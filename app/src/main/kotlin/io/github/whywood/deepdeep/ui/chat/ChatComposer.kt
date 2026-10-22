@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -74,12 +75,15 @@ internal fun ChatComposer(
     thinkingLevel: ThinkingLevel,
     thinkingLevels: List<ThinkingLevel>,
     quote: QuotedMessage?,
+    attachments: List<AttachmentRef>,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
     onModelChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
     onClearQuote: () -> Unit,
+    onPickAttachment: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -169,6 +173,13 @@ internal fun ChatComposer(
                                 )
                             }
                         }
+                        if (attachments.isNotEmpty()) {
+                            AttachmentChips(
+                                attachments = attachments,
+                                onRemove = onRemoveAttachment,
+                                modifier = Modifier.padding(bottom = 10.dp),
+                            )
+                        }
                         BasicTextField(
                             value = value,
                             onValueChange = onValueChange,
@@ -206,6 +217,17 @@ internal fun ChatComposer(
                     modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    DdIconButton(
+                        icon = DdIcons.Paperclip,
+                        onClick = onPickAttachment,
+                        contentDescription = stringResource(R.string.assistant_attach_add),
+                        modifier = Modifier.testTag("assistant_attach"),
+                        size = 34.dp,
+                        iconSize = 17.dp,
+                        tint = colors.inkTertiary,
+                        enabled = !sending,
+                    )
+                    Spacer(Modifier.width(2.dp))
                     ComposerChip(
                         text = label,
                         onClick = {

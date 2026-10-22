@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,21 +16,17 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -58,12 +53,15 @@ internal fun ChatTurn(
     onShare: (String) -> Unit,
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
+    onOpenAttachment: (AttachmentRef) -> Unit,
+    onOpenFile: (String) -> Unit,
 ) {
     if (message.role == AssistantRole.USER) {
         UserBubble(
             message = message,
             onCopy = onCopy,
             onQuote = onQuote,
+            onOpenAttachment = onOpenAttachment,
         )
     } else {
         AssistantTurn(
@@ -73,6 +71,7 @@ internal fun ChatTurn(
             onShare = onShare,
             onCopyOutput = onCopyOutput,
             onQuote = onQuote,
+            onOpenFile = onOpenFile,
         )
     }
 }
@@ -82,54 +81,47 @@ private fun UserBubble(
     message: AssistantMessage,
     onCopy: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
+    onOpenAttachment: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
-    val haptic = LocalHapticFeedback.current
-    var menuAnchor by remember { mutableStateOf(Offset.Zero) }
-    var menuExpanded by remember { mutableStateOf(false) }
-    val content = remember(message.text) { splitQuoted(message.text) }
+    val context = LocalContext.current
+    val parsed = remember(message.text) { parseAttachmentBlock(message.text) }
+    val content = remember(parsed.text) { splitQuoted(parsed.text) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
         Box(Modifier.widthIn(max = 560.dp)) {
-            Column(
-                Modifier
-                    .clip(UserBubbleShape)
-                    .background(colors.userBubble)
-                    .pointerInput(message.id) {
-                        detectTapGestures(
-                            onLongPress = { offset ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                menuAnchor = offset
-                                menuExpanded = true
-                            },
+            SelectableMessageText(
+                messageId = message.id,
+                onQuote = { text -> onQuote(message.id, text) },
+                onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
+            ) {
+                Column(
+                    Modifier
+                        .clip(UserBubbleShape)
+                        .background(colors.userBubble)
+                        .padding(horizontal = 15.dp, vertical = 11.dp),
+                ) {
+                    if (content.quote != null) {
+                        QuoteContext(content.quote)
+                        if (content.body.isNotEmpty() || parsed.attachments.isNotEmpty()) {
+                            Spacer(Modifier.height(6.dp))
+                        }
+                    }
+                    if (parsed.attachments.isNotEmpty()) {
+                        AttachmentCards(attachments = parsed.attachments, onOpen = onOpenAttachment)
+                        if (content.body.isNotEmpty()) Spacer(Modifier.height(8.dp))
+                    }
+                    if (content.body.isNotEmpty()) {
+                        Text(
+                            text = content.body,
+                            style = DdType.body,
+                            color = colors.onUserBubble,
                         )
                     }
-                    .padding(horizontal = 15.dp, vertical = 11.dp),
-            ) {
-                if (content.quote != null) {
-                    QuoteContext(content.quote)
-                    if (content.body.isNotEmpty()) Spacer(Modifier.height(6.dp))
-                }
-                if (content.body.isNotEmpty()) {
-                    Text(
-                        text = content.body,
-                        style = DdType.body,
-                        color = colors.onUserBubble,
-                    )
                 }
             }
-            MessageActionMenu(
-                messageId = message.id,
-                expanded = menuExpanded,
-                anchor = menuAnchor,
-                showShare = false,
-                onDismissRequest = { menuExpanded = false },
-                onCopy = { onCopy(message.text) },
-                onQuote = { onQuote(message.id, message.text) },
-                onShare = {},
-            )
         }
     }
 }
@@ -162,11 +154,10 @@ private fun AssistantTurn(
     onShare: (String) -> Unit,
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
+    onOpenFile: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
-    val haptic = LocalHapticFeedback.current
-    var menuAnchor by remember { mutableStateOf(Offset.Zero) }
-    var menuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val answer = message.text.trim()
     val readable = remember(answer) { markdownToPlainText(answer) }
     Column(Modifier.fillMaxWidth()) {
@@ -175,34 +166,17 @@ private fun AssistantTurn(
                 message = message,
                 onToggleStep = onToggleStep,
                 onCopyOutput = onCopyOutput,
+                onFileClick = onOpenFile,
             )
             if (answer.isNotEmpty()) Spacer(Modifier.height(6.dp))
         }
         if (answer.isNotEmpty()) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .pointerInput(message.id) {
-                        detectTapGestures(
-                            onLongPress = { offset ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                menuAnchor = offset
-                                menuExpanded = true
-                            },
-                        )
-                    },
+            SelectableMessageText(
+                messageId = message.id,
+                onQuote = { text -> onQuote(message.id, text) },
+                onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
             ) {
-                ChatMarkdown(answer)
-                MessageActionMenu(
-                    messageId = message.id,
-                    expanded = menuExpanded,
-                    anchor = menuAnchor,
-                    showShare = true,
-                    onDismissRequest = { menuExpanded = false },
-                    onCopy = { onCopy(readable) },
-                    onQuote = { onQuote(message.id, message.text) },
-                    onShare = { onShare(readable) },
-                )
+                ChatMarkdown(answer, onFileClick = onOpenFile)
             }
         }
         when (message.status) {

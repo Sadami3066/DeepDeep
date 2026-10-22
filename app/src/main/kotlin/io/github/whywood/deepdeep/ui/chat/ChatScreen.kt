@@ -31,12 +31,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -49,7 +52,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -60,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -85,6 +94,11 @@ fun ChatScreen(
     onToggleStep: (messageId: Long, stepId: Long) -> Unit,
     onQuoteMessage: (Long, String) -> Unit,
     onClearQuote: () -> Unit,
+    attachments: List<AttachmentRef>,
+    onPickAttachment: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
+    onOpenAttachment: (AttachmentRef) -> Unit,
+    onOpenFile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -104,6 +118,10 @@ fun ChatScreen(
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
     }
     val latestMessages by rememberUpdatedState(state.messages)
+    val selectionCoordinator = remember { SelectionCoordinator() }
+    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    val latestRootOrigin by rememberUpdatedState(rootOrigin)
+    val selectionClearMargin = with(density) { 28.dp.toPx() }
 
     fun copyText(text: String) {
         if (copyToClipboard(context, text)) {
@@ -147,7 +165,22 @@ fun ChatScreen(
     }
 
 
-    Column(modifier.fillMaxSize().background(colors.paper)) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(colors.paper)
+            .onGloballyPositioned { rootOrigin = it.positionInWindow() }
+            .pointerInput(selectionCoordinator, selectionClearMargin) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val windowPosition = down.position + latestRootOrigin
+                    if (!selectionCoordinator.isInsideSelectionArea(windowPosition, selectionClearMargin)) {
+                        selectionCoordinator.clear()
+                    }
+                }
+            },
+    ) {
+        CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {
         ChatTopBar(
             onMenu = {
                 keyboard?.hide()
@@ -193,6 +226,8 @@ fun ChatScreen(
                                     onShare = ::shareAnswer,
                                     onCopyOutput = ::copyText,
                                     onQuote = onQuoteMessage,
+                                    onOpenAttachment = onOpenAttachment,
+                                    onOpenFile = onOpenFile,
                                 )
                             }
                         }
@@ -234,6 +269,7 @@ fun ChatScreen(
             thinkingLevel = state.thinkingLevel,
             thinkingLevels = thinkingLevels,
             quote = state.quote,
+            attachments = attachments,
             onValueChange = onInputChange,
             onSend = {
                 keyboard?.hide()
@@ -244,11 +280,14 @@ fun ChatScreen(
             onModelChange = onModelChange,
             onThinkingLevelChange = onThinkingLevelChange,
             onClearQuote = onClearQuote,
+            onPickAttachment = onPickAttachment,
+            onRemoveAttachment = onRemoveAttachment,
             onOpenSettings = onOpenSettings,
             modifier = Modifier
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
                 .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         )
+        }
     }
 }
 

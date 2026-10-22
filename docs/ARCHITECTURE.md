@@ -55,6 +55,9 @@ Compose ChatScreen
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
 - `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
 - Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。
+- 文本选择由 Compose context-menu provider 接管（`SelectionActions`）：自绘文字版复制/全选/引用/朗读菜单，通过 copy action + 剪贴板读取选中文本，朗读使用系统 TTS（manifest 需要 TTS_SERVICE queries）；`SelectionCoordinator` 记录当前选区 bounds，屏幕根节点在 Initial pass 检测选区外按下并重置对应消息的选择子树，从而即使 Compose 不主动清除也能收起选择与菜单。
+- 附件：`data/Attachment.kt` 定义 `AttachmentRef` 与会话文本编解码（`<attachments>` 块）；`FileAttachmentStore` 把 URI 复制到 `workspace/attachments/`、生成预览类型，并提供 `resolve(raw)` 把消息里的相对/绝对/file:// 路径映射回 workspace 内文件；`ChatViewModel` 负责待发附件与 prompt 拼装；`AttachmentUi` 负责气泡缩略图卡、composer chips、全屏预览（图片/文本/Markdown/不可预览）与 FileProvider 分享。
+- 文件引用：Markdown 行内 AST 增加 `FileRef`（`MarkdownParser.isWorkspaceFileReference` 保守判定），`ChatMarkdown.onFileClick` 把引用渲染成可点击链接；未传回调时外观与普通文本一致。
 - 消息长度操作在 `ChatTurn` / `ChatActions`（长按锚定菜单、引用预览在 `ChatComposer`）。
 - Compose stability config 位于 `app/compose-stability.conf`，把 runtime 模型与 UI state 声明为 stable，避免流式更新重组合全部消息。
 

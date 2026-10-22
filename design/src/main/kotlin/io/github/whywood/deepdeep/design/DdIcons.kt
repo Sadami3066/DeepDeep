@@ -66,6 +66,7 @@ object DdIcons {
     val Plug = DdIcon(R.drawable.ic_dd_plug)
     val Copy = DdIcon(R.drawable.ic_dd_copy)
     val Quote = DdIcon(R.drawable.ic_dd_quote)
+    val SelectAll = DdIcon(R.drawable.ic_dd_select_all)
     val Share = DdIcon(R.drawable.ic_dd_share)
     val Refresh = DdIcon(R.drawable.ic_dd_refresh)
     val Volume = DdIcon(R.drawable.ic_dd_volume)

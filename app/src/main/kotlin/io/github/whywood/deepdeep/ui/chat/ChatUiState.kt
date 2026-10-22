@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -16,6 +17,7 @@ data class ChatUiState(
     val messages: List<AssistantMessage> = emptyList(),
     val input: String = "",
     val quote: QuotedMessage? = null,
+    val attachments: List<AttachmentRef> = emptyList(),
     val sending: Boolean = false,
     val activity: String? = null,
     val activityStartedAt: Long? = null,

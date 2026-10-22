@@ -37,6 +37,7 @@ internal sealed interface InlineNode {
     data class Text(val text: String) : InlineNode
     data class Code(val text: String) : InlineNode
     data class Kbd(val text: String) : InlineNode
+    data class FileRef(val text: String, val path: String, val code: Boolean = false) : InlineNode
     data class Bold(val children: List<InlineNode>) : InlineNode
     data class Italic(val children: List<InlineNode>) : InlineNode
     data class Strike(val children: List<InlineNode>) : InlineNode
@@ -80,6 +81,16 @@ private val escapableChars = setOf(
     '\\', '`', '*', '_', '{', '}', '[', ']', '<', '>', '(', ')', '#', '+', '-', '.', '!', '|', '~', '$', '^',
 )
 private val urlTrailingChars = setOf('.', ',', ';', ':', '!', '?')
+private val workspaceFileExtensions = setOf(
+    "png", "jpg", "jpeg", "webp", "gif", "bmp", "md", "markdown", "txt", "json", "xml", "yaml", "yml",
+    "toml", "csv", "log", "pdf", "zip", "kt", "kts", "java", "py", "js", "ts", "tsx", "jsx", "c", "h",
+    "cpp", "hpp", "css", "html", "sh", "bash", "sql", "rs", "go", "swift", "rb",
+)
+private val fileReferenceStopChars = setOf(
+    ' ', '\t', '\n', '\r', '<', '>', '(', ')', '[', ']', '{', '}', '"', '\'', '`', '|', '*',
+    '，', '。', '、', '；', '：', '！', '？', '（', '）', '“', '”', '‘', '’',
+)
+private val fileReferenceTrailingChars = setOf('.', ',', ';', ':', '!', '?')
 
 internal fun parseMarkdown(source: String): List<MarkdownBlock> = parseMarkdownDocument(source).blocks
 
@@ -456,6 +467,7 @@ private fun inlinePlainNode(node: InlineNode): String = when (node) {
     is InlineNode.Text -> node.text
     is InlineNode.Code -> node.text
     is InlineNode.Kbd -> node.text
+    is InlineNode.FileRef -> node.text
     is InlineNode.Math -> node.text
     is InlineNode.FootnoteRef -> "[${node.number}]"
     is InlineNode.Bold -> inlinePlainChildren(node.children)
@@ -484,6 +496,47 @@ private fun indexOfIgnoreCase(text: String, needle: String, start: Int): Int {
         index++
     }
     return -1
+}
+
+internal fun isWorkspaceFileReference(value: String): Boolean {
+    val trimmed = value.trim()
+    if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return false
+    if (!hasKnownFileExtension(trimmed)) return false
+    val lower = trimmed.lowercase()
+    return when {
+        lower.startsWith("attachments/") || lower.startsWith("workspace/") -> true
+        lower.startsWith("/") && lower.contains("/files/workspace/") -> true
+        lower.startsWith("file://") -> true
+        else -> false
+    }
+}
+
+private fun hasKnownFileExtension(value: String): Boolean {
+    val dot = value.lastIndexOf('.')
+    if (dot <= 0 || dot == value.lastIndex) return false
+    return value.substring(dot + 1).lowercase() in workspaceFileExtensions
+}
+
+private fun fileReferenceEnd(text: String, index: Int): Int {
+    val plausible = when (text[index]) {
+        'a' -> text.startsWith("attachments/", index)
+        'w' -> text.startsWith("workspace/", index)
+        'f' -> text.startsWith("file://", index, ignoreCase = true)
+        '/' -> true
+        else -> false
+    }
+    if (!plausible) return -1
+    if (index > 0) {
+        val previous = text[index - 1]
+        if (previous.isLetterOrDigit() || previous == '_' || previous == '/' || previous == '.' || previous == '-') {
+            return -1
+        }
+    }
+    var end = index
+    while (end < text.length && !text[end].isWhitespace() && text[end] !in fileReferenceStopChars) end++
+    while (end > index && text[end - 1] in fileReferenceTrailingChars) end--
+    if (end <= index) return -1
+    return if (isWorkspaceFileReference(text.substring(index, end))) end else -1
 }
 
 private fun parseHexColor(value: String): Int? {
@@ -540,6 +593,14 @@ private class InlineScanner(
                 index++
                 continue
             }
+            val fileReference = fileReferenceEnd(text, index)
+            if (fileReference > 0) {
+                val value = text.substring(index, fileReference)
+                flush()
+                nodes += InlineNode.FileRef(value, value)
+                index = fileReference
+                continue
+            }
             if (isUrlAt(text, index)) {
                 var end = index
                 while (end < text.length && !text[end].isWhitespace() && text[end] != '<') end++
@@ -555,8 +616,14 @@ private class InlineScanner(
             if (char == '`') {
                 val end = text.indexOf('`', index + 1)
                 if (end > index) {
+                    val content = text.substring(index + 1, end)
                     flush()
-                    nodes += InlineNode.Code(text.substring(index + 1, end))
+                    val fileReference = content.trim()
+                    nodes += if (isWorkspaceFileReference(fileReference)) {
+                        InlineNode.FileRef(content, fileReference, code = true)
+                    } else {
+                        InlineNode.Code(content)
+                    }
                     index = end + 1
                 } else {
                     buffer.append('`')
@@ -778,7 +845,16 @@ private class InlineScanner(
             "i", "em" -> listOf(InlineNode.Italic(parse(inner)))
             "sup" -> listOf(InlineNode.Superscript(parse(inner)))
             "sub" -> listOf(InlineNode.Subscript(parse(inner)))
-            "code" -> listOf(InlineNode.Code(inner))
+            "code" -> {
+                val path = inner.trim()
+                listOf(
+                    if (isWorkspaceFileReference(path)) {
+                        InlineNode.FileRef(inner, path, code = true)
+                    } else {
+                        InlineNode.Code(inner)
+                    },
+                )
+            }
             "kbd" -> listOf(InlineNode.Kbd(inner))
             "a" -> {
                 val href = hrefPattern.find(attributes)?.let { match ->

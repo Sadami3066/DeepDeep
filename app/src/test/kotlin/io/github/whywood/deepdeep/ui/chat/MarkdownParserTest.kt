@@ -313,6 +313,69 @@ class MarkdownParserTest {
         assertTrue(tokens.any { it.type == CodeTokenType.STRING && textOf(code, it) == "+new" })
     }
 
+    @Test
+    fun detectsWorkspaceFileReferences() {
+        assertTrue(isWorkspaceFileReference("attachments/75d6_notes.md"))
+        assertTrue(isWorkspaceFileReference("workspace/x.png"))
+        assertTrue(isWorkspaceFileReference("/data/user/0/io.github.whywood.deepdeep/files/workspace/x.png"))
+        assertTrue(isWorkspaceFileReference("file:///data/user/0/io.github.whywood.deepdeep/files/workspace/x.png"))
+        assertTrue(isWorkspaceFileReference("workspace/report.PDF"))
+        assertFalse(isWorkspaceFileReference("workspace/folder"))
+        assertFalse(isWorkspaceFileReference("notes.md"))
+        assertFalse(isWorkspaceFileReference("http://example.com/files/workspace/x.md"))
+        assertFalse(isWorkspaceFileReference("tmp/files/workspace/x.md"))
+        assertFalse(isWorkspaceFileReference("attachments/script.unknownext"))
+        assertFalse(isWorkspaceFileReference("see attachments notes"))
+    }
+
+    @Test
+    fun inlineNodesDetectFileReferences() {
+        val source =
+            "see attachments/75d6_notes.md and /data/user/0/io.github.whywood.deepdeep/files/workspace/x.png now"
+        val refs = inlineNodes(source).filterIsInstance<InlineNode.FileRef>()
+        assertEquals(
+            listOf(
+                "attachments/75d6_notes.md",
+                "/data/user/0/io.github.whywood.deepdeep/files/workspace/x.png",
+            ),
+            refs.map { it.path },
+        )
+        assertTrue(refs.none { it.code })
+        assertEquals(source, inlinePlainText(source))
+        assertEquals(emptyList<InlineNode.FileRef>(), inlineNodes("attachments folder and workspace stuff").filterIsInstance<InlineNode.FileRef>())
+        assertEquals("open attachments/x.md.", inlinePlainText("open attachments/x.md."))
+        val uri = inlineNodes("file:///data/user/0/io.github.whywood.deepdeep/files/workspace/x.png").single()
+        assertEquals(
+            InlineNode.FileRef(
+                "file:///data/user/0/io.github.whywood.deepdeep/files/workspace/x.png",
+                "file:///data/user/0/io.github.whywood.deepdeep/files/workspace/x.png",
+            ),
+            uri,
+        )
+    }
+
+    @Test
+    fun inlineCodeFileReferencesKeepCodeStyleNode() {
+        assertEquals(
+            InlineNode.FileRef("attachments/x.md", "attachments/x.md", code = true),
+            inlineNodes("`attachments/x.md`").single(),
+        )
+        assertEquals(InlineNode.Code("val x = 1"), inlineNodes("`val x = 1`").single())
+    }
+
+    @Test
+    fun markdownLinksRouteWorkspaceFiles() {
+        val source = "[notes](attachments/75d6_notes.md) and [site](https://example.com)"
+        val links = inlineNodes(source).filterIsInstance<InlineNode.Link>()
+        assertEquals(
+            listOf("attachments/75d6_notes.md", "https://example.com"),
+            links.map { it.destination },
+        )
+        assertTrue(isWorkspaceFileReference(links[0].destination))
+        assertFalse(isWorkspaceFileReference(links[1].destination))
+        assertEquals("notes and site", inlinePlainText(source))
+    }
+
     private fun listBlock(source: String): MarkdownBlock.ListBlock =
         parseMarkdown(source).single() as MarkdownBlock.ListBlock
 

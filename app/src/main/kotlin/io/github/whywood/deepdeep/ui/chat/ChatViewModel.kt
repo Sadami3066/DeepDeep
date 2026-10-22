@@ -1,7 +1,12 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
@@ -42,6 +47,7 @@ class ChatViewModel(
     private val runtime: AgentRuntime,
     private val providers: ProviderDirectory,
     private val modelConfigStore: ModelSettings,
+    private val attachmentStore: AttachmentStore,
     private val prepareRuntime: suspend () -> Unit,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
@@ -95,6 +101,40 @@ class ChatViewModel(
         mutableState.update { if (it.quote == null) it else it.copy(quote = null) }
     }
 
+    fun attach(uri: Uri) {
+        val current = mutableState.value
+        if (current.sending || current.switchingConversation) return
+        if (current.attachments.size >= MAX_ATTACHMENTS) {
+            mutableState.update { it.copy(error = "最多添加 5 个附件") }
+            return
+        }
+        viewModelScope.launch {
+            when (val result = withContext(ioDispatcher) { attachmentStore.import(uri) }) {
+                is AttachmentImport.Imported -> mutableState.update {
+                    if (it.attachments.size >= MAX_ATTACHMENTS) {
+                        it.copy(error = "最多添加 5 个附件")
+                    } else {
+                        it.copy(attachments = it.attachments + result.ref, error = null)
+                    }
+                }
+
+                AttachmentImport.TooLarge -> mutableState.update {
+                    it.copy(error = "文件超过 25MB，无法添加")
+                }
+
+                AttachmentImport.Failed -> mutableState.update {
+                    it.copy(error = "无法读取该文件")
+                }
+            }
+        }
+    }
+
+    fun removeAttachment(id: String) {
+        mutableState.update { state ->
+            state.copy(attachments = state.attachments.filterNot { it.id == id })
+        }
+    }
+
     fun send() {
         val current = mutableState.value
         if (!current.ready || !current.historyLoaded) {
@@ -104,7 +144,7 @@ class ChatViewModel(
         if (current.sending || current.switchingConversation) return
         val text = current.input.trim()
         if (text.isEmpty()) return
-        val prompt = buildPrompt(current.quote, text)
+        val prompt = buildPrompt(current.quote, current.attachments, text)
         val userMessage = AssistantMessage(nextMessageId++, AssistantRole.USER, prompt)
         val assistantId = nextMessageId++
         activeAssistantId = assistantId
@@ -122,6 +162,7 @@ class ChatViewModel(
                 ),
                 input = "",
                 quote = null,
+                attachments = emptyList(),
                 sending = true,
                 activity = "思考中",
                 activityStartedAt = now,
@@ -184,6 +225,7 @@ class ChatViewModel(
                     activityStartedAt = null,
                     error = null,
                     quote = null,
+                    attachments = emptyList(),
                 )
             }
             openSession(summary, fresh = false)
@@ -197,7 +239,7 @@ class ChatViewModel(
         pendingSessionId = summary.id
         if (fresh) {
             mutableState.update {
-                it.copy(switchingConversation = true, error = null, quote = null)
+                it.copy(switchingConversation = true, error = null, quote = null, attachments = emptyList())
             }
         }
         openingJob = viewModelScope.launch {
@@ -361,6 +403,7 @@ class ChatViewModel(
                 messages = emptyList(),
                 input = "",
                 quote = null,
+                attachments = emptyList(),
                 sending = false,
                 activity = null,
                 activityStartedAt = null,
@@ -413,10 +456,20 @@ class ChatViewModel(
         return if (plain.length <= 240) plain else plain.take(240).trimEnd() + "…"
     }
 
-    private fun buildPrompt(quote: QuotedMessage?, body: String): String {
-        if (quote == null) return body
-        val quoted = quote.text.lineSequence().joinToString("\n") { "> $it" }
-        return "$quoted\n\n$body"
+    private fun buildPrompt(
+        quote: QuotedMessage?,
+        attachments: List<AttachmentRef>,
+        body: String,
+    ): String = buildString {
+        if (quote != null) {
+            append(quote.text.lineSequence().joinToString("\n") { "> $it" })
+            append("\n\n")
+        }
+        if (attachments.isNotEmpty()) {
+            append(encodeAttachmentBlock(attachments))
+            append("\n\n")
+        }
+        append(body)
     }
 
     private fun applyConfig(config: ModelConfig) {
@@ -677,6 +730,10 @@ class ChatViewModel(
     private fun titleFrom(messages: List<AssistantMessage>): String {
         val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return "新对话"
         return titleFrom(firstUser)
+    }
+
+    private companion object {
+        const val MAX_ATTACHMENTS = 5
     }
 
 }

@@ -1,5 +1,10 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import android.content.Intent
+import android.net.Uri
+import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
@@ -48,7 +53,7 @@ class ChatViewModelTest {
     @Test
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
 
         viewModel.onInputChange("hello")
@@ -75,7 +80,7 @@ class ChatViewModelTest {
     @Test
     fun ignoresStaleRunEvents() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
         viewModel.send()
@@ -91,7 +96,7 @@ class ChatViewModelTest {
     @Test
     fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
         viewModel.onInputChange("do it")
         viewModel.send()
@@ -140,7 +145,7 @@ class ChatViewModelTest {
                 "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
             )
         }
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
         assertEquals("from a", viewModel.state.value.messages.single().text)
 
@@ -161,7 +166,7 @@ class ChatViewModelTest {
     @Test
     fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
 
         viewModel.quote(9, "**重点**内容")
@@ -225,6 +230,16 @@ class ChatViewModelTest {
         override fun resolveConfig(config: ModelConfig): ModelConfig = config.copy(modelId = option.id)
         override fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model? = null
         override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
+    }
+
+    private class FakeAttachmentStore : AttachmentStore {
+        override suspend fun import(uri: Uri): AttachmentImport = AttachmentImport.Failed
+
+        override fun file(ref: AttachmentRef): java.io.File = java.io.File(ref.path)
+
+        override fun shareIntent(ref: AttachmentRef): Intent? = null
+
+        override fun resolve(raw: String): AttachmentRef? = null
     }
 
     private class FakeSettings : ModelSettings {

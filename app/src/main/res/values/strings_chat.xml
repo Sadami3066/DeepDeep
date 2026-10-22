@@ -1,6 +1,19 @@
 <resources>
     <string name="assistant_action_copy">复制</string>
+    <string name="assistant_action_select_all">全选</string>
     <string name="assistant_action_share">分享</string>
+    <string name="assistant_action_speak">朗读</string>
+    <string name="assistant_attach_add">添加附件</string>
+    <string name="assistant_attach_empty">空文件</string>
+    <string name="assistant_attach_failed">无法读取该文件</string>
+    <string name="assistant_attach_limit">最多添加 5 个附件</string>
+    <string name="assistant_attach_missing">文件不存在</string>
+    <string name="assistant_attach_open">查看附件</string>
+    <string name="assistant_attach_remove">移除附件</string>
+    <string name="assistant_attach_share">分享文件</string>
+    <string name="assistant_attach_too_large">文件超过 25MB，无法添加</string>
+    <string name="assistant_attach_unpreviewable">无法预览此文件</string>
+    <string name="assistant_close">关闭</string>
     <string name="assistant_configure_hint">尚未配置模型</string>
     <string name="assistant_configure_input">先在设置中配置模型</string>
     <string name="assistant_copied">已复制</string>

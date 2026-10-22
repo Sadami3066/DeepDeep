@@ -7,5 +7,6 @@
 5. P4 — remove old UI, new runtime/event/session metadata ownership, tests/docs (done)
 6. P5 — motion system, drawer/session switch smoothness, process timeline redesign, palette and press states (done)
 7. P6 — markdown upgrade (nested lists, images, table scroll, highlighting), message action menu/quote, conversation switch cache (done)
-8. Next — root ShellExecutor when root testing is authorized; scheduled prompts/event triggers
-9. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it
+8. P7 — text selection actions (text toolbar, draggable handles, outside dismiss), file attachments (thumbnails, markdown preview, share), clickable file references in assistant messages (done)
+9. Next — root ShellExecutor when root testing is authorized; scheduled prompts/event triggers
+10. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it

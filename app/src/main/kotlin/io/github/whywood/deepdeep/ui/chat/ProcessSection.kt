@@ -52,6 +52,7 @@ internal fun ProcessSection(
     message: AssistantMessage,
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
+    onFileClick: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
@@ -151,6 +152,7 @@ internal fun ProcessSection(
                         is AssistantStep.Text -> ChatMarkdown(
                             text = step.text.trim(),
                             modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                            onFileClick = onFileClick,
                         )
                     }
                 }

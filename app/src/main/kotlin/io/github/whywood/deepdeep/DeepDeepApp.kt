@@ -1,6 +1,10 @@
 package io.github.whywood.deepdeep
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -13,22 +17,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
+import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
@@ -55,16 +64,24 @@ internal fun DeepDeepApp(
                     runtime = graph.host,
                     providers = graph.providerCatalog,
                     modelConfigStore = graph.modelConfigStore,
+                    attachmentStore = graph.attachmentStore,
                     prepareRuntime = graph::prepare,
                 )
             }
         },
     )
     val state by chatViewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val shareChooserTitle = stringResource(R.string.assistant_attach_share)
+    val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        uris.forEach(chatViewModel::attach)
+    }
+    var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val configuredProviders by graph.apiKeyStore.providerIds.collectAsStateWithLifecycle(initialValue = emptySet())
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val colors = deepDeepColors()
+    val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val navigator = rememberAppNavigator()
     val density = LocalDensity.current
     val drawerWidthPx = with(density) { 304.dp.toPx() }
@@ -122,6 +139,22 @@ internal fun DeepDeepApp(
                     onToggleStep = chatViewModel::toggleStep,
                     onQuoteMessage = chatViewModel::quote,
                     onClearQuote = chatViewModel::clearQuote,
+                    attachments = state.attachments,
+                    onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
+                    onRemoveAttachment = chatViewModel::removeAttachment,
+                    onOpenAttachment = { previewAttachment = it },
+                    onOpenFile = { raw ->
+                        val resolved = graph.attachmentStore.resolve(raw)
+                        if (resolved == null) {
+                            Toast.makeText(
+                                context,
+                                attachmentMissingMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            previewAttachment = resolved
+                        }
+                    },
                 )
 
                 AppDestination.Settings -> SettingsScreen(
@@ -266,6 +299,19 @@ internal fun DeepDeepApp(
                     onSettings = ::openSettings,
                 )
             }
+        }
+        previewAttachment?.let { attachment ->
+            AttachmentPreviewDialog(
+                attachment = attachment,
+                file = graph.attachmentStore.file(attachment),
+                onDismiss = { previewAttachment = null },
+                onShare = {
+                    val intent = graph.attachmentStore.shareIntent(attachment)
+                    if (intent != null) {
+                        context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+                    }
+                },
+            )
         }
     }
 }
