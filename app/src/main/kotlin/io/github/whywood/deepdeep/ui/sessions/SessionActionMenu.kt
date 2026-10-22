@@ -7,6 +7,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.runtime.ConversationSummary
@@ -27,9 +29,10 @@ fun SessionActionMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         offset = with(density) { DpOffset(anchor.x.toDp(), anchor.y.toDp() - 24.dp) },
-        menuWidth = 144.dp,
+        menuWidth = 168.dp,
     ) {
         MenuAction(
+            icon = DdIcons.Compose,
             text = stringResource(R.string.drawer_action_rename),
             testTag = "session_action_rename",
             onClick = {
@@ -39,6 +42,7 @@ fun SessionActionMenu(
         )
         if (showPin) {
             MenuAction(
+                icon = DdIcons.Pin,
                 text = stringResource(
                     if (session.pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin,
                 ),
@@ -50,6 +54,7 @@ fun SessionActionMenu(
             )
         }
         MenuAction(
+            icon = DdIcons.Folder,
             text = stringResource(
                 if (session.archived) R.string.drawer_action_unarchive else R.string.drawer_action_archive,
             ),
@@ -60,6 +65,8 @@ fun SessionActionMenu(
             },
         )
         MenuAction(
+            icon = DdIcons.Trash,
+            destructive = true,
             text = stringResource(R.string.drawer_action_delete),
             testTag = "session_action_delete",
             onClick = {
@@ -75,10 +82,14 @@ private fun MenuAction(
     text: String,
     testTag: String,
     onClick: () -> Unit,
+    icon: DdIcon? = null,
+    destructive: Boolean = false,
 ) {
     DdMenuItem(
         text = text,
         onClick = onClick,
+        icon = icon,
+        destructive = destructive,
         testTag = testTag,
     )
 }

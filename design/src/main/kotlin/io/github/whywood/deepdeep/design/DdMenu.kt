@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,10 +55,17 @@ fun DdMenuItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
+    icon: DdIcon? = null,
+    destructive: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
     testTag: String? = null,
 ) {
     val colors = deepDeepColors()
+    val contentColor = when {
+        destructive -> colors.danger
+        selected -> colors.accent
+        else -> colors.ink
+    }
     DdPressable(
         onClick = onClick,
         modifier = modifier
@@ -66,18 +75,23 @@ fun DdMenuItem(
         shape = RoundedCornerShape(10.dp),
         contentDescription = text,
     ) {
-        Box(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                DdIcon(icon = icon, tint = contentColor, size = 16.dp)
+                Spacer(Modifier.width(10.dp))
+            }
             Text(
                 text = text,
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier.weight(1f),
                 style = DdType.bodySmall,
-                color = if (selected) colors.accent else colors.ink,
-                textAlign = TextAlign.Center,
+                color = contentColor,
+                textAlign = TextAlign.Start,
                 maxLines = 1,
             )
-            if (trailing != null) {
-                Row(Modifier.align(Alignment.CenterEnd)) { trailing() }
-            }
+            trailing?.invoke()
         }
     }
 }

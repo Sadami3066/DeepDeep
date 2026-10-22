@@ -75,10 +75,11 @@ internal fun ChatTopBar(
                 DdMenu(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },
-                    menuWidth = 136.dp,
+                    menuWidth = 148.dp,
                 ) {
                     DdMenuItem(
                         text = stringResource(R.string.assistant_settings),
+                        icon = DdIcons.Settings,
                         onClick = {
                             menuOpen = false
                             onOpenSettings()

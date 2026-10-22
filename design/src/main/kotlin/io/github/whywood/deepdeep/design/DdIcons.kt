@@ -69,6 +69,7 @@ object DdIcons {
     val Refresh = DdIcon(R.drawable.ic_dd_refresh)
     val Volume = DdIcon(R.drawable.ic_dd_volume)
     val VolumeX = DdIcon(R.drawable.ic_dd_volume_x)
+    val Pin = DdIcon(R.drawable.ic_dd_pin)
     val Font = DdIcon(R.drawable.ic_dd_font)
     val Shield = DdIcon(R.drawable.ic_dd_shield)
 }

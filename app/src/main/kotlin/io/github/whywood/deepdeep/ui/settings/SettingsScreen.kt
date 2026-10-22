@@ -48,6 +48,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
@@ -262,67 +263,65 @@ private fun ThemeRow(
 ) {
     val colors = deepDeepColors()
     var expanded by remember { mutableStateOf(false) }
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val wash by animateFloatAsState(
-        targetValue = if (pressed) 0.06f else 0f,
-        animationSpec = tween(
-            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
-            easing = DdMotion.EaseOut,
-        ),
-        label = "theme-row-wash",
-    )
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.ink.copy(alpha = wash))
-            .clickable(interactionSource = interaction, indication = null) { expanded = true }
-            .heightIn(min = 60.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .testTag("settings_theme"),
-        verticalAlignment = Alignment.CenterVertically,
+    DdPressable(
+        onClick = { expanded = true },
+        modifier = Modifier.fillMaxWidth().testTag("settings_theme"),
+        shape = RoundedCornerShape(20.dp),
+        contentDescription = stringResource(R.string.settings_theme),
     ) {
-        DdIcon(icon = DdIcons.Moon, tint = colors.inkSecondary, size = 20.dp)
-        Spacer(Modifier.width(14.dp))
-        Text(
-            text = stringResource(R.string.settings_theme),
-            modifier = Modifier.weight(1f),
-            style = DdType.body,
-            color = colors.ink,
-            maxLines = 1,
-        )
-        Box {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIcon(icon = DdIcons.Moon, tint = colors.inkSecondary, size = 20.dp)
+            Spacer(Modifier.width(14.dp))
             Text(
-                text = themeLabel(themeMode),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
+                text = stringResource(R.string.settings_theme),
+                modifier = Modifier.weight(1f),
+                style = DdType.body,
+                color = colors.ink,
                 maxLines = 1,
             )
-            DdMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                menuWidth = 144.dp,
-            ) {
-                ThemeMode.entries.forEach { mode ->
-                    DdMenuItem(
-                        text = themeLabel(mode),
-                        onClick = {
-                            onThemeModeChange(mode)
-                            expanded = false
-                        },
-                        selected = mode == themeMode,
-                        trailing = {
-                            if (mode == themeMode) {
-                                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-                            }
-                        },
-                    )
+            Box {
+                Text(
+                    text = themeLabel(themeMode),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+                DdMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    menuWidth = 168.dp,
+                ) {
+                    ThemeMode.entries.forEach { mode ->
+                        DdMenuItem(
+                            text = themeLabel(mode),
+                            icon = when (mode) {
+                                ThemeMode.SYSTEM -> DdIcons.Monitor
+                                ThemeMode.LIGHT -> DdIcons.Sun
+                                ThemeMode.DARK -> DdIcons.Moon
+                            },
+                            onClick = {
+                                onThemeModeChange(mode)
+                                expanded = false
+                            },
+                            selected = mode == themeMode,
+                            trailing = {
+                                if (mode == themeMode) {
+                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
+                                }
+                            },
+                        )
+                    }
                 }
             }
+            Spacer(Modifier.width(6.dp))
+            DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
         }
-        Spacer(Modifier.width(6.dp))
-        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
     }
 }
 
@@ -367,21 +366,23 @@ private fun LicenseSheet(onClose: () -> Unit) {
 @Composable
 private fun LicenseRow(title: String, subtitle: String, onClick: () -> Unit) {
     val colors = deepDeepColors()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        contentDescription = title,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(text = title, style = DdType.body, color = colors.ink)
-            Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(text = title, style = DdType.body, color = colors.ink)
+                Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
+            }
+            DdIcon(icon = DdIcons.External, tint = colors.inkTertiary, size = 16.dp)
         }
-        DdIcon(icon = DdIcons.External, tint = colors.inkTertiary, size = 16.dp)
     }
 }
 

@@ -251,7 +251,7 @@ private fun ApiKeySection(
         onSave(key)
     }
 
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             text = stringResource(R.string.settings_provider_api_key),
             style = DdType.micro,

@@ -52,7 +52,7 @@ Compose ChatScreen
 - 抽屉用持久 composition + `graphicsLayer` translation，避免开关时反复组合；遮罩只在可见时挂载，避免拦截触摸。
 - ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
-- `DdMenu` 统一浮层圆角、纯白背景、菜单项居中与按压态。
+- `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
 - Markdown 解析在 `MarkdownParser`，渲染在 `ChatMarkdown`；代码块语言/复制、任务列表和引用条都在这一层扩展。
 
 ## 存储

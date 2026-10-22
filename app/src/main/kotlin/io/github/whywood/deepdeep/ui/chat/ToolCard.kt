@@ -75,10 +75,12 @@ internal fun ToolCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 30.dp)
+                .padding(horizontal = 4.dp)
+                .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
+                .padding(horizontal = 8.dp)
                 .testTag("tool_toggle_${tool.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {

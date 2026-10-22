@@ -196,67 +196,57 @@ fun DdListRow(
 ) {
     val colors = deepDeepColors()
     val alpha = if (enabled) 1f else 0.42f
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val wash by animateFloatAsState(
-        targetValue = if (pressed && enabled && onClick != null) 0.06f else 0f,
-        animationSpec = tween(
-            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
-            easing = DdMotion.EaseOut,
-        ),
-        label = "list-row-wash",
-    )
-    val clickable = if (onClick != null && enabled) {
-        Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
-    } else {
-        Modifier
-    }
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.ink.copy(alpha = wash))
-            .then(clickable)
-            .heightIn(min = 60.dp)
-            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    DdPressable(
+        onClick = onClick ?: {},
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        enabled = onClick != null && enabled,
+        contentDescription = title,
     ) {
-        if (icon != null) {
-            DdIcon(icon = icon, tint = colors.inkSecondary.copy(alpha = alpha), size = 20.dp)
-            Spacer(Modifier.width(14.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(
-                text = title,
-                style = DdType.body,
-                color = colors.ink.copy(alpha = alpha),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (subtitle != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp)
+                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                DdIcon(icon = icon, tint = colors.inkSecondary.copy(alpha = alpha), size = 20.dp)
+                Spacer(Modifier.width(14.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
-                    text = subtitle,
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary.copy(alpha = alpha),
+                    text = title,
+                    style = DdType.body,
+                    color = colors.ink.copy(alpha = alpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary.copy(alpha = alpha),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-        }
-        if (trailing != null) {
-            trailing()
-        } else if (value != null) {
-            Text(
-                text = value,
-                modifier = Modifier.padding(start = 12.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary.copy(alpha = alpha),
-                maxLines = 1,
-            )
-        }
-        if (showChevron) {
-            Spacer(Modifier.width(6.dp))
-            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = alpha), size = 16.dp)
+            if (trailing != null) {
+                trailing()
+            } else if (value != null) {
+                Text(
+                    text = value,
+                    modifier = Modifier.padding(start = 12.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary.copy(alpha = alpha),
+                    maxLines = 1,
+                )
+            }
+            if (showChevron) {
+                Spacer(Modifier.width(6.dp))
+                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = alpha), size = 16.dp)
+            }
         }
     }
 }

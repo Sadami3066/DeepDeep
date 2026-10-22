@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -87,32 +88,36 @@ internal fun ProcessSection(
         null
     }
     Column(Modifier.fillMaxWidth()) {
-        Row(
+        DdPressable(
+            onClick = { expansionOverride = if (expanded) 0 else 1 },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 32.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .padding(horizontal = 4.dp)
+                .heightIn(min = 36.dp)
                 .semantics { stateDescription = state }
-                .clickable(role = Role.Button) {
-                    expansionOverride = if (expanded) 0 else 1
-                }
                 .testTag("process_toggle_${message.id}"),
-            verticalAlignment = Alignment.CenterVertically,
+            shape = RoundedCornerShape(8.dp),
+            contentDescription = summary,
         ) {
-            Text(
-                text = summary,
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                color = colors.inkTertiary,
-            )
-            Spacer(Modifier.weight(1f))
-            Spacer(Modifier.size(2.dp))
-            DdIcon(
-                icon = DdIcons.ChevronDown,
-                modifier = Modifier.rotate(rotation),
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
-                size = 13.dp,
-            )
-            Spacer(Modifier.width(2.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = summary,
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.size(2.dp))
+                DdIcon(
+                    icon = DdIcons.ChevronDown,
+                    modifier = Modifier.rotate(rotation),
+                    tint = colors.inkTertiary.copy(alpha = 0.7f),
+                    size = 13.dp,
+                )
+                Spacer(Modifier.width(2.dp))
+            }
         }
         AnimatedVisibility(
             visible = expanded,

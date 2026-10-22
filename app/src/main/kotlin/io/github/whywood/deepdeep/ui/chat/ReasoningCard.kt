@@ -61,10 +61,12 @@ internal fun ReasoningCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 30.dp)
+                .padding(horizontal = 4.dp)
+                .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
+                .padding(horizontal = 8.dp)
                 .testTag("reasoning_toggle_${step.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {

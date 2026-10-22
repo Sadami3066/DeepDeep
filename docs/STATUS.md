@@ -18,6 +18,8 @@
 - old Assistant*/LinuxSettingsScreen removed
 - markdown upgrade: task lists, ordered start, fenced language/copy, quote bar
 - DdMenu unified topbar/session/theme menus with rounded press states; DdPressable fast press-in
+- whale-blue accent + danger red; icon-left menus; API key input margin; process row padding
+- settings rows/provider/theme/license migrated to DdPressable for tap feedback
 
 ## Checks
 

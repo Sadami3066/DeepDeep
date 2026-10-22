@@ -43,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -152,48 +153,42 @@ private fun ProviderRow(
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val wash by animateFloatAsState(
-        targetValue = if (pressed) 0.06f else 0f,
-        animationSpec = tween(
-            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
-            easing = DdMotion.EaseOut,
-        ),
-        label = "provider-row-wash",
-    )
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.ink.copy(alpha = wash))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .heightIn(min = 68.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        contentDescription = provider.name,
     ) {
-        InitialBadge(provider.name)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = provider.name,
-                style = DdType.body,
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(R.string.settings_provider_models_count, provider.modelCount),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-                maxLines = 1,
-            )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 68.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            InitialBadge(provider.name)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = provider.name,
+                    style = DdType.body,
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(R.string.settings_provider_models_count, provider.modelCount),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+            }
+            when {
+                active -> StatusPill(stringResource(R.string.settings_provider_current), active = true)
+                configured -> StatusPill(stringResource(R.string.settings_status_configured), active = false)
+            }
+            Spacer(Modifier.width(6.dp))
+            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 16.dp)
         }
-        when {
-            active -> StatusPill(stringResource(R.string.settings_provider_current), active = true)
-            configured -> StatusPill(stringResource(R.string.settings_status_configured), active = false)
-        }
-        Spacer(Modifier.width(6.dp))
-        DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 16.dp)
     }
 }
