@@ -1,0 +1,36 @@
+deepdeep Linux environment third-party notices
+==============================================
+
+Alpine Linux minirootfs 3.24.2 (aarch64)
+-----------------------------------------
+Source: https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/aarch64/alpine-minirootfs-3.24.2-aarch64.tar.gz
+SHA256: 9bf70a7f18ea44094cbb5f70c58f9af129c8214745743db0e68e5502cc2ce773
+License: Alpine Linux and its packages carry their own licenses. Package
+license metadata is in /lib/apk/db/installed; license files, when shipped,
+are under /usr/share/licenses. Alpine package sources are published by the
+Alpine Linux project. Alpine Linux is not part of deepdeep and is provided
+without warranty.
+
+PRoot
+-----
+Source: https://github.com/OpenMinis/proot at commit 1b444ee1cb2f4896c08166e9a12c905af5416f1c
+This is a fork of Termux PRoot / PRoot, licensed under GNU GPL version 2.
+The full license text is in assets/licenses/PRoot-GPL-2.0.txt.
+Build: Android NDK 28.2.13676358, target aarch64-linux-android26, talloc 2.4.2
+linked statically. The corresponding source is the repository and commit
+above, plus talloc 2.4.2 from https://download.samba.org/pub/talloc/.
+Written offer: the source is available from the public repository above and
+from the deepdeep source distribution that contains this notice.
+
+PRoot loader
+------------
+Source: Termux PRoot / OpenMinis vendored loader; shipped by OpenMinis at
+https://github.com/OpenMinis/OpenMinis/blob/b4c0661d5631ebab4d1a2e6f3fd4c805d4030a6c/src/android/app/src/main/jniLibs/arm64-v8a/libproot-loader.so
+SHA256: 44ef39c1e1a18c09f6e4c4b5d6f8bba82d30596598bd155ec162d05c5122ff04
+License: GNU GPL version 2. The loader is a PRoot component; source is the
+PRoot/Termux PRoot projects named above.
+
+No root, no kernel, no VM
+-------------------------
+This is a user-space PRoot environment. It does not provide host root, a
+separate kernel, container-grade isolation, or a complete Linux distribution.

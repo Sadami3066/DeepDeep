@@ -1,0 +1,41 @@
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+}
+
+val verifyModuleBoundaries = tasks.register("verifyModuleBoundaries") {
+    group = "verification"
+    description = "Checks app -> runtime/shell/design and core-only dependencies."
+}
+
+gradle.projectsEvaluated {
+    val allowed = mapOf(
+        ":app" to setOf(":runtime", ":shell", ":design"),
+        ":runtime" to emptySet(),
+        ":shell" to emptySet(),
+        ":design" to emptySet(),
+    )
+    val violations = subprojects.flatMap { module ->
+        val targets = allowed[module.path] ?: return@flatMap emptyList()
+        module.configurations.flatMap { configuration ->
+            configuration.dependencies.withType<org.gradle.api.artifacts.ProjectDependency>().mapNotNull { dependency ->
+                val target = dependency.path
+                when {
+                    target == module.path -> null
+                    target in targets -> null
+                    module.path == ":app" && target in setOf(":runtime", ":shell", ":design") -> null
+                    else -> "${module.path} -> $target"
+                }
+            }
+        }
+    }.distinct()
+    verifyModuleBoundaries.configure {
+        inputs.property("violations", violations)
+        doLast {
+            check(violations.isEmpty()) { "Invalid module dependencies: ${violations.joinToString()}" }
+            logger.lifecycle("Module boundaries verified: app -> runtime/shell/design")
+        }
+    }
+}
