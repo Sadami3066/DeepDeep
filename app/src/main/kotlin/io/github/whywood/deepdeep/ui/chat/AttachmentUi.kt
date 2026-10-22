@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -84,9 +85,13 @@ private sealed interface FilePreview {
 internal fun AttachmentCards(
     attachments: List<AttachmentRef>,
     onOpen: (AttachmentRef) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(
+        modifier = Modifier.widthIn(max = 560.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        maxItemsInEachRow = 3,
+    ) {
         attachments.forEach { attachment ->
             if (attachment.kind == AttachmentKind.IMAGE) {
                 ImageAttachmentCard(attachment = attachment, onOpen = onOpen)
@@ -108,14 +113,10 @@ private fun ImageAttachmentCard(
         val file = attachmentFile(context, attachment)
         value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
     }
-    val aspect = bitmap?.let { it.width.toFloat() / it.height.toFloat().coerceAtLeast(1f) } ?: (4f / 3f)
-    val widthDp = 200.dp
-    val heightDp = (widthDp.value / aspect).coerceIn(120f, 260f).dp
     DdPressable(
         onClick = { onOpen(attachment) },
         modifier = Modifier
-            .width(widthDp)
-            .height(heightDp)
+            .size(140.dp)
             .testTag("attachment_${attachment.id}"),
         shape = RoundedCornerShape(12.dp),
         background = colors.wash,
@@ -129,7 +130,7 @@ private fun ImageAttachmentCard(
                 bitmap = image.asImageBitmap(),
                 contentDescription = attachment.name,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
             )
         }
     }
@@ -226,7 +227,7 @@ private fun AttachmentPreviewCard(
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
-    val cardWidth = if (attachment.kind == AttachmentKind.TEXT) 170.dp else 150.dp
+    val cardWidth = 150.dp
     Box(
         modifier = Modifier
             .width(cardWidth)
