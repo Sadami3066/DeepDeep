@@ -13,6 +13,7 @@
     <string name="assistant_greeting_morning">早上好</string>
     <string name="assistant_hint">有什么可以帮你？</string>
     <string name="assistant_home_prompt">今天想从哪里开始？</string>
+    <string name="assistant_image_failed">图片无法加载</string>
     <string name="assistant_jump_bottom">回到底部</string>
     <string name="assistant_loading">正在载入…</string>
     <string name="assistant_menu">打开菜单</string>
@@ -25,6 +26,8 @@
     <string name="assistant_process">过程</string>
     <string name="assistant_process_reasoning">%1$d 个思考</string>
     <string name="assistant_process_tools">%1$d 个工具</string>
+    <string name="assistant_quote">引用</string>
+    <string name="assistant_quote_remove">取消引用</string>
     <string name="assistant_reasoning">思考</string>
     <string name="assistant_send">发送</string>
     <string name="assistant_settings">设置</string>

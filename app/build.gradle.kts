@@ -40,6 +40,11 @@ kotlin {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf"))
+    reportsDestination.set(layout.buildDirectory.dir("compose-reports"))
+}
+
 dependencies {
     implementation(project(":runtime"))
     implementation(project(":shell"))

@@ -36,6 +36,7 @@ Compose ChatScreen
 - SdkCredentialStore 使用 Android Keystore 加密的 ApiKeyStore，可按 provider 预加载/清除 key。
 - SessionMetaStore/SessionRepository 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
 - 会话文件读取/写入在 IO dispatcher；Chat 层注入 `ioDispatcher` 以便测试。
+- ChatViewModel 为每个已加载过的会话保留消息快照缓存；再次打开时先渲染缓存，再在后台 `open` SDK session（单 mutex 串行，epoch 丢弃过期打开），发送会等待打开完成。
 
 ## 消息模型
 
@@ -53,7 +54,9 @@ Compose ChatScreen
 - ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
 - `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
-- Markdown 解析在 `MarkdownParser`，渲染在 `ChatMarkdown`；代码块语言/复制、任务列表和引用条都在这一层扩展。
+- Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。
+- 消息长度操作在 `ChatTurn` / `ChatActions`（长按锚定菜单、引用预览在 `ChatComposer`）。
+- Compose stability config 位于 `app/compose-stability.conf`，把 runtime 模型与 UI state 声明为 stable，避免流式更新重组合全部消息。
 
 ## 存储
 

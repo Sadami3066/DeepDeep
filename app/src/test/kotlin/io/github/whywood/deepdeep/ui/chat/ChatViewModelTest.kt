@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.chat
 
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.MessageStatus
@@ -26,6 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -126,21 +128,83 @@ class ChatViewModelTest {
         assertTrue(message.steps[1] is AssistantStep.Tool)
     }
 
+    @Test
+    fun switchingBackShowsCachedMessagesBeforeSessionOpens() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 1L, "a.jsonl")
+        val second = ConversationSummary("session-b", "B", 2L, "b.jsonl")
+        val runtime = FakeRuntime().apply {
+            sessionId = "session-a"
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
+                "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
+            )
+        }
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        advanceUntilIdle()
+        assertEquals("from a", viewModel.state.value.messages.single().text)
+
+        viewModel.openConversation("session-b")
+        assertTrue(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+        assertEquals("from b", viewModel.state.value.messages.single().text)
+
+        viewModel.openConversation("session-a")
+        assertFalse(viewModel.state.value.switchingConversation)
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals("from a", viewModel.state.value.messages.single().text)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals("a.jsonl", runtime.openCalls.last())
+    }
+
+    @Test
+    fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        advanceUntilIdle()
+
+        viewModel.quote(9, "**重点**内容")
+        assertEquals("重点内容", viewModel.state.value.quote?.text)
+
+        viewModel.onInputChange("展开说说")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("> 重点内容\n\n展开说说", runtime.sent.single())
+        assertEquals("> 重点内容\n\n展开说说", viewModel.state.value.messages.first().text)
+        assertNull(viewModel.state.value.quote)
+    }
+
     private class FakeRuntime : AgentRuntime {
         private val flow = MutableSharedFlow<RuntimeEvent>(extraBufferCapacity = 64)
         val runId = "run-1"
         override val events: SharedFlow<RuntimeEvent> = flow
-        override val currentSessionId: String = "session-1"
-        override val currentSessionFile: String = "session-1.jsonl"
+        var sessionId: String = "session-1"
+        override val currentSessionId: String get() = sessionId
+        override val currentSessionFile: String get() = "$sessionId.jsonl"
         override var busy: Boolean = false
+        var sessions: List<ConversationSummary> = emptyList()
+        var histories: Map<String, List<AssistantMessage>> = emptyMap()
+        val openCalls = mutableListOf<String>()
+        val sent = mutableListOf<String>()
         override suspend fun start() = Unit
         override suspend fun ensureStarted() = Unit
-        override suspend fun send(text: String) = Unit
+        override suspend fun send(text: String) {
+            sent += text
+        }
+
         override fun stop() = Unit
         override suspend fun newChat() = Unit
-        override suspend fun open(filePath: String) = Unit
-        override suspend fun history(): List<AssistantMessage> = emptyList()
-        override suspend fun sessions(includeArchived: Boolean): List<ConversationSummary> = emptyList()
+        override suspend fun open(filePath: String) {
+            openCalls += filePath
+            sessions.firstOrNull { it.filePath == filePath }?.let { sessionId = it.id }
+        }
+
+        override suspend fun history(): List<AssistantMessage> = histories[sessionId].orEmpty()
+        override suspend fun sessions(includeArchived: Boolean): List<ConversationSummary> =
+            if (includeArchived) sessions else sessions.filter { !it.archived }
+
         override suspend fun renameSession(id: String, title: String) = Unit
         override suspend fun setSessionPinned(id: String, pinned: Boolean) = Unit
         override suspend fun setSessionArchived(id: String, archived: Boolean) = Unit

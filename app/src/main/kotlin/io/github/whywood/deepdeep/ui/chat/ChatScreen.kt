@@ -83,6 +83,8 @@ fun ChatScreen(
     onModelChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
     onToggleStep: (messageId: Long, stepId: Long) -> Unit,
+    onQuoteMessage: (Long, String) -> Unit,
+    onClearQuote: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -190,6 +192,7 @@ fun ChatScreen(
                                     onCopy = ::copyText,
                                     onShare = ::shareAnswer,
                                     onCopyOutput = ::copyText,
+                                    onQuote = onQuoteMessage,
                                 )
                             }
                         }
@@ -230,6 +233,7 @@ fun ChatScreen(
             models = state.models,
             thinkingLevel = state.thinkingLevel,
             thinkingLevels = thinkingLevels,
+            quote = state.quote,
             onValueChange = onInputChange,
             onSend = {
                 keyboard?.hide()
@@ -239,6 +243,7 @@ fun ChatScreen(
             onStop = onStop,
             onModelChange = onModelChange,
             onThinkingLevelChange = onThinkingLevelChange,
+            onClearQuote = onClearQuote,
             onOpenSettings = onOpenSettings,
             modifier = Modifier
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))

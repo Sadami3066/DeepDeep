@@ -36,6 +36,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
@@ -63,7 +64,7 @@ fun DdPressable(
     val colors = deepDeepColors()
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val wash by animateFloatAsState(
+    val wash = animateFloatAsState(
         targetValue = if (pressed && enabled) 0.07f else 0f,
         animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "press-wash",
@@ -87,7 +88,14 @@ fun DdPressable(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.matchParentSize().background(colors.ink.copy(alpha = wash)))
+        Box(
+            Modifier
+                .matchParentSize()
+                .drawBehind {
+                    val alpha = wash.value
+                    if (alpha > 0f) drawRect(colors.ink.copy(alpha = alpha))
+                },
+        )
         content()
     }
 }

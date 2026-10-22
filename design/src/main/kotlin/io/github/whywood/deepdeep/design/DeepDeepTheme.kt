@@ -39,6 +39,12 @@ data class DeepDeepColors(
     val wash: Color,
     val composer: Color,
     val scrim: Color,
+    val codeKeyword: Color,
+    val codeString: Color,
+    val codeComment: Color,
+    val codeNumber: Color,
+    val codeFunction: Color,
+    val codeType: Color,
 ) {
     val userBubble: Color get() = accentSoft
     val onUserBubble: Color get() = ink
@@ -61,6 +67,12 @@ private val Light = DeepDeepColors(
     wash = Color(0xFFEDF3F4),
     composer = Color(0xFFFFFFFF),
     scrim = Color(0x520B1220),
+    codeKeyword = Color(0xFF7C3AED),
+    codeString = Color(0xFF15803D),
+    codeComment = Color(0xFF64727E),
+    codeNumber = Color(0xFFB45309),
+    codeFunction = Color(0xFF1D4ED8),
+    codeType = Color(0xFF0E7490),
 )
 
 private val Dark = DeepDeepColors(
@@ -80,6 +92,12 @@ private val Dark = DeepDeepColors(
     wash = Color(0xFF142428),
     composer = Color(0xFF0F1A1D),
     scrim = Color(0x99000000),
+    codeKeyword = Color(0xFFC4A7F5),
+    codeString = Color(0xFF8FD694),
+    codeComment = Color(0xFF8A9BA0),
+    codeNumber = Color(0xFFE8B67A),
+    codeFunction = Color(0xFF8AB4F8),
+    codeType = Color(0xFF7FD1E0),
 )
 
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }

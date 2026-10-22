@@ -1,11 +1,19 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -20,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +36,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -37,8 +49,10 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
@@ -59,11 +73,13 @@ internal fun ChatComposer(
     models: List<ModelOption>,
     thinkingLevel: ThinkingLevel,
     thinkingLevels: List<ThinkingLevel>,
+    quote: QuotedMessage?,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
     onModelChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
+    onClearQuote: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -77,6 +93,17 @@ internal fun ChatComposer(
     val placeholder = when {
         !configured -> stringResource(R.string.assistant_configure_input)
         else -> stringResource(R.string.assistant_hint)
+    }
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    var lastQuote by remember { mutableStateOf<QuotedMessage?>(null) }
+
+    LaunchedEffect(quote) {
+        if (quote != null) {
+            lastQuote = quote
+            focusRequester.requestFocus()
+            keyboard?.show()
+        }
     }
 
     Column(modifier.fillMaxWidth()) {
@@ -93,33 +120,87 @@ internal fun ChatComposer(
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 2.dp),
                 ) {
-                    BasicTextField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp).testTag("assistant_input"),
-                        enabled = configured,
-                        textStyle = DdType.body.copy(
-                            fontSize = 16.sp,
-                            lineHeight = 25.sp,
-                            color = if (configured) colors.ink else colors.inkTertiary,
-                        ),
-                        cursorBrush = SolidColor(colors.accent),
-                        maxLines = 8,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
-                        decorationBox = { inner ->
-                            Box {
-                                if (value.isEmpty()) {
+                    Column {
+                        AnimatedVisibility(
+                            visible = quote != null,
+                            enter = fadeIn(tween(DdMotion.FAST)) +
+                                expandVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    expandFrom = Alignment.Top,
+                                ),
+                            exit = fadeOut(tween(DdMotion.FAST)) +
+                                shrinkVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    shrinkTowards = Alignment.Top,
+                                ),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp)
+                                    .testTag("assistant_quote_preview"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(Modifier.weight(1f).height(IntrinsicSize.Min)) {
+                                    Box(
+                                        Modifier
+                                            .width(2.dp)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(1.dp))
+                                            .background(colors.hairline),
+                                    )
                                     Text(
-                                        text = placeholder,
-                                        style = DdType.body.copy(fontSize = 16.sp, lineHeight = 25.sp),
+                                        text = (quote ?: lastQuote)?.text.orEmpty(),
+                                        modifier = Modifier.padding(start = 10.dp),
+                                        style = DdType.bodySmall,
                                         color = colors.inkTertiary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                inner()
+                                DdIconButton(
+                                    icon = DdIcons.Close,
+                                    onClick = onClearQuote,
+                                    contentDescription = stringResource(R.string.assistant_quote_remove),
+                                    modifier = Modifier.testTag("assistant_quote_clear"),
+                                    size = 30.dp,
+                                    iconSize = 14.dp,
+                                    tint = colors.inkTertiary,
+                                )
                             }
-                        },
-                    )
+                        }
+                        BasicTextField(
+                            value = value,
+                            onValueChange = onValueChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 42.dp)
+                                .focusRequester(focusRequester)
+                                .testTag("assistant_input"),
+                            enabled = configured,
+                            textStyle = DdType.body.copy(
+                                fontSize = 16.sp,
+                                lineHeight = 25.sp,
+                                color = if (configured) colors.ink else colors.inkTertiary,
+                            ),
+                            cursorBrush = SolidColor(colors.accent),
+                            maxLines = 8,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
+                            decorationBox = { inner ->
+                                Box {
+                                    if (value.isEmpty()) {
+                                        Text(
+                                            text = placeholder,
+                                            style = DdType.body.copy(fontSize = 16.sp, lineHeight = 25.sp),
+                                            color = colors.inkTertiary,
+                                        )
+                                    }
+                                    inner()
+                                }
+                            },
+                        )
+                    }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 6.dp),

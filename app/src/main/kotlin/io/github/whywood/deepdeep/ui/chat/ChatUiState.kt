@@ -5,11 +5,17 @@ import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
+data class QuotedMessage(
+    val messageId: Long,
+    val text: String,
+)
+
 data class ChatUiState(
     val ready: Boolean = false,
     val configured: Boolean = false,
     val messages: List<AssistantMessage> = emptyList(),
     val input: String = "",
+    val quote: QuotedMessage? = null,
     val sending: Boolean = false,
     val activity: String? = null,
     val activityStartedAt: Long? = null,

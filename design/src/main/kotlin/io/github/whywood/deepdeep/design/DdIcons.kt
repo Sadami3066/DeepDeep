@@ -65,6 +65,7 @@ object DdIcons {
     val Clock = DdIcon(R.drawable.ic_dd_clock)
     val Plug = DdIcon(R.drawable.ic_dd_plug)
     val Copy = DdIcon(R.drawable.ic_dd_copy)
+    val Quote = DdIcon(R.drawable.ic_dd_quote)
     val Share = DdIcon(R.drawable.ic_dd_share)
     val Refresh = DdIcon(R.drawable.ic_dd_refresh)
     val Volume = DdIcon(R.drawable.ic_dd_volume)

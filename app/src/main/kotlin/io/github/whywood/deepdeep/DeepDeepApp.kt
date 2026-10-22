@@ -120,6 +120,8 @@ internal fun DeepDeepApp(
                     onModelChange = chatViewModel::setModel,
                     onThinkingLevelChange = chatViewModel::setThinkingLevel,
                     onToggleStep = chatViewModel::toggleStep,
+                    onQuoteMessage = chatViewModel::quote,
+                    onClearQuote = chatViewModel::clearQuote,
                 )
 
                 AppDestination.Settings -> SettingsScreen(
