@@ -4,7 +4,7 @@
 
 ```
 :app
- ├─ :runtime   pi2kotlin 适配、DeepSeek、会话、历史、Key
+ ├─ :runtime   pi2kotlin 适配、事件、Provider 目录、会话元数据、Key
  ├─ :shell     Alpine/proot、LinuxShellExecutor
  └─ :design    Compose 主题与组件
 ```
@@ -14,32 +14,47 @@
 ## 运行时
 
 ```
-Compose UI
+Compose ChatScreen
+  → ChatViewModel
+  → AgentRuntime interface
   → AgentRuntimeHost
   → PiSessionEngine
-  → createAgentSession(
-        cwd = filesDir/workspace,
-        agentDir = filesDir/agent,
-        model = deepseek/<model>,
-        tools = pi 原生文件工具 + bash,
-        credentials = SdkCredentialStore
-    )
-  → DeepSeek
-  → RuntimeEvent / StateFlow
+  → createAgentSession(...)
+  → provider/model
+  → RuntimeEvent(runId, ...)
+  → ChatUiState
 ```
 
-`bash` 使用 pi2kotlin 自带的 `bashTool`，只把 `ShellExecutor` 换成 `LinuxShellExecutor`；命令在 Alpine `/workspace` 中执行。
+关键点：
+
+- `AgentRuntime` 是接口，`AgentRuntimeHost` 实现；Chat 层可替换/测试。
+- 每次发送生成 `runId`；流式事件带 runId，UI 丢弃旧 run 的迟到事件。
+- `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
+- 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
+- `ProviderCatalog` 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
+- `ModelConfigStore` 保存 provider/model/thinking；聊天 composer 切换模型和思考。
+- `SdkCredentialStore` 使用 Android Keystore 加密的 `ApiKeyStore`，可按 provider 预加载/清除 key。
+- `SessionMetaStore`/`SessionRepository` 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
+
+## UI
+
+- ChatScreen：Claude 式顶栏、左侧用户气泡、全宽 assistant、浮动 composer。
+- 过程区：DSH 式过程摘要 + reasoning/tool 卡片；运行中默认展开，完成后可折叠。
+- ChatScrollController：按布局实际 overflow 跟随底部，用户上拖后暂停并显示“回到底部”。
+- SettingsScreen：Claude 式分组卡；占位项有可见反馈；Provider/运行环境/颜色模式/关于是真实入口。
+- ProviderList/ProviderDetail：42 家 Provider、搜索、API Key 存储、OAuth 占位、设为当前 Provider。
+- Drawer：顶部功能项带图标；历史项纯文字，置顶/最近分区；长按重命名/置顶/归档/删除；归档页。
 
 ## 存储
 
 ```
 filesDir/
   workspace/        cwd，同时是 Alpine /workspace
-  agent/            agentDir，SDK sessions/skills/AGENTS.md
+  agent/            agentDir，SDK sessions/skills
   linux/rootfs/     Alpine rootfs
 ```
 
-API Key 由 Android Keystore 加密后存 DataStore；会话由 pi2kotlin 写入 JSONL。
+API Key、模型配置、会话元数据在 DataStore；会话正文由 pi2kotlin 写入 JSONL。
 
 ## 工具
 

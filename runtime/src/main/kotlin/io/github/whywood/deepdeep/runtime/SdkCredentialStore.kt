@@ -23,6 +23,11 @@ class SdkCredentialStore(
         }
     }
 
+    suspend fun preloadAll() {
+        cache.clear()
+        cache.putAll(apiKeys.readAll())
+    }
+
     fun invalidate(providerId: String) {
         cache.remove(providerId)
     }

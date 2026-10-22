@@ -51,6 +51,16 @@ class ApiKeyStore(context: Context) {
         decrypt(encoded)
     }
 
+    suspend fun readAll(): Map<String, String> = withContext(Dispatchers.IO) {
+        val values = store.data.first()
+        values.asMap().entries.mapNotNull { (preference, value) ->
+            if (!preference.name.startsWith(KEY_PREFIX)) return@mapNotNull null
+            val providerId = preference.name.removePrefix(KEY_PREFIX)
+            val apiKey = decrypt(value as String)
+            if (apiKey.isNullOrBlank()) null else providerId to apiKey
+        }.toMap()
+    }
+
     suspend fun save(providerId: String, apiKey: String?) = withContext(Dispatchers.IO) {
         val encrypted = apiKey?.trim()?.takeIf { it.isNotEmpty() }?.let(::encrypt)
         store.edit { values ->

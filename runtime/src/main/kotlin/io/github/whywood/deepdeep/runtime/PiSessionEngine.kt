@@ -34,6 +34,7 @@ class PiSessionEngine(
     agentDir: File,
     private val credentials: CredentialStore,
     private val shellExecutor: ShellExecutor?,
+    private val providers: ProviderCatalog,
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -43,8 +44,8 @@ class PiSessionEngine(
     private val transport = okHttpTransport()
 
     suspend fun createSession(file: Path?, config: ModelConfig, shellEnabled: Boolean = true): AgentSession {
-        val model = DeepSeekModels.model(config.modelId)
-        val modelId = model?.id ?: DeepSeekModels.defaultModelId()
+        val resolved = providers.resolveConfig(config)
+        val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
         val tools = defaultCodingTools(
             cwd = cwd,
@@ -58,13 +59,15 @@ class PiSessionEngine(
                 agentDir = agentDirectory,
                 transport = transport,
                 fs = fs,
-                model = DeepSeekModels.modelReference(modelId),
-                thinkingLevel = config.thinkingLevel.runtimeValue(),
+                model = providers.modelReference(resolved.providerId, modelId),
+                thinkingLevel = resolved.thinkingLevel.runtimeValue(),
                 sessionFile = file,
                 tools = tools,
                 shellExecutor = activeShell,
                 hooks = CodingHooks(
-                    extraSystemPromptSections = { mapOf("deepdeep_environment" to environmentPrompt(modelId)) },
+                    extraSystemPromptSections = {
+                        mapOf("deepdeep_environment" to environmentPrompt(resolved.providerId, modelId))
+                    },
                 ),
                 credentials = credentials,
                 projectTrusted = true,
@@ -77,6 +80,10 @@ class PiSessionEngine(
     }
 
     fun history(session: AgentSession): List<AssistantMessage> = mapHistory(session.messages)
+
+    suspend fun deleteSessionFile(filePath: String) {
+        runCatching { fs.delete(filePath.toPath()) }
+    }
 
     fun titleFor(text: String): String {
         val normalized = text.trim().replace(Regex("\\s+"), " ")
@@ -95,11 +102,11 @@ class PiSessionEngine(
         OffsetDateTime.parse(value).toInstant().toEpochMilli()
     }.getOrDefault(0L)
 
-    private fun environmentPrompt(modelId: String): String = buildString {
+    private fun environmentPrompt(providerId: String, modelId: String): String = buildString {
         appendLine("<deepdeep_environment>")
         appendLine("你是 deepdeep，一个运行在 Android 手机上的个人 agent。")
         appendLine("当前时间：${OffsetDateTime.now()}。")
-        appendLine("模型：$modelId。")
+        appendLine("模型：$providerId/$modelId。")
         appendLine("工作区：$cwd。")
         appendLine("bash 工具运行在 Alpine Linux（proot）里，工作目录是 /workspace，它和宿主工作区是同一个目录。")
         appendLine("pi 的文件工具（read/write/edit/ls/grep/find）直接操作宿主工作区。")
@@ -148,7 +155,15 @@ class PiSessionEngine(
                         }
                     }
                     if (text.isNotBlank() || steps.isNotEmpty()) {
-                        result += AssistantMessage(messageId++, AssistantRole.ASSISTANT, text, steps = steps)
+                        result += AssistantMessage(
+                            id = messageId++,
+                            role = AssistantRole.ASSISTANT,
+                            text = text,
+                            steps = steps,
+                            status = MessageStatus.DONE,
+                            startedAt = message.timestamp,
+                            finishedAt = message.timestamp,
+                        )
                     }
                 }
 
@@ -171,6 +186,9 @@ class PiSessionEngine(
                             role = AssistantRole.ASSISTANT,
                             text = "",
                             steps = listOf(AssistantStep.Tool(trace)),
+                            status = MessageStatus.DONE,
+                            startedAt = message.timestamp,
+                            finishedAt = message.timestamp,
                         )
                     } else {
                         val updated = existing.copy(

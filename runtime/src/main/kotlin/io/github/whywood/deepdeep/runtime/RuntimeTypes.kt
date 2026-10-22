@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.Model
-import dev.pi.ai.ModelCatalog
+import kotlinx.coroutines.flow.SharedFlow
 
 enum class ThinkingLevel {
     OFF,
@@ -11,9 +10,19 @@ enum class ThinkingLevel {
 }
 
 data class ModelOption(
+    val providerId: String,
     val id: String,
     val displayName: String,
     val thinkingLevels: List<ThinkingLevel>,
+)
+
+data class ProviderSummary(
+    val id: String,
+    val name: String,
+    val modelCount: Int,
+    val baseUrl: String?,
+    val hasOAuth: Boolean,
+    val supportsApiKey: Boolean,
 )
 
 data class ConversationSummary(
@@ -21,11 +30,20 @@ data class ConversationSummary(
     val title: String,
     val updatedAt: Long,
     val filePath: String,
+    val pinned: Boolean = false,
+    val archived: Boolean = false,
 )
 
 enum class AssistantRole {
     USER,
     ASSISTANT,
+}
+
+enum class MessageStatus {
+    RUNNING,
+    DONE,
+    STOPPED,
+    FAILED,
 }
 
 sealed interface AssistantStep {
@@ -61,6 +79,8 @@ data class ToolTrace(
     val error: String? = null,
     val expanded: Boolean = false,
     val toolCallId: String = "",
+    val startedAt: Long = 0,
+    val durationMs: Long? = null,
 )
 
 data class AssistantMessage(
@@ -69,67 +89,130 @@ data class AssistantMessage(
     val text: String,
     val streaming: Boolean = false,
     val steps: List<AssistantStep> = emptyList(),
+    val status: MessageStatus = MessageStatus.DONE,
+    val startedAt: Long = 0,
+    val finishedAt: Long? = null,
+    val runId: String = "",
 )
 
-sealed interface RuntimeEvent {
-    data class TextDelta(val text: String) : RuntimeEvent
+enum class RunStatus {
+    DONE,
+    STOPPED,
+    FAILED,
+}
 
-    data class ReasoningDelta(val text: String) : RuntimeEvent
+sealed interface RuntimeEvent {
+    val runId: String
+
+    data class RunStarted(
+        override val runId: String,
+        val startedAt: Long,
+    ) : RuntimeEvent
+
+    data class ActivityChanged(
+        override val runId: String,
+        val activity: String?,
+    ) : RuntimeEvent
+
+    data class TextDelta(
+        override val runId: String,
+        val text: String,
+    ) : RuntimeEvent
+
+    data class ReasoningDelta(
+        override val runId: String,
+        val text: String,
+    ) : RuntimeEvent
 
     data class ToolStarted(
-        val toolName: String,
+        override val runId: String,
+        val callId: String,
+        val name: String,
         val arguments: Map<String, String>,
-        val toolCallId: String,
+        val startedAt: Long,
     ) : RuntimeEvent
 
     data class ToolFinished(
-        val toolName: String,
+        override val runId: String,
+        val callId: String,
+        val name: String,
         val result: String,
         val isError: Boolean,
-        val toolCallId: String,
+        val durationMs: Long?,
     ) : RuntimeEvent
 
-    data class RunFinished(val text: String) : RuntimeEvent
+    data class RunFinished(
+        override val runId: String,
+        val text: String,
+        val status: RunStatus,
+        val finishedAt: Long,
+    ) : RuntimeEvent
 
-    data object RunStopped : RuntimeEvent
+    data class RunFailed(
+        override val runId: String,
+        val message: String,
+    ) : RuntimeEvent
 
-    data class RunFailed(val message: String) : RuntimeEvent
-
-    data class Status(val message: String) : RuntimeEvent
+    data class SessionListChanged(
+        override val runId: String = "",
+    ) : RuntimeEvent
 }
 
-object DeepSeekModels {
-    const val PROVIDER_ID = "deepseek"
+interface ProviderDirectory {
+    val summaries: List<ProviderSummary>
 
-    fun options(): List<ModelOption> = ModelCatalog.findByProvider(PROVIDER_ID)
-        .filterIsInstance<Model>()
-        .map { model ->
-            ModelOption(
-                id = model.id,
-                displayName = model.name,
-                thinkingLevels = thinkingLevels(model),
-            )
-        }
+    fun summary(providerId: String): ProviderSummary?
 
-    fun defaultModelId(): String {
-        val models = options()
-        return models.firstOrNull { it.id == "deepseek-v4-flash" }?.id
-            ?: models.firstOrNull()?.id
-            ?: error("No DeepSeek model in catalog")
-    }
+    fun models(providerId: String): List<ModelOption>
 
-    fun model(modelId: String): Model? = ModelCatalog.findChat(PROVIDER_ID, modelId)
+    fun resolveConfig(config: ModelConfig): ModelConfig
 
-    fun modelReference(modelId: String): String = "$PROVIDER_ID/${modelId.ifBlank { defaultModelId() }}"
+    fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model?
 
-    private fun thinkingLevels(model: Model): List<ThinkingLevel> {
-        if (!model.reasoning) return listOf(ThinkingLevel.OFF)
-        val levels = model.thinkingLevelMap.orEmpty().filterValues { it != null }.keys
-        return buildList {
-            add(ThinkingLevel.OFF)
-            if ("low" in levels) add(ThinkingLevel.LOW)
-            if ("medium" in levels) add(ThinkingLevel.MEDIUM)
-            if ("high" in levels) add(ThinkingLevel.HIGH)
-        }.distinct()
-    }
+    fun modelReference(providerId: String, modelId: String): String
+}
+
+interface ModelSettings {
+    val config: kotlinx.coroutines.flow.Flow<ModelConfig>
+
+    suspend fun read(): ModelConfig
+
+    suspend fun save(config: ModelConfig)
+}
+
+interface AgentRuntime {
+    val events: SharedFlow<RuntimeEvent>
+    val currentSessionId: String?
+    val currentSessionFile: String?
+    val busy: Boolean
+
+    suspend fun start()
+
+    suspend fun ensureStarted()
+
+    suspend fun send(text: String)
+
+    fun stop()
+
+    suspend fun newChat()
+
+    suspend fun open(filePath: String)
+
+    suspend fun history(): List<AssistantMessage>
+
+    suspend fun sessions(includeArchived: Boolean = false): List<ConversationSummary>
+
+    suspend fun renameSession(id: String, title: String)
+
+    suspend fun setSessionPinned(id: String, pinned: Boolean)
+
+    suspend fun setSessionArchived(id: String, archived: Boolean)
+
+    suspend fun deleteSession(id: String)
+
+    suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel)
+
+    suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel)
+
+    suspend fun currentConfig(): ModelConfig
 }

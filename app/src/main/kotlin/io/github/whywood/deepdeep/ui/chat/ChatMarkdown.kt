@@ -32,7 +32,7 @@ import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 @Composable
-internal fun AssistantMarkdown(text: String, modifier: Modifier = Modifier) {
+internal fun ChatMarkdown(text: String, modifier: Modifier = Modifier) {
     val colors = deepDeepColors()
     val blocks = remember(text) { parseMarkdown(text) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {

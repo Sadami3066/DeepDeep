@@ -1,14 +1,17 @@
 package io.github.whywood.deepdeep
 
 import android.content.Context
+import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
-import io.github.whywood.deepdeep.runtime.DeepSeekModels
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
+import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
+import io.github.whywood.deepdeep.runtime.SessionMetaStore
+import io.github.whywood.deepdeep.runtime.SessionRepository
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
@@ -30,12 +33,21 @@ class AppGraph(context: Context) {
     val linuxEnvironment = LinuxEnvironment(appContext, workspace)
     val shellExecutor = LinuxShellExecutor(linuxEnvironment)
     val credentials = SdkCredentialStore(apiKeyStore, scope)
-    val engine = PiSessionEngine(workspace, agentDir, credentials, shellExecutor)
-    val host = AgentRuntimeHost(engine, modelConfigStore) { linuxSettings.isEnabled() }
+    val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
+    val sessionMetaStore = SessionMetaStore(appContext)
+    val engine = PiSessionEngine(workspace, agentDir, credentials, shellExecutor, providerCatalog)
+    val sessionRepository = SessionRepository(engine, sessionMetaStore)
+    val host = AgentRuntimeHost(
+        engine = engine,
+        modelConfigStore = modelConfigStore,
+        sessionRepository = sessionRepository,
+        providers = providerCatalog,
+        shellEnabled = { linuxSettings.isEnabled() },
+    )
 
     suspend fun prepare() {
         importDebugKey()
-        credentials.preload(DeepSeekModels.PROVIDER_ID)
+        credentials.preloadAll()
     }
 
     private suspend fun importDebugKey() {
@@ -45,7 +57,7 @@ class AppGraph(context: Context) {
         if (!keyFile.isFile) return
         val key = keyFile.readText().trim()
         if (key.isNotEmpty()) {
-            apiKeyStore.save(DeepSeekModels.PROVIDER_ID, key)
+            apiKeyStore.save(ProviderCatalog.DEFAULT_PROVIDER_ID, key)
         }
         keyFile.delete()
         directory.delete()

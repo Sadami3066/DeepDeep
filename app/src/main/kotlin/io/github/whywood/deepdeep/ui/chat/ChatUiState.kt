@@ -2,29 +2,27 @@ package io.github.whywood.deepdeep.ui.chat
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
-data class AssistantUiState(
+data class ChatUiState(
+    val ready: Boolean = false,
+    val configured: Boolean = false,
     val messages: List<AssistantMessage> = emptyList(),
     val input: String = "",
     val sending: Boolean = false,
+    val activity: String? = null,
+    val activityStartedAt: Long? = null,
     val error: String? = null,
-    val modelOverride: String? = null,
+    val providerId: String = "",
+    val modelId: String = "",
+    val modelLabel: String = "",
     val thinkingLevel: ThinkingLevel = ThinkingLevel.OFF,
+    val models: List<ModelOption> = emptyList(),
     val conversationId: String? = null,
     val conversationTitle: String = "",
     val conversations: List<ConversationSummary> = emptyList(),
+    val archivedConversations: List<ConversationSummary> = emptyList(),
+    val archivedCount: Int = 0,
     val historyLoaded: Boolean = false,
 )
-
-fun AssistantMessage.answerText(): String {
-    val body = text
-        .removeSuffix("\n\n$STOPPED_MARKER")
-        .removeSuffix(STOPPED_MARKER)
-        .trim()
-    return body.takeUnless { it == EMPTY_REPLY || it == NO_REPLY_MARKER }.orEmpty()
-}
-
-const val STOPPED_MARKER = "（已停止）"
-const val EMPTY_REPLY = "没有收到回复，请重试。"
-const val NO_REPLY_MARKER = "（没有收到回复）"

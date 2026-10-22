@@ -1,14 +1,11 @@
 package io.github.whywood.deepdeep.ui.settings
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,29 +16,24 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
@@ -51,16 +43,11 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPrimaryButton
-import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
-import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.DeepSeekModels
-import io.github.whywood.deepdeep.runtime.ModelOption
-import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 
 private const val INSTRUMENT_SANS_URL = "https://github.com/Instrument/instrument-sans"
@@ -69,39 +56,45 @@ private const val LUCIDE_URL = "https://github.com/lucide-icons/lucide"
 
 @Composable
 fun SettingsScreen(
+    userName: String,
+    providerName: String?,
+    modelName: String?,
+    configured: Boolean,
     themeMode: ThemeMode,
-    hasApiKey: Boolean,
-    modelId: String,
-    thinkingLevel: ThinkingLevel,
     linuxState: LinuxInstallState,
     linuxSupported: Boolean,
     linuxEnabled: Boolean,
     versionName: String,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onApiKeySave: (String) -> Unit,
-    onApiKeyClear: () -> Unit,
-    onModelIdChange: (String) -> Unit,
-    onThinkingLevelChange: (ThinkingLevel) -> Unit,
+    onOpenProviders: () -> Unit,
     onLinuxInstall: () -> Unit,
     onLinuxReset: () -> Unit,
     onLinuxEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val models = remember { DeepSeekModels.options() }
-    val selectedModel = models.firstOrNull { it.id == modelId } ?: models.firstOrNull()
-    val thinkingLevels = selectedModel?.thinkingLevels.orEmpty()
     var showThemeSheet by remember { mutableStateOf(false) }
-    var showModelSheet by remember { mutableStateOf(false) }
-    var showThinkingSheet by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var placeholder by remember { mutableStateOf<String?>(null) }
+    var linuxExpanded by rememberSaveable { mutableStateOf(false) }
     val themeLabel = stringResource(
         when (themeMode) {
             ThemeMode.SYSTEM -> R.string.settings_theme_system
             ThemeMode.LIGHT -> R.string.settings_theme_light
             ThemeMode.DARK -> R.string.settings_theme_dark
         },
+    )
+    val activeModel = listOfNotNull(
+        providerName?.takeIf { it.isNotBlank() },
+        modelName?.takeIf { it.isNotBlank() },
+    ).joinToString(" · ").ifBlank { stringResource(R.string.settings_account_no_model) }
+    val providerLabel = providerName?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.settings_status_unconfigured)
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (linuxExpanded) 180f else 0f,
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "linux-chevron",
     )
 
     Column(
@@ -135,61 +128,152 @@ fun SettingsScreen(
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(28.dp))
-
-            SettingsGroup(label = stringResource(R.string.settings_group_model)) {
-                ApiKeyField(
-                    hasApiKey = hasApiKey,
-                    onSave = onApiKeySave,
-                    onClear = onApiKeyClear,
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.settings_model),
-                    value = selectedModel?.displayName ?: modelId,
-                    onClick = { showModelSheet = true },
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_model"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Brain,
-                    title = stringResource(R.string.settings_thinking),
-                    value = thinkingLabel(thinkingLevel),
-                    enabled = thinkingLevels.size > 1,
-                    onClick = if (thinkingLevels.size > 1) {
-                        { showThinkingSheet = true }
-                    } else {
-                        null
-                    },
-                    showChevron = thinkingLevels.size > 1,
-                    modifier = Modifier.testTag("settings_thinking"),
-                )
-            }
-
-            Spacer(Modifier.height(32.dp))
-            LinuxSettingsScreen(
-                state = linuxState,
-                supported = linuxSupported,
-                enabled = linuxEnabled,
-                onInstall = onLinuxInstall,
-                onReset = onLinuxReset,
-                onEnabledChange = onLinuxEnabledChange,
+            Spacer(Modifier.height(22.dp))
+            AccountCard(
+                userName = userName,
+                activeModel = activeModel,
+                configured = configured,
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = stringResource(R.string.settings_group_account)) {
+                PlaceholderRow(
+                    icon = DdIcons.Settings,
+                    title = R.string.settings_profile,
+                    subtitle = R.string.settings_profile_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.File,
+                    title = R.string.settings_billing,
+                    subtitle = R.string.settings_billing_subtitle,
+                ) { placeholder = it }
+            }
+
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = stringResource(R.string.settings_group_features)) {
+                PlaceholderRow(
+                    icon = DdIcons.Sparkles,
+                    title = R.string.settings_features,
+                    subtitle = R.string.settings_features_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Plug,
+                    title = R.string.settings_connectors,
+                    subtitle = R.string.settings_connectors_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Shield,
+                    title = R.string.settings_permissions,
+                    subtitle = R.string.settings_permissions_subtitle,
+                ) { placeholder = it }
+            }
+
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = stringResource(R.string.settings_group_model)) {
+                DdListRow(
+                    icon = DdIcons.Globe,
+                    title = stringResource(R.string.settings_provider),
+                    subtitle = stringResource(R.string.settings_provider_subtitle),
+                    value = providerLabel,
+                    onClick = onOpenProviders,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_provider"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Terminal,
+                    title = stringResource(R.string.settings_environment),
+                    subtitle = linuxStatusLabel(linuxState),
+                    onClick = { linuxExpanded = !linuxExpanded },
+                    trailing = {
+                        DdIcon(
+                            icon = DdIcons.ChevronDown,
+                            tint = colors.inkTertiary,
+                            modifier = Modifier.rotate(chevronRotation),
+                            size = 16.dp,
+                        )
+                    },
+                    modifier = Modifier.testTag("settings_environment"),
+                )
+                AnimatedVisibility(visible = linuxExpanded) {
+                    Column(Modifier.padding(top = 4.dp, bottom = 12.dp)) {
+                        LinuxEnvironmentSection(
+                            state = linuxState,
+                            supported = linuxSupported,
+                            enabled = linuxEnabled,
+                            onInstall = onLinuxInstall,
+                            onReset = onLinuxReset,
+                            onEnabledChange = onLinuxEnabledChange,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
             SettingsGroup(label = stringResource(R.string.settings_group_appearance)) {
                 DdListRow(
                     icon = DdIcons.Moon,
                     title = stringResource(R.string.settings_theme),
+                    subtitle = stringResource(R.string.settings_theme_subtitle),
                     value = themeLabel,
                     onClick = { showThemeSheet = true },
                     showChevron = true,
+                    modifier = Modifier.testTag("settings_theme"),
                 )
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Font,
+                    title = R.string.settings_font,
+                    subtitle = R.string.settings_font_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Globe,
+                    title = R.string.settings_language,
+                    subtitle = R.string.settings_language_subtitle,
+                ) { placeholder = it }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = stringResource(R.string.settings_group_app)) {
+                PlaceholderRow(
+                    icon = DdIcons.Phone,
+                    title = R.string.settings_haptics,
+                    subtitle = R.string.settings_haptics_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Volume,
+                    title = R.string.settings_notifications,
+                    subtitle = R.string.settings_notifications_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Clock,
+                    title = R.string.settings_focus,
+                    subtitle = R.string.settings_focus_subtitle,
+                ) { placeholder = it }
+            }
+
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = stringResource(R.string.settings_group_privacy)) {
+                PlaceholderRow(
+                    icon = DdIcons.Shield,
+                    title = R.string.settings_privacy,
+                    subtitle = R.string.settings_privacy_subtitle,
+                ) { placeholder = it }
+                DdHairline()
+                PlaceholderRow(
+                    icon = DdIcons.Share,
+                    title = R.string.settings_sharing,
+                    subtitle = R.string.settings_sharing_subtitle,
+                ) { placeholder = it }
+            }
+
+            Spacer(Modifier.height(28.dp))
             SettingsGroup(label = stringResource(R.string.settings_group_about)) {
                 DdListRow(
                     icon = DdIcons.Info,
@@ -200,9 +284,19 @@ fun SettingsScreen(
                 DdListRow(
                     icon = DdIcons.File,
                     title = stringResource(R.string.settings_license),
+                    subtitle = stringResource(R.string.settings_license_subtitle),
                     onClick = { showLicenses = true },
                     showChevron = true,
                 )
+            }
+
+            Spacer(Modifier.height(28.dp))
+            SettingsGroup(label = null) {
+                PlaceholderRow(
+                    icon = DdIcons.ArrowLeft,
+                    title = R.string.settings_sign_out,
+                    subtitle = R.string.settings_sign_out_subtitle,
+                ) { placeholder = it }
             }
             Spacer(Modifier.height(48.dp))
         }
@@ -219,172 +313,66 @@ fun SettingsScreen(
         )
     }
 
-    if (showModelSheet) {
-        ModelSheet(
-            models = models,
-            selectedModelId = selectedModel?.id,
-            onSelect = {
-                onModelIdChange(it)
-                showModelSheet = false
-            },
-            onClose = { showModelSheet = false },
-        )
-    }
-
-    if (showThinkingSheet) {
-        ThinkingSheet(
-            levels = thinkingLevels,
-            selected = thinkingLevel,
-            onSelect = {
-                onThinkingLevelChange(it)
-                showThinkingSheet = false
-            },
-            onClose = { showThinkingSheet = false },
-        )
-    }
-
     if (showLicenses) {
         LicenseSheet(onClose = { showLicenses = false })
     }
-}
 
-@Composable
-private fun SettingsGroup(label: String, content: @Composable () -> Unit) {
-    Column {
-        DdSectionLabel(label)
-        Spacer(Modifier.height(10.dp))
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(deepDeepColors().surface)
-                .padding(horizontal = 16.dp),
-        ) {
-            content()
-        }
+    placeholder?.let { title ->
+        PlaceholderSheet(title = title, onClose = { placeholder = null })
     }
 }
 
 @Composable
-private fun ApiKeyField(
-    hasApiKey: Boolean,
-    onSave: (String) -> Unit,
-    onClear: () -> Unit,
+private fun AccountCard(
+    userName: String,
+    activeModel: String,
+    configured: Boolean,
 ) {
     val colors = deepDeepColors()
-    var draft by remember { mutableStateOf("") }
-    var showRequired by remember { mutableStateOf(false) }
-
-    fun submit() {
-        val key = draft.trim()
-        if (key.isEmpty()) {
-            showRequired = !hasApiKey
-            return
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(colors.surface)
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            InitialBadge(userName, size = 48.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = userName,
+                    style = DdType.body,
+                    color = colors.ink,
+                    maxLines = 1,
+                )
+                Text(
+                    text = stringResource(R.string.settings_account_local),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+            }
+            StatusPill(
+                text = stringResource(
+                    if (configured) R.string.settings_status_configured else R.string.settings_status_unconfigured,
+                ),
+                active = configured,
+            )
         }
-        showRequired = false
-        onSave(key)
-        draft = ""
-    }
-
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp)) {
+        Spacer(Modifier.height(16.dp))
+        DdHairline()
+        Spacer(Modifier.height(14.dp))
         Text(
-            text = stringResource(R.string.settings_api_key_label),
+            text = stringResource(R.string.settings_account_current_model),
             style = DdType.micro,
             color = colors.inkTertiary,
         )
-        Spacer(Modifier.height(8.dp))
-        SettingsTextField(
-            value = draft,
-            onValueChange = {
-                draft = it
-                showRequired = false
-            },
-            placeholder = stringResource(
-                if (hasApiKey) R.string.settings_api_key_saved_placeholder else R.string.settings_api_key_hint,
-            ),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done,
-            ),
-            visualTransformation = PasswordVisualTransformation(),
-            onDone = { submit() },
-        )
-        if (showRequired) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_api_key_required),
-                style = DdType.bodySmall,
-                color = colors.inkSecondary,
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            DdTextAction(
-                text = stringResource(R.string.settings_api_key_save),
-                onClick = { submit() },
-                enabled = draft.isNotBlank(),
-            )
-            Spacer(Modifier.weight(1f))
-            if (hasApiKey) {
-                DdTextAction(
-                    text = stringResource(R.string.settings_api_key_clear),
-                    onClick = {
-                        draft = ""
-                        showRequired = false
-                        onClear()
-                    },
-                    color = colors.inkTertiary,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardOptions: KeyboardOptions,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    onDone: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val border by animateColorAsState(
-        targetValue = if (focused) colors.accent else colors.hairline,
-        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-        label = "settings-field-border",
-    )
-    val shape = RoundedCornerShape(14.dp)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(colors.wash)
-            .border(1.dp, border, shape)
-            .padding(horizontal = 16.dp, vertical = 15.dp),
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = DdType.body.copy(color = colors.ink),
-            cursorBrush = SolidColor(colors.accent),
-            singleLine = true,
-            keyboardOptions = keyboardOptions,
-            keyboardActions = KeyboardActions(onDone = { onDone() }),
-            visualTransformation = visualTransformation,
-            interactionSource = interaction,
-            decorationBox = { inner ->
-                Box {
-                    if (value.isEmpty()) {
-                        Text(text = placeholder, style = DdType.body, color = colors.inkTertiary)
-                    }
-                    inner()
-                }
-            },
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = activeModel,
+            style = DdType.body,
+            color = colors.ink,
         )
     }
 }
@@ -417,65 +405,6 @@ private fun ThemeModeSheet(
                     },
                 )
                 if (index != ThemeMode.entries.lastIndex) DdHairline()
-            }
-            Spacer(Modifier.height(28.dp))
-        }
-    }
-}
-
-@Composable
-private fun ModelSheet(
-    models: List<ModelOption>,
-    selectedModelId: String?,
-    onSelect: (String) -> Unit,
-    onClose: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdSheet(onDismiss = onClose) {
-        DdSheetHeader(stringResource(R.string.settings_model_title), onClose)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-            Spacer(Modifier.height(8.dp))
-            models.forEachIndexed { index, model ->
-                DdListRow(
-                    title = model.displayName,
-                    subtitle = model.id,
-                    onClick = { onSelect(model.id) },
-                    trailing = {
-                        if (model.id == selectedModelId) {
-                            DdIcon(DdIcons.Check, tint = colors.accent, size = 20.dp)
-                        }
-                    },
-                )
-                if (index != models.lastIndex) DdHairline()
-            }
-            Spacer(Modifier.height(28.dp))
-        }
-    }
-}
-
-@Composable
-private fun ThinkingSheet(
-    levels: List<ThinkingLevel>,
-    selected: ThinkingLevel,
-    onSelect: (ThinkingLevel) -> Unit,
-    onClose: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdSheet(onDismiss = onClose) {
-        DdSheetHeader(stringResource(R.string.settings_thinking_title), onClose)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-            Spacer(Modifier.height(8.dp))
-            levels.forEachIndexed { index, level ->
-                DdListRow(
-                    title = thinkingLabel(level),
-                    onClick = { onSelect(level) },
-                    trailing = {
-                        if (level == selected) {
-                            DdIcon(DdIcons.Check, tint = colors.accent, size = 20.dp)
-                        }
-                    },
-                )
-                if (index != levels.lastIndex) DdHairline()
             }
             Spacer(Modifier.height(28.dp))
         }
@@ -539,11 +468,9 @@ private fun LicenseRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun thinkingLabel(level: ThinkingLevel): String = stringResource(
-    when (level) {
-        ThinkingLevel.OFF -> R.string.settings_thinking_off
-        ThinkingLevel.LOW -> R.string.settings_thinking_low
-        ThinkingLevel.MEDIUM -> R.string.settings_thinking_medium
-        ThinkingLevel.HIGH -> R.string.settings_thinking_high
-    },
-)
+private fun linuxStatusLabel(state: LinuxInstallState): String = when (state) {
+    LinuxInstallState.NotInstalled -> stringResource(R.string.settings_linux_status_not_installed)
+    LinuxInstallState.Installing -> stringResource(R.string.settings_linux_status_installing)
+    is LinuxInstallState.Installed -> stringResource(R.string.settings_linux_status_installed, state.version)
+    is LinuxInstallState.Failed -> stringResource(R.string.settings_linux_status_failed, state.message)
+}

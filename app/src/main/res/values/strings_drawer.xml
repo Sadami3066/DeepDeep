@@ -1,0 +1,28 @@
+<resources>
+    <string name="drawer_nav_chat">聊天</string>
+    <string name="drawer_nav_archived">已归档</string>
+    <string name="drawer_nav_new_chat">新建对话</string>
+    <string name="drawer_pinned_section">置顶</string>
+    <string name="drawer_history_section">历史对话</string>
+    <string name="drawer_history_empty">还没有对话</string>
+    <string name="drawer_history_loading">正在读取…</string>
+    <string name="drawer_account_hint">设置</string>
+    <string name="drawer_archived_count">%1$d</string>
+    <string name="drawer_archived_title">已归档</string>
+    <string name="drawer_archived_empty">还没有已归档的对话</string>
+    <string name="drawer_back">返回</string>
+    <string name="drawer_close">关闭</string>
+    <string name="drawer_action_rename">重命名</string>
+    <string name="drawer_action_pin">置顶</string>
+    <string name="drawer_action_unpin">取消置顶</string>
+    <string name="drawer_action_archive">归档</string>
+    <string name="drawer_action_unarchive">取消归档</string>
+    <string name="drawer_action_delete">删除</string>
+    <string name="drawer_rename_title">重命名对话</string>
+    <string name="drawer_rename_placeholder">对话名称</string>
+    <string name="drawer_rename_save">保存</string>
+    <string name="drawer_delete_title">删除对话</string>
+    <string name="drawer_delete_message">「%1$s」删除后无法恢复。</string>
+    <string name="drawer_delete_confirm">删除</string>
+    <string name="drawer_cancel">取消</string>
+</resources>

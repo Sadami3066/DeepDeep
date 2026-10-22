@@ -3,10 +3,4 @@
     <string name="service_channel_name">deepdeep 运行状态</string>
     <string name="service_running">deepdeep 正在运行</string>
     <string name="service_stop">停止</string>
-    <string name="drawer_chat">聊天</string>
-    <string name="drawer_recent">历史对话</string>
-    <string name="drawer_recent_empty">还没有对话</string>
-    <string name="drawer_recent_loading">正在读取…</string>
-    <string name="drawer_settings_hint">设置</string>
-    <string name="drawer_new_chat">新建对话</string>
 </resources>

@@ -32,6 +32,7 @@ fun DdIcon(
 
 object DdIcons {
     val Menu = DdIcon(R.drawable.ic_dd_menu)
+    val More = DdIcon(R.drawable.ic_dd_more)
     val Close = DdIcon(R.drawable.ic_dd_close)
     val Plus = DdIcon(R.drawable.ic_dd_plus)
     val ArrowUp = DdIcon(R.drawable.ic_dd_arrow_up)

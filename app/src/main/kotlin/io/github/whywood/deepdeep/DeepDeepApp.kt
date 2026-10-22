@@ -24,12 +24,15 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
-import io.github.whywood.deepdeep.ui.chat.AssistantScreen
-import io.github.whywood.deepdeep.ui.chat.AssistantViewModel
+import io.github.whywood.deepdeep.ui.chat.ChatScreen
+import io.github.whywood.deepdeep.ui.chat.ChatViewModel
+import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
+import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
+import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
 
-private enum class Page { CHAT, SETTINGS }
+private enum class Page { CHAT, SETTINGS, PROVIDERS, PROVIDER_DETAIL, ARCHIVED }
 
 @Composable
 internal fun DeepDeepApp(
@@ -38,27 +41,30 @@ internal fun DeepDeepApp(
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val viewModel: AssistantViewModel = viewModel(
+    val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
-                AssistantViewModel(
-                    host = graph.host,
+                ChatViewModel(
+                    runtime = graph.host,
+                    providers = graph.providerCatalog,
                     modelConfigStore = graph.modelConfigStore,
                     prepareRuntime = graph::prepare,
                 )
             }
         },
     )
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val hasApiKey by graph.apiKeyStore.hasKey(DeepSeekProvider).collectAsStateWithLifecycle(initialValue = false)
-    val modelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = io.github.whywood.deepdeep.runtime.ModelConfig())
+    val state by chatViewModel.state.collectAsStateWithLifecycle()
+    val configuredProviders by graph.apiKeyStore.providerIds.collectAsStateWithLifecycle(initialValue = emptySet())
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val colors = deepDeepColors()
 
     var pageName by rememberSaveable { mutableStateOf(Page.CHAT.name) }
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    var selectedProviderId by rememberSaveable { mutableStateOf<String?>(null) }
     val page = runCatching { Page.valueOf(pageName) }.getOrDefault(Page.CHAT)
+    val activeProvider = graph.providerCatalog.summary(state.providerId)
+    val selectedProvider = selectedProviderId?.let(graph.providerCatalog::summary)
 
     fun openChat() {
         pageName = Page.CHAT.name
@@ -70,66 +76,52 @@ internal fun DeepDeepApp(
         drawerOpen = false
     }
 
+    fun openProviders() {
+        pageName = Page.PROVIDERS.name
+    }
+
+    fun openProvider(providerId: String) {
+        selectedProviderId = providerId
+        pageName = Page.PROVIDER_DETAIL.name
+    }
+
     BackHandler(enabled = drawerOpen || page != Page.CHAT) {
         when {
             drawerOpen -> drawerOpen = false
-            page == Page.SETTINGS -> openChat()
+            page == Page.PROVIDER_DETAIL -> pageName = Page.PROVIDERS.name
+            page == Page.PROVIDERS || page == Page.SETTINGS || page == Page.ARCHIVED -> openChat()
         }
     }
 
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         when (page) {
-            Page.CHAT -> AssistantScreen(
-                state = state,
-                configured = hasApiKey,
-                configuredModel = modelConfig?.modelId,
-                userName = "Milous",
-                onInputChange = viewModel::onInputChange,
-                onSend = viewModel::send,
-                onStop = viewModel::stop,
-                onNewChat = viewModel::newChat,
+            Page.CHAT -> ChatScreen(
+                state = state.copy(configured = state.providerId in configuredProviders),
+                onInputChange = chatViewModel::onInputChange,
+                onSend = chatViewModel::send,
+                onStop = chatViewModel::stop,
+                onNewChat = chatViewModel::newChat,
                 onOpenDrawer = { drawerOpen = true },
                 onOpenSettings = ::openSettings,
-                onModelChange = viewModel::setModelOverride,
-                onThinkingLevelChange = viewModel::setThinkingLevel,
-                onToggleStep = viewModel::toggleStep,
+                onModelChange = chatViewModel::setModel,
+                onThinkingLevelChange = chatViewModel::setThinkingLevel,
+                onToggleStep = chatViewModel::toggleStep,
             )
 
             Page.SETTINGS -> SettingsScreen(
+                userName = "Milous",
+                providerName = activeProvider?.name,
+                modelName = state.modelLabel.takeIf { it.isNotBlank() },
+                configured = state.providerId in configuredProviders,
                 themeMode = theme,
-                hasApiKey = hasApiKey,
-                modelId = modelConfig?.modelId ?: "",
-                thinkingLevel = modelConfig?.thinkingLevel ?: state.thinkingLevel,
                 linuxState = linuxState,
                 linuxSupported = graph.linuxEnvironment.isSupported,
                 linuxEnabled = linuxEnabled,
                 versionName = BuildConfig.VERSION_NAME,
                 onBack = ::openChat,
                 onThemeModeChange = onThemeChange,
-                onApiKeySave = { key ->
-                    scope.launch {
-                        graph.apiKeyStore.save(DeepSeekProvider, key)
-                        graph.credentials.preload(DeepSeekProvider)
-                    }
-                },
-                onApiKeyClear = {
-                    scope.launch {
-                        graph.apiKeyStore.save(DeepSeekProvider, null)
-                        graph.credentials.invalidate(DeepSeekProvider)
-                    }
-                },
-                onModelIdChange = { modelId ->
-                    scope.launch {
-                        val current = graph.modelConfigStore.read()
-                        graph.host.setModel(modelId, current.thinkingLevel)
-                    }
-                },
-                onThinkingLevelChange = { level ->
-                    scope.launch { graph.host.setThinkingLevel(level) }
-                },
-                onLinuxInstall = {
-                    scope.launch { graph.linuxEnvironment.install() }
-                },
+                onOpenProviders = ::openProviders,
+                onLinuxInstall = { scope.launch { graph.linuxEnvironment.install() } },
                 onLinuxReset = {
                     scope.launch {
                         graph.linuxSettings.setEnabled(false)
@@ -144,13 +136,63 @@ internal fun DeepDeepApp(
                     }
                 },
             )
+
+            Page.PROVIDERS -> ProviderListScreen(
+                providers = graph.providerCatalog.summaries,
+                configuredProviderIds = configuredProviders,
+                activeProviderId = state.providerId,
+                onBack = ::openSettings,
+                onProviderClick = ::openProvider,
+            )
+
+            Page.PROVIDER_DETAIL -> {
+                val provider = selectedProvider
+                if (provider == null) {
+                    openProviders()
+                } else {
+                    ProviderDetailScreen(
+                        provider = provider,
+                        models = graph.providerCatalog.models(provider.id),
+                        configured = provider.id in configuredProviders,
+                        active = provider.id == state.providerId,
+                        activeModelId = state.modelId.takeIf { provider.id == state.providerId },
+                        onBack = ::openProviders,
+                        onSaveApiKey = { key ->
+                            scope.launch {
+                                graph.apiKeyStore.save(provider.id, key)
+                                graph.credentials.preload(provider.id)
+                            }
+                        },
+                        onClearApiKey = {
+                            scope.launch {
+                                graph.apiKeyStore.save(provider.id, null)
+                                graph.credentials.invalidate(provider.id)
+                            }
+                        },
+                        onActivate = { modelId ->
+                            scope.launch {
+                                graph.host.setModel(provider.id, modelId, state.thinkingLevel)
+                                openChat()
+                            }
+                        },
+                    )
+                }
+            }
+
+            Page.ARCHIVED -> ArchivedSessionsScreen(
+                archivedSessions = state.archivedConversations,
+                onBack = ::openChat,
+                onOpen = { id ->
+                    chatViewModel.openConversation(id)
+                    openChat()
+                },
+                onRename = chatViewModel::renameSession,
+                onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
+                onDelete = chatViewModel::deleteSession,
+            )
         }
 
-        AnimatedVisibility(
-            visible = drawerOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
+        AnimatedVisibility(visible = drawerOpen, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -167,20 +209,27 @@ internal fun DeepDeepApp(
                 conversations = state.conversations,
                 activeConversationId = state.conversationId,
                 historyLoaded = state.historyLoaded,
+                archivedCount = state.archivedCount,
                 userName = "Milous",
                 onChat = ::openChat,
-                onConversation = { id ->
-                    viewModel.openConversation(id)
-                    openChat()
+                onArchived = {
+                    pageName = Page.ARCHIVED.name
+                    drawerOpen = false
                 },
                 onNewChat = {
-                    viewModel.newChat()
+                    chatViewModel.newChat()
                     openChat()
                 },
+                onConversation = { id ->
+                    chatViewModel.openConversation(id)
+                    openChat()
+                },
+                onRename = chatViewModel::renameSession,
+                onSetPinned = chatViewModel::setSessionPinned,
+                onSetArchived = chatViewModel::setSessionArchived,
+                onDelete = chatViewModel::deleteSession,
                 onSettings = ::openSettings,
             )
         }
     }
 }
-
-private const val DeepSeekProvider = "deepseek"
