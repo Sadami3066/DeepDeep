@@ -1,12 +1,20 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -26,7 +37,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -62,16 +77,27 @@ internal fun ChatMarkdown(text: String, modifier: Modifier = Modifier) {
                     color = colors.ink,
                 )
 
-                is MarkdownBlock.Code -> CodeBlock(block.code, colors)
+                is MarkdownBlock.Code -> CodeBlock(block.language, block.code, colors)
 
-                is MarkdownBlock.Quote -> Text(
-                    text = inline(block.text, colors),
-                    modifier = Modifier.padding(start = 12.dp),
-                    style = DdType.body,
-                    color = colors.inkSecondary,
-                )
+                is MarkdownBlock.Quote -> Row(Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier
+                            .width(2.dp)
+                            .heightIn(min = 22.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(colors.hairline),
+                    )
+                    Text(
+                        text = inline(block.text, colors),
+                        modifier = Modifier.padding(start = 12.dp),
+                        style = DdType.body,
+                        color = colors.inkSecondary,
+                    )
+                }
 
                 is MarkdownBlock.Bullets -> BulletBlock(block, colors)
+
+                is MarkdownBlock.Tasks -> TaskBlock(block, colors)
 
                 is MarkdownBlock.Table -> TableBlock(block, colors)
 
@@ -82,23 +108,49 @@ internal fun ChatMarkdown(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CodeBlock(code: String, colors: DeepDeepColors) {
+private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors) {
+    val context = LocalContext.current
+    val copied = stringResource(R.string.assistant_copied)
     Column(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(colors.wash)
-            .padding(12.dp),
+            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 12.dp),
     ) {
-        Text(
-            text = code.trimEnd(),
-            style = DdType.bodySmall.copy(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-            ),
-            color = colors.inkSecondary,
-        )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = language?.uppercase().orEmpty().ifBlank { "CODE" },
+                modifier = Modifier.weight(1f),
+                style = DdType.micro,
+                color = colors.inkTertiary,
+            )
+            DdIconButton(
+                icon = DdIcons.Copy,
+                onClick = {
+                    if (copyToClipboard(context, code)) {
+                        Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                contentDescription = stringResource(R.string.assistant_tool_copy),
+                modifier = Modifier.testTag("markdown_code_copy"),
+                size = 30.dp,
+                iconSize = 14.dp,
+                tint = colors.inkTertiary,
+            )
+        }
+        Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            Text(
+                text = code,
+                style = DdType.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                ),
+                color = colors.inkSecondary,
+                softWrap = false,
+            )
+        }
     }
 }
 
@@ -108,7 +160,7 @@ private fun BulletBlock(block: MarkdownBlock.Bullets, colors: DeepDeepColors) {
         block.items.forEachIndexed { index, item ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Text(
-                    text = if (block.ordered) "${index + 1}." else "•",
+                    text = if (block.ordered) "${block.start + index}." else "•",
                     modifier = Modifier.width(22.dp),
                     style = DdType.body,
                     color = colors.inkTertiary,
@@ -118,6 +170,35 @@ private fun BulletBlock(block: MarkdownBlock.Bullets, colors: DeepDeepColors) {
                     modifier = Modifier.weight(1f),
                     style = DdType.body,
                     color = colors.ink,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskBlock(block: MarkdownBlock.Tasks, colors: DeepDeepColors) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        block.items.forEach { item ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Box(
+                    Modifier
+                        .padding(top = 3.dp)
+                        .size(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (item.checked) colors.accent else colors.wash)
+                        .border(1.dp, if (item.checked) colors.accent else colors.hairline, RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (item.checked) {
+                        DdIcon(icon = DdIcons.Check, tint = colors.onAccent, size = 10.dp)
+                    }
+                }
+                Text(
+                    text = inline(item.text, colors),
+                    modifier = Modifier.weight(1f).padding(start = 8.dp),
+                    style = DdType.body,
+                    color = if (item.checked) colors.inkTertiary else colors.ink,
                 )
             }
         }

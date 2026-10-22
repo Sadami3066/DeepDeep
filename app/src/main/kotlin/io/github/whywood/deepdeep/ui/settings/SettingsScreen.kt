@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +45,8 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
@@ -266,7 +266,10 @@ private fun ThemeRow(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed) 0.06f else 0f,
-        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        animationSpec = tween(
+            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
+            easing = DdMotion.EaseOut,
+        ),
         label = "theme-row-wash",
     )
     Row(
@@ -296,25 +299,20 @@ private fun ThemeRow(
                 color = colors.inkTertiary,
                 maxLines = 1,
             )
-            DropdownMenu(
+            DdMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
+                menuWidth = 144.dp,
             ) {
                 ThemeMode.entries.forEach { mode ->
-                    DropdownMenuItem(
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)),
-                        text = {
-                            Text(
-                                text = themeLabel(mode),
-                                style = DdType.bodySmall,
-                                color = colors.ink,
-                            )
-                        },
+                    DdMenuItem(
+                        text = themeLabel(mode),
                         onClick = {
                             onThemeModeChange(mode)
                             expanded = false
                         },
-                        trailingIcon = {
+                        selected = mode == themeMode,
+                        trailing = {
                             if (mode == themeMode) {
                                 DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
                             }

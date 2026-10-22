@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
@@ -73,18 +72,13 @@ internal fun ChatTopBar(
                     tint = colors.inkSecondary,
                     iconSize = 21.dp,
                 )
-                DropdownMenu(
+                DdMenu(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },
+                    menuWidth = 136.dp,
                 ) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(R.string.assistant_settings),
-                                style = DdType.label,
-                                color = colors.ink,
-                            )
-                        },
+                    DdMenuItem(
+                        text = stringResource(R.string.assistant_settings),
                         onClick = {
                             menuOpen = false
                             onOpenSettings()

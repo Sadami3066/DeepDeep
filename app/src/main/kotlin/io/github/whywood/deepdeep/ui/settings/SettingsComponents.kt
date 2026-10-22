@@ -47,14 +47,16 @@ internal fun SettingsGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
-    Column(
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        content = content,
-    )
+    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
+        Column(
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(colors.surface)
+                .padding(vertical = 4.dp),
+            content = content,
+        )
+    }
 }
 
 @Composable

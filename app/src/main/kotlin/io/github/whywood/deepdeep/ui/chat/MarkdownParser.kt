@@ -3,17 +3,21 @@ package io.github.whywood.deepdeep.ui.chat
 internal sealed interface MarkdownBlock {
     data class Heading(val level: Int, val text: String) : MarkdownBlock
     data class Paragraph(val text: String) : MarkdownBlock
-    data class Code(val code: String) : MarkdownBlock
+    data class Code(val language: String?, val code: String) : MarkdownBlock
     data class Quote(val text: String) : MarkdownBlock
-    data class Bullets(val items: List<String>, val ordered: Boolean) : MarkdownBlock
+    data class Bullets(val items: List<String>, val ordered: Boolean, val start: Int = 1) : MarkdownBlock
+    data class Tasks(val items: List<TaskItem>) : MarkdownBlock
     data class Table(val header: List<String>, val rows: List<List<String>>) : MarkdownBlock
     data object Rule : MarkdownBlock
 }
 
+internal data class TaskItem(val text: String, val checked: Boolean)
+
 private val headingPattern = Regex("^(#{1,6})\\s+(.+)$")
 private val bulletPattern = Regex("^\\s*[-*+]\\s+(.+)$")
-private val orderedPattern = Regex("^\\s*\\d+[.)]\\s+(.+)$")
+private val orderedPattern = Regex("^\\s*(\\d+)[.)]\\s+(.+)$")
 private val rulePattern = Regex("^(-{3,}|\\*{3,}|_{3,})$")
+private val taskPattern = Regex("^\\s*[-*+]\\s+\\[([ xX])]\\s+(.+)$")
 private val separatorCellPattern = Regex("^:?-{3,}:?$")
 
 internal fun parseMarkdown(source: String): List<MarkdownBlock> {
@@ -26,6 +30,7 @@ internal fun parseMarkdown(source: String): List<MarkdownBlock> {
             trimmed.isEmpty() -> index++
 
             trimmed.startsWith("```") -> {
+                val language = trimmed.removePrefix("```").trim().takeIf { it.isNotEmpty() }
                 val code = mutableListOf<String>()
                 index++
                 while (index < lines.size && !lines[index].trim().startsWith("```")) {
@@ -33,7 +38,7 @@ internal fun parseMarkdown(source: String): List<MarkdownBlock> {
                     index++
                 }
                 if (index < lines.size) index++
-                blocks += MarkdownBlock.Code(code.joinToString("\n"))
+                blocks += MarkdownBlock.Code(language, code.joinToString("\n").trimEnd())
             }
 
             isTableStart(lines, index) -> {
@@ -67,6 +72,16 @@ internal fun parseMarkdown(source: String): List<MarkdownBlock> {
                 blocks += MarkdownBlock.Quote(quote.joinToString("\n"))
             }
 
+            taskPattern.matches(lines[index]) -> {
+                val items = mutableListOf<TaskItem>()
+                while (index < lines.size) {
+                    val match = taskPattern.matchEntire(lines[index]) ?: break
+                    items += TaskItem(match.groupValues[2], match.groupValues[1].equals("x", ignoreCase = true))
+                    index++
+                }
+                blocks += MarkdownBlock.Tasks(items)
+            }
+
             bulletPattern.matches(lines[index]) -> {
                 val items = mutableListOf<String>()
                 while (index < lines.size) {
@@ -78,13 +93,14 @@ internal fun parseMarkdown(source: String): List<MarkdownBlock> {
             }
 
             orderedPattern.matches(lines[index]) -> {
+                val start = orderedPattern.matchEntire(lines[index])?.groupValues?.get(1)?.toIntOrNull() ?: 1
                 val items = mutableListOf<String>()
                 while (index < lines.size) {
                     val match = orderedPattern.matchEntire(lines[index]) ?: break
-                    items += match.groupValues[1]
+                    items += match.groupValues[2]
                     index++
                 }
-                blocks += MarkdownBlock.Bullets(items, ordered = true)
+                blocks += MarkdownBlock.Bullets(items, ordered = true, start = start)
             }
 
             else -> {
@@ -109,6 +125,7 @@ private fun isBlockStart(lines: List<String>, index: Int): Boolean {
         headingPattern.matches(trimmed) ||
         rulePattern.matches(trimmed) ||
         trimmed.startsWith(">") ||
+        taskPattern.matches(lines[index]) ||
         bulletPattern.matches(lines[index]) ||
         orderedPattern.matches(lines[index]) ||
         isTableStart(lines, index)
@@ -132,7 +149,14 @@ internal fun markdownToPlainText(text: String): String =
                 is MarkdownBlock.Paragraph -> stripInline(block.text)
                 is MarkdownBlock.Code -> block.code
                 is MarkdownBlock.Quote -> stripInline(block.text)
-                is MarkdownBlock.Bullets -> block.items.joinToString("\n") { "• ${stripInline(it)}" }
+                is MarkdownBlock.Bullets -> block.items.mapIndexed { index, item ->
+                    if (block.ordered) "${block.start + index}. ${stripInline(item)}" else "• ${stripInline(item)}"
+                }.joinToString("\n")
+
+                is MarkdownBlock.Tasks -> block.items.joinToString("\n") { item ->
+                    "${if (item.checked) "☑" else "☐"} ${stripInline(item.text)}"
+                }
+
                 is MarkdownBlock.Table -> (listOf(block.header) + block.rows)
                     .joinToString("\n") { row -> row.joinToString("，") { stripInline(it) } }
                 MarkdownBlock.Rule -> ""

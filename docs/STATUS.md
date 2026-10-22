@@ -16,6 +16,8 @@
 - motion system: DdMotion tokens, DdTypingDots, typed navigation, AnimatedScreenHost
 - press states: rounded gray wash on menus/list rows/provider rows/session rows
 - old Assistant*/LinuxSettingsScreen removed
+- markdown upgrade: task lists, ordered start, fenced language/copy, quote bar
+- DdMenu unified topbar/session/theme menus with rounded press states; DdPressable fast press-in
 
 ## Checks
 
@@ -33,6 +35,7 @@
 - `menu-anchored-v2.png`
 - `settings-pressed-v2.png`
 - `history-grouped.png`
+- `topbar-menu.png`, `session-menu-new.png`, `final-settings-press.png`
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 

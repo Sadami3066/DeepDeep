@@ -295,7 +295,10 @@ private fun DrawerHistoryRow(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed) 0.06f else 0f,
-        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        animationSpec = tween(
+            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
+            easing = DdMotion.EaseOut,
+        ),
         label = "session-row-wash",
     )
     Box(Modifier.fillMaxWidth()) {

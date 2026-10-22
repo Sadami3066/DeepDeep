@@ -63,7 +63,10 @@ fun DdPressable(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed && enabled) 0.07f else 0f,
-        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        animationSpec = tween(
+            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
+            easing = DdMotion.EaseOut,
+        ),
         label = "press-wash",
     )
     val semantics = if (contentDescription == null) {
@@ -197,7 +200,10 @@ fun DdListRow(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed && enabled && onClick != null) 0.06f else 0f,
-        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        animationSpec = tween(
+            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
+            easing = DdMotion.EaseOut,
+        ),
         label = "list-row-wash",
     )
     val clickable = if (onClick != null && enabled) {

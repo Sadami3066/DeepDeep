@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 
 object DdMotion {
     const val PRESS = 140
+    const val PRESS_IN = 70
+    const val PRESS_OUT = 180
     const val FAST = 200
     const val BASE = 260
     const val ENTER = 460

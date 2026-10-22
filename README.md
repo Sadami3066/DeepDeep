@@ -7,6 +7,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - Claude 风格的聊天布局：右侧浅色用户气泡、全宽 assistant、浮动 composer
 - 过程按 DSH 思路展示：运行中展开过程、工具/思考行收起；结束后自动收起，只留最终回复
 - 工具调用与中间文本按顺序进入过程，历史会话按一个用户回合聚合
+- Markdown：标题、段落、引用条、有序/无序/任务列表、表格、带语言标签和复制按钮的代码块
 - pi2kotlin 流式事件、DeepSeek provider、Alpine/proot 里的 `bash`
 - 42 家 Provider 目录 + API Key 认证入口；思考等级在 composer 切换
 - 会话历史、置顶、归档、重命名、删除；长按菜单跟随点击位置
