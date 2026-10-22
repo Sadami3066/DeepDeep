@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -104,55 +106,29 @@ private fun ImageAttachmentCard(
         val file = attachmentFile(context, attachment)
         value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
     }
+    val aspect = bitmap?.let { it.width.toFloat() / it.height.toFloat().coerceAtLeast(1f) } ?: (4f / 3f)
+    val widthDp = 200.dp
+    val heightDp = (widthDp.value / aspect).coerceIn(120f, 260f).dp
     DdPressable(
         onClick = { onOpen(attachment) },
         modifier = Modifier
-            .widthIn(max = 220.dp)
-            .fillMaxWidth()
+            .width(widthDp)
+            .height(heightDp)
             .testTag("attachment_${attachment.id}"),
         shape = RoundedCornerShape(12.dp),
+        background = colors.wash,
         contentDescription = stringResource(R.string.assistant_attach_open),
     ) {
-        Column(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.wash),
-                contentAlignment = Alignment.Center,
-            ) {
-                val image = bitmap
-                if (image == null) {
-                    DdIcon(icon = DdIcons.Image, tint = colors.inkTertiary, size = 22.dp)
-                } else {
-                    Image(
-                        bitmap = image.asImageBitmap(),
-                        contentDescription = attachment.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-            }
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 2.dp, end = 2.dp, top = 6.dp, bottom = 2.dp),
-            ) {
-                Text(
-                    text = attachment.name,
-                    style = DdType.bodySmall,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = formatAttachmentSize(attachment.size),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                )
-            }
+        val image = bitmap
+        if (image == null) {
+            DdIcon(icon = DdIcons.Image, tint = colors.inkTertiary, size = 22.dp)
+        } else {
+            Image(
+                bitmap = image.asImageBitmap(),
+                contentDescription = attachment.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
         }
     }
 }
@@ -214,49 +190,126 @@ private fun FileAttachmentCard(
 internal fun AttachmentChips(
     attachments: List<AttachmentRef>,
     onRemove: (String) -> Unit,
+    onOpen: (AttachmentRef) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         attachments.forEach { attachment ->
-            Row(
-                modifier = Modifier
-                    .height(30.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(colors.wash)
-                    .padding(start = 8.dp, end = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdIcon(
-                    icon = attachmentIcon(attachment.kind),
-                    tint = colors.inkSecondary,
-                    size = 14.dp,
-                )
-                Spacer(Modifier.width(6.dp))
+            AttachmentPreviewCard(
+                attachment = attachment,
+                onRemove = { onRemove(attachment.id) },
+                onOpen = { onOpen(attachment) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentPreviewCard(
+    attachment: AttachmentRef,
+    onRemove: () -> Unit,
+    onOpen: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    val context = LocalContext.current
+    val cardWidth = if (attachment.kind == AttachmentKind.TEXT) 170.dp else 150.dp
+    Box(
+        modifier = Modifier
+            .width(cardWidth)
+            .height(104.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.surface)
+            .clickable(onClick = onOpen)
+            .testTag("attachment_${attachment.id}"),
+    ) {
+        when (attachment.kind) {
+            AttachmentKind.IMAGE -> {
+                val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
+                    val file = attachmentFile(context, attachment)
+                    value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
+                }
+                val image = bitmap
+                if (image == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        DdIcon(icon = DdIcons.Image, tint = colors.inkTertiary, size = 20.dp)
+                    }
+                } else {
+                    Image(
+                        bitmap = image.asImageBitmap(),
+                        contentDescription = attachment.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
+
+            AttachmentKind.TEXT -> {
+                val snippet by produceState(initialValue = "", attachment.id) {
+                    val file = attachmentFile(context, attachment)
+                    value = withContext(Dispatchers.IO) {
+                        runCatching {
+                            file.bufferedReader().use { reader ->
+                                val buffer = CharArray(900)
+                                val count = reader.read(buffer)
+                                if (count <= 0) "" else String(buffer, 0, count)
+                            }
+                        }.getOrDefault("")
+                    }
+                }
                 Text(
-                    text = attachment.name,
-                    modifier = Modifier.widthIn(max = 150.dp),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                DdIconButton(
-                    icon = DdIcons.Close,
-                    onClick = { onRemove(attachment.id) },
-                    contentDescription = stringResource(R.string.assistant_attach_remove),
-                    modifier = Modifier.testTag("attachment_remove_${attachment.id}"),
-                    size = 18.dp,
-                    iconSize = 11.dp,
-                    tint = colors.inkTertiary,
+                    text = snippet.ifBlank { attachment.name },
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+                    style = DdType.bodySmall.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                    color = colors.inkTertiary,
+                    maxLines = 7,
+                    overflow = TextOverflow.Clip,
                 )
             }
+
+            AttachmentKind.OTHER -> {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    DdIcon(icon = DdIcons.File, tint = colors.inkSecondary, size = 20.dp)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = attachment.name,
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+                        color = colors.ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = formatAttachmentSize(attachment.size),
+                        style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(5.dp)
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(colors.ink.copy(alpha = 0.55f))
+                .clickable(onClick = onRemove)
+                .testTag("attachment_remove_${attachment.id}"),
+            contentAlignment = Alignment.Center,
+        ) {
+            DdIcon(icon = DdIcons.Close, tint = colors.surface, size = 13.dp)
         }
     }
 }

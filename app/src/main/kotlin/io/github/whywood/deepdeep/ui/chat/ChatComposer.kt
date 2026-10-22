@@ -84,6 +84,7 @@ internal fun ChatComposer(
     onClearQuote: () -> Unit,
     onPickAttachment: () -> Unit,
     onRemoveAttachment: (String) -> Unit,
+    onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -177,6 +178,7 @@ internal fun ChatComposer(
                             AttachmentChips(
                                 attachments = attachments,
                                 onRemove = onRemoveAttachment,
+                                onOpen = onOpenAttachment,
                                 modifier = Modifier.padding(bottom = 10.dp),
                             )
                         }

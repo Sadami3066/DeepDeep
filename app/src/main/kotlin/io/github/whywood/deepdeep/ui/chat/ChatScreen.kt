@@ -282,6 +282,7 @@ fun ChatScreen(
             onClearQuote = onClearQuote,
             onPickAttachment = onPickAttachment,
             onRemoveAttachment = onRemoveAttachment,
+            onOpenAttachment = onOpenAttachment,
             onOpenSettings = onOpenSettings,
             modifier = Modifier
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
