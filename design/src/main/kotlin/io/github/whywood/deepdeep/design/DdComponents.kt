@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.design
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,10 +65,7 @@ fun DdPressable(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed && enabled) 0.07f else 0f,
-        animationSpec = tween(
-            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
-            easing = DdMotion.EaseOut,
-        ),
+        animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "press-wash",
     )
     val semantics = if (contentDescription == null) {
@@ -81,7 +80,7 @@ fun DdPressable(
             .background(background)
             .clickable(
                 interactionSource = interaction,
-                indication = null,
+                indication = ripple(color = colors.ink.copy(alpha = 0.035f)),
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,

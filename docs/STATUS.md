@@ -19,7 +19,9 @@
 - markdown upgrade: task lists, ordered start, fenced language/copy, quote bar
 - DdMenu unified topbar/session/theme menus with rounded press states; DdPressable fast press-in
 - whale-blue accent + danger red; icon-left menus; API key input margin; process row padding
-- settings rows/provider/theme/license migrated to DdPressable for tap feedback
+- settings rows/provider/theme/license migrated to DdPressable; tap gets bounded ripple, long press gets wash
+- menu icons left-aligned; danger delete red; whale-blue palette
+- API key field margin and process row padding
 
 ## Checks
 

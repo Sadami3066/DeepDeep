@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -295,10 +296,7 @@ private fun DrawerHistoryRow(
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
         targetValue = if (pressed) 0.06f else 0f,
-        animationSpec = tween(
-            if (pressed) DdMotion.PRESS_IN else DdMotion.PRESS_OUT,
-            easing = DdMotion.EaseOut,
-        ),
+        animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "session-row-wash",
     )
     Box(Modifier.fillMaxWidth()) {
