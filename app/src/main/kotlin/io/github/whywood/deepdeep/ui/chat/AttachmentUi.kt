@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +65,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -139,48 +141,54 @@ private fun FileAttachmentCard(
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
+    val shape = RoundedCornerShape(12.dp)
+    val extension = attachment.name.substringAfterLast('.', "").uppercase(Locale.US).take(4)
     DdPressable(
         onClick = { onOpen(attachment) },
         modifier = Modifier
-            .widthIn(min = 160.dp, max = 280.dp)
-            .heightIn(min = 52.dp)
+            .size(140.dp)
             .testTag("attachment_${attachment.id}"),
-        shape = RoundedCornerShape(12.dp),
-        background = colors.wash,
+        shape = shape,
+        background = colors.surface,
         contentDescription = stringResource(R.string.assistant_attach_open),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            Modifier
+                .fillMaxSize()
+                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+                .padding(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(colors.surface),
-                contentAlignment = Alignment.Center,
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                DdIcon(
-                    icon = attachmentIcon(attachment.kind),
-                    tint = colors.inkSecondary,
-                    size = 16.dp,
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.widthIn(max = 220.dp)) {
-                Text(
-                    text = attachment.name,
-                    style = DdType.bodySmall,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = formatAttachmentSize(attachment.size),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                )
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, colors.hairline, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = extension.ifEmpty { "FILE" },
+                        style = DdType.micro.copy(fontSize = 9.sp),
+                        color = colors.inkSecondary,
+                    )
+                }
+                Column {
+                    Text(
+                        text = attachment.name,
+                        style = DdType.bodySmall,
+                        color = colors.ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = formatAttachmentSize(attachment.size),
+                        style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

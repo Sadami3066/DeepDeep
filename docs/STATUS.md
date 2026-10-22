@@ -26,7 +26,7 @@
 - markdown inline elements: escapes/hard breaks, autolinks (URL/email), reference links, inline HTML subset (b/i/code/kbd/sup/sub/br/a/span color), math fallback (inline + display block), footnote refs + end list
 - image tap opens a full-screen lightbox (scrim, fit-center, fade, back/tap to dismiss)
 - message actions: text-label selection toolbar (copy/select all/quote/read aloud), draggable handles, outside-tap clears selection/menu, composer quote preview, quoted context in user bubbles
-- attachments: system file picker (multi-select), Claude-style composer preview cards (image thumbnail / text snippet / file card + circular remove), workspace copy for agent access, inline image thumbnails + file cards, full-screen preview (image/text/markdown/unpreviewable) with FileProvider share
+- attachments: system file picker (multi-select), Claude-style composer preview cards (image thumbnail / text snippet / file card + circular remove), workspace copy for agent access, attachments rendered as separate cards outside the user bubble (image thumbnails, extension-badge file tiles), full-screen preview (image/text/markdown/unpreviewable) with FileProvider share
 - file references in assistant messages: attachments/workspace/absolute/file:// paths and markdown links are clickable and resolve to previews
 - Claude Android app reverse-engineered for selection + attachment UX (Compose TextContextMenu provider, text-label toolbar, native handles, image/preview sheets)
 - conversation switch cache: finished turns cached per conversation, reopening a visited conversation renders instantly while the SDK session opens in background

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -91,34 +92,37 @@ private fun UserBubble(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
-        Box(Modifier.widthIn(max = 560.dp)) {
-            SelectableMessageText(
-                messageId = message.id,
-                onQuote = { text -> onQuote(message.id, text) },
-                onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
-            ) {
-                Column(
-                    Modifier
-                        .clip(UserBubbleShape)
-                        .background(colors.userBubble)
-                        .padding(horizontal = 15.dp, vertical = 11.dp),
+        Column(
+            modifier = Modifier.widthIn(max = 560.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (parsed.attachments.isNotEmpty()) {
+                AttachmentCards(attachments = parsed.attachments, onOpen = onOpenAttachment)
+            }
+            if (content.quote != null || content.body.isNotEmpty()) {
+                SelectableMessageText(
+                    messageId = message.id,
+                    onQuote = { text -> onQuote(message.id, text) },
+                    onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
                 ) {
-                    if (content.quote != null) {
-                        QuoteContext(content.quote)
-                        if (content.body.isNotEmpty() || parsed.attachments.isNotEmpty()) {
-                            Spacer(Modifier.height(6.dp))
+                    Column(
+                        Modifier
+                            .clip(UserBubbleShape)
+                            .background(colors.userBubble)
+                            .padding(horizontal = 15.dp, vertical = 11.dp),
+                    ) {
+                        if (content.quote != null) {
+                            QuoteContext(content.quote)
+                            if (content.body.isNotEmpty()) Spacer(Modifier.height(6.dp))
                         }
-                    }
-                    if (parsed.attachments.isNotEmpty()) {
-                        AttachmentCards(attachments = parsed.attachments, onOpen = onOpenAttachment)
-                        if (content.body.isNotEmpty()) Spacer(Modifier.height(8.dp))
-                    }
-                    if (content.body.isNotEmpty()) {
-                        Text(
-                            text = content.body,
-                            style = DdType.body,
-                            color = colors.onUserBubble,
-                        )
+                        if (content.body.isNotEmpty()) {
+                            Text(
+                                text = content.body,
+                                style = DdType.body,
+                                color = colors.onUserBubble,
+                            )
+                        }
                     }
                 }
             }
