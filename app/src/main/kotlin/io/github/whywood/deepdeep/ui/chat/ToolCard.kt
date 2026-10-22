@@ -7,19 +7,17 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -66,61 +64,76 @@ internal fun ToolCard(
     )
     val preview = remember(tool.arguments) { toolArgsPreview(tool.arguments) }
     val output = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() }
-    val duration = tool.durationMs?.takeIf { it > 0 }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.wash),
-    ) {
-        Column(
+    val duration = tool.durationMs?.takeIf { it > 0L }
+    val statusText = when (tool.status) {
+        ToolActivityStatus.RUNNING -> stringResource(R.string.assistant_tool_running)
+        ToolActivityStatus.DONE -> stringResource(R.string.assistant_tool_done)
+        ToolActivityStatus.FAILED -> stringResource(R.string.assistant_tool_failed)
+    }
+    val muted = if (tool.status == ToolActivityStatus.FAILED) colors.inkSecondary else colors.inkTertiary
+    Column(Modifier.fillMaxWidth()) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 30.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
-                .testTag("tool_toggle_${tool.id}")
-                .padding(horizontal = 12.dp),
+                .testTag("tool_toggle_${tool.id}"),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 38.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdIcon(icon = toolIcon(tool.name), tint = colors.inkTertiary, size = 14.dp)
-                Spacer(Modifier.width(7.dp))
-                Text(
-                    text = tool.name,
-                    style = DdType.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        lineHeight = 19.sp,
-                    ),
-                    color = colors.inkSecondary,
-                )
+            Text(
+                text = tool.name,
+                style = DdType.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                ),
+                color = colors.inkSecondary,
+            )
+            if (preview.isNotEmpty()) {
                 Spacer(Modifier.width(8.dp))
-                Spacer(Modifier.weight(1f))
-                ToolStatus(tool.status, duration)
-                Spacer(Modifier.width(6.dp))
-                DdIcon(
-                    icon = DdIcons.ChevronDown,
-                    modifier = Modifier.rotate(rotation),
-                    tint = colors.inkTertiary,
-                    size = 14.dp,
-                )
-            }
-            if (!tool.expanded && preview.isNotEmpty()) {
                 Text(
                     text = preview,
-                    modifier = Modifier.fillMaxWidth().padding(start = 21.dp, bottom = 9.dp),
+                    modifier = Modifier.weight(1f),
                     style = DdType.bodySmall.copy(
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         lineHeight = 18.sp,
                     ),
                     color = colors.inkTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            } else {
+                Spacer(Modifier.weight(1f))
             }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = statusText,
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                color = muted,
+            )
+            if (duration != null) {
+                Text(
+                    text = " · ",
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+                Text(
+                    text = durationLabel(duration),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            DdIcon(
+                icon = DdIcons.ChevronDown,
+                modifier = Modifier.rotate(rotation),
+                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                size = 12.dp,
+            )
+            Spacer(Modifier.width(2.dp))
         }
         AnimatedVisibility(
             visible = tool.expanded,
@@ -133,26 +146,26 @@ internal fun ToolCard(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
-            Column(Modifier.fillMaxWidth().padding(start = 33.dp, end = 12.dp, bottom = 10.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
                 if (tool.arguments.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.assistant_tool_args),
                         style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                         color = colors.inkTertiary,
                     )
-                    Spacer(Modifier.size(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = tool.arguments.entries.joinToString("\n") { "${it.key} = ${it.value}" },
                         style = DdType.bodySmall.copy(
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             lineHeight = 18.sp,
                         ),
-                        color = colors.inkSecondary,
+                        color = colors.inkTertiary,
                     )
                 }
                 if (output != null) {
-                    if (tool.arguments.isNotEmpty()) Spacer(Modifier.size(8.dp))
+                    if (tool.arguments.isNotEmpty()) Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -165,71 +178,29 @@ internal fun ToolCard(
                         Spacer(Modifier.weight(1f))
                         DdPressable(
                             onClick = { onCopyOutput(output) },
-                            modifier = Modifier.size(28.dp).testTag("tool_copy_${tool.id}"),
-                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.size(26.dp).testTag("tool_copy_${tool.id}"),
+                            shape = RoundedCornerShape(6.dp),
                             contentDescription = stringResource(R.string.assistant_tool_copy),
                         ) {
-                            DdIcon(icon = DdIcons.Copy, tint = colors.inkTertiary, size = 14.dp)
+                            DdIcon(icon = DdIcons.Copy, tint = colors.inkTertiary, size = 13.dp)
                         }
                     }
-                    Spacer(Modifier.size(4.dp))
-                    Box(
-                        Modifier
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = output.trim(),
+                        modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(colors.surface)
-                            .heightIn(max = 240.dp)
-                            .verticalScroll(rememberScrollState())
-                            .padding(10.dp),
-                    ) {
-                        Text(
-                            text = output.trim(),
-                            style = DdType.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                lineHeight = 18.sp,
-                            ),
-                            color = if (tool.status == ToolActivityStatus.FAILED) colors.ink else colors.inkSecondary,
-                        )
-                    }
+                            .heightIn(max = 220.dp)
+                            .verticalScroll(rememberScrollState()),
+                        style = DdType.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            lineHeight = 18.sp,
+                        ),
+                        color = colors.inkSecondary,
+                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ToolStatus(status: ToolActivityStatus, durationMs: Long?) {
-    val colors = deepDeepColors()
-    val (dotColor, label) = when (status) {
-        ToolActivityStatus.RUNNING -> colors.accent to stringResource(R.string.assistant_tool_running)
-        ToolActivityStatus.DONE -> colors.inkTertiary to stringResource(R.string.assistant_tool_done)
-        ToolActivityStatus.FAILED -> colors.ink to stringResource(R.string.assistant_tool_failed)
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .size(5.dp)
-                .clip(CircleShape)
-                .background(dotColor),
-        )
-        Spacer(Modifier.width(5.dp))
-        Text(
-            text = label,
-            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-            color = dotColor,
-        )
-        if (durationMs != null) {
-            Text(
-                text = " · ",
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                color = colors.inkTertiary,
-            )
-            Text(
-                text = durationLabel(durationMs),
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                color = colors.inkTertiary,
-            )
         }
     }
 }
@@ -250,11 +221,4 @@ private fun toolArgsPreview(arguments: Map<String, String>): String {
         ?: arguments.values.firstOrNull { it.isNotBlank() }
         ?: return ""
     return value.replace('\n', ' ').trim()
-}
-
-private fun toolIcon(name: String): DdIcon = when (name) {
-    "read", "write", "edit" -> DdIcons.File
-    "bash", "shell", "linux_shell" -> DdIcons.Terminal
-    "ls", "find", "grep" -> DdIcons.Folder
-    else -> DdIcons.Sparkles
 }

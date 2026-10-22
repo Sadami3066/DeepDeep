@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -52,7 +53,8 @@ internal fun ProcessSection(
     onCopyOutput: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
-    var expanded by rememberSaveable(message.id) { mutableStateOf(true) }
+    var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
+    val expanded = if (expansionOverride < 0) message.streaming else expansionOverride == 1
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
@@ -88,17 +90,15 @@ internal fun ProcessSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 36.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .heightIn(min = 32.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
-                .clickable(role = Role.Button) { expanded = !expanded }
+                .clickable(role = Role.Button) {
+                    expansionOverride = if (expanded) 0 else 1
+                }
                 .testTag("process_toggle_${message.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (message.streaming) {
-                PulsingDot(color = colors.accent, size = 5.dp)
-                Spacer(Modifier.width(7.dp))
-            }
             Text(
                 text = summary,
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
@@ -109,8 +109,8 @@ internal fun ProcessSection(
             DdIcon(
                 icon = DdIcons.ChevronDown,
                 modifier = Modifier.rotate(rotation),
-                tint = colors.inkTertiary,
-                size = 14.dp,
+                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                size = 13.dp,
             )
             Spacer(Modifier.width(2.dp))
         }
@@ -141,6 +141,11 @@ internal fun ProcessSection(
                             tool = step.trace,
                             onToggle = { onToggleStep(step.trace.id) },
                             onCopyOutput = onCopyOutput,
+                        )
+
+                        is AssistantStep.Text -> ChatMarkdown(
+                            text = step.text.trim(),
+                            modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
                         )
                     }
                 }

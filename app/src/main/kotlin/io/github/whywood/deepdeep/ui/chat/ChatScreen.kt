@@ -4,8 +4,12 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -29,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +49,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -131,6 +137,14 @@ fun ChatScreen(
         }
     }
 
+    LaunchedEffect(state.sending) {
+        if (state.sending) {
+            delay(320)
+            controller.followContent()
+        }
+    }
+
+
     Column(modifier.fillMaxSize().background(colors.paper)) {
         ChatTopBar(
             onMenu = {
@@ -149,7 +163,16 @@ fun ChatScreen(
             modifier = Modifier.statusBarsPadding(),
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (state.messages.isEmpty()) {
+            if (state.switchingConversation) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp).testTag("switching_progress"),
+                        color = colors.inkTertiary,
+                        strokeWidth = 2.dp,
+                        trackColor = Color.Transparent,
+                    )
+                }
+            } else if (state.messages.isEmpty()) {
                 EmptyState(loaded = state.historyLoaded, modifier = Modifier.fillMaxSize())
             } else {
                 LazyColumn(
@@ -163,8 +186,6 @@ fun ChatScreen(
                             Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
                                 ChatTurn(
                                     message = message,
-                                    activity = state.activity,
-                                    activityStartedAt = state.activityStartedAt,
                                     onToggleStep = { stepId -> onToggleStep(message.id, stepId) },
                                     onCopy = ::copyText,
                                     onShare = ::shareAnswer,
@@ -182,10 +203,26 @@ fun ChatScreen(
                 )
             }
         }
+        AnimatedVisibility(
+            visible = state.sending,
+            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 18.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                WorkingIndicator(
+                    activity = state.activity,
+                    startedAt = state.activityStartedAt,
+                    modifier = Modifier.widthIn(max = 780.dp).fillMaxWidth(),
+                )
+            }
+        }
         state.error?.let { ErrorRow(it) }
         ChatComposer(
             value = state.input,
-            ready = state.ready && state.historyLoaded,
+            ready = state.ready && state.historyLoaded && !state.switchingConversation,
             sending = state.sending,
             configured = configured,
             modelLabel = if (configured) state.modelLabel else "",
@@ -299,13 +336,7 @@ private fun JumpToBottomChip(
         onClick = onClick,
         modifier = modifier
             .height(36.dp)
-            .shadow(
-                elevation = 10.dp,
-                shape = CircleShape,
-                clip = false,
-                ambientColor = colors.ink.copy(alpha = 0.05f),
-                spotColor = colors.ink.copy(alpha = 0.12f),
-            )
+            .border(1.dp, colors.hairline.copy(alpha = 0.65f), CircleShape)
             .testTag("jump_to_bottom"),
         shape = CircleShape,
         background = colors.surface,

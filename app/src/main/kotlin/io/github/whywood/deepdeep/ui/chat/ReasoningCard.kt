@@ -47,7 +47,7 @@ internal fun ReasoningCard(
     onToggle: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val expanded = active || step.expanded
+    val expanded = step.expanded
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
@@ -61,38 +61,25 @@ internal fun ReasoningCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 34.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .heightIn(min = 30.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
                 .testTag("reasoning_toggle_${step.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(
-                icon = DdIcons.Brain,
-                tint = if (active) colors.accent else colors.inkTertiary,
-                size = 13.dp,
-            )
-            Spacer(Modifier.width(7.dp))
             Text(
                 text = stringResource(R.string.assistant_reasoning),
-                style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 19.sp),
-                color = colors.inkSecondary,
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                color = if (active) colors.inkSecondary else colors.inkTertiary,
             )
-            Spacer(Modifier.width(6.dp))
-            if (active) {
-                Text(
-                    text = stringResource(R.string.assistant_reasoning_running),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
-                    color = colors.accent,
-                )
-                Spacer(Modifier.weight(1f))
-            } else if (!expanded && preview.isNotEmpty()) {
+            if (!expanded && preview.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
                 Text(
                     text = preview,
                     modifier = Modifier.weight(1f),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
-                    color = colors.inkTertiary,
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -104,8 +91,8 @@ internal fun ReasoningCard(
             DdIcon(
                 icon = DdIcons.ChevronDown,
                 modifier = Modifier.rotate(rotation),
-                tint = colors.inkTertiary,
-                size = 14.dp,
+                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                size = 12.dp,
             )
             Spacer(Modifier.width(2.dp))
         }
@@ -122,8 +109,8 @@ internal fun ReasoningCard(
         ) {
             Text(
                 text = step.text.trim().ifEmpty { "…" },
-                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, top = 2.dp, bottom = 8.dp),
-                style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 20.sp),
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 2.dp, bottom = 6.dp),
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
                 color = colors.inkTertiary,
             )
         }

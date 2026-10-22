@@ -5,10 +5,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 private val Context.sessionMetaStore by preferencesDataStore(name = "session_meta")
@@ -85,9 +87,9 @@ class SessionRepository(
     private val engine: PiSessionEngine,
     private val metaStore: SessionMetaStore,
 ) {
-    suspend fun list(includeArchived: Boolean = false): List<ConversationSummary> {
+    suspend fun list(includeArchived: Boolean = false): List<ConversationSummary> = withContext(Dispatchers.IO) {
         val metas = metaStore.read()
-        return engine.listSessions()
+        engine.listSessions()
             .map { base ->
                 val meta = metas[base.id]
                 base.copy(
@@ -114,7 +116,7 @@ class SessionRepository(
         metaStore.update(id) { it.copy(archived = archived) }
     }
 
-    suspend fun delete(id: String) {
+    suspend fun delete(id: String) = withContext(Dispatchers.IO) {
         val target = engine.listSessions().firstOrNull { it.id == id }
         if (target != null) engine.deleteSessionFile(target.filePath)
         metaStore.remove(id)

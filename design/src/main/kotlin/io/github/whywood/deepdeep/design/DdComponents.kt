@@ -30,6 +30,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +45,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+val LocalDdRowHorizontalPadding = staticCompositionLocalOf { 0.dp }
 
 @Composable
 fun DdPressable(
@@ -136,7 +139,7 @@ fun DdWordmark(
 @Composable
 fun DdHairline(
     modifier: Modifier = Modifier,
-    color: Color = deepDeepColors().hairline,
+    color: Color = deepDeepColors().hairline.copy(alpha = 0.45f),
 ) {
     Box(modifier.fillMaxWidth().height(1.dp).background(color))
 }
@@ -190,13 +193,26 @@ fun DdListRow(
 ) {
     val colors = deepDeepColors()
     val alpha = if (enabled) 1f else 0.42f
-    val clickable = if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val wash by animateFloatAsState(
+        targetValue = if (pressed && enabled && onClick != null) 0.06f else 0f,
+        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        label = "list-row-wash",
+    )
+    val clickable = if (onClick != null && enabled) {
+        Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+    } else {
+        Modifier
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.ink.copy(alpha = wash))
             .then(clickable)
             .heightIn(min = 60.dp)
-            .padding(vertical = 12.dp),
+            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {

@@ -6,7 +6,7 @@
 :app
  ├─ :runtime   pi2kotlin 适配、事件、Provider 目录、会话元数据、Key
  ├─ :shell     Alpine/proot、LinuxShellExecutor
- └─ :design    Compose 主题与组件
+ └─ :design    Compose 主题、字体、motion tokens、组件
 ```
 
 依赖方向：`:app` 依赖三个模块；`:runtime`/`:shell`/`:design` 不互相依赖。
@@ -31,19 +31,27 @@ Compose ChatScreen
 - 每次发送生成 `runId`；流式事件带 runId，UI 丢弃旧 run 的迟到事件。
 - `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
-- `ProviderCatalog` 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
-- `ModelConfigStore` 保存 provider/model/thinking；聊天 composer 切换模型和思考。
-- `SdkCredentialStore` 使用 Android Keystore 加密的 `ApiKeyStore`，可按 provider 预加载/清除 key。
-- `SessionMetaStore`/`SessionRepository` 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
+- ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
+- ModelConfigStore 保存 provider/model/thinking；聊天 composer 切换模型和思考。
+- SdkCredentialStore 使用 Android Keystore 加密的 ApiKeyStore，可按 provider 预加载/清除 key。
+- SessionMetaStore/SessionRepository 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
+- 会话文件读取/写入在 IO dispatcher；Chat 层注入 `ioDispatcher` 以便测试。
 
-## UI
+## 消息模型
 
-- ChatScreen：Claude 式顶栏、左侧用户气泡、全宽 assistant、浮动 composer。
-- 过程区：DSH 式过程摘要 + reasoning/tool 卡片；运行中默认展开，完成后可折叠。
-- ChatScrollController：按布局实际 overflow 跟随底部，用户上拖后暂停并显示“回到底部”。
-- SettingsScreen：Claude 式分组卡；占位项有可见反馈；Provider/运行环境/颜色模式/关于是真实入口。
-- ProviderList/ProviderDetail：42 家 Provider、搜索、API Key 存储、OAuth 占位、设为当前 Provider。
-- Drawer：顶部功能项带图标；历史项纯文字，置顶/最近分区；长按重命名/置顶/归档/删除；归档页。
+- 一个 UI assistant message 对应一个用户回合。
+- `AssistantStep` 有序保存 `Reasoning`、`Text`、`Tool`；`AssistantMessage.text` 是最终回复。
+- 历史映射按用户消息分 turn，把连续 assistant/tool 消息聚合成一个 message；工具前的文本留在过程，工具后的最终文本成为 answer。
+- 实时发送时文本先进入过程的 `Text` step，结束时把尾部最终文本移到 answer。
+
+## UI 与动效
+
+- `ui/navigation`：`AppDestination`、`AppNavigator`、`AppScreenTransition`、`AnimatedScreenHost`。
+- 设置层级使用 typed stack + `AnimatedContent`；系统返回手势 -> pop。
+- `design/DdMotion` 统一时长/easing；`DdTypingDots` 承载思考动画。
+- 抽屉用持久 composition + `graphicsLayer` translation，避免开关时反复组合；遮罩只在可见时挂载，避免拦截触摸。
+- ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
+- 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow`），不使用方框 ripple。
 
 ## 存储
 

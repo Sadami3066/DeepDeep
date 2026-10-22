@@ -1,37 +1,38 @@
 # Status
 
-## Done: P0-P4 polish
+## Done: P0-P5 polish
 
-- Claude-style chat layout + working state + DSH process timeline
-- real auto-follow: live tool/reasoning rows stay visible; jump-to-bottom chip
-- runId filtering, immediate session title/list refresh, cold-start ready state
-- singleTask + notification intent flags (one MainActivity)
-- drawer history without icons; long-press rename/pin/archive/delete; archived page
-- Claude-style settings with placeholders; real Provider/运行环境/颜色模式/关于
-- 42-provider directory + write-only API Key auth + active provider/model selection
-- thinking level moved to chat composer; settings no longer controls it
-- old Assistant*/LinuxSettingsScreen removed; provider/model/session metadata owned by new code
+- Claude-style chat: right user bubbles, fixed thinking row, quiet collapsed process
+- process redesign: expanded while running, details collapsed, auto collapse at finish; intermediate text/tools in order; final answer separate
+- history turns grouped; single process per user turn
+- conversation switch: persistent drawer, short centered spinner, no horizontal page push
+- drawer: light paper background, white menus, no selected accent, anchored context menu, rounded press state
+- menu text centered, compact width, press follows row; session rows have rounded press state
+- full-width rounded press highlights on settings rows / provider rows
+- process text rendered with the same Markdown pipeline as final answers
+- lighter default hairlines
+- settings: compact grouped cards, no verbose copy, anchored theme menu, Toast placeholders, nested runtime page
+- palette: light background + pure white contrast + teal-blue accent; lighter hairlines
+- motion system: DdMotion tokens, DdTypingDots, typed navigation, AnimatedScreenHost
+- press states: rounded gray wash on menus/list rows/provider rows/session rows
+- old Assistant*/LinuxSettingsScreen removed
 
 ## Checks
 
 - `verifyModuleBoundaries` pass
 - `:runtime:testDebugUnitTest`, `:app:testDebugUnitTest`, `:shell:testDebugUnitTest` pass
-- `lintDebug` 0 errors (10 version/resource warnings)
+- `lintDebug` 0 errors
 - `assembleDebug` / `assembleRelease` pass
-- Release/R8 signed with debug key, installed and chatted on device
+- Device smoke: responsive drawer, smooth session switch, collapsed process, anchored menu
 
-## Device evidence
+## Evidence
 
-`artifacts/validation/polish/`:
+`artifacts/validation/polish/` plus latest:
 
-- `new-long-2/6/12/22.png` — long tool task: reasoning/tool/working visible during run
-- `new-stop.png` — stop marker + failed tool + process summary
-- `drawer-immediate.png` — new session title appears in drawer immediately
-- `new-actions.png` — long-press session actions
-- `new-settings2.png` — Claude-style settings
-- `provider-list2.png` — 42-provider directory
-- `final-home.png`, `final-empty.png`, `release-final.png`
-- `single-activity.txt`, `fgs-dumpsys.txt`
+- `process-running-v2.png`, `process-final-v2.png`
+- `menu-anchored-v2.png`
+- `settings-pressed-v2.png`
+- `history-grouped.png`
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 
@@ -39,5 +40,5 @@ Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 
 - root: `ShellExecutor` extension point; implementation deferred until root testing is authorized
 - scheduled prompts / event triggers
+- markdown renderer upgrade (user requested later)
 - skills/AGENTS.md provisioning, memory conventions
-- notifications/calendar/GUI/voice (later)

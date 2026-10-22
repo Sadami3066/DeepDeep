@@ -108,7 +108,7 @@ fun ProviderDetailScreen(
             Spacer(Modifier.height(20.dp))
             ProviderOverview(provider = provider, configured = configured, active = active)
             Spacer(Modifier.height(28.dp))
-            SettingsGroup(label = stringResource(R.string.settings_provider_auth)) {
+            SettingsGroup {
                 if (!provider.supportsApiKey) {
                     DdListRow(
                         icon = DdIcons.Info,
@@ -134,7 +134,7 @@ fun ProviderDetailScreen(
                 }
             }
             Spacer(Modifier.height(28.dp))
-            SettingsGroup(label = stringResource(R.string.settings_provider_model_group)) {
+            SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Sparkles,
                     title = stringResource(R.string.settings_provider_model),

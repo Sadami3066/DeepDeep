@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,21 +34,17 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 @Composable
 internal fun ChatTurn(
     message: AssistantMessage,
-    activity: String?,
-    activityStartedAt: Long?,
     onToggleStep: (Long) -> Unit,
     onCopy: (String) -> Unit,
     onShare: (String) -> Unit,
     onCopyOutput: (String) -> Unit,
 ) {
     if (message.role == AssistantRole.USER) {
-        UserBubble(message.text)
+        UserBubble(text = message.text, onCopy = onCopy)
         return
     }
     AssistantTurn(
         message = message,
-        activity = activity,
-        activityStartedAt = activityStartedAt,
         onToggleStep = onToggleStep,
         onCopy = onCopy,
         onShare = onShare,
@@ -50,10 +52,15 @@ internal fun ChatTurn(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun UserBubble(text: String) {
+private fun UserBubble(text: String, onCopy: (String) -> Unit) {
     val colors = deepDeepColors()
-    Row(Modifier.fillMaxWidth()) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+    ) {
         Box(
             Modifier
                 .widthIn(max = 560.dp)
@@ -61,11 +68,18 @@ private fun UserBubble(text: String) {
                     RoundedCornerShape(
                         topStart = 20.dp,
                         topEnd = 20.dp,
-                        bottomEnd = 20.dp,
-                        bottomStart = 6.dp,
+                        bottomEnd = 6.dp,
+                        bottomStart = 20.dp,
                     ),
                 )
                 .background(colors.userBubble)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onCopy(text)
+                    },
+                )
                 .padding(horizontal = 15.dp, vertical = 11.dp),
         ) {
             Text(
@@ -80,8 +94,6 @@ private fun UserBubble(text: String) {
 @Composable
 private fun AssistantTurn(
     message: AssistantMessage,
-    activity: String?,
-    activityStartedAt: Long?,
     onToggleStep: (Long) -> Unit,
     onCopy: (String) -> Unit,
     onShare: (String) -> Unit,
@@ -97,14 +109,10 @@ private fun AssistantTurn(
                 onToggleStep = onToggleStep,
                 onCopyOutput = onCopyOutput,
             )
-            if (answer.isNotEmpty() || message.streaming) Spacer(Modifier.height(6.dp))
+            if (answer.isNotEmpty()) Spacer(Modifier.height(6.dp))
         }
         if (answer.isNotEmpty()) {
             ChatMarkdown(answer)
-        }
-        if (message.streaming) {
-            if (answer.isNotEmpty()) Spacer(Modifier.height(10.dp))
-            WorkingIndicator(activity = activity, startedAt = activityStartedAt)
         }
         when (message.status) {
             MessageStatus.STOPPED -> StatusMark(
@@ -130,7 +138,7 @@ private fun AssistantTurn(
 }
 
 @Composable
-private fun StatusMark(text: String, color: androidx.compose.ui.graphics.Color) {
+private fun StatusMark(text: String, color: Color) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(
             text = text,

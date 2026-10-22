@@ -117,12 +117,23 @@ class PiSessionEngine(
     private fun mapHistory(messages: List<AgentMessage>): List<AssistantMessage> {
         val result = mutableListOf<AssistantMessage>()
         val traces = mutableMapOf<String, ToolTrace>()
+        var current: AssistantMessage? = null
         var messageId = 0L
         var stepId = 0L
+
+        fun flush() {
+            current?.let { message ->
+                if (message.text.isNotBlank() || message.steps.isNotEmpty()) {
+                    result += message
+                }
+            }
+            current = null
+        }
 
         for (agentMessage in messages) {
             when (val message = agentMessage.asLlmMessage()) {
                 is UserMessage -> {
+                    flush()
                     val text = message.content.asText()
                     if (text.isNotBlank()) {
                         result += AssistantMessage(messageId++, AssistantRole.USER, text)
@@ -130,13 +141,26 @@ class PiSessionEngine(
                 }
 
                 is PiAssistantMessage -> {
-                    val text = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
-                    val steps = mutableListOf<AssistantStep>()
+                    val base = current ?: AssistantMessage(
+                        id = messageId++,
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        status = MessageStatus.DONE,
+                        startedAt = message.timestamp,
+                    )
+                    val newSteps = mutableListOf<AssistantStep>()
+                    var lastToolIndex = -1
                     for (content in message.content) {
                         when (content) {
                             is ThinkingContent -> {
                                 if (content.thinking.isNotBlank()) {
-                                    steps += AssistantStep.Reasoning(stepId++, content.thinking)
+                                    newSteps += AssistantStep.Reasoning(stepId++, content.thinking)
+                                }
+                            }
+
+                            is TextContent -> {
+                                if (content.text.isNotBlank()) {
+                                    newSteps += AssistantStep.Text(stepId++, content.text)
                                 }
                             }
 
@@ -148,28 +172,41 @@ class PiSessionEngine(
                                     toolCallId = content.id,
                                 )
                                 traces[content.id] = trace
-                                steps += AssistantStep.Tool(trace)
+                                newSteps += AssistantStep.Tool(trace)
+                                lastToolIndex = newSteps.lastIndex
                             }
 
                             else -> Unit
                         }
                     }
-                    if (text.isNotBlank() || steps.isNotEmpty()) {
-                        result += AssistantMessage(
-                            id = messageId++,
-                            role = AssistantRole.ASSISTANT,
-                            text = text,
-                            steps = steps,
-                            status = MessageStatus.DONE,
-                            startedAt = message.timestamp,
-                            finishedAt = message.timestamp,
-                        )
+                    val finalText = if (lastToolIndex >= 0) {
+                        newSteps.drop(lastToolIndex + 1).filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
+                    } else {
+                        newSteps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
                     }
+                    val processSteps = if (lastToolIndex >= 0) {
+                        newSteps.filterIndexed { index, step -> !(step is AssistantStep.Text && index > lastToolIndex) }
+                    } else {
+                        newSteps.filterNot { it is AssistantStep.Text }
+                    }
+                    current = base.copy(
+                        text = finalText.ifBlank { base.text },
+                        steps = base.steps + processSteps,
+                        startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
+                        finishedAt = message.timestamp,
+                    )
                 }
 
                 is ToolResultMessage -> {
                     val output = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
                     val existing = traces[message.toolCallId]
+                    val base = current ?: AssistantMessage(
+                        id = messageId++,
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        status = MessageStatus.DONE,
+                        startedAt = message.timestamp,
+                    )
                     if (existing == null) {
                         val trace = ToolTrace(
                             id = stepId++,
@@ -181,13 +218,8 @@ class PiSessionEngine(
                             toolCallId = message.toolCallId,
                         )
                         traces[message.toolCallId] = trace
-                        result += AssistantMessage(
-                            id = messageId++,
-                            role = AssistantRole.ASSISTANT,
-                            text = "",
-                            steps = listOf(AssistantStep.Tool(trace)),
-                            status = MessageStatus.DONE,
-                            startedAt = message.timestamp,
+                        current = base.copy(
+                            steps = base.steps + AssistantStep.Tool(trace),
                             finishedAt = message.timestamp,
                         )
                     } else {
@@ -197,29 +229,23 @@ class PiSessionEngine(
                             error = output.takeIf { it.isNotBlank() && message.isError },
                         )
                         traces[message.toolCallId] = updated
-                        val index = result.indexOfLast { item ->
-                            item.steps.any { step ->
-                                step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId
-                            }
-                        }
-                        if (index >= 0) {
-                            val target = result[index]
-                            result[index] = target.copy(
-                                steps = target.steps.map { step ->
-                                    if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
-                                        AssistantStep.Tool(updated)
-                                    } else {
-                                        step
-                                    }
-                                },
-                            )
-                        }
+                        current = base.copy(
+                            steps = base.steps.map { step ->
+                                if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
+                                    AssistantStep.Tool(updated)
+                                } else {
+                                    step
+                                }
+                            },
+                            finishedAt = message.timestamp,
+                        )
                     }
                 }
 
                 else -> Unit
             }
         }
+        flush()
         return result
     }
 

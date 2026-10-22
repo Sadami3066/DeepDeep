@@ -25,4 +25,5 @@ data class ChatUiState(
     val archivedConversations: List<ConversationSummary> = emptyList(),
     val archivedCount: Int = 0,
     val historyLoaded: Boolean = false,
+    val switchingConversation: Boolean = false,
 )

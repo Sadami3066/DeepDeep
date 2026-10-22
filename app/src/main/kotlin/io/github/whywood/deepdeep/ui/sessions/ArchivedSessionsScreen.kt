@@ -1,9 +1,13 @@
 package io.github.whywood.deepdeep.ui.sessions
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
@@ -50,7 +59,10 @@ fun ArchivedSessionsScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var actionTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var menuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var menuAnchor by remember { mutableStateOf(Offset.Zero) }
+    var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     val ordered = remember(archivedSessions) { archivedSessions.sortedByDescending { it.updatedAt } }
     BackHandler(onBack = onBack)
     Column(
@@ -105,53 +117,115 @@ fun ArchivedSessionsScreen(
             ) {
                 items(ordered, key = { it.id }) { session ->
                     ArchivedSessionRow(
-                        title = session.title,
+                        session = session,
+                        menuExpanded = menuTarget?.id == session.id,
                         onClick = { onOpen(session.id) },
-                        onLongClick = { actionTarget = session },
+                        onLongClick = { offset ->
+                            menuAnchor = offset
+                            menuTarget = session
+                        },
+                        menuAnchor = menuAnchor,
+                        onDismissMenu = { menuTarget = null },
+                        onAction = { action ->
+                            when (action) {
+                                SessionAction.RENAME -> renameTarget = session
+                                SessionAction.TOGGLE_PIN -> Unit
+                                SessionAction.TOGGLE_ARCHIVE -> onUnarchive(session.id)
+                                SessionAction.DELETE -> deleteTarget = session
+                            }
+                        },
                         testTag = "archived_${session.id}",
                     )
                 }
             }
         }
     }
-    actionTarget?.let { session ->
-        SessionActionsSheet(
-            session = session,
-            showPin = false,
-            onDismiss = { actionTarget = null },
-            onRename = { title -> onRename(session.id, title) },
-            onTogglePinned = {},
-            onToggleArchived = { onUnarchive(session.id) },
-            onDelete = { onDelete(session.id) },
+    renameTarget?.let { session ->
+        RenameSessionDialog(
+            initialTitle = session.title,
+            onDismiss = { renameTarget = null },
+            onConfirm = { title ->
+                renameTarget = null
+                onRename(session.id, title)
+            },
+        )
+    }
+    deleteTarget?.let { session ->
+        DeleteSessionDialog(
+            sessionTitle = session.title,
+            onDismiss = { deleteTarget = null },
+            onConfirm = {
+                deleteTarget = null
+                onDelete(session.id)
+            },
         )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ArchivedSessionRow(
-    title: String,
+    session: ConversationSummary,
+    menuExpanded: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (Offset) -> Unit,
+    menuAnchor: Offset,
+    onDismissMenu: () -> Unit,
+    onAction: (SessionAction) -> Unit,
     testTag: String,
 ) {
     val colors = deepDeepColors()
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .testTag(testTag)
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            text = title,
-            style = DdType.body,
-            color = colors.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+    val haptic = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val wash by animateFloatAsState(
+        targetValue = if (pressed) 0.06f else 0f,
+        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        label = "archived-row-wash",
+    )
+    Box(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.ink.copy(alpha = wash))
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val press = PressInteraction.Press(offset)
+                            interaction.emit(press)
+                            if (tryAwaitRelease()) {
+                                interaction.emit(PressInteraction.Release(press))
+                            } else {
+                                interaction.emit(PressInteraction.Cancel(press))
+                            }
+                        },
+                        onTap = { onClick() },
+                        onLongPress = { offset ->
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLongClick(offset)
+                        },
+                    )
+                }
+                .testTag(testTag)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = session.title,
+                style = DdType.body,
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        SessionActionMenu(
+            session = session,
+            expanded = menuExpanded,
+            showPin = false,
+            onDismissRequest = onDismissMenu,
+            onAction = onAction,
+            anchor = menuAnchor,
         )
     }
 }

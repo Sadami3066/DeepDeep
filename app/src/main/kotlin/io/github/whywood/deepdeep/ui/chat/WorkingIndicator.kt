@@ -1,18 +1,9 @@
 package io.github.whywood.deepdeep.ui.chat
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,39 +13,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.DdTypingDots
 import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlinx.coroutines.delay
-
-@Composable
-internal fun PulsingDot(
-    color: Color,
-    modifier: Modifier = Modifier,
-    size: Dp = 6.dp,
-) {
-    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.25f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulse-alpha",
-    )
-    Box(
-        modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(color.copy(alpha = pulse)),
-    )
-}
 
 @Composable
 internal fun WorkingIndicator(
@@ -72,23 +39,29 @@ internal fun WorkingIndicator(
         }
     }
     val elapsedSeconds = startedAt?.let { ((now - it).coerceAtLeast(0L) / 1000L).toInt() }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        PulsingDot(color = colors.accent)
+    Row(
+        modifier = modifier.heightIn(min = 28.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DdTypingDots(color = colors.inkTertiary)
         Spacer(Modifier.width(8.dp))
         Text(
             text = activity ?: stringResource(R.string.assistant_working),
-            style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 19.sp),
+            modifier = Modifier.weight(1f, fill = false),
+            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
             color = colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (elapsedSeconds != null) {
             Text(
                 text = " · ",
-                style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 19.sp),
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 color = colors.inkTertiary,
             )
             Text(
                 text = stringResource(R.string.assistant_elapsed_seconds, elapsedSeconds),
-                style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 19.sp),
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 color = colors.inkTertiary,
             )
         }

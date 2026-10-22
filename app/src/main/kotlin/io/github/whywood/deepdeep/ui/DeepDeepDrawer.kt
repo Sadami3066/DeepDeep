@@ -1,9 +1,13 @@
 package io.github.whywood.deepdeep.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,13 +47,16 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.ui.sessions.SessionActionsSheet
+import io.github.whywood.deepdeep.ui.sessions.DeleteSessionDialog
+import io.github.whywood.deepdeep.ui.sessions.RenameSessionDialog
+import io.github.whywood.deepdeep.ui.sessions.SessionAction
+import io.github.whywood.deepdeep.ui.sessions.SessionActionMenu
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DeepDeepDrawer(
     conversations: List<ConversationSummary>,
@@ -65,7 +76,10 @@ fun DeepDeepDrawer(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var actionTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var menuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var menuAnchor by remember { mutableStateOf(Offset.Zero) }
+    var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     val pinned = remember(conversations) {
         conversations.filter { it.pinned && !it.archived }.sortedByDescending { it.updatedAt }
     }
@@ -76,7 +90,7 @@ fun DeepDeepDrawer(
         modifier
             .fillMaxHeight()
             .width(304.dp)
-            .background(colors.raised)
+            .background(colors.paper)
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 24.dp)
@@ -91,14 +105,12 @@ fun DeepDeepDrawer(
             DrawerNavItem(
                 icon = DdIcons.Message,
                 label = stringResource(R.string.drawer_nav_chat),
-                selected = true,
                 onClick = onChat,
                 testTag = "drawer_chat",
             )
             DrawerNavItem(
                 icon = DdIcons.Folder,
                 label = stringResource(R.string.drawer_nav_archived),
-                selected = false,
                 onClick = onArchived,
                 testTag = "drawer_archived",
                 trailing = {
@@ -112,13 +124,12 @@ fun DeepDeepDrawer(
             DrawerNavItem(
                 icon = DdIcons.Plus,
                 label = stringResource(R.string.drawer_nav_new_chat),
-                selected = false,
                 onClick = onNewChat,
                 testTag = "drawer_new_chat",
             )
         }
         Spacer(Modifier.height(18.dp))
-        DdHairline()
+        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
         Spacer(Modifier.height(14.dp))
         if (conversations.isEmpty()) {
             Text(
@@ -139,9 +150,24 @@ fun DeepDeepDrawer(
                     items(pinned, key = { it.id }) { conversation ->
                         DrawerHistoryRow(
                             conversation = conversation,
-                            selected = conversation.id == activeConversationId,
+                            menuExpanded = menuTarget?.id == conversation.id,
                             onClick = { onConversation(conversation.id) },
-                            onLongClick = { actionTarget = conversation },
+                            onLongClick = { offset ->
+                                menuAnchor = offset
+                                menuTarget = conversation
+                            },
+                            menuAnchor = menuAnchor,
+                            onDismissMenu = { menuTarget = null },
+                            onAction = { action ->
+                                when (action) {
+                                    SessionAction.RENAME -> renameTarget = conversation
+                                    SessionAction.TOGGLE_PIN -> onSetPinned(conversation.id, !conversation.pinned)
+                                    SessionAction.TOGGLE_ARCHIVE ->
+                                        onSetArchived(conversation.id, !conversation.archived)
+
+                                    SessionAction.DELETE -> deleteTarget = conversation
+                                }
+                            },
                             testTag = "recent_${conversation.id}",
                         )
                     }
@@ -153,28 +179,53 @@ fun DeepDeepDrawer(
                     items(recent, key = { it.id }) { conversation ->
                         DrawerHistoryRow(
                             conversation = conversation,
-                            selected = conversation.id == activeConversationId,
+                            menuExpanded = menuTarget?.id == conversation.id,
                             onClick = { onConversation(conversation.id) },
-                            onLongClick = { actionTarget = conversation },
+                            onLongClick = { offset ->
+                                menuAnchor = offset
+                                menuTarget = conversation
+                            },
+                            menuAnchor = menuAnchor,
+                            onDismissMenu = { menuTarget = null },
+                            onAction = { action ->
+                                when (action) {
+                                    SessionAction.RENAME -> renameTarget = conversation
+                                    SessionAction.TOGGLE_PIN -> onSetPinned(conversation.id, !conversation.pinned)
+                                    SessionAction.TOGGLE_ARCHIVE ->
+                                        onSetArchived(conversation.id, !conversation.archived)
+
+                                    SessionAction.DELETE -> deleteTarget = conversation
+                                }
+                            },
                             testTag = "recent_${conversation.id}",
                         )
                     }
                 }
             }
         }
-        DdHairline()
+        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
         Spacer(Modifier.height(12.dp))
         DrawerAccountRow(userName = userName, onClick = onSettings)
         Spacer(Modifier.height(12.dp))
     }
-    actionTarget?.let { session ->
-        SessionActionsSheet(
-            session = session,
-            onDismiss = { actionTarget = null },
-            onRename = { title -> onRename(session.id, title) },
-            onTogglePinned = { onSetPinned(session.id, !session.pinned) },
-            onToggleArchived = { onSetArchived(session.id, !session.archived) },
-            onDelete = { onDelete(session.id) },
+    renameTarget?.let { session ->
+        RenameSessionDialog(
+            initialTitle = session.title,
+            onDismiss = { renameTarget = null },
+            onConfirm = { title ->
+                renameTarget = null
+                onRename(session.id, title)
+            },
+        )
+    }
+    deleteTarget?.let { session ->
+        DeleteSessionDialog(
+            sessionTitle = session.title,
+            onDismiss = { deleteTarget = null },
+            onConfirm = {
+                deleteTarget = null
+                onDelete(session.id)
+            },
         )
     }
 }
@@ -183,7 +234,6 @@ fun DeepDeepDrawer(
 private fun DrawerNavItem(
     icon: DdIcon,
     label: String,
-    selected: Boolean,
     onClick: () -> Unit,
     testTag: String,
     trailing: (@Composable () -> Unit)? = null,
@@ -194,7 +244,6 @@ private fun DrawerNavItem(
             .fillMaxWidth()
             .height(50.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) colors.accentSoft else colors.raised)
             .clickable(onClick = onClick)
             .testTag(testTag)
             .padding(horizontal = 12.dp),
@@ -203,14 +252,14 @@ private fun DrawerNavItem(
     ) {
         DdIcon(
             icon = icon,
-            tint = if (selected) colors.accent else colors.inkSecondary,
+            tint = colors.inkSecondary,
             size = 20.dp,
         )
         Text(
             text = label,
             modifier = Modifier.weight(1f),
             style = DdType.body.copy(fontSize = 16.sp, lineHeight = 22.sp),
-            color = if (selected) colors.accent else colors.ink,
+            color = colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -229,33 +278,69 @@ private fun DrawerSectionLabel(text: String) {
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DrawerHistoryRow(
     conversation: ConversationSummary,
-    selected: Boolean,
+    menuExpanded: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (Offset) -> Unit,
+    menuAnchor: Offset,
+    onDismissMenu: () -> Unit,
+    onAction: (SessionAction) -> Unit,
     testTag: String,
 ) {
     val colors = deepDeepColors()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) colors.accentSoft else colors.raised)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .testTag(testTag)
-            .padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = conversation.title,
-            style = DdType.bodySmall,
-            color = if (selected) colors.accent else colors.inkSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+    val haptic = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val wash by animateFloatAsState(
+        targetValue = if (pressed) 0.06f else 0f,
+        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        label = "session-row-wash",
+    )
+    Box(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.ink.copy(alpha = wash))
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val press = PressInteraction.Press(offset)
+                            interaction.emit(press)
+                            if (tryAwaitRelease()) {
+                                interaction.emit(PressInteraction.Release(press))
+                            } else {
+                                interaction.emit(PressInteraction.Cancel(press))
+                            }
+                        },
+                        onTap = { onClick() },
+                        onLongPress = { offset ->
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLongClick(offset)
+                        },
+                    )
+                }
+                .testTag(testTag)
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = conversation.title,
+                style = DdType.bodySmall,
+                color = colors.inkSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        SessionActionMenu(
+            session = conversation,
+            expanded = menuExpanded,
+            onDismissRequest = onDismissMenu,
+            onAction = onAction,
+            anchor = menuAnchor,
         )
     }
 }

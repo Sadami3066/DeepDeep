@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.chat
 
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
@@ -45,7 +46,7 @@ class ChatViewModelTest {
     @Test
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {})
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
 
         viewModel.onInputChange("hello")
@@ -72,15 +73,57 @@ class ChatViewModelTest {
     @Test
     fun ignoresStaleRunEvents() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {})
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
         viewModel.send()
         runtime.emit(RuntimeEvent.RunStarted("run-1", 1000L))
         runtime.emit(RuntimeEvent.TextDelta("run-2", "stale"))
         runtime.emit(RuntimeEvent.TextDelta("run-1", "fresh"))
+        runtime.emit(RuntimeEvent.RunFinished("run-1", "fresh", RunStatus.DONE, 2000L))
         advanceUntilIdle()
         assertEquals("fresh", viewModel.state.value.messages.last().text)
+    }
+
+
+    @Test
+    fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        advanceUntilIdle()
+        viewModel.onInputChange("do it")
+        viewModel.send()
+        runtime.emit(RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emit(RuntimeEvent.TextDelta(runtime.runId, "starting"))
+        runtime.emit(
+            RuntimeEvent.ToolStarted(
+                runId = runtime.runId,
+                callId = "call-1",
+                name = "bash",
+                arguments = mapOf("command" to "sleep 1"),
+                startedAt = 1200L,
+            ),
+        )
+        runtime.emit(
+            RuntimeEvent.ToolFinished(
+                runId = runtime.runId,
+                callId = "call-1",
+                name = "bash",
+                result = "ok",
+                isError = false,
+                durationMs = 1000L,
+            ),
+        )
+        runtime.emit(RuntimeEvent.TextDelta(runtime.runId, "done"))
+        runtime.emit(RuntimeEvent.RunFinished(runtime.runId, "done", RunStatus.DONE, 3000L))
+        advanceUntilIdle()
+
+        val message = viewModel.state.value.messages.last()
+        assertEquals("done", message.text)
+        assertEquals(2, message.steps.size)
+        assertTrue(message.steps[0] is AssistantStep.Text)
+        assertEquals("starting", (message.steps[0] as AssistantStep.Text).text)
+        assertTrue(message.steps[1] is AssistantStep.Tool)
     }
 
     private class FakeRuntime : AgentRuntime {

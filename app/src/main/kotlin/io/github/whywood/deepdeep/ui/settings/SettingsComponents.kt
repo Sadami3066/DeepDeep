@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -10,9 +11,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -22,49 +21,40 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
-import io.github.whywood.deepdeep.design.DdPrimaryButton
-import io.github.whywood.deepdeep.design.DdSectionLabel
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 @Composable
 internal fun SettingsGroup(
-    label: String?,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
-    Column(modifier.fillMaxWidth()) {
-        if (label != null) {
-            DdSectionLabel(label, Modifier.padding(start = 4.dp))
-            Spacer(Modifier.height(10.dp))
-        }
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(colors.surface)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            content = content,
-        )
-    }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.surface)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        content = content,
+    )
 }
 
 @Composable
@@ -155,49 +145,14 @@ internal fun SettingsTextField(
 internal fun PlaceholderRow(
     icon: DdIcon,
     @StringRes title: Int,
-    @StringRes subtitle: Int?,
-    onPlaceholder: (String) -> Unit,
 ) {
-    val titleText = stringResource(title)
+    val context = LocalContext.current
     DdListRow(
         icon = icon,
-        title = titleText,
-        subtitle = subtitle?.let { stringResource(it) },
-        value = stringResource(R.string.settings_placeholder_value),
-        onClick = { onPlaceholder(titleText) },
-        showChevron = true,
+        title = stringResource(title),
+        value = stringResource(R.string.settings_placeholder),
+        onClick = {
+            Toast.makeText(context, R.string.settings_placeholder, Toast.LENGTH_SHORT).show()
+        },
     )
-}
-
-@Composable
-internal fun PlaceholderSheet(title: String, onClose: () -> Unit) {
-    val colors = deepDeepColors()
-    DdSheet(onDismiss = onClose) {
-        DdSheetHeader(title, onClose)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.settings_placeholder_body),
-                modifier = Modifier.fillMaxWidth(),
-                style = DdType.heading,
-                color = colors.ink,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_placeholder_hint),
-                modifier = Modifier.fillMaxWidth(),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            DdPrimaryButton(
-                text = stringResource(R.string.settings_placeholder_dismiss),
-                onClick = onClose,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(28.dp))
-        }
-    }
 }

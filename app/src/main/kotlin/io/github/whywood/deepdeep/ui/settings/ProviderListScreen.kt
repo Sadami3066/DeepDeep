@@ -1,7 +1,11 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,21 +24,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ProviderSummary
@@ -100,21 +109,17 @@ fun ProviderListScreen(
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.settings_provider_description),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             SettingsTextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = stringResource(R.string.settings_provider_search),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             )
-            Spacer(Modifier.height(24.dp))
-            SettingsGroup(label = countLabel) {
+            Spacer(Modifier.height(16.dp))
+            DdSectionLabel(countLabel, Modifier.padding(start = 4.dp))
+            Spacer(Modifier.height(10.dp))
+            SettingsGroup {
                 if (filtered.isEmpty()) {
                     Text(
                         text = stringResource(R.string.settings_provider_no_result),
@@ -147,12 +152,21 @@ private fun ProviderRow(
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val wash by animateFloatAsState(
+        targetValue = if (pressed) 0.06f else 0f,
+        animationSpec = tween(DdMotion.PRESS, easing = DdMotion.EaseOut),
+        label = "provider-row-wash",
+    )
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.ink.copy(alpha = wash))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .heightIn(min = 68.dp)
-            .padding(vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InitialBadge(provider.name)

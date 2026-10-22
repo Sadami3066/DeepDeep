@@ -1,73 +1,42 @@
 <resources>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
-    <string name="settings_group_account">账户</string>
-    <string name="settings_group_features">功能</string>
-    <string name="settings_group_model">模型与运行环境</string>
-    <string name="settings_group_appearance">外观</string>
-    <string name="settings_group_app">应用</string>
-    <string name="settings_group_privacy">隐私</string>
-    <string name="settings_group_about">关于</string>
 
-    <string name="settings_account_local">本地账户 · 数据仅存本机</string>
-    <string name="settings_account_current_model">当前模型</string>
     <string name="settings_account_no_model">尚未选择模型</string>
     <string name="settings_status_configured">已配置</string>
     <string name="settings_status_unconfigured">未配置</string>
 
     <string name="settings_profile">个人资料</string>
-    <string name="settings_profile_subtitle">头像、名字与本地身份</string>
     <string name="settings_billing">账单与用量</string>
-    <string name="settings_billing_subtitle">用量统计与账单明细</string>
     <string name="settings_features">功能</string>
-    <string name="settings_features_subtitle">技能、工具与能力开关</string>
     <string name="settings_connectors">连接器</string>
-    <string name="settings_connectors_subtitle">外部服务与 MCP 连接</string>
     <string name="settings_permissions">权限</string>
-    <string name="settings_permissions_subtitle">文件、相机与网络访问</string>
+    <string name="settings_font">字体样式</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_haptics">触感反馈</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_focus">时间与专注</string>
+    <string name="settings_privacy">隐私</string>
+    <string name="settings_sharing">共享</string>
+    <string name="settings_sign_out">退出登录</string>
 
     <string name="settings_provider">Provider</string>
-    <string name="settings_provider_subtitle">模型服务提供方</string>
     <string name="settings_environment">运行环境</string>
     <string name="settings_theme">颜色模式</string>
-    <string name="settings_theme_subtitle">浅色、深色或跟随系统</string>
-    <string name="settings_theme_title">颜色模式</string>
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
-    <string name="settings_font">字体样式</string>
-    <string name="settings_font_subtitle">界面字体</string>
-    <string name="settings_language">语言</string>
-    <string name="settings_language_subtitle">界面语言，当前为简体中文</string>
-
-    <string name="settings_haptics">触感反馈</string>
-    <string name="settings_haptics_subtitle">点击与长按的振动反馈</string>
-    <string name="settings_notifications">通知</string>
-    <string name="settings_notifications_subtitle">运行完成与错误提醒</string>
-    <string name="settings_focus">时间与专注</string>
-    <string name="settings_focus_subtitle">专注模式与使用提醒</string>
-    <string name="settings_privacy">隐私</string>
-    <string name="settings_privacy_subtitle">数据存储与本地权限</string>
-    <string name="settings_sharing">共享</string>
-    <string name="settings_sharing_subtitle">分享与导出对话</string>
 
     <string name="settings_version">版本</string>
     <string name="settings_license">开源许可</string>
-    <string name="settings_license_subtitle">字体与图标许可</string>
     <string name="settings_license_title">开源许可</string>
     <string name="settings_license_sans">Instrument Sans</string>
     <string name="settings_license_serif">Newsreader</string>
     <string name="settings_license_icons">Lucide Icons</string>
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>
     <string name="settings_license_isc">ISC License</string>
-    <string name="settings_close">关闭</string>
-    <string name="settings_sign_out">退出登录</string>
-    <string name="settings_sign_out_subtitle">本地账户无需登录，数据仅存本机</string>
 
-    <string name="settings_placeholder_value">尚未接入</string>
-    <string name="settings_placeholder_body">尚未接入</string>
-    <string name="settings_placeholder_hint">该功能仍在开发中，将在后续版本提供。</string>
-    <string name="settings_placeholder_dismiss">知道了</string>
+    <string name="settings_placeholder">尚未接入</string>
 
     <string name="settings_linux_status_not_installed">未安装</string>
     <string name="settings_linux_status_installing">正在安装…</string>
@@ -77,9 +46,7 @@
     <string name="settings_linux_install">安装 Linux 环境</string>
     <string name="settings_linux_installing">正在安装…</string>
     <string name="settings_linux_enable">允许助手运行 Linux 命令</string>
-    <string name="settings_linux_boundary">免 Root 用户空间，可访问应用文件；不是安全沙箱。</string>
     <string name="settings_linux_reset">重置 Linux 环境</string>
-    <string name="settings_linux_reset_body">删除环境，保留工作区</string>
     <string name="settings_linux_reset_title">重置 Linux 环境？</string>
     <string name="settings_linux_reset_dialog">将删除 Linux 环境并关闭开关，工作区文件保留。</string>
     <string name="settings_linux_reset_confirm">重置</string>
@@ -87,14 +54,12 @@
     <string name="settings_linux_unsupported">此设备不支持 Linux（仅 arm64-v8a）。</string>
 
     <string name="settings_provider_title">Provider</string>
-    <string name="settings_provider_description">选择模型服务提供方</string>
     <string name="settings_provider_search">搜索 Provider</string>
     <string name="settings_provider_all_count">全部 Provider · %1$d</string>
     <string name="settings_provider_result_count">搜索结果 · %1$d</string>
     <string name="settings_provider_models_count">%1$d 个模型</string>
     <string name="settings_provider_current">当前</string>
     <string name="settings_provider_no_result">没有匹配的 Provider</string>
-    <string name="settings_provider_auth">认证</string>
     <string name="settings_provider_extra_config">需要额外配置</string>
     <string name="settings_provider_extra_config_body">该 Provider 不支持 API Key，需要 OAuth 或专用登录方式。</string>
     <string name="settings_provider_oauth_hint">OAuth 尚未接入</string>
@@ -105,7 +70,6 @@
     <string name="settings_provider_api_key_required">请输入 API Key</string>
     <string name="settings_provider_api_key_save">保存</string>
     <string name="settings_provider_api_key_clear">清除</string>
-    <string name="settings_provider_model_group">模型</string>
     <string name="settings_provider_model">当前模型</string>
     <string name="settings_provider_models_title">选择模型</string>
     <string name="settings_provider_model_count">模型数量</string>

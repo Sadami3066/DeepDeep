@@ -96,18 +96,11 @@ internal fun LinuxEnvironmentSection(
             DdListRow(
                 icon = DdIcons.Refresh,
                 title = stringResource(R.string.settings_linux_reset),
-                subtitle = stringResource(R.string.settings_linux_reset_body),
                 onClick = { resetConfirm = true },
                 showChevron = true,
                 modifier = Modifier.testTag("linux_reset"),
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.settings_linux_boundary),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-        )
     }
 
     if (resetConfirm) {

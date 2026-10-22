@@ -4,9 +4,9 @@
     <string name="assistant_configure_hint">尚未配置模型</string>
     <string name="assistant_configure_input">先在设置中配置模型</string>
     <string name="assistant_copied">已复制</string>
-    <string name="assistant_duration_minutes">%1$d 分 %2$d 秒</string>
-    <string name="assistant_duration_seconds">%1$s 秒</string>
-    <string name="assistant_elapsed_seconds">%1$d 秒</string>
+    <string name="assistant_duration_minutes">%1$dm %2$ds</string>
+    <string name="assistant_duration_seconds">%1$ss</string>
+    <string name="assistant_elapsed_seconds">%1$ds</string>
     <string name="assistant_failed">生成失败</string>
     <string name="assistant_greeting_afternoon">下午好</string>
     <string name="assistant_greeting_evening">晚上好</string>
@@ -26,7 +26,6 @@
     <string name="assistant_process_reasoning">%1$d 个思考</string>
     <string name="assistant_process_tools">%1$d 个工具</string>
     <string name="assistant_reasoning">思考</string>
-    <string name="assistant_reasoning_running">思考中</string>
     <string name="assistant_send">发送</string>
     <string name="assistant_settings">设置</string>
     <string name="assistant_share_chooser">分享回答</string>

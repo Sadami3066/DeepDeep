@@ -62,6 +62,13 @@ sealed interface AssistantStep {
         override val id: Long get() = trace.id
         override val expanded: Boolean get() = trace.expanded
     }
+
+    data class Text(
+        override val id: Long,
+        val text: String,
+    ) : AssistantStep {
+        override val expanded: Boolean = false
+    }
 }
 
 enum class ToolActivityStatus {

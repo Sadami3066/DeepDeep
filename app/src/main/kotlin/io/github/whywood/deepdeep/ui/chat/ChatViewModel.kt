@@ -17,17 +17,22 @@ import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChatViewModel(
     private val runtime: AgentRuntime,
     private val providers: ProviderDirectory,
     private val modelConfigStore: ModelSettings,
     private val prepareRuntime: suspend () -> Unit,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
@@ -45,7 +50,7 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 prepareRuntime()
-                runtime.ensureStarted()
+                withContext(ioDispatcher) { runtime.ensureStarted() }
                 val config = providers.resolveConfig(modelConfigStore.read())
                 modelConfigStore.save(config)
                 applyConfig(config)
@@ -70,7 +75,7 @@ class ChatViewModel(
             mutableState.update { it.copy(error = "正在恢复会话，请稍候…") }
             return
         }
-        if (current.sending) return
+        if (current.sending || current.switchingConversation) return
         val text = current.input.trim()
         if (text.isEmpty()) return
         val userMessage = AssistantMessage(nextMessageId++, AssistantRole.USER, text)
@@ -115,7 +120,7 @@ class ChatViewModel(
         if (mutableState.value.sending) return
         viewModelScope.launch {
             try {
-                runtime.newChat()
+                withContext(ioDispatcher) { runtime.newChat() }
                 resetForSession()
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -126,17 +131,27 @@ class ChatViewModel(
     }
 
     fun openConversation(id: String) {
-        if (mutableState.value.sending) return
-        val summary = (mutableState.value.conversations + mutableState.value.archivedConversations)
+        val current = mutableState.value
+        if (current.sending || current.switchingConversation) return
+        if (current.historyLoaded && current.conversationId == id) return
+        val summary = (current.conversations + current.archivedConversations)
             .firstOrNull { it.id == id } ?: return
+        activeAssistantId = null
+        activeRunId = null
         viewModelScope.launch {
+            mutableState.update { it.copy(switchingConversation = true, error = null) }
             try {
-                runtime.open(summary.filePath)
-                resetForSession(conversationId = id, conversationTitle = summary.title)
+                withContext(ioDispatcher) { runtime.open(summary.filePath) }
+                loadHistory(minimumSwitchMillis = 220L)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "打开会话失败")) }
+                mutableState.update {
+                    it.copy(
+                        switchingConversation = false,
+                        error = userFacingError(error.message ?: "打开会话失败"),
+                    )
+                }
             }
         }
     }
@@ -229,12 +244,15 @@ class ChatViewModel(
         }
     }
 
-    private suspend fun loadHistory() {
+    private suspend fun loadHistory(minimumSwitchMillis: Long = 0L) {
+        val startedAt = System.currentTimeMillis()
         val messages = runtime.history()
         val sessions = runtime.sessions(includeArchived = false)
         val allSessions = runtime.sessions(includeArchived = true)
         val currentId = runtime.currentSessionId
         val summary = allSessions.firstOrNull { it.id == currentId }
+        val remaining = minimumSwitchMillis - (System.currentTimeMillis() - startedAt)
+        if (remaining > 0L) delay(remaining)
         nextMessageId = (messages.maxOfOrNull { it.id } ?: -1L) + 1
         nextStepId = (messages.flatMap { it.steps }.maxOfOrNull { it.id } ?: -1L) + 1
         mutableState.update {
@@ -247,6 +265,7 @@ class ChatViewModel(
                 conversationId = summary?.id ?: currentId,
                 conversationTitle = summary?.title ?: titleFrom(messages),
                 historyLoaded = true,
+                switchingConversation = false,
             )
         }
     }
@@ -333,7 +352,16 @@ class ChatViewModel(
 
             is RuntimeEvent.TextDelta -> {
                 if (!matchesRun(event.runId)) return
-                updateAssistant { it.copy(text = it.text + event.text) }
+                updateAssistant { message ->
+                    val steps = message.steps.toMutableList()
+                    val last = steps.lastOrNull()
+                    if (last is AssistantStep.Text) {
+                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
+                    } else {
+                        steps += AssistantStep.Text(nextStepId++, event.text)
+                    }
+                    message.copy(steps = steps)
+                }
             }
 
             is RuntimeEvent.ReasoningDelta -> {
@@ -434,8 +462,9 @@ class ChatViewModel(
                 state.copy(
                     messages = state.messages.map { message ->
                         if (message.id != id) return@map message
+                        val finalText = text.ifBlank { message.text }
                         message.copy(
-                            text = text.ifBlank { message.text },
+                            text = finalText,
                             streaming = false,
                             status = when (status) {
                                 RunStatus.DONE -> MessageStatus.DONE
@@ -443,13 +472,16 @@ class ChatViewModel(
                                 RunStatus.FAILED -> MessageStatus.FAILED
                             },
                             finishedAt = finishedAt,
-                            steps = message.steps.map { step ->
-                                if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
-                                    step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
-                                } else {
-                                    step
-                                }
-                            },
+                            steps = consumeFinalText(
+                                message.steps.map { step ->
+                                    if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
+                                        step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
+                                    } else {
+                                        step
+                                    }
+                                },
+                                finalText,
+                            ),
                         )
                     },
                     sending = false,
@@ -501,6 +533,18 @@ class ChatViewModel(
         activeAssistantId = null
         activeRunId = null
         viewModelScope.launch { refreshSessions() }
+    }
+
+    private fun consumeFinalText(steps: List<AssistantStep>, finalText: String): List<AssistantStep> {
+        val final = finalText.trim()
+        if (final.isEmpty()) return steps
+        val last = steps.lastOrNull() as? AssistantStep.Text ?: return steps
+        val candidate = last.text.trim()
+        return if (candidate.isNotEmpty() && (final == candidate || final.endsWith(candidate))) {
+            steps.dropLast(1)
+        } else {
+            steps
+        }
     }
 
     private fun userFacingError(message: String): String = when {

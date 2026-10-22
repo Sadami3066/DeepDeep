@@ -1,38 +1,45 @@
 package io.github.whywood.deepdeep
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
+import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
+import io.github.whywood.deepdeep.ui.navigation.AppDestination
+import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
+import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
-
-private enum class Page { CHAT, SETTINGS, PROVIDERS, PROVIDER_DETAIL, ARCHIVED }
 
 @Composable
 internal fun DeepDeepApp(
@@ -58,154 +65,180 @@ internal fun DeepDeepApp(
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val colors = deepDeepColors()
+    val navigator = rememberAppNavigator()
+    val density = LocalDensity.current
+    val drawerWidthPx = with(density) { 304.dp.toPx() }
 
-    var pageName by rememberSaveable { mutableStateOf(Page.CHAT.name) }
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
-    var selectedProviderId by rememberSaveable { mutableStateOf<String?>(null) }
-    val page = runCatching { Page.valueOf(pageName) }.getOrDefault(Page.CHAT)
+    val drawerProgress by animateFloatAsState(
+        targetValue = if (drawerOpen) 1f else 0f,
+        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+        label = "drawer-progress",
+    )
     val activeProvider = graph.providerCatalog.summary(state.providerId)
-    val selectedProvider = selectedProviderId?.let(graph.providerCatalog::summary)
+
+    fun closeDrawer() {
+        drawerOpen = false
+    }
 
     fun openChat() {
-        pageName = Page.CHAT.name
         drawerOpen = false
+        navigator.reset(AppDestination.Chat)
     }
 
     fun openSettings() {
-        pageName = Page.SETTINGS.name
         drawerOpen = false
+        navigator.push(AppDestination.Settings)
     }
 
-    fun openProviders() {
-        pageName = Page.PROVIDERS.name
-    }
-
-    fun openProvider(providerId: String) {
-        selectedProviderId = providerId
-        pageName = Page.PROVIDER_DETAIL.name
-    }
-
-    BackHandler(enabled = drawerOpen || page != Page.CHAT) {
-        when {
-            drawerOpen -> drawerOpen = false
-            page == Page.PROVIDER_DETAIL -> pageName = Page.PROVIDERS.name
-            page == Page.PROVIDERS || page == Page.SETTINGS || page == Page.ARCHIVED -> openChat()
+    fun back() {
+        if (drawerOpen) {
+            drawerOpen = false
+        } else {
+            navigator.pop()
         }
+    }
+
+    BackHandler(enabled = drawerOpen || navigator.canPop) {
+        back()
     }
 
     Box(Modifier.fillMaxSize().background(colors.paper)) {
-        when (page) {
-            Page.CHAT -> ChatScreen(
-                state = state.copy(configured = state.providerId in configuredProviders),
-                onInputChange = chatViewModel::onInputChange,
-                onSend = chatViewModel::send,
-                onStop = chatViewModel::stop,
-                onNewChat = chatViewModel::newChat,
-                onOpenDrawer = { drawerOpen = true },
-                onOpenSettings = ::openSettings,
-                onModelChange = chatViewModel::setModel,
-                onThinkingLevelChange = chatViewModel::setThinkingLevel,
-                onToggleStep = chatViewModel::toggleStep,
-            )
+        AnimatedScreenHost(
+            navigator = navigator,
+            modifier = Modifier.fillMaxSize(),
+        ) { destination ->
+            when (destination) {
+                AppDestination.Chat -> ChatScreen(
+                    state = state.copy(configured = state.providerId in configuredProviders),
+                    onInputChange = chatViewModel::onInputChange,
+                    onSend = chatViewModel::send,
+                    onStop = chatViewModel::stop,
+                    onNewChat = chatViewModel::newChat,
+                    onOpenDrawer = { drawerOpen = true },
+                    onOpenSettings = ::openSettings,
+                    onModelChange = chatViewModel::setModel,
+                    onThinkingLevelChange = chatViewModel::setThinkingLevel,
+                    onToggleStep = chatViewModel::toggleStep,
+                )
 
-            Page.SETTINGS -> SettingsScreen(
-                userName = "Milous",
-                providerName = activeProvider?.name,
-                modelName = state.modelLabel.takeIf { it.isNotBlank() },
-                configured = state.providerId in configuredProviders,
-                themeMode = theme,
-                linuxState = linuxState,
-                linuxSupported = graph.linuxEnvironment.isSupported,
-                linuxEnabled = linuxEnabled,
-                versionName = BuildConfig.VERSION_NAME,
-                onBack = ::openChat,
-                onThemeModeChange = onThemeChange,
-                onOpenProviders = ::openProviders,
-                onLinuxInstall = { scope.launch { graph.linuxEnvironment.install() } },
-                onLinuxReset = {
-                    scope.launch {
-                        graph.linuxSettings.setEnabled(false)
-                        graph.linuxEnvironment.reset()
-                        graph.host.reconfigure()
+                AppDestination.Settings -> SettingsScreen(
+                    userName = "Milous",
+                    providerName = activeProvider?.name,
+                    modelName = state.modelLabel.takeIf { it.isNotBlank() },
+                    configured = state.providerId in configuredProviders,
+                    themeMode = theme,
+                    linuxState = linuxState,
+                    versionName = BuildConfig.VERSION_NAME,
+                    onBack = ::back,
+                    onThemeModeChange = onThemeChange,
+                    onOpenProviders = { navigator.push(AppDestination.Providers) },
+                    onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
+                )
+
+                AppDestination.Providers -> ProviderListScreen(
+                    providers = graph.providerCatalog.summaries,
+                    configuredProviderIds = configuredProviders,
+                    activeProviderId = state.providerId,
+                    onBack = ::back,
+                    onProviderClick = { id -> navigator.push(AppDestination.ProviderDetail(id)) },
+                )
+
+                AppDestination.RuntimeSettings -> RuntimeSettingsScreen(
+                    linuxState = linuxState,
+                    linuxSupported = graph.linuxEnvironment.isSupported,
+                    linuxEnabled = linuxEnabled,
+                    onBack = ::back,
+                    onInstall = { scope.launch { graph.linuxEnvironment.install() } },
+                    onReset = {
+                        scope.launch {
+                            graph.linuxSettings.setEnabled(false)
+                            graph.linuxEnvironment.reset()
+                            graph.host.reconfigure()
+                        }
+                    },
+                    onEnabledChange = { enabled ->
+                        scope.launch {
+                            graph.linuxSettings.setEnabled(enabled)
+                            graph.host.reconfigure()
+                        }
+                    },
+                )
+
+                is AppDestination.ProviderDetail -> {
+                    val provider = graph.providerCatalog.summary(destination.id)
+                    if (provider == null) {
+                        LaunchedEffect(destination.id) {
+                            navigator.pop()
+                        }
+                    } else {
+                        ProviderDetailScreen(
+                            provider = provider,
+                            models = graph.providerCatalog.models(provider.id),
+                            configured = provider.id in configuredProviders,
+                            active = provider.id == state.providerId,
+                            activeModelId = state.modelId.takeIf { provider.id == state.providerId },
+                            onBack = ::back,
+                            onSaveApiKey = { key ->
+                                scope.launch {
+                                    graph.apiKeyStore.save(provider.id, key)
+                                    graph.credentials.preload(provider.id)
+                                }
+                            },
+                            onClearApiKey = {
+                                scope.launch {
+                                    graph.apiKeyStore.save(provider.id, null)
+                                    graph.credentials.invalidate(provider.id)
+                                }
+                            },
+                            onActivate = { modelId ->
+                                scope.launch {
+                                    graph.host.setModel(provider.id, modelId, state.thinkingLevel)
+                                    openChat()
+                                }
+                            },
+                        )
                     }
-                },
-                onLinuxEnabledChange = { enabled ->
-                    scope.launch {
-                        graph.linuxSettings.setEnabled(enabled)
-                        graph.host.reconfigure()
-                    }
-                },
-            )
-
-            Page.PROVIDERS -> ProviderListScreen(
-                providers = graph.providerCatalog.summaries,
-                configuredProviderIds = configuredProviders,
-                activeProviderId = state.providerId,
-                onBack = ::openSettings,
-                onProviderClick = ::openProvider,
-            )
-
-            Page.PROVIDER_DETAIL -> {
-                val provider = selectedProvider
-                if (provider == null) {
-                    openProviders()
-                } else {
-                    ProviderDetailScreen(
-                        provider = provider,
-                        models = graph.providerCatalog.models(provider.id),
-                        configured = provider.id in configuredProviders,
-                        active = provider.id == state.providerId,
-                        activeModelId = state.modelId.takeIf { provider.id == state.providerId },
-                        onBack = ::openProviders,
-                        onSaveApiKey = { key ->
-                            scope.launch {
-                                graph.apiKeyStore.save(provider.id, key)
-                                graph.credentials.preload(provider.id)
-                            }
-                        },
-                        onClearApiKey = {
-                            scope.launch {
-                                graph.apiKeyStore.save(provider.id, null)
-                                graph.credentials.invalidate(provider.id)
-                            }
-                        },
-                        onActivate = { modelId ->
-                            scope.launch {
-                                graph.host.setModel(provider.id, modelId, state.thinkingLevel)
-                                openChat()
-                            }
-                        },
-                    )
                 }
-            }
 
-            Page.ARCHIVED -> ArchivedSessionsScreen(
-                archivedSessions = state.archivedConversations,
-                onBack = ::openChat,
-                onOpen = { id ->
-                    chatViewModel.openConversation(id)
-                    openChat()
-                },
-                onRename = chatViewModel::renameSession,
-                onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
-                onDelete = chatViewModel::deleteSession,
-            )
+                AppDestination.Archived -> ArchivedSessionsScreen(
+                    archivedSessions = state.archivedConversations,
+                    onBack = ::back,
+                    onOpen = { id ->
+                        chatViewModel.openConversation(id)
+                        openChat()
+                    },
+                    onRename = chatViewModel::renameSession,
+                    onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
+                    onDelete = chatViewModel::deleteSession,
+                )
+            }
         }
 
-        AnimatedVisibility(visible = drawerOpen, enter = fadeIn(), exit = fadeOut()) {
+        if (drawerOpen || drawerProgress > 0.01f) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(colors.scrim)
-                    .clickable { drawerOpen = false },
+                    .graphicsLayer { alpha = drawerProgress }
+                    .background(colors.scrim.copy(alpha = 0.32f * drawerProgress))
+                    .then(
+                        if (drawerOpen) {
+                            Modifier.clickable { drawerOpen = false }
+                        } else {
+                            Modifier
+                        },
+                    ),
             )
         }
-        AnimatedVisibility(
-            visible = drawerOpen,
-            enter = slideInHorizontally { -it },
-            exit = slideOutHorizontally { -it },
-        ) {
-            DeepDeepDrawer(
+        if (drawerOpen || drawerProgress > 0.01f) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .width(304.dp)
+                    .align(Alignment.CenterStart)
+                    .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress) },
+            ) {
+                DeepDeepDrawer(
                 conversations = state.conversations,
                 activeConversationId = state.conversationId,
                 historyLoaded = state.historyLoaded,
@@ -213,23 +246,24 @@ internal fun DeepDeepApp(
                 userName = "Milous",
                 onChat = ::openChat,
                 onArchived = {
-                    pageName = Page.ARCHIVED.name
                     drawerOpen = false
+                    navigator.push(AppDestination.Archived)
                 },
                 onNewChat = {
+                    drawerOpen = false
                     chatViewModel.newChat()
-                    openChat()
                 },
                 onConversation = { id ->
+                    drawerOpen = false
                     chatViewModel.openConversation(id)
-                    openChat()
                 },
                 onRename = chatViewModel::renameSession,
                 onSetPinned = chatViewModel::setSessionPinned,
                 onSetArchived = chatViewModel::setSessionArchived,
                 onDelete = chatViewModel::deleteSession,
-                onSettings = ::openSettings,
-            )
+                    onSettings = ::openSettings,
+                )
+            }
         }
     }
 }
