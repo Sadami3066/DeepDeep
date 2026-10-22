@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonElement
 
 class SdkCredentialStore(
@@ -75,6 +74,4 @@ class SdkCredentialStore(
     }
 
     override fun readRaw(): Map<String, JsonElement> = emptyMap()
-
-    fun blockingRead(providerId: String): String? = runBlocking { apiKeys.read(providerId) }
 }
