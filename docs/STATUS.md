@@ -8,6 +8,7 @@
 - `ScheduleService`: precise wake-ups at `nextRunAt`, per-conversation batching, catch-up on service start, session deleted/archived cleanup, clock/timezone recompute; `ScheduleStore` schemaVersion 2 (v1 tasks discarded); tools bind to the calling session
 - Schedules page rebuilt: minimal grouped list, editor sheet (name, content, recurrence, time/date/weekday pickers, target conversation, enable), manual run, delete; chat header clock for active reminders and reminder label in bubbles
 - Chat: pure `ConversationReducer`; reopening a conversation always refetches history (fixes blank conversations after background events); injected reminder messages stream live
+- Provider compatibility: OpenCode Zen/Go requests now carry `x-opencode-session` (pi2kotlin 0.1.2) instead of failing with 400 `MissingSessionID`
 - Tests: 227 unit tests (app 131 / runtime 78 / shell 18); lint and module boundaries green
 - Evidence: `artifacts/validation/round11/`
 

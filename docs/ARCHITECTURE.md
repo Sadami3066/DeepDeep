@@ -47,6 +47,7 @@ Compose ChatScreen
 - `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
 - ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
+- OpenCode（Zen / Go）的网关要求每个请求带 `x-opencode-session`，否则返回 400 `MissingSessionID`；SDK 0.1.2 起由 `Models` 层用 `StreamOptions.sessionId` 自动注入，coding agent 把会话 id 传进 `AgentOptions`。
 - ModelConfigStore 保存 provider/model/thinking；聊天 composer 切换模型和思考。
 - SdkCredentialStore 使用 Android Keystore 加密的 ApiKeyStore，可按 provider 预加载/清除 key。
 - SessionMetaStore/SessionRepository 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。

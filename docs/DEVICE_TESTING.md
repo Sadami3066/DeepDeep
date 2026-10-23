@@ -83,6 +83,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 48. 生命周期：删除绑定对话后任务从任务页消失；归档绑定对话后任务变已停用。
 49. 失败可见：断网或使用无效 API Key 发送；该轮显示本地化错误（如「余额不足」「Invalid or expired API key」）+「重试」；恢复网络后点重试成功；杀进程重开历史里仍能看到失败轮。
 50. 补跑：到点前杀进程，重开 App 后补投一次且不重复；改设备时区后任务按新本地时间重算。
+52. OpenCode Go：切到 opencode-go 的模型（如 deepseek-v4.1-flash / claude-haiku-5-5）发一条消息；不再出现 400 `MissingSessionID`，正常回复；会话 JSONL 无 `stopReason=error`。
 51. 系统提示词：新会话的 JSONL 初始 system 消息里 `preamble` 是 DeepDeep 自己的前言（不再出现 "You are an expert coding assistant operating inside pi"），`<rules>` 仍在、`<tools>` 文本段不再生成（工具定义走 system 消息的 `toolsAdded`）；下一轮只追加 `<environment>` / `<instruction>` patch，不再有重复身份的 `<system>` section。`files/agent/SYSTEM.md` 首次启动生成，手动改动后不会被覆盖。
 
 ## 证据
