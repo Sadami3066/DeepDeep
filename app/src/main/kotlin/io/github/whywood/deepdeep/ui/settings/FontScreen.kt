@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -119,31 +121,45 @@ private fun FontPreviewRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = 96.dp)
+                .heightIn(min = 104.dp)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.Bottom,
+            verticalAlignment = Alignment.Top,
         ) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f).padding(top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = label,
+                    style = DdType.label.copy(fontFamily = family),
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (selected) {
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = label,
-                        style = DdType.label.copy(fontFamily = family),
-                        color = colors.ink,
+                        text = currentLabel,
+                        style = DdType.chip,
+                        color = colors.accent,
                         maxLines = 1,
                     )
-                    if (selected) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = currentLabel,
-                            style = DdType.chip,
-                            color = colors.accent,
-                            maxLines = 1,
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
-                    }
+                    Spacer(Modifier.width(2.dp))
+                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
                 }
-                Spacer(Modifier.height(2.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.widthIn(max = 168.dp).padding(top = 12.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "我思故我在",
+                    style = DdType.body.copy(fontFamily = family, fontSize = 18.sp, lineHeight = 26.sp),
+                    color = colors.inkSecondary,
+                    maxLines = 1,
+                )
                 Text(
                     text = "I think, therefore I am.",
                     style = DdType.bodySmall.copy(fontFamily = family, fontSize = 13.sp, lineHeight = 19.sp),
@@ -152,14 +168,6 @@ private fun FontPreviewRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = "我思故我在",
-                modifier = Modifier.padding(bottom = 2.dp),
-                style = DdType.body.copy(fontFamily = family, fontSize = 18.sp, lineHeight = 26.sp),
-                color = colors.inkSecondary,
-                maxLines = 1,
-            )
         }
     }
 }
