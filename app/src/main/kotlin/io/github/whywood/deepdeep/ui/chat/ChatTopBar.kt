@@ -27,7 +27,6 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 @Composable
 internal fun ChatTopBar(
     onMenu: () -> Unit,
-    onNewChat: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -56,13 +55,6 @@ internal fun ChatTopBar(
             modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIconButton(
-                icon = DdIcons.Plus,
-                onClick = onNewChat,
-                contentDescription = stringResource(R.string.assistant_new_chat),
-                tint = colors.inkSecondary,
-                iconSize = 20.dp,
-            )
             Box {
                 DdIconButton(
                     icon = DdIcons.More,

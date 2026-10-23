@@ -201,7 +201,6 @@ internal fun DeepDeepApp(
                     onInputChange = chatViewModel::onInputChange,
                     onSend = chatViewModel::send,
                     onStop = chatViewModel::stop,
-                    onNewChat = chatViewModel::newChat,
                     onOpenDrawer = { drawerOpen = true },
                     onOpenSettings = ::openSettings,
                     onModelChange = chatViewModel::setModel,
@@ -385,10 +384,6 @@ internal fun DeepDeepApp(
                     onArchived = {
                         drawerOpen = false
                         navigator.push(AppDestination.Archived)
-                    },
-                    onNewChat = {
-                        drawerOpen = false
-                        chatViewModel.newChat()
                     },
                     onOpenSearch = {
                         drawerOpen = false

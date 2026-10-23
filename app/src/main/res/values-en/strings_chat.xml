@@ -34,7 +34,6 @@
     <string name="assistant_model_sheet">Select model</string>
     <string name="assistant_model_unconfigured">No model configured</string>
     <string name="assistant_more">More actions</string>
-    <string name="assistant_new_chat">New chat</string>
     <string name="assistant_open_settings">Open settings</string>
     <string name="assistant_process">Process</string>
     <string name="assistant_process_reasoning">%1$d thoughts</string>

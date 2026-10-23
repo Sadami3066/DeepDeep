@@ -1,7 +1,6 @@
 <resources>
     <string name="drawer_nav_chat">Chat</string>
     <string name="drawer_nav_archived">Archived</string>
-    <string name="drawer_nav_new_chat">New chat</string>
     <string name="drawer_nav_skills">Skills</string>
     <string name="drawer_nav_plugins">Plugins</string>
     <string name="drawer_nav_scheduled">Scheduled</string>

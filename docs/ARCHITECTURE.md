@@ -6,7 +6,7 @@
 - Home 是默认工作区；用户在抽屉「工作区」里可新建/重命名/删除 workspace，目录为 `files/workspaces/<id>`，WorkspaceStore(DataStore) 只存 id/name/cwd/createdAt；旧 `files/projects`、旧 `projects` DataStore 与旧 session 目录/cwd 均做幂等迁移。
 - 每条 session 绑定创建时的 cwd（home 或某个 workspace）；session 文件仍由 pi SDK 按 `AgentPaths.sessionsForCwd()` 存放在 `agent/sessions/<encoded-cwd>/`，列表由 `SessionCatalog` 按已知 cwd 聚合后叠加 SessionMetaStore（置顶/归档/标题覆盖）。
 - 抽屉按工作区分组展示全部未归档会话（`ChatViewModel.refreshSessions()` 读取 `runtime.allSessions()`，用 session.cwd 匹配工作区）；工作区置顶是 UI 偏好，存 `AppPreferences`（`pinned_workspace_ids`），会话置顶仍由 SessionMetaStore 持久化。
-- 顶栏 + 固定以 `AgentRuntimeHost.HOME_ID` 新建会话；工作区行的 + 走 `ChatViewModel.newSession(workspaceId)`，不改变其他工作区运行中的会话。
+- 新建会话入口只在抽屉：工作区行展开后的 + 与工作区长按菜单走 `ChatViewModel.newSession(workspaceId)`（Home 同样），顶栏不提供新建；顶栏 + 已移除。
 - 附件导入/预览/文件引用解析都以当前会话 cwd 为 root（`AttachmentStore.import/file/shareIntent/resolve(raw, root)`），project 会话的附件落在 project 目录。
 
 ## 多会话并发

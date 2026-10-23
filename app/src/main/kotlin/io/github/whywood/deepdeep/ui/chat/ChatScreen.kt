@@ -95,7 +95,6 @@ fun ChatScreen(
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
-    onNewChat: () -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
     onModelChange: (String) -> Unit,
@@ -209,11 +208,6 @@ fun ChatScreen(
             onMenu = {
                 keyboard?.hide()
                 onOpenDrawer()
-            },
-            onNewChat = {
-                keyboard?.hide()
-                focusManager.clearFocus()
-                onNewChat()
             },
             onOpenSettings = {
                 keyboard?.hide()

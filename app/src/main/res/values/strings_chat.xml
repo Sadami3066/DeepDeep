@@ -34,7 +34,6 @@
     <string name="assistant_model_sheet">选择模型</string>
     <string name="assistant_model_unconfigured">未配置模型</string>
     <string name="assistant_more">更多操作</string>
-    <string name="assistant_new_chat">新建对话</string>
     <string name="assistant_open_settings">去设置</string>
     <string name="assistant_process">过程</string>
     <string name="assistant_process_reasoning">%1$d 个思考</string>

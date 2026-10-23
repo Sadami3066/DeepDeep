@@ -79,7 +79,7 @@ private sealed interface DrawerEntry {
         override val key: String = "workspaces_header"
     }
 
-    data class WorkspaceEntry(val workspace: RuntimeWorkspace) : DrawerEntry {
+    data class WorkspaceEntry(val workspace: RuntimeWorkspace, val first: Boolean) : DrawerEntry {
         override val key: String = "workspace_${workspace.id}"
     }
 
@@ -103,7 +103,6 @@ fun DeepDeepDrawer(
     userName: String,
     onChat: () -> Unit,
     onArchived: () -> Unit,
-    onNewChat: () -> Unit,
     onOpenSearch: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
@@ -137,8 +136,8 @@ fun DeepDeepDrawer(
     val entries = remember(orderedWorkspaces, sessionsByCwd, expandedWorkspaceIds) {
         buildList {
             add(DrawerEntry.WorkspacesHeader)
-            orderedWorkspaces.forEach { workspace ->
-                add(DrawerEntry.WorkspaceEntry(workspace))
+            orderedWorkspaces.forEachIndexed { index, workspace ->
+                add(DrawerEntry.WorkspaceEntry(workspace, index == 0))
                 if (workspace.id in expandedWorkspaceIds) {
                     val workspaceSessions = sessionsByCwd[workspace.cwd].orEmpty()
                         .sortedWith(
@@ -204,12 +203,6 @@ fun DeepDeepDrawer(
                     )
                 },
             )
-            DrawerNavItem(
-                icon = DdIcons.Plus,
-                label = stringResource(R.string.drawer_nav_new_chat),
-                onClick = onNewChat,
-                testTag = "drawer_new_chat",
-            )
             Spacer(Modifier.height(6.dp))
             DrawerNavItem(
                 icon = DdIcons.Sparkles,
@@ -245,6 +238,7 @@ fun DeepDeepDrawer(
 
                     is DrawerEntry.WorkspaceEntry -> DrawerWorkspaceRow(
                         workspace = entry.workspace,
+                        first = entry.first,
                         pinned = entry.workspace.id in pinnedWorkspaceIds,
                         expanded = entry.workspace.id in expandedWorkspaceIds,
                         menuExpanded = workspaceMenuTarget?.id == entry.workspace.id,
@@ -338,8 +332,8 @@ private fun DrawerWorkspacesHeader(
         Text(
             text = stringResource(R.string.workspace_section),
             modifier = Modifier.weight(1f),
-            style = DdType.bodySmall,
-            color = colors.inkSecondary.copy(alpha = 0.85f),
+            style = DdType.chip,
+            color = colors.inkTertiary,
             maxLines = 1,
         )
         DdIconButton(
@@ -357,6 +351,7 @@ private fun DrawerWorkspacesHeader(
 @Composable
 private fun DrawerWorkspaceRow(
     workspace: RuntimeWorkspace,
+    first: Boolean,
     pinned: Boolean,
     expanded: Boolean,
     menuExpanded: Boolean,
@@ -374,19 +369,36 @@ private fun DrawerWorkspaceRow(
     val haptic = LocalHapticFeedback.current
     val hapticsEnabled = LocalHapticsEnabled.current
     val density = LocalDensity.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val wash by animateFloatAsState(
+        targetValue = if (pressed) 0.05f else 0f,
+        animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
+        label = "workspace-row-wash",
+    )
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
         label = "workspace-chevron",
     )
-    Box(modifier.fillMaxWidth()) {
+    Box(modifier.fillMaxWidth().padding(top = if (first) 0.dp else 6.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp)
+                .height(42.dp)
                 .clip(RoundedCornerShape(10.dp))
+                .background(colors.ink.copy(alpha = wash))
                 .pointerInput(workspace.id) {
                     detectTapGestures(
+                        onPress = { offset ->
+                            val press = PressInteraction.Press(offset)
+                            interaction.emit(press)
+                            if (tryAwaitRelease()) {
+                                interaction.emit(PressInteraction.Release(press))
+                            } else {
+                                interaction.emit(PressInteraction.Cancel(press))
+                            }
+                        },
                         onTap = { onToggleExpanded() },
                         onLongPress = { offset ->
                             if (hapticsEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -398,16 +410,18 @@ private fun DrawerWorkspaceRow(
                 .padding(start = 10.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            DdIcon(icon = DdIcons.Folder, tint = colors.inkTertiary, size = 16.dp)
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = workspace.name,
                 modifier = Modifier.weight(1f),
-                style = DdType.bodySmall,
-                color = colors.inkSecondary,
+                style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                color = colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (pinned) {
-                DdIcon(icon = DdIcons.Pin, tint = colors.inkTertiary, size = 13.dp)
+                DdIcon(icon = DdIcons.Pin, tint = colors.inkTertiary, size = 12.dp)
                 Spacer(Modifier.width(6.dp))
             }
             if (expanded) {
@@ -425,7 +439,7 @@ private fun DrawerWorkspaceRow(
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 tint = colors.inkTertiary,
-                size = 15.dp,
+                size = 14.dp,
                 modifier = Modifier
                     .graphicsLayer { rotationZ = chevronRotation }
                     .testTag("workspace_chevron_${workspace.id}"),
@@ -489,8 +503,8 @@ private fun DrawerWorkspaceEmptyRow(modifier: Modifier = Modifier) {
         text = stringResource(R.string.drawer_workspace_empty),
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
-        style = DdType.bodySmall,
+            .padding(start = 34.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+        style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
         color = colors.inkTertiary,
         maxLines = 1,
     )
@@ -561,7 +575,7 @@ private fun DrawerSessionRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(40.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
                 .pointerInput(Unit) {
@@ -583,13 +597,15 @@ private fun DrawerSessionRow(
                     )
                 }
                 .testTag(testTag)
-                .padding(start = 24.dp, end = 10.dp),
+                .padding(start = 34.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            DdIcon(icon = DdIcons.Message, tint = colors.inkTertiary, size = 13.dp)
+            Spacer(Modifier.width(6.dp))
             Text(
                 text = conversation.title,
                 modifier = Modifier.weight(1f),
-                style = DdType.bodySmall,
+                style = DdType.bodySmall.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
                 color = colors.inkSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -610,7 +626,7 @@ private fun DrawerSessionRow(
                     conversation.pinned -> DdIcon(
                         icon = DdIcons.Pin,
                         tint = colors.inkTertiary,
-                        size = 13.dp,
+                        size = 12.dp,
                     )
 
                     else -> Text(

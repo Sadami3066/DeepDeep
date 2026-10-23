@@ -214,7 +214,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun newChatCanStartWhilePreviousSessionIsRunning() = runTest(dispatcher) {
+    fun newSessionCanStartWhilePreviousSessionIsRunning() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
@@ -224,7 +224,7 @@ class ChatViewModelTest {
         runtime.emitFor(firstSession, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         assertTrue(viewModel.state.value.sending)
 
-        viewModel.newChat()
+        viewModel.newSession(HOME_ID)
         advanceUntilIdle()
         val secondSession = viewModel.state.value.conversationId!!
         assertTrue(secondSession != firstSession)

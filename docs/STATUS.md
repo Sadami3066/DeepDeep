@@ -43,9 +43,9 @@
 - Workspace rename (Project→Workspace end-to-end: UI/API/type/files/DataStore/directories/session cwd/docs) with idempotent migration; drawer DSH-style Workspaces section, create/rename/delete (Home fixed), running-session spinner, relative time
 - IME: animated bottom inset (imeAnimationTarget + tween) + per-frame list anchoring, removed delay hacks; keyboard-up drawer open stays smooth
 
-- UI v3 drawer: workspaces laid out directly as an expandable tree (Home is the default workspace row), multiple workspaces can stay expanded, chevron-only disclosure, no section labels and no selection accent; top-bar + creates a Home session
+- UI v3 drawer: workspaces laid out directly as an expandable tree (Home is the default workspace row), multiple workspaces can stay expanded, chevron-only disclosure, no section labels and no selection accent; top-bar new-chat button removed; sessions can only be created from the workspace row + (or workspace long-press menu)
 - workspace pin (long-press menu, persisted in AppPreferences, pinned-first order, small pin icon); session pin only within its workspace, shown as a small pin icon instead of relative time; per-workspace + creates a session in that workspace
-- drawer loads all non-archived sessions across workspaces (`allSessions`) and groups them by cwd; expand/collapse via LazyColumn `animateItem()`
+- drawer loads all non-archived sessions across workspaces (`allSessions`) and groups them by cwd; workspace rows get folder icon + 15sp medium name, session rows get message icon + smaller secondary text and indentation; expand/collapse via LazyColumn `animateItem()`
 - legacy UI replaced with self-written controls: DdDialog (no Material AlertDialog, IME-aware), DdSearchField (session/archived/provider search), DdTextField (API key + rename), DdSpinner (all loaders); DdSegmentedControl no longer shows square press ripple
 - settings runtime-environment page fixed (removed nested wash card and misaligned size line; DdSwitch/DdSpinner/DdDialog standard rows)
 - Provider detail shows masked saved key placeholder (`sk-*****`) instead of "已保存，输入新 Key 可替换"

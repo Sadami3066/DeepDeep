@@ -189,13 +189,6 @@ class ChatViewModel(
         mutableState.value.conversationId?.let(runtime::stop)
     }
 
-    fun newChat() {
-        viewModelScope.launch {
-            cacheCurrentSession()
-            createSession(AgentRuntimeHost.HOME_ID)
-        }
-    }
-
     fun newSession(workspaceId: String) {
         viewModelScope.launch {
             cacheCurrentSession()
