@@ -33,10 +33,17 @@
     <string name="drawer_search_empty">No matching chats</string>
     <string name="drawer_search_clear">Clear search</string>
     <string name="drawer_coming_soon">Coming soon</string>
-    <string name="drawer_project">Projects</string>
-    <string name="drawer_project_current">Project · %1$s</string>
-    <string name="project_picker_title">Projects</string>
-    <string name="project_create">New project</string>
-    <string name="project_create_confirm">Create</string>
-    <string name="project_home_subtitle">Default folder</string>
+    <string name="workspace_section">Workspaces</string>
+    <string name="workspace_create">New workspace</string>
+    <string name="workspace_rename_title">Rename workspace</string>
+    <string name="workspace_name_placeholder">Workspace name</string>
+    <string name="workspace_name_confirm">Save</string>
+    <string name="workspace_create_confirm">Create</string>
+    <string name="workspace_name_error_empty">Name cannot be empty</string>
+    <string name="workspace_name_error_too_long">Name cannot exceed 40 characters</string>
+    <string name="workspace_name_error_duplicate">A workspace with this name already exists</string>
+    <string name="workspace_delete_title">Delete workspace</string>
+    <string name="workspace_delete_message">“%1$s” and its %2$d conversations will be deleted. This cannot be undone.</string>
+    <string name="workspace_delete_message_empty">“%1$s” will be deleted. This cannot be undone.</string>
+    <string name="workspace_delete_confirm">Delete</string>
 </resources>

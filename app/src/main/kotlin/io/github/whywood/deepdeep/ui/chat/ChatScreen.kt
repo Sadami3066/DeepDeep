@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.chat
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,7 +29,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -45,6 +49,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -57,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -81,6 +88,7 @@ import java.time.LocalTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
     state: ChatUiState,
@@ -101,6 +109,10 @@ fun ChatScreen(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
+    sendHidesKeyboard: Boolean = true,
+    followStreaming: Boolean = true,
+    showReasoning: Boolean = true,
+    expandProcessByDefault: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -111,7 +123,18 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val controller = rememberChatScrollController(listState)
     val density = LocalDensity.current
-    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
+    val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
+    val targetBottomInsetPx = maxOf(imeBottomPx, navigationBottomPx).toFloat()
+    val animatedBottomInset = remember { Animatable(0f) }
+    LaunchedEffect(targetBottomInsetPx) {
+        animatedBottomInset.animateTo(
+            targetValue = targetBottomInsetPx,
+            animationSpec = tween(DdMotion.BASE + 80, easing = DdMotion.EaseInOut),
+        )
+    }
+    val bottomInset = with(density) { animatedBottomInset.value.toDp() }
+    var composerHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val shareChooserTitle = stringResource(R.string.assistant_share_chooser)
     val shareUnavailable = stringResource(R.string.assistant_share_unavailable)
@@ -137,8 +160,10 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(controller) {
-        snapshotFlow { latestMessages }.collect { controller.followContent() }
+    LaunchedEffect(controller, followStreaming) {
+        snapshotFlow { latestMessages }.collect {
+            if (followStreaming) controller.followContent()
+        }
     }
 
     var knownCount by remember { mutableIntStateOf(state.messages.size) }
@@ -152,18 +177,14 @@ fun ChatScreen(
         if (state.historyLoaded) controller.jumpToBottom(animate = false)
     }
 
-    LaunchedEffect(imeVisible) {
-        if (imeVisible) {
-            delay(260)
-            controller.followContent()
+    LaunchedEffect(controller) {
+        snapshotFlow { animatedBottomInset.value to composerHeightPx }.collect {
+            controller.anchorToBottom()
         }
     }
 
     LaunchedEffect(state.sending) {
-        if (state.sending) {
-            delay(320)
-            controller.followContent()
-        }
+        if (state.sending) controller.followContent()
     }
 
 
@@ -171,6 +192,7 @@ fun ChatScreen(
         modifier
             .fillMaxSize()
             .background(colors.paper)
+            .padding(bottom = bottomInset)
             .onGloballyPositioned { rootOrigin = it.positionInWindow() }
             .pointerInput(selectionCoordinator, selectionClearMargin) {
                 awaitEachGesture {
@@ -231,6 +253,8 @@ fun ChatScreen(
                                     onOpenAttachment = onOpenAttachment,
                                     onOpenFile = onOpenFile,
                                     attachmentRoot = attachmentRoot,
+                                    showReasoning = showReasoning,
+                                    expandProcessByDefault = expandProcessByDefault,
                                 )
                             }
                         }
@@ -276,8 +300,10 @@ fun ChatScreen(
             attachmentRoot = attachmentRoot,
             onValueChange = onInputChange,
             onSend = {
-                keyboard?.hide()
-                focusManager.clearFocus()
+                if (sendHidesKeyboard) {
+                    keyboard?.hide()
+                    focusManager.clearFocus()
+                }
                 onSend()
             },
             onStop = onStop,
@@ -289,7 +315,7 @@ fun ChatScreen(
             onOpenAttachment = onOpenAttachment,
             onOpenSettings = onOpenSettings,
             modifier = Modifier
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                .onSizeChanged { composerHeightPx = it.height }
                 .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         )
         }

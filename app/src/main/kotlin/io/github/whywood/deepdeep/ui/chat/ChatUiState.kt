@@ -4,7 +4,7 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
-import io.github.whywood.deepdeep.runtime.RuntimeProject
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
 data class QuotedMessage(
@@ -33,8 +33,8 @@ data class ChatUiState(
     val conversations: List<ConversationSummary> = emptyList(),
     val archivedConversations: List<ConversationSummary> = emptyList(),
     val archivedCount: Int = 0,
-    val projects: List<RuntimeProject> = emptyList(),
-    val currentProjectId: String = "home",
+    val workspaces: List<RuntimeWorkspace> = emptyList(),
+    val currentWorkspaceId: String = "home",
     val conversationCwd: String = "",
     val busySessionIds: Set<String> = emptySet(),
     val historyLoaded: Boolean = false,

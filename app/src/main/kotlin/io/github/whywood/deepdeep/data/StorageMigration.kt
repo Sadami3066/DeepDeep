@@ -4,42 +4,67 @@ import java.io.File
 import org.json.JSONObject
 
 object StorageMigration {
+    private const val LEGACY_WORKSPACE = "workspace"
+    private const val HOME = "home"
+    private const val LEGACY_PROJECTS = "projects"
+    private const val WORKSPACES = "workspaces"
+
     fun migrate(filesDir: File) {
-        val workspace = File(filesDir, "workspace")
-        val home = File(filesDir, "home")
-        if (!home.exists() && workspace.exists()) {
-            workspace.renameTo(home)
+        val legacyWorkspace = File(filesDir, LEGACY_WORKSPACE)
+        val home = File(filesDir, HOME)
+        if (!home.exists() && legacyWorkspace.exists()) {
+            legacyWorkspace.renameTo(home)
         }
         home.mkdirs()
 
-        val sessions = File(filesDir, "agent/sessions")
-        if (!sessions.isDirectory) return
-        val oldDir = File(sessions, encodeCwdName(workspace.absolutePath))
-        val newDir = File(sessions, encodeCwdName(home.absolutePath))
-        if (!newDir.exists() && oldDir.exists()) {
-            oldDir.renameTo(newDir)
+        val legacyProjects = File(filesDir, LEGACY_PROJECTS)
+        val workspaces = File(filesDir, WORKSPACES)
+        if (!workspaces.exists() && legacyProjects.exists()) {
+            legacyProjects.renameTo(workspaces)
         }
-        val target = if (newDir.isDirectory) newDir else return
-        target.listFiles()
-            ?.filter { it.isFile && it.name.endsWith(".jsonl") }
-            ?.forEach { file -> rewriteCwd(file, workspace.absolutePath, home.absolutePath) }
+        workspaces.mkdirs()
+
+        val rewrites = listOf(
+            "/files/$LEGACY_WORKSPACE" to "/files/$HOME",
+            "/files/$LEGACY_PROJECTS/" to "/files/$WORKSPACES/",
+        )
+        migrateSessions(File(filesDir, "agent/sessions"), rewrites)
     }
 
-    private fun rewriteCwd(file: File, oldPath: String, newPath: String) {
-        val lines = runCatching { file.readLines() }.getOrNull() ?: return
-        if (lines.isEmpty()) return
-        val header = runCatching { JSONObject(lines.first()) }.getOrNull() ?: return
-        if (header.optString("cwd") != oldPath) return
-        header.put("cwd", newPath)
-        val content = buildString {
-            append(header.toString())
-            append('\n')
-            lines.drop(1).forEach { line ->
-                append(line)
-                append('\n')
+    private fun migrateSessions(sessionRoot: File, rewrites: List<Pair<String, String>>) {
+        if (!sessionRoot.isDirectory) return
+        val directories = sessionRoot.listFiles()?.filter { it.isDirectory }.orEmpty()
+        for (directory in directories) {
+            val files = directory.listFiles()?.filter { it.isFile && it.name.endsWith(".jsonl") }.orEmpty()
+            for (file in files) {
+                val lines = runCatching { file.readLines() }.getOrNull() ?: continue
+                if (lines.isEmpty()) continue
+                val header = runCatching { JSONObject(lines.first()) }.getOrNull() ?: continue
+                val cwd = header.optString("cwd")
+                if (cwd.isBlank()) continue
+                val migratedCwd = rewrites.fold(cwd) { value, (from, to) -> value.replace(from, to) }
+                if (migratedCwd != cwd) {
+                    header.put("cwd", migratedCwd)
+                    val content = buildString {
+                        append(header.toString())
+                        append('\n')
+                        lines.drop(1).forEach { line ->
+                            append(line)
+                            append('\n')
+                        }
+                    }
+                    runCatching { file.writeText(content) }
+                }
+                val expectedDirectory = File(sessionRoot, encodeCwdName(migratedCwd))
+                if (expectedDirectory != file.parentFile) {
+                    expectedDirectory.mkdirs()
+                    runCatching { file.renameTo(File(expectedDirectory, file.name)) }
+                }
             }
         }
-        runCatching { file.writeText(content) }
+        sessionRoot.listFiles()
+            ?.filter { it.isDirectory && it.listFiles()?.isEmpty() == true }
+            ?.forEach { it.delete() }
     }
 
     private fun encodeCwdName(cwd: String): String {

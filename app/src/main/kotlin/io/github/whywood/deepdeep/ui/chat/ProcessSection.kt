@@ -53,10 +53,16 @@ internal fun ProcessSection(
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
+    showReasoning: Boolean = true,
+    expandByDefault: Boolean = false,
 ) {
     val colors = deepDeepColors()
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
-    val expanded = if (expansionOverride < 0) message.streaming else expansionOverride == 1
+    val expanded = if (expansionOverride < 0) {
+        message.streaming || expandByDefault
+    } else {
+        expansionOverride == 1
+    }
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
@@ -65,7 +71,7 @@ internal fun ProcessSection(
     val state = stringResource(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
+    val reasoningCount = if (showReasoning) message.steps.count { it is AssistantStep.Reasoning } else 0
     val toolCount = message.steps.count { it is AssistantStep.Tool }
     val duration = message.finishedAt?.let { finished ->
         if (message.startedAt > 0 && finished > message.startedAt) finished - message.startedAt else null
@@ -135,27 +141,29 @@ internal fun ProcessSection(
                 Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                message.steps.forEach { step ->
-                    when (step) {
-                        is AssistantStep.Reasoning -> ReasoningCard(
-                            step = step,
-                            active = step.id == activeReasoningId,
-                            onToggle = { onToggleStep(step.id) },
-                        )
+                message.steps
+                    .filter { showReasoning || it !is AssistantStep.Reasoning }
+                    .forEach { step ->
+                        when (step) {
+                            is AssistantStep.Reasoning -> ReasoningCard(
+                                step = step,
+                                active = step.id == activeReasoningId,
+                                onToggle = { onToggleStep(step.id) },
+                            )
 
-                        is AssistantStep.Tool -> ToolCard(
-                            tool = step.trace,
-                            onToggle = { onToggleStep(step.trace.id) },
-                            onCopyOutput = onCopyOutput,
-                        )
+                            is AssistantStep.Tool -> ToolCard(
+                                tool = step.trace,
+                                onToggle = { onToggleStep(step.trace.id) },
+                                onCopyOutput = onCopyOutput,
+                            )
 
-                        is AssistantStep.Text -> ChatMarkdown(
-                            text = step.text.trim(),
-                            modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
-                            onFileClick = onFileClick,
-                        )
+                            is AssistantStep.Text -> ChatMarkdown(
+                                text = step.text.trim(),
+                                modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                                onFileClick = onFileClick,
+                            )
+                        }
                     }
-                }
             }
         }
     }

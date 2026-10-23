@@ -12,25 +12,25 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
-private val Context.projectStore by preferencesDataStore(name = "projects")
+private val Context.workspaceStore by preferencesDataStore(name = "workspaces")
 
-class ProjectStore(context: Context) {
-    private val store = context.applicationContext.projectStore
+class WorkspaceStore(context: Context) {
+    private val store = context.applicationContext.workspaceStore
     private val key = stringPreferencesKey("entries")
 
-    val projects: Flow<List<RuntimeProject>> = store.data
+    val workspaces: Flow<List<RuntimeWorkspace>> = store.data
         .map { values -> decode(values[key]) }
         .catch { error ->
             if (error is IOException) emit(emptyList()) else throw error
         }
 
-    suspend fun read(): List<RuntimeProject> = projects.first()
+    suspend fun read(): List<RuntimeWorkspace> = workspaces.first()
 
-    suspend fun add(project: RuntimeProject) {
+    suspend fun add(workspace: RuntimeWorkspace) {
         store.edit { values ->
             val current = decode(values[key]).toMutableList()
-            current.removeAll { it.id == project.id }
-            current.add(project)
+            current.removeAll { it.id == workspace.id }
+            current.add(workspace)
             values[key] = encode(current)
         }
     }
@@ -50,7 +50,7 @@ class ProjectStore(context: Context) {
         }
     }
 
-    private fun decode(raw: String?): List<RuntimeProject> {
+    private fun decode(raw: String?): List<RuntimeWorkspace> {
         if (raw.isNullOrBlank()) return emptyList()
         return runCatching {
             val array = JSONArray(raw)
@@ -62,7 +62,7 @@ class ProjectStore(context: Context) {
                     val cwd = item.optString("cwd")
                     if (cwd.isBlank()) continue
                     add(
-                        RuntimeProject(
+                        RuntimeWorkspace(
                             id = id,
                             name = name,
                             cwd = cwd,
@@ -74,15 +74,15 @@ class ProjectStore(context: Context) {
         }.getOrDefault(emptyList())
     }
 
-    private fun encode(projects: List<RuntimeProject>): String {
+    private fun encode(workspaces: List<RuntimeWorkspace>): String {
         val array = JSONArray()
-        projects.forEach { project ->
+        workspaces.forEach { workspace ->
             array.put(
                 JSONObject()
-                    .put("id", project.id)
-                    .put("name", project.name)
-                    .put("cwd", project.cwd)
-                    .put("createdAt", project.createdAt),
+                    .put("id", workspace.id)
+                    .put("name", workspace.name)
+                    .put("cwd", workspace.cwd)
+                    .put("createdAt", workspace.createdAt),
             )
         }
         return array.toString()

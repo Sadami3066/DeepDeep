@@ -3,8 +3,7 @@ package io.github.whywood.deepdeep.ui.settings
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.UiPreferences
+import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -53,10 +54,11 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
-import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -73,10 +75,12 @@ fun SettingsScreen(
     modelName: String?,
     configured: Boolean,
     themeMode: ThemeMode,
+    preferences: UiPreferences,
     linuxState: LinuxInstallState,
     versionName: String,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onToggle: (UiToggle, Boolean) -> Unit,
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
     modifier: Modifier = Modifier,
@@ -170,7 +174,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                ThemeRow(
+                ThemeControl(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
                 )
@@ -191,8 +195,44 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.Phone, R.string.settings_haptics)
+                SwitchRow(
+                    icon = DdIcons.Phone,
+                    title = R.string.settings_haptics,
+                    checked = preferences.hapticsEnabled,
+                    onCheckedChange = { onToggle(UiToggle.HAPTICS, it) },
+                )
                 DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Message,
+                    title = R.string.settings_send_hides_keyboard,
+                    checked = preferences.sendHidesKeyboard,
+                    onCheckedChange = { onToggle(UiToggle.SEND_HIDES_KEYBOARD, it) },
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.AudioLines,
+                    title = R.string.settings_follow_streaming,
+                    checked = preferences.followStreaming,
+                    onCheckedChange = { onToggle(UiToggle.FOLLOW_STREAMING, it) },
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Brain,
+                    title = R.string.settings_show_reasoning,
+                    checked = preferences.showReasoning,
+                    onCheckedChange = { onToggle(UiToggle.SHOW_REASONING, it) },
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.ChevronDown,
+                    title = R.string.settings_expand_process,
+                    checked = preferences.expandProcessByDefault,
+                    onCheckedChange = { onToggle(UiToggle.EXPAND_PROCESS, it) },
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            SettingsGroup {
                 PlaceholderRow(DdIcons.Volume, R.string.settings_notifications)
                 DdHairline()
                 PlaceholderRow(DdIcons.Clock, R.string.settings_focus)
@@ -275,25 +315,13 @@ private fun AccountCard(
 }
 
 @Composable
-private fun ThemeRow(
+private fun ThemeControl(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
 ) {
     val colors = deepDeepColors()
-    var expanded by remember { mutableStateOf(false) }
-    DdPressable(
-        onClick = { expanded = true },
-        modifier = Modifier.fillMaxWidth().testTag("settings_theme"),
-        shape = RoundedCornerShape(20.dp),
-        contentDescription = stringResource(R.string.settings_theme),
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 60.dp)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             DdIcon(icon = DdIcons.Moon, tint = colors.inkSecondary, size = 20.dp)
             Spacer(Modifier.width(14.dp))
             Text(
@@ -303,44 +331,40 @@ private fun ThemeRow(
                 color = colors.ink,
                 maxLines = 1,
             )
-            Box {
-                Text(
-                    text = themeLabel(themeMode),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                )
-                DdMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    menuWidth = 168.dp,
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        DdMenuItem(
-                            text = themeLabel(mode),
-                            icon = when (mode) {
-                                ThemeMode.SYSTEM -> DdIcons.Monitor
-                                ThemeMode.LIGHT -> DdIcons.Sun
-                                ThemeMode.DARK -> DdIcons.Moon
-                            },
-                            onClick = {
-                                onThemeModeChange(mode)
-                                expanded = false
-                            },
-                            selected = mode == themeMode,
-                            trailing = {
-                                if (mode == themeMode) {
-                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.width(6.dp))
-            DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
         }
+        Spacer(Modifier.height(12.dp))
+        DdSegmentedControl(
+            options = ThemeMode.entries,
+            selected = themeMode,
+            onSelect = onThemeModeChange,
+            modifier = Modifier.fillMaxWidth().testTag("settings_theme"),
+            label = { themeLabel(it) },
+        )
     }
+}
+
+@Composable
+private fun SwitchRow(
+    icon: DdIcon,
+    @StringRes title: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val stateDescription = stringResource(
+        if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
+    )
+    DdListRow(
+        icon = icon,
+        title = stringResource(title),
+        onClick = { onCheckedChange(!checked) },
+        trailing = {
+            DdSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                stateDescription = stateDescription,
+            )
+        },
+    )
 }
 
 @Composable

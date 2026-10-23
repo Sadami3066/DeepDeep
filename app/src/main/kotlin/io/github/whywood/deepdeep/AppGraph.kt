@@ -2,7 +2,9 @@ package io.github.whywood.deepdeep
 
 import android.content.Context
 import dev.pi.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.FileAttachmentStore
+import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
@@ -10,7 +12,7 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
-import io.github.whywood.deepdeep.runtime.ProjectStore
+import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
@@ -31,7 +33,7 @@ class AppGraph(context: Context) {
     }
 
     val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
-    val projectsDir: File = File(appContext.filesDir, "projects").apply { mkdirs() }
+    val workspacesDir: File = File(appContext.filesDir, "workspaces").apply { mkdirs() }
     val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
 
     val apiKeyStore = ApiKeyStore(appContext)
@@ -39,12 +41,13 @@ class AppGraph(context: Context) {
     val attachmentStore = FileAttachmentStore(appContext, homeDir)
     val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
+    val appPreferences = AppPreferences(appContext)
     val linuxEnvironment = LinuxEnvironment(appContext, homeDir)
     val credentials = SdkCredentialStore(apiKeyStore, scope)
     val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
     val sessionMetaStore = SessionMetaStore(appContext)
     val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
-    val projectStore = ProjectStore(appContext)
+    val workspaceStore = WorkspaceStore(appContext)
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
 
     private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
@@ -66,15 +69,16 @@ class AppGraph(context: Context) {
 
     val host = AgentRuntimeHost(
         homeDir = homeDir,
-        projectsDir = projectsDir,
+        workspacesDir = workspacesDir,
         engineFactory = engineFactory,
         modelConfigStore = modelConfigStore,
         catalog = sessionCatalog,
-        projectStore = projectStore,
+        workspaceStore = workspaceStore,
         providers = providerCatalog,
     )
 
     suspend fun prepare() {
+        LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
         importDebugKey()
         credentials.preloadAll()
     }

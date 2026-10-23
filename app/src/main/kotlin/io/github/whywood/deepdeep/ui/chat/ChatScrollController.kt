@@ -32,6 +32,15 @@ internal class ChatScrollController(private val listState: LazyListState) {
         settleByOverflow()
     }
 
+    suspend fun anchorToBottom() {
+        if (!following) return
+        withFrameNanos { }
+        val overflow = overflowToBottom()
+        if (overflow > 0f) {
+            listState.scrollBy(overflow)
+        }
+    }
+
     suspend fun jumpToBottom(animate: Boolean) {
         following = true
         awaitSettled()

@@ -22,11 +22,11 @@ import okio.Path.Companion.toPath
 
 class AgentRuntimeHost(
     private val homeDir: File,
-    private val projectsDir: File,
+    private val workspacesDir: File,
     private val engineFactory: suspend (File) -> PiSessionEngine,
     private val modelConfigStore: ModelConfigStore,
     private val catalog: SessionCatalog,
-    private val projectStore: ProjectStore,
+    private val workspaceStore: WorkspaceStore,
     private val providers: ProviderCatalog,
 ) : AgentRuntime {
     private class Handle(
@@ -57,7 +57,7 @@ class AgentRuntimeHost(
     override suspend fun start() = mutex.withLock {
         if (started) return@withLock
         homeDir.mkdirs()
-        projectsDir.mkdirs()
+        workspacesDir.mkdirs()
         started = true
     }
 
@@ -65,47 +65,64 @@ class AgentRuntimeHost(
         if (!started) start()
     }
 
-    override suspend fun projects(): List<RuntimeProject> = buildList {
-        add(homeProject())
-        addAll(projectStore.read().filter { it.id != HOME_ID })
+    override suspend fun workspaces(): List<RuntimeWorkspace> = buildList {
+        add(homeWorkspace())
+        addAll(workspaceStore.read().filter { it.id != HOME_ID })
     }
 
-    override suspend fun createProject(name: String): RuntimeProject = mutex.withLock {
+    override suspend fun createWorkspace(name: String): RuntimeWorkspace = mutex.withLock {
         val trimmed = name.trim()
-        require(trimmed.isNotEmpty()) { "项目名称不能为空" }
+        require(trimmed.isNotEmpty()) { "工作区名称不能为空" }
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
-        val directory = File(projectsDir, id).apply { mkdirs() }
-        val project = RuntimeProject(
+        val directory = File(workspacesDir, id).apply { mkdirs() }
+        val workspace = RuntimeWorkspace(
             id = id,
             name = trimmed,
             cwd = directory.absolutePath,
             createdAt = System.currentTimeMillis(),
         )
-        projectStore.add(project)
+        workspaceStore.add(workspace)
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
-        project
+        workspace
     }
 
-    override suspend fun renameProject(id: String, name: String) {
+    override suspend fun renameWorkspace(id: String, name: String) {
         if (id == HOME_ID) return
-        val project = projectStore.read().firstOrNull { it.id == id } ?: return
+        val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        projectStore.add(project.copy(name = trimmed))
+        workspaceStore.add(workspace.copy(name = trimmed))
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    override suspend fun deleteProject(id: String) {
+    override suspend fun deleteWorkspace(id: String) {
         if (id == HOME_ID) return
-        projectStore.remove(id)
+        val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
+        val sessions = catalog.list(workspace.cwd)
+        sessions.forEach { session ->
+            runCatching { stop(session.id) }
+            mutex.withLock { detach(session.id) }
+        }
+        sessions.forEach { session ->
+            catalog.delete(session.filePath)
+            catalog.removeMeta(session.id)
+        }
+        runCatching { File(workspace.cwd).deleteRecursively() }
+        workspaceStore.remove(id)
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    override suspend fun newSession(projectId: String): OpenedSession = mutex.withLock {
-        val project = projectFor(projectId)
-        val handle = attach(project.cwd, null)
+    override suspend fun allSessions(): List<ConversationSummary> =
+        catalog.listAll(allCwds()).filterNot { it.archived }
+
+    override suspend fun workspaceSessionCount(workspaceId: String): Int =
+        catalog.list(workspaceFor(workspaceId).cwd).size
+
+    override suspend fun newSession(workspaceId: String): OpenedSession = mutex.withLock {
+        val workspace = workspaceFor(workspaceId)
+        val handle = attach(workspace.cwd, null)
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
-        OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), project.cwd)
+        OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), workspace.cwd)
     }
 
     override suspend fun openSession(filePath: String, cwd: String): OpenedSession = mutex.withLock {
@@ -182,9 +199,9 @@ class AgentRuntimeHost(
         handles[sessionId]?.let { handle -> handle.engine.history(handle.session) }.orEmpty()
     }
 
-    override suspend fun sessions(projectId: String): List<ConversationSummary> {
-        val project = projectFor(projectId)
-        return catalog.list(project.cwd).filterNot { it.archived }
+    override suspend fun sessions(workspaceId: String): List<ConversationSummary> {
+        val workspace = workspaceFor(workspaceId)
+        return catalog.list(workspace.cwd).filterNot { it.archived }
     }
 
     override suspend fun archivedSessions(): List<ConversationSummary> =
@@ -250,20 +267,20 @@ class AgentRuntimeHost(
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    private fun homeProject(): RuntimeProject = RuntimeProject(
+    private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
         id = HOME_ID,
         name = HOME_NAME,
         cwd = homeDir.absolutePath,
         isHome = true,
     )
 
-    private suspend fun projectFor(projectId: String): RuntimeProject {
-        if (projectId == HOME_ID || projectId.isBlank()) return homeProject()
-        return projectStore.read().firstOrNull { it.id == projectId } ?: homeProject()
+    private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace {
+        if (workspaceId == HOME_ID || workspaceId.isBlank()) return homeWorkspace()
+        return workspaceStore.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
     }
 
     private suspend fun allCwds(): List<String> =
-        listOf(homeDir.absolutePath) + projectStore.read().map { it.cwd }
+        listOf(homeDir.absolutePath) + workspaceStore.read().map { it.cwd }
 
     private suspend fun attach(cwd: String, file: String?): Handle {
         val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile?.toString() == file }

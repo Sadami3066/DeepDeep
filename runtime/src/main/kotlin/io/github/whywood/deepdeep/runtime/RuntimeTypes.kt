@@ -36,7 +36,7 @@ data class ConversationSummary(
     val archived: Boolean = false,
 )
 
-data class RuntimeProject(
+data class RuntimeWorkspace(
     val id: String,
     val name: String,
     val cwd: String,
@@ -228,15 +228,19 @@ interface AgentRuntime {
 
     suspend fun ensureStarted()
 
-    suspend fun projects(): List<RuntimeProject>
+    suspend fun workspaces(): List<RuntimeWorkspace>
 
-    suspend fun createProject(name: String): RuntimeProject
+    suspend fun createWorkspace(name: String): RuntimeWorkspace
 
-    suspend fun renameProject(id: String, name: String)
+    suspend fun renameWorkspace(id: String, name: String)
 
-    suspend fun deleteProject(id: String)
+    suspend fun deleteWorkspace(id: String)
 
-    suspend fun newSession(projectId: String): OpenedSession
+    suspend fun allSessions(): List<ConversationSummary>
+
+    suspend fun workspaceSessionCount(workspaceId: String): Int
+
+    suspend fun newSession(workspaceId: String): OpenedSession
 
     suspend fun openSession(filePath: String, cwd: String): OpenedSession
 
@@ -248,7 +252,7 @@ interface AgentRuntime {
 
     suspend fun history(sessionId: String): List<AssistantMessage>
 
-    suspend fun sessions(projectId: String): List<ConversationSummary>
+    suspend fun sessions(workspaceId: String): List<ConversationSummary>
 
     suspend fun archivedSessions(): List<ConversationSummary>
 

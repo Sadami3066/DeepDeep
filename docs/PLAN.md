@@ -8,5 +8,5 @@
 6. P5 — motion system, drawer/session switch smoothness, process timeline redesign, palette and press states (done)
 7. P6 — markdown upgrade (nested lists, images, table scroll, highlighting), message action menu/quote, conversation switch cache (done)
 8. P7 — text selection actions (text toolbar, draggable handles, outside dismiss), file attachments (thumbnails, markdown preview, share), clickable file references in assistant messages (done)
-9. Next — localize runtime/chat hardcoded strings; project rename/delete UI; skills/plugins/scheduled implementations; root ShellExecutor when authorized; scheduled prompts/event triggers
+9. Next — workspace-level session migration/archive; full-text search (message body); skills/plugins/scheduled implementations; root ShellExecutor when authorized; scheduled prompts/event triggers
 10. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it

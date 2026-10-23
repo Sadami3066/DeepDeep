@@ -16,6 +16,12 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_chinese">简体中文</string>
     <string name="settings_language_english">English</string>
+    <string name="settings_send_hides_keyboard">发送后收起键盘</string>
+    <string name="settings_follow_streaming">流式输出跟随</string>
+    <string name="settings_show_reasoning">显示思考过程</string>
+    <string name="settings_expand_process">过程默认展开</string>
+    <string name="settings_switch_on">开</string>
+    <string name="settings_switch_off">关</string>
     <string name="settings_haptics">触感反馈</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_focus">时间与专注</string>

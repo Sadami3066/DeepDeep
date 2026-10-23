@@ -47,6 +47,7 @@ object DdIcons {
     val File = DdIcon(R.drawable.ic_dd_file)
     val Globe = DdIcon(R.drawable.ic_dd_globe)
     val Settings = DdIcon(R.drawable.ic_dd_settings)
+    val Search = DdIcon(R.drawable.ic_dd_search)
     val Message = DdIcon(R.drawable.ic_dd_message)
     val Compose = DdIcon(R.drawable.ic_dd_compose)
     val Phone = DdIcon(R.drawable.ic_dd_phone)

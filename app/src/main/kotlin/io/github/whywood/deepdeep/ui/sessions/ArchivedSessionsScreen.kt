@@ -48,6 +48,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
@@ -198,6 +199,7 @@ private fun ArchivedSessionRow(
 ) {
     val colors = deepDeepColors()
     val haptic = LocalHapticFeedback.current
+    val hapticsEnabled = LocalHapticsEnabled.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
@@ -225,7 +227,7 @@ private fun ArchivedSessionRow(
                         },
                         onTap = { onClick() },
                         onLongPress = { offset ->
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (hapticsEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onLongClick(offset)
                         },
                     )

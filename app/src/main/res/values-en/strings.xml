@@ -3,4 +3,9 @@
     <string name="service_channel_name">deepdeep status</string>
     <string name="service_running">deepdeep is running</string>
     <string name="service_stop">Stop</string>
+    <string name="relative_just_now">Just now</string>
+    <string name="relative_minutes">%1$d min ago</string>
+    <string name="relative_hours">%1$d h ago</string>
+    <string name="relative_yesterday">Yesterday</string>
+    <string name="relative_days">%1$d d ago</string>
 </resources>

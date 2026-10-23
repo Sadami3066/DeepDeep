@@ -78,7 +78,7 @@
     <string name="chat_error_attachment_failed">附件添加失败</string>
     <string name="chat_error_restoring">正在恢复会话，请稍候…</string>
     <string name="chat_error_session_not_ready">会话尚未就绪，请稍候…</string>
-    <string name="chat_error_create_project">创建项目失败</string>
+    <string name="chat_error_create_workspace">创建项目失败</string>
     <string name="chat_error_switch_model">切换模型失败</string>
     <string name="chat_error_switch_thinking">切换思考档位失败</string>
     <string name="chat_error_open_conversation">打开会话失败</string>

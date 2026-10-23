@@ -1,13 +1,14 @@
 package io.github.whywood.deepdeep.ui
 
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -15,6 +16,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,42 +27,28 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,13 +57,16 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
-import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
 import io.github.whywood.deepdeep.ui.sessions.DeleteSessionDialog
 import io.github.whywood.deepdeep.ui.sessions.RenameSessionDialog
 import io.github.whywood.deepdeep.ui.sessions.SessionAction
@@ -84,10 +75,26 @@ import io.github.whywood.deepdeep.ui.sessions.SessionActionMenu
 private sealed interface DrawerEntry {
     val key: String
 
+    data object WorkspacesHeader : DrawerEntry {
+        override val key: String = "workspaces_header"
+    }
+
+    data class WorkspaceEntry(val workspace: RuntimeWorkspace) : DrawerEntry {
+        override val key: String = "workspace_${workspace.id}"
+    }
+
     data class Header(val title: String, override val key: String) : DrawerEntry
 
     data class Session(val conversation: ConversationSummary) : DrawerEntry {
         override val key: String = conversation.id
+    }
+
+    data object HistoryEmpty : DrawerEntry {
+        override val key: String = "history_empty"
+    }
+
+    data object HistoryLoading : DrawerEntry {
+        override val key: String = "history_loading"
     }
 }
 
@@ -97,12 +104,18 @@ fun DeepDeepDrawer(
     activeConversationId: String?,
     historyLoaded: Boolean,
     archivedCount: Int,
-    currentProjectName: String,
-    onOpenProjects: () -> Unit,
+    workspaces: List<RuntimeWorkspace>,
+    currentWorkspaceId: String,
+    busySessionIds: Set<String>,
     userName: String,
     onChat: () -> Unit,
     onArchived: () -> Unit,
     onNewChat: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onCreateWorkspace: () -> Unit,
+    onSelectWorkspace: (String) -> Unit,
+    onRenameWorkspace: (String) -> Unit,
+    onDeleteWorkspace: (String) -> Unit,
     onConversation: (String) -> Unit,
     onRename: (String, String) -> Unit,
     onSetPinned: (String, Boolean) -> Unit,
@@ -116,8 +129,7 @@ fun DeepDeepDrawer(
     val comingSoon = stringResource(R.string.drawer_coming_soon)
     val pinnedLabel = stringResource(R.string.drawer_pinned_section)
     val historyLabel = stringResource(R.string.drawer_history_section)
-    var searchOpen by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    var workspaceMenuTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var menuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var menuAnchor by remember { mutableStateOf(Offset.Zero) }
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
@@ -128,36 +140,24 @@ fun DeepDeepDrawer(
     val recent = remember(conversations) {
         conversations.filter { !it.pinned && !it.archived }.sortedByDescending { it.updatedAt }
     }
-    val query = searchQuery.trim()
-    val filtering = query.isNotEmpty()
-    val visiblePinned = remember(pinned, query) {
-        if (query.isEmpty()) pinned else pinned.filter { it.title.contains(query, ignoreCase = true) }
-    }
-    val visibleRecent = remember(recent, query) {
-        if (query.isEmpty()) recent else recent.filter { it.title.contains(query, ignoreCase = true) }
-    }
-    val entries = remember(visiblePinned, visibleRecent, filtering, pinnedLabel, historyLabel) {
+    val entries = remember(workspaces, conversations, pinned, recent, historyLoaded, pinnedLabel, historyLabel) {
         buildList {
-            if (filtering) {
-                visiblePinned.forEach { add(DrawerEntry.Session(it)) }
-                visibleRecent.forEach { add(DrawerEntry.Session(it)) }
+            add(DrawerEntry.WorkspacesHeader)
+            workspaces.forEach { add(DrawerEntry.WorkspaceEntry(it)) }
+            if (conversations.isEmpty()) {
+                add(if (historyLoaded) DrawerEntry.HistoryEmpty else DrawerEntry.HistoryLoading)
             } else {
-                if (visiblePinned.isNotEmpty()) {
+                if (pinned.isNotEmpty()) {
                     add(DrawerEntry.Header(pinnedLabel, "pinned_header"))
-                    visiblePinned.forEach { add(DrawerEntry.Session(it)) }
+                    pinned.forEach { add(DrawerEntry.Session(it)) }
                 }
-                if (visibleRecent.isNotEmpty()) {
+                if (recent.isNotEmpty()) {
                     add(DrawerEntry.Header(historyLabel, "recent_header"))
-                    visibleRecent.forEach { add(DrawerEntry.Session(it)) }
+                    recent.forEach { add(DrawerEntry.Session(it)) }
                 }
             }
         }
     }
-    val closeSearch = {
-        searchOpen = false
-        searchQuery = ""
-    }
-    BackHandler(enabled = searchOpen, onBack = closeSearch)
     Column(
         modifier
             .fillMaxHeight()
@@ -169,141 +169,120 @@ fun DeepDeepDrawer(
             .testTag("drawer_panel"),
     ) {
         Spacer(Modifier.height(22.dp))
-        DdWordmark(
-            style = DdType.wordmark.copy(fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
-        )
-        Spacer(Modifier.height(24.dp))
-        if (searchOpen) {
-            DrawerSearchField(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                onClose = closeSearch,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdWordmark(
+                style = DdType.wordmark.copy(fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
             )
-        } else {
-            Column(Modifier.fillMaxWidth()) {
-                DrawerNavItem(
-                    icon = DdIcons.Message,
-                    label = stringResource(R.string.drawer_nav_chat),
-                    onClick = onChat,
-                    testTag = "drawer_chat",
-                )
-                DrawerNavItem(
-                    icon = DdIcons.Folder,
-                    label = stringResource(R.string.drawer_nav_archived),
-                    onClick = onArchived,
-                    testTag = "drawer_archived",
-                    trailing = {
-                        Text(
-                            text = stringResource(R.string.drawer_archived_count, archivedCount),
-                            style = DdType.numeric,
-                            color = colors.inkTertiary,
-                        )
-                    },
-                )
-                DrawerNavItem(
-                    icon = DdIcons.Plus,
-                    label = stringResource(R.string.drawer_nav_new_chat),
-                    onClick = onNewChat,
-                    testTag = "drawer_new_chat",
-                )
-                Spacer(Modifier.height(6.dp))
-                DrawerNavItem(
-                    icon = DdIcons.Sparkles,
-                    label = stringResource(R.string.drawer_nav_skills),
-                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                    testTag = "drawer_skills",
-                )
-                DrawerNavItem(
-                    icon = DdIcons.Plug,
-                    label = stringResource(R.string.drawer_nav_plugins),
-                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                    testTag = "drawer_plugins",
-                )
-                DrawerNavItem(
-                    icon = DdIcons.Clock,
-                    label = stringResource(R.string.drawer_nav_scheduled),
-                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                    testTag = "drawer_scheduled",
-                )
-            }
-            Spacer(Modifier.height(18.dp))
-            DdHairline(color = colors.hairline.copy(alpha = 0.45f))
-            Spacer(Modifier.height(6.dp))
-            DdPressable(
-                onClick = onOpenProjects,
-                modifier = Modifier.fillMaxWidth().testTag("drawer_projects"),
-                background = colors.wash,
-                shape = RoundedCornerShape(10.dp),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DdIcon(icon = DdIcons.Folder, tint = colors.inkSecondary, size = 15.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.drawer_project_current, currentProjectName),
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                        maxLines = 1,
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            if (conversations.isNotEmpty()) {
-                DrawerSearchRow(onOpen = { searchOpen = true })
-            } else {
-                Spacer(Modifier.height(14.dp))
-            }
+            Spacer(Modifier.weight(1f))
+            DdIconButton(
+                icon = DdIcons.Search,
+                onClick = onOpenSearch,
+                contentDescription = stringResource(R.string.drawer_search),
+                modifier = Modifier.testTag("drawer_search"),
+                size = 40.dp,
+                iconSize = 20.dp,
+                tint = colors.inkSecondary,
+            )
         }
-        if (conversations.isEmpty()) {
-            Text(
-                text = stringResource(
-                    if (historyLoaded) R.string.drawer_history_empty else R.string.drawer_history_loading,
-                ),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
+        Spacer(Modifier.height(18.dp))
+        Column(Modifier.fillMaxWidth()) {
+            DrawerNavItem(
+                icon = DdIcons.Message,
+                label = stringResource(R.string.drawer_nav_chat),
+                onClick = onChat,
+                testTag = "drawer_chat",
             )
-            Spacer(Modifier.weight(1f))
-        } else if (filtering && entries.isEmpty()) {
-            Text(
-                text = stringResource(R.string.drawer_search_empty),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
+            DrawerNavItem(
+                icon = DdIcons.Folder,
+                label = stringResource(R.string.drawer_nav_archived),
+                onClick = onArchived,
+                testTag = "drawer_archived",
+                trailing = {
+                    Text(
+                        text = stringResource(R.string.drawer_archived_count, archivedCount),
+                        style = DdType.numeric,
+                        color = colors.inkTertiary,
+                    )
+                },
             )
-            Spacer(Modifier.weight(1f))
-        } else {
-            LazyColumn(Modifier.weight(1f)) {
-                items(entries, key = { it.key }) { entry ->
-                    when (entry) {
-                        is DrawerEntry.Header -> DrawerSectionLabel(entry.title)
-                        is DrawerEntry.Session -> DrawerHistoryRow(
-                            conversation = entry.conversation,
-                            menuExpanded = menuTarget?.id == entry.conversation.id,
-                            onClick = { onConversation(entry.conversation.id) },
-                            onLongClick = { offset ->
-                                menuAnchor = offset
-                                menuTarget = entry.conversation
-                            },
-                            menuAnchor = menuAnchor,
-                            onDismissMenu = { menuTarget = null },
-                            onAction = { action ->
-                                when (action) {
-                                    SessionAction.RENAME -> renameTarget = entry.conversation
-                                    SessionAction.TOGGLE_PIN ->
-                                        onSetPinned(entry.conversation.id, !entry.conversation.pinned)
+            DrawerNavItem(
+                icon = DdIcons.Plus,
+                label = stringResource(R.string.drawer_nav_new_chat),
+                onClick = onNewChat,
+                testTag = "drawer_new_chat",
+            )
+            Spacer(Modifier.height(6.dp))
+            DrawerNavItem(
+                icon = DdIcons.Sparkles,
+                label = stringResource(R.string.drawer_nav_skills),
+                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                testTag = "drawer_skills",
+            )
+            DrawerNavItem(
+                icon = DdIcons.Plug,
+                label = stringResource(R.string.drawer_nav_plugins),
+                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                testTag = "drawer_plugins",
+            )
+            DrawerNavItem(
+                icon = DdIcons.Clock,
+                label = stringResource(R.string.drawer_nav_scheduled),
+                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                testTag = "drawer_scheduled",
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 4.dp),
+        ) {
+            items(entries, key = { it.key }) { entry ->
+                when (entry) {
+                    DrawerEntry.WorkspacesHeader -> DrawerWorkspacesHeader(onCreate = onCreateWorkspace)
+                    is DrawerEntry.WorkspaceEntry -> DrawerWorkspaceRow(
+                        workspace = entry.workspace,
+                        selected = entry.workspace.id == currentWorkspaceId,
+                        menuExpanded = workspaceMenuTarget?.id == entry.workspace.id,
+                        onClick = { onSelectWorkspace(entry.workspace.id) },
+                        onLongClick = { workspaceMenuTarget = entry.workspace },
+                        onDismissMenu = { workspaceMenuTarget = null },
+                        onRename = { onRenameWorkspace(entry.workspace.id) },
+                        onDelete = { onDeleteWorkspace(entry.workspace.id) },
+                    )
 
-                                    SessionAction.TOGGLE_ARCHIVE ->
-                                        onSetArchived(entry.conversation.id, !entry.conversation.archived)
+                    is DrawerEntry.Header -> DrawerSectionLabel(entry.title)
+                    is DrawerEntry.Session -> DrawerHistoryRow(
+                        conversation = entry.conversation,
+                        busy = entry.conversation.id in busySessionIds,
+                        menuExpanded = menuTarget?.id == entry.conversation.id,
+                        onClick = { onConversation(entry.conversation.id) },
+                        onLongClick = { offset ->
+                            menuAnchor = offset
+                            menuTarget = entry.conversation
+                        },
+                        menuAnchor = menuAnchor,
+                        onDismissMenu = { menuTarget = null },
+                        onAction = { action ->
+                            when (action) {
+                                SessionAction.RENAME -> renameTarget = entry.conversation
+                                SessionAction.TOGGLE_PIN ->
+                                    onSetPinned(entry.conversation.id, !entry.conversation.pinned)
 
-                                    SessionAction.DELETE -> deleteTarget = entry.conversation
-                                }
-                            },
-                            testTag = "recent_${entry.conversation.id}",
-                        )
-                    }
+                                SessionAction.TOGGLE_ARCHIVE ->
+                                    onSetArchived(entry.conversation.id, !entry.conversation.archived)
+
+                                SessionAction.DELETE -> deleteTarget = entry.conversation
+                            }
+                        },
+                        testTag = "recent_${entry.conversation.id}",
+                    )
+
+                    DrawerEntry.HistoryEmpty -> DrawerHistoryHint(stringResource(R.string.drawer_history_empty))
+                    DrawerEntry.HistoryLoading -> DrawerHistoryHint(stringResource(R.string.drawer_history_loading))
                 }
             }
         }
@@ -335,110 +314,107 @@ fun DeepDeepDrawer(
 }
 
 @Composable
-private fun DrawerSearchRow(onOpen: () -> Unit) {
+private fun DrawerWorkspacesHeader(onCreate: () -> Unit) {
     val colors = deepDeepColors()
-    val searchLabel = stringResource(R.string.drawer_search)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(colors.wash)
-            .clickable(onClick = onOpen)
-            .semantics { this.contentDescription = searchLabel }
-            .testTag("drawer_search_toggle")
-            .padding(horizontal = 12.dp),
+            .padding(start = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.drawer_search_placeholder),
+            text = stringResource(R.string.workspace_section),
+            modifier = Modifier.weight(1f),
             style = DdType.bodySmall,
-            color = colors.inkTertiary,
+            color = colors.inkSecondary.copy(alpha = 0.85f),
             maxLines = 1,
+        )
+        DdIconButton(
+            icon = DdIcons.Plus,
+            onClick = onCreate,
+            contentDescription = stringResource(R.string.workspace_create),
+            modifier = Modifier.testTag("drawer_workspace_create"),
+            size = 32.dp,
+            iconSize = 16.dp,
+            tint = colors.inkTertiary,
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DrawerSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClose: () -> Unit,
+private fun DrawerWorkspaceRow(
+    workspace: RuntimeWorkspace,
+    selected: Boolean,
+    menuExpanded: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDismissMenu: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val focusRequester = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        focusRequester.requestFocus()
-        keyboard?.show()
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Box(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
                 .height(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(colors.raised)
-                .border(1.dp, colors.hairline.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
-                .padding(start = 12.dp, end = 4.dp),
+                .background(if (selected) colors.wash else colors.paper)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (workspace.isHome) null else onLongClick,
+                )
+                .testTag("workspace_${workspace.id}")
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
-                            onClose()
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    .testTag("drawer_search_field"),
-                textStyle = DdType.bodySmall.copy(color = colors.ink),
-                cursorBrush = SolidColor(colors.accent),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                decorationBox = { inner ->
-                    if (query.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.drawer_search_placeholder),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                    }
-                    inner()
-                },
+            Text(
+                text = workspace.name,
+                style = DdType.bodySmall,
+                color = if (selected) colors.ink else colors.inkSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (query.isNotEmpty()) {
-                DdIconButton(
-                    icon = DdIcons.Close,
-                    onClick = { onQueryChange("") },
-                    contentDescription = stringResource(R.string.drawer_search_clear),
-                    modifier = Modifier.testTag("drawer_search_clear"),
-                    size = 32.dp,
-                    iconSize = 15.dp,
-                    tint = colors.inkTertiary,
-                )
-            }
         }
-        Spacer(Modifier.width(4.dp))
-        DdTextAction(
-            text = stringResource(R.string.drawer_cancel),
-            onClick = onClose,
-            modifier = Modifier.testTag("drawer_search_cancel"),
-            color = colors.inkSecondary,
-        )
+        DdMenu(
+            expanded = menuExpanded,
+            onDismissRequest = onDismissMenu,
+            menuWidth = 168.dp,
+        ) {
+            DdMenuItem(
+                text = stringResource(R.string.drawer_action_rename),
+                onClick = {
+                    onDismissMenu()
+                    onRename()
+                },
+                icon = DdIcons.Compose,
+                testTag = "workspace_action_rename",
+            )
+            DdMenuItem(
+                text = stringResource(R.string.drawer_action_delete),
+                onClick = {
+                    onDismissMenu()
+                    onDelete()
+                },
+                icon = DdIcons.Trash,
+                destructive = true,
+                testTag = "workspace_action_delete",
+            )
+        }
     }
+}
+
+@Composable
+private fun DrawerHistoryHint(text: String) {
+    val colors = deepDeepColors()
+    Text(
+        text = text,
+        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+        style = DdType.bodySmall,
+        color = colors.inkTertiary,
+    )
 }
 
 @Composable
@@ -492,6 +468,7 @@ private fun DrawerSectionLabel(text: String) {
 @Composable
 private fun DrawerHistoryRow(
     conversation: ConversationSummary,
+    busy: Boolean,
     menuExpanded: Boolean,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
@@ -502,6 +479,7 @@ private fun DrawerHistoryRow(
 ) {
     val colors = deepDeepColors()
     val haptic = LocalHapticFeedback.current
+    val hapticsEnabled = LocalHapticsEnabled.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
@@ -509,6 +487,7 @@ private fun DrawerHistoryRow(
         animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "session-row-wash",
     )
+    val relativeTime = rememberRelativeTime(conversation.updatedAt)
     Box(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -529,7 +508,7 @@ private fun DrawerHistoryRow(
                         },
                         onTap = { onClick() },
                         onLongPress = { offset ->
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (hapticsEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onLongClick(offset)
                         },
                     )
@@ -540,11 +519,40 @@ private fun DrawerHistoryRow(
         ) {
             Text(
                 text = conversation.title,
+                modifier = Modifier.weight(1f),
                 style = DdType.bodySmall,
                 color = colors.inkSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.widthIn(min = 40.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Crossfade(
+                    targetState = busy,
+                    animationSpec = tween(DdMotion.FAST),
+                    label = "session-trailing",
+                ) { running ->
+                    if (running) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .testTag("session_busy_${conversation.id}"),
+                            color = colors.inkTertiary,
+                            strokeWidth = 1.5.dp,
+                        )
+                    } else {
+                        Text(
+                            text = relativeTime,
+                            style = DdType.bodySmall.copy(fontSize = 11.sp),
+                            color = colors.inkTertiary,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
         SessionActionMenu(
             session = conversation,

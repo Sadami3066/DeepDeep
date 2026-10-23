@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.AgentRuntime
+import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
@@ -17,7 +18,7 @@ import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeProject
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -192,41 +193,92 @@ class ChatViewModel(
     fun newChat() {
         viewModelScope.launch {
             cacheCurrentSession()
-            createSession(mutableState.value.currentProjectId)
+            createSession(mutableState.value.currentWorkspaceId)
         }
     }
 
-    fun selectProject(projectId: String) {
-        if (mutableState.value.currentProjectId == projectId) return
+    fun selectWorkspace(workspaceId: String) {
+        if (mutableState.value.currentWorkspaceId == workspaceId) return
         viewModelScope.launch {
             cacheCurrentSession()
-            val projects = withContext(ioDispatcher) { runtime.projects() }
-            val project = projects.firstOrNull { it.id == projectId } ?: return@launch
-            mutableState.update { it.copy(currentProjectId = project.id, error = null) }
-            val sessions = withContext(ioDispatcher) { runtime.sessions(project.id) }
-            refreshProjectSessions(project, sessions)
+            val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
+            val workspace = workspaces.firstOrNull { it.id == workspaceId } ?: return@launch
+            mutableState.update { it.copy(currentWorkspaceId = workspace.id, error = null) }
+            val sessions = withContext(ioDispatcher) { runtime.sessions(workspace.id) }
+            refreshWorkspaceSessions(workspace, sessions)
             val recent = sessions.firstOrNull()
             if (recent != null) {
                 switchToSummary(recent)
             } else {
-                createSession(project.id)
+                createSession(workspace.id)
             }
         }
     }
 
-    fun createProject(name: String) {
+    fun createWorkspace(name: String) {
         viewModelScope.launch {
             try {
-                val project = withContext(ioDispatcher) { runtime.createProject(name) }
-                val projects = withContext(ioDispatcher) { runtime.projects() }
-                mutableState.update { it.copy(projects = projects) }
-                selectProject(project.id)
+                val workspace = withContext(ioDispatcher) { runtime.createWorkspace(name) }
+                val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
+                mutableState.update { it.copy(workspaces = workspaces) }
+                selectWorkspace(workspace.id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.createProjectFailed)) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.createWorkspaceFailed)) }
             }
         }
+    }
+
+    fun renameWorkspace(workspaceId: String, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                runtime.renameWorkspace(workspaceId, trimmed)
+                refreshSessions()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.createWorkspaceFailed)) }
+            }
+        }
+    }
+
+    fun deleteWorkspace(workspaceId: String) {
+        if (workspaceId == AgentRuntimeHost.HOME_ID) return
+        viewModelScope.launch {
+            try {
+                runtime.deleteWorkspace(workspaceId)
+                if (mutableState.value.currentWorkspaceId == workspaceId) {
+                    val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
+                    val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()
+                    if (home != null) selectWorkspace(home.id) else refreshSessions()
+                } else {
+                    refreshSessions()
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.createWorkspaceFailed)) }
+            }
+        }
+    }
+
+    suspend fun loadWorkspaceSessionCount(workspaceId: String): Int =
+        withContext(ioDispatcher) { runtime.workspaceSessionCount(workspaceId) }
+
+    suspend fun loadSearchSessions(): List<SessionSearchHit> = withContext(ioDispatcher) {
+        val workspaces = mutableState.value.workspaces.ifEmpty { runtime.workspaces() }
+        val namesByCwd = workspaces.associate { it.cwd to it.name }
+        runtime.allSessions()
+            .map { summary ->
+                SessionSearchHit(
+                    conversation = summary.copy(title = localizedTitle(summary.title)),
+                    workspaceName = namesByCwd[summary.cwd] ?: "Home",
+                )
+            }
+            .sortedByDescending { it.conversation.updatedAt }
     }
 
     fun openConversation(id: String) {
@@ -319,10 +371,10 @@ class ChatViewModel(
             if (wasActive) runtime.stop(id)
             runCatching { withContext(ioDispatcher) { runtime.deleteSession(id) } }
             if (wasActive) {
-                val projectId = mutableState.value.currentProjectId
-                val sessions = withContext(ioDispatcher) { runtime.sessions(projectId) }
+                val workspaceId = mutableState.value.currentWorkspaceId
+                val sessions = withContext(ioDispatcher) { runtime.sessions(workspaceId) }
                 val next = sessions.firstOrNull()
-                if (next != null) switchToSummary(next) else createSession(projectId)
+                if (next != null) switchToSummary(next) else createSession(workspaceId)
             } else {
                 refreshSessions()
             }
@@ -330,26 +382,26 @@ class ChatViewModel(
     }
 
     private suspend fun restoreInitialSession() {
-        val projects = withContext(ioDispatcher) { runtime.projects() }
+        val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
         val sessions = withContext(ioDispatcher) {
-            projects.flatMap { project -> runtime.sessions(project.id) }
+            workspaces.flatMap { workspace -> runtime.sessions(workspace.id) }
         }
         val recent = sessions.maxByOrNull { it.updatedAt }
-        val home = projects.firstOrNull { it.isHome } ?: projects.firstOrNull()
+        val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()
         if (home == null) {
             mutableState.update {
                 it.copy(ready = true, historyLoaded = true, error = "运行时未就绪")
             }
             return
         }
-        val project = recent?.let { summary -> projects.firstOrNull { it.cwd == summary.cwd } } ?: home
+        val workspace = recent?.let { summary -> workspaces.firstOrNull { it.cwd == summary.cwd } } ?: home
         mutableState.update {
             it.copy(
                 ready = true,
-                projects = projects,
-                currentProjectId = project.id,
+                workspaces = workspaces,
+                currentWorkspaceId = workspace.id,
                 conversationCwd = recent?.cwd ?: home.cwd,
-                conversations = sessions.filter { session -> session.cwd == project.cwd }
+                conversations = sessions.filter { session -> session.cwd == workspace.cwd }
                     .map { session -> session.copy(title = localizedTitle(session.title)) },
                 historyLoaded = recent != null,
             )
@@ -357,21 +409,21 @@ class ChatViewModel(
         if (recent != null) {
             switchToSummary(recent)
         } else {
-            createSession(project.id)
+            createSession(workspace.id)
         }
     }
 
     private fun switchToSummary(summary: ConversationSummary) {
         val cached = conversationCache[summary.id]
-        val projectId = mutableState.value.projects
-            .firstOrNull { project -> project.cwd == summary.cwd }
+        val workspaceId = mutableState.value.workspaces
+            .firstOrNull { workspace -> workspace.cwd == summary.cwd }
             ?.id
-            ?: mutableState.value.currentProjectId
+            ?: mutableState.value.currentWorkspaceId
         mutableState.update {
             it.copy(
                 conversationId = summary.id,
                 conversationCwd = summary.cwd,
-                currentProjectId = projectId,
+                currentWorkspaceId = workspaceId,
                 conversationTitle = cached?.title?.ifBlank { summary.title } ?: summary.title,
                 messages = cached?.messages ?: emptyList(),
                 sending = cached?.sending ?: false,
@@ -432,18 +484,18 @@ class ChatViewModel(
         sessionOpenJobs[summary.id] = job
     }
 
-    private fun createSession(projectId: String) {
+    private fun createSession(workspaceId: String) {
         viewModelScope.launch {
             try {
-                val opened = withContext(ioDispatcher) { runtime.newSession(projectId) }
+                val opened = withContext(ioDispatcher) { runtime.newSession(workspaceId) }
                 val projectCwd = opened.cwd
                 conversationCache[opened.sessionId] = ConversationSnapshot()
                 mutableState.update {
                     it.copy(
                         conversationId = opened.sessionId,
                         conversationCwd = projectCwd,
-                        currentProjectId = it.projects.firstOrNull { project -> project.cwd == projectCwd }?.id
-                            ?: projectId,
+                        currentWorkspaceId = it.workspaces.firstOrNull { workspace -> workspace.cwd == projectCwd }?.id
+                            ?: workspaceId,
                         conversationTitle = "",
                         messages = emptyList(),
                         sending = false,
@@ -745,18 +797,18 @@ class ChatViewModel(
 
     private suspend fun refreshSessions() {
         val current = mutableState.value
-        val projects = withContext(ioDispatcher) { runtime.projects() }
-        val project = projects.firstOrNull { it.id == current.currentProjectId }
-            ?: projects.firstOrNull { it.isHome }
-            ?: projects.firstOrNull()
-        val sessions = project?.let { withContext(ioDispatcher) { runtime.sessions(it.id) } }.orEmpty()
+        val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
+        val workspace = workspaces.firstOrNull { it.id == current.currentWorkspaceId }
+            ?: workspaces.firstOrNull { it.isHome }
+            ?: workspaces.firstOrNull()
+        val sessions = workspace?.let { withContext(ioDispatcher) { runtime.sessions(it.id) } }.orEmpty()
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
         mutableState.update {
             val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
             it.copy(
                 ready = true,
-                projects = projects,
-                currentProjectId = project?.id ?: it.currentProjectId,
+                workspaces = workspaces,
+                currentWorkspaceId = workspace?.id ?: it.currentWorkspaceId,
                 conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedConversations = archived.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedCount = archived.size,
@@ -766,10 +818,10 @@ class ChatViewModel(
         cacheCurrentSession()
     }
 
-    private fun refreshProjectSessions(project: RuntimeProject, sessions: List<ConversationSummary>) {
+    private fun refreshWorkspaceSessions(workspace: RuntimeWorkspace, sessions: List<ConversationSummary>) {
         mutableState.update {
             it.copy(
-                currentProjectId = project.id,
+                currentWorkspaceId = workspace.id,
                 conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
             )
         }

@@ -34,6 +34,11 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data object Search : AppDestination {
+        override val routeKey: String = "search"
+        override val depth: Int = 1
+    }
+
     companion object {
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
 
@@ -43,6 +48,7 @@ sealed interface AppDestination {
             routeKey == Providers.routeKey -> Providers
             routeKey == Archived.routeKey -> Archived
             routeKey == RuntimeSettings.routeKey -> RuntimeSettings
+            routeKey == Search.routeKey -> Search
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
             else -> null

@@ -32,6 +32,7 @@ import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 
@@ -58,6 +59,8 @@ internal fun ChatTurn(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
+    showReasoning: Boolean = true,
+    expandProcessByDefault: Boolean = false,
 ) {
     if (message.role == AssistantRole.USER) {
         UserBubble(
@@ -76,6 +79,8 @@ internal fun ChatTurn(
             onCopyOutput = onCopyOutput,
             onQuote = onQuote,
             onOpenFile = onOpenFile,
+            showReasoning = showReasoning,
+            expandProcessByDefault = expandProcessByDefault,
         )
     }
 }
@@ -163,18 +168,23 @@ private fun AssistantTurn(
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenFile: (String) -> Unit,
+    showReasoning: Boolean,
+    expandProcessByDefault: Boolean,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     val answer = message.text.trim()
     val readable = remember(answer) { markdownToPlainText(answer) }
     Column(Modifier.fillMaxWidth()) {
-        if (message.steps.isNotEmpty()) {
+        val hasVisibleProcess = message.steps.any { showReasoning || it !is AssistantStep.Reasoning }
+        if (hasVisibleProcess) {
             ProcessSection(
                 message = message,
                 onToggleStep = onToggleStep,
                 onCopyOutput = onCopyOutput,
                 onFileClick = onOpenFile,
+                showReasoning = showReasoning,
+                expandByDefault = expandProcessByDefault,
             )
             if (answer.isNotEmpty()) Spacer(Modifier.height(6.dp))
         }

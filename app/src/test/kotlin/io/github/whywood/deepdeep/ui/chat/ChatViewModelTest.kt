@@ -18,7 +18,7 @@ import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeProject
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -268,24 +268,29 @@ class ChatViewModelTest {
         val openCalls = mutableListOf<String>()
         val sent = mutableListOf<String>()
         private var createdCount = 0
-        private val extraProjects = mutableListOf<RuntimeProject>()
+        private val extraProjects = mutableListOf<RuntimeWorkspace>()
 
         override suspend fun start() = Unit
         override suspend fun ensureStarted() = Unit
 
-        override suspend fun projects(): List<RuntimeProject> =
-            listOf(RuntimeProject(HOME_ID, "Home", HOME_CWD, isHome = true)) + extraProjects
+        override suspend fun workspaces(): List<RuntimeWorkspace> =
+            listOf(RuntimeWorkspace(HOME_ID, "Home", HOME_CWD, isHome = true)) + extraProjects
 
-        override suspend fun createProject(name: String): RuntimeProject {
-            val project = RuntimeProject("project-$name", name, "/projects/$name", createdAt = 1L)
-            extraProjects += project
-            return project
+        override suspend fun createWorkspace(name: String): RuntimeWorkspace {
+            val workspace = RuntimeWorkspace("workspace-$name", name, "/workspaces/$name", createdAt = 1L)
+            extraProjects += workspace
+            return workspace
         }
 
-        override suspend fun renameProject(id: String, name: String) = Unit
-        override suspend fun deleteProject(id: String) = Unit
+        override suspend fun renameWorkspace(id: String, name: String) = Unit
+        override suspend fun deleteWorkspace(id: String) = Unit
 
-        override suspend fun newSession(projectId: String): OpenedSession {
+        override suspend fun allSessions(): List<ConversationSummary> =
+            sessions.filter { !it.archived }
+
+        override suspend fun workspaceSessionCount(workspaceId: String): Int = sessions.size
+
+        override suspend fun newSession(workspaceId: String): OpenedSession {
             createdCount += 1
             val id = "session-$createdCount"
             sessions = sessions + ConversationSummary(id, "", createdCount.toLong(), "$id.jsonl", HOME_CWD)
@@ -309,7 +314,7 @@ class ChatViewModelTest {
         override suspend fun history(sessionId: String): List<AssistantMessage> =
             histories[sessionId].orEmpty()
 
-        override suspend fun sessions(projectId: String): List<ConversationSummary> =
+        override suspend fun sessions(workspaceId: String): List<ConversationSummary> =
             sessions.filter { !it.archived }
 
         override suspend fun archivedSessions(): List<ConversationSummary> =

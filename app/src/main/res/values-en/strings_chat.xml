@@ -78,7 +78,7 @@
     <string name="chat_error_attachment_failed">Failed to add attachment</string>
     <string name="chat_error_restoring">Restoring session…</string>
     <string name="chat_error_session_not_ready">Session is not ready</string>
-    <string name="chat_error_create_project">Failed to create project</string>
+    <string name="chat_error_create_workspace">Failed to create project</string>
     <string name="chat_error_switch_model">Failed to switch model</string>
     <string name="chat_error_switch_thinking">Failed to switch thinking level</string>
     <string name="chat_error_open_conversation">Failed to open conversation</string>

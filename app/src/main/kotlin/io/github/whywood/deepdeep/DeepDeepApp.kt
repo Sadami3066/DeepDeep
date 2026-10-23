@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,6 +36,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.UiPreferences
+import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -45,12 +49,17 @@ import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
-import io.github.whywood.deepdeep.ui.projects.ProjectPickerDialog
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
+import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
+import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
+import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,7 +86,7 @@ internal fun DeepDeepApp(
         attachmentFailed = stringResource(R.string.chat_error_attachment_failed),
         restoringSession = stringResource(R.string.chat_error_restoring),
         sessionNotReady = stringResource(R.string.chat_error_session_not_ready),
-        createProjectFailed = stringResource(R.string.chat_error_create_project),
+        createWorkspaceFailed = stringResource(R.string.chat_error_create_workspace),
         switchModelFailed = stringResource(R.string.chat_error_switch_model),
         switchThinkingFailed = stringResource(R.string.chat_error_switch_thinking),
         openConversationFailed = stringResource(R.string.chat_error_open_conversation),
@@ -125,7 +134,11 @@ internal fun DeepDeepApp(
     val drawerWidthPx = with(density) { 304.dp.toPx() }
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
-    var projectsOpen by remember { mutableStateOf(false) }
+    val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
+    var workspaceCreateOpen by remember { mutableStateOf(false) }
+    var workspaceRenameTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
+    var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
+    var workspaceDeleteCount by remember { mutableIntStateOf(0) }
     val drawerProgress by animateFloatAsState(
         targetValue = if (drawerOpen) 1f else 0f,
         animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
@@ -159,6 +172,7 @@ internal fun DeepDeepApp(
         back()
     }
 
+    CompositionLocalProvider(LocalHapticsEnabled provides uiPreferences.hapticsEnabled) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         AnimatedScreenHost(
             navigator = navigator,
@@ -186,6 +200,10 @@ internal fun DeepDeepApp(
                         previewAttachment = it
                     },
                     attachmentRoot = attachmentRoot,
+                    sendHidesKeyboard = uiPreferences.sendHidesKeyboard,
+                    followStreaming = uiPreferences.followStreaming,
+                    showReasoning = uiPreferences.showReasoning,
+                    expandProcessByDefault = uiPreferences.expandProcessByDefault,
                     onOpenFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
@@ -207,10 +225,14 @@ internal fun DeepDeepApp(
                     modelName = state.modelLabel.takeIf { it.isNotBlank() },
                     configured = state.providerId in configuredProviders,
                     themeMode = theme,
+                    preferences = uiPreferences,
                     linuxState = linuxState,
                     versionName = BuildConfig.VERSION_NAME,
                     onBack = ::back,
                     onThemeModeChange = onThemeChange,
+                    onToggle = { toggle, enabled ->
+                        scope.launch { graph.appPreferences.set(toggle, enabled) }
+                    },
                     onOpenProviders = { navigator.push(AppDestination.Providers) },
                     onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
                 )
@@ -291,6 +313,15 @@ internal fun DeepDeepApp(
                     onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
                     onDelete = chatViewModel::deleteSession,
                 )
+
+                AppDestination.Search -> SessionSearchScreen(
+                    onBack = ::back,
+                    loadSessions = chatViewModel::loadSearchSessions,
+                    onOpen = { id ->
+                        chatViewModel.openConversation(id)
+                        navigator.reset(AppDestination.Chat)
+                    },
+                )
             }
         }
 
@@ -318,50 +349,93 @@ internal fun DeepDeepApp(
                     .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress) },
             ) {
                 DeepDeepDrawer(
-                conversations = state.conversations,
-                activeConversationId = state.conversationId,
-                historyLoaded = state.historyLoaded,
-                archivedCount = state.archivedCount,
-                currentProjectName = state.projects.firstOrNull { it.id == state.currentProjectId }?.name ?: "Home",
-                onOpenProjects = {
-                    drawerOpen = false
-                    projectsOpen = true
-                },
-                userName = "Milous",
-                onChat = ::openChat,
-                onArchived = {
-                    drawerOpen = false
-                    navigator.push(AppDestination.Archived)
-                },
-                onNewChat = {
-                    drawerOpen = false
-                    chatViewModel.newChat()
-                },
-                onConversation = { id ->
-                    drawerOpen = false
-                    chatViewModel.openConversation(id)
-                },
-                onRename = chatViewModel::renameSession,
-                onSetPinned = chatViewModel::setSessionPinned,
-                onSetArchived = chatViewModel::setSessionArchived,
-                onDelete = chatViewModel::deleteSession,
+                    conversations = state.conversations,
+                    activeConversationId = state.conversationId,
+                    historyLoaded = state.historyLoaded,
+                    archivedCount = state.archivedCount,
+                    workspaces = state.workspaces,
+                    currentWorkspaceId = state.currentWorkspaceId,
+                    busySessionIds = state.busySessionIds,
+                    userName = "Milous",
+                    onChat = ::openChat,
+                    onArchived = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Archived)
+                    },
+                    onNewChat = {
+                        drawerOpen = false
+                        chatViewModel.newChat()
+                    },
+                    onOpenSearch = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Search)
+                    },
+                    onCreateWorkspace = {
+                        drawerOpen = false
+                        workspaceCreateOpen = true
+                    },
+                    onSelectWorkspace = { workspaceId ->
+                        drawerOpen = false
+                        chatViewModel.selectWorkspace(workspaceId)
+                    },
+                    onRenameWorkspace = { workspaceId ->
+                        drawerOpen = false
+                        workspaceRenameTarget = state.workspaces.firstOrNull { it.id == workspaceId }
+                    },
+                    onDeleteWorkspace = { workspaceId ->
+                        drawerOpen = false
+                        val target = state.workspaces.firstOrNull { it.id == workspaceId }
+                        if (target != null) {
+                            workspaceDeleteTarget = target
+                            scope.launch {
+                                workspaceDeleteCount = chatViewModel.loadWorkspaceSessionCount(workspaceId)
+                            }
+                        }
+                    },
+                    onConversation = { id ->
+                        drawerOpen = false
+                        chatViewModel.openConversation(id)
+                    },
+                    onRename = chatViewModel::renameSession,
+                    onSetPinned = chatViewModel::setSessionPinned,
+                    onSetArchived = chatViewModel::setSessionArchived,
+                    onDelete = chatViewModel::deleteSession,
                     onSettings = ::openSettings,
                 )
             }
         }
-        if (projectsOpen) {
-            ProjectPickerDialog(
-                projects = state.projects,
-                currentProjectId = state.currentProjectId,
-                onSelect = { projectId ->
-                    projectsOpen = false
-                    chatViewModel.selectProject(projectId)
+        if (workspaceCreateOpen) {
+            WorkspaceNameDialog(
+                mode = WorkspaceNameMode.CREATE,
+                existingNames = state.workspaces.map { it.name },
+                onConfirm = { name ->
+                    workspaceCreateOpen = false
+                    chatViewModel.createWorkspace(name)
                 },
-                onCreate = { name ->
-                    projectsOpen = false
-                    chatViewModel.createProject(name)
+                onDismiss = { workspaceCreateOpen = false },
+            )
+        }
+        workspaceRenameTarget?.let { target ->
+            WorkspaceNameDialog(
+                mode = WorkspaceNameMode.RENAME,
+                initial = target.name,
+                existingNames = state.workspaces.filterNot { it.id == target.id }.map { it.name },
+                onConfirm = { name ->
+                    workspaceRenameTarget = null
+                    chatViewModel.renameWorkspace(target.id, name)
                 },
-                onDismiss = { projectsOpen = false },
+                onDismiss = { workspaceRenameTarget = null },
+            )
+        }
+        workspaceDeleteTarget?.let { target ->
+            DeleteWorkspaceDialog(
+                name = target.name,
+                sessionCount = workspaceDeleteCount,
+                onConfirm = {
+                    workspaceDeleteTarget = null
+                    chatViewModel.deleteWorkspace(target.id)
+                },
+                onDismiss = { workspaceDeleteTarget = null },
             )
         }
         previewAttachment?.let { attachment ->
@@ -381,5 +455,6 @@ internal fun DeepDeepApp(
                 },
             )
         }
+    }
     }
 }
