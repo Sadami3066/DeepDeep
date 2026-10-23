@@ -275,7 +275,7 @@ private fun DrawerSectionLabel(text: String) {
         text = text,
         modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 4.dp),
         style = DdType.bodySmall,
-        color = colors.inkTertiary,
+        color = colors.inkSecondary.copy(alpha = 0.85f),
     )
 }
 
