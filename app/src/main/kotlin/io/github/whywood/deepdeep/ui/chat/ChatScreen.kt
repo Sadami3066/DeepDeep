@@ -40,7 +40,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -81,6 +80,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -224,11 +224,11 @@ fun ChatScreen(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (state.switchingConversation) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp).testTag("switching_progress"),
+                    DdSpinner(
+                        modifier = Modifier.testTag("switching_progress"),
                         color = colors.inkTertiary,
+                        size = 18.dp,
                         strokeWidth = 2.dp,
-                        trackColor = Color.Transparent,
                     )
                 }
             } else if (state.messages.isEmpty()) {

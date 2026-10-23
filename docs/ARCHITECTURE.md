@@ -5,6 +5,8 @@
 - 工作目录从 `workspace` 更名 `home`；数据迁移在 AppGraph 初始化前执行：`files/workspace`→`files/home`，旧 session 目录按 cwd 编码重命名并重写 JSONL 头的 cwd。
 - Home 是默认工作区；用户在抽屉「工作区」里可新建/重命名/删除 workspace，目录为 `files/workspaces/<id>`，WorkspaceStore(DataStore) 只存 id/name/cwd/createdAt；旧 `files/projects`、旧 `projects` DataStore 与旧 session 目录/cwd 均做幂等迁移。
 - 每条 session 绑定创建时的 cwd（home 或某个 workspace）；session 文件仍由 pi SDK 按 `AgentPaths.sessionsForCwd()` 存放在 `agent/sessions/<encoded-cwd>/`，列表由 `SessionCatalog` 按已知 cwd 聚合后叠加 SessionMetaStore（置顶/归档/标题覆盖）。
+- 抽屉按工作区分组展示全部未归档会话（`ChatViewModel.refreshSessions()` 读取 `runtime.allSessions()`，用 session.cwd 匹配工作区）；工作区置顶是 UI 偏好，存 `AppPreferences`（`pinned_workspace_ids`），会话置顶仍由 SessionMetaStore 持久化。
+- 顶栏 + 固定以 `AgentRuntimeHost.HOME_ID` 新建会话；工作区行的 + 走 `ChatViewModel.newSession(workspaceId)`，不改变其他工作区运行中的会话。
 - 附件导入/预览/文件引用解析都以当前会话 cwd 为 root（`AttachmentStore.import/file/shareIntent/resolve(raw, root)`），project 会话的附件落在 project 目录。
 
 ## 多会话并发
@@ -64,6 +66,10 @@ Compose ChatScreen
 - 设置层级使用 typed stack + `AnimatedContent`；系统返回手势 -> pop。
 - `design/DdMotion` 统一时长/easing；`DdTypingDots` 承载思考动画。
 - 抽屉用持久 composition + `graphicsLayer` translation，避免开关时反复组合；遮罩只在可见时挂载，避免拦截触摸。
+- 抽屉工作区树由 `sessions + workspaces + pinnedWorkspaceIds + expandedWorkspaceIds` 驱动，展开状态由 `DeepDeepApp` 的 `rememberSaveable` 集合持有；工作区/会话行用 `LazyColumn` + `animateItem()` 做展开/收起和重排。
+- 设计系统组件：`DdSwitch`、`DdSegmentedControl`（无 ripple）、`DdDialog`（Dialog + IME 自适应）、`DdSearchField`、`DdTextField`、`DdSpinner`；设置/Provider/会话/归档页统一使用这些自写控件，不再直接使用 Material AlertDialog/Switch/CircularProgressIndicator。
+- 运行环境页是设置分组内的标准行（DdSwitch + DdListRow + DdDialog），不再嵌套 wash 卡片。
+- Provider 详情保存 key 后由 DeepDeepApp 通过 `ApiKeyStore.read(providerId)` 读出并传给 `ProviderDetailScreen(savedApiKey=…)`，UI 只显示掩码 placeholder。
 - ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
 - `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
@@ -80,7 +86,8 @@ Compose ChatScreen
 
 ```
 filesDir/
-  workspace/        cwd，同时是 Alpine /workspace
+  home/             cwd，同时是 Alpine /workspace
+  workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
   linux/rootfs/     Alpine rootfs
 ```

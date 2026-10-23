@@ -51,7 +51,6 @@
     <string name="settings_linux_status_installing">正在安装…</string>
     <string name="settings_linux_status_installed">已安装 · Alpine %1$s</string>
     <string name="settings_linux_status_failed">安装失败：%1$s</string>
-    <string name="settings_linux_size">占用 %1$d MB</string>
     <string name="settings_linux_install">安装 Linux 环境</string>
     <string name="settings_linux_installing">正在安装…</string>
     <string name="settings_linux_enable">允许助手运行 Linux 命令</string>
@@ -61,6 +60,8 @@
     <string name="settings_linux_reset_confirm">重置</string>
     <string name="settings_linux_cancel">取消</string>
     <string name="settings_linux_unsupported">此设备不支持 Linux（仅 arm64-v8a）。</string>
+    <string name="settings_linux_size_label">占用空间</string>
+    <string name="settings_linux_size_value">%1$d MB</string>
 
     <string name="settings_provider_title">Provider</string>
     <string name="settings_provider_search">搜索 Provider</string>

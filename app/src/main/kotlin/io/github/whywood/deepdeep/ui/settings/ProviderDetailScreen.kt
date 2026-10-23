@@ -43,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -56,6 +57,7 @@ fun ProviderDetailScreen(
     configured: Boolean,
     active: Boolean,
     activeModelId: String?,
+    savedApiKey: String? = null,
     onBack: () -> Unit,
     onSaveApiKey: (String) -> Unit,
     onClearApiKey: () -> Unit,
@@ -128,6 +130,7 @@ fun ProviderDetailScreen(
                     if (provider.hasOAuth) DdHairline()
                     ApiKeySection(
                         configured = configured,
+                        savedApiKey = savedApiKey,
                         onSave = onSaveApiKey,
                         onClear = onClearApiKey,
                     )
@@ -233,6 +236,7 @@ private fun ProviderOverview(
 @Composable
 private fun ApiKeySection(
     configured: Boolean,
+    savedApiKey: String?,
     onSave: (String) -> Unit,
     onClear: () -> Unit,
 ) {
@@ -258,19 +262,17 @@ private fun ApiKeySection(
             color = colors.inkTertiary,
         )
         Spacer(Modifier.height(8.dp))
-        SettingsTextField(
+        DdTextField(
             value = draft,
             onValueChange = {
                 draft = it
                 showRequired = false
             },
-            placeholder = stringResource(
-                if (configured) {
-                    R.string.settings_provider_api_key_saved
-                } else {
-                    R.string.settings_provider_api_key_hint
-                },
-            ),
+            placeholder = if (configured) {
+                maskApiKey(savedApiKey)
+            } else {
+                stringResource(R.string.settings_provider_api_key_hint)
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done,
@@ -351,4 +353,9 @@ private fun ModelSheet(
             Spacer(Modifier.height(28.dp))
         }
     }
+}
+
+internal fun maskApiKey(key: String?): String {
+    val trimmed = key?.trim().orEmpty()
+    return if (trimmed.length >= 6) trimmed.take(3) + "*****" else "*****"
 }

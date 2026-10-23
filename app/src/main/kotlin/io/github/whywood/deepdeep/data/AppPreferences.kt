@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ data class UiPreferences(
     val followStreaming: Boolean = true,
     val showReasoning: Boolean = true,
     val expandProcessByDefault: Boolean = false,
+    val pinnedWorkspaceIds: Set<String> = emptySet(),
 )
 
 enum class UiToggle {
@@ -35,6 +37,7 @@ class AppPreferences(context: Context) {
     private val followStreamingKey = booleanPreferencesKey("follow_streaming")
     private val showReasoningKey = booleanPreferencesKey("show_reasoning")
     private val expandProcessKey = booleanPreferencesKey("expand_process_by_default")
+    private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
 
     val preferences: Flow<UiPreferences> = store.data
         .map { values ->
@@ -44,6 +47,7 @@ class AppPreferences(context: Context) {
                 followStreaming = values[followStreamingKey] ?: true,
                 showReasoning = values[showReasoningKey] ?: true,
                 expandProcessByDefault = values[expandProcessKey] ?: false,
+                pinnedWorkspaceIds = values[pinnedWorkspacesKey] ?: emptySet(),
             )
         }
         .catch { error ->
@@ -61,6 +65,14 @@ class AppPreferences(context: Context) {
                 UiToggle.SHOW_REASONING -> values[showReasoningKey] = enabled
                 UiToggle.EXPAND_PROCESS -> values[expandProcessKey] = enabled
             }
+        }
+    }
+
+    suspend fun setWorkspacePinned(workspaceId: String, pinned: Boolean) {
+        if (workspaceId.isBlank()) return
+        store.edit { values ->
+            val current = values[pinnedWorkspacesKey] ?: emptySet()
+            values[pinnedWorkspacesKey] = if (pinned) current + workspaceId else current - workspaceId
         }
     }
 }

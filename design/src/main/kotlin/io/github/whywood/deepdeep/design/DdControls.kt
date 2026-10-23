@@ -155,6 +155,7 @@ fun <T> DdSegmentedControl(
         ) {
             options.forEachIndexed { index, option ->
                 val isSelected = index == selectedIndex
+                val interaction = remember { MutableInteractionSource() }
                 Box(
                     Modifier
                         .weight(1f)
@@ -164,6 +165,8 @@ fun <T> DdSegmentedControl(
                             enabled = enabled,
                             role = Role.RadioButton,
                             onClick = { if (!isSelected) onSelect(option) },
+                            interactionSource = interaction,
+                            indication = null,
                         ),
                     contentAlignment = Alignment.Center,
                 ) {

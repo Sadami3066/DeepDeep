@@ -19,8 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -135,6 +137,15 @@ internal fun DeepDeepApp(
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
+    val expandedWorkspacesSaver = remember {
+        Saver<Set<String>, ArrayList<String>>(
+            save = { ArrayList(it) },
+            restore = { it.toSet() },
+        )
+    }
+    var expandedWorkspaceIds by rememberSaveable(stateSaver = expandedWorkspacesSaver) {
+        mutableStateOf(emptySet<String>())
+    }
     var workspaceCreateOpen by remember { mutableStateOf(false) }
     var workspaceRenameTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
@@ -170,6 +181,12 @@ internal fun DeepDeepApp(
 
     BackHandler(enabled = drawerOpen || navigator.canPop) {
         back()
+    }
+
+    LaunchedEffect(state.ready, state.currentWorkspaceId) {
+        if (state.ready && state.currentWorkspaceId.isNotBlank()) {
+            expandedWorkspaceIds = expandedWorkspaceIds + state.currentWorkspaceId
+        }
     }
 
     CompositionLocalProvider(LocalHapticsEnabled provides uiPreferences.hapticsEnabled) {
@@ -273,12 +290,20 @@ internal fun DeepDeepApp(
                             navigator.pop()
                         }
                     } else {
+                        val savedApiKey by produceState<String?>(
+                            initialValue = null,
+                            provider.id,
+                            provider.id in configuredProviders,
+                        ) {
+                            value = runCatching { graph.apiKeyStore.read(provider.id) }.getOrNull()
+                        }
                         ProviderDetailScreen(
                             provider = provider,
                             models = graph.providerCatalog.models(provider.id),
                             configured = provider.id in configuredProviders,
                             active = provider.id == state.providerId,
                             activeModelId = state.modelId.takeIf { provider.id == state.providerId },
+                            savedApiKey = savedApiKey,
                             onBack = ::back,
                             onSaveApiKey = { key ->
                                 scope.launch {
@@ -349,12 +374,11 @@ internal fun DeepDeepApp(
                     .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress) },
             ) {
                 DeepDeepDrawer(
-                    conversations = state.conversations,
-                    activeConversationId = state.conversationId,
-                    historyLoaded = state.historyLoaded,
+                    sessions = state.conversations,
                     archivedCount = state.archivedCount,
                     workspaces = state.workspaces,
-                    currentWorkspaceId = state.currentWorkspaceId,
+                    pinnedWorkspaceIds = uiPreferences.pinnedWorkspaceIds,
+                    expandedWorkspaceIds = expandedWorkspaceIds,
                     busySessionIds = state.busySessionIds,
                     userName = "Milous",
                     onChat = ::openChat,
@@ -374,9 +398,20 @@ internal fun DeepDeepApp(
                         drawerOpen = false
                         workspaceCreateOpen = true
                     },
-                    onSelectWorkspace = { workspaceId ->
+                    onToggleWorkspaceExpanded = { workspaceId ->
+                        expandedWorkspaceIds = if (workspaceId in expandedWorkspaceIds) {
+                            expandedWorkspaceIds - workspaceId
+                        } else {
+                            expandedWorkspaceIds + workspaceId
+                        }
+                    },
+                    onToggleWorkspacePinned = { workspaceId ->
+                        val pinned = workspaceId in uiPreferences.pinnedWorkspaceIds
+                        scope.launch { graph.appPreferences.setWorkspacePinned(workspaceId, !pinned) }
+                    },
+                    onNewSessionInWorkspace = { workspaceId ->
                         drawerOpen = false
-                        chatViewModel.selectWorkspace(workspaceId)
+                        chatViewModel.newSession(workspaceId)
                     },
                     onRenameWorkspace = { workspaceId ->
                         drawerOpen = false

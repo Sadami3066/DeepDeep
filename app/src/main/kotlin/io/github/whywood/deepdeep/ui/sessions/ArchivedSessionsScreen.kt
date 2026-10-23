@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -48,6 +45,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -121,10 +119,16 @@ fun ArchivedSessionsScreen(
                 color = colors.inkTertiary,
             )
         } else {
-            ArchivedSearchField(
+            DdSearchField(
                 query = query,
                 onQueryChange = { query = it },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                placeholder = stringResource(R.string.drawer_search_archived_placeholder),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .testTag("archived_search"),
+                clearContentDescription = stringResource(R.string.drawer_search_clear),
+                fieldTestTag = "archived_search_field",
+                clearTestTag = "archived_search_clear",
             )
             if (filtered.isEmpty()) {
                 Text(
@@ -255,52 +259,3 @@ private fun ArchivedSessionRow(
     }
 }
 
-@Composable
-private fun ArchivedSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = deepDeepColors()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.raised)
-            .border(1.dp, colors.hairline.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-            .padding(start = 14.dp, end = 6.dp)
-            .testTag("archived_search"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BasicTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.weight(1f).testTag("archived_search_field"),
-            textStyle = DdType.bodySmall.copy(color = colors.ink),
-            cursorBrush = SolidColor(colors.accent),
-            singleLine = true,
-            decorationBox = { inner ->
-                if (query.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.drawer_search_archived_placeholder),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
-                }
-                inner()
-            },
-        )
-        if (query.isNotEmpty()) {
-            DdIconButton(
-                icon = DdIcons.Close,
-                onClick = { onQueryChange("") },
-                contentDescription = stringResource(R.string.drawer_search_clear),
-                modifier = Modifier.testTag("archived_search_clear"),
-                size = 32.dp,
-                iconSize = 15.dp,
-                tint = colors.inkTertiary,
-            )
-        }
-    }
-}

@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -25,15 +24,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,27 +41,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.chat.SessionSearchHit
@@ -145,21 +132,25 @@ fun SessionSearchScreen(
                 iconSize = 21.dp,
             )
             Spacer(Modifier.width(4.dp))
-            SearchField(
+            DdSearchField(
                 query = query,
                 onQueryChange = { query = it },
-                onClose = onBack,
-                focusRequester = focusRequester,
+                placeholder = stringResource(R.string.search_placeholder),
                 modifier = Modifier.weight(1f).padding(end = 4.dp),
+                focusRequester = focusRequester,
+                clearContentDescription = stringResource(R.string.search_clear),
+                onEscape = onBack,
+                fieldTestTag = "search_field",
+                clearTestTag = "search_clear",
             )
         }
         if (loading) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp).testTag("search_loading"),
+                DdSpinner(
+                    modifier = Modifier.testTag("search_loading"),
                     color = colors.inkTertiary,
+                    size = 18.dp,
                     strokeWidth = 2.dp,
-                    trackColor = Color.Transparent,
                 )
             }
         } else {
@@ -206,75 +197,6 @@ fun SessionSearchScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClose: () -> Unit,
-    focusRequester: FocusRequester,
-    modifier: Modifier = Modifier,
-) {
-    val colors = deepDeepColors()
-    val borderColor = colors.hairline.copy(alpha = 0.6f)
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .clip(shape)
-            .background(colors.raised)
-            .border(1.dp, borderColor, shape)
-            .padding(start = 12.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DdIcon(icon = DdIcons.Search, tint = colors.inkTertiary, size = 16.dp)
-        Spacer(Modifier.width(8.dp))
-        BasicTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier
-                .weight(1f)
-                .focusRequester(focusRequester)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
-                        onClose()
-                        true
-                    } else {
-                        false
-                    }
-                }
-                .testTag("search_field"),
-            textStyle = DdType.bodySmall.copy(fontSize = 15.sp, lineHeight = 22.sp, color = colors.ink),
-            cursorBrush = SolidColor(colors.accent),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            decorationBox = { inner ->
-                Box {
-                    if (query.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.search_placeholder),
-                            style = DdType.bodySmall.copy(fontSize = 15.sp, lineHeight = 22.sp),
-                            color = colors.inkTertiary,
-                        )
-                    }
-                    inner()
-                }
-            },
-        )
-        if (query.isNotEmpty()) {
-            DdIconButton(
-                icon = DdIcons.Close,
-                onClick = { onQueryChange("") },
-                contentDescription = stringResource(R.string.search_clear),
-                modifier = Modifier.testTag("search_clear"),
-                size = 34.dp,
-                iconSize = 15.dp,
-                tint = colors.inkTertiary,
-            )
         }
     }
 }

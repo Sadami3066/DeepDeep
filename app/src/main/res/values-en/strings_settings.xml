@@ -45,7 +45,6 @@
     <string name="settings_linux_status_installing">Installing…</string>
     <string name="settings_linux_status_installed">Installed · Alpine %1$s</string>
     <string name="settings_linux_status_failed">Install failed: %1$s</string>
-    <string name="settings_linux_size">%1$d MB used</string>
     <string name="settings_linux_install">Install Linux environment</string>
     <string name="settings_linux_installing">Installing…</string>
     <string name="settings_linux_enable">Allow assistant to run Linux commands</string>
@@ -55,6 +54,8 @@
     <string name="settings_linux_reset_confirm">Reset</string>
     <string name="settings_linux_cancel">Cancel</string>
     <string name="settings_linux_unsupported">Linux is not supported on this device (arm64-v8a only).</string>
+    <string name="settings_linux_size_label">Space used</string>
+    <string name="settings_linux_size_value">%1$d MB</string>
     <string name="settings_provider_title">Providers</string>
     <string name="settings_provider_search">Search providers</string>
     <string name="settings_provider_all_count">All providers · %1$d</string>

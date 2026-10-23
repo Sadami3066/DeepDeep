@@ -18,7 +18,6 @@ import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -193,19 +192,24 @@ class ChatViewModel(
     fun newChat() {
         viewModelScope.launch {
             cacheCurrentSession()
-            createSession(mutableState.value.currentWorkspaceId)
+            createSession(AgentRuntimeHost.HOME_ID)
+        }
+    }
+
+    fun newSession(workspaceId: String) {
+        viewModelScope.launch {
+            cacheCurrentSession()
+            createSession(workspaceId)
         }
     }
 
     fun selectWorkspace(workspaceId: String) {
-        if (mutableState.value.currentWorkspaceId == workspaceId) return
         viewModelScope.launch {
             cacheCurrentSession()
             val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
             val workspace = workspaces.firstOrNull { it.id == workspaceId } ?: return@launch
             mutableState.update { it.copy(currentWorkspaceId = workspace.id, error = null) }
             val sessions = withContext(ioDispatcher) { runtime.sessions(workspace.id) }
-            refreshWorkspaceSessions(workspace, sessions)
             val recent = sessions.firstOrNull()
             if (recent != null) {
                 switchToSummary(recent)
@@ -401,8 +405,7 @@ class ChatViewModel(
                 workspaces = workspaces,
                 currentWorkspaceId = workspace.id,
                 conversationCwd = recent?.cwd ?: home.cwd,
-                conversations = sessions.filter { session -> session.cwd == workspace.cwd }
-                    .map { session -> session.copy(title = localizedTitle(session.title)) },
+                conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
                 historyLoaded = recent != null,
             )
         }
@@ -801,7 +804,7 @@ class ChatViewModel(
         val workspace = workspaces.firstOrNull { it.id == current.currentWorkspaceId }
             ?: workspaces.firstOrNull { it.isHome }
             ?: workspaces.firstOrNull()
-        val sessions = workspace?.let { withContext(ioDispatcher) { runtime.sessions(it.id) } }.orEmpty()
+        val sessions = withContext(ioDispatcher) { runtime.allSessions() }
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
         mutableState.update {
             val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
@@ -816,15 +819,6 @@ class ChatViewModel(
             )
         }
         cacheCurrentSession()
-    }
-
-    private fun refreshWorkspaceSessions(workspace: RuntimeWorkspace, sessions: List<ConversationSummary>) {
-        mutableState.update {
-            it.copy(
-                currentWorkspaceId = workspace.id,
-                conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
-            )
-        }
     }
 
     private fun quoteExcerpt(text: String): String {

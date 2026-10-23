@@ -1,14 +1,11 @@
 package io.github.whywood.deepdeep.ui
 
 import android.widget.Toast
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -32,7 +29,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,13 +39,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -60,12 +59,13 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
 import io.github.whywood.deepdeep.ui.sessions.DeleteSessionDialog
 import io.github.whywood.deepdeep.ui.sessions.RenameSessionDialog
@@ -83,29 +83,22 @@ private sealed interface DrawerEntry {
         override val key: String = "workspace_${workspace.id}"
     }
 
-    data class Header(val title: String, override val key: String) : DrawerEntry
-
-    data class Session(val conversation: ConversationSummary) : DrawerEntry {
-        override val key: String = conversation.id
+    data class WorkspaceEmpty(val workspaceId: String) : DrawerEntry {
+        override val key: String = "workspace_empty_$workspaceId"
     }
 
-    data object HistoryEmpty : DrawerEntry {
-        override val key: String = "history_empty"
-    }
-
-    data object HistoryLoading : DrawerEntry {
-        override val key: String = "history_loading"
+    data class Session(val conversation: ConversationSummary, val workspaceId: String) : DrawerEntry {
+        override val key: String = "session_${workspaceId}_${conversation.id}"
     }
 }
 
 @Composable
 fun DeepDeepDrawer(
-    conversations: List<ConversationSummary>,
-    activeConversationId: String?,
-    historyLoaded: Boolean,
+    sessions: List<ConversationSummary>,
     archivedCount: Int,
     workspaces: List<RuntimeWorkspace>,
-    currentWorkspaceId: String,
+    pinnedWorkspaceIds: Set<String>,
+    expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
     userName: String,
     onChat: () -> Unit,
@@ -113,7 +106,9 @@ fun DeepDeepDrawer(
     onNewChat: () -> Unit,
     onOpenSearch: () -> Unit,
     onCreateWorkspace: () -> Unit,
-    onSelectWorkspace: (String) -> Unit,
+    onToggleWorkspaceExpanded: (String) -> Unit,
+    onToggleWorkspacePinned: (String) -> Unit,
+    onNewSessionInWorkspace: (String) -> Unit,
     onRenameWorkspace: (String) -> Unit,
     onDeleteWorkspace: (String) -> Unit,
     onConversation: (String) -> Unit,
@@ -127,33 +122,34 @@ fun DeepDeepDrawer(
     val colors = deepDeepColors()
     val context = LocalContext.current
     val comingSoon = stringResource(R.string.drawer_coming_soon)
-    val pinnedLabel = stringResource(R.string.drawer_pinned_section)
-    val historyLabel = stringResource(R.string.drawer_history_section)
     var workspaceMenuTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
-    var menuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
-    var menuAnchor by remember { mutableStateOf(Offset.Zero) }
+    var workspaceMenuAnchor by remember { mutableStateOf(Offset.Zero) }
+    var sessionMenuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var sessionMenuAnchor by remember { mutableStateOf(Offset.Zero) }
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
-    val pinned = remember(conversations) {
-        conversations.filter { it.pinned && !it.archived }.sortedByDescending { it.updatedAt }
+    val orderedWorkspaces = remember(workspaces, pinnedWorkspaceIds) {
+        workspaces.filter { it.id in pinnedWorkspaceIds } + workspaces.filterNot { it.id in pinnedWorkspaceIds }
     }
-    val recent = remember(conversations) {
-        conversations.filter { !it.pinned && !it.archived }.sortedByDescending { it.updatedAt }
+    val sessionsByCwd = remember(sessions) {
+        sessions.filterNot { it.archived }.groupBy { it.cwd }
     }
-    val entries = remember(workspaces, conversations, pinned, recent, historyLoaded, pinnedLabel, historyLabel) {
+    val entries = remember(orderedWorkspaces, sessionsByCwd, expandedWorkspaceIds) {
         buildList {
             add(DrawerEntry.WorkspacesHeader)
-            workspaces.forEach { add(DrawerEntry.WorkspaceEntry(it)) }
-            if (conversations.isEmpty()) {
-                add(if (historyLoaded) DrawerEntry.HistoryEmpty else DrawerEntry.HistoryLoading)
-            } else {
-                if (pinned.isNotEmpty()) {
-                    add(DrawerEntry.Header(pinnedLabel, "pinned_header"))
-                    pinned.forEach { add(DrawerEntry.Session(it)) }
-                }
-                if (recent.isNotEmpty()) {
-                    add(DrawerEntry.Header(historyLabel, "recent_header"))
-                    recent.forEach { add(DrawerEntry.Session(it)) }
+            orderedWorkspaces.forEach { workspace ->
+                add(DrawerEntry.WorkspaceEntry(workspace))
+                if (workspace.id in expandedWorkspaceIds) {
+                    val workspaceSessions = sessionsByCwd[workspace.cwd].orEmpty()
+                        .sortedWith(
+                            compareByDescending<ConversationSummary> { it.pinned }
+                                .thenByDescending { it.updatedAt },
+                        )
+                    if (workspaceSessions.isEmpty()) {
+                        add(DrawerEntry.WorkspaceEmpty(workspace.id))
+                    } else {
+                        workspaceSessions.forEach { add(DrawerEntry.Session(it, workspace.id)) }
+                    }
                 }
             }
         }
@@ -242,30 +238,46 @@ fun DeepDeepDrawer(
         ) {
             items(entries, key = { it.key }) { entry ->
                 when (entry) {
-                    DrawerEntry.WorkspacesHeader -> DrawerWorkspacesHeader(onCreate = onCreateWorkspace)
+                    DrawerEntry.WorkspacesHeader -> DrawerWorkspacesHeader(
+                        onCreate = onCreateWorkspace,
+                        modifier = Modifier.animateItem(),
+                    )
+
                     is DrawerEntry.WorkspaceEntry -> DrawerWorkspaceRow(
                         workspace = entry.workspace,
-                        selected = entry.workspace.id == currentWorkspaceId,
+                        pinned = entry.workspace.id in pinnedWorkspaceIds,
+                        expanded = entry.workspace.id in expandedWorkspaceIds,
                         menuExpanded = workspaceMenuTarget?.id == entry.workspace.id,
-                        onClick = { onSelectWorkspace(entry.workspace.id) },
-                        onLongClick = { workspaceMenuTarget = entry.workspace },
+                        menuAnchor = workspaceMenuAnchor,
+                        modifier = Modifier.animateItem(),
+                        onToggleExpanded = { onToggleWorkspaceExpanded(entry.workspace.id) },
+                        onLongClick = { offset ->
+                            workspaceMenuAnchor = offset
+                            workspaceMenuTarget = entry.workspace
+                        },
                         onDismissMenu = { workspaceMenuTarget = null },
+                        onTogglePinned = { onToggleWorkspacePinned(entry.workspace.id) },
+                        onNewSession = { onNewSessionInWorkspace(entry.workspace.id) },
                         onRename = { onRenameWorkspace(entry.workspace.id) },
                         onDelete = { onDeleteWorkspace(entry.workspace.id) },
                     )
 
-                    is DrawerEntry.Header -> DrawerSectionLabel(entry.title)
-                    is DrawerEntry.Session -> DrawerHistoryRow(
+                    is DrawerEntry.WorkspaceEmpty -> DrawerWorkspaceEmptyRow(
+                        modifier = Modifier.animateItem(),
+                    )
+
+                    is DrawerEntry.Session -> DrawerSessionRow(
                         conversation = entry.conversation,
                         busy = entry.conversation.id in busySessionIds,
-                        menuExpanded = menuTarget?.id == entry.conversation.id,
+                        menuExpanded = sessionMenuTarget?.id == entry.conversation.id,
+                        menuAnchor = sessionMenuAnchor,
+                        modifier = Modifier.animateItem(),
                         onClick = { onConversation(entry.conversation.id) },
                         onLongClick = { offset ->
-                            menuAnchor = offset
-                            menuTarget = entry.conversation
+                            sessionMenuAnchor = offset
+                            sessionMenuTarget = entry.conversation
                         },
-                        menuAnchor = menuAnchor,
-                        onDismissMenu = { menuTarget = null },
+                        onDismissMenu = { sessionMenuTarget = null },
                         onAction = { action ->
                             when (action) {
                                 SessionAction.RENAME -> renameTarget = entry.conversation
@@ -280,9 +292,6 @@ fun DeepDeepDrawer(
                         },
                         testTag = "recent_${entry.conversation.id}",
                     )
-
-                    DrawerEntry.HistoryEmpty -> DrawerHistoryHint(stringResource(R.string.drawer_history_empty))
-                    DrawerEntry.HistoryLoading -> DrawerHistoryHint(stringResource(R.string.drawer_history_loading))
                 }
             }
         }
@@ -314,10 +323,13 @@ fun DeepDeepDrawer(
 }
 
 @Composable
-private fun DrawerWorkspacesHeader(onCreate: () -> Unit) {
+private fun DrawerWorkspacesHeader(
+    onCreate: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(36.dp)
             .padding(start = 10.dp),
@@ -342,78 +354,145 @@ private fun DrawerWorkspacesHeader(onCreate: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DrawerWorkspaceRow(
     workspace: RuntimeWorkspace,
-    selected: Boolean,
+    pinned: Boolean,
+    expanded: Boolean,
     menuExpanded: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    menuAnchor: Offset,
+    onToggleExpanded: () -> Unit,
+    onLongClick: (Offset) -> Unit,
     onDismissMenu: () -> Unit,
+    onTogglePinned: () -> Unit,
+    onNewSession: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    Box(Modifier.fillMaxWidth()) {
+    val haptic = LocalHapticFeedback.current
+    val hapticsEnabled = LocalHapticsEnabled.current
+    val density = LocalDensity.current
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+        label = "workspace-chevron",
+    )
+    Box(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) colors.wash else colors.paper)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = if (workspace.isHome) null else onLongClick,
-                )
+                .pointerInput(workspace.id) {
+                    detectTapGestures(
+                        onTap = { onToggleExpanded() },
+                        onLongPress = { offset ->
+                            if (hapticsEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLongClick(offset)
+                        },
+                    )
+                }
                 .testTag("workspace_${workspace.id}")
-                .padding(horizontal = 10.dp),
+                .padding(start = 10.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = workspace.name,
+                modifier = Modifier.weight(1f),
                 style = DdType.bodySmall,
-                color = if (selected) colors.ink else colors.inkSecondary,
+                color = colors.inkSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+            if (pinned) {
+                DdIcon(icon = DdIcons.Pin, tint = colors.inkTertiary, size = 13.dp)
+                Spacer(Modifier.width(6.dp))
+            }
+            if (expanded) {
+                DdIconButton(
+                    icon = DdIcons.Plus,
+                    onClick = onNewSession,
+                    contentDescription = stringResource(R.string.drawer_workspace_new_session),
+                    modifier = Modifier.testTag("workspace_new_session_${workspace.id}"),
+                    size = 30.dp,
+                    iconSize = 15.dp,
+                    tint = colors.inkTertiary,
+                )
+                Spacer(Modifier.width(2.dp))
+            }
+            DdIcon(
+                icon = DdIcons.ChevronRight,
+                tint = colors.inkTertiary,
+                size = 15.dp,
+                modifier = Modifier
+                    .graphicsLayer { rotationZ = chevronRotation }
+                    .testTag("workspace_chevron_${workspace.id}"),
             )
         }
         DdMenu(
             expanded = menuExpanded,
             onDismissRequest = onDismissMenu,
-            menuWidth = 168.dp,
+            offset = with(density) { DpOffset(menuAnchor.x.toDp(), menuAnchor.y.toDp() - 24.dp) },
+            menuWidth = 176.dp,
         ) {
             DdMenuItem(
-                text = stringResource(R.string.drawer_action_rename),
+                text = stringResource(
+                    if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin,
+                ),
                 onClick = {
                     onDismissMenu()
-                    onRename()
+                    onTogglePinned()
                 },
-                icon = DdIcons.Compose,
-                testTag = "workspace_action_rename",
+                icon = DdIcons.Pin,
+                testTag = "workspace_action_pin",
             )
             DdMenuItem(
-                text = stringResource(R.string.drawer_action_delete),
+                text = stringResource(R.string.drawer_workspace_new_session),
                 onClick = {
                     onDismissMenu()
-                    onDelete()
+                    onNewSession()
                 },
-                icon = DdIcons.Trash,
-                destructive = true,
-                testTag = "workspace_action_delete",
+                icon = DdIcons.Plus,
+                testTag = "workspace_action_new_session",
             )
+            if (!workspace.isHome) {
+                DdMenuItem(
+                    text = stringResource(R.string.drawer_action_rename),
+                    onClick = {
+                        onDismissMenu()
+                        onRename()
+                    },
+                    icon = DdIcons.Compose,
+                    testTag = "workspace_action_rename",
+                )
+                DdMenuItem(
+                    text = stringResource(R.string.drawer_action_delete),
+                    onClick = {
+                        onDismissMenu()
+                        onDelete()
+                    },
+                    icon = DdIcons.Trash,
+                    destructive = true,
+                    testTag = "workspace_action_delete",
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun DrawerHistoryHint(text: String) {
+private fun DrawerWorkspaceEmptyRow(modifier: Modifier = Modifier) {
     val colors = deepDeepColors()
     Text(
-        text = text,
-        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+        text = stringResource(R.string.drawer_workspace_empty),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
         style = DdType.bodySmall,
         color = colors.inkTertiary,
+        maxLines = 1,
     )
 }
 
@@ -455,27 +534,17 @@ private fun DrawerNavItem(
 }
 
 @Composable
-private fun DrawerSectionLabel(text: String) {
-    val colors = deepDeepColors()
-    Text(
-        text = text,
-        modifier = Modifier.padding(start = 10.dp, top = 10.dp, bottom = 4.dp),
-        style = DdType.bodySmall,
-        color = colors.inkSecondary.copy(alpha = 0.85f),
-    )
-}
-
-@Composable
-private fun DrawerHistoryRow(
+private fun DrawerSessionRow(
     conversation: ConversationSummary,
     busy: Boolean,
     menuExpanded: Boolean,
+    menuAnchor: Offset,
     onClick: () -> Unit,
     onLongClick: (Offset) -> Unit,
-    menuAnchor: Offset,
     onDismissMenu: () -> Unit,
     onAction: (SessionAction) -> Unit,
     testTag: String,
+    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val haptic = LocalHapticFeedback.current
@@ -488,7 +557,7 @@ private fun DrawerHistoryRow(
         label = "session-row-wash",
     )
     val relativeTime = rememberRelativeTime(conversation.updatedAt)
-    Box(Modifier.fillMaxWidth()) {
+    Box(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -514,7 +583,7 @@ private fun DrawerHistoryRow(
                     )
                 }
                 .testTag(testTag)
-                .padding(horizontal = 10.dp),
+                .padding(start = 24.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -530,27 +599,26 @@ private fun DrawerHistoryRow(
                 modifier = Modifier.widthIn(min = 40.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Crossfade(
-                    targetState = busy,
-                    animationSpec = tween(DdMotion.FAST),
-                    label = "session-trailing",
-                ) { running ->
-                    if (running) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .testTag("session_busy_${conversation.id}"),
-                            color = colors.inkTertiary,
-                            strokeWidth = 1.5.dp,
-                        )
-                    } else {
-                        Text(
-                            text = relativeTime,
-                            style = DdType.bodySmall.copy(fontSize = 11.sp),
-                            color = colors.inkTertiary,
-                            maxLines = 1,
-                        )
-                    }
+                when {
+                    busy -> DdSpinner(
+                        modifier = Modifier.testTag("session_busy_${conversation.id}"),
+                        color = colors.inkTertiary,
+                        size = 12.dp,
+                        strokeWidth = 1.5.dp,
+                    )
+
+                    conversation.pinned -> DdIcon(
+                        icon = DdIcons.Pin,
+                        tint = colors.inkTertiary,
+                        size = 13.dp,
+                    )
+
+                    else -> Text(
+                        text = relativeTime,
+                        style = DdType.bodySmall.copy(fontSize = 11.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
                 }
             }
         }

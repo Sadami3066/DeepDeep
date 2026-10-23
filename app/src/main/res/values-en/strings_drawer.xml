@@ -5,10 +5,6 @@
     <string name="drawer_nav_skills">Skills</string>
     <string name="drawer_nav_plugins">Plugins</string>
     <string name="drawer_nav_scheduled">Scheduled</string>
-    <string name="drawer_pinned_section">Pinned</string>
-    <string name="drawer_history_section">History</string>
-    <string name="drawer_history_empty">No conversations yet</string>
-    <string name="drawer_history_loading">Loading…</string>
     <string name="drawer_account_hint">Settings</string>
     <string name="drawer_archived_count">%1$d</string>
     <string name="drawer_archived_title">Archived</string>
@@ -33,6 +29,8 @@
     <string name="drawer_search_empty">No matching chats</string>
     <string name="drawer_search_clear">Clear search</string>
     <string name="drawer_coming_soon">Coming soon</string>
+    <string name="drawer_workspace_new_session">New chat</string>
+    <string name="drawer_workspace_empty">No chats yet</string>
     <string name="workspace_section">Workspaces</string>
     <string name="workspace_create">New workspace</string>
     <string name="workspace_rename_title">Rename workspace</string>
