@@ -173,89 +173,88 @@ fun DeepDeepDrawer(
             style = DdType.wordmark.copy(fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
         )
         Spacer(Modifier.height(24.dp))
-        Column(Modifier.fillMaxWidth()) {
-            DrawerNavItem(
-                icon = DdIcons.Message,
-                label = stringResource(R.string.drawer_nav_chat),
-                onClick = onChat,
-                testTag = "drawer_chat",
+        if (searchOpen) {
+            DrawerSearchField(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onClose = closeSearch,
             )
-            DrawerNavItem(
-                icon = DdIcons.Folder,
-                label = stringResource(R.string.drawer_nav_archived),
-                onClick = onArchived,
-                testTag = "drawer_archived",
-                trailing = {
-                    Text(
-                        text = stringResource(R.string.drawer_archived_count, archivedCount),
-                        style = DdType.numeric,
-                        color = colors.inkTertiary,
-                    )
-                },
-            )
-            DrawerNavItem(
-                icon = DdIcons.Plus,
-                label = stringResource(R.string.drawer_nav_new_chat),
-                onClick = onNewChat,
-                testTag = "drawer_new_chat",
-            )
-            Spacer(Modifier.height(6.dp))
-            DrawerNavItem(
-                icon = DdIcons.Sparkles,
-                label = stringResource(R.string.drawer_nav_skills),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                testTag = "drawer_skills",
-            )
-            DrawerNavItem(
-                icon = DdIcons.Plug,
-                label = stringResource(R.string.drawer_nav_plugins),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                testTag = "drawer_plugins",
-            )
-            DrawerNavItem(
-                icon = DdIcons.Clock,
-                label = stringResource(R.string.drawer_nav_scheduled),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                testTag = "drawer_scheduled",
-            )
-        }
-        Spacer(Modifier.height(18.dp))
-        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
-        Spacer(Modifier.height(6.dp))
-        DdPressable(
-            onClick = onOpenProjects,
-            modifier = Modifier.fillMaxWidth().testTag("drawer_projects"),
-            background = colors.wash,
-            shape = RoundedCornerShape(10.dp),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdIcon(icon = DdIcons.Folder, tint = colors.inkSecondary, size = 15.dp)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.drawer_project_current, currentProjectName),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                    maxLines = 1,
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        if (conversations.isNotEmpty() || searchOpen) {
-            Spacer(Modifier.height(6.dp))
-            if (searchOpen) {
-                DrawerSearchField(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    onClose = closeSearch,
-                )
-            } else {
-                DrawerSearchRow(onOpen = { searchOpen = true })
-            }
         } else {
-            Spacer(Modifier.height(14.dp))
+            Column(Modifier.fillMaxWidth()) {
+                DrawerNavItem(
+                    icon = DdIcons.Message,
+                    label = stringResource(R.string.drawer_nav_chat),
+                    onClick = onChat,
+                    testTag = "drawer_chat",
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Folder,
+                    label = stringResource(R.string.drawer_nav_archived),
+                    onClick = onArchived,
+                    testTag = "drawer_archived",
+                    trailing = {
+                        Text(
+                            text = stringResource(R.string.drawer_archived_count, archivedCount),
+                            style = DdType.numeric,
+                            color = colors.inkTertiary,
+                        )
+                    },
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Plus,
+                    label = stringResource(R.string.drawer_nav_new_chat),
+                    onClick = onNewChat,
+                    testTag = "drawer_new_chat",
+                )
+                Spacer(Modifier.height(6.dp))
+                DrawerNavItem(
+                    icon = DdIcons.Sparkles,
+                    label = stringResource(R.string.drawer_nav_skills),
+                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                    testTag = "drawer_skills",
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Plug,
+                    label = stringResource(R.string.drawer_nav_plugins),
+                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                    testTag = "drawer_plugins",
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Clock,
+                    label = stringResource(R.string.drawer_nav_scheduled),
+                    onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                    testTag = "drawer_scheduled",
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+            DdHairline(color = colors.hairline.copy(alpha = 0.45f))
+            Spacer(Modifier.height(6.dp))
+            DdPressable(
+                onClick = onOpenProjects,
+                modifier = Modifier.fillMaxWidth().testTag("drawer_projects"),
+                background = colors.wash,
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DdIcon(icon = DdIcons.Folder, tint = colors.inkSecondary, size = 15.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.drawer_project_current, currentProjectName),
+                        style = DdType.bodySmall,
+                        color = colors.inkSecondary,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            if (conversations.isNotEmpty()) {
+                DrawerSearchRow(onOpen = { searchOpen = true })
+            } else {
+                Spacer(Modifier.height(14.dp))
+            }
         }
         if (conversations.isEmpty()) {
             Text(
