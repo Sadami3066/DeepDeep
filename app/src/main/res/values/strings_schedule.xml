@@ -32,12 +32,7 @@
     <string name="schedules_frequency_weekdays">工作日</string>
     <string name="schedules_frequency_weekends">周末</string>
     <string name="schedules_frequency_weekly">每周</string>
-    <string name="schedules_frequency_cron">cron</string>
-    <string name="schedules_frequency_picker_title">重复</string>
-    <string name="schedules_frequency_once_subtitle">在指定日期和时间运行一次</string>
-    <string name="schedules_frequency_cron_subtitle">用 5 段 cron 表达式重复</string>
     <string name="schedules_cron_expression_label">cron 表达式</string>
-    <string name="schedules_cron_syntax_hint">分钟 小时 日 月 星期，例如 0 9 * * 1-5</string>
     <string name="schedules_next_run_line">下次：%1$s</string>
     <string name="schedules_time_label">时间</string>
     <string name="schedules_date_label">日期</string>

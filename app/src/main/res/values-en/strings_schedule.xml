@@ -32,12 +32,7 @@
     <string name="schedules_frequency_weekdays">Weekdays</string>
     <string name="schedules_frequency_weekends">Weekends</string>
     <string name="schedules_frequency_weekly">Weekly</string>
-    <string name="schedules_frequency_cron">Cron</string>
-    <string name="schedules_frequency_picker_title">Repeat</string>
-    <string name="schedules_frequency_once_subtitle">Runs once at the chosen date and time</string>
-    <string name="schedules_frequency_cron_subtitle">Repeat with a 5-field cron expression</string>
     <string name="schedules_cron_expression_label">Cron expression</string>
-    <string name="schedules_cron_syntax_hint">minute hour day month weekday, e.g. 0 9 * * 1-5</string>
     <string name="schedules_next_run_line">Next: %1$s</string>
     <string name="schedules_time_label">Time</string>
     <string name="schedules_date_label">Date</string>

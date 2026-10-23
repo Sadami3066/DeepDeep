@@ -9,6 +9,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScheduleDraftTest {
@@ -40,7 +41,7 @@ class ScheduleDraftTest {
     )
 
     private fun draft(
-        frequency: DraftFrequency = DraftFrequency.CRON,
+        repeat: Boolean = true,
         name: String = "Morning brief",
         prompt: String = "Summarize my notes",
         date: LocalDate = LocalDate.of(2026, 10, 24),
@@ -50,7 +51,7 @@ class ScheduleDraftTest {
     ): ScheduleDraft = ScheduleDraft(
         name = name,
         prompt = prompt,
-        frequency = frequency,
+        repeat = repeat,
         date = date,
         time = time,
         cronExpression = cronExpression,
@@ -80,26 +81,26 @@ class ScheduleDraftTest {
         val time = LocalTime.of(18, 45)
         assertEquals(
             ScheduleTrigger.Once(date, time),
-            draft(frequency = DraftFrequency.ONCE, date = date, time = time).toTrigger(),
+            draft(repeat = false, date = date, time = time).toTrigger(),
         )
         assertEquals(
             ScheduleTrigger.Cron("0 9 * * 1-5"),
-            draft(frequency = DraftFrequency.CRON, cronExpression = "0 9 * * 1-5").toTrigger(),
+            draft(repeat = true, cronExpression = "0 9 * * 1-5").toTrigger(),
         )
         assertEquals(
             ScheduleTrigger.Cron("0 9 * * *"),
-            draft(frequency = DraftFrequency.CRON).toTrigger(),
+            draft(repeat = true).toTrigger(),
         )
         assertEquals(
             ScheduleTrigger.Cron("*/5 * * * *"),
-            draft(frequency = DraftFrequency.CRON, cronExpression = "  */5 * * * *  ").toTrigger(),
+            draft(repeat = true, cronExpression = "  */5 * * * *  ").toTrigger(),
         )
     }
 
     @Test
     fun migratesLegacyDailyTriggerToCron() {
         val mapped = ScheduleDraft.from(schedule(ScheduleTrigger.Daily(LocalTime.of(7, 5))), "Conversation")
-        assertEquals(DraftFrequency.CRON, mapped.frequency)
+        assertTrue(mapped.repeat)
         assertEquals("5 7 * * *", mapped.cronExpression)
         assertEquals(LocalTime.of(7, 5), mapped.time)
         assertEquals(ScheduleTrigger.Cron("5 7 * * *"), mapped.toTrigger())
@@ -111,7 +112,7 @@ class ScheduleDraftTest {
             schedule(ScheduleTrigger.Weekly(weekdays, LocalTime.of(8, 0))),
             "Conversation",
         )
-        assertEquals(DraftFrequency.CRON, workdays.frequency)
+        assertTrue(workdays.repeat)
         assertEquals("0 8 * * 1,2,3,4,5", workdays.cronExpression)
         assertEquals(ScheduleTrigger.Cron("0 8 * * 1,2,3,4,5"), workdays.toTrigger())
 
@@ -136,7 +137,7 @@ class ScheduleDraftTest {
     @Test
     fun keepsExistingCronExpression() {
         val mapped = ScheduleDraft.from(schedule(ScheduleTrigger.Cron("0 9 * * 1-5")), "Conversation")
-        assertEquals(DraftFrequency.CRON, mapped.frequency)
+        assertTrue(mapped.repeat)
         assertEquals("0 9 * * 1-5", mapped.cronExpression)
         assertEquals(LocalTime.of(9, 0), mapped.time)
         assertEquals(ScheduleTrigger.Cron("0 9 * * 1-5"), mapped.toTrigger())
@@ -157,7 +158,7 @@ class ScheduleDraftTest {
         assertEquals(
             DraftError.PAST_TIME,
             draft(
-                frequency = DraftFrequency.ONCE,
+                repeat = false,
                 date = LocalDate.of(2026, 10, 20),
                 time = LocalTime.of(9, 0),
             ).validate(now),
@@ -173,20 +174,20 @@ class ScheduleDraftTest {
     fun validatesCronExpression() {
         assertEquals(
             DraftError.INVALID_CRON,
-            draft(frequency = DraftFrequency.CRON, cronExpression = "not a cron").validate(now),
+            draft(repeat = true, cronExpression = "not a cron").validate(now),
         )
         assertEquals(
             DraftError.INVALID_CRON,
-            draft(frequency = DraftFrequency.CRON, cronExpression = "0 9 * *").validate(now),
+            draft(repeat = true, cronExpression = "0 9 * *").validate(now),
         )
-        assertNull(draft(frequency = DraftFrequency.CRON, cronExpression = "0 9 * * 1-5").validate(now))
+        assertNull(draft(repeat = true, cronExpression = "0 9 * * 1-5").validate(now))
     }
 
     @Test
     fun acceptsFutureOnceTime() {
         assertNull(
             draft(
-                frequency = DraftFrequency.ONCE,
+                repeat = false,
                 date = LocalDate.of(2026, 10, 24),
                 time = LocalTime.of(9, 0),
             ).validate(now),
@@ -208,29 +209,29 @@ class ScheduleDraftTest {
     fun nextRunPreviewFollowsTrigger() {
         assertEquals(
             ZonedDateTime.of(2026, 10, 23, 13, 0, 0, 0, zone),
-            draft(frequency = DraftFrequency.CRON, cronExpression = "0 13 * * *").nextRunPreview(now),
+            draft(repeat = true, cronExpression = "0 13 * * *").nextRunPreview(now),
         )
         assertEquals(
             ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, zone),
-            draft(frequency = DraftFrequency.CRON, cronExpression = "0 9 * * *").nextRunPreview(now),
+            draft(repeat = true, cronExpression = "0 9 * * *").nextRunPreview(now),
         )
         assertEquals(
             ZonedDateTime.of(2026, 10, 26, 9, 0, 0, 0, zone),
-            draft(frequency = DraftFrequency.CRON, cronExpression = "0 9 * * 1-5").nextRunPreview(now),
+            draft(repeat = true, cronExpression = "0 9 * * 1-5").nextRunPreview(now),
         )
         assertEquals(
             ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, zone),
             draft(
-                frequency = DraftFrequency.ONCE,
+                repeat = false,
                 date = LocalDate.of(2026, 10, 24),
                 time = LocalTime.of(9, 0),
             ).nextRunPreview(now),
         )
         assertNull(
-            draft(frequency = DraftFrequency.ONCE, date = LocalDate.of(2026, 10, 20), time = LocalTime.of(9, 0))
+            draft(repeat = false, date = LocalDate.of(2026, 10, 20), time = LocalTime.of(9, 0))
                 .nextRunPreview(now),
         )
-        assertNull(draft(frequency = DraftFrequency.CRON, cronExpression = "not a cron").nextRunPreview(now))
+        assertNull(draft(repeat = true, cronExpression = "not a cron").nextRunPreview(now))
     }
 
     @Test

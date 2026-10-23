@@ -44,7 +44,6 @@ internal fun ScheduleEditor(
     }
     var draft by remember(initialDraft) { mutableStateOf(initialDraft) }
     var validationError by remember { mutableStateOf<Int?>(null) }
-    var showFrequencyPicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showConversationPicker by remember { mutableStateOf(false) }
@@ -83,31 +82,23 @@ internal fun ScheduleEditor(
                     stringResource(R.string.schedules_prompt_hint),
                     singleLine = false,
                 )
-                FieldLabel(stringResource(R.string.schedules_repeat_label))
-                EditorRow("", frequencyLabel(draft.frequency), Modifier.testTag("schedule_frequency_row")) {
-                    showFrequencyPicker = true
-                }
-                when (draft.frequency) {
-                    DraftFrequency.ONCE -> {
-                        EditorRow(
-                            stringResource(R.string.schedules_date_label),
-                            dateFormatter.format(draft.date),
-                            Modifier.testTag("schedule_date_row"),
-                        ) { showDatePicker = true }
-                        TimeRow(draft.time) { showTimePicker = true }
-                    }
-
-                    DraftFrequency.CRON -> {
-                        FieldLabel(stringResource(R.string.schedules_cron_expression_label))
-                        DdTextField(
-                            draft.cronExpression,
-                            { draft = draft.copy(cronExpression = it); validationError = null },
-                            DEFAULT_CRON_EXPRESSION,
-                            testTag = "schedule_cron_expression",
-                        )
-                        FieldHint(stringResource(R.string.schedules_cron_syntax_hint))
-                        CronSummaryLine(draft.cronExpression)
-                    }
+                RepeatRow(draft.repeat) { draft = draft.copy(repeat = it); validationError = null }
+                if (draft.repeat) {
+                    FieldLabel(stringResource(R.string.schedules_cron_expression_label))
+                    DdTextField(
+                        draft.cronExpression,
+                        { draft = draft.copy(cronExpression = it); validationError = null },
+                        DEFAULT_CRON_EXPRESSION,
+                        testTag = "schedule_cron_expression",
+                    )
+                    CronSummaryLine(draft.cronExpression)
+                } else {
+                    EditorRow(
+                        stringResource(R.string.schedules_date_label),
+                        dateFormatter.format(draft.date),
+                        Modifier.testTag("schedule_date_row"),
+                    ) { showDatePicker = true }
+                    TimeRow(draft.time) { showTimePicker = true }
                 }
                 EditorRow(stringResource(R.string.schedules_deliver_to), conversationLabel(draft)) { showConversationPicker = true }
                 if (isEditing && draft.sessionId.isNotBlank()) {
@@ -149,11 +140,6 @@ internal fun ScheduleEditor(
         }
     }
 
-    if (showFrequencyPicker) FrequencyPickerSheet(draft.frequency, { frequency ->
-        draft = draft.copy(frequency = frequency)
-        validationError = null
-        showFrequencyPicker = false
-    }) { showFrequencyPicker = false }
     if (showTimePicker) DdTimePicker(draft.time, { draft = draft.copy(time = it); validationError = null }) { showTimePicker = false }
     if (showDatePicker) DdDatePicker(draft.date, { draft = draft.copy(date = it); validationError = null }) { showDatePicker = false }
     if (showConversationPicker) ConversationPickerSheet(runtime, draft.sessionId, { session ->
@@ -198,11 +184,6 @@ private fun FieldLabel(text: String) {
 }
 
 @Composable
-private fun FieldHint(text: String) {
-    Text(text, Modifier.padding(top = 8.dp), style = DdType.bodySmall, color = deepDeepColors().inkTertiary)
-}
-
-@Composable
 private fun TimeRow(time: LocalTime, onClick: () -> Unit) {
     EditorRow(stringResource(R.string.schedules_time_label), time.format(SCHEDULE_TIME_FORMAT), Modifier.testTag("schedule_time_row"), onClick)
 }
@@ -239,6 +220,14 @@ private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 }
 
 @Composable
+private fun RepeatRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.schedules_repeat_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
+        DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
 private fun ErrorText(text: String) {
     Text(text, Modifier.padding(top = 12.dp), style = DdType.bodySmall, color = deepDeepColors().danger)
 }
@@ -260,63 +249,6 @@ private fun conversationLabel(draft: ScheduleDraft): String = when {
     draft.conversationTitle.isNotBlank() -> draft.conversationTitle
     draft.sessionId.isNotBlank() -> stringResource(R.string.schedules_conversation_deleted)
     else -> stringResource(R.string.schedules_conversation_label)
-}
-
-@Composable
-private fun frequencyLabel(frequency: DraftFrequency): String = stringResource(
-    when (frequency) {
-        DraftFrequency.ONCE -> R.string.schedules_frequency_once
-        DraftFrequency.CRON -> R.string.schedules_frequency_cron
-    },
-)
-
-@Composable
-private fun frequencySubtitle(frequency: DraftFrequency): String = stringResource(
-    when (frequency) {
-        DraftFrequency.ONCE -> R.string.schedules_frequency_once_subtitle
-        DraftFrequency.CRON -> R.string.schedules_frequency_cron_subtitle
-    },
-)
-
-@Composable
-private fun FrequencyPickerSheet(
-    selected: DraftFrequency,
-    onSelect: (DraftFrequency) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdSheet(onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).testTag("schedule_frequency_picker")) {
-            DdSheetHeader(stringResource(R.string.schedules_frequency_picker_title), onDismiss)
-            Column(
-                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
-            ) {
-                DraftFrequency.entries.forEachIndexed { index, frequency ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onSelect(frequency) }.heightIn(min = 64.dp).padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(frequencyLabel(frequency), style = DdType.body, color = colors.ink, maxLines = 1)
-                            Text(
-                                frequencySubtitle(frequency),
-                                style = DdType.bodySmall,
-                                color = colors.inkTertiary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        if (frequency == selected) {
-                            Spacer(Modifier.width(12.dp))
-                            DdIcon(DdIcons.Check, colors.accent, size = 18.dp)
-                        }
-                    }
-                    if (index != DraftFrequency.entries.lastIndex) DdHairline()
-                }
-                Spacer(Modifier.height(24.dp))
-            }
-        }
-    }
 }
 
 @Composable

@@ -13,11 +13,6 @@ private val DEFAULT_TIME: LocalTime = LocalTime.of(9, 0)
 
 internal const val DEFAULT_CRON_EXPRESSION = "0 9 * * *"
 
-enum class DraftFrequency {
-    ONCE,
-    CRON,
-}
-
 enum class DraftError {
     EMPTY_NAME,
     EMPTY_PROMPT,
@@ -30,7 +25,7 @@ data class ScheduleDraft(
     val id: String? = null,
     val name: String = "",
     val prompt: String = "",
-    val frequency: DraftFrequency = DraftFrequency.CRON,
+    val repeat: Boolean = true,
     val date: LocalDate = LocalDate.now(),
     val time: LocalTime = DEFAULT_TIME,
     val cronExpression: String = DEFAULT_CRON_EXPRESSION,
@@ -40,16 +35,17 @@ data class ScheduleDraft(
     val conversationTitle: String = "",
     val enabled: Boolean = true,
 ) {
-    fun toTrigger(): ScheduleTrigger = when (frequency) {
-        DraftFrequency.ONCE -> ScheduleTrigger.Once(date, time)
-        DraftFrequency.CRON -> ScheduleTrigger.Cron(cronExpression.trim())
+    fun toTrigger(): ScheduleTrigger = if (repeat) {
+        ScheduleTrigger.Cron(cronExpression.trim())
+    } else {
+        ScheduleTrigger.Once(date, time)
     }
 
     fun validate(now: ZonedDateTime): DraftError? = when {
         name.isBlank() -> DraftError.EMPTY_NAME
         prompt.isBlank() -> DraftError.EMPTY_PROMPT
-        frequency == DraftFrequency.ONCE && nextRunPreview(now) == null -> DraftError.PAST_TIME
-        frequency == DraftFrequency.CRON && ScheduleTrigger.Cron(cronExpression).validationError(now) != null -> DraftError.INVALID_CRON
+        !repeat && nextRunPreview(now) == null -> DraftError.PAST_TIME
+        repeat && ScheduleTrigger.Cron(cronExpression).validationError(now) != null -> DraftError.INVALID_CRON
         sessionId.isBlank() -> DraftError.NO_CONVERSATION
         else -> null
     }
@@ -61,12 +57,11 @@ data class ScheduleDraft(
 
         fun from(schedule: Schedule, conversationTitle: String): ScheduleDraft {
             val trigger = schedule.trigger
-            val frequency = if (trigger is ScheduleTrigger.Once) DraftFrequency.ONCE else DraftFrequency.CRON
             return ScheduleDraft(
                 id = schedule.id,
                 name = schedule.name,
                 prompt = schedule.prompt,
-                frequency = frequency,
+                repeat = trigger !is ScheduleTrigger.Once,
                 date = (trigger as? ScheduleTrigger.Once)?.date ?: LocalDate.now(),
                 time = when (trigger) {
                     is ScheduleTrigger.Once -> trigger.time
