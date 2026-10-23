@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -13,14 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.DevPackageCatalog
 import io.github.whywood.deepdeep.data.DevPackagesState
 import io.github.whywood.deepdeep.design.DdHairline
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -32,20 +32,26 @@ internal fun DevPackagesSection(
     state: DevPackagesState,
     linuxInstalled: Boolean,
     onInstallBundle: (DevBundle) -> Unit,
-    onInstallPackage: (String) -> Unit,
-    onUninstallPackage: (String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val busyLabel = state.operation?.label
+    val operation = state.operation
 
     Column(modifier.fillMaxWidth()) {
-        DdSectionLabel(
-            stringResource(R.string.dev_bundles_title),
-            Modifier.padding(start = 4.dp),
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            DdSectionLabel(
+                stringResource(R.string.dev_bundles_title),
+                Modifier.weight(1f).padding(start = 4.dp),
+            )
+            DdTextAction(
+                text = stringResource(R.string.dev_refresh),
+                onClick = onRefresh,
+                enabled = linuxInstalled && !state.busy && !state.checking,
+            )
+        }
         Spacer(Modifier.height(10.dp))
+
         SettingsGroup {
             if (!linuxInstalled) {
                 Text(
@@ -58,74 +64,19 @@ internal fun DevPackagesSection(
             }
             DevPackageCatalog.bundles.forEachIndexed { index, bundle ->
                 val title = stringResource(bundle.titleRes)
+                val installing = operation?.label == title
                 val installedCount = bundle.packageIds.count { it in state.installed }
-                val installing = busyLabel == title
                 BundleRow(
                     bundle = bundle,
                     title = title,
                     installedCount = installedCount,
                     installed = installedCount == bundle.packageIds.size,
                     installing = installing,
-                    stage = state.operation?.stage,
+                    stage = operation?.stage,
                     enabled = linuxInstalled && (!state.busy || installing),
                     onInstall = { onInstallBundle(bundle) },
                 )
                 if (index != DevPackageCatalog.bundles.lastIndex) DdHairline()
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            DdSectionLabel(
-                stringResource(R.string.dev_individual_title),
-                Modifier.weight(1f).padding(start = 4.dp),
-            )
-            DdTextAction(
-                text = stringResource(R.string.dev_refresh),
-                onClick = onRefresh,
-                enabled = linuxInstalled && !state.busy && !state.checking,
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        SettingsGroup {
-            DevPackageCatalog.packages.forEachIndexed { index, packageInfo ->
-                val installed = packageInfo.id in state.installed
-                val installing = state.operation?.label == packageInfo.displayName
-                DdListRow(
-                    title = packageInfo.displayName,
-                    subtitle = packageInfo.sizeLabel,
-                    trailing = {
-                        when {
-                            installing -> {
-                                DdSpinner(size = 16.dp, strokeWidth = 2.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.dev_installing),
-                                    style = DdType.bodySmall,
-                                    color = colors.inkTertiary,
-                                )
-                            }
-
-                            installed -> {
-                                DdTextAction(
-                                    text = stringResource(R.string.dev_uninstall),
-                                    onClick = { onUninstallPackage(packageInfo.id) },
-                                    enabled = linuxInstalled && !state.busy,
-                                    color = colors.danger,
-                                )
-                            }
-
-                            else -> {
-                                DdTextAction(
-                                    text = stringResource(R.string.dev_install),
-                                    onClick = { onInstallPackage(packageInfo.id) },
-                                    enabled = linuxInstalled && !state.busy,
-                                )
-                            }
-                        }
-                    },
-                )
-                if (index != DevPackageCatalog.packages.lastIndex) DdHairline()
             }
         }
 
@@ -138,6 +89,14 @@ internal fun DevPackagesSection(
                 color = colors.danger,
             )
         }
+
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.dev_self_install_hint),
+            modifier = Modifier.padding(horizontal = 4.dp),
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+        )
     }
 }
 
@@ -153,22 +112,44 @@ private fun BundleRow(
     onInstall: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val subtitle = stringResource(
-        if (installed) R.string.dev_bundle_installed_count
-        else R.string.dev_bundle_package_count,
-        installedCount,
-        bundle.packageIds.size,
-    )
-    DdListRow(
-        title = title,
-        subtitle = "$subtitle · ${stringResource(bundle.subtitleRes)}",
-        value = if (installed) stringResource(R.string.dev_installed) else bundle.sizeLabel,
-        trailing = {
-            when {
-                installing -> {
+    val includes = bundle.packageIds.joinToString("、")
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 96.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = title,
+                style = DdType.body,
+                color = colors.ink,
+                maxLines = 1,
+            )
+            Text(
+                text = stringResource(bundle.subtitleRes),
+                style = DdType.bodySmall,
+                color = colors.inkSecondary,
+            )
+            Text(
+                text = stringResource(R.string.dev_includes, includes),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        when {
+            installing -> {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     DdSpinner(size = 16.dp, strokeWidth = 2.dp)
                     stage?.let {
-                        Spacer(Modifier.width(8.dp))
                         Text(
                             text = it,
                             style = DdType.bodySmall,
@@ -176,15 +157,35 @@ private fun BundleRow(
                         )
                     }
                 }
+            }
 
-                !installed -> {
+            installed -> {
+                Text(
+                    text = stringResource(R.string.dev_installed),
+                    style = DdType.bodySmall,
+                    color = colors.accent,
+                )
+            }
+
+            else -> {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = if (installedCount > 0) {
+                            "${installedCount}/${bundle.packageIds.size} · ${bundle.sizeLabel}"
+                        } else {
+                            bundle.sizeLabel
+                        },
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
                     DdTextAction(
-                        text = stringResource(R.string.dev_install),
+                        text = stringResource(if (installedCount > 0) R.string.dev_continue else R.string.dev_install),
                         onClick = onInstall,
                         enabled = enabled,
                     )
                 }
             }
-        },
-    )
+        }
+    }
 }

@@ -73,7 +73,7 @@ class DevPackageManager(
     }
 
     fun installBundle(bundle: DevBundle) {
-        install(bundle.packageIds, context.getString(bundle.titleRes))
+        install(bundle.packageIds, context.getString(bundle.titleRes), bundle.postInstallCommand)
     }
 
     fun installPackage(packageId: String) {
@@ -122,7 +122,7 @@ class DevPackageManager(
         _state.update { it.copy(error = null) }
     }
 
-    private fun install(packageIds: List<String>, label: String) {
+    private fun install(packageIds: List<String>, label: String, postInstall: String? = null) {
         val ids = packageIds.distinct().filter { DevPackageCatalog.packageById(it) != null }
         if (ids.isEmpty()) return
         if (running.get()) {
@@ -172,6 +172,17 @@ class DevPackageManager(
                         result.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
                     )
                 }
+                if (!postInstall.isNullOrBlank()) {
+                    val stage = context.getString(R.string.dev_stage_python)
+                    _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = null)) }
+                    notifications.notifyInstall(label, stage, null)
+                    val post = linux.executeStreaming(postInstall, TIMEOUT_POST) { }
+                    if (post.exitCode != 0) {
+                        throw IllegalStateException(
+                            post.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
+                        )
+                    }
+                }
                 val installed = queryInstalled()
                 _state.update { it.copy(installed = installed, operation = null) }
                 runCatching { linux.refreshState() }
@@ -205,6 +216,7 @@ class DevPackageManager(
         private const val TIMEOUT_UPDATE = 120_000L
         private const val TIMEOUT_INSTALL = 15 * 60_000L
         private const val TIMEOUT_UNINSTALL = 120_000L
+        private const val TIMEOUT_POST = 10 * 60_000L
         private val PROGRESS = Regex("""^\((\d+)/(\d+)\)""")
     }
 }

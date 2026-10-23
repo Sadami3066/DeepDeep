@@ -207,7 +207,7 @@ fun PersonalizationScreen(
                     DdTextArea(
                         value = instruction,
                         onValueChange = { next ->
-                            instruction = next.take(PersonalizationStore.MAX_INSTRUCTION_LENGTH)
+                            instruction = next
                             if (tone != TonePreset.CUSTOM && instruction != toneTexts[tone]) {
                                 tone = TonePreset.CUSTOM
                             }
@@ -228,7 +228,6 @@ fun PersonalizationScreen(
                             text = stringResource(
                                 R.string.personalization_instruction_counter,
                                 instruction.length,
-                                PersonalizationStore.MAX_INSTRUCTION_LENGTH,
                             ),
                             style = DdType.numeric,
                             color = colors.inkTertiary,

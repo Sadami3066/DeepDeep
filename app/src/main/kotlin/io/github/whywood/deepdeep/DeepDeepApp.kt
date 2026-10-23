@@ -60,6 +60,7 @@ import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
+import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.FontScreen
 import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
 import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
@@ -269,15 +270,12 @@ internal fun DeepDeepApp(
                     modelName = state.modelLabel.takeIf { it.isNotBlank() },
                     configured = state.providerId in configuredProviders,
                     themeMode = theme,
-                    preferences = uiPreferences,
                     linuxState = linuxState,
                     versionName = BuildConfig.VERSION_NAME,
                     fontLabel = fontStyle.displayName,
                     onBack = ::back,
                     onThemeModeChange = onThemeChange,
-                    onToggle = { toggle, enabled ->
-                        scope.launch { graph.appPreferences.set(toggle, enabled) }
-                    },
+                    onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
                     onOpenProviders = { navigator.push(AppDestination.Providers) },
                     onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
                     onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
@@ -316,8 +314,6 @@ internal fun DeepDeepApp(
                             }
                         },
                         onInstallBundle = graph.devPackageManager::installBundle,
-                        onInstallPackage = graph.devPackageManager::installPackage,
-                        onUninstallPackage = graph.devPackageManager::uninstallPackage,
                         onRefreshPackages = graph.devPackageManager::refresh,
                     )
                 }
@@ -334,6 +330,14 @@ internal fun DeepDeepApp(
                     current = fontStyle,
                     onBack = ::back,
                     onSelect = onFontStyleChange,
+                )
+
+                AppDestination.ChatSettings -> ChatSettingsScreen(
+                    preferences = uiPreferences,
+                    onBack = ::back,
+                    onToggle = { toggle, enabled ->
+                        scope.launch { graph.appPreferences.set(toggle, enabled) }
+                    },
                 )
 
                 is AppDestination.ProviderDetail -> {

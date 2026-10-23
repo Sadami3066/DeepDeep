@@ -952,6 +952,6 @@ class ChatViewModel(
     }
 
     private companion object {
-        const val MAX_ATTACHMENTS = 5
+        const val MAX_ATTACHMENTS = 15
     }
 }

@@ -55,7 +55,7 @@ Compose ChatScreen
 
 ## 个性化与提示词
 
-- `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、语气预设、用户指令；运行时只向 `PiSessionEngine` 提供 `Personalization(nickname, interaction, instruction)`。
+- `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；运行时只向 `PiSessionEngine` 提供 `Personalization(nickname, interaction, instruction)`。
 - `PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个自定义 section：
   - `system`：DeepDeep 身份、当前时间/模型/工作区、proot 事实、交互模式规则、隐藏说明；手动包 `<system>…</system>`。
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
@@ -73,7 +73,7 @@ Compose ChatScreen
 
 ## 开发包
 
-- `DevPackageCatalog` 定义 16 个 Alpine 包与 7 个场景组合；`DevPackageManager` 在 proot 内执行 `apk update` + `apk add`。
+- `DevPackageCatalog` 定义 3 个场景组合（环境基础 / 日常办公 / 开发编程）；`DevPackageManager` 在 proot 内执行 `apk update` + `apk add`，办公组合随后用 pip 安装 `python-docx`/`python-pptx`/`pdfplumber`。
 - `LinuxEnvironment.executeStreaming` / `PRootExecutor.executeStreaming` 提供逐行输出回调；按 `(n/m) Installing` 更新进度。
 - 安装状态不单独持久化，进入运行环境页时用 `apk info -e` 查询真实状态；Linux 重置后自动清空。
 - 一次只允许一个安装；失败保留最后输出片段；安装任务由 app scope 持有，离开页面不取消。

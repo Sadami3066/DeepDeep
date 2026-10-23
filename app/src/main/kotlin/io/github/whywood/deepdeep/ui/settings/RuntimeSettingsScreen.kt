@@ -39,8 +39,6 @@ fun RuntimeSettingsScreen(
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     onInstallBundle: (DevBundle) -> Unit,
-    onInstallPackage: (String) -> Unit,
-    onUninstallPackage: (String) -> Unit,
     onRefreshPackages: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -93,8 +91,6 @@ fun RuntimeSettingsScreen(
                 state = devPackages,
                 linuxInstalled = linuxState is LinuxInstallState.Installed,
                 onInstallBundle = onInstallBundle,
-                onInstallPackage = onInstallPackage,
-                onUninstallPackage = onUninstallPackage,
                 onRefresh = onRefreshPackages,
             )
             Spacer(Modifier.height(40.dp))

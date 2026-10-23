@@ -1,11 +1,19 @@
 # Status
 
+## Done: P10.1 follow-up polish
+
+- Runtime page: 3 bundles only (环境基础 / 日常办公 / 开发编程), no individual tools; roomier title/subtitle spacing and one-line package summary; self-install hint
+- Personalization: 8000-character instruction limit removed; "语气" renamed to "提示词"
+- Attachments: max 15 (was 5)
+- Chat settings: haptics / keyboard / streaming / reasoning / process expansion moved to a dedicated page
+- Office bundle: poppler-utils, qpdf, openpyxl, xlsxwriter, Pillow, tesseract + pip python-docx/python-pptx/pdfplumber; verified imports and pdftotext
+
 ## Done: P10 personalization, notifications, runtime tools
 
-- Settings: profile → personalization (nickname, interaction style, tone presets, user instruction); billing/time-focus/sharing removed; privacy page; font picker; notification permission row
+- Settings: profile → personalization (nickname, interaction style, prompt presets, user instruction); billing/time-focus/sharing removed; privacy page; font picker; notification permission row
 - Prompt assembly: `<system>` (identity/environment/hidden interaction rules) + `<instruction>` (user preference) injected through SDK hook; old `deepdeep_environment` removed; XML escaping
 - Notifications: foreground service shows session title/activity, multi-session count, stop action; background completion notification opens the session; download progress channel
-- Runtime: 7 developer-tool bundles + individual packages, background `apk update/add` with line streaming, install/uninstall, notification progress, installed-state refresh
+- Runtime: 3 developer-tool bundles (environment basics / office / development), background `apk update/add` with line streaming, optional pip post-install for office, notification progress, installed-state refresh
 - Provider icons: 42 providers (15 color, 26 mono, Radius fallback), list/detail wiring
 - Fonts: Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora bundled; Chinese falls back to system; font picker persists and rebuilds
 - Design docs: `docs/SCHEDULING.md`, `docs/SKILLS.md`
@@ -91,6 +99,7 @@
 - `artifacts/validation/ui-round4/`: new icon drawer/settings, mascot empty state light/dark, markdown path rendering (links vs monospace vs codeBackground)
 - `artifacts/validation/perf/`: performance baseline/after notes and raw gfxinfo dumps
 - `artifacts/validation/ui-round5/`: original icon library restored in drawer/settings, simple-prompt natural Markdown answer, `files/home` absolute path rendered clickable and preview opened
+- `artifacts/validation/round7/`: 3 bundle runtime layout, chat settings page, prompt rename/no limit, office bundle install (`office-libs-ok`, `pdftotext` 25.12)
 - `artifacts/validation/round6/`: personalization (nickname/mode/tone/preset), settings removals/privacy/fonts, 42 provider icons, runtime package install (network + Python, notifications, installed state, 72MB rootfs), prompt `<system>`/`<instruction>` evidence, foreground/completion notifications and session open
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.

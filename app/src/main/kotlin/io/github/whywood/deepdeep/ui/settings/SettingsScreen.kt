@@ -44,8 +44,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
-import io.github.whywood.deepdeep.data.UiPreferences
-import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -57,7 +55,6 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -78,13 +75,12 @@ fun SettingsScreen(
     modelName: String?,
     configured: Boolean,
     themeMode: ThemeMode,
-    preferences: UiPreferences,
     linuxState: LinuxInstallState,
     versionName: String,
     fontLabel: String,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onToggle: (UiToggle, Boolean) -> Unit,
+    onOpenChatSettings: () -> Unit,
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
     onOpenPersonalization: () -> Unit,
@@ -214,39 +210,12 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                SwitchRow(
-                    icon = DdIcons.Phone,
-                    title = R.string.settings_haptics,
-                    checked = preferences.hapticsEnabled,
-                    onCheckedChange = { onToggle(UiToggle.HAPTICS, it) },
-                )
-                DdHairline()
-                SwitchRow(
+                DdListRow(
                     icon = DdIcons.Message,
-                    title = R.string.settings_send_hides_keyboard,
-                    checked = preferences.sendHidesKeyboard,
-                    onCheckedChange = { onToggle(UiToggle.SEND_HIDES_KEYBOARD, it) },
-                )
-                DdHairline()
-                SwitchRow(
-                    icon = DdIcons.AudioLines,
-                    title = R.string.settings_follow_streaming,
-                    checked = preferences.followStreaming,
-                    onCheckedChange = { onToggle(UiToggle.FOLLOW_STREAMING, it) },
-                )
-                DdHairline()
-                SwitchRow(
-                    icon = DdIcons.Brain,
-                    title = R.string.settings_show_reasoning,
-                    checked = preferences.showReasoning,
-                    onCheckedChange = { onToggle(UiToggle.SHOW_REASONING, it) },
-                )
-                DdHairline()
-                SwitchRow(
-                    icon = DdIcons.ChevronDown,
-                    title = R.string.settings_expand_process,
-                    checked = preferences.expandProcessByDefault,
-                    onCheckedChange = { onToggle(UiToggle.EXPAND_PROCESS, it) },
+                    title = stringResource(R.string.settings_chat),
+                    onClick = onOpenChatSettings,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_chat"),
                 )
             }
 
@@ -394,30 +363,6 @@ private fun ThemeControl(
             label = { themeLabel(it) },
         )
     }
-}
-
-@Composable
-private fun SwitchRow(
-    icon: DdIcon,
-    @StringRes title: Int,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val stateDescription = stringResource(
-        if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
-    )
-    DdListRow(
-        icon = icon,
-        title = stringResource(title),
-        onClick = { onCheckedChange(!checked) },
-        trailing = {
-            DdSwitch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                stateDescription = stateDescription,
-            )
-        },
-    )
 }
 
 @Composable

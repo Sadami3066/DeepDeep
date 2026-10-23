@@ -6,7 +6,7 @@
     <string name="assistant_attach_add">添加附件</string>
     <string name="assistant_attach_empty">空文件</string>
     <string name="assistant_attach_failed">无法读取该文件</string>
-    <string name="assistant_attach_limit">最多添加 5 个附件</string>
+    <string name="assistant_attach_limit">最多添加 15 个附件</string>
     <string name="assistant_attach_missing">文件不存在</string>
     <string name="assistant_attach_open">查看附件</string>
     <string name="assistant_attach_remove">移除附件</string>
@@ -72,7 +72,7 @@
     <string name="chat_error_empty_reply">（没有收到回复）</string>
     <string name="chat_error_runtime_start">运行时启动失败</string>
     <string name="chat_error_preparing">正在准备会话，请稍候…</string>
-    <string name="chat_error_max_attachments">最多添加 5 个附件</string>
+    <string name="chat_error_max_attachments">最多添加 15 个附件</string>
     <string name="chat_error_attachment_too_large">附件超过 25MB，无法添加</string>
     <string name="chat_error_attachment_failed">附件添加失败</string>
     <string name="chat_error_restoring">正在恢复会话，请稍候…</string>

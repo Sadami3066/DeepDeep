@@ -6,7 +6,7 @@
     <string name="assistant_attach_add">Add attachment</string>
     <string name="assistant_attach_empty">Empty file</string>
     <string name="assistant_attach_failed">Could not read this file</string>
-    <string name="assistant_attach_limit">Up to 5 attachments</string>
+    <string name="assistant_attach_limit">Up to 15 attachments</string>
     <string name="assistant_attach_missing">File not found</string>
     <string name="assistant_attach_open">View attachment</string>
     <string name="assistant_attach_remove">Remove attachment</string>
@@ -72,7 +72,7 @@
     <string name="chat_error_empty_reply">(No reply got)</string>
     <string name="chat_error_runtime_start">Runtime failed to start</string>
     <string name="chat_error_preparing">Preparing session…</string>
-    <string name="chat_error_max_attachments">Up to 5 attachments</string>
+    <string name="chat_error_max_attachments">Up to 15 attachments</string>
     <string name="chat_error_attachment_too_large">Attachment exceeds 25 MB</string>
     <string name="chat_error_attachment_failed">Failed to add attachment</string>
     <string name="chat_error_restoring">Restoring session…</string>

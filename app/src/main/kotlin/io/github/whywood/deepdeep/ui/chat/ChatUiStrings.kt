@@ -50,7 +50,7 @@ data class ChatUiStrings(
             emptyReply = "(No reply got)",
             runtimeStartFailed = "Runtime failed to start",
             preparingSession = "Preparing session…",
-            maxAttachments = "Up to 5 attachments",
+            maxAttachments = "Up to 15 attachments",
             attachmentTooLarge = "Attachment exceeds 25 MB",
             attachmentFailed = "Failed to add attachment",
             restoringSession = "Restoring session…",

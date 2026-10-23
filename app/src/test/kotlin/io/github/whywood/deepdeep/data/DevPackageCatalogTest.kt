@@ -13,7 +13,7 @@ class DevPackageCatalogTest {
 
     @Test
     fun bundlesReferenceKnownPackages() {
-        assertEquals(7, DevPackageCatalog.bundles.size)
+        assertEquals(3, DevPackageCatalog.bundles.size)
         val known = DevPackageCatalog.packages.map { it.id }.toSet()
         DevPackageCatalog.bundles.forEach { bundle ->
             assertTrue("bundle ${bundle.id} is empty", bundle.packageIds.isNotEmpty())
@@ -26,13 +26,31 @@ class DevPackageCatalogTest {
     }
 
     @Test
-    fun fullstackCoversTheNonBuildBundles() {
-        val fullstack = DevPackageCatalog.bundleById("fullstack")!!
-        val expected = DevPackageCatalog.bundles
-            .filter { it.id != "build" && it.id != "fullstack" }
-            .flatMap { it.packageIds }
-            .toSet()
-        assertTrue(fullstack.packageIds.containsAll(expected))
-        assertTrue("fullstack must not include the heavy build toolchain", "build-base" !in fullstack.packageIds)
+    fun baseBundleCoversRuntimeBasics() {
+        val base = DevPackageCatalog.bundleById("base")!!
+        assertTrue(
+            base.packageIds.containsAll(
+                listOf(
+                    "curl", "wget", "python3", "py3-pip", "nodejs", "npm",
+                    "ripgrep", "fd", "ffmpeg", "openssh-client",
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun officeBundleCoversDocumentsAndExcel() {
+        val office = DevPackageCatalog.bundleById("office")!!
+        assertTrue(office.packageIds.containsAll(listOf("poppler-utils", "py3-openpyxl", "tesseract-ocr")))
+        val command = office.postInstallCommand.orEmpty()
+        assertTrue(command.isNotBlank())
+        assertTrue(command.contains("python-docx"))
+        assertTrue(command.contains("python-pptx"))
+    }
+
+    @Test
+    fun devBundleCoversBuildAndGitHub() {
+        val dev = DevPackageCatalog.bundleById("dev")!!
+        assertTrue(dev.packageIds.containsAll(listOf("git", "github-cli", "build-base", "make")))
     }
 }

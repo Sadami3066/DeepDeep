@@ -11,5 +11,6 @@
 9. P8 — drawer v3: expandable workspace tree with per-workspace sessions, workspace pin, session pin icon, no section labels/selection accent; legacy UI cleanup (DdDialog/DdSearchField/DdTextField/DdSpinner, runtime env row fix, masked saved API key) (done)
 10. P9 — performance (deferred IME/drawer reads, stream delta batching, stability report), mascot empty state (new icon set experiment reverted to original icon library), modern markdown inline-code/path rendering with home/workspace absolute path links (done)
 11. P10 — personalization + `<system>`/`<instruction>` prompt assembly, notification center (session/tool/download progress), runtime developer-package bundles, 42 provider icons, 5 Latin fonts, remove billing/focus/sharing, privacy page, scheduling/skills design docs (done)
-12. Next — implement scheduled tasks per `docs/SCHEDULING.md`; implement skills per `docs/SKILLS.md`; workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
-13. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it
+12. P10.1 — runtime 3 bundles (基础/办公/开发) + roomier layout, no individual tools; remove instruction limit; attachments 15; tone → prompt; chat settings page (done)
+13. Next — implement scheduled tasks per `docs/SCHEDULING.md`; implement skills per `docs/SKILLS.md`; workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+14. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it

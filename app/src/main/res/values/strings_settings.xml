@@ -1,4 +1,5 @@
 <resources>
+    <string name="settings_chat">聊天设置</string>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
 
@@ -104,14 +105,14 @@
     <string name="personalization_interaction_quiet_body">少提问、少打断；能自己判断的就自己决定。</string>
     <string name="personalization_interaction_balanced_body">必要时问一次，平衡主动与克制。</string>
     <string name="personalization_interaction_proactive_body">更主动澄清和追问，完成后主动给出下一步建议。</string>
-    <string name="personalization_tone_title">语气</string>
+    <string name="personalization_tone_title">提示词</string>
     <string name="personalization_tone_warm">热情</string>
     <string name="personalization_tone_cute">可爱</string>
     <string name="personalization_tone_calm">冷静</string>
     <string name="personalization_tone_custom">自定义</string>
     <string name="personalization_instruction_hint">写下你希望 DeepDeep 长期遵守的偏好…</string>
     <string name="personalization_preset_hint">预设会填入输入框，可自由修改</string>
-    <string name="personalization_instruction_counter">%1$d/%2$d</string>
+    <string name="personalization_instruction_counter">%1$d 字</string>
     <string name="personalization_preset_warm">用热情、有感染力的语气回应；适度表达情绪和支持，但不要夸张、不要谄媚。</string>
     <string name="personalization_preset_cute">用可爱、轻松的语气回应；可以使用少量语气词和颜文字，但保持信息准确、不卖萌过度。</string>
     <string name="personalization_preset_calm">用冷静、克制的语气回应；直接给结论和依据，不寒暄，不过度共情。</string>
@@ -129,36 +130,27 @@
     <string name="settings_font_current">当前</string>
     <string name="settings_font_preview_note">中文字符使用系统字体。</string>
 
-    <string name="dev_bundles_title">推荐组合</string>
-    <string name="dev_individual_title">单个工具</string>
+    <string name="dev_bundles_title">安装组合</string>
     <string name="dev_install">安装</string>
-    <string name="dev_uninstall">卸载</string>
     <string name="dev_installed">已安装</string>
-    <string name="dev_installing">安装中…</string>
     <string name="dev_refresh">刷新</string>
-    <string name="dev_linux_required">先安装 Linux 环境，才能安装开发工具。</string>
+    <string name="dev_linux_required">先安装 Linux 环境，才能安装这些组合。</string>
     <string name="dev_error">失败：%1$s</string>
     <string name="dev_stage_updating">正在更新软件源…</string>
     <string name="dev_stage_installing">正在安装…</string>
     <string name="dev_stage_progress">安装中 %1$d/%2$d</string>
+    <string name="dev_stage_python">正在安装 Python 文档库…</string>
     <string name="dev_uninstalling">正在移除 %1$s…</string>
-    <string name="dev_error_busy">正在安装其他组件</string>
+    <string name="dev_error_busy">正在安装其他组合</string>
     <string name="dev_error_linux_missing">请先安装 Linux 环境</string>
     <string name="dev_error_generic">安装失败</string>
-    <string name="dev_bundle_installed_count">已安装 %1$d/%2$d</string>
-    <string name="dev_bundle_package_count">%1$d/%2$d</string>
-    <string name="dev_bundle_network">网络基础</string>
-    <string name="dev_bundle_network_body">curl、wget、jq 与 CA 证书</string>
-    <string name="dev_bundle_python">Python 脚本</string>
-    <string name="dev_bundle_python_body">Python 3 与 pip</string>
-    <string name="dev_bundle_node">Node 开发</string>
-    <string name="dev_bundle_node_body">Node.js 与 npm</string>
-    <string name="dev_bundle_git">Git 协作</string>
-    <string name="dev_bundle_git_body">Git 与 OpenSSH 客户端</string>
-    <string name="dev_bundle_search">命令行搜索</string>
-    <string name="dev_bundle_search_body">ripgrep、fd 与 tree</string>
-    <string name="dev_bundle_build">编译工具链</string>
-    <string name="dev_bundle_build_body">GCC、make、CMake 与 pkgconf</string>
-    <string name="dev_bundle_fullstack">全栈开发</string>
-    <string name="dev_bundle_fullstack_body">Python、Node、Git、网络与搜索工具</string>
+    <string name="dev_continue">继续安装</string>
+    <string name="dev_includes">包含 %1$s</string>
+    <string name="dev_self_install_hint">更多需求可以在对话里直接让 DeepDeep 自行安装（apk / pip / npm）。</string>
+    <string name="dev_bundle_base">环境基础</string>
+    <string name="dev_bundle_base_body">网络、Python、Node、搜索、FFmpeg 与 SSH</string>
+    <string name="dev_bundle_office">日常办公</string>
+    <string name="dev_bundle_office_body">PDF、Excel、Word、PPT 处理与 OCR</string>
+    <string name="dev_bundle_dev">开发编程</string>
+    <string name="dev_bundle_dev_body">Git、GitHub CLI、GCC、Make 与 CMake</string>
 </resources>

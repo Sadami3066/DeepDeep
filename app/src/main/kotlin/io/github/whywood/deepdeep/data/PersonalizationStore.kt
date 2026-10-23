@@ -65,12 +65,11 @@ class PersonalizationStore(context: Context) {
             values[nicknameKey] = value.nickname.take(MAX_NICKNAME_LENGTH)
             values[interactionKey] = value.interaction.name
             values[toneKey] = value.tone.name
-            values[instructionKey] = value.instruction.take(MAX_INSTRUCTION_LENGTH)
+            values[instructionKey] = value.instruction
         }
     }
 
     companion object {
         const val MAX_NICKNAME_LENGTH = 40
-        const val MAX_INSTRUCTION_LENGTH = 8000
     }
 }
