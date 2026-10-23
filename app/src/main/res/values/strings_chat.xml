@@ -43,6 +43,10 @@
     <string name="assistant_reasoning">思考</string>
     <string name="assistant_send">发送</string>
     <string name="assistant_settings">设置</string>
+    <string name="assistant_reload">重新加载</string>
+    <string name="chat_reload_done">已重新加载当前会话</string>
+    <string name="chat_reload_failed">重新加载失败</string>
+    <string name="chat_reload_busy">请先停止当前回答</string>
     <string name="assistant_share_chooser">分享回答</string>
     <string name="assistant_share_unavailable">没有可用的分享应用</string>
     <string name="assistant_step_collapsed">已收起</string>

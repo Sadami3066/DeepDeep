@@ -57,7 +57,7 @@ fun WorkspaceSettingsScreen(
     LaunchedEffect(workspace.id, reloadKey) {
         val skills = skillRepository.list()
         val enabledIds = skillRepository.projectEnabledIds(workspace.cwd)
-        projectSkillCount = skills.count { it.id in enabledIds && !it.globalEnabled }
+        projectSkillCount = skills.count { it.globalEnabled || it.id in enabledIds }
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
     }
 

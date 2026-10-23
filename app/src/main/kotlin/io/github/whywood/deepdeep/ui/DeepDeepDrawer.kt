@@ -105,6 +105,7 @@ fun DeepDeepDrawer(
     onArchived: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSkills: () -> Unit,
+    onScheduled: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
@@ -130,7 +131,8 @@ fun DeepDeepDrawer(
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     val orderedWorkspaces = remember(workspaces, pinnedWorkspaceIds) {
-        workspaces.filter { it.id in pinnedWorkspaceIds } + workspaces.filterNot { it.id in pinnedWorkspaceIds }
+        val visible = workspaces.filterNot { it.hidden }
+        visible.filter { it.id in pinnedWorkspaceIds } + visible.filterNot { it.id in pinnedWorkspaceIds }
     }
     val sessionsByCwd = remember(sessions) {
         sessions.filterNot { it.archived }.groupBy { it.cwd }
@@ -221,7 +223,7 @@ fun DeepDeepDrawer(
             DrawerNavItem(
                 icon = DdIcons.Clock,
                 label = stringResource(R.string.drawer_nav_scheduled),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                onClick = onScheduled,
                 testTag = "drawer_scheduled",
             )
         }

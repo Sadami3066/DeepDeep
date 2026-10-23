@@ -57,18 +57,21 @@ fun ProjectSkillsSheet(
     LaunchedEffect(workspace.cwd) {
         val installed = skillRepository.list()
         val enabled = skillRepository.projectEnabledIds(workspace.cwd)
-        val available = installed.filter { !it.globalEnabled }
-        skills = available
-        selected = enabled intersect available.map { it.id }.toSet()
+        skills = installed
+        selected = enabled intersect installed.map { it.id }.toSet()
         loading = false
     }
 
+    val globallyEnabled = skills.filter { it.globalEnabled }.mapTo(mutableSetOf()) { it.id }
     val save: () -> Unit = {
         if (!saving) {
             saving = true
             failed = false
             scope.launch {
-                val ok = skillRepository.applyProjectSkills(workspace.cwd, selected)
+                val ok = skillRepository.applyProjectSkills(
+                    workspace.cwd,
+                    selected.filterNot { it in globallyEnabled }.toSet(),
+                )
                 saving = false
                 if (ok) {
                     onSaved()
@@ -118,11 +121,16 @@ fun ProjectSkillsSheet(
                         itemsIndexed(skills, key = { _, skill -> skill.id }) { index, skill ->
                             DdListRow(
                                 title = skill.name,
-                                subtitle = skill.description,
+                                subtitle = if (skill.globalEnabled) {
+                                    stringResource(R.string.project_skills_global_hint, skill.description)
+                                } else {
+                                    skill.description
+                                },
                                 subtitleMaxLines = 2,
                                 trailing = {
                                     DdSwitch(
-                                        checked = skill.id in selected,
+                                        checked = skill.globalEnabled || skill.id in selected,
+                                        enabled = !skill.globalEnabled,
                                         onCheckedChange = { checked ->
                                             selected = if (checked) {
                                                 selected + skill.id

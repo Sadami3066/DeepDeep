@@ -229,4 +229,53 @@ class ScheduleStoreTest {
         File(directory, "schedules.json").writeText("  \n")
         assertTrue(store().list().isEmpty())
     }
+
+    @Test
+    fun markRunningAndFinishedPersistRunState() = runTest {
+        val store = store()
+        val created = store.create(newSchedule())
+        val startedAt = epoch(2026, 10, 23, 8, 0)
+        val running = store.markRunning(created.id, startedAt)
+        assertNotNull(running)
+        assertEquals(ScheduleRunStatus.RUNNING, running!!.lastStatus)
+        assertEquals(startedAt, running.lastRunAt)
+
+        val finishedAt = startedAt + 60_000L
+        val finished = store.markFinished(
+            id = created.id,
+            status = ScheduleRunStatus.DONE,
+            sessionId = "session-1",
+            error = null,
+            at = finishedAt,
+        )
+        assertNotNull(finished)
+        assertEquals(ScheduleRunStatus.DONE, finished!!.lastStatus)
+        assertEquals("session-1", finished.lastSessionId)
+        assertEquals(finishedAt, finished.updatedAt)
+        assertEquals(epoch(2026, 10, 24, 8, 0), finished.nextRunAt)
+
+        val reopened = ScheduleStore(directory, clock).list().single()
+        assertEquals(ScheduleRunStatus.DONE, reopened.lastStatus)
+        assertEquals("session-1", reopened.lastSessionId)
+    }
+
+    @Test
+    fun onceScheduleDisablesAfterRun() = runTest {
+        val store = store()
+        val created = store.create(
+            newSchedule(trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 23), LocalTime.of(13, 0))),
+        )
+        store.markRunning(created.id, clock.millis())
+        val finished = store.markFinished(
+            id = created.id,
+            status = ScheduleRunStatus.FAILED,
+            sessionId = null,
+            error = "boom",
+            at = clock.millis() + 1_000,
+        )
+        assertNotNull(finished)
+        assertFalse(finished!!.enabled)
+        assertNull(finished.nextRunAt)
+        assertEquals("boom", finished.lastError)
+    }
 }

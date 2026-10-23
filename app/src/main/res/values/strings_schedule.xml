@@ -1,0 +1,35 @@
+<resources>
+    <string name="schedules_title">定时任务</string>
+    <string name="schedules_back">返回</string>
+    <string name="schedules_new">新建定时任务</string>
+    <string name="schedules_empty_title">还没有定时任务</string>
+    <string name="schedules_empty_hint">点 + 与助手安排一个定时任务</string>
+    <string name="schedules_note">服务存活时按计划运行；错过的任务会在下次打开 App 时补跑一次。</string>
+    <string name="schedules_subtitle">%1$s · %2$s</string>
+    <string name="schedules_never">未安排</string>
+    <string name="schedules_trigger">触发</string>
+    <string name="schedules_workspace">工作区</string>
+    <string name="schedules_next">下次运行</string>
+    <string name="schedules_last">上次运行</string>
+    <string name="schedules_status">状态</string>
+    <string name="schedules_prompt">任务提示词</string>
+    <string name="schedules_open_session">打开运行会话</string>
+    <string name="schedules_delete">删除任务</string>
+    <string name="schedules_delete_title">删除定时任务？</string>
+    <string name="schedules_delete_message">「%1$s」删除后无法恢复。</string>
+    <string name="schedules_delete_confirm">删除</string>
+    <string name="schedules_cancel">取消</string>
+    <string name="schedules_arrangements">安排记录</string>
+    <string name="schedules_arrangement_hint">继续与助手沟通</string>
+
+    <string name="schedules_trigger_once">%1$s %2$s</string>
+    <string name="schedules_trigger_daily">每天 %1$s</string>
+    <string name="schedules_trigger_weekdays">工作日 %1$s</string>
+    <string name="schedules_trigger_weekends">周末 %1$s</string>
+    <string name="schedules_trigger_weekly">每周 %1$s · %2$s</string>
+
+    <string name="schedules_status_running">运行中</string>
+    <string name="schedules_status_done">完成</string>
+    <string name="schedules_status_stopped">已停止</string>
+    <string name="schedules_status_failed">失败</string>
+</resources>

@@ -27,7 +27,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 @Composable
 internal fun ChatTopBar(
     onMenu: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -70,12 +70,13 @@ internal fun ChatTopBar(
                     menuWidth = 148.dp,
                 ) {
                     DdMenuItem(
-                        text = stringResource(R.string.assistant_settings),
-                        icon = DdIcons.Settings,
+                        text = stringResource(R.string.assistant_reload),
+                        icon = DdIcons.Refresh,
                         onClick = {
                             menuOpen = false
-                            onOpenSettings()
+                            onReload()
                         },
+                        testTag = "assistant_reload",
                     )
                 }
             }

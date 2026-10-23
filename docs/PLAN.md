@@ -14,5 +14,6 @@
 12. P10.1 — runtime 3 bundles (基础/办公/开发) + roomier layout, no individual tools; remove instruction limit; attachments 15; tone → prompt; chat settings page (done)
 13. P10.2 — remove placeholder settings rows; Newsreader default + new font sample; always-on chat options; process auto-collapse at final-text start (done)
 14. P11 — skills repository with zip install + global/project enable, workspace settings + AGENTS.md editor, app tools (`ask_user_question` UI, schedule CRUD + local store only) (done)
-15. Next — scheduled executor + task page + hidden schedule workspace per `docs/SCHEDULING.md`; workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
-16. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it
+15. P11.1 — project skills include global rows, chat reload, scheduled executor + schedule page + hidden schedule workspace, storage migration repair (done)
+16. Next — workspace-level session migration/archive; full-text search; scheduled task manual run/edit/history; root ShellExecutor when authorized
+17. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it

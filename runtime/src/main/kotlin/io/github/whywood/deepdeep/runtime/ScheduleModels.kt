@@ -24,6 +24,13 @@ sealed interface ScheduleTrigger {
     data class Weekly(val days: Set<DayOfWeek>, val time: LocalTime) : ScheduleTrigger
 }
 
+enum class ScheduleRunStatus {
+    RUNNING,
+    DONE,
+    STOPPED,
+    FAILED,
+}
+
 data class Schedule(
     val id: String,
     val name: String,
@@ -33,6 +40,10 @@ data class Schedule(
     val enabled: Boolean = true,
     val notify: Boolean = true,
     val nextRunAt: Long? = null,
+    val lastRunAt: Long? = null,
+    val lastStatus: ScheduleRunStatus? = null,
+    val lastSessionId: String? = null,
+    val lastError: String? = null,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 ) {
@@ -102,6 +113,10 @@ fun Schedule.toJsonObject(): JsonObject = buildJsonObject {
     } else {
         put("nextRunAt", nextRunAt)
     }
+    put("lastRunAt", lastRunAt)
+    put("lastStatus", lastStatus?.name)
+    put("lastSessionId", lastSessionId)
+    put("lastError", lastError)
     put("createdAt", createdAt)
     put("updatedAt", updatedAt)
 }
@@ -134,6 +149,13 @@ fun scheduleFromJsonObject(json: JsonObject): Schedule = Schedule(
     enabled = json.booleanOrCorrupt("enabled"),
     notify = json.booleanOrCorrupt("notify"),
     nextRunAt = json.optionalLong("nextRunAt"),
+    lastRunAt = json.optionalLong("lastRunAt"),
+    lastStatus = json.optionalString("lastStatus")?.let { value ->
+        runCatching { ScheduleRunStatus.valueOf(value) }
+            .getOrElse { throw CorruptScheduleDataException("lastStatus 无效：$value") }
+    },
+    lastSessionId = json.optionalString("lastSessionId"),
+    lastError = json.optionalString("lastError"),
     createdAt = json.longOrCorrupt("createdAt"),
     updatedAt = json.longOrCorrupt("updatedAt"),
 )
@@ -182,6 +204,12 @@ private fun JsonObject.optionalLong(name: String): Long? {
     if (element is JsonNull) return null
     return (element as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
         ?: throw CorruptScheduleDataException("字段无效：$name")
+}
+
+private fun JsonObject.optionalString(name: String): String? {
+    val element = this[name] ?: return null
+    if (element is JsonNull) return null
+    return (element as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
 }
 
 private fun JsonObject.objectOrCorrupt(name: String): JsonObject =

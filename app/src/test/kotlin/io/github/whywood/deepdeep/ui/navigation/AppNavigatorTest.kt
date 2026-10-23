@@ -53,6 +53,7 @@ class AppNavigatorTest {
             AppDestination.Archived,
             AppDestination.RuntimeSettings,
             AppDestination.Skills,
+            AppDestination.Schedules,
             AppDestination.WorkspaceSettings("workspace-1"),
         )
         destinations.forEach { destination ->

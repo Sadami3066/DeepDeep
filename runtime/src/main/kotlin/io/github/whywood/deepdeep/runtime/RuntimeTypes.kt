@@ -42,6 +42,7 @@ data class RuntimeWorkspace(
     val cwd: String,
     val createdAt: Long = 0L,
     val isHome: Boolean = false,
+    val hidden: Boolean = false,
 )
 
 data class OpenedSession(
@@ -245,6 +246,8 @@ interface AgentRuntime {
     suspend fun openSession(filePath: String, cwd: String): OpenedSession
 
     suspend fun closeSession(sessionId: String)
+
+    suspend fun reloadSession(sessionId: String): String
 
     suspend fun send(sessionId: String, text: String)
 

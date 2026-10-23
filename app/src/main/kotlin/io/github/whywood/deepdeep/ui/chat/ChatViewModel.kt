@@ -197,10 +197,67 @@ class ChatViewModel(
         mutableState.value.conversationId?.let(runtime::stop)
     }
 
+    suspend fun reloadSession(): Result<Unit> {
+        val current = mutableState.value
+        if (current.sending) {
+            return Result.failure(IllegalStateException(uiStrings.reloadBusy))
+        }
+        val sessionId = current.conversationId
+            ?: return Result.failure(IllegalStateException(uiStrings.sessionNotReady))
+        return try {
+            val reopenedId = withContext(ioDispatcher) { runtime.reloadSession(sessionId) }
+            if (reopenedId != sessionId) {
+                conversationCache.remove(sessionId)?.let { snapshot ->
+                    conversationCache[reopenedId] = snapshot
+                }
+                mutableState.update { it.copy(conversationId = reopenedId, error = null) }
+            } else {
+                mutableState.update { it.copy(error = null) }
+            }
+            Result.success(Unit)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Result.failure(IllegalStateException(uiStrings.reloadFailed, error))
+        }
+    }
+
     fun newSession(workspaceId: String) {
         viewModelScope.launch {
             cacheCurrentSession()
             createSession(workspaceId)
+        }
+    }
+
+    fun newScheduleSession() {
+        viewModelScope.launch {
+            cacheCurrentSession()
+            createSession(AgentRuntimeHost.SCHEDULE_ID)
+        }
+    }
+
+    suspend fun loadScheduleSessions(): List<ConversationSummary> =
+        withContext(ioDispatcher) { runtime.sessions(AgentRuntimeHost.SCHEDULE_ID) }
+
+    fun openScheduleConversation(summary: ConversationSummary) {
+        cacheCurrentSession()
+        switchToSummary(summary)
+    }
+
+    fun openConversationById(id: String) {
+        val current = mutableState.value
+        val known = (current.conversations + current.archivedConversations).firstOrNull { it.id == id }
+        if (known != null) {
+            openConversation(id)
+            return
+        }
+        viewModelScope.launch {
+            val summary = withContext(ioDispatcher) {
+                runtime.allSessions().firstOrNull { it.id == id }
+                    ?: runtime.archivedSessions().firstOrNull { it.id == id }
+            } ?: return@launch
+            cacheCurrentSession()
+            switchToSummary(summary)
         }
     }
 
@@ -394,11 +451,12 @@ class ChatViewModel(
 
     private suspend fun restoreInitialSession() {
         val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
+        val visibleWorkspaces = workspaces.filterNot { it.hidden }
         val sessions = withContext(ioDispatcher) {
-            workspaces.flatMap { workspace -> runtime.sessions(workspace.id) }
+            visibleWorkspaces.flatMap { workspace -> runtime.sessions(workspace.id) }
         }
         val recent = sessions.maxByOrNull { it.updatedAt }
-        val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()
+        val home = visibleWorkspaces.firstOrNull { it.isHome } ?: visibleWorkspaces.firstOrNull()
         if (home == null) {
             mutableState.update {
                 it.copy(ready = true, historyLoaded = true, error = "运行时未就绪")

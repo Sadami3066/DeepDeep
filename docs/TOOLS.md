@@ -96,22 +96,24 @@ defaultCodingTools(...) + appTools(cwd, AppToolContext)
 - `schedule_update`：局部更新并重算 `nextRunAt`。
 - `schedule_delete`：按 id 删除。
 
-限制：
+执行：
 
-- 本轮只落库与计算 `nextRunAt`，没有调度执行器、任务页面或补跑。
-- 工具结果带 `execution: "not_enabled"`，不要向用户声称任务会自动运行。
+- `ScheduleRunner` 在 `AgentService` 内运行，30 秒 tick；`enabled && nextRunAt <= now` 的当前任务串行执行。
+- 执行时在目标工作区新建会话并发送 prompt；记录 `lastRunAt/lastStatus/lastSessionId/lastError`，一次性任务执行后禁用。
+- 服务被杀时不唤醒；下次打开 App 后补跑一次。状态与手动停止沿用运行时会话。
+- 工具结果带 `execution: "enabled"`。
 - 存储使用 Mutex + 临时文件 rename；JSON 损坏时保留原文件并报错。
 - 触发时间使用设备本地时区；时间计算可注入 `Clock` 便于测试。
 
-## 隐藏工作区（设计）
+## 隐藏工作区
 
 定时任务控制面放在隐藏工作区：
 
 - 工作区 id `schedules`，cwd `files/schedules/workspace`，不进入抽屉、搜索和启动恢复。
-- 新建任务时在该工作区创建一个「定时任务会话」，用户与 agent 对话，由 schedule 工具写入任务。
-- 任务本身保存目标 `workspaceId`；执行时在目标工作区新建会话。
-- 目标工作区被删除时任务禁用。
-- 执行器仍按 `docs/SCHEDULING.md` 的前台 tick + 下次打开补跑。
+- 定时任务页的 `+` 在该工作区创建一个「定时任务会话」，用户与 agent 对话，由 schedule 工具写入任务；安排记录可从定时任务页重新打开。
+- 任务本身保存目标 `workspaceId`；未指定时默认 Home；执行时在目标工作区新建会话。
+- 目标工作区被删除时任务记录失败，不自动改到 Home。
+- 执行器按 `docs/SCHEDULING.md` 的前台 tick + 下次打开补跑。
 
 ## 安全
 

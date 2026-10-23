@@ -13,8 +13,8 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - 42 家 Provider 目录 + API Key 认证入口；思考等级在 composer 切换
 - 会话历史、置顶、归档、重命名、删除；长按菜单跟随点击位置
 - 常驻抽屉、设置层级推入转场、统一 motion tokens 与按压态
-- 技能仓库：zip 安装、全局/工作区启停；工作区 AGENTS.md 编辑
-- App 工具：提问界面、schedule 系列（只落库，执行器后续）
+- 技能仓库：zip 安装、全局/工作区启停、聊天内重新加载；工作区 AGENTS.md 编辑
+- App 工具：提问界面、schedule 系列、前台服务定时执行、定时任务页与隐藏安排工作区
 - 无 root；root 能力后续接入
 
 ## 结构
@@ -40,7 +40,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 
 ## 边界
 
-- 工具：pi 原生 + `bash` + App 层 `ask_user_question` / `schedule_*`；Android 能力工具暂不注册。
+- 工具：pi 原生 + `bash` + App 层 `ask_user_question` / `schedule_*`；定时任务在服务存活时运行，错过时下次打开补跑。
 - 不做权限/审批系统；只有 Linux/root 功能开关。
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据。
 - Linux 是 proot 用户空间，不是安全沙箱。

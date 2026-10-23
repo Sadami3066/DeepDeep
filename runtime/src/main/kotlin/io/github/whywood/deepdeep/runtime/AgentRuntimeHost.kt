@@ -67,7 +67,8 @@ class AgentRuntimeHost(
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = buildList {
         add(homeWorkspace())
-        addAll(workspaceStore.read().filter { it.id != HOME_ID })
+        add(scheduleWorkspace())
+        addAll(workspaceStore.read().filter { it.id != HOME_ID && it.id != SCHEDULE_ID })
     }
 
     override suspend fun createWorkspace(name: String): RuntimeWorkspace = mutex.withLock {
@@ -87,7 +88,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun renameWorkspace(id: String, name: String) {
-        if (id == HOME_ID) return
+        if (id == HOME_ID || id == SCHEDULE_ID) return
         val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
@@ -96,7 +97,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun deleteWorkspace(id: String) {
-        if (id == HOME_ID) return
+        if (id == HOME_ID || id == SCHEDULE_ID) return
         val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
         val sessions = catalog.list(workspace.cwd)
         sessions.forEach { session ->
@@ -113,7 +114,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun allSessions(): List<ConversationSummary> =
-        catalog.listAll(allCwds()).filterNot { it.archived }
+        catalog.listAll(visibleCwds()).filterNot { it.archived }
 
     override suspend fun workspaceSessionCount(workspaceId: String): Int =
         catalog.list(workspaceFor(workspaceId).cwd).size
@@ -136,6 +137,17 @@ class AgentRuntimeHost(
 
     override suspend fun closeSession(sessionId: String) = mutex.withLock {
         detach(sessionId)
+    }
+
+    override suspend fun reloadSession(sessionId: String): String = mutex.withLock {
+        val handle = handles[sessionId] ?: error("Agent session is not ready")
+        check(!handle.busy) { "Agent session is busy" }
+        val file = handle.session.sessionFile?.toString() ?: error("Agent session has no file")
+        val cwd = handle.cwd
+        detach(sessionId)
+        val reopened = attach(cwd, file)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        reopened.session.sessionId
     }
 
     override suspend fun send(sessionId: String, text: String) {
@@ -210,7 +222,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun archivedSessions(): List<ConversationSummary> =
-        catalog.listAll(allCwds()).filter { it.archived }
+        catalog.listAll(visibleCwds()).filter { it.archived }
 
     override suspend fun renameSession(id: String, title: String) {
         catalog.rename(id, title)
@@ -279,13 +291,28 @@ class AgentRuntimeHost(
         isHome = true,
     )
 
+    private fun scheduleWorkspace(): RuntimeWorkspace {
+        val directory = File(File(homeDir.parentFile, "schedules"), "workspace")
+        directory.mkdirs()
+        return RuntimeWorkspace(
+            id = SCHEDULE_ID,
+            name = SCHEDULE_NAME,
+            cwd = directory.absolutePath,
+            hidden = true,
+        )
+    }
+
     private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace {
         if (workspaceId == HOME_ID || workspaceId.isBlank()) return homeWorkspace()
+        if (workspaceId == SCHEDULE_ID) return scheduleWorkspace()
         return workspaceStore.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
     }
 
-    private suspend fun allCwds(): List<String> =
+    private suspend fun visibleCwds(): List<String> =
         listOf(homeDir.absolutePath) + workspaceStore.read().map { it.cwd }
+
+    private suspend fun allCwds(): List<String> =
+        visibleCwds() + scheduleWorkspace().cwd
 
     private suspend fun attach(cwd: String, file: String?): Handle {
         val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile?.toString() == file }
@@ -420,6 +447,8 @@ class AgentRuntimeHost(
     companion object {
         const val HOME_ID = "home"
         const val HOME_NAME = "Home"
+        const val SCHEDULE_ID = "schedules"
+        const val SCHEDULE_NAME = "Scheduled"
     }
 }
 

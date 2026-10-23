@@ -19,7 +19,10 @@ class AgentService : Service() {
         graph.notificationCenter.start()
         startForeground(NOTIFICATION_ID, graph.notificationCenter.foregroundNotification())
         graph.notificationCenter.onForegroundStarted()
-        scope.launch { graph.host.ensureStarted() }
+        scope.launch {
+            graph.host.ensureStarted()
+            graph.scheduleRunner.start()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -40,6 +43,7 @@ class AgentService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        graph.scheduleRunner.stop()
         graph.notificationCenter.stop()
         scope.cancel()
         super.onDestroy()

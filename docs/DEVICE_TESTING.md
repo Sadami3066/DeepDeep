@@ -67,12 +67,18 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 32. 项目技能：关闭全局后，项目技能 sheet 只列未全局技能；勾选保存后 `files/workspaces/<id>/.pi/skills/<id>` 存在；新建会话 JSONL 的 `<skills>` 含该技能；取消勾选后副本消失。
 33. AGENTS.md：编辑并保存后工作区根目录出现文件；新建会话 JSONL 的 `<project_context>` 含保存内容；有 `AGENTS.override.md` 时显示实际文件名。
 34. ask_user_question：聊天要求模型提问；sheet 显示题干/选项/自定义/跳过/提交；选择后工具继续并回答；关闭或跳过会结束等待；App 不在前台时不挂起。
-35. schedule：聊天创建 daily/weekdays 任务；`files/schedules/schedules.json` 有正确 `nextRunAt` 与触发；`schedule_list/update/delete` 可操作；工具结果包含 `execution: "not_enabled"`，不声称已执行。
+35. schedule：聊天创建 daily/weekdays 任务；`files/schedules/schedules.json` 有正确 `nextRunAt` 与触发；`schedule_list/update/delete` 可操作；工具结果包含 `execution: "enabled"`。
 36. 重启迁移：工作区 AGENTS.md、项目技能和工作区会话在重启后仍生效；`files/agent/sessions` 下不出现 `files-homes-*` 目录，`/files/workspaces/...` 不被误写。
+37. 项目技能显示全局技能：全局启用一个技能后打开工作区设置 → 项目技能，该技能显示为开启、标记「全局」且开关不可操作。
+38. 会话重新加载：打开一个已有会话，安装/启用新技能；聊天右上角「重新加载」；继续发消息，会话 JSONL 新增系统段中出现 `<skills>`。
+39. 定时任务页：抽屉「定时任务」显示列表、下次运行、开关；`+` 打开隐藏工作区安排会话，抽屉/搜索不出现该隐藏工作区。
+40. 定时任务执行：创建 1–2 分钟后的一次性任务；前台服务 tick 后 `lastStatus=DONE`、`lastSessionId` 有值、nextRunAt 置空且开关关闭；运行会话可打开并看到结果。
+41. 任务详情：显示触发、工作区、下次/上次运行、状态、错误、prompt；打开运行会话、删除均可用；安排记录可重新打开隐藏会话。
+42. 项目技能保存：全局技能不生成项目副本；未全局技能勾选后复制到 `.pi/skills`，取消勾选后删除。
 
 ## 证据
 
-`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`，设备日志用：
+`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`，设备日志用：
 
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat

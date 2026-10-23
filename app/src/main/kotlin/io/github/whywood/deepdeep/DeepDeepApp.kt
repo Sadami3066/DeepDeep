@@ -53,6 +53,7 @@ import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.questions.AskQuestionSheet
+import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
@@ -86,6 +87,7 @@ internal fun DeepDeepApp(
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val reloadDoneMessage = stringResource(R.string.chat_reload_done)
     val retryTemplate = stringResource(R.string.chat_status_retrying_format)
     val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
     val chatUiStrings = ChatUiStrings(
@@ -107,6 +109,8 @@ internal fun DeepDeepApp(
         switchModelFailed = stringResource(R.string.chat_error_switch_model),
         switchThinkingFailed = stringResource(R.string.chat_error_switch_thinking),
         openConversationFailed = stringResource(R.string.chat_error_open_conversation),
+        reloadBusy = stringResource(R.string.chat_reload_busy),
+        reloadFailed = stringResource(R.string.chat_reload_failed),
         newChatFailed = stringResource(R.string.chat_error_new_chat),
         newChatTitle = stringResource(R.string.chat_title_new),
         invalidApiKey = stringResource(R.string.chat_error_invalid_api_key),
@@ -238,6 +242,16 @@ internal fun DeepDeepApp(
                     onStop = chatViewModel::stop,
                     onOpenDrawer = { drawerOpen = true },
                     onOpenSettings = ::openSettings,
+                    onReload = {
+                        scope.launch {
+                            val result = chatViewModel.reloadSession()
+                            Toast.makeText(
+                                context,
+                                result.exceptionOrNull()?.message ?: reloadDoneMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
                     onModelChange = chatViewModel::setModel,
                     onThinkingLevelChange = chatViewModel::setThinkingLevel,
                     onToggleStep = chatViewModel::toggleStep,
@@ -413,6 +427,25 @@ internal fun DeepDeepApp(
                     onBack = ::back,
                 )
 
+                AppDestination.Schedules -> ScheduleScreen(
+                    store = graph.scheduleStore,
+                    workspaces = state.workspaces,
+                    loadArrangements = chatViewModel::loadScheduleSessions,
+                    onBack = ::back,
+                    onNew = {
+                        chatViewModel.newScheduleSession()
+                        navigator.reset(AppDestination.Chat)
+                    },
+                    onOpenSession = { sessionId ->
+                        chatViewModel.openConversationById(sessionId)
+                        navigator.reset(AppDestination.Chat)
+                    },
+                    onOpenArrangement = { summary ->
+                        chatViewModel.openScheduleConversation(summary)
+                        navigator.reset(AppDestination.Chat)
+                    },
+                )
+
                 is AppDestination.WorkspaceSettings -> {
                     val workspace = state.workspaces.firstOrNull { it.id == destination.workspaceId }
                     if (workspace == null) {
@@ -473,6 +506,10 @@ internal fun DeepDeepApp(
                     onOpenSkills = {
                         drawerOpen = false
                         navigator.push(AppDestination.Skills)
+                    },
+                    onScheduled = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Schedules)
                     },
                     onCreateWorkspace = {
                         drawerOpen = false

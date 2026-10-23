@@ -22,7 +22,7 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import okio.Path
 
-private const val SCHEDULE_EXECUTION = "not_enabled"
+private const val SCHEDULE_EXECUTION = "enabled"
 
 private val DAY_ALIASES: Map<String, DayOfWeek> = buildMap {
     DayOfWeek.entries.forEach { day ->
@@ -185,7 +185,7 @@ fun scheduleTools(cwd: Path, context: AppToolContext): List<CodingTool> = listOf
 
 private fun scheduleCreateTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
     name = "schedule_create",
-    description = "Create a scheduled task for this app. The scheduler is not active yet: the task is saved and shown, but execution is disabled until a later release.",
+    description = "Create a scheduled task for this app. The task runs in its target workspace while the app foreground service is alive; missed runs execute once on the next app start.",
     parameters = createParameters,
     label = "schedule_create",
     promptSnippet = "Create a scheduled task",
@@ -219,7 +219,7 @@ private fun scheduleCreateTool(cwd: Path, context: AppToolContext): CodingTool =
 
 private fun scheduleListTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
     name = "schedule_list",
-    description = "List saved scheduled tasks with trigger, next run time, workspace and enabled state. Execution is not active yet.",
+    description = "List saved scheduled tasks with trigger, next run time, workspace, enabled state and last run status.",
     parameters = listParameters,
     label = "schedule_list",
     promptSnippet = "List scheduled tasks",
@@ -241,7 +241,7 @@ private fun scheduleListTool(cwd: Path, context: AppToolContext): CodingTool = C
 
 private fun scheduleUpdateTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
     name = "schedule_update",
-    description = "Update a saved scheduled task. Only provided fields change. The scheduler is not active yet.",
+    description = "Update a saved scheduled task. Only provided fields change.",
     parameters = updateParameters,
     label = "schedule_update",
     promptSnippet = "Update a scheduled task",
@@ -319,6 +319,10 @@ private fun scheduleJson(schedule: Schedule): JsonObject = buildJsonObject {
     put("workspaceId", schedule.workspaceId)
     put("enabled", schedule.enabled)
     put("notify", schedule.notify)
+    put("lastRunAt", schedule.lastRunAt)
+    put("lastStatus", schedule.lastStatus?.name)
+    put("lastSessionId", schedule.lastSessionId)
+    put("lastError", schedule.lastError)
     put("execution", SCHEDULE_EXECUTION)
 }
 
@@ -342,6 +346,8 @@ private suspend fun resolveWorkspace(cwd: Path, context: AppToolContext, raw: St
 private fun workspaceForPath(workspaces: List<RuntimeWorkspace>, cwd: Path): RuntimeWorkspace? {
     val current = cwd.toString()
     return workspaces.firstOrNull { samePath(it.cwd, current) }
+        ?: workspaces.firstOrNull { it.isHome }
+        ?: workspaces.firstOrNull()
 }
 
 private fun samePath(left: String, right: String): Boolean =

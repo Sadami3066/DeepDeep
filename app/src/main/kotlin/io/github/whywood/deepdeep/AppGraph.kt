@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.service.ScheduleRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
@@ -113,6 +114,7 @@ class AppGraph(context: Context) {
     )
 
     val notificationCenter by lazy { NotificationCenter(appContext, host) }
+    val scheduleRunner by lazy { ScheduleRunner(host, scheduleStore) }
     val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     suspend fun prepare() {

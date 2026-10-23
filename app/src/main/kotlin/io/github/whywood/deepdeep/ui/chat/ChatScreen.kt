@@ -103,6 +103,7 @@ fun ChatScreen(
     onStop: () -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
+    onReload: () -> Unit,
     onModelChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
     onToggleStep: (messageId: Long, stepId: Long) -> Unit,
@@ -225,9 +226,9 @@ fun ChatScreen(
                 keyboard?.hide()
                 onOpenDrawer()
             },
-            onOpenSettings = {
+            onReload = {
                 keyboard?.hide()
-                onOpenSettings()
+                onReload()
             },
             modifier = Modifier.statusBarsPadding(),
         )

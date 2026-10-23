@@ -1,10 +1,20 @@
 # Status
 
+## Done: P11.1 skill scopes, session reload, scheduled execution
+
+- Project skills: all repository skills are listed; globally enabled skills are on and cannot be turned off, marked Global
+- Chat overflow: Settings replaced by Reload; reloads skills/AGENTS.md for the current session via detach/reattach, refuses while running
+- Scheduled tasks: `ScheduleRunner` in AgentService ticks every 30s, runs due tasks in target workspaces, persists status/session/error, one-time tasks disable after running
+- Hidden `schedules` workspace: excludes drawer/search/restore; `+` opens an arrangement session, arrangement history can be reopened
+- Schedules page: list, next run, enable switch, detail, delete, open run session; statuses and next-run timestamps refresh every 5s
+- Storage migration fix: workspace paths no longer get rewritten to `/files/homes`
+- Evidence: `artifacts/validation/round10/`
+
 ## Done: P11 skills, workspace settings, app tools
 
 - Skills: 技能页从抽屉进入；zip 安装（单技能、路径/大小校验）到 `files/skills`；全局开关复制到 `files/agent/skills`；删除清理仓库与所有启用副本
 - Workspace settings: 长按工作区「设置」替代「新建会话」；项目技能 bottom sheet（只列未全局技能，复制到 `.pi/skills`）；AGENTS.md bottom sheet（64KB、override 优先、空内容删除）
-- App tools: `ask_user_question`（DSH schema，全 App bottom sheet，题库/多选/自定义/跳过/取消）与 `schedule_create/list/update/delete`（只落库并计算 nextRunAt，不执行）
+- App tools: `ask_user_question`（DSH schema，全 App bottom sheet，题库/多选/自定义/跳过/取消）与 `schedule_create/list/update/delete`（P11 只落库并计算 nextRunAt，执行器见 P11.1）
 - Storage migration: fixed `/files/workspace` prefix matching `/files/workspaces`; repairs sessions previously rewritten to `/files/homes` back to `/files/workspaces`
 - Docs: 新增 `docs/TOOLS.md`；重写 `docs/SKILLS.md`、`docs/SCHEDULING.md`；更新架构/UI/测试说明
 - Evidence: `artifacts/validation/round9/`
@@ -94,7 +104,7 @@
 ## Checks
 
 - `verifyModuleBoundaries` pass
-- `:runtime:testDebugUnitTest`, `:app:testDebugUnitTest`, `:shell:testDebugUnitTest` pass（166 tests：105 app / 43 runtime / 18 shell）
+- `:runtime:testDebugUnitTest`, `:app:testDebugUnitTest`, `:shell:testDebugUnitTest` pass（168 tests：105 app / 45 runtime / 18 shell）
 - `lintDebug` 0 errors
 - `assembleDebug` / `assembleRelease` pass
 - P11 device smoke: zip install, global copy on/off, WorkA project skill copy, AGENTS.md saved into session `<project_context>`, session `<skills>` contains demo-skill, ask sheet answered, schedule JSON contains daily/weekdays tasks
@@ -126,6 +136,6 @@ Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 ## Pending
 
 - root: `ShellExecutor` extension point; implementation deferred until root testing is authorized
-- scheduled tasks: execution engine + task page + hidden schedule workspace per `docs/SCHEDULING.md`
+- scheduled tasks: manual "run now", editable form, run history list, schedule-level notification toggle
 - skills: editing/creation, `.md` import, market, hot reload
 - proactive cron scheduling tied to interaction style

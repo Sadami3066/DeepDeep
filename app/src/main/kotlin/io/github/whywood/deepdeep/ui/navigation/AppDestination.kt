@@ -64,6 +64,11 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Schedules : AppDestination {
+        override val routeKey: String = "schedules"
+        override val depth: Int = 1
+    }
+
     data class WorkspaceSettings(val workspaceId: String) : AppDestination {
         override val routeKey: String = "workspaces/$workspaceId/settings"
         override val depth: Int = 1
@@ -86,6 +91,7 @@ sealed interface AppDestination {
             routeKey == Privacy.routeKey -> Privacy
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
+            routeKey == Schedules.routeKey -> Schedules
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
 

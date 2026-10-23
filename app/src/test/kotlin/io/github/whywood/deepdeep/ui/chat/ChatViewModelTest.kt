@@ -327,6 +327,8 @@ class ChatViewModelTest {
 
         override suspend fun closeSession(sessionId: String) = Unit
 
+        override suspend fun reloadSession(sessionId: String): String = sessionId
+
         override suspend fun send(sessionId: String, text: String) {
             sent += text
         }

@@ -16,6 +16,7 @@
     <string name="project_skills_empty_title">No skills available yet</string>
     <string name="project_skills_empty_hint">Install skills first, then choose which project skills this workspace enables.</string>
     <string name="project_skills_empty_action">Install skills</string>
+    <string name="project_skills_global_hint">Global · %1$s</string>
 
     <string name="agents_doc_title">AGENTS.md</string>
     <string name="agents_doc_default_file">AGENTS.md</string>

@@ -16,6 +16,7 @@
     <string name="project_skills_empty_title">还没有可用的技能</string>
     <string name="project_skills_empty_hint">先安装技能，再为这个工作区选择要启用的项目技能。</string>
     <string name="project_skills_empty_action">去安装技能</string>
+    <string name="project_skills_global_hint">全局启用 · %1$s</string>
 
     <string name="agents_doc_title">AGENTS.md</string>
     <string name="agents_doc_default_file">AGENTS.md</string>

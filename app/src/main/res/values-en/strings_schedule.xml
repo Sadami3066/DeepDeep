@@ -1,0 +1,35 @@
+<resources>
+    <string name="schedules_title">Scheduled</string>
+    <string name="schedules_back">Back</string>
+    <string name="schedules_new">New scheduled task</string>
+    <string name="schedules_empty_title">No scheduled tasks yet</string>
+    <string name="schedules_empty_hint">Tap + to arrange one with the assistant</string>
+    <string name="schedules_note">Runs while the app service is alive; missed runs execute once the next time the app opens.</string>
+    <string name="schedules_subtitle">%1$s · %2$s</string>
+    <string name="schedules_never">Not scheduled</string>
+    <string name="schedules_trigger">Trigger</string>
+    <string name="schedules_workspace">Workspace</string>
+    <string name="schedules_next">Next run</string>
+    <string name="schedules_last">Last run</string>
+    <string name="schedules_status">Status</string>
+    <string name="schedules_prompt">Task prompt</string>
+    <string name="schedules_open_session">Open run session</string>
+    <string name="schedules_delete">Delete task</string>
+    <string name="schedules_delete_title">Delete scheduled task?</string>
+    <string name="schedules_delete_message">“%1$s” will be deleted permanently.</string>
+    <string name="schedules_delete_confirm">Delete</string>
+    <string name="schedules_cancel">Cancel</string>
+    <string name="schedules_arrangements">Arrangement history</string>
+    <string name="schedules_arrangement_hint">Continue with the assistant</string>
+
+    <string name="schedules_trigger_once">%1$s %2$s</string>
+    <string name="schedules_trigger_daily">Daily %1$s</string>
+    <string name="schedules_trigger_weekdays">Weekdays %1$s</string>
+    <string name="schedules_trigger_weekends">Weekends %1$s</string>
+    <string name="schedules_trigger_weekly">Weekly %1$s · %2$s</string>
+
+    <string name="schedules_status_running">Running</string>
+    <string name="schedules_status_done">Done</string>
+    <string name="schedules_status_stopped">Stopped</string>
+    <string name="schedules_status_failed">Failed</string>
+</resources>

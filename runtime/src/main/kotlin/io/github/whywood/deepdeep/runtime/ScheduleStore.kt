@@ -106,8 +106,52 @@ class ScheduleStore(
         true
     }
 
-    private fun computeNextRunAt(trigger: ScheduleTrigger): Long? =
-        trigger.nextRun(ZonedDateTime.now(clock))?.toInstant()?.toEpochMilli()
+    suspend fun markRunning(id: String, at: Long): Schedule? = mutex.withLock {
+        val current = load()
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0) return@withLock null
+        val updated = current[index].copy(
+            lastRunAt = at,
+            lastStatus = ScheduleRunStatus.RUNNING,
+            lastError = null,
+            updatedAt = at,
+        )
+        persist(current.toMutableList().also { it[index] = updated })
+        updated
+    }
+
+    suspend fun markFinished(
+        id: String,
+        status: ScheduleRunStatus,
+        sessionId: String?,
+        error: String?,
+        at: Long,
+    ): Schedule? = mutex.withLock {
+        val current = load()
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0) return@withLock null
+        val existing = current[index]
+        val nextRunAt = if (existing.trigger is ScheduleTrigger.Once) {
+            null
+        } else {
+            computeNextRunAt(existing.trigger, ZonedDateTime.now(clock).plusSeconds(1))
+        }
+        val updated = existing.copy(
+            enabled = if (existing.trigger is ScheduleTrigger.Once) false else existing.enabled,
+            nextRunAt = nextRunAt,
+            lastStatus = status,
+            lastSessionId = sessionId ?: existing.lastSessionId,
+            lastError = error,
+            updatedAt = at,
+        )
+        persist(current.toMutableList().also { it[index] = updated })
+        updated
+    }
+
+    private fun computeNextRunAt(
+        trigger: ScheduleTrigger,
+        now: ZonedDateTime = ZonedDateTime.now(clock),
+    ): Long? = trigger.nextRun(now)?.toInstant()?.toEpochMilli()
 
     private fun load(): List<Schedule> {
         if (!file.exists()) return emptyList()
