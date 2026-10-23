@@ -56,7 +56,7 @@ Compose ChatScreen
 ## 个性化与提示词
 
 - 基础系统提示词由 SDK 的 `SYSTEM.md` 覆盖机制替换：`PiSessionEngine` 在创建会话前确保 `files/agent/SYSTEM.md` 存在（已存在则保留用户编辑），SDK 读到后不再使用自带的 "You are an expert coding assistant operating inside pi" 前言。工作区里放 `.pi/SYSTEM.md` 可覆盖全局这一份。
-- 自定义前言会让 SDK 跳过它自己的 `<tools>`/`<rules>` section，因此 runtime 按实际工具列表重建这两段（`promptSnippet`、`promptGuidelines` + 简洁/路径规则），作为静态 section 随会话初始化写入。
+- 自定义前言会让 SDK 跳过它自己的 `<tools>`/`<rules>` section。`<tools>` 不需要重建：模型真正拿到的工具定义来自 system 消息的 `toolsAdded` 字段，provider 层据此组装请求的 `tools`。runtime 只重建 `<rules>`（各工具 `promptGuidelines` + 简洁/路径规则）作为静态 section。
 - `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；`PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个动态 section：
   - `environment`：当前时间、模型、工作区、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。

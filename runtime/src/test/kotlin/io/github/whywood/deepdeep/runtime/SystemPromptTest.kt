@@ -46,17 +46,15 @@ class SystemPromptTest {
     }
 
     @Test
-    fun toolSectionsCarrySnippetsRulesAndWrapping() {
+    fun ruleSectionCarriesGuidelinesAndWrapping() {
         val tools = listOf(
             tool("read", "Read file contents", listOf("Use read to examine files instead of cat or sed.")),
             tool("bash", "Execute bash commands", null),
         )
 
-        val sections = buildToolPromptSections(tools)
+        val sections = buildToolRuleSection(tools)
 
-        assertTrue(sections.getValue("tools").startsWith("<tools>"))
-        assertTrue(sections.getValue("tools").contains("- read: Read file contents"))
-        assertTrue(sections.getValue("tools").contains("other custom tools"))
+        assertFalse(sections.containsKey("tools"))
         assertTrue(sections.getValue("rules").startsWith("<rules>"))
         assertTrue(sections.getValue("rules").contains("- Use read to examine files instead of cat or sed."))
         assertTrue(sections.getValue("rules").contains("- Be concise in your responses"))
@@ -64,13 +62,13 @@ class SystemPromptTest {
     }
 
     @Test
-    fun toolSectionsDeduplicateRules() {
+    fun ruleSectionDeduplicatesGuidelines() {
         val tools = listOf(
             tool("a", "Tool A", listOf("Same rule.")),
             tool("b", "Tool B", listOf("Same rule.", "Other rule.")),
         )
 
-        val rules = buildToolPromptSections(tools).getValue("rules")
+        val rules = buildToolRuleSection(tools).getValue("rules")
         assertEquals(1, Regex("- Same rule\\.").findAll(rules).count())
         assertTrue(rules.contains("- Other rule."))
     }

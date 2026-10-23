@@ -77,7 +77,7 @@ class PiSessionEngine(
                     },
                 ),
                 credentials = credentials,
-                extraSystemPromptSections = buildToolPromptSections(tools),
+                extraSystemPromptSections = buildToolRuleSection(tools),
                 projectTrusted = true,
             ),
         )

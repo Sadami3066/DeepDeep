@@ -21,19 +21,13 @@ internal fun ensureSystemPromptFile(agentDir: File) {
     runCatching { file.writeText(DEEP_DEEP_SYSTEM_PROMPT + "\n") }
 }
 
-internal fun buildToolPromptSections(tools: List<CodingTool>): Map<String, String> {
-    val snippets = tools.mapNotNull { tool -> tool.promptSnippet?.let { "${tool.name}: $it" } }
-    val toolList = if (snippets.isEmpty()) "(none)" else snippets.joinToString("\n") { "- $it" }
+internal fun buildToolRuleSection(tools: List<CodingTool>): Map<String, String> {
     val rules = buildList {
         tools.forEach { tool -> addAll(tool.promptGuidelines.orEmpty()) }
         add("Be concise in your responses")
         add("Show file paths clearly when working with files")
     }.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
     return mapOf(
-        "tools" to wrapPromptSection(
-            "tools",
-            "$toolList\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.",
-        ),
         "rules" to wrapPromptSection("rules", rules.joinToString("\n") { "- $it" }),
     )
 }
