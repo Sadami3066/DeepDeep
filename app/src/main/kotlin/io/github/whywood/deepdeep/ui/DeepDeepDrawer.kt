@@ -100,6 +100,7 @@ fun DeepDeepDrawer(
     pinnedWorkspaceIds: Set<String>,
     expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
+    reminderSessionIds: Set<String>,
     userName: String,
     onChat: () -> Unit,
     onArchived: () -> Unit,
@@ -267,6 +268,7 @@ fun DeepDeepDrawer(
                     is DrawerEntry.Session -> DrawerSessionRow(
                         conversation = entry.conversation,
                         busy = entry.conversation.id in busySessionIds,
+                        hasReminder = entry.conversation.id in reminderSessionIds,
                         menuExpanded = sessionMenuTarget?.id == entry.conversation.id,
                         menuAnchor = sessionMenuAnchor,
                         modifier = Modifier.animateItem(),
@@ -556,6 +558,7 @@ private fun DrawerNavItem(
 private fun DrawerSessionRow(
     conversation: ConversationSummary,
     busy: Boolean,
+    hasReminder: Boolean,
     menuExpanded: Boolean,
     menuAnchor: Offset,
     onClick: () -> Unit,
@@ -605,7 +608,7 @@ private fun DrawerSessionRow(
                 .padding(start = 34.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Message, tint = colors.inkTertiary, size = 13.dp)
+            DdIcon(icon = if (hasReminder) DdIcons.Clock else DdIcons.Message, tint = colors.inkTertiary, size = 13.dp)
             Spacer(Modifier.width(6.dp))
             Text(
                 text = conversation.title,

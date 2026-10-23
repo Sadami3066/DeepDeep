@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -29,6 +30,7 @@ internal fun ChatTopBar(
     onReload: () -> Unit,
     reminderCount: Int,
     onOpenSchedules: () -> Unit,
+    reloading: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -64,6 +66,13 @@ internal fun ChatTopBar(
                     modifier = Modifier.testTag("assistant_reminders"),
                     tint = colors.inkSecondary,
                     iconSize = 20.dp,
+                )
+            }
+            if (reloading) {
+                DdSpinner(
+                    modifier = Modifier.padding(end = 6.dp).testTag("assistant_reloading"),
+                    size = 16.dp,
+                    strokeWidth = 1.5.dp,
                 )
             }
             Box {

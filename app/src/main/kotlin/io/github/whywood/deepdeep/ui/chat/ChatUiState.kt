@@ -39,4 +39,5 @@ data class ChatUiState(
     val busySessionIds: Set<String> = emptySet(),
     val historyLoaded: Boolean = false,
     val switchingConversation: Boolean = false,
+    val reloading: Boolean = false,
 )

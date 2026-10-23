@@ -275,6 +275,7 @@ internal fun DeepDeepApp(
                     },
                     onOpenSchedules = { navigator.push(AppDestination.Schedules) },
                     onRetry = chatViewModel::retry,
+                    reloading = state.reloading,
                     onOpenFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
@@ -494,6 +495,7 @@ internal fun DeepDeepApp(
                     pinnedWorkspaceIds = uiPreferences.pinnedWorkspaceIds,
                     expandedWorkspaceIds = expandedWorkspaceIds,
                     busySessionIds = state.busySessionIds,
+                    reminderSessionIds = schedules.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
                     userName = nickname,
                     onChat = ::openChat,
                     onArchived = {

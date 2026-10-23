@@ -208,20 +208,23 @@ class ChatViewModel(
         }
         val sessionId = current.conversationId
             ?: return Result.failure(IllegalStateException(uiStrings.sessionNotReady))
+        mutableState.update { it.copy(reloading = true) }
         return try {
             val reopenedId = withContext(ioDispatcher) { runtime.reloadSession(sessionId) }
             if (reopenedId != sessionId) {
                 conversationCache.remove(sessionId)?.let { snapshot ->
                     conversationCache[reopenedId] = snapshot
                 }
-                mutableState.update { it.copy(conversationId = reopenedId, error = null) }
+                mutableState.update { it.copy(conversationId = reopenedId, error = null, reloading = false) }
             } else {
-                mutableState.update { it.copy(error = null) }
+                mutableState.update { it.copy(error = null, reloading = false) }
             }
             Result.success(Unit)
         } catch (cancelled: CancellationException) {
+            mutableState.update { it.copy(reloading = false) }
             throw cancelled
         } catch (error: Exception) {
+            mutableState.update { it.copy(reloading = false) }
             Result.failure(IllegalStateException(uiStrings.reloadFailed, error))
         }
     }

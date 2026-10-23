@@ -119,6 +119,7 @@ fun ChatScreen(
     reminderCount: Int,
     onOpenSchedules: () -> Unit,
     onRetry: (Long) -> Unit,
+    reloading: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -233,6 +234,7 @@ fun ChatScreen(
                 keyboard?.hide()
                 onReload()
             },
+            reloading = reloading,
             reminderCount = reminderCount,
             onOpenSchedules = {
                 keyboard?.hide()

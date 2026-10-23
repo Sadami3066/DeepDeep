@@ -163,7 +163,7 @@ fun ScheduleScreen(
                 DdSpinner(size = 22.dp, strokeWidth = 2.dp)
             }
 
-            schedules.isEmpty() -> EmptySchedules(::openNew, Modifier.weight(1f))
+            schedules.isEmpty() -> EmptySchedules(Modifier.weight(1f))
 
             else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 val active = schedules.filter { it.enabled }.sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.name }))
@@ -249,11 +249,9 @@ private fun ScheduleRow(schedule: Schedule, conversationText: String?, onOpen: (
 }
 
 @Composable
-private fun EmptySchedules(onNew: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun EmptySchedules(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Text(stringResource(R.string.schedules_empty_title), style = DdType.body, color = deepDeepColors().ink)
-        Spacer(Modifier.height(16.dp))
-        DdPrimaryButton(stringResource(R.string.schedules_new_title), onNew, Modifier.fillMaxWidth().testTag("schedules_empty_new"))
     }
 }
 
