@@ -4,11 +4,16 @@ import java.io.File
 import java.nio.file.Files
 import java.time.Clock
 import java.time.DayOfWeek
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,10 +24,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+internal class MutableTestClock(
+    private var current: Instant,
+    private val zone: ZoneId,
+) : Clock() {
+    override fun getZone(): ZoneId = zone
+
+    override fun withZone(zone: ZoneId): Clock = MutableTestClock(current, zone)
+
+    override fun instant(): Instant = current
+
+    fun advance(duration: Duration) {
+        current = current.plus(duration)
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScheduleStoreTest {
     private lateinit var directory: File
     private val zone = ZoneId.of("Asia/Shanghai")
-    private val clock = Clock.fixed(Instant.parse("2026-10-23T04:00:00Z"), zone)
+    private val clock = MutableTestClock(Instant.parse("2026-10-23T04:00:00Z"), zone)
+    private val sessionFile = "/tmp/session-1.jsonl"
 
     @Before
     fun setUp() {
@@ -39,11 +61,18 @@ class ScheduleStoreTest {
     private fun newSchedule(
         name: String = "Morning brief",
         trigger: ScheduleTrigger = ScheduleTrigger.Daily(LocalTime.of(8, 0)),
+        enabled: Boolean = true,
+        sessionId: String = "session-1",
+        sessionFile: String = this.sessionFile,
+        cwd: String = "/tmp",
     ): NewSchedule = NewSchedule(
         name = name,
-        workspaceId = "home",
         prompt = "Summarize my day",
         trigger = trigger,
+        enabled = enabled,
+        sessionId = sessionId,
+        sessionFile = sessionFile,
+        cwd = cwd,
     )
 
     private fun epoch(year: Int, month: Int, day: Int, hour: Int, minute: Int): Long =
@@ -57,17 +86,20 @@ class ScheduleStoreTest {
         val created = store.create(newSchedule())
         assertTrue(created.id.isNotBlank())
         assertEquals("Morning brief", created.name)
-        assertEquals("home", created.workspaceId)
         assertEquals("Summarize my day", created.prompt)
         assertEquals(ScheduleTrigger.Daily(LocalTime.of(8, 0)), created.trigger)
+        assertEquals("session-1", created.sessionId)
+        assertEquals(sessionFile, created.sessionFile)
+        assertEquals("/tmp", created.cwd)
         assertEquals(epoch(2026, 10, 24, 8, 0), created.nextRunAt)
         assertEquals(clock.millis(), created.createdAt)
         assertEquals(clock.millis(), created.updatedAt)
 
         val file = File(directory, "schedules.json")
         assertTrue(file.exists())
-        assertTrue(file.readText().contains("\"schemaVersion\":1"))
-        assertTrue(file.readText().contains("\"nextRunAt\""))
+        assertTrue(file.readText().contains("\"schemaVersion\":2"))
+        assertTrue(file.readText().contains("\"sessionId\":\"session-1\""))
+        assertFalse(file.readText().contains("workspaceId"))
         assertFalse(File(directory, "schedules.json.tmp").exists())
 
         val reopened = ScheduleStore(directory, clock).list()
@@ -97,6 +129,15 @@ class ScheduleStoreTest {
     }
 
     @Test
+    fun disabledOnceScheduleMayBeInThePastAndHasNoNextRun() = runTest {
+        val store = store()
+        val past = ScheduleTrigger.Once(LocalDate.of(2026, 10, 20), LocalTime.of(9, 0))
+        val created = store.create(newSchedule(trigger = past, enabled = false))
+        assertFalse(created.enabled)
+        assertNull(created.nextRunAt)
+    }
+
+    @Test
     fun futureOnceScheduleStoresNextRunAt() = runTest {
         val store = store()
         val created = store.create(
@@ -122,13 +163,13 @@ class ScheduleStoreTest {
         )
         assertEquals("Evening brief", updated?.name)
         assertEquals(created.prompt, updated?.prompt)
-        assertEquals(created.workspaceId, updated?.workspaceId)
+        assertEquals("session-1", updated?.sessionId)
         assertEquals(false, updated?.enabled)
         assertEquals(
             ScheduleTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(19, 30)),
             updated?.trigger,
         )
-        assertEquals(epoch(2026, 10, 23, 19, 30), updated?.nextRunAt)
+        assertNull(updated?.nextRunAt)
         assertEquals(created.createdAt, updated?.createdAt)
         assertEquals(listOf(updated), store.list())
     }
@@ -140,6 +181,16 @@ class ScheduleStoreTest {
         val updated = store.update(created.id, SchedulePatch(name = "Renamed"))
         assertEquals(created.nextRunAt, updated?.nextRunAt)
         assertEquals("Renamed", updated?.name)
+    }
+
+    @Test
+    fun updateReenablesAndRecomputesNextRunAt() = runTest {
+        val store = store()
+        val created = store.create(newSchedule(enabled = false))
+        assertNull(created.nextRunAt)
+        val updated = store.update(created.id, SchedulePatch(enabled = true))
+        assertNotNull(updated?.nextRunAt)
+        assertEquals(epoch(2026, 10, 24, 8, 0), updated?.nextRunAt)
     }
 
     @Test
@@ -167,6 +218,22 @@ class ScheduleStoreTest {
     }
 
     @Test
+    fun changeFlowEmitsAfterPersist() = runTest {
+        val store = store()
+        var emissions = 0
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            store.changes.collect { emissions++ }
+        }
+        runCurrent()
+        store.create(newSchedule())
+        runCurrent()
+        assertEquals(1, emissions)
+        store.delete(store.list().single().id)
+        runCurrent()
+        assertEquals(2, emissions)
+    }
+
+    @Test
     fun onceAndWeeklyTriggersSurviveReload() = runTest {
         val store = store()
         val once = store.create(
@@ -189,6 +256,131 @@ class ScheduleStoreTest {
     }
 
     @Test
+    fun markDeliveredAdvancesRecurringSchedule() = runTest {
+        val store = store()
+        val created = store.create(newSchedule())
+        val at = epoch(2026, 10, 24, 8, 0)
+        val delivered = store.markDelivered(created.id, at)
+        assertNotNull(delivered)
+        assertEquals(at, delivered!!.lastDeliveredAt)
+        assertNull(delivered.lastError)
+        assertTrue(delivered.enabled)
+        assertEquals(epoch(2026, 10, 25, 8, 0), delivered.nextRunAt)
+        assertEquals(at, delivered.updatedAt)
+    }
+
+    @Test
+    fun markDeliveredDisablesOnceSchedule() = runTest {
+        val store = store()
+        val created = store.create(
+            newSchedule(trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 23), LocalTime.of(13, 0))),
+        )
+        val delivered = store.markDelivered(created.id, epoch(2026, 10, 23, 13, 0))
+        assertNotNull(delivered)
+        assertFalse(delivered!!.enabled)
+        assertNull(delivered.nextRunAt)
+        assertEquals(epoch(2026, 10, 23, 13, 0), delivered.lastDeliveredAt)
+    }
+
+    @Test
+    fun markDeliveryFailedKeepsLastDeliveredAndAdvances() = runTest {
+        val store = store()
+        val created = store.create(newSchedule())
+        val at = epoch(2026, 10, 24, 8, 0)
+        val failed = store.markDeliveryFailed(created.id, ScheduleError.SESSION_MISSING, at)
+        assertNotNull(failed)
+        assertEquals(ScheduleError.SESSION_MISSING, failed!!.lastError)
+        assertNull(failed.lastDeliveredAt)
+        assertTrue(failed.enabled)
+        assertEquals(epoch(2026, 10, 25, 8, 0), failed.nextRunAt)
+    }
+
+    @Test
+    fun markRunNowKeepsNextRunAt() = runTest {
+        val store = store()
+        val created = store.create(newSchedule())
+        val at = clock.millis()
+        val delivered = store.markRunNow(created.id, at)
+        assertEquals(created.nextRunAt, delivered?.nextRunAt)
+        assertEquals(created.enabled, delivered?.enabled)
+        assertEquals(at, delivered?.lastDeliveredAt)
+        assertNull(delivered?.lastError)
+
+        val failed = store.markRunNow(created.id, at + 1, ScheduleError.OPEN_FAILED)
+        assertEquals(created.nextRunAt, failed?.nextRunAt)
+        assertEquals(at, failed?.lastDeliveredAt)
+        assertEquals(ScheduleError.OPEN_FAILED, failed?.lastError)
+    }
+
+    @Test
+    fun deleteBySessionRemovesOnlyThatConversation() = runTest {
+        val store = store()
+        val first = store.create(newSchedule(sessionId = "session-1"))
+        val second = store.create(newSchedule(name = "Other", sessionId = "session-2"))
+
+        assertTrue(store.deleteBySession("session-1"))
+        assertEquals(listOf(second), store.list())
+        assertFalse(store.deleteBySession("session-1"))
+        assertFalse(store.list().any { it.id == first.id })
+    }
+
+    @Test
+    fun disableBySessionSkipsOtherConversations() = runTest {
+        val store = store()
+        val first = store.create(newSchedule(sessionId = "session-1"))
+        val second = store.create(newSchedule(name = "Other", sessionId = "session-2"))
+
+        assertTrue(store.disableBySession("session-1"))
+        val updated = store.list()
+        val disabled = updated.first { it.id == first.id }
+        assertFalse(disabled.enabled)
+        assertNull(disabled.nextRunAt)
+        assertTrue(updated.first { it.id == second.id }.enabled)
+        assertFalse(store.disableBySession("session-1"))
+    }
+
+    @Test
+    fun recomputeTargetsRecomputesEnabledSchedules() = runTest {
+        val store = store()
+        val daily = store.create(newSchedule())
+        val disabled = store.create(newSchedule(name = "Paused", enabled = false))
+        val missedOnce = store.create(
+            newSchedule(
+                name = "Missed once",
+                trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0)),
+            ),
+        )
+        assertNull(disabled.nextRunAt)
+
+        clock.advance(Duration.ofDays(10))
+        store.recomputeTargets()
+
+        val updated = store.list()
+        val updatedDaily = updated.first { it.id == daily.id }
+        assertEquals(epoch(2026, 11, 3, 8, 0), updatedDaily.nextRunAt)
+        assertTrue(updatedDaily.enabled)
+        val updatedDisabled = updated.first { it.id == disabled.id }
+        assertNull(updatedDisabled.nextRunAt)
+        assertFalse(updatedDisabled.enabled)
+        val updatedOnce = updated.first { it.id == missedOnce.id }
+        assertFalse(updatedOnce.enabled)
+        assertNull(updatedOnce.nextRunAt)
+    }
+
+    @Test
+    fun legacySchemaIsDiscardedAndRewrittenAsEmptyV2() = runTest {
+        val file = File(directory, "schedules.json")
+        file.writeText(
+            "{\"schemaVersion\":1,\"schedules\":[{\"id\":\"old\",\"name\":\"Old\",\"workspaceId\":\"home\",\"prompt\":\"x\",\"trigger\":{\"type\":\"daily\",\"time\":\"08:00\"},\"enabled\":true,\"notify\":true,\"nextRunAt\":null,\"lastRunAt\":null,\"lastStatus\":null,\"lastSessionId\":null,\"lastError\":null,\"createdAt\":1,\"updatedAt\":2}]}",
+        )
+        val store = store()
+        assertTrue(store.list().isEmpty())
+        val migrated = file.readText()
+        assertTrue(migrated.contains("\"schemaVersion\":2"))
+        assertTrue(migrated.contains("\"schedules\":[]"))
+    }
+
+    @Test
     fun corruptFileIsPreservedAndThrows() = runTest {
         val file = File(directory, "schedules.json")
         val corrupt = "{ this is not json"
@@ -207,17 +399,17 @@ class ScheduleStoreTest {
     @Test
     fun unsupportedSchemaVersionThrows() = runTest {
         val file = File(directory, "schedules.json")
-        val versionTwo = "{\"schemaVersion\":2,\"schedules\":[]}"
-        file.writeText(versionTwo)
+        val versionThree = "{\"schemaVersion\":3,\"schedules\":[]}"
+        file.writeText(versionThree)
         val error = runCatching { store().list() }.exceptionOrNull()
         assertTrue(error is CorruptScheduleDataException)
-        assertEquals(versionTwo, file.readText())
+        assertEquals(versionThree, file.readText())
     }
 
     @Test
     fun corruptEntryThrows() = runTest {
         val file = File(directory, "schedules.json")
-        val corruptEntry = "{\"schemaVersion\":1,\"schedules\":[{\"id\":\"x\"}]}"
+        val corruptEntry = "{\"schemaVersion\":2,\"schedules\":[{\"id\":\"x\"}]}"
         file.writeText(corruptEntry)
         val error = runCatching { store().list() }.exceptionOrNull()
         assertTrue(error is CorruptScheduleDataException)
@@ -228,54 +420,5 @@ class ScheduleStoreTest {
     fun blankFileIsTreatedAsEmpty() = runTest {
         File(directory, "schedules.json").writeText("  \n")
         assertTrue(store().list().isEmpty())
-    }
-
-    @Test
-    fun markRunningAndFinishedPersistRunState() = runTest {
-        val store = store()
-        val created = store.create(newSchedule())
-        val startedAt = epoch(2026, 10, 23, 8, 0)
-        val running = store.markRunning(created.id, startedAt)
-        assertNotNull(running)
-        assertEquals(ScheduleRunStatus.RUNNING, running!!.lastStatus)
-        assertEquals(startedAt, running.lastRunAt)
-
-        val finishedAt = startedAt + 60_000L
-        val finished = store.markFinished(
-            id = created.id,
-            status = ScheduleRunStatus.DONE,
-            sessionId = "session-1",
-            error = null,
-            at = finishedAt,
-        )
-        assertNotNull(finished)
-        assertEquals(ScheduleRunStatus.DONE, finished!!.lastStatus)
-        assertEquals("session-1", finished.lastSessionId)
-        assertEquals(finishedAt, finished.updatedAt)
-        assertEquals(epoch(2026, 10, 24, 8, 0), finished.nextRunAt)
-
-        val reopened = ScheduleStore(directory, clock).list().single()
-        assertEquals(ScheduleRunStatus.DONE, reopened.lastStatus)
-        assertEquals("session-1", reopened.lastSessionId)
-    }
-
-    @Test
-    fun onceScheduleDisablesAfterRun() = runTest {
-        val store = store()
-        val created = store.create(
-            newSchedule(trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 23), LocalTime.of(13, 0))),
-        )
-        store.markRunning(created.id, clock.millis())
-        val finished = store.markFinished(
-            id = created.id,
-            status = ScheduleRunStatus.FAILED,
-            sessionId = null,
-            error = "boom",
-            at = clock.millis() + 1_000,
-        )
-        assertNotNull(finished)
-        assertFalse(finished!!.enabled)
-        assertNull(finished.nextRunAt)
-        assertEquals("boom", finished.lastError)
     }
 }

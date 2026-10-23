@@ -119,6 +119,9 @@ internal fun DeepDeepApp(
         networkError = stringResource(R.string.chat_error_network),
         invalidToolArgs = stringResource(R.string.chat_error_invalid_tool_args),
         serviceUnavailable = stringResource(R.string.chat_error_service_unavailable),
+        insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
+        modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
+        retry = stringResource(R.string.assistant_retry),
     )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
@@ -146,6 +149,7 @@ internal fun DeepDeepApp(
     }
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val configuredProviders by graph.apiKeyStore.providerIds.collectAsStateWithLifecycle(initialValue = emptySet())
+    val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
@@ -266,6 +270,11 @@ internal fun DeepDeepApp(
                     },
                     attachmentRoot = attachmentRoot,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
+                    reminderCount = schedules.count { schedule ->
+                        schedule.enabled && schedule.sessionId == state.conversationId
+                    },
+                    onOpenSchedules = { navigator.push(AppDestination.Schedules) },
+                    onRetry = chatViewModel::retry,
                     onOpenFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
@@ -428,20 +437,12 @@ internal fun DeepDeepApp(
                 )
 
                 AppDestination.Schedules -> ScheduleScreen(
-                    store = graph.scheduleStore,
-                    workspaces = state.workspaces,
-                    loadArrangements = chatViewModel::loadScheduleSessions,
+                    service = graph.scheduleService,
+                    runtime = graph.host,
+                    initialConversationId = state.conversationId,
                     onBack = ::back,
-                    onNew = {
-                        chatViewModel.newScheduleSession()
-                        navigator.reset(AppDestination.Chat)
-                    },
-                    onOpenSession = { sessionId ->
+                    onOpenConversation = { sessionId ->
                         chatViewModel.openConversationById(sessionId)
-                        navigator.reset(AppDestination.Chat)
-                    },
-                    onOpenArrangement = { summary ->
-                        chatViewModel.openScheduleConversation(summary)
                         navigator.reset(AppDestination.Chat)
                     },
                 )

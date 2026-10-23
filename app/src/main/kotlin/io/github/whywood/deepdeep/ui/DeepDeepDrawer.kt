@@ -131,8 +131,7 @@ fun DeepDeepDrawer(
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     val orderedWorkspaces = remember(workspaces, pinnedWorkspaceIds) {
-        val visible = workspaces.filterNot { it.hidden }
-        visible.filter { it.id in pinnedWorkspaceIds } + visible.filterNot { it.id in pinnedWorkspaceIds }
+        workspaces.filter { it.id in pinnedWorkspaceIds } + workspaces.filterNot { it.id in pinnedWorkspaceIds }
     }
     val sessionsByCwd = remember(sessions) {
         sessions.filterNot { it.archived }.groupBy { it.cwd }

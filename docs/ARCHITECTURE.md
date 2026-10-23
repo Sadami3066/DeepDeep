@@ -73,12 +73,20 @@ Compose ChatScreen
 
 ## App 工具
 
-- `PiSessionEngine` 在 `defaultCodingTools` 后追加 `appTools(cwd, AppToolContext)`；工具由 `CodingTool` 定义，不修改 SDK。
+- `PiSessionEngine` 在 `defaultCodingTools` 后追加 `appTools(cwd, AppToolContext, ScheduleBinding)`；工具由 `CodingTool` 定义，不修改 SDK。
 - `QuestionCenter` 维护待答队列并暴露 `StateFlow`，`ask_user_question` 工具等待 UI 回答；App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
-- `ScheduleStore` 保存 `files/schedules/schedules.json`；schedule 工具与定时任务页共用。
-- `ScheduleRunner` 由 `AgentService` 启动，30 秒 tick 执行到点任务；运行状态写回 store，执行会话位于目标工作区。
-- 隐藏工作区 `schedules` 的 cwd 是 `files/schedules/workspace`，不进入抽屉/搜索/启动恢复；安排会话与执行会话分离。
-- 工具分类与契约见 `docs/TOOLS.md`。
+- `ScheduleBinding` 在会话创建后绑定 `AgentSession`，schedule 工具据此把提醒绑定到调用它的会话。
+- `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
+- 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。
+- 工具分类与契约见 `docs/TOOLS.md`，调度语义见 `docs/SCHEDULING.md`。
+
+## 运行时事件
+
+- `SessionRuntimeEvent(sessionId, event)` 是宿主唯一的事件出口；会话级事件带 sessionId，宿主级事件用空 sessionId。
+- 事件类型：`RunStarted`、`ActivityChanged`、`TextDelta`、`ReasoningDelta`、`ToolStarted`、`ToolFinished`、`RunFinished`、`RunFailed`、`SessionListChanged`、`TurnInjected`、`SessionRemoved`、`SessionArchived`。
+- `RunFailed` 由宿主在运行结束后检查最后一条 assistant 消息的 stopReason 产生（`Error`），带厂商错误原文；UI 统一本地化后展示在失败轮上。
+- `TurnInjected` 是宿主主动注入的用户消息（定时提醒），UI 追加用户气泡；空闲时同时补一个流式 assistant 占位。
+- UI 只订阅事件与状态流，不轮询；`ScheduleService.schedules` 是任务页的数据源。
 
 ## 通知
 
@@ -143,7 +151,7 @@ filesDir/
   workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
   skills/<id>/      技能仓库（SDK 不扫描）
-  schedules/        schedules.json + workspace/（隐藏安排会话）
+  schedules/        schedules.json（提醒绑定到对话）
   linux/rootfs/     Alpine rootfs
 ```
 
@@ -151,7 +159,7 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 
 ## 设计中的系统
 
-- 定时任务：`docs/SCHEDULING.md`（工具、执行器、任务页、隐藏工作区已实现）。
+- 定时任务：`docs/SCHEDULING.md`（提醒投递、任务页编辑、手动执行已实现）。
 - Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现）。
 - 工具分类：`docs/TOOLS.md`。
 
@@ -161,6 +169,18 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 - `bash`：`LinuxShellExecutor` → `LinuxEnvironment` → PRoot/Alpine
 - App 层：`ask_user_question`、`schedule_create/list/update/delete`
 - 不注册 `device_info`、`open_app` 等 Android 能力工具
+
+## 功能接线
+
+新增或改造一个功能时，按这个顺序接完，缺一项就算没打通：
+
+1. 持久化：`runtime/<Feature>Store`，原子写、损坏时保留原文件、可注入 `Clock`、每次写入后发出 `changes` 信号。
+2. 宿主服务：`runtime/<Feature>Service`，`start()/stop()` 生命周期、`StateFlow` 状态、监听 `runtime.events` 处理会话生命周期。
+3. 模型工具：`runtime/<Feature>Tools`，`CodingTool` 薄适配，按调用会话绑定，结果是 JSON 文本。
+4. 运行时事件：由宿主发出；UI 只订阅事件与状态流，不新增定时轮询。
+5. UI：`app/ui/<feature>` 用 `collectAsStateWithLifecycle` 读状态、动作回调回服务，界面不直接持有 store。
+6. 测试：store/service/reducer/纯函数单测 + `docs/DEVICE_TESTING.md` 验收条目 + `artifacts/validation/` 证据。
+7. 文档：`docs/TOOLS.md`、`docs/UI.md`、本文件、`docs/STATUS.md` 同步；用户可见文案中英双语。
 
 ## root 扩展
 

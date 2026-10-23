@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.runtime
 import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
-import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -21,8 +20,6 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import okio.Path
-
-private const val SCHEDULE_EXECUTION = "enabled"
 
 private val DAY_ALIASES: Map<String, DayOfWeek> = buildMap {
     DayOfWeek.entries.forEach { day ->
@@ -51,27 +48,29 @@ private val WEEKEND_DAYS: Set<DayOfWeek> = setOf(DayOfWeek.SATURDAY, DayOfWeek.S
 
 private val TOOL_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 
+private val FREQUENCY_VALUES = buildJsonArray {
+    add(JsonPrimitive("once"))
+    add(JsonPrimitive("daily"))
+    add(JsonPrimitive("weekdays"))
+    add(JsonPrimitive("weekends"))
+    add(JsonPrimitive("weekly"))
+}
+
 private val createParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("prompt") {
             put("type", "string")
-            put("description", "Prompt text sent to a new session when the schedule fires")
+            put("description", "Message sent to the current conversation when the reminder fires")
         }
         putJsonObject("frequency") {
             put("type", "string")
-            put("enum", buildJsonArray {
-                add(JsonPrimitive("once"))
-                add(JsonPrimitive("daily"))
-                add(JsonPrimitive("weekdays"))
-                add(JsonPrimitive("weekends"))
-                add(JsonPrimitive("weekly"))
-            })
+            put("enum", FREQUENCY_VALUES)
             put("description", "Trigger kind: once, daily, weekdays (Monday to Friday), weekends (Saturday and Sunday) or weekly")
         }
         putJsonObject("name") {
             put("type", "string")
-            put("description", "Display name for the schedule (defaults to the prompt preview)")
+            put("description", "Display name for the reminder (defaults to the prompt preview)")
         }
         putJsonObject("date") {
             put("type", "string")
@@ -85,18 +84,6 @@ private val createParameters: JsonObject = buildJsonObject {
             put("type", "array")
             put("items", buildJsonObject { put("type", "string") })
             put("description", "Weekdays for weekly triggers: ISO numbers 1-7 (1=Monday) or names like MONDAY, WEDNESDAY, 周一")
-        }
-        putJsonObject("workspace") {
-            put("type", "string")
-            put("description", "Workspace id, name or path (defaults to the current workspace)")
-        }
-        putJsonObject("notify") {
-            put("type", "boolean")
-            put("description", "Notify when the run finishes (default true)")
-        }
-        putJsonObject("enabled") {
-            put("type", "boolean")
-            put("description", "Whether the schedule is enabled (default true)")
         }
     }
     put("required", buildJsonArray {
@@ -114,17 +101,11 @@ private val updateParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("prompt") {
             put("type", "string")
-            put("description", "New prompt text")
+            put("description", "New message text")
         }
         putJsonObject("frequency") {
             put("type", "string")
-            put("enum", buildJsonArray {
-                add(JsonPrimitive("once"))
-                add(JsonPrimitive("daily"))
-                add(JsonPrimitive("weekdays"))
-                add(JsonPrimitive("weekends"))
-                add(JsonPrimitive("weekly"))
-            })
+            put("enum", FREQUENCY_VALUES)
             put("description", "New trigger kind: once, daily, weekdays, weekends or weekly")
         }
         putJsonObject("name") {
@@ -144,17 +125,9 @@ private val updateParameters: JsonObject = buildJsonObject {
             put("items", buildJsonObject { put("type", "string") })
             put("description", "Weekdays for weekly triggers: ISO numbers 1-7 (1=Monday) or names like MONDAY, WEDNESDAY, 周一")
         }
-        putJsonObject("workspace") {
-            put("type", "string")
-            put("description", "Workspace id, name or path")
-        }
-        putJsonObject("notify") {
-            put("type", "boolean")
-            put("description", "Notify when the run finishes")
-        }
         putJsonObject("enabled") {
             put("type", "boolean")
-            put("description", "Whether the schedule is enabled")
+            put("description", "Whether the reminder is enabled")
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("id")) })
@@ -176,115 +149,124 @@ private val deleteParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("id")) })
 }
 
-fun scheduleTools(cwd: Path, context: AppToolContext): List<CodingTool> = listOf(
-    scheduleCreateTool(cwd, context),
-    scheduleListTool(cwd, context),
-    scheduleUpdateTool(cwd, context),
-    scheduleDeleteTool(cwd, context),
+fun scheduleTools(cwd: Path, context: AppToolContext, binding: ScheduleBinding): List<CodingTool> = listOf(
+    scheduleCreateTool(cwd, context, binding),
+    scheduleListTool(cwd, context, binding),
+    scheduleUpdateTool(cwd, context, binding),
+    scheduleDeleteTool(cwd, context, binding),
 )
 
-private fun scheduleCreateTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
+private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
     name = "schedule_create",
-    description = "Create a scheduled task for this app. The task runs in its target workspace while the app foreground service is alive; missed runs execute once on the next app start.",
+    description = "Create a reminder bound to the current conversation. When it fires, a reminder message is posted into this same conversation and starts a run here; no separate session or workspace is created.",
     parameters = createParameters,
     label = "schedule_create",
-    promptSnippet = "Create a scheduled task",
+    promptSnippet = "Create a reminder in this conversation",
     promptGuidelines = listOf(
-        "Use schedule_create when the user asks to run a prompt once at a specific time, every day, or on selected weekdays.",
-        "Only create schedules when the user explicitly asks for a scheduled or recurring task.",
+        "Use schedule_create when the user asks to be reminded once at a specific time, every day, or on selected weekdays.",
+        "The reminder fires in the current conversation, so never ask for a target workspace.",
+        "Only create reminders when the user explicitly asks for a scheduled or recurring reminder.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         scheduleToolResult {
+            val session = requireSession(binding)
+            val sessionFile = session.sessionFile
+                ?: throw IllegalArgumentException("当前会话尚未保存，无法创建定时提醒")
             val prompt = args.requiredString("prompt")
             val frequency = args.requiredString("frequency")
             val name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() } ?: promptPreview(prompt)
-            val workspace = resolveWorkspace(cwd, context, args.stringOrNull("workspace"))
-                ?: throw IllegalArgumentException("未找到工作区：${args.stringOrNull("workspace") ?: "当前工作区"}")
             val trigger = parseTrigger(args, base = null, requestedFrequency = frequency)
-            val schedule = context.scheduleStore.create(
+            val created = context.scheduleService.create(
                 NewSchedule(
                     name = name,
-                    workspaceId = workspace.id,
                     prompt = prompt,
                     trigger = trigger,
-                    enabled = args.boolOrNull("enabled") ?: true,
-                    notify = args.boolOrNull("notify") ?: true,
+                    enabled = true,
+                    sessionId = session.sessionId,
+                    sessionFile = sessionFile,
+                    cwd = session.cwd,
                 ),
             )
-            textResult(scheduleJson(schedule).toString())
+            textResult(scheduleJson(created).toString())
         }
     },
 )
 
-private fun scheduleListTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
+private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
     name = "schedule_list",
-    description = "List saved scheduled tasks with trigger, next run time, workspace, enabled state and last run status.",
+    description = "List the reminders bound to the current conversation with trigger, next run time, enabled state and last delivery result.",
     parameters = listParameters,
     label = "schedule_list",
-    promptSnippet = "List scheduled tasks",
-    promptGuidelines = listOf("Use schedule_list before updating or deleting a schedule so you have the id."),
+    promptSnippet = "List reminders in this conversation",
+    promptGuidelines = listOf("Use schedule_list before updating or deleting a reminder so you have the id."),
     execute = { _, _, signal, _ ->
         signal?.throwIfAborted()
         scheduleToolResult {
-            val schedules = context.scheduleStore.list()
+            val session = requireSession(binding)
+            val schedules = context.scheduleService.list()
+                .filter { it.sessionId == session.sessionId }
+                .sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.createdAt }))
             val result = buildJsonObject {
                 putJsonArray("schedules") {
                     schedules.forEach { add(scheduleJson(it)) }
                 }
-                put("execution", SCHEDULE_EXECUTION)
             }
             textResult(result.toString())
         }
     },
 )
 
-private fun scheduleUpdateTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
+private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
     name = "schedule_update",
-    description = "Update a saved scheduled task. Only provided fields change.",
+    description = "Update a reminder bound to the current conversation. Only provided fields change; the reminder cannot be rebound to another conversation.",
     parameters = updateParameters,
     label = "schedule_update",
-    promptSnippet = "Update a scheduled task",
-    promptGuidelines = listOf("Use schedule_list to find the schedule id before calling schedule_update."),
+    promptSnippet = "Update a reminder",
+    promptGuidelines = listOf("Use schedule_list to find the reminder id before calling schedule_update."),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         scheduleToolResult {
+            val session = requireSession(binding)
             val id = args.requiredString("id")
-            val existing = context.scheduleStore.list().firstOrNull { it.id == id }
+            val existing = context.scheduleService.list()
+                .firstOrNull { it.id == id && it.sessionId == session.sessionId }
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
-            val workspaceArg = args.stringOrNull("workspace")?.trim()?.takeIf { it.isNotEmpty() }
-            val workspace = workspaceArg?.let {
-                resolveWorkspace(cwd, context, it) ?: throw IllegalArgumentException("未找到工作区：$it")
-            }
             val hasTriggerArgs = listOf("frequency", "date", "time", "weekdays").any { args.containsKey(it) }
-            val trigger = if (hasTriggerArgs) parseTrigger(args, base = existing.trigger, requestedFrequency = null) else null
+            val trigger = if (hasTriggerArgs) {
+                parseTrigger(args, base = existing.trigger, requestedFrequency = args.stringOrNull("frequency"))
+            } else {
+                null
+            }
             val patch = SchedulePatch(
                 name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() },
-                workspaceId = workspace?.id,
                 prompt = args.stringOrNull("prompt")?.takeIf { it.isNotBlank() },
                 trigger = trigger,
                 enabled = args.boolOrNull("enabled"),
-                notify = args.boolOrNull("notify"),
             )
-            val updated = context.scheduleStore.update(id, patch)
+            val updated = context.scheduleService.update(id, patch)
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
             textResult(scheduleJson(updated).toString())
         }
     },
 )
 
-private fun scheduleDeleteTool(cwd: Path, context: AppToolContext): CodingTool = CodingTool(
+private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
     name = "schedule_delete",
-    description = "Delete a saved scheduled task by id.",
+    description = "Delete a reminder bound to the current conversation by id.",
     parameters = deleteParameters,
     label = "schedule_delete",
-    promptSnippet = "Delete a scheduled task",
-    promptGuidelines = listOf("Confirm with the user before deleting a scheduled task."),
+    promptSnippet = "Delete a reminder",
+    promptGuidelines = listOf("Confirm with the user before deleting a reminder."),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         scheduleToolResult {
+            val session = requireSession(binding)
             val id = args.requiredString("id")
-            if (!context.scheduleStore.delete(id)) {
+            val existing = context.scheduleService.list()
+                .firstOrNull { it.id == id && it.sessionId == session.sessionId }
+                ?: throw IllegalArgumentException("未找到定时任务：$id")
+            if (!context.scheduleService.delete(existing.id)) {
                 throw IllegalArgumentException("未找到定时任务：$id")
             }
             val result = buildJsonObject {
@@ -295,6 +277,9 @@ private fun scheduleDeleteTool(cwd: Path, context: AppToolContext): CodingTool =
         }
     },
 )
+
+private fun requireSession(binding: ScheduleBinding): BoundSession =
+    binding.current() ?: throw IllegalArgumentException("当前会话未绑定")
 
 private suspend fun scheduleToolResult(block: suspend () -> dev.pi.agent.AgentToolResult): dev.pi.agent.AgentToolResult =
     try {
@@ -316,42 +301,19 @@ private fun scheduleJson(schedule: Schedule): JsonObject = buildJsonObject {
     } else {
         put("nextRunAt", schedule.nextRunAt)
     }
-    put("workspaceId", schedule.workspaceId)
     put("enabled", schedule.enabled)
-    put("notify", schedule.notify)
-    put("lastRunAt", schedule.lastRunAt)
-    put("lastStatus", schedule.lastStatus?.name)
-    put("lastSessionId", schedule.lastSessionId)
-    put("lastError", schedule.lastError)
-    put("execution", SCHEDULE_EXECUTION)
-}
-
-private suspend fun resolveWorkspace(cwd: Path, context: AppToolContext, raw: String?): RuntimeWorkspace? {
-    val home = RuntimeWorkspace(
-        id = AgentRuntimeHost.HOME_ID,
-        name = AgentRuntimeHost.HOME_NAME,
-        cwd = context.homeDir.absolutePath,
-        isHome = true,
-    )
-    val workspaces = buildList {
-        add(home)
-        addAll(context.workspaceStore.read().filter { it.id != home.id })
+    if (schedule.lastDeliveredAt == null) {
+        put("lastDeliveredAt", JsonNull)
+    } else {
+        put("lastDeliveredAt", schedule.lastDeliveredAt)
     }
-    val query = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return workspaceForPath(workspaces, cwd)
-    return workspaces.firstOrNull { it.id == query }
-        ?: workspaces.firstOrNull { it.name.equals(query, ignoreCase = true) }
-        ?: workspaces.firstOrNull { samePath(it.cwd, query) }
+    if (schedule.lastError == null) {
+        put("lastError", JsonNull)
+    } else {
+        put("lastError", schedule.lastError.name)
+    }
+    put("sessionId", schedule.sessionId)
 }
-
-private fun workspaceForPath(workspaces: List<RuntimeWorkspace>, cwd: Path): RuntimeWorkspace? {
-    val current = cwd.toString()
-    return workspaces.firstOrNull { samePath(it.cwd, current) }
-        ?: workspaces.firstOrNull { it.isHome }
-        ?: workspaces.firstOrNull()
-}
-
-private fun samePath(left: String, right: String): Boolean =
-    runCatching { File(left).canonicalFile == File(right).canonicalFile }.getOrDefault(left == right)
 
 private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFrequency: String?): ScheduleTrigger {
     val frequency = requestedFrequency?.trim()?.lowercase()
@@ -448,7 +410,7 @@ private fun parseWeekday(raw: String): DayOfWeek {
 
 private fun promptPreview(prompt: String): String {
     val normalized = prompt.trim().replace(Regex("\\s+"), " ")
-    return if (normalized.length <= 28) normalized.ifEmpty { "定时任务" } else normalized.take(28) + "…"
+    return if (normalized.length <= 28) normalized.ifEmpty { "定时提醒" } else normalized.take(28) + "…"
 }
 
 private fun JsonObject.stringOrNull(name: String): String? =

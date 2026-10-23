@@ -42,7 +42,6 @@ data class RuntimeWorkspace(
     val cwd: String,
     val createdAt: Long = 0L,
     val isHome: Boolean = false,
-    val hidden: Boolean = false,
 )
 
 data class OpenedSession(
@@ -122,6 +121,8 @@ data class AssistantMessage(
     val startedAt: Long = 0,
     val finishedAt: Long? = null,
     val runId: String = "",
+    val error: String? = null,
+    val reminder: String? = null,
 )
 
 enum class RunStatus {
@@ -194,6 +195,21 @@ sealed interface RuntimeEvent {
         val message: String,
     ) : RuntimeEvent
 
+    data class TurnInjected(
+        override val runId: String,
+        val text: String,
+        val reminder: String?,
+    ) : RuntimeEvent
+
+    data class SessionRemoved(
+        override val runId: String = "",
+    ) : RuntimeEvent
+
+    data class SessionArchived(
+        override val runId: String = "",
+        val archived: Boolean,
+    ) : RuntimeEvent
+
     data class SessionListChanged(
         override val runId: String = "",
     ) : RuntimeEvent
@@ -250,6 +266,10 @@ interface AgentRuntime {
     suspend fun reloadSession(sessionId: String): String
 
     suspend fun send(sessionId: String, text: String)
+
+    suspend fun deliverReminder(sessionId: String, text: String, reminder: String?)
+
+    suspend fun activeRunId(sessionId: String): String?
 
     fun stop(sessionId: String)
 

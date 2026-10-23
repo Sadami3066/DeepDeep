@@ -1,15 +1,5 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.asLlmMessage
-import dev.pi.ai.AssistantMessage as PiAssistantMessage
-import dev.pi.ai.BlockContent
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.TextContent
-import dev.pi.ai.ThinkingContent
-import dev.pi.ai.ToolCall
-import dev.pi.ai.ToolResultMessage
-import dev.pi.ai.UserMessage
 import dev.pi.ai.auth.CredentialStore
 import dev.pi.ai.http.okHttpTransport
 import dev.pi.coding.AgentSessionOptions
@@ -24,7 +14,6 @@ import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.defaultCodingTools
 import java.io.File
 import java.time.OffsetDateTime
-import kotlinx.serialization.json.JsonObject
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -49,6 +38,7 @@ class PiSessionEngine(
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
+        val binding = ScheduleBinding()
         val tools = buildList {
             addAll(
                 defaultCodingTools(
@@ -59,10 +49,10 @@ class PiSessionEngine(
                 ),
             )
             toolContext?.let { context ->
-                addAll(appTools(cwd, context))
+                addAll(appTools(cwd, context, binding))
             }
         }
-        return createAgentSession(
+        val session = createAgentSession(
             AgentSessionOptions(
                 cwd = cwd,
                 agentDir = agentDirectory,
@@ -89,13 +79,15 @@ class PiSessionEngine(
                 projectTrusted = true,
             ),
         )
+        binding.attach(session)
+        return session
     }
 
     suspend fun listSessions(): List<ConversationSummary> = SessionManager.list(paths, fs).map { info ->
         info.toSummary()
     }
 
-    fun history(session: AgentSession): List<AssistantMessage> = mapHistory(session.messages)
+    fun history(session: AgentSession): List<AssistantMessage> = HistoryMapper.mapHistory(session.messages)
 
     suspend fun deleteSessionFile(filePath: String) {
         runCatching { fs.delete(filePath.toPath()) }
@@ -117,151 +109,8 @@ class PiSessionEngine(
     private fun parseTimestamp(value: String): Long = runCatching {
         OffsetDateTime.parse(value).toInstant().toEpochMilli()
     }.getOrDefault(0L)
-
-    private fun mapHistory(messages: List<AgentMessage>): List<AssistantMessage> {
-        val result = mutableListOf<AssistantMessage>()
-        val traces = mutableMapOf<String, ToolTrace>()
-        var current: AssistantMessage? = null
-        var messageId = 0L
-        var stepId = 0L
-
-        fun flush() {
-            current?.let { message ->
-                if (message.text.isNotBlank() || message.steps.isNotEmpty()) {
-                    result += message
-                }
-            }
-            current = null
-        }
-
-        for (agentMessage in messages) {
-            when (val message = agentMessage.asLlmMessage()) {
-                is UserMessage -> {
-                    flush()
-                    val text = message.content.asText()
-                    if (text.isNotBlank()) {
-                        result += AssistantMessage(messageId++, AssistantRole.USER, text)
-                    }
-                }
-
-                is PiAssistantMessage -> {
-                    val base = current ?: AssistantMessage(
-                        id = messageId++,
-                        role = AssistantRole.ASSISTANT,
-                        text = "",
-                        status = MessageStatus.DONE,
-                        startedAt = message.timestamp,
-                    )
-                    val newSteps = mutableListOf<AssistantStep>()
-                    var lastToolIndex = -1
-                    for (content in message.content) {
-                        when (content) {
-                            is ThinkingContent -> {
-                                if (content.thinking.isNotBlank()) {
-                                    newSteps += AssistantStep.Reasoning(stepId++, content.thinking)
-                                }
-                            }
-
-                            is TextContent -> {
-                                if (content.text.isNotBlank()) {
-                                    newSteps += AssistantStep.Text(stepId++, content.text)
-                                }
-                            }
-
-                            is ToolCall -> {
-                                val trace = ToolTrace(
-                                    id = stepId++,
-                                    name = content.name,
-                                    arguments = content.arguments.toStringMap(),
-                                    toolCallId = content.id,
-                                )
-                                traces[content.id] = trace
-                                newSteps += AssistantStep.Tool(trace)
-                                lastToolIndex = newSteps.lastIndex
-                            }
-
-                            else -> Unit
-                        }
-                    }
-                    val finalText = if (lastToolIndex >= 0) {
-                        newSteps.drop(lastToolIndex + 1).filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                    } else {
-                        newSteps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                    }
-                    val processSteps = if (lastToolIndex >= 0) {
-                        newSteps.filterIndexed { index, step -> !(step is AssistantStep.Text && index > lastToolIndex) }
-                    } else {
-                        newSteps.filterNot { it is AssistantStep.Text }
-                    }
-                    current = base.copy(
-                        text = finalText.ifBlank { base.text },
-                        steps = base.steps + processSteps,
-                        startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
-                        finishedAt = message.timestamp,
-                    )
-                }
-
-                is ToolResultMessage -> {
-                    val output = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
-                    val existing = traces[message.toolCallId]
-                    val base = current ?: AssistantMessage(
-                        id = messageId++,
-                        role = AssistantRole.ASSISTANT,
-                        text = "",
-                        status = MessageStatus.DONE,
-                        startedAt = message.timestamp,
-                    )
-                    if (existing == null) {
-                        val trace = ToolTrace(
-                            id = stepId++,
-                            name = message.toolName,
-                            arguments = emptyMap(),
-                            status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = output.takeIf { it.isNotBlank() && !message.isError },
-                            error = output.takeIf { it.isNotBlank() && message.isError },
-                            toolCallId = message.toolCallId,
-                        )
-                        traces[message.toolCallId] = trace
-                        current = base.copy(
-                            steps = base.steps + AssistantStep.Tool(trace),
-                            finishedAt = message.timestamp,
-                        )
-                    } else {
-                        val updated = existing.copy(
-                            status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = output.takeIf { it.isNotBlank() && !message.isError },
-                            error = output.takeIf { it.isNotBlank() && message.isError },
-                        )
-                        traces[message.toolCallId] = updated
-                        current = base.copy(
-                            steps = base.steps.map { step ->
-                                if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
-                                    AssistantStep.Tool(updated)
-                                } else {
-                                    step
-                                }
-                            },
-                            finishedAt = message.timestamp,
-                        )
-                    }
-                }
-
-                else -> Unit
-            }
-        }
-        flush()
-        return result
-    }
-
-    private fun dev.pi.ai.MessageContent.asText(): String = when (this) {
-        is PlainTextContent -> text
-        is BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
-    }
-
-    private fun JsonObject.toStringMap(): Map<String, String> = entries.associate { (key, value) ->
-        key to value.toString().trim('"')
-    }
 }
+
 
 fun ThinkingLevel.runtimeValue(): String = when (this) {
     ThinkingLevel.OFF -> "off"

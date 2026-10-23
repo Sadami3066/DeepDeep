@@ -31,6 +31,9 @@ data class ChatUiStrings(
     val networkError: String,
     val invalidToolArgs: String,
     val serviceUnavailable: String,
+    val insufficientBalance: String,
+    val modelUnavailable: String,
+    val retry: String,
 ) {
     fun activity(activity: RuntimeActivity?): String? = when (activity) {
         null -> null
@@ -41,7 +44,30 @@ data class ChatUiStrings(
         is RuntimeActivity.RunningTool -> runningTool(activity.name)
     }
 
+    fun runError(raw: String?): String {
+        val text = raw?.trim().orEmpty()
+        if (text.isEmpty()) return requestFailed
+        return when {
+            text.contains("API key", ignoreCase = true) || text.contains("401") -> invalidApiKey
+            text.contains("402") ||
+                text.contains("Insufficient Balance", ignoreCase = true) ||
+                text.contains("insufficient_quota", ignoreCase = true) -> insufficientBalance
+
+            text.contains("429") -> rateLimited
+            text.contains("timed out", ignoreCase = true) -> timeout
+            text.contains("Network", ignoreCase = true) -> networkError
+            text.contains("404") || text.contains("model not found", ignoreCase = true) -> modelUnavailable
+            text.contains("tool input", ignoreCase = true) ||
+                text.contains("invalid JSON", ignoreCase = true) -> invalidToolArgs
+
+            SERVER_ERROR.containsMatchIn(text) -> serviceUnavailable
+            else -> requestFailed + "\n" + text.take(300)
+        }
+    }
+
     companion object {
+        private val SERVER_ERROR = Regex("\\b5\\d{2}\\b")
+
         fun fallback(): ChatUiStrings = ChatUiStrings(
             thinking = "Thinking",
             retrying = { attempt -> "Retrying ($attempt)" },
@@ -71,7 +97,9 @@ data class ChatUiStrings(
             networkError = "Cannot reach the model service. Check your network.",
             invalidToolArgs = "Model returned invalid tool arguments. Try again.",
             serviceUnavailable = "Model service temporarily unavailable",
+            insufficientBalance = "Insufficient balance. Top up and try again.",
+            modelUnavailable = "Model unavailable. Switch models.",
+            retry = "Retry",
         )
-
     }
 }

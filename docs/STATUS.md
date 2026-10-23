@@ -1,5 +1,16 @@
 # Status
 
+## Done: P11.2 visible failures, conversation-bound reminders, editable schedules
+
+- Run failures: the host inspects the final assistant stop reason, so 401/402/429/5xx/timeout/network/model-missing errors show a localized message with Retry instead of an empty reply; history reloads keep the failed turn; background notifications carry the error
+- i18n: every new user-visible string exists in `values` and `values-en`; runtime stores schedule error codes and the UI localizes them
+- Schedules rewritten to reminder-delivery: a reminder belongs to the conversation that created it; at due time the message is posted back into that conversation and runs there, with its history/AGENTS.md/skills and no new session
+- `ScheduleService`: precise wake-ups at `nextRunAt`, per-conversation batching, catch-up on service start, session deleted/archived cleanup, clock/timezone recompute; `ScheduleStore` schemaVersion 2 (v1 tasks discarded); tools bind to the calling session
+- Schedules page rebuilt: minimal grouped list, editor sheet (name, content, recurrence, time/date/weekday pickers, target conversation, enable), manual run, delete; chat header clock for active reminders and reminder label in bubbles
+- Chat: pure `ConversationReducer`; reopening a conversation always refetches history (fixes blank conversations after background events); injected reminder messages stream live
+- Tests: 227 unit tests (app 131 / runtime 78 / shell 18); lint and module boundaries green
+- Evidence: `artifacts/validation/round11/`
+
 ## Done: P11.1 skill scopes, session reload, scheduled execution
 
 - Project skills: all repository skills are listed; globally enabled skills are on and cannot be turned off, marked Global

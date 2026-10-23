@@ -21,7 +21,7 @@
 defaultCodingTools(...) + appTools(cwd, AppToolContext)
 ```
 
-`AppToolContext` 提供 `ScheduleStore`、`QuestionCenter`、`WorkspaceStore`、`homeDir`。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
+`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`；`ScheduleBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
 
 取消：长任务通过 `RunSignal` 监听；UI 等待型工具在 signal abort 时结束等待。
 
@@ -57,23 +57,26 @@ defaultCodingTools(...) + appTools(cwd, AppToolContext)
 
 ## schedule
 
-数据文件：`files/schedules/schedules.json`。
+数据文件：`files/schedules/schedules.json`，`schemaVersion` 2。
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "schedules": [
     {
       "id": "a1b2c3d4e5f6",
       "name": "每日简报",
       "prompt": "整理今天的日程并给出建议",
-      "workspaceId": "home",
       "trigger": { "type": "weekly", "time": "09:00", "days": [1,2,3,4,5] },
       "enabled": true,
-      "notify": true,
+      "sessionId": "01a167c8-2d77-7943-9854-5e670c5c1c23",
+      "sessionFile": "agent/sessions/--...--/2026-10-23T08-02-14-519Z_01a167c8....jsonl",
+      "cwd": "files/home",
+      "nextRunAt": 1760058000000,
+      "lastDeliveredAt": null,
+      "lastError": null,
       "createdAt": 1760000000000,
-      "updatedAt": 1760000000000,
-      "nextRunAt": 1760058000000
+      "updatedAt": 1760000000000
     }
   ]
 }
@@ -91,29 +94,26 @@ defaultCodingTools(...) + appTools(cwd, AppToolContext)
 
 工具：
 
-- `schedule_create`：创建任务；`workspace` 缺省当前工作区。
-- `schedule_list`：列出 id、名称、触发、下次运行、工作区、启用状态。
-- `schedule_update`：局部更新并重算 `nextRunAt`。
-- `schedule_delete`：按 id 删除。
+- `schedule_create`：创建提醒；绑定到调用它的会话，不指定工作区。
+- `schedule_list`：列出当前会话的 id、名称、触发、下次投递、启用状态、上次投递与错误码。
+- `schedule_update`：局部更新名称、内容、触发或启用状态并重算 `nextRunAt`；不能改绑会话。
+- `schedule_delete`：按 id 删除当前会话的提醒。
+- 四个工具都只作用于调用会话的提醒；结果取消 `execution` 字段，`lastError` 返回错误码。
 
-执行：
+投递：
 
-- `ScheduleRunner` 在 `AgentService` 内运行，30 秒 tick；`enabled && nextRunAt <= now` 的当前任务串行执行。
-- 执行时在目标工作区新建会话并发送 prompt；记录 `lastRunAt/lastStatus/lastSessionId/lastError`，一次性任务执行后禁用。
-- 服务被杀时不唤醒；下次打开 App 后补跑一次。状态与手动停止沿用运行时会话。
-- 工具结果带 `execution: "enabled"`。
-- 存储使用 Mutex + 临时文件 rename；JSON 损坏时保留原文件并报错。
+- `ScheduleService` 在 `AgentService` 内运行；没有固定 tick，按最近的 `nextRunAt` 唤醒，存储变更与会话事件即时重算。
+- 到点把 `[定时提醒] 名称` 消息投进绑定会话并开始一次运行；同一会话多条同时到点合并成一条批量提醒。
+- 一次性提醒投递后停用；周期提醒按规则推进；失败记录 `SESSION_MISSING` / `OPEN_FAILED` / `DELIVERY_FAILED`。
+- 服务被杀时不唤醒，下次打开 App 补投一次。投递与手动执行共用同一条路径。
+- 存储使用 Mutex + 临时文件替换；JSON 损坏时保留原文件并报错。
 - 触发时间使用设备本地时区；时间计算可注入 `Clock` 便于测试。
 
-## 隐藏工作区
+会话绑定：
 
-定时任务控制面放在隐藏工作区：
-
-- 工作区 id `schedules`，cwd `files/schedules/workspace`，不进入抽屉、搜索和启动恢复。
-- 定时任务页的 `+` 在该工作区创建一个「定时任务会话」，用户与 agent 对话，由 schedule 工具写入任务；安排记录可从定时任务页重新打开。
-- 任务本身保存目标 `workspaceId`；未指定时默认 Home；执行时在目标工作区新建会话。
-- 目标工作区被删除时任务记录失败，不自动改到 Home。
-- 执行器按 `docs/SCHEDULING.md` 的前台 tick + 下次打开补跑。
+- 工具通过 `ScheduleBinding.current()` 取调用会话；没有绑定时返回错误结果。
+- 删除会话会删除其提醒；归档会话会停用其提醒。
+- 任务页与工具写同一个存储，服务订阅存储变更，界面实时更新。
 
 ## 安全
 

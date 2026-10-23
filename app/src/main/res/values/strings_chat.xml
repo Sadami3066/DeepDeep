@@ -94,4 +94,9 @@
     <string name="chat_error_invalid_tool_args">模型返回了无效的工具参数，请重试</string>
     <string name="chat_error_service_unavailable">模型服务暂时不可用</string>
     <string name="assistant_image_preview">预览</string>
+    <string name="assistant_reminder_label">定时提醒 · %1$s</string>
+    <string name="assistant_reminders">定时提醒</string>
+    <string name="assistant_retry">重试</string>
+    <string name="chat_error_insufficient_balance">余额不足，请充值后重试</string>
+    <string name="chat_error_model_unavailable">模型不可用，请切换模型</string>
 </resources>

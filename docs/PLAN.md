@@ -15,5 +15,6 @@
 13. P10.2 — remove placeholder settings rows; Newsreader default + new font sample; always-on chat options; process auto-collapse at final-text start (done)
 14. P11 — skills repository with zip install + global/project enable, workspace settings + AGENTS.md editor, app tools (`ask_user_question` UI, schedule CRUD + local store only) (done)
 15. P11.1 — project skills include global rows, chat reload, scheduled executor + schedule page + hidden schedule workspace, storage migration repair (done)
-16. Next — workspace-level session migration/archive; full-text search; scheduled task manual run/edit/history; root ShellExecutor when authorized
-17. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it
+16. P11.2 — visible run failures with i18n + retry, conversation-bound reminder delivery (ScheduleService, no hidden workspace), editable schedule page with manual run and new UI, conversation state reducer and feature wiring checklist (done)
+17. Next — workspace-level session migration/archive; full-text search; schedule editor trigger presets (cron/custom intervals); root ShellExecutor when authorized
+18. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it

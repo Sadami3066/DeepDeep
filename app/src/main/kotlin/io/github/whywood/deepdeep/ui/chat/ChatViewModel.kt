@@ -19,10 +19,7 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
-import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.runtime.ToolActivityStatus
-import io.github.whywood.deepdeep.runtime.ToolTrace
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,14 +35,6 @@ import kotlinx.coroutines.withContext
 
 private const val STREAM_DELTA_BATCH_MS = 16L
 
-private data class ConversationSnapshot(
-    val messages: List<AssistantMessage> = emptyList(),
-    val title: String = "",
-    val sending: Boolean = false,
-    val activity: String? = null,
-    val activityStartedAt: Long? = null,
-)
-
 class ChatViewModel(
     private val runtime: AgentRuntime,
     private val providers: ProviderDirectory,
@@ -58,7 +47,7 @@ class ChatViewModel(
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
 
-    private val conversationCache = mutableMapOf<String, ConversationSnapshot>()
+    private val conversationCache = mutableMapOf<String, ConversationState>()
     private val sessionOpenJobs = mutableMapOf<String, Job>()
     private val pendingDeltas = mutableListOf<RuntimeEvent>()
     private var pendingDeltaJob: Job? = null
@@ -147,15 +136,30 @@ class ChatViewModel(
             mutableState.update { it.copy(error = uiStrings.restoringSession) }
             return
         }
-        val sessionId = current.conversationId
-        if (sessionId == null) {
+        if (current.conversationId == null) {
             mutableState.update { it.copy(error = uiStrings.sessionNotReady) }
             return
         }
         if (current.sending || current.switchingConversation) return
         val text = current.input.trim()
         if (text.isEmpty()) return
-        val prompt = buildPrompt(current.quote, current.attachments, text)
+        startTurn(buildPrompt(current.quote, current.attachments, text))
+    }
+
+    fun retry(messageId: Long) {
+        flushPendingDeltas()
+        val current = mutableState.value
+        if (!current.ready || !current.historyLoaded) return
+        if (current.sending || current.switchingConversation) return
+        val index = current.messages.indexOfFirst { it.id == messageId }
+        if (index <= 0) return
+        val prompt = current.messages.take(index).lastOrNull { it.role == AssistantRole.USER }?.text ?: return
+        startTurn(prompt)
+    }
+
+    private fun startTurn(prompt: String) {
+        val current = mutableState.value
+        val sessionId = current.conversationId ?: return
         val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
         val assistantId = nextId + 1
         val now = System.currentTimeMillis()
@@ -176,7 +180,7 @@ class ChatViewModel(
                 activity = uiStrings.thinking,
                 activityStartedAt = now,
                 error = null,
-                conversationTitle = it.conversationTitle.ifBlank { titleFrom(text) },
+                conversationTitle = it.conversationTitle.ifBlank { titleFrom(prompt) },
             )
         }
         cacheCurrentSession()
@@ -187,7 +191,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                finishWithError(sessionId, error.message ?: uiStrings.requestFailed)
+                finishRunError(sessionId, error.message ?: uiStrings.requestFailed)
             }
         }
     }
@@ -227,21 +231,6 @@ class ChatViewModel(
             cacheCurrentSession()
             createSession(workspaceId)
         }
-    }
-
-    fun newScheduleSession() {
-        viewModelScope.launch {
-            cacheCurrentSession()
-            createSession(AgentRuntimeHost.SCHEDULE_ID)
-        }
-    }
-
-    suspend fun loadScheduleSessions(): List<ConversationSummary> =
-        withContext(ioDispatcher) { runtime.sessions(AgentRuntimeHost.SCHEDULE_ID) }
-
-    fun openScheduleConversation(summary: ConversationSummary) {
-        cacheCurrentSession()
-        switchToSummary(summary)
     }
 
     fun openConversationById(id: String) {
@@ -451,15 +440,14 @@ class ChatViewModel(
 
     private suspend fun restoreInitialSession() {
         val workspaces = withContext(ioDispatcher) { runtime.workspaces() }
-        val visibleWorkspaces = workspaces.filterNot { it.hidden }
         val sessions = withContext(ioDispatcher) {
-            visibleWorkspaces.flatMap { workspace -> runtime.sessions(workspace.id) }
+            workspaces.flatMap { workspace -> runtime.sessions(workspace.id) }
         }
         val recent = sessions.maxByOrNull { it.updatedAt }
-        val home = visibleWorkspaces.firstOrNull { it.isHome } ?: visibleWorkspaces.firstOrNull()
+        val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()
         if (home == null) {
             mutableState.update {
-                it.copy(ready = true, historyLoaded = true, error = "运行时未就绪")
+                it.copy(ready = true, historyLoaded = true, error = uiStrings.runtimeStartFailed)
             }
             return
         }
@@ -497,7 +485,7 @@ class ChatViewModel(
                 sending = cached?.sending ?: false,
                 activity = cached?.activity,
                 activityStartedAt = cached?.activityStartedAt,
-                historyLoaded = cached != null,
+                historyLoaded = cached?.loaded == true,
                 switchingConversation = cached == null,
                 input = "",
                 quote = null,
@@ -510,30 +498,33 @@ class ChatViewModel(
 
     private fun openSession(summary: ConversationSummary) {
         if (sessionOpenJobs.containsKey(summary.id)) return
-        val cached = conversationCache[summary.id]
         val job = viewModelScope.launch {
             try {
                 withContext(ioDispatcher) { runtime.openSession(summary.filePath, summary.cwd) }
-                if (cached == null) {
-                    val messages = withContext(ioDispatcher) { runtime.history(summary.id) }
-                    val snapshot = ConversationSnapshot(
-                        messages = messages,
-                        title = summary.title.ifBlank { titleFrom(messages) },
-                    )
-                    conversationCache[summary.id] = snapshot
-                    if (mutableState.value.conversationId == summary.id) {
-                        mutableState.update {
-                            it.copy(
-                                messages = snapshot.messages,
-                                conversationTitle = snapshot.title,
-                                historyLoaded = true,
-                                switchingConversation = false,
-                            )
-                        }
-                    }
+                val history = withContext(ioDispatcher) { runtime.history(summary.id) }
+                val activeRunId = withContext(ioDispatcher) { runtime.activeRunId(summary.id) }
+                val localized = history.map { message ->
+                    message.error?.let { raw -> message.copy(error = uiStrings.runError(raw)) } ?: message
+                }
+                val title = summary.title.ifBlank { titleFrom(localized) }
+                val snapshot = if (activeRunId == null) {
+                    ConversationState(messages = localized, title = title, loaded = true)
                 } else {
-                    if (mutableState.value.conversationId == summary.id) {
-                        mutableState.update { it.copy(historyLoaded = true, switchingConversation = false) }
+                    ConversationState(messages = localized, title = title, loaded = true)
+                        .adoptActiveRun(activeRunId, uiStrings.thinking, System.currentTimeMillis())
+                }
+                conversationCache[summary.id] = snapshot
+                if (mutableState.value.conversationId == summary.id) {
+                    mutableState.update {
+                        it.copy(
+                            messages = snapshot.messages,
+                            conversationTitle = snapshot.title,
+                            sending = snapshot.sending,
+                            activity = snapshot.activity,
+                            activityStartedAt = snapshot.activityStartedAt,
+                            historyLoaded = true,
+                            switchingConversation = false,
+                        )
                     }
                 }
                 refreshSessions()
@@ -557,7 +548,7 @@ class ChatViewModel(
             try {
                 val opened = withContext(ioDispatcher) { runtime.newSession(workspaceId) }
                 val projectCwd = opened.cwd
-                conversationCache[opened.sessionId] = ConversationSnapshot()
+                conversationCache[opened.sessionId] = ConversationState()
                 mutableState.update {
                     it.copy(
                         conversationId = opened.sessionId,
@@ -587,25 +578,43 @@ class ChatViewModel(
     }
 
     private fun cacheCurrentSession() {
-        flushPendingDeltas()
         val current = mutableState.value
         val id = current.conversationId ?: return
         if (!current.historyLoaded) return
-        conversationCache[id] = ConversationSnapshot(
+        flushPendingDeltas()
+        val loaded = conversationCache[id]?.loaded == true
+        conversationCache[id] = ConversationState(
             messages = current.messages,
             title = current.conversationTitle,
             sending = current.sending,
             activity = current.activity,
             activityStartedAt = current.activityStartedAt,
+            loaded = loaded,
         )
     }
 
     private fun onSessionEvent(scoped: SessionRuntimeEvent) {
         val event = scoped.event
-        if (event is RuntimeEvent.SessionListChanged) {
-            flushPendingDeltas()
-            viewModelScope.launch { refreshSessions() }
-            return
+        when (event) {
+            is RuntimeEvent.SessionListChanged -> {
+                flushPendingDeltas()
+                viewModelScope.launch { refreshSessions() }
+                return
+            }
+
+            is RuntimeEvent.SessionRemoved -> {
+                flushPendingDeltas()
+                viewModelScope.launch { refreshSessions() }
+                return
+            }
+
+            is RuntimeEvent.SessionArchived -> {
+                flushPendingDeltas()
+                viewModelScope.launch { refreshSessions() }
+                return
+            }
+
+            else -> Unit
         }
         val activeId = mutableState.value.conversationId
         if (scoped.sessionId == activeId) {
@@ -614,23 +623,21 @@ class ChatViewModel(
                 return
             }
             flushPendingDeltas()
-            val reduced = reduce(mutableState.value.snapshot(), event)
-            mutableState.update {
-                it.copy(
-                    messages = reduced.messages,
-                    sending = reduced.sending,
-                    activity = reduced.activity,
-                    activityStartedAt = reduced.activityStartedAt,
-                    error = if (event is RuntimeEvent.RunFailed) {
-                        userFacingError(event.message.ifBlank { uiStrings.requestFailed })
-                    } else {
-                        it.error
-                    },
-                )
+            val reduced = reduce(mutableState.value.conversationState(), event, uiStrings)
+            mutableState.update { base ->
+                val updated = base.applyConversation(reduced)
+                if (event is RuntimeEvent.RunFailed && reduced.messages.none { it.status == MessageStatus.FAILED }) {
+                    updated.copy(error = uiStrings.runError(event.message))
+                } else if (event is RuntimeEvent.RunFailed) {
+                    updated.copy(error = null)
+                } else {
+                    updated
+                }
             }
+            cacheCurrentSession()
         } else {
-            val snapshot = conversationCache[scoped.sessionId] ?: ConversationSnapshot()
-            conversationCache[scoped.sessionId] = reduce(snapshot, event)
+            val cached = conversationCache[scoped.sessionId] ?: ConversationState()
+            conversationCache[scoped.sessionId] = reduce(cached, event, uiStrings)
         }
     }
 
@@ -665,15 +672,13 @@ class ChatViewModel(
         val events = pendingDeltas.toList()
         pendingDeltas.clear()
         pendingDeltaRunId = null
-        var snapshot = mutableState.value.snapshot()
-        events.forEach { event -> snapshot = reduce(snapshot, event) }
+        var snapshot = mutableState.value.conversationState()
+        events.forEach { event -> snapshot = reduce(snapshot, event, uiStrings) }
         val reduced = snapshot
-        mutableState.update {
-            it.copy(messages = reduced.messages)
-        }
+        mutableState.update { it.applyConversation(reduced) }
     }
 
-    private fun ChatUiState.snapshot(): ConversationSnapshot = ConversationSnapshot(
+    private fun ChatUiState.conversationState(): ConversationState = ConversationState(
         messages = messages,
         title = conversationTitle,
         sending = sending,
@@ -681,232 +686,22 @@ class ChatViewModel(
         activityStartedAt = activityStartedAt,
     )
 
-    private fun reduce(snapshot: ConversationSnapshot, event: RuntimeEvent): ConversationSnapshot = when (event) {
-        is RuntimeEvent.RunStarted -> {
-            val target = snapshot.messages.lastOrNull { it.role == AssistantRole.ASSISTANT && it.streaming }
-            if (target == null) {
-                snapshot
-            } else {
-                snapshot.copy(
-                    messages = snapshot.messages.map {
-                        if (it.id == target.id) it.copy(runId = event.runId) else it
-                    },
-                    sending = true,
-                    activity = uiStrings.thinking,
-                    activityStartedAt = event.startedAt,
-                )
-            }
-        }
+    private fun ChatUiState.applyConversation(state: ConversationState): ChatUiState = copy(
+        messages = state.messages,
+        conversationTitle = state.title,
+        sending = state.sending,
+        activity = state.activity,
+        activityStartedAt = state.activityStartedAt,
+    )
 
-        is RuntimeEvent.ActivityChanged -> {
-            if (!snapshot.matchesRun(event.runId)) {
-                snapshot
-            } else {
-                val label = uiStrings.activity(event.activity)
-                snapshot.copy(
-                    activity = label,
-                    activityStartedAt = if (label == null) null else {
-                        snapshot.activityStartedAt ?: System.currentTimeMillis()
-                    },
-                )
-            }
-        }
-
-        is RuntimeEvent.TextDelta -> {
-            if (!snapshot.matchesRun(event.runId)) {
-                snapshot
-            } else {
-                snapshot.updateAssistant(event.runId) { message ->
-                    val steps = message.steps.toMutableList()
-                    val last = steps.lastOrNull()
-                    if (last is AssistantStep.Text) {
-                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
-                    } else {
-                        steps += AssistantStep.Text(nextStepId(steps), event.text)
-                    }
-                    message.copy(steps = steps)
-                }
-            }
-        }
-
-        is RuntimeEvent.ReasoningDelta -> {
-            if (!snapshot.matchesRun(event.runId)) {
-                snapshot
-            } else {
-                snapshot.updateAssistant(event.runId) { message ->
-                    val steps = message.steps.toMutableList()
-                    val last = steps.lastOrNull()
-                    if (last is AssistantStep.Reasoning) {
-                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
-                    } else {
-                        steps += AssistantStep.Reasoning(nextStepId(steps), event.text)
-                    }
-                    message.copy(steps = steps)
-                }
-            }
-        }
-
-        is RuntimeEvent.ToolStarted -> {
-            if (!snapshot.matchesRun(event.runId)) {
-                snapshot
-            } else {
-                snapshot.updateAssistant(event.runId) { message ->
-                    message.copy(
-                        steps = message.steps + AssistantStep.Tool(
-                            ToolTrace(
-                                id = nextStepId(message.steps),
-                                name = event.name,
-                                arguments = event.arguments,
-                                toolCallId = event.callId,
-                                startedAt = event.startedAt,
-                            ),
-                        ),
-                    )
-                }
-            }
-        }
-
-        is RuntimeEvent.ToolFinished -> {
-            if (!snapshot.matchesRun(event.runId)) {
-                snapshot
-            } else {
-                snapshot.updateAssistant(event.runId) { message ->
-                    val index = message.steps.indexOfLast { step ->
-                        step is AssistantStep.Tool && step.trace.toolCallId == event.callId
-                    }
-                    if (index == -1) {
-                        message.copy(
-                            steps = message.steps + AssistantStep.Tool(
-                                ToolTrace(
-                                    id = nextStepId(message.steps),
-                                    name = event.name,
-                                    arguments = emptyMap(),
-                                    status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                                    output = event.result.takeIf { !event.isError && it.isNotBlank() },
-                                    error = event.result.takeIf { event.isError && it.isNotBlank() },
-                                    toolCallId = event.callId,
-                                    durationMs = event.durationMs,
-                                ),
-                            ),
-                        )
-                    } else {
-                        val trace = (message.steps[index] as AssistantStep.Tool).trace.copy(
-                            status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = event.result.takeIf { !event.isError && it.isNotBlank() },
-                            error = event.result.takeIf { event.isError && it.isNotBlank() },
-                            durationMs = event.durationMs,
-                        )
-                        message.copy(
-                            steps = message.steps.toMutableList().also { it[index] = AssistantStep.Tool(trace) },
-                        )
-                    }
-                }
-            }
-        }
-
-        is RuntimeEvent.RunFinished -> finishWithStatus(snapshot, event.runId, event.text, event.status, event.finishedAt)
-
-        is RuntimeEvent.RunFailed -> finishWithError(snapshot, event.runId, event.message)
-
-        is RuntimeEvent.SessionListChanged -> snapshot
-    }
-
-    private fun ConversationSnapshot.matchesRun(runId: String): Boolean =
-        messages.any { it.runId == runId }
-
-    private fun ConversationSnapshot.updateAssistant(
-        runId: String,
-        transform: (AssistantMessage) -> AssistantMessage,
-    ): ConversationSnapshot {
-        val index = messages.indexOfLast { it.runId == runId }
-        if (index == -1) return this
-        val target = messages[index]
-        return copy(messages = messages.toMutableList().also { it[index] = transform(target) })
-    }
-
-    private fun nextStepId(steps: List<AssistantStep>): Long =
-        (steps.maxOfOrNull { it.id } ?: -1L) + 1
-
-    private fun finishWithStatus(
-        snapshot: ConversationSnapshot,
-        runId: String,
-        text: String,
-        status: RunStatus,
-        finishedAt: Long,
-    ): ConversationSnapshot {
-        val index = snapshot.messages.indexOfLast { it.runId == runId }
-        if (index == -1) return snapshot.copy(sending = false, activity = null, activityStartedAt = null)
-        val message = snapshot.messages[index]
-        val finalText = text.ifBlank { message.text }
-        val finalized = message.copy(
-            text = finalText,
-            streaming = false,
-            status = when (status) {
-                RunStatus.DONE -> MessageStatus.DONE
-                RunStatus.STOPPED -> MessageStatus.STOPPED
-                RunStatus.FAILED -> MessageStatus.FAILED
-            },
-            finishedAt = finishedAt,
-            steps = consumeFinalText(
-                message.steps.map { step ->
-                    if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
-                        step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
-                    } else {
-                        step
-                    }
-                },
-                finalText,
-            ),
-        )
-        return snapshot.copy(
-            messages = snapshot.messages.toMutableList().also { it[index] = finalized },
-            sending = false,
-            activity = null,
-            activityStartedAt = null,
-        )
-    }
-
-    private fun finishWithError(
-        snapshot: ConversationSnapshot,
-        runId: String,
-        message: String,
-    ): ConversationSnapshot {
-        val index = snapshot.messages.indexOfLast { it.runId == runId }
-        if (index == -1) return snapshot.copy(sending = false, activity = null, activityStartedAt = null)
-        val current = snapshot.messages[index]
-        val failed = current.copy(
-            text = current.text.ifBlank { uiStrings.emptyReply },
-            streaming = false,
-            status = MessageStatus.FAILED,
-            finishedAt = System.currentTimeMillis(),
-            steps = current.steps.map { step ->
-                if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
-                    step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
-                } else {
-                    step
-                }
-            },
-        )
-        return snapshot.copy(
-            messages = snapshot.messages.toMutableList().also { it[index] = failed },
-            sending = false,
-            activity = null,
-            activityStartedAt = null,
-        )
-    }
-
-    private fun finishWithError(sessionId: String, message: String) {
+    private fun finishRunError(sessionId: String, message: String) {
         if (mutableState.value.conversationId != sessionId) return
-        val reduced = finishWithError(mutableState.value.snapshot(), "", message)
+        val reduced = mutableState.value.conversationState().finishWithError("", message, uiStrings)
+        val hasFailure = reduced.messages.any { it.status == MessageStatus.FAILED && it.error != null }
         mutableState.update {
-            it.copy(
-                messages = reduced.messages,
-                sending = reduced.sending,
-                activity = reduced.activity,
-                activityStartedAt = reduced.activityStartedAt,
-                error = userFacingError(message),
-            )
+            it.applyConversation(reduced).copy(error = if (hasFailure) it.error else uiStrings.runError(message))
         }
+        cacheCurrentSession()
     }
 
     private suspend fun refreshSessions() {
@@ -917,6 +712,8 @@ class ChatViewModel(
             ?: workspaces.firstOrNull()
         val sessions = withContext(ioDispatcher) { runtime.allSessions() }
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
+        val visibleIds = (sessions + archived).map { it.id }.toSet()
+        conversationCache.keys.retainAll(visibleIds)
         mutableState.update {
             val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
             it.copy(
@@ -1002,14 +799,15 @@ class ChatViewModel(
     }
 
     private fun localizedTitle(title: String): String =
-        if (title.isBlank() || title == "新对话") uiStrings.newChatTitle else title
+        if (title.isBlank() || title == LEGACY_NEW_TITLE) uiStrings.newChatTitle else title
 
     private fun titleFrom(messages: List<AssistantMessage>): String {
-        val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return "新对话"
+        val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return uiStrings.newChatTitle
         return titleFrom(firstUser)
     }
 
     private companion object {
         const val MAX_ATTACHMENTS = 15
+        const val LEGACY_NEW_TITLE = "新对话"
     }
 }

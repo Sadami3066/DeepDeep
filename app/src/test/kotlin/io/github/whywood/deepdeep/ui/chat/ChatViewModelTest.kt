@@ -204,6 +204,10 @@ class ChatViewModelTest {
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, " more"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "partial more", RunStatus.DONE, 2000L))
         advanceUntilIdle()
+        runtime.histories = runtime.histories + (sessionId to listOf(
+            AssistantMessage(1, AssistantRole.USER, "hello"),
+            AssistantMessage(2, AssistantRole.ASSISTANT, "partial more"),
+        ))
 
         viewModel.openConversation("session-a")
         advanceUntilIdle()
@@ -232,6 +236,10 @@ class ChatViewModelTest {
 
         runtime.emitFor(firstSession, RuntimeEvent.TextDelta(runtime.runId, "background"))
         runtime.emitFor(firstSession, RuntimeEvent.RunFinished(runtime.runId, "background", RunStatus.DONE, 2000L))
+        runtime.histories = runtime.histories + (firstSession to listOf(
+            AssistantMessage(1, AssistantRole.USER, "first"),
+            AssistantMessage(2, AssistantRole.ASSISTANT, "background"),
+        ))
 
         viewModel.openConversation(firstSession)
         advanceUntilIdle()
@@ -279,6 +287,102 @@ class ChatViewModelTest {
         assertNull(viewModel.state.value.quote)
     }
 
+
+    @Test
+    fun blankCachedConversationAlwaysReloadsHistory() = runTest(dispatcher) {
+        val existing = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(existing)
+            histories = mapOf("session-a" to emptyList())
+        }
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.newSession(HOME_ID)
+        advanceUntilIdle()
+        val newSessionId = viewModel.state.value.conversationId!!
+        assertTrue(viewModel.state.value.messages.isEmpty())
+
+        runtime.histories = runtime.histories + (newSessionId to listOf(
+            AssistantMessage(1, AssistantRole.USER, "reminder body"),
+        ))
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+        viewModel.openConversation(newSessionId)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.state.value.messages.size)
+        assertEquals("reminder body", viewModel.state.value.messages.single().text)
+        assertTrue((runtime.historyCalls[newSessionId] ?: 0) >= 1)
+        assertTrue(viewModel.state.value.historyLoaded)
+    }
+
+    @Test
+    fun turnInjectedCreatesPlaceholderAndStreams() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply { sessions = listOf(session) }
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+        val raw = "[定时提醒] 喝水\n这是你设置的定时提醒，现在到时间了。\n\n喝水提醒"
+
+        runtime.emitFor(sessionId, RuntimeEvent.TurnInjected("run-t", raw, "喝水"))
+        advanceUntilIdle()
+
+        val injected = viewModel.state.value
+        assertTrue(injected.sending)
+        assertEquals(2, injected.messages.size)
+        val user = injected.messages[0]
+        assertEquals(AssistantRole.USER, user.role)
+        assertEquals("喝水提醒", user.text)
+        assertEquals("喝水", user.reminder)
+        val assistant = injected.messages[1]
+        assertEquals(AssistantRole.ASSISTANT, assistant.role)
+        assertTrue(assistant.streaming)
+        assertEquals("run-t", assistant.runId)
+
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-t", "收到"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-t", "收到", RunStatus.DONE, 2000L))
+        advanceUntilIdle()
+        assertEquals("收到", viewModel.state.value.messages.last().text)
+        assertFalse(viewModel.state.value.sending)
+    }
+
+    @Test
+    fun retryResendsPreviousUserText() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "402 Insufficient Balance"))
+        advanceUntilIdle()
+
+        val failed = viewModel.state.value.messages.last()
+        assertEquals(MessageStatus.FAILED, failed.status)
+        assertEquals(ChatUiStrings.fallback().insufficientBalance, failed.error)
+
+        viewModel.retry(failed.id)
+        advanceUntilIdle()
+
+        assertEquals(listOf("hello", "hello"), runtime.sent)
+        assertEquals(4, viewModel.state.value.messages.size)
+        assertEquals(AssistantRole.USER, viewModel.state.value.messages[2].role)
+        assertEquals(MessageStatus.RUNNING, viewModel.state.value.messages[3].status)
+    }
+
+    @Test
+    fun runErrorMapsInsufficientBalance() {
+        val strings = ChatUiStrings.fallback()
+        assertEquals(strings.insufficientBalance, strings.runError("402 Insufficient Balance"))
+        assertEquals(strings.insufficientBalance, strings.runError("insufficient_quota"))
+        assertEquals(strings.invalidApiKey, strings.runError("401 API key invalid"))
+        assertEquals(strings.modelUnavailable, strings.runError("404 model not found"))
+        assertEquals(strings.serviceUnavailable, strings.runError("HTTP 503"))
+        assertTrue(strings.runError("weird failure").startsWith(strings.requestFailed))
+    }
+
     private class FakeRuntime : AgentRuntime {
         private val flow = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 64)
         private val busy = MutableStateFlow<Set<String>>(emptySet())
@@ -287,8 +391,11 @@ class ChatViewModelTest {
         override val busySessionIds: StateFlow<Set<String>> = busy
         var sessions: List<ConversationSummary> = emptyList()
         var histories: Map<String, List<AssistantMessage>> = emptyMap()
+        var activeRuns: Map<String, String> = emptyMap()
+        val historyCalls = mutableMapOf<String, Int>()
         val openCalls = mutableListOf<String>()
         val sent = mutableListOf<String>()
+        val delivered = mutableListOf<Triple<String, String, String?>>()
         private var createdCount = 0
         private val extraProjects = mutableListOf<RuntimeWorkspace>()
 
@@ -335,8 +442,16 @@ class ChatViewModelTest {
 
         override fun stop(sessionId: String) = Unit
 
-        override suspend fun history(sessionId: String): List<AssistantMessage> =
-            histories[sessionId].orEmpty()
+        override suspend fun history(sessionId: String): List<AssistantMessage> {
+            historyCalls[sessionId] = (historyCalls[sessionId] ?: 0) + 1
+            return histories[sessionId].orEmpty()
+        }
+
+        override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
+            delivered += Triple(sessionId, text, reminder)
+        }
+
+        override suspend fun activeRunId(sessionId: String): String? = activeRuns[sessionId]
 
         override suspend fun sessionTitle(sessionId: String): String? =
             sessions.firstOrNull { it.id == sessionId }?.title

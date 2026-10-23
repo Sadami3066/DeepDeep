@@ -113,12 +113,15 @@ class ScheduleModelsTest {
         val schedule = Schedule(
             id = "schedule-1",
             name = "Morning brief",
-            workspaceId = "home",
             prompt = "Summarize my notes",
             trigger = ScheduleTrigger.Daily(LocalTime.of(8, 0)),
             enabled = false,
-            notify = false,
+            sessionId = "session-1",
+            sessionFile = "/data/sessions/session-1.jsonl",
+            cwd = "/data/home",
             nextRunAt = 1_800_000_000_000L,
+            lastDeliveredAt = 1_700_000_000_000L,
+            lastError = ScheduleError.DELIVERY_FAILED,
             createdAt = 100,
             updatedAt = 200,
         )
@@ -127,19 +130,40 @@ class ScheduleModelsTest {
     }
 
     @Test
-    fun missingNextRunAtDecodesAsNull() {
+    fun lastErrorIsStoredAsEnumName() {
+        val schedule = Schedule(
+            id = "id",
+            name = "name",
+            prompt = "prompt",
+            trigger = ScheduleTrigger.Daily(LocalTime.of(8, 0)),
+            sessionId = "session",
+            sessionFile = "/tmp/session.jsonl",
+            cwd = "/tmp",
+            lastError = ScheduleError.SESSION_MISSING,
+        )
+        val json = schedule.toJsonObject()
+        assertEquals("SESSION_MISSING", (json["lastError"] as JsonPrimitive).content)
+        assertEquals(ScheduleError.SESSION_MISSING, scheduleFromJsonObject(json).lastError)
+    }
+
+    @Test
+    fun missingOptionalFieldsDecodeAsNull() {
         val json = buildJsonObject {
             put("id", "id-1")
             put("name", "name")
-            put("workspaceId", "home")
             put("prompt", "prompt")
+            put("trigger", ScheduleTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
             put("enabled", true)
-            put("notify", false)
+            put("sessionId", "session-1")
+            put("sessionFile", "/tmp/session.jsonl")
+            put("cwd", "/tmp")
             put("createdAt", 1)
             put("updatedAt", 2)
-            put("trigger", ScheduleTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
         }
-        assertNull(scheduleFromJsonObject(json).nextRunAt)
+        val schedule = scheduleFromJsonObject(json)
+        assertNull(schedule.nextRunAt)
+        assertNull(schedule.lastDeliveredAt)
+        assertNull(schedule.lastError)
     }
 
     @Test
@@ -160,6 +184,23 @@ class ScheduleModelsTest {
                         put("type", "weekly")
                         put("time", "09:00")
                         put("days", buildJsonArray { add(JsonPrimitive(9)) })
+                    },
+                )
+            }.exceptionOrNull(),
+            runCatching {
+                scheduleFromJsonObject(
+                    buildJsonObject {
+                        put("id", "x")
+                        put("name", "n")
+                        put("prompt", "p")
+                        put("trigger", ScheduleTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
+                        put("enabled", true)
+                        put("sessionId", "s")
+                        put("sessionFile", "f")
+                        put("cwd", "c")
+                        put("lastError", "NOT_AN_ERROR")
+                        put("createdAt", 1)
+                        put("updatedAt", 2)
                     },
                 )
             }.exceptionOrNull(),

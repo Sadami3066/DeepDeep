@@ -116,6 +116,9 @@ fun ChatScreen(
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
     autoCollapseProcess: Boolean = true,
+    reminderCount: Int,
+    onOpenSchedules: () -> Unit,
+    onRetry: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -230,6 +233,11 @@ fun ChatScreen(
                 keyboard?.hide()
                 onReload()
             },
+            reminderCount = reminderCount,
+            onOpenSchedules = {
+                keyboard?.hide()
+                onOpenSchedules()
+            },
             modifier = Modifier.statusBarsPadding(),
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -267,6 +275,7 @@ fun ChatScreen(
                                     onQuote = onQuoteMessage,
                                     onOpenAttachment = onOpenAttachment,
                                     onOpenFile = onOpenFile,
+                                    onRetry = onRetry,
                                     attachmentRoot = attachmentRoot,
                                     autoCollapseProcess = autoCollapseProcess,
                                 )

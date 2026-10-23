@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
+import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
@@ -27,7 +28,6 @@ import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
-import io.github.whywood.deepdeep.service.ScheduleRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
@@ -70,12 +70,12 @@ class AppGraph(context: Context) {
     val agentDocStore = AgentDocStore()
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
     val questionCenter = QuestionCenter(isForeground = { AppVisibility.foreground })
-    private val appToolContext = AppToolContext(
-        scheduleStore = scheduleStore,
-        questionCenter = questionCenter,
-        workspaceStore = workspaceStore,
-        homeDir = homeDir,
-    )
+    private val appToolContext: AppToolContext by lazy {
+        AppToolContext(
+            scheduleService = scheduleService,
+            questionCenter = questionCenter,
+        )
+    }
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
 
     private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
@@ -111,10 +111,11 @@ class AppGraph(context: Context) {
         catalog = sessionCatalog,
         workspaceStore = workspaceStore,
         providers = providerCatalog,
+        backgroundScope = scope,
     )
 
     val notificationCenter by lazy { NotificationCenter(appContext, host) }
-    val scheduleRunner by lazy { ScheduleRunner(host, scheduleStore) }
+    val scheduleService by lazy { ScheduleService(host, scheduleStore, scope) }
     val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     suspend fun prepare() {

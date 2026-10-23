@@ -94,4 +94,9 @@
     <string name="chat_error_invalid_tool_args">Model returned invalid tool arguments. Try again.</string>
     <string name="chat_error_service_unavailable">Model service temporarily unavailable</string>
     <string name="assistant_image_preview">Preview</string>
+    <string name="assistant_reminder_label">Scheduled reminder · %1$s</string>
+    <string name="assistant_reminders">Scheduled reminders</string>
+    <string name="assistant_retry">Retry</string>
+    <string name="chat_error_insufficient_balance">Insufficient balance. Top up and try again.</string>
+    <string name="chat_error_model_unavailable">Model unavailable. Switch models.</string>
 </resources>

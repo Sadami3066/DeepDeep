@@ -1,8 +1,12 @@
 package io.github.whywood.deepdeep.service
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.IBinder
+import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.DeepDeepApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,15 +17,24 @@ import kotlinx.coroutines.launch
 class AgentService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val graph by lazy { (application as DeepDeepApplication).graph }
+    private val clockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action ?: return
+            if (action == Intent.ACTION_TIME_CHANGED || action == Intent.ACTION_TIMEZONE_CHANGED) {
+                scope.launch { graph.scheduleService.recomputeTargets() }
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         graph.notificationCenter.start()
         startForeground(NOTIFICATION_ID, graph.notificationCenter.foregroundNotification())
         graph.notificationCenter.onForegroundStarted()
+        registerClockReceiver()
         scope.launch {
             graph.host.ensureStarted()
-            graph.scheduleRunner.start()
+            graph.scheduleService.start()
         }
     }
 
@@ -43,10 +56,19 @@ class AgentService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        graph.scheduleRunner.stop()
+        runCatching { unregisterReceiver(clockReceiver) }
+        graph.scheduleService.stop()
         graph.notificationCenter.stop()
         scope.cancel()
         super.onDestroy()
+    }
+
+    private fun registerClockReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        ContextCompat.registerReceiver(this, clockReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     companion object {

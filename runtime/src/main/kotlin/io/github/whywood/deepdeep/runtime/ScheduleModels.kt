@@ -16,6 +16,12 @@ import kotlinx.serialization.json.putJsonArray
 
 class CorruptScheduleDataException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+enum class ScheduleError {
+    SESSION_MISSING,
+    OPEN_FAILED,
+    DELIVERY_FAILED,
+}
+
 sealed interface ScheduleTrigger {
     data class Once(val date: LocalDate, val time: LocalTime) : ScheduleTrigger
 
@@ -24,26 +30,18 @@ sealed interface ScheduleTrigger {
     data class Weekly(val days: Set<DayOfWeek>, val time: LocalTime) : ScheduleTrigger
 }
 
-enum class ScheduleRunStatus {
-    RUNNING,
-    DONE,
-    STOPPED,
-    FAILED,
-}
-
 data class Schedule(
     val id: String,
     val name: String,
-    val workspaceId: String,
     val prompt: String,
     val trigger: ScheduleTrigger,
     val enabled: Boolean = true,
-    val notify: Boolean = true,
+    val sessionId: String,
+    val sessionFile: String,
+    val cwd: String,
     val nextRunAt: Long? = null,
-    val lastRunAt: Long? = null,
-    val lastStatus: ScheduleRunStatus? = null,
-    val lastSessionId: String? = null,
-    val lastError: String? = null,
+    val lastDeliveredAt: Long? = null,
+    val lastError: ScheduleError? = null,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 ) {
@@ -103,20 +101,27 @@ fun ScheduleTrigger.toJsonObject(): JsonObject = buildJsonObject {
 fun Schedule.toJsonObject(): JsonObject = buildJsonObject {
     put("id", id)
     put("name", name)
-    put("workspaceId", workspaceId)
     put("prompt", prompt)
     put("trigger", trigger.toJsonObject())
     put("enabled", enabled)
-    put("notify", notify)
+    put("sessionId", sessionId)
+    put("sessionFile", sessionFile)
+    put("cwd", cwd)
     if (nextRunAt == null) {
         put("nextRunAt", JsonNull)
     } else {
         put("nextRunAt", nextRunAt)
     }
-    put("lastRunAt", lastRunAt)
-    put("lastStatus", lastStatus?.name)
-    put("lastSessionId", lastSessionId)
-    put("lastError", lastError)
+    if (lastDeliveredAt == null) {
+        put("lastDeliveredAt", JsonNull)
+    } else {
+        put("lastDeliveredAt", lastDeliveredAt)
+    }
+    if (lastError == null) {
+        put("lastError", JsonNull)
+    } else {
+        put("lastError", lastError.name)
+    }
     put("createdAt", createdAt)
     put("updatedAt", updatedAt)
 }
@@ -143,19 +148,18 @@ fun scheduleTriggerFromJsonObject(json: JsonObject): ScheduleTrigger {
 fun scheduleFromJsonObject(json: JsonObject): Schedule = Schedule(
     id = json.stringOrCorrupt("id"),
     name = json.stringOrCorrupt("name"),
-    workspaceId = json.stringOrCorrupt("workspaceId"),
     prompt = json.stringOrCorrupt("prompt"),
     trigger = scheduleTriggerFromJsonObject(json.objectOrCorrupt("trigger")),
     enabled = json.booleanOrCorrupt("enabled"),
-    notify = json.booleanOrCorrupt("notify"),
+    sessionId = json.stringOrCorrupt("sessionId"),
+    sessionFile = json.stringOrCorrupt("sessionFile"),
+    cwd = json.stringOrCorrupt("cwd"),
     nextRunAt = json.optionalLong("nextRunAt"),
-    lastRunAt = json.optionalLong("lastRunAt"),
-    lastStatus = json.optionalString("lastStatus")?.let { value ->
-        runCatching { ScheduleRunStatus.valueOf(value) }
-            .getOrElse { throw CorruptScheduleDataException("lastStatus 无效：$value") }
+    lastDeliveredAt = json.optionalLong("lastDeliveredAt"),
+    lastError = json.optionalString("lastError")?.let { value ->
+        runCatching { ScheduleError.valueOf(value) }
+            .getOrElse { throw CorruptScheduleDataException("lastError 无效：$value") }
     },
-    lastSessionId = json.optionalString("lastSessionId"),
-    lastError = json.optionalString("lastError"),
     createdAt = json.longOrCorrupt("createdAt"),
     updatedAt = json.longOrCorrupt("updatedAt"),
 )

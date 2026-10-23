@@ -5,8 +5,12 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Clock
+import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -20,20 +24,22 @@ import kotlinx.serialization.json.putJsonArray
 
 data class NewSchedule(
     val name: String,
-    val workspaceId: String,
     val prompt: String,
     val trigger: ScheduleTrigger,
     val enabled: Boolean = true,
-    val notify: Boolean = true,
+    val sessionId: String,
+    val sessionFile: String,
+    val cwd: String,
 )
 
 data class SchedulePatch(
     val name: String? = null,
-    val workspaceId: String? = null,
     val prompt: String? = null,
     val trigger: ScheduleTrigger? = null,
     val enabled: Boolean? = null,
-    val notify: Boolean? = null,
+    val sessionId: String? = null,
+    val sessionFile: String? = null,
+    val cwd: String? = null,
 )
 
 class ScheduleStore(
@@ -42,24 +48,27 @@ class ScheduleStore(
 ) {
     private val mutex = Mutex()
     private val file = File(directory, FILE_NAME)
+    private val changesFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+    val changes: SharedFlow<Unit> = changesFlow.asSharedFlow()
 
     suspend fun list(): List<Schedule> = mutex.withLock { load() }
 
-    suspend fun create(schedule: NewSchedule): Schedule = mutex.withLock {
+    suspend fun create(newSchedule: NewSchedule): Schedule = mutex.withLock {
         val current = load()
-        val nextRunAt = computeNextRunAt(schedule.trigger)
-        if (schedule.trigger is ScheduleTrigger.Once && nextRunAt == null) {
+        val now = clock.millis()
+        val nextRunAt = if (newSchedule.enabled) computeNextRunAt(newSchedule.trigger) else null
+        if (newSchedule.enabled && newSchedule.trigger is ScheduleTrigger.Once && nextRunAt == null) {
             throw IllegalArgumentException("once 的时间必须在未来")
         }
-        val now = clock.millis()
         val created = Schedule(
             id = UUID.randomUUID().toString(),
-            name = schedule.name,
-            workspaceId = schedule.workspaceId,
-            prompt = schedule.prompt,
-            trigger = schedule.trigger,
-            enabled = schedule.enabled,
-            notify = schedule.notify,
+            name = newSchedule.name,
+            prompt = newSchedule.prompt,
+            trigger = newSchedule.trigger,
+            enabled = newSchedule.enabled,
+            sessionId = newSchedule.sessionId,
+            sessionFile = newSchedule.sessionFile,
+            cwd = newSchedule.cwd,
             nextRunAt = nextRunAt,
             createdAt = now,
             updatedAt = now,
@@ -75,22 +84,26 @@ class ScheduleStore(
         val existing = current[index]
         val triggerChanged = patch.trigger != null
         val enabledChanged = patch.enabled != null
+        val bindingChanged = patch.sessionId != null || patch.sessionFile != null || patch.cwd != null
         val trigger = patch.trigger ?: existing.trigger
-        val nextRunAt = if (triggerChanged || enabledChanged) {
-            computeNextRunAt(trigger)
+        val enabled = patch.enabled ?: existing.enabled
+        val recompute = triggerChanged || enabledChanged || bindingChanged
+        val nextRunAt = if (recompute) {
+            if (enabled) computeNextRunAt(trigger) else null
         } else {
             existing.nextRunAt
         }
-        if (triggerChanged && trigger is ScheduleTrigger.Once && nextRunAt == null) {
+        if (recompute && enabled && trigger is ScheduleTrigger.Once && nextRunAt == null) {
             throw IllegalArgumentException("once 的时间必须在未来")
         }
         val updated = existing.copy(
             name = patch.name ?: existing.name,
-            workspaceId = patch.workspaceId ?: existing.workspaceId,
             prompt = patch.prompt ?: existing.prompt,
             trigger = trigger,
-            enabled = patch.enabled ?: existing.enabled,
-            notify = patch.notify ?: existing.notify,
+            enabled = enabled,
+            sessionId = patch.sessionId ?: existing.sessionId,
+            sessionFile = patch.sessionFile ?: existing.sessionFile,
+            cwd = patch.cwd ?: existing.cwd,
             nextRunAt = nextRunAt,
             updatedAt = clock.millis(),
         )
@@ -106,13 +119,16 @@ class ScheduleStore(
         true
     }
 
-    suspend fun markRunning(id: String, at: Long): Schedule? = mutex.withLock {
+    suspend fun markDelivered(id: String, at: Long): Schedule? = mutex.withLock {
         val current = load()
         val index = current.indexOfFirst { it.id == id }
         if (index < 0) return@withLock null
-        val updated = current[index].copy(
-            lastRunAt = at,
-            lastStatus = ScheduleRunStatus.RUNNING,
+        val existing = current[index]
+        val once = existing.trigger is ScheduleTrigger.Once
+        val updated = existing.copy(
+            enabled = if (once) false else existing.enabled,
+            nextRunAt = if (once) null else nextRunAtAfter(existing.trigger, at),
+            lastDeliveredAt = at,
             lastError = null,
             updatedAt = at,
         )
@@ -120,27 +136,15 @@ class ScheduleStore(
         updated
     }
 
-    suspend fun markFinished(
-        id: String,
-        status: ScheduleRunStatus,
-        sessionId: String?,
-        error: String?,
-        at: Long,
-    ): Schedule? = mutex.withLock {
+    suspend fun markDeliveryFailed(id: String, error: ScheduleError, at: Long): Schedule? = mutex.withLock {
         val current = load()
         val index = current.indexOfFirst { it.id == id }
         if (index < 0) return@withLock null
         val existing = current[index]
-        val nextRunAt = if (existing.trigger is ScheduleTrigger.Once) {
-            null
-        } else {
-            computeNextRunAt(existing.trigger, ZonedDateTime.now(clock).plusSeconds(1))
-        }
+        val once = existing.trigger is ScheduleTrigger.Once
         val updated = existing.copy(
-            enabled = if (existing.trigger is ScheduleTrigger.Once) false else existing.enabled,
-            nextRunAt = nextRunAt,
-            lastStatus = status,
-            lastSessionId = sessionId ?: existing.lastSessionId,
+            enabled = if (once) false else existing.enabled,
+            nextRunAt = if (once) null else nextRunAtAfter(existing.trigger, at),
             lastError = error,
             updatedAt = at,
         )
@@ -148,10 +152,74 @@ class ScheduleStore(
         updated
     }
 
-    private fun computeNextRunAt(
-        trigger: ScheduleTrigger,
-        now: ZonedDateTime = ZonedDateTime.now(clock),
-    ): Long? = trigger.nextRun(now)?.toInstant()?.toEpochMilli()
+    suspend fun markRunNow(id: String, at: Long, error: ScheduleError? = null): Schedule? = mutex.withLock {
+        val current = load()
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0) return@withLock null
+        val existing = current[index]
+        val updated = existing.copy(
+            lastDeliveredAt = if (error == null) at else existing.lastDeliveredAt,
+            lastError = error,
+            updatedAt = at,
+        )
+        persist(current.toMutableList().also { it[index] = updated })
+        updated
+    }
+
+    suspend fun deleteBySession(sessionId: String): Boolean = mutex.withLock {
+        val current = load()
+        val remaining = current.filterNot { it.sessionId == sessionId }
+        if (remaining.size == current.size) return@withLock false
+        persist(remaining)
+        true
+    }
+
+    suspend fun disableBySession(sessionId: String): Boolean = mutex.withLock {
+        val current = load()
+        val now = clock.millis()
+        val updated = current.map { schedule ->
+            if (schedule.sessionId == sessionId && schedule.enabled) {
+                schedule.copy(enabled = false, nextRunAt = null, updatedAt = now)
+            } else {
+                schedule
+            }
+        }
+        if (updated == current) return@withLock false
+        persist(updated)
+        true
+    }
+
+    suspend fun recomputeTargets(): Unit = mutex.withLock {
+        val current = load()
+        val nowMillis = clock.millis()
+        val now = ZonedDateTime.now(clock)
+        val updated = current.map { schedule ->
+            if (!schedule.enabled) {
+                if (schedule.nextRunAt == null) schedule else schedule.copy(nextRunAt = null, updatedAt = nowMillis)
+            } else {
+                val next = schedule.trigger.nextRun(now)?.toInstant()?.toEpochMilli()
+                val missedOnce = next == null && schedule.trigger is ScheduleTrigger.Once
+                if (next == schedule.nextRunAt && !missedOnce) {
+                    schedule
+                } else {
+                    schedule.copy(
+                        enabled = if (missedOnce) false else schedule.enabled,
+                        nextRunAt = next,
+                        updatedAt = nowMillis,
+                    )
+                }
+            }
+        }
+        if (updated != current) persist(updated)
+    }
+
+    private fun computeNextRunAt(trigger: ScheduleTrigger, now: ZonedDateTime = ZonedDateTime.now(clock)): Long? =
+        trigger.nextRun(now)?.toInstant()?.toEpochMilli()
+
+    private fun nextRunAtAfter(trigger: ScheduleTrigger, at: Long): Long? =
+        trigger.nextRun(ZonedDateTime.ofInstant(Instant.ofEpochMilli(at), clock.zone))
+            ?.toInstant()
+            ?.toEpochMilli()
 
     private fun load(): List<Schedule> {
         if (!file.exists()) return emptyList()
@@ -165,6 +233,10 @@ class ScheduleStore(
             ?: throw CorruptScheduleDataException("定时任务数据不是有效 JSON 对象")
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
             ?: throw CorruptScheduleDataException("定时任务数据缺少 schemaVersion")
+        if (version == LEGACY_SCHEMA_VERSION) {
+            persist(emptyList())
+            return emptyList()
+        }
         if (version != SCHEMA_VERSION) {
             throw CorruptScheduleDataException("不支持的 schemaVersion：$version")
         }
@@ -195,10 +267,12 @@ class ScheduleStore(
         } catch (_: AtomicMoveNotSupportedException) {
             Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
+        changesFlow.tryEmit(Unit)
     }
 
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
+        private const val LEGACY_SCHEMA_VERSION = 1
         private const val FILE_NAME = "schedules.json"
     }
 }

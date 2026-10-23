@@ -2,6 +2,8 @@ package io.github.whywood.deepdeep.runtime
 
 import android.util.Log
 import dev.pi.agent.AgentEvent
+import dev.pi.agent.asAssistantMessage
+import dev.pi.ai.StopReason
 import dev.pi.ai.TextContent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
@@ -9,6 +11,7 @@ import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.SessionEvent
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path.Companion.toPath
@@ -28,6 +32,7 @@ class AgentRuntimeHost(
     private val catalog: SessionCatalog,
     private val workspaceStore: WorkspaceStore,
     private val providers: ProviderCatalog,
+    private val backgroundScope: CoroutineScope,
 ) : AgentRuntime {
     private class Handle(
         val engine: PiSessionEngine,
@@ -67,8 +72,7 @@ class AgentRuntimeHost(
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = buildList {
         add(homeWorkspace())
-        add(scheduleWorkspace())
-        addAll(workspaceStore.read().filter { it.id != HOME_ID && it.id != SCHEDULE_ID })
+        addAll(workspaceStore.read().filter { it.id != HOME_ID })
     }
 
     override suspend fun createWorkspace(name: String): RuntimeWorkspace = mutex.withLock {
@@ -88,7 +92,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun renameWorkspace(id: String, name: String) {
-        if (id == HOME_ID || id == SCHEDULE_ID) return
+        if (id == HOME_ID) return
         val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
@@ -97,7 +101,7 @@ class AgentRuntimeHost(
     }
 
     override suspend fun deleteWorkspace(id: String) {
-        if (id == HOME_ID || id == SCHEDULE_ID) return
+        if (id == HOME_ID) return
         val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
         val sessions = catalog.list(workspace.cwd)
         sessions.forEach { session ->
@@ -107,6 +111,7 @@ class AgentRuntimeHost(
         sessions.forEach { session ->
             catalog.delete(session.filePath)
             catalog.removeMeta(session.id)
+            eventsBuffer.emit(SessionRuntimeEvent(session.id, RuntimeEvent.SessionRemoved()))
         }
         runCatching { File(workspace.cwd).deleteRecursively() }
         workspaceStore.remove(id)
@@ -152,20 +157,59 @@ class AgentRuntimeHost(
 
     override suspend fun send(sessionId: String, text: String) {
         val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
+        runTurn(handle, beginRun(handle), text)
+    }
+
+    override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
+        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
+        if (handle.busy || handle.session.isStreaming) {
+            val runId = handle.runId.orEmpty()
+            emit(handle, RuntimeEvent.TurnInjected(runId, text, reminder))
+            handle.session.followUp(text)
+            eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+            return
+        }
+        val runId = beginRun(handle)
+        emit(handle, RuntimeEvent.TurnInjected(runId, text, reminder))
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        backgroundScope.launch { runTurn(handle, runId, text) }
+    }
+
+    override suspend fun activeRunId(sessionId: String): String? = mutex.withLock {
+        handles[sessionId]?.runId
+    }
+
+    private fun beginRun(handle: Handle): String {
         val runId = UUID.randomUUID().toString()
         handle.runId = runId
         handle.stopRequested = false
         handle.terminalEmitted = false
         handle.busy = true
         publishBusy()
+        return runId
+    }
+
+    private suspend fun runTurn(handle: Handle, runId: String, text: String) {
         try {
             ensureTitle(handle, text)
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
-            Log.i(TAG, "send session=$sessionId run=$runId chars=${text.length}")
+            Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text)
             if (!handle.stopRequested && !handle.terminalEmitted) {
-                emitTerminal(handle, runId, handle.session.getLastAssistantText().orEmpty(), RunStatus.DONE)
+                val last = handle.session.messages.asReversed().firstNotNullOfOrNull { it.asAssistantMessage() }
+                val status = when (last?.stopReason) {
+                    StopReason.Error -> RunStatus.FAILED
+                    StopReason.Aborted -> RunStatus.STOPPED
+                    else -> RunStatus.DONE
+                }
+                emitTerminal(
+                    handle = handle,
+                    runId = runId,
+                    text = handle.session.getLastAssistantText().orEmpty(),
+                    status = status,
+                    message = last?.errorMessage,
+                )
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -213,7 +257,7 @@ class AgentRuntimeHost(
 
     override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
         handles[sessionId]?.session?.sessionManager?.getSessionName()
-            ?: catalog.find(allCwds(), sessionId)?.title
+            ?: catalog.find(visibleCwds(), sessionId)?.title
     }
 
     override suspend fun sessions(workspaceId: String): List<ConversationSummary> {
@@ -236,16 +280,18 @@ class AgentRuntimeHost(
 
     override suspend fun setSessionArchived(id: String, archived: Boolean) {
         catalog.setArchived(id, archived)
+        eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionArchived(archived = archived)))
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
     override suspend fun deleteSession(id: String) {
-        val summary = catalog.find(allCwds(), id)
+        val summary = catalog.find(visibleCwds(), id)
         mutex.withLock { detach(id) }
         if (summary != null) {
             catalog.delete(summary.filePath)
             catalog.removeMeta(id)
         }
+        eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionRemoved()))
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
@@ -291,28 +337,13 @@ class AgentRuntimeHost(
         isHome = true,
     )
 
-    private fun scheduleWorkspace(): RuntimeWorkspace {
-        val directory = File(File(homeDir.parentFile, "schedules"), "workspace")
-        directory.mkdirs()
-        return RuntimeWorkspace(
-            id = SCHEDULE_ID,
-            name = SCHEDULE_NAME,
-            cwd = directory.absolutePath,
-            hidden = true,
-        )
-    }
-
     private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace {
         if (workspaceId == HOME_ID || workspaceId.isBlank()) return homeWorkspace()
-        if (workspaceId == SCHEDULE_ID) return scheduleWorkspace()
         return workspaceStore.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
     }
 
     private suspend fun visibleCwds(): List<String> =
         listOf(homeDir.absolutePath) + workspaceStore.read().map { it.cwd }
-
-    private suspend fun allCwds(): List<String> =
-        visibleCwds() + scheduleWorkspace().cwd
 
     private suspend fun attach(cwd: String, file: String?): Handle {
         val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile?.toString() == file }
@@ -447,8 +478,6 @@ class AgentRuntimeHost(
     companion object {
         const val HOME_ID = "home"
         const val HOME_NAME = "Home"
-        const val SCHEDULE_ID = "schedules"
-        const val SCHEDULE_NAME = "Scheduled"
     }
 }
 

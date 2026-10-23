@@ -75,10 +75,18 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 40. 定时任务执行：创建 1–2 分钟后的一次性任务；前台服务 tick 后 `lastStatus=DONE`、`lastSessionId` 有值、nextRunAt 置空且开关关闭；运行会话可打开并看到结果。
 41. 任务详情：显示触发、工作区、下次/上次运行、状态、错误、prompt；打开运行会话、删除均可用；安排记录可重新打开隐藏会话。
 42. 项目技能保存：全局技能不生成项目副本；未全局技能勾选后复制到 `.pi/skills`，取消勾选后删除。
+43. 定时任务迁移：升级前存在 v1 任务；升级后 `schedules.json` 变成 `schemaVersion: 2` 且任务为空，旧任务不再出现。
+44. 定时任务编辑器：任务页「＋」打开编辑器，填名称/内容/时间；一次性过去时间内联报错；保存后列表立即出现新行，重启仍在。
+45. 提醒投递：在当前对话创建 1 分钟内的一次性提醒；到点后提醒气泡出现在**同一对话**（带「定时提醒」标签），助手在原对话里继续回复；抽屉中该对话置顶；一次性任务变为已停用。
+46. 批量投递：同一对话两条提醒设到同一分钟；只出现一条批量提醒和一次运行。
+47. 手动执行：编辑已有任务点「立即运行」；提醒立刻出现在绑定对话并跳转过去，下次投递时间不变。
+48. 生命周期：删除绑定对话后任务从任务页消失；归档绑定对话后任务变已停用。
+49. 失败可见：断网或使用无效 API Key 发送；该轮显示本地化错误（如「余额不足」「Invalid or expired API key」）+「重试」；恢复网络后点重试成功；杀进程重开历史里仍能看到失败轮。
+50. 补跑：到点前杀进程，重开 App 后补投一次且不重复；改设备时区后任务按新本地时间重算。
 
 ## 证据
 
-`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`，设备日志用：
+`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`、`artifacts/validation/round11/`，设备日志用：
 
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat

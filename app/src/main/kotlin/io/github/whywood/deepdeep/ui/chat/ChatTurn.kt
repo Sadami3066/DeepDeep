@@ -22,13 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
 import java.io.File
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -58,6 +63,7 @@ internal fun ChatTurn(
     onQuote: (Long, String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
+    onRetry: (Long) -> Unit,
     attachmentRoot: File,
     autoCollapseProcess: Boolean = true,
 ) {
@@ -78,6 +84,7 @@ internal fun ChatTurn(
             onCopyOutput = onCopyOutput,
             onQuote = onQuote,
             onOpenFile = onOpenFile,
+            onRetry = onRetry,
             autoCollapseProcess = autoCollapseProcess,
         )
     }
@@ -104,6 +111,20 @@ private fun UserBubble(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            val reminder = message.reminder
+            if (reminder != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    DdIcon(icon = DdIcons.Clock, tint = colors.inkTertiary, size = 12.dp)
+                    Text(
+                        text = stringResource(R.string.assistant_reminder_label, reminder),
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                        color = colors.inkTertiary,
+                    )
+                }
+            }
             if (parsed.attachments.isNotEmpty()) {
                 AttachmentCards(attachments = parsed.attachments, root = attachmentRoot, onOpen = onOpenAttachment)
             }
@@ -166,6 +187,7 @@ private fun AssistantTurn(
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenFile: (String) -> Unit,
+    onRetry: (Long) -> Unit,
     autoCollapseProcess: Boolean,
 ) {
     val colors = deepDeepColors()
@@ -207,10 +229,7 @@ private fun AssistantTurn(
                 color = colors.inkTertiary,
             )
 
-            MessageStatus.FAILED -> StatusMark(
-                text = stringResource(R.string.assistant_failed),
-                color = colors.inkSecondary,
-            )
+            MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry)
 
             else -> Unit
         }
@@ -222,6 +241,25 @@ private fun AssistantTurn(
                 onShare = { onShare(readable) },
             )
         }
+    }
+}
+
+@Composable
+private fun FailedMark(message: AssistantMessage, onRetry: (Long) -> Unit) {
+    val colors = deepDeepColors()
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text = message.error ?: stringResource(R.string.assistant_failed),
+            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+            color = colors.inkSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        DdTextAction(
+            text = stringResource(R.string.assistant_retry),
+            onClick = { onRetry(message.id) },
+            modifier = Modifier.testTag("assistant_retry"),
+        )
     }
 }
 

@@ -1,15 +1,12 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.coding.tools.CodingTool
-import java.io.File
 import okio.Path
 
 data class AppToolContext(
-    val scheduleStore: ScheduleStore,
+    val scheduleService: ScheduleService,
     val questionCenter: QuestionCenter,
-    val workspaceStore: WorkspaceStore,
-    val homeDir: File,
 )
 
-fun appTools(cwd: Path, context: AppToolContext): List<CodingTool> =
-    scheduleTools(cwd, context) + askUserQuestionTool(context.questionCenter)
+fun appTools(cwd: Path, context: AppToolContext, binding: ScheduleBinding): List<CodingTool> =
+    scheduleTools(cwd, context, binding) + askUserQuestionTool(context.questionCenter)
