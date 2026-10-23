@@ -34,7 +34,21 @@ Trigger
   Once(date: LocalDate, time: LocalTime)
   Daily(time: LocalTime)
   Weekly(days: Set<DayOfWeek>, time: LocalTime)
+  Interval(every: Int, unit: MINUTES|HOURS|DAYS, time: LocalTime?, startDate: LocalDate?)
+  Monthly(day: Int, time: LocalTime)
+  Cron(expression: String)
 ```
+
+触发规则：
+
+| 类型 | 语义 |
+|---|---|
+| `once` | 指定日期时间，必须晚于当前；投递后停用 |
+| `daily` | 每天指定时间 |
+| `weekly` | 每周指定星期与时间（工作日/周末是它的预设） |
+| `interval` | 分钟/小时：按每天 00:00 对齐（如每 30 分钟 → 00:00、00:30…）；天：从 `startDate` 起每 N 天的指定时间，需要 `time` 与 `startDate` |
+| `monthly` | 每月第 N 天（1–31）指定时间；短月取当月最后一天（31 号在 2 月取 28/29 号） |
+| `cron` | 5 段本地时间表达式（分钟 小时 日 月 星期），支持 `*`、列表、范围、步长、月份/星期英文名；日与星期同时限定时按「或」匹配；最多向后找 5 年，无匹配视为无效 |
 
 - 使用设备本地时区；不保存 API Key，提醒内容按本地明文保存。
 - `enabled = false` 时 `nextRunAt = null`；重新启用时按规则重算。
@@ -75,7 +89,8 @@ Trigger
 `schedule_create`、`schedule_list`、`schedule_update`、`schedule_delete` 绑定到调用它们的会话：
 
 - 只能看到、修改、删除当前会话的提醒；创建即绑定当前会话，无需指定工作区。
-- `schedule_create` 参数：`prompt`、`frequency`（once / daily / weekdays / weekends / weekly）、`name`、`date`、`time`、`weekdays`。
+- `schedule_create` 参数：`prompt`、`frequency`（once / daily / weekdays / weekends / weekly / interval / monthly / cron）、`name`、`date`、`time`、`weekdays`；新类型参数：`interval` + `interval_unit`（minutes/hours/days，天类型再带 `start_date`）、`day_of_month`、`cron`。
+- 触发器在写入前校验：时间过去的一次性、星期为空、间隔越界、缺 `time`/`start_date`、cron 表达式无效或 5 年内无匹配都会被拒绝（工具返回错误文案）。
 - `schedule_list/update/delete` 只作用于当前会话；`update` 可改名称、内容、触发与启用状态，不能改绑对话。
 - 工具与任务页写同一个存储；`ScheduleService` 订阅存储变更即时重算，无需重启。
 

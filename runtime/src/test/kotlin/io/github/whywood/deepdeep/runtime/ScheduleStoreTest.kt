@@ -421,4 +421,30 @@ class ScheduleStoreTest {
         File(directory, "schedules.json").writeText("  \n")
         assertTrue(store().list().isEmpty())
     }
+
+    @Test
+    fun createRejectsInvalidCronExpression() = runTest {
+        val failure = runCatching {
+            store().create(newSchedule(trigger = ScheduleTrigger.Cron("*/0 * * * *")))
+        }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
+    }
+
+    @Test
+    fun createStoresNextRunForIntervalAndMonthly() = runTest {
+        val interval = store().create(
+            newSchedule(trigger = ScheduleTrigger.Interval(2, IntervalUnit.HOURS)),
+        )
+        assertEquals(
+            ZonedDateTime.of(2026, 10, 23, 14, 0, 0, 0, zone).toInstant().toEpochMilli(),
+            interval.nextRunAt,
+        )
+        val monthly = store().create(
+            newSchedule(trigger = ScheduleTrigger.Monthly(31, LocalTime.of(9, 0))),
+        )
+        assertEquals(
+            ZonedDateTime.of(2026, 10, 31, 9, 0, 0, 0, zone).toInstant().toEpochMilli(),
+            monthly.nextRunAt,
+        )
+    }
 }

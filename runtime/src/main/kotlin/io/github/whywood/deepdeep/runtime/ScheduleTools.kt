@@ -54,6 +54,9 @@ private val FREQUENCY_VALUES = buildJsonArray {
     add(JsonPrimitive("weekdays"))
     add(JsonPrimitive("weekends"))
     add(JsonPrimitive("weekly"))
+    add(JsonPrimitive("interval"))
+    add(JsonPrimitive("monthly"))
+    add(JsonPrimitive("cron"))
 }
 
 private val createParameters: JsonObject = buildJsonObject {
@@ -66,7 +69,7 @@ private val createParameters: JsonObject = buildJsonObject {
         putJsonObject("frequency") {
             put("type", "string")
             put("enum", FREQUENCY_VALUES)
-            put("description", "Trigger kind: once, daily, weekdays (Monday to Friday), weekends (Saturday and Sunday) or weekly")
+            put("description", "Trigger kind: once, daily, weekdays (Monday to Friday), weekends (Saturday and Sunday), weekly, interval, monthly or cron")
         }
         putJsonObject("name") {
             put("type", "string")
@@ -84,6 +87,31 @@ private val createParameters: JsonObject = buildJsonObject {
             put("type", "array")
             put("items", buildJsonObject { put("type", "string") })
             put("description", "Weekdays for weekly triggers: ISO numbers 1-7 (1=Monday) or names like MONDAY, WEDNESDAY, 周一")
+        }
+        putJsonObject("interval") {
+            put("type", "number")
+            put("description", "Repeat every N units for interval triggers: 1..1440 minutes, 1..24 hours or 1..365 days")
+        }
+        putJsonObject("interval_unit") {
+            put("type", "string")
+            put("enum", buildJsonArray {
+                add(JsonPrimitive("minutes"))
+                add(JsonPrimitive("hours"))
+                add(JsonPrimitive("days"))
+            })
+            put("description", "Unit for interval triggers: minutes, hours or days")
+        }
+        putJsonObject("start_date") {
+            put("type", "string")
+            put("description", "YYYY-MM-DD start date for interval triggers in days; defaults to today")
+        }
+        putJsonObject("day_of_month") {
+            put("type", "number")
+            put("description", "Day of month 1..31 for monthly triggers; shorter months use their last day")
+        }
+        putJsonObject("cron") {
+            put("type", "string")
+            put("description", "Five-field cron expression in local time: minute hour day-of-month month day-of-week, e.g. 0 9 * * 1-5")
         }
     }
     put("required", buildJsonArray {
@@ -106,7 +134,7 @@ private val updateParameters: JsonObject = buildJsonObject {
         putJsonObject("frequency") {
             put("type", "string")
             put("enum", FREQUENCY_VALUES)
-            put("description", "New trigger kind: once, daily, weekdays, weekends or weekly")
+            put("description", "New trigger kind: once, daily, weekdays, weekends, weekly, interval, monthly or cron")
         }
         putJsonObject("name") {
             put("type", "string")
@@ -124,6 +152,31 @@ private val updateParameters: JsonObject = buildJsonObject {
             put("type", "array")
             put("items", buildJsonObject { put("type", "string") })
             put("description", "Weekdays for weekly triggers: ISO numbers 1-7 (1=Monday) or names like MONDAY, WEDNESDAY, 周一")
+        }
+        putJsonObject("interval") {
+            put("type", "number")
+            put("description", "Repeat every N units for interval triggers: 1..1440 minutes, 1..24 hours or 1..365 days")
+        }
+        putJsonObject("interval_unit") {
+            put("type", "string")
+            put("enum", buildJsonArray {
+                add(JsonPrimitive("minutes"))
+                add(JsonPrimitive("hours"))
+                add(JsonPrimitive("days"))
+            })
+            put("description", "Unit for interval triggers: minutes, hours or days")
+        }
+        putJsonObject("start_date") {
+            put("type", "string")
+            put("description", "YYYY-MM-DD start date for interval triggers in days")
+        }
+        putJsonObject("day_of_month") {
+            put("type", "number")
+            put("description", "Day of month 1..31 for monthly triggers")
+        }
+        putJsonObject("cron") {
+            put("type", "string")
+            put("description", "Five-field cron expression in local time")
         }
         putJsonObject("enabled") {
             put("type", "boolean")
@@ -232,7 +285,10 @@ private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: Sess
             val existing = context.scheduleService.list()
                 .firstOrNull { it.id == id && it.sessionId == session.sessionId }
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
-            val hasTriggerArgs = listOf("frequency", "date", "time", "weekdays").any { args.containsKey(it) }
+            val hasTriggerArgs = listOf(
+                "frequency", "date", "time", "weekdays",
+                "interval", "interval_unit", "start_date", "day_of_month", "cron",
+            ).any { args.containsKey(it) }
             val trigger = if (hasTriggerArgs) {
                 parseTrigger(args, base = existing.trigger, requestedFrequency = args.stringOrNull("frequency"))
             } else {
@@ -319,7 +375,7 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
     val frequency = requestedFrequency?.trim()?.lowercase()
         ?: args.stringOrNull("frequency")?.trim()?.lowercase()
         ?: base?.let(::triggerKind)
-        ?: throw IllegalArgumentException("缺少 frequency（once/daily/weekdays/weekends/weekly）")
+        ?: throw IllegalArgumentException("缺少 frequency（once/daily/weekdays/weekends/weekly/interval/monthly/cron）")
     val baseTime = base?.timeOf()
     return when (frequency) {
         "once" -> {
@@ -356,14 +412,56 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
                 ?: throw IllegalArgumentException("weekly 需要 time（HH:mm）")
             ScheduleTrigger.Weekly(days, time)
         }
-        else -> throw IllegalArgumentException("frequency 只能是 once/daily/weekdays/weekends/weekly")
+        "interval" -> {
+            val baseInterval = base as? ScheduleTrigger.Interval
+            val every = args.intOrNull("interval")
+                ?: baseInterval?.every
+                ?: throw IllegalArgumentException("interval 需要 interval（重复次数）")
+            val unit = args.stringOrNull("interval_unit")?.trim()?.takeIf { it.isNotEmpty() }
+                ?.let(::parseIntervalUnit)
+                ?: baseInterval?.unit
+                ?: throw IllegalArgumentException("interval 需要 interval_unit（minutes/hours/days）")
+            if (unit == IntervalUnit.DAYS) {
+                val time = parseTimeArg(args, baseInterval?.time ?: baseTime)
+                    ?: throw IllegalArgumentException("interval 天需要 time（HH:mm）")
+                val startDate = args.stringOrNull("start_date")?.trim()?.takeIf { it.isNotEmpty() }
+                    ?.let(::parseDate)
+                    ?: baseInterval?.startDate
+                    ?: LocalDate.now()
+                ScheduleTrigger.Interval(every, unit, time, startDate)
+            } else {
+                ScheduleTrigger.Interval(every, unit)
+            }
+        }
+        "monthly" -> {
+            val baseMonthly = base as? ScheduleTrigger.Monthly
+            val day = args.intOrNull("day_of_month")
+                ?: baseMonthly?.day
+                ?: throw IllegalArgumentException("monthly 需要 day_of_month（1..31）")
+            val time = parseTimeArg(args, baseTime)
+                ?: throw IllegalArgumentException("monthly 需要 time（HH:mm）")
+            ScheduleTrigger.Monthly(day, time)
+        }
+        "cron" -> {
+            val baseCron = base as? ScheduleTrigger.Cron
+            val expression = args.stringOrNull("cron")?.trim()?.takeIf { it.isNotEmpty() }
+                ?: baseCron?.expression
+                ?: throw IllegalArgumentException("cron 需要 cron（5 段表达式）")
+            ScheduleTrigger.Cron(expression)
+        }
+        else -> throw IllegalArgumentException(
+            "frequency 只能是 once/daily/weekdays/weekends/weekly/interval/monthly/cron",
+        )
     }
 }
 
-private fun ScheduleTrigger.timeOf(): LocalTime = when (this) {
+private fun ScheduleTrigger.timeOf(): LocalTime? = when (this) {
     is ScheduleTrigger.Once -> time
     is ScheduleTrigger.Daily -> time
     is ScheduleTrigger.Weekly -> time
+    is ScheduleTrigger.Interval -> time
+    is ScheduleTrigger.Monthly -> time
+    is ScheduleTrigger.Cron -> null
 }
 
 private fun triggerKind(trigger: ScheduleTrigger): String = when (trigger) {
@@ -374,6 +472,9 @@ private fun triggerKind(trigger: ScheduleTrigger): String = when (trigger) {
         WEEKEND_DAYS -> "weekends"
         else -> "weekly"
     }
+    is ScheduleTrigger.Interval -> "interval"
+    is ScheduleTrigger.Monthly -> "monthly"
+    is ScheduleTrigger.Cron -> "cron"
 }
 
 private fun parseTimeArg(args: JsonObject, fallback: LocalTime?): LocalTime? {
@@ -389,6 +490,13 @@ private fun parseTime(raw: String): LocalTime {
     } catch (error: DateTimeParseException) {
         throw IllegalArgumentException("时间格式无效：$raw（使用 HH:mm）")
     }
+}
+
+private fun parseIntervalUnit(raw: String): IntervalUnit = when (raw.trim().lowercase()) {
+    "minutes", "minute", "min" -> IntervalUnit.MINUTES
+    "hours", "hour" -> IntervalUnit.HOURS
+    "days", "day" -> IntervalUnit.DAYS
+    else -> throw IllegalArgumentException("interval_unit 只能是 minutes/hours/days")
 }
 
 private fun parseDate(raw: String): LocalDate = try {
@@ -418,6 +526,9 @@ private fun JsonObject.stringOrNull(name: String): String? =
 
 private fun JsonObject.boolOrNull(name: String): Boolean? =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
+
+private fun JsonObject.intOrNull(name: String): Int? =
+    (this[name] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toInt()
 
 private fun JsonObject.requiredString(name: String): String =
     stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }

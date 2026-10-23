@@ -56,10 +56,13 @@ class ScheduleStore(
     suspend fun create(newSchedule: NewSchedule): Schedule = mutex.withLock {
         val current = load()
         val now = clock.millis()
-        val nextRunAt = if (newSchedule.enabled) computeNextRunAt(newSchedule.trigger) else null
-        if (newSchedule.enabled && newSchedule.trigger is ScheduleTrigger.Once && nextRunAt == null) {
-            throw IllegalArgumentException("once 的时间必须在未来")
+        val nowZoned = ZonedDateTime.now(clock)
+        newSchedule.trigger.validationError(nowZoned)?.let { error ->
+            if (newSchedule.enabled || newSchedule.trigger !is ScheduleTrigger.Once) {
+                throw IllegalArgumentException(error)
+            }
         }
+        val nextRunAt = if (newSchedule.enabled) computeNextRunAt(newSchedule.trigger) else null
         val created = Schedule(
             id = UUID.randomUUID().toString(),
             name = newSchedule.name,
@@ -93,8 +96,12 @@ class ScheduleStore(
         } else {
             existing.nextRunAt
         }
-        if (recompute && enabled && trigger is ScheduleTrigger.Once && nextRunAt == null) {
-            throw IllegalArgumentException("once 的时间必须在未来")
+        if (recompute) {
+            trigger.validationError(ZonedDateTime.now(clock))?.let { error ->
+                if (enabled || trigger !is ScheduleTrigger.Once) {
+                    throw IllegalArgumentException(error)
+                }
+            }
         }
         val updated = existing.copy(
             name = patch.name ?: existing.name,

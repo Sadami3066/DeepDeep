@@ -256,17 +256,26 @@ private fun EmptySchedules(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ruleLabel(trigger: ScheduleTrigger): String = stringResource(
-    when (trigger) {
-        is ScheduleTrigger.Once -> R.string.schedules_frequency_once
-        is ScheduleTrigger.Daily -> R.string.schedules_frequency_daily
-        is ScheduleTrigger.Weekly -> when {
+private fun ruleLabel(trigger: ScheduleTrigger): String = when (trigger) {
+    is ScheduleTrigger.Once -> stringResource(R.string.schedules_frequency_once)
+    is ScheduleTrigger.Daily -> stringResource(R.string.schedules_frequency_daily)
+    is ScheduleTrigger.Weekly -> stringResource(
+        when {
             trigger.days == WEEKDAY_SET -> R.string.schedules_frequency_weekdays
             trigger.days == WEEKEND_SET -> R.string.schedules_frequency_weekends
             else -> R.string.schedules_frequency_weekly
-        }
-    },
-)
+        },
+    )
+
+    is ScheduleTrigger.Interval -> when (trigger.unit) {
+        IntervalUnit.MINUTES -> stringResource(R.string.schedules_rule_interval_minutes, trigger.every)
+        IntervalUnit.HOURS -> stringResource(R.string.schedules_rule_interval_hours, trigger.every)
+        IntervalUnit.DAYS -> stringResource(R.string.schedules_rule_interval_days, trigger.every)
+    }
+
+    is ScheduleTrigger.Monthly -> stringResource(R.string.schedules_rule_monthly, trigger.day)
+    is ScheduleTrigger.Cron -> stringResource(R.string.schedules_rule_cron, trigger.expression)
+}
 
 @Composable
 private fun nextDeliveryLabel(timestamp: Long?): String {
@@ -293,5 +302,8 @@ internal fun draftErrorRes(error: DraftError): Int = when (error) {
     DraftError.EMPTY_PROMPT -> R.string.schedule_error_empty_prompt
     DraftError.EMPTY_WEEKDAYS -> R.string.schedule_error_empty_weekdays
     DraftError.PAST_TIME -> R.string.schedule_error_past_time
+    DraftError.INVALID_INTERVAL -> R.string.schedule_error_invalid_interval
+    DraftError.INVALID_DAY_OF_MONTH -> R.string.schedule_error_invalid_day_of_month
+    DraftError.INVALID_CRON -> R.string.schedule_error_invalid_cron
     DraftError.NO_CONVERSATION -> R.string.schedule_error_no_conversation
 }

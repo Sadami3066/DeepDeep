@@ -19,5 +19,6 @@
 17. P11.3 — model sheet provider switching, regenerate-on-retry, auto-retry switch with UI feedback (done)
 18. P12 — `/` commands, manual compaction, token usage ring + session stats, goals with round continuation, background jobs with wake-up, inline question card (done)
 19. P12.1 — device-feedback polish: job notices as one-line markers, multiple questions serialized into one interactive card with answers collected into the process, baseline-centered inline code chips, `present` tool with delivery cards, PRoot shared storage (MANAGE_EXTERNAL_STORAGE bind of /sdcard), workspace file browser, share-panel inset jitter fixes (done)
-20. Next — workspace-level session migration/archive; full-text search; schedule editor trigger presets (cron/custom intervals); root ShellExecutor when authorized
-21. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it
+20. P12.2 — reminder triggers: interval (minutes/hours/day), monthly day, five-field cron with parser/validation, scheduler next-run support, editor picker + cron presets, tool parameters (done)
+21. Next — workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+22. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it
