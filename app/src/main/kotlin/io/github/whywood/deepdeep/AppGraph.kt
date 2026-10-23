@@ -3,9 +3,12 @@ package io.github.whywood.deepdeep
 import android.content.Context
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.FileAttachmentStore
+import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -17,6 +20,7 @@ import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
+import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
@@ -42,6 +46,8 @@ class AppGraph(context: Context) {
     val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
     val appPreferences = AppPreferences(appContext)
+    val personalizationStore = PersonalizationStore(appContext)
+    val fontPreferences = FontPreferences(appContext)
     val linuxEnvironment = LinuxEnvironment(appContext, homeDir)
     val credentials = SdkCredentialStore(apiKeyStore, scope)
     val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
@@ -64,7 +70,14 @@ class AppGraph(context: Context) {
     }
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        PiSessionEngine(cwd, agentDir, credentials, shellExecutorFor(cwd), providerCatalog)
+        PiSessionEngine(
+            workspace = cwd,
+            agentDir = agentDir,
+            credentials = credentials,
+            shellExecutor = shellExecutorFor(cwd),
+            providers = providerCatalog,
+            personalization = { personalizationStore.read().toRuntime() },
+        )
     }
 
     val host = AgentRuntimeHost(
@@ -76,6 +89,9 @@ class AppGraph(context: Context) {
         workspaceStore = workspaceStore,
         providers = providerCatalog,
     )
+
+    val notificationCenter by lazy { NotificationCenter(appContext, host) }
+    val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     suspend fun prepare() {
         LegacyWorkspaceMigration.migrate(appContext, workspaceStore)

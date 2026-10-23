@@ -97,6 +97,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     state: ChatUiState,
+    nickname: String,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -244,7 +245,11 @@ fun ChatScreen(
                     )
                 }
             } else if (state.messages.isEmpty()) {
-                EmptyState(loaded = state.historyLoaded, modifier = Modifier.fillMaxSize())
+                EmptyState(
+                    loaded = state.historyLoaded,
+                    nickname = nickname,
+                    modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 LazyColumn(
                     state = listState,
@@ -337,6 +342,7 @@ fun ChatScreen(
 @Composable
 private fun EmptyState(
     loaded: Boolean,
+    nickname: String,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -370,7 +376,7 @@ private fun EmptyState(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = greeting(),
+                        text = greeting(nickname),
                         modifier = Modifier.testTag("home_greeting"),
                         style = DdType.display,
                         color = colors.ink,
@@ -390,10 +396,13 @@ private fun EmptyState(
 }
 
 @Composable
-private fun greeting(): String = when (LocalTime.now().hour) {
-    in 5..10 -> stringResource(R.string.assistant_greeting_morning)
-    in 11..17 -> stringResource(R.string.assistant_greeting_afternoon)
-    else -> stringResource(R.string.assistant_greeting_evening)
+private fun greeting(nickname: String): String {
+    val base = when (LocalTime.now().hour) {
+        in 5..10 -> stringResource(R.string.assistant_greeting_morning)
+        in 11..17 -> stringResource(R.string.assistant_greeting_afternoon)
+        else -> stringResource(R.string.assistant_greeting_evening)
+    }
+    return if (nickname.isBlank()) base else "$base，$nickname"
 }
 
 @Composable

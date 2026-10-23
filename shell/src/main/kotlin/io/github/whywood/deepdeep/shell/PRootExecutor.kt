@@ -22,7 +22,14 @@ class PRootExecutor(
         require(maxOutputBytes > 0) { "maxOutputBytes must be positive" }
     }
 
-    override suspend fun execute(command: String, timeoutMillis: Long): LinuxResult {
+    override suspend fun execute(command: String, timeoutMillis: Long): LinuxResult =
+        executeStreaming(command, timeoutMillis, null)
+
+    suspend fun executeStreaming(
+        command: String,
+        timeoutMillis: Long,
+        onOutputLine: ((String) -> Unit)?,
+    ): LinuxResult {
         require(command.isNotBlank()) { "command must not be blank" }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
 
@@ -31,7 +38,7 @@ class PRootExecutor(
             val cancelled = AtomicBoolean(false)
             val worker = Thread({
                 try {
-                    val result = executeBlocking(command, timeoutMillis) { running ->
+                    val result = executeBlocking(command, timeoutMillis, onOutputLine) { running ->
                         runningRef.set(running)
                         if (cancelled.get()) killTree(running.process, running.pid)
                     }
@@ -79,6 +86,7 @@ class PRootExecutor(
     private fun executeBlocking(
         command: String,
         timeoutMillis: Long,
+        onOutputLine: ((String) -> Unit)?,
         onStarted: (RunningProcess) -> Unit,
     ): LinuxResult {
         require(prootBinary.isFile) { "PRoot binary missing: $prootBinary" }
@@ -108,6 +116,7 @@ class PRootExecutor(
         watchdog.start()
 
         val output = ByteArrayOutputStream()
+        val pendingLine = ByteArrayOutputStream()
         var truncated = false
         try {
             process.inputStream.use { input ->
@@ -124,6 +133,22 @@ class PRootExecutor(
                         output.write(buffer, 0, minOf(read, remaining))
                     }
                     if (read > remaining) truncated = true
+                    if (onOutputLine != null) {
+                        for (index in 0 until read) {
+                            val byte = buffer[index]
+                            if (byte == '\n'.code.toByte()) {
+                                val line = pendingLine.toByteArray().toString(Charsets.UTF_8).trimEnd('\r')
+                                pendingLine.reset()
+                                runCatching { onOutputLine(line) }
+                            } else {
+                                pendingLine.write(byte.toInt())
+                            }
+                        }
+                    }
+                }
+                if (onOutputLine != null && pendingLine.size() > 0) {
+                    val line = pendingLine.toByteArray().toString(Charsets.UTF_8).trimEnd('\r')
+                    runCatching { onOutputLine(line) }
                 }
             }
             process.waitFor()

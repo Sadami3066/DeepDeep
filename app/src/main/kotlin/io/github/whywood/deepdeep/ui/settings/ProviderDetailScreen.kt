@@ -196,7 +196,7 @@ private fun ProviderOverview(
             Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            InitialBadge(provider.name, size = 52.dp)
+            ProviderIcon(provider.id, provider.name, size = 52.dp, iconSize = 30.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(

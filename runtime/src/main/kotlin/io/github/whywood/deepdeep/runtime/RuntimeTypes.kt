@@ -252,6 +252,8 @@ interface AgentRuntime {
 
     suspend fun history(sessionId: String): List<AssistantMessage>
 
+    suspend fun sessionTitle(sessionId: String): String?
+
     suspend fun sessions(workspaceId: String): List<ConversationSummary>
 
     suspend fun archivedSessions(): List<ConversationSummary>

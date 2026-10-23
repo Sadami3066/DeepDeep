@@ -199,6 +199,7 @@ fun DdListRow(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     showChevron: Boolean = false,
+    subtitleMaxLines: Int = 1,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
@@ -234,7 +235,7 @@ fun DdListRow(
                         text = subtitle,
                         style = DdType.bodySmall,
                         color = colors.inkTertiary.copy(alpha = alpha),
-                        maxLines = 1,
+                        maxLines = subtitleMaxLines,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

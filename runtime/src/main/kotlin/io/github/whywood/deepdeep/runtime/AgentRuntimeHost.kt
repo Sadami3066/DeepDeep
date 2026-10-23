@@ -199,6 +199,11 @@ class AgentRuntimeHost(
         handles[sessionId]?.let { handle -> handle.engine.history(handle.session) }.orEmpty()
     }
 
+    override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
+        handles[sessionId]?.session?.sessionManager?.getSessionName()
+            ?: catalog.find(allCwds(), sessionId)?.title
+    }
+
     override suspend fun sessions(workspaceId: String): List<ConversationSummary> {
         val workspace = workspaceFor(workspaceId)
         return catalog.list(workspace.cwd).filterNot { it.archived }

@@ -10,11 +10,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -105,94 +108,154 @@ private val Dark = DeepDeepColors(
 
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }
 
+enum class DdFontStyle(val id: String, val displayName: String) {
+    INSTRUMENT("instrument", "Instrument Sans"),
+    GEIST("geist", "Geist"),
+    IBM_PLEX_SANS("ibm_plex_sans", "IBM Plex Sans"),
+    NEWSREADER("newsreader", "Newsreader"),
+    LORA("lora", "Lora"),
+    ;
+
+    companion object {
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: INSTRUMENT
+    }
+}
+
+@OptIn(ExperimentalTextApi::class)
 object DdFonts {
-    val Sans = FontFamily(
+    private val InstrumentSans = FontFamily(
         Font(R.font.instrument_sans_regular, FontWeight.Normal),
         Font(R.font.instrument_sans_medium, FontWeight.Medium),
         Font(R.font.instrument_sans_semibold, FontWeight.SemiBold),
     )
-    val Newsreader = FontFamily(
+
+    private val NewsreaderFamily = FontFamily(
         Font(R.font.newsreader_regular, FontWeight.Normal),
         Font(R.font.newsreader_medium, FontWeight.Medium),
     )
-    val Display = FontFamily.Serif
+
+    private val GeistFamily = variableFamily(R.font.geist_variable)
+    private val IbmPlexSansFamily = variableFamily(R.font.ibm_plex_sans_variable)
+    private val LoraFamily = variableFamily(R.font.lora_variable)
+
+    var style: DdFontStyle = DdFontStyle.INSTRUMENT
+        private set
+
+    fun apply(style: DdFontStyle) {
+        this.style = style
+    }
+
+    fun familyFor(style: DdFontStyle): FontFamily = when (style) {
+        DdFontStyle.INSTRUMENT -> InstrumentSans
+        DdFontStyle.GEIST -> GeistFamily
+        DdFontStyle.IBM_PLEX_SANS -> IbmPlexSansFamily
+        DdFontStyle.NEWSREADER -> NewsreaderFamily
+        DdFontStyle.LORA -> LoraFamily
+    }
+
+    val Sans: FontFamily get() = familyFor(style)
+
+    val Display: FontFamily
+        get() = if (style == DdFontStyle.INSTRUMENT) NewsreaderFamily else familyFor(style)
+
+    val Newsreader: FontFamily get() = NewsreaderFamily
+
+    private fun variableFamily(resId: Int): FontFamily = FontFamily(
+        Font(resId, FontWeight.Normal, variationSettings = weightVariant(400)),
+        Font(resId, FontWeight.Medium, variationSettings = weightVariant(500)),
+        Font(resId, FontWeight.SemiBold, variationSettings = weightVariant(600)),
+    )
+
+    private fun weightVariant(weight: Int): FontVariation.Settings =
+        FontVariation.Settings(FontVariation.weight(weight))
 }
 
 object DdType {
-    val wordmark = TextStyle(
-        fontFamily = DdFonts.Newsreader,
-        fontWeight = FontWeight.Medium,
-        fontSize = 27.sp,
-        lineHeight = 32.sp,
-        letterSpacing = (-0.4).sp,
-    )
-    val display = TextStyle(
-        fontFamily = DdFonts.Display,
-        fontWeight = FontWeight.Medium,
-        fontSize = 40.sp,
-        lineHeight = 49.sp,
-        letterSpacing = (-0.3).sp,
-    )
-    val pageTitle = TextStyle(
-        fontFamily = DdFonts.Display,
-        fontWeight = FontWeight.Medium,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = (-0.2).sp,
-    )
-    val heading = TextStyle(
-        fontFamily = DdFonts.Display,
-        fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
-        lineHeight = 31.sp,
-    )
-    val body = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 26.sp,
-    )
-    val bodySmall = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 21.sp,
-    )
-    val label = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-    )
-    val chip = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-    )
-    val button = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-    )
-    val micro = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 1.7.sp,
-    )
-    val numeric = TextStyle(
-        fontFamily = DdFonts.Sans,
-        fontWeight = FontWeight.Medium,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.2.sp,
-    )
+    val wordmark: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Display,
+            fontWeight = FontWeight.Medium,
+            fontSize = 27.sp,
+            lineHeight = 32.sp,
+            letterSpacing = (-0.4).sp,
+        )
+    val display: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Display,
+            fontWeight = FontWeight.Medium,
+            fontSize = 40.sp,
+            lineHeight = 49.sp,
+            letterSpacing = (-0.3).sp,
+        )
+    val pageTitle: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Display,
+            fontWeight = FontWeight.Medium,
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            letterSpacing = (-0.2).sp,
+        )
+    val heading: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Display,
+            fontWeight = FontWeight.Medium,
+            fontSize = 24.sp,
+            lineHeight = 31.sp,
+        )
+    val body: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 16.sp,
+            lineHeight = 26.sp,
+        )
+    val bodySmall: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 21.sp,
+        )
+    val label: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
+    val chip: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+        )
+    val button: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
+    val micro: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 1.7.sp,
+        )
+    val numeric: TextStyle
+        get() = TextStyle(
+            fontFamily = DdFonts.Sans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            letterSpacing = 0.2.sp,
+        )
 }
 
-private val DeepDeepTypography = Typography(
+private fun deepDeepTypography(): Typography = Typography(
     displayLarge = DdType.display.copy(fontSize = 52.sp, lineHeight = 60.sp),
     displayMedium = DdType.display,
     displaySmall = DdType.pageTitle,
@@ -273,17 +336,23 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 }
 
 @Composable
-fun DeepDeepTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
+fun DeepDeepTheme(
+    mode: ThemeMode = ThemeMode.SYSTEM,
+    fontStyle: DdFontStyle = DdFonts.style,
+    content: @Composable () -> Unit,
+) {
     val dark = when (mode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
     val colors = if (dark) Dark else Light
+    DdFonts.apply(fontStyle)
+    val typography = remember(fontStyle) { deepDeepTypography() }
     CompositionLocalProvider(LocalDeepDeepColors provides colors) {
         MaterialTheme(
             colorScheme = colors.materialScheme(),
-            typography = DeepDeepTypography,
+            typography = typography,
             shapes = DeepDeepShapes,
             content = content,
         )

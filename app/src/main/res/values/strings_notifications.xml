@@ -1,0 +1,24 @@
+<resources>
+    <string name="notification_channel_runtime">运行状态</string>
+    <string name="notification_channel_runtime_desc">显示当前会话正在思考或运行工具</string>
+    <string name="notification_channel_results">完成提醒</string>
+    <string name="notification_channel_results_desc">会话在后台完成、停止或失败时提醒</string>
+    <string name="notification_channel_downloads">开发工具</string>
+    <string name="notification_channel_downloads_desc">显示开发包安装进度</string>
+
+    <string name="notification_service_idle">后台服务已就绪</string>
+    <string name="notification_sessions_running">%1$d 个会话正在运行</string>
+    <string name="notification_action_stop">停止</string>
+    <string name="notification_activity_thinking">正在思考…</string>
+    <string name="notification_activity_tool">正在运行 %1$s</string>
+    <string name="notification_activity_retrying">正在重试（第 %1$d 次）…</string>
+    <string name="notification_activity_compacting">正在压缩上下文…</string>
+
+    <string name="notification_result_done">回答完成</string>
+    <string name="notification_result_stopped">已停止</string>
+    <string name="notification_result_failed">失败：%1$s</string>
+
+    <string name="notification_download_title">开发工具</string>
+    <string name="notification_download_done">%1$s 安装完成</string>
+    <string name="notification_download_failed">安装失败：%1$s</string>
+</resources>

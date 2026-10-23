@@ -336,6 +336,9 @@ class ChatViewModelTest {
         override suspend fun history(sessionId: String): List<AssistantMessage> =
             histories[sessionId].orEmpty()
 
+        override suspend fun sessionTitle(sessionId: String): String? =
+            sessions.firstOrNull { it.id == sessionId }?.title
+
         override suspend fun sessions(workspaceId: String): List<ConversationSummary> =
             sessions.filter { !it.archived }
 

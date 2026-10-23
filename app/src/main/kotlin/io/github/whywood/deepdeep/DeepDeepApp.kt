@@ -39,9 +39,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
@@ -58,6 +60,9 @@ import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
+import io.github.whywood.deepdeep.ui.settings.FontScreen
+import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
+import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
@@ -69,6 +74,10 @@ import kotlinx.coroutines.launch
 internal fun DeepDeepApp(
     graph: AppGraph,
     theme: ThemeMode,
+    fontStyle: DdFontStyle = DdFontStyle.INSTRUMENT,
+    openSessionId: String? = null,
+    onOpenSessionConsumed: () -> Unit = {},
+    onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -130,6 +139,7 @@ internal fun DeepDeepApp(
     val configuredProviders by graph.apiKeyStore.providerIds.collectAsStateWithLifecycle(initialValue = emptySet())
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
+    val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val navigator = rememberAppNavigator()
@@ -138,6 +148,10 @@ internal fun DeepDeepApp(
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
+    val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
+        initialValue = PersonalizationUi(),
+    )
+    val nickname = personalization.nickname.trim().ifBlank { "DeepDeep" }
     val expandedWorkspacesSaver = remember {
         Saver<Set<String>, ArrayList<String>>(
             save = { ArrayList(it) },
@@ -190,6 +204,18 @@ internal fun DeepDeepApp(
         }
     }
 
+    LaunchedEffect(openSessionId, state.ready, state.conversations, state.archivedConversations) {
+        val sessionId = openSessionId ?: return@LaunchedEffect
+        if (!state.ready) return@LaunchedEffect
+        val found = state.conversations.any { it.id == sessionId } ||
+            state.archivedConversations.any { it.id == sessionId }
+        if (!found) return@LaunchedEffect
+        drawerOpen = false
+        navigator.reset(AppDestination.Chat)
+        chatViewModel.openConversation(sessionId)
+        onOpenSessionConsumed()
+    }
+
     CompositionLocalProvider(LocalHapticsEnabled provides uiPreferences.hapticsEnabled) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         AnimatedScreenHost(
@@ -199,6 +225,7 @@ internal fun DeepDeepApp(
             when (destination) {
                 AppDestination.Chat -> ChatScreen(
                     state = state.copy(configured = state.providerId in configuredProviders),
+                    nickname = nickname,
                     onInputChange = chatViewModel::onInputChange,
                     onSend = chatViewModel::send,
                     onStop = chatViewModel::stop,
@@ -237,7 +264,7 @@ internal fun DeepDeepApp(
                 )
 
                 AppDestination.Settings -> SettingsScreen(
-                    userName = "Milous",
+                    nickname = nickname,
                     providerName = activeProvider?.name,
                     modelName = state.modelLabel.takeIf { it.isNotBlank() },
                     configured = state.providerId in configuredProviders,
@@ -245,6 +272,7 @@ internal fun DeepDeepApp(
                     preferences = uiPreferences,
                     linuxState = linuxState,
                     versionName = BuildConfig.VERSION_NAME,
+                    fontLabel = fontStyle.displayName,
                     onBack = ::back,
                     onThemeModeChange = onThemeChange,
                     onToggle = { toggle, enabled ->
@@ -252,6 +280,9 @@ internal fun DeepDeepApp(
                     },
                     onOpenProviders = { navigator.push(AppDestination.Providers) },
                     onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
+                    onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
+                    onOpenFonts = { navigator.push(AppDestination.Fonts) },
+                    onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
                 )
 
                 AppDestination.Providers -> ProviderListScreen(
@@ -262,25 +293,47 @@ internal fun DeepDeepApp(
                     onProviderClick = { id -> navigator.push(AppDestination.ProviderDetail(id)) },
                 )
 
-                AppDestination.RuntimeSettings -> RuntimeSettingsScreen(
-                    linuxState = linuxState,
-                    linuxSupported = graph.linuxEnvironment.isSupported,
-                    linuxEnabled = linuxEnabled,
+                AppDestination.RuntimeSettings -> {
+                    LaunchedEffect(linuxState) { graph.devPackageManager.refresh() }
+                    RuntimeSettingsScreen(
+                        linuxState = linuxState,
+                        linuxSupported = graph.linuxEnvironment.isSupported,
+                        linuxEnabled = linuxEnabled,
+                        devPackages = devPackages,
+                        onBack = ::back,
+                        onInstall = { scope.launch { graph.linuxEnvironment.install() } },
+                        onReset = {
+                            scope.launch {
+                                graph.linuxSettings.setEnabled(false)
+                                graph.linuxEnvironment.reset()
+                                graph.host.reconfigure()
+                            }
+                        },
+                        onEnabledChange = { enabled ->
+                            scope.launch {
+                                graph.linuxSettings.setEnabled(enabled)
+                                graph.host.reconfigure()
+                            }
+                        },
+                        onInstallBundle = graph.devPackageManager::installBundle,
+                        onInstallPackage = graph.devPackageManager::installPackage,
+                        onUninstallPackage = graph.devPackageManager::uninstallPackage,
+                        onRefreshPackages = graph.devPackageManager::refresh,
+                    )
+                }
+
+                AppDestination.Personalization -> PersonalizationScreen(
+                    value = personalization,
                     onBack = ::back,
-                    onInstall = { scope.launch { graph.linuxEnvironment.install() } },
-                    onReset = {
-                        scope.launch {
-                            graph.linuxSettings.setEnabled(false)
-                            graph.linuxEnvironment.reset()
-                            graph.host.reconfigure()
-                        }
-                    },
-                    onEnabledChange = { enabled ->
-                        scope.launch {
-                            graph.linuxSettings.setEnabled(enabled)
-                            graph.host.reconfigure()
-                        }
-                    },
+                    onSave = { value -> scope.launch { graph.personalizationStore.save(value) } },
+                )
+
+                AppDestination.Privacy -> PrivacyScreen(onBack = ::back)
+
+                AppDestination.Fonts -> FontScreen(
+                    current = fontStyle,
+                    onBack = ::back,
+                    onSelect = onFontStyleChange,
                 )
 
                 is AppDestination.ProviderDetail -> {
@@ -380,7 +433,7 @@ internal fun DeepDeepApp(
                     pinnedWorkspaceIds = uiPreferences.pinnedWorkspaceIds,
                     expandedWorkspaceIds = expandedWorkspaceIds,
                     busySessionIds = state.busySessionIds,
-                    userName = "Milous",
+                    userName = nickname,
                     onChat = ::openChat,
                     onArchived = {
                         drawerOpen = false

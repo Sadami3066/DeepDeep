@@ -1,5 +1,16 @@
 # Status
 
+## Done: P10 personalization, notifications, runtime tools
+
+- Settings: profile → personalization (nickname, interaction style, tone presets, user instruction); billing/time-focus/sharing removed; privacy page; font picker; notification permission row
+- Prompt assembly: `<system>` (identity/environment/hidden interaction rules) + `<instruction>` (user preference) injected through SDK hook; old `deepdeep_environment` removed; XML escaping
+- Notifications: foreground service shows session title/activity, multi-session count, stop action; background completion notification opens the session; download progress channel
+- Runtime: 7 developer-tool bundles + individual packages, background `apk update/add` with line streaming, install/uninstall, notification progress, installed-state refresh
+- Provider icons: 42 providers (15 color, 26 mono, Radius fallback), list/detail wiring
+- Fonts: Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora bundled; Chinese falls back to system; font picker persists and rebuilds
+- Design docs: `docs/SCHEDULING.md`, `docs/SKILLS.md`
+- Unit tests for prompt assembly and package catalog; existing tests green
+
 ## Done: P0-P5 polish
 
 - Claude-style chat: right user bubbles, fixed thinking row, quiet collapsed process
@@ -80,11 +91,13 @@
 - `artifacts/validation/ui-round4/`: new icon drawer/settings, mascot empty state light/dark, markdown path rendering (links vs monospace vs codeBackground)
 - `artifacts/validation/perf/`: performance baseline/after notes and raw gfxinfo dumps
 - `artifacts/validation/ui-round5/`: original icon library restored in drawer/settings, simple-prompt natural Markdown answer, `files/home` absolute path rendered clickable and preview opened
+- `artifacts/validation/round6/`: personalization (nickname/mode/tone/preset), settings removals/privacy/fonts, 42 provider icons, runtime package install (network + Python, notifications, installed state, 72MB rootfs), prompt `<system>`/`<instruction>` evidence, foreground/completion notifications and session open
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 
 ## Pending
 
 - root: `ShellExecutor` extension point; implementation deferred until root testing is authorized
-- scheduled prompts / event triggers
-- skills/AGENTS.md provisioning, memory conventions
+- scheduled tasks: implementation per `docs/SCHEDULING.md` (service tick + catch-up)
+- skills: implementation per `docs/SKILLS.md` (global/workspace CRUD, enable/disable)
+- proactive cron scheduling tied to interaction style

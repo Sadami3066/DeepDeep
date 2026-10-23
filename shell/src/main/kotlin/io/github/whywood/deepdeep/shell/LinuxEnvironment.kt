@@ -48,6 +48,8 @@ class LinuxEnvironment(
 
     suspend fun reset(): LinuxInstallState = installer.reset()
 
+    suspend fun refreshState(): LinuxInstallState = installer.refreshState()
+
     override suspend fun execute(
         command: String,
         timeoutMillis: Long,
@@ -57,6 +59,18 @@ class LinuxEnvironment(
             "Linux environment is not installed"
         }
         return executor.execute(command, timeoutMillis)
+    }
+
+    suspend fun executeStreaming(
+        command: String,
+        timeoutMillis: Long,
+        onOutputLine: (String) -> Unit,
+    ): LinuxResult {
+        requireSupported()
+        require(installer.currentState() is LinuxInstallState.Installed) {
+            "Linux environment is not installed"
+        }
+        return executor.executeStreaming(command, timeoutMillis, onOutputLine)
     }
 
     suspend fun refreshDns() {

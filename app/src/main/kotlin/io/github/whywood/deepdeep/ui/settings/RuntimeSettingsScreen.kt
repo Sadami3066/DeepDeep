@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.DevBundle
+import io.github.whywood.deepdeep.data.DevPackagesState
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdType
@@ -31,10 +33,15 @@ fun RuntimeSettingsScreen(
     linuxState: LinuxInstallState,
     linuxSupported: Boolean,
     linuxEnabled: Boolean,
+    devPackages: DevPackagesState,
     onBack: () -> Unit,
     onInstall: () -> Unit,
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onInstallBundle: (DevBundle) -> Unit,
+    onInstallPackage: (String) -> Unit,
+    onUninstallPackage: (String) -> Unit,
+    onRefreshPackages: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -81,6 +88,15 @@ fun RuntimeSettingsScreen(
                     onEnabledChange = onEnabledChange,
                 )
             }
+            Spacer(Modifier.height(24.dp))
+            DevPackagesSection(
+                state = devPackages,
+                linuxInstalled = linuxState is LinuxInstallState.Installed,
+                onInstallBundle = onInstallBundle,
+                onInstallPackage = onInstallPackage,
+                onUninstallPackage = onUninstallPackage,
+                onRefresh = onRefreshPackages,
+            )
             Spacer(Modifier.height(40.dp))
         }
     }

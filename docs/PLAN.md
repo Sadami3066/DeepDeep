@@ -10,5 +10,6 @@
 8. P7 — text selection actions (text toolbar, draggable handles, outside dismiss), file attachments (thumbnails, markdown preview, share), clickable file references in assistant messages (done)
 9. P8 — drawer v3: expandable workspace tree with per-workspace sessions, workspace pin, session pin icon, no section labels/selection accent; legacy UI cleanup (DdDialog/DdSearchField/DdTextField/DdSpinner, runtime env row fix, masked saved API key) (done)
 10. P9 — performance (deferred IME/drawer reads, stream delta batching, stability report), mascot empty state (new icon set experiment reverted to original icon library), modern markdown inline-code/path rendering with home/workspace absolute path links (done)
-11. Next — workspace-level session migration/archive; full-text search (message body); skills/plugins/scheduled implementations; root ShellExecutor when authorized; scheduled prompts/event triggers
-12. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it
+11. P10 — personalization + `<system>`/`<instruction>` prompt assembly, notification center (session/tool/download progress), runtime developer-package bundles, 42 provider icons, 5 Latin fonts, remove billing/focus/sharing, privacy page, scheduling/skills design docs (done)
+12. Next — implement scheduled tasks per `docs/SCHEDULING.md`; implement skills per `docs/SKILLS.md`; workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+13. Later — phone capabilities via root shell/scripts; model-created schedules; custom tools only when shell cannot express it

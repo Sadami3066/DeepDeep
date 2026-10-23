@@ -158,7 +158,7 @@ private fun ProviderRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            InitialBadge(provider.name)
+            ProviderIcon(provider.id, provider.name)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(

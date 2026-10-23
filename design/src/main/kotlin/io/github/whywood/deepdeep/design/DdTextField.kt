@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -26,6 +27,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -75,6 +77,62 @@ fun DdTextField(
             keyboardOptions = keyboardOptions,
             keyboardActions = KeyboardActions(onDone = { onDone() }),
             visualTransformation = visualTransformation,
+            interactionSource = interaction,
+            decorationBox = { inner ->
+                Box {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = DdType.body,
+                            color = colors.inkTertiary,
+                        )
+                    }
+                    inner()
+                }
+            },
+        )
+    }
+}
+
+@Composable
+fun DdTextArea(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    minHeight: Dp = 132.dp,
+    maxHeight: Dp = 260.dp,
+    testTag: String? = null,
+) {
+    val colors = deepDeepColors()
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val borderColor by animateColorAsState(
+        targetValue = if (focused) colors.accent else colors.hairline.copy(alpha = 0.6f),
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "dd-area-border",
+    )
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = minHeight, max = maxHeight)
+            .clip(shape)
+            .background(colors.raised)
+            .border(1.dp, borderColor, shape)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        contentAlignment = Alignment.TopStart,
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minHeight - 28.dp, max = maxHeight - 28.dp)
+                .then(if (testTag == null) Modifier else Modifier.testTag(testTag)),
+            textStyle = DdType.body.copy(color = colors.ink),
+            cursorBrush = SolidColor(colors.accent),
+            singleLine = false,
             interactionSource = interaction,
             decorationBox = { inner ->
                 Box {

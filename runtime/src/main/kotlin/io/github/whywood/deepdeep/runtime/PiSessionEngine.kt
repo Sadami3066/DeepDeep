@@ -35,6 +35,7 @@ class PiSessionEngine(
     private val credentials: CredentialStore,
     private val shellExecutor: ShellExecutor?,
     private val providers: ProviderCatalog,
+    private val personalization: suspend () -> Personalization = { Personalization() },
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -66,7 +67,14 @@ class PiSessionEngine(
                 shellExecutor = activeShell,
                 hooks = CodingHooks(
                     extraSystemPromptSections = {
-                        mapOf("deepdeep_environment" to environmentPrompt(resolved.providerId, modelId))
+                        val current = runCatching { personalization() }.getOrDefault(Personalization())
+                        buildPersonalizationSections(
+                            personalization = current,
+                            providerId = resolved.providerId,
+                            modelId = modelId,
+                            cwd = cwd.toString(),
+                            now = OffsetDateTime.now(),
+                        )
                     },
                 ),
                 credentials = credentials,
@@ -101,18 +109,6 @@ class PiSessionEngine(
     private fun parseTimestamp(value: String): Long = runCatching {
         OffsetDateTime.parse(value).toInstant().toEpochMilli()
     }.getOrDefault(0L)
-
-    private fun environmentPrompt(providerId: String, modelId: String): String = buildString {
-        appendLine("<deepdeep_environment>")
-        appendLine("你是 deepdeep，一个运行在 Android 手机上的个人 agent。")
-        appendLine("当前时间：${OffsetDateTime.now()}。")
-        appendLine("模型：$providerId/$modelId。")
-        appendLine("工作区：$cwd。")
-        appendLine("bash 工具运行在 Alpine Linux（proot）里，工作目录是 /workspace，它和宿主工作区是同一个目录。")
-        appendLine("pi 的文件工具（read/write/edit/ls/grep/find）直接操作宿主工作区。")
-        appendLine("不需要请求审批；直接执行命令。不要编造工具结果。")
-        appendLine("</deepdeep_environment>")
-    }
 
     private fun mapHistory(messages: List<AgentMessage>): List<AssistantMessage> {
         val result = mutableListOf<AssistantMessage>()

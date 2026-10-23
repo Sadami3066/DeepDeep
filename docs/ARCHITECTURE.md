@@ -53,6 +53,37 @@ Compose ChatScreen
 - 会话文件读取/写入在 IO dispatcher；Chat 层注入 `ioDispatcher` 以便测试。
 - ChatViewModel 为每个已加载过的会话保留消息快照缓存；再次打开时先渲染缓存，再在后台 `open` SDK session（单 mutex 串行，epoch 丢弃过期打开），发送会等待打开完成。
 
+## 个性化与提示词
+
+- `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、语气预设、用户指令；运行时只向 `PiSessionEngine` 提供 `Personalization(nickname, interaction, instruction)`。
+- `PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个自定义 section：
+  - `system`：DeepDeep 身份、当前时间/模型/工作区、proot 事实、交互模式规则、隐藏说明；手动包 `<system>…</system>`。
+  - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
+- SDK 的 hook extra 不会自动包 section 标签，因此包装在 runtime 内完成；旧 `deepdeep_environment` 已移除。
+- 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效；修改个性化不需要重启会话。Skills 的 `<skills>` section 仍由 SDK 注入。
+
+## 通知
+
+- `NotificationCenter` 由 `AgentService` 启动，收集 `RuntimeEvent`，维护 active runs。
+- 前台服务通知：会话标题 + 当前 `RuntimeActivity`；多会话显示数量；动作停止最近会话。
+- 完成通知：`RunFinished/RunFailed` 且 `AppVisibility.foreground == false` 时发出，点击带 sessionId 回到对应会话。
+- 开发包安装：`DevPackageManager` 调用 `notifyInstall`，展示阶段/`n`/`m` 进度；完成后自动取消或发结果。
+- 频道：`agent_runtime`（LOW）、`session_results`（DEFAULT）、`downloads`（LOW）。
+- 通知权限沿用系统 `POST_NOTIFICATIONS`；设置页显示状态并可跳转系统通知设置。
+
+## 开发包
+
+- `DevPackageCatalog` 定义 16 个 Alpine 包与 7 个场景组合；`DevPackageManager` 在 proot 内执行 `apk update` + `apk add`。
+- `LinuxEnvironment.executeStreaming` / `PRootExecutor.executeStreaming` 提供逐行输出回调；按 `(n/m) Installing` 更新进度。
+- 安装状态不单独持久化，进入运行环境页时用 `apk info -e` 查询真实状态；Linux 重置后自动清空。
+- 一次只允许一个安装；失败保留最后输出片段；安装任务由 app scope 持有，离开页面不取消。
+
+## Provider 图标与字体
+
+- Provider 图标按 provider id 映射到 `app/src/main/res/drawable/provider_*.xml`；彩色标保持原色（白底圆），单色标 tint；无可靠官方标的 Radius 回退 InitialBadge。
+- 字体 5 套（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora）随 APK；`DdFonts.apply` 切换 `DdType` getter 使用的 family，中文回退系统；切换后重建 Activity 以刷新全部页面。
+- 许可统一在设置「开源许可」列出；Provider 图标的商标归各品牌方。
+
 ## 消息模型
 
 - 一个 UI assistant message 对应一个用户回合。
@@ -96,7 +127,12 @@ filesDir/
   linux/rootfs/     Alpine rootfs
 ```
 
-API Key、模型配置、会话元数据在 DataStore；会话正文由 pi2kotlin 写入 JSONL。
+API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
+
+## 设计中的系统
+
+- 定时任务：`docs/SCHEDULING.md`（服务内调度 + 下次打开补跑；本轮不实现）。
+- Skills：`docs/SKILLS.md`（App 管文件与 UI，SDK 已负责扫描和 `<skills>` 注入；本轮不实现）。
 
 ## 工具
 

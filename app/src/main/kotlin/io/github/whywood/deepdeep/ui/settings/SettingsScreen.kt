@@ -3,11 +3,10 @@ package io.github.whywood.deepdeep.ui.settings
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,14 +33,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
@@ -67,10 +66,14 @@ import io.github.whywood.deepdeep.shell.LinuxInstallState
 private const val INSTRUMENT_SANS_URL = "https://github.com/Instrument/instrument-sans"
 private const val NEWSREADER_URL = "https://github.com/productiontype/Newsreader"
 private const val LUCIDE_URL = "https://github.com/lucide-icons/lucide"
+private const val MODELS_DEV_URL = "https://models.dev"
+private const val GEIST_URL = "https://github.com/vercel/geist-font"
+private const val IBM_PLEX_URL = "https://github.com/IBM/plex"
+private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
 
 @Composable
 fun SettingsScreen(
-    userName: String,
+    nickname: String,
     providerName: String?,
     modelName: String?,
     configured: Boolean,
@@ -78,11 +81,15 @@ fun SettingsScreen(
     preferences: UiPreferences,
     linuxState: LinuxInstallState,
     versionName: String,
+    fontLabel: String,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onToggle: (UiToggle, Boolean) -> Unit,
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
+    onOpenPersonalization: () -> Unit,
+    onOpenFonts: () -> Unit,
+    onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -130,16 +137,21 @@ fun SettingsScreen(
             )
             Spacer(Modifier.height(16.dp))
             AccountCard(
-                userName = userName,
+                userName = nickname,
                 activeModel = activeModel,
                 configured = configured,
+                onClick = onOpenPersonalization,
             )
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.Settings, R.string.settings_profile)
-                DdHairline()
-                PlaceholderRow(DdIcons.File, R.string.settings_billing)
+                DdListRow(
+                    icon = DdIcons.Sparkles,
+                    title = stringResource(R.string.settings_personalization),
+                    onClick = onOpenPersonalization,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_personalization"),
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -179,7 +191,14 @@ fun SettingsScreen(
                     onThemeModeChange = onThemeModeChange,
                 )
                 DdHairline()
-                PlaceholderRow(DdIcons.Font, R.string.settings_font)
+                DdListRow(
+                    icon = DdIcons.Font,
+                    title = stringResource(R.string.settings_font),
+                    value = fontLabel,
+                    onClick = onOpenFonts,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_font"),
+                )
                 DdHairline()
                 LanguageRow(
                     language = language,
@@ -233,16 +252,18 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.Volume, R.string.settings_notifications)
-                DdHairline()
-                PlaceholderRow(DdIcons.Clock, R.string.settings_focus)
+                NotificationRow()
             }
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.Shield, R.string.settings_privacy)
-                DdHairline()
-                PlaceholderRow(DdIcons.Share, R.string.settings_sharing)
+                DdListRow(
+                    icon = DdIcons.Shield,
+                    title = stringResource(R.string.settings_privacy),
+                    onClick = onOpenPrivacy,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_privacy"),
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -279,39 +300,71 @@ private fun AccountCard(
     userName: String,
     activeModel: String,
     configured: Boolean,
+    onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
     SettingsGroup {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        DdPressable(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            contentDescription = userName,
         ) {
-            InitialBadge(userName, size = 44.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = userName,
-                    style = DdType.body,
-                    color = colors.ink,
-                    maxLines = 1,
-                )
-                Text(
-                    text = activeModel,
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                InitialBadge(userName, size = 44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = userName,
+                        style = DdType.body,
+                        color = colors.ink,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = activeModel,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                StatusPill(
+                    text = stringResource(
+                        if (configured) R.string.settings_status_configured else R.string.settings_status_unconfigured,
+                    ),
+                    active = configured,
                 )
             }
-            Spacer(Modifier.width(8.dp))
-            StatusPill(
-                text = stringResource(
-                    if (configured) R.string.settings_status_configured else R.string.settings_status_unconfigured,
-                ),
-                active = configured,
-            )
         }
     }
+}
+
+@Composable
+private fun NotificationRow() {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    LifecycleResumeEffect(Unit) {
+        enabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        onPauseOrDispose {}
+    }
+    DdListRow(
+        icon = DdIcons.Volume,
+        title = stringResource(R.string.settings_notifications),
+        value = stringResource(
+            if (enabled) R.string.settings_notifications_on else R.string.settings_notifications_off,
+        ),
+        onClick = {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            context.startActivity(intent)
+        },
+        showChevron = true,
+        modifier = Modifier.testTag("settings_notifications"),
+    )
 }
 
 @Composable
@@ -481,6 +534,30 @@ private fun LicenseSheet(onClose: () -> Unit) {
                 title = stringResource(R.string.settings_license_icons),
                 subtitle = stringResource(R.string.settings_license_isc),
                 onClick = { uriHandler.openUri(LUCIDE_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_provider_icons),
+                subtitle = stringResource(R.string.settings_license_provider_icons_body),
+                onClick = { uriHandler.openUri(MODELS_DEV_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_geist),
+                subtitle = stringResource(R.string.settings_license_ofl),
+                onClick = { uriHandler.openUri(GEIST_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_plex),
+                subtitle = stringResource(R.string.settings_license_ofl),
+                onClick = { uriHandler.openUri(IBM_PLEX_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_lora),
+                subtitle = stringResource(R.string.settings_license_ofl),
+                onClick = { uriHandler.openUri(LORA_URL) },
             )
             Spacer(Modifier.height(28.dp))
         }

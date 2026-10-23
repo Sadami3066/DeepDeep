@@ -1,8 +1,5 @@
 <resources>
     <string name="app_name">deepdeep</string>
-    <string name="service_channel_name">deepdeep 运行状态</string>
-    <string name="service_running">deepdeep 正在运行</string>
-    <string name="service_stop">停止</string>
     <string name="relative_just_now">刚刚</string>
     <string name="relative_minutes">%1$d 分钟前</string>
     <string name="relative_hours">%1$d 小时前</string>

@@ -34,6 +34,21 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data object Personalization : AppDestination {
+        override val routeKey: String = "settings/personalization"
+        override val depth: Int = 2
+    }
+
+    data object Fonts : AppDestination {
+        override val routeKey: String = "settings/fonts"
+        override val depth: Int = 2
+    }
+
+    data object Privacy : AppDestination {
+        override val routeKey: String = "settings/privacy"
+        override val depth: Int = 2
+    }
+
     data object Search : AppDestination {
         override val routeKey: String = "search"
         override val depth: Int = 1
@@ -48,6 +63,9 @@ sealed interface AppDestination {
             routeKey == Providers.routeKey -> Providers
             routeKey == Archived.routeKey -> Archived
             routeKey == RuntimeSettings.routeKey -> RuntimeSettings
+            routeKey == Personalization.routeKey -> Personalization
+            routeKey == Fonts.routeKey -> Fonts
+            routeKey == Privacy.routeKey -> Privacy
             routeKey == Search.routeKey -> Search
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
