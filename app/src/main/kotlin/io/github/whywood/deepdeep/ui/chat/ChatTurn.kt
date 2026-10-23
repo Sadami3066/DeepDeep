@@ -59,8 +59,7 @@ internal fun ChatTurn(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
-    showReasoning: Boolean = true,
-    expandProcessByDefault: Boolean = false,
+    autoCollapseProcess: Boolean = true,
 ) {
     if (message.role == AssistantRole.USER) {
         UserBubble(
@@ -79,8 +78,7 @@ internal fun ChatTurn(
             onCopyOutput = onCopyOutput,
             onQuote = onQuote,
             onOpenFile = onOpenFile,
-            showReasoning = showReasoning,
-            expandProcessByDefault = expandProcessByDefault,
+            autoCollapseProcess = autoCollapseProcess,
         )
     }
 }
@@ -168,23 +166,29 @@ private fun AssistantTurn(
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenFile: (String) -> Unit,
-    showReasoning: Boolean,
-    expandProcessByDefault: Boolean,
+    autoCollapseProcess: Boolean,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
-    val answer = message.text.trim()
+    val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
+    val streamingAnswer = if (autoCollapseProcess && message.streaming) {
+        trailingText?.text.orEmpty()
+    } else {
+        ""
+    }
+    val answer = message.text.trim().ifBlank { streamingAnswer.trim() }
+    val excludedStepId = if (message.text.isBlank() && streamingAnswer.isNotBlank()) trailingText?.id else null
     val readable = remember(answer) { markdownToPlainText(answer) }
     Column(Modifier.fillMaxWidth()) {
-        val hasVisibleProcess = message.steps.any { showReasoning || it !is AssistantStep.Reasoning }
+        val hasVisibleProcess = message.steps.any { it.id != excludedStepId }
         if (hasVisibleProcess) {
             ProcessSection(
                 message = message,
                 onToggleStep = onToggleStep,
                 onCopyOutput = onCopyOutput,
                 onFileClick = onOpenFile,
-                showReasoning = showReasoning,
-                expandByDefault = expandProcessByDefault,
+                autoCollapseProcess = autoCollapseProcess,
+                excludedStepId = excludedStepId,
             )
             if (answer.isNotEmpty()) Spacer(Modifier.height(6.dp))
         }

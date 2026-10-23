@@ -117,7 +117,7 @@ enum class DdFontStyle(val id: String, val displayName: String) {
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: INSTRUMENT
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: NEWSREADER
     }
 }
 
@@ -138,7 +138,7 @@ object DdFonts {
     private val IbmPlexSansFamily = variableFamily(R.font.ibm_plex_sans_variable)
     private val LoraFamily = variableFamily(R.font.lora_variable)
 
-    var style: DdFontStyle = DdFontStyle.INSTRUMENT
+    var style: DdFontStyle = DdFontStyle.NEWSREADER
         private set
 
     fun apply(style: DdFontStyle) {

@@ -1,5 +1,13 @@
 # Status
 
+## Done: P10.2 final polish
+
+- Settings: removed 功能 / 连接器 / 权限 rows
+- Fonts: default Newsreader; font preview sample is 「我思故为在」+「I think, therefore I am.」
+- Chat settings: haptics / keyboard / streaming / reasoning are always on with no switches; process setting renamed 「过程自动折叠」, default on
+- Process auto-collapse: collapses when the final result text starts streaming, answer continues outside the process; off keeps it expanded
+- Evidence: `artifacts/validation/round8/` (settings, font samples, chat settings, collapse-at-streaming)
+
 ## Done: P10.1 follow-up polish
 
 - Runtime page: 3 bundles only (环境基础 / 日常办公 / 开发编程), no individual tools; roomier title/subtitle spacing and one-line package summary; self-install hint

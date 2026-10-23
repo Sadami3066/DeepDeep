@@ -8,9 +8,6 @@
     <string name="settings_status_unconfigured">未配置</string>
 
     <string name="settings_personalization">个性化</string>
-    <string name="settings_features">功能</string>
-    <string name="settings_connectors">连接器</string>
-    <string name="settings_permissions">权限</string>
     <string name="settings_font">字体样式</string>
     <string name="settings_language">语言</string>
     <string name="settings_language_system">跟随系统</string>
@@ -19,11 +16,12 @@
     <string name="settings_send_hides_keyboard">发送后收起键盘</string>
     <string name="settings_follow_streaming">流式输出跟随</string>
     <string name="settings_show_reasoning">显示思考过程</string>
-    <string name="settings_expand_process">过程默认展开</string>
+    <string name="settings_auto_collapse_process">过程自动折叠</string>
     <string name="settings_switch_on">开</string>
     <string name="settings_switch_off">关</string>
     <string name="settings_haptics">触感反馈</string>
     <string name="settings_notifications">通知</string>
+    <string name="settings_always_on">已开启</string>
     <string name="settings_notifications_on">已开启</string>
     <string name="settings_notifications_off">未开启</string>
     <string name="settings_privacy">隐私</string>

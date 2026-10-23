@@ -131,13 +131,13 @@ private fun FontPreviewRow(
                     maxLines = 1,
                 )
                 Text(
-                    text = "深潜 DeepDeep 0123",
+                    text = "我思故为在",
                     style = DdType.body.copy(fontFamily = family),
                     color = colors.inkSecondary,
                     maxLines = 1,
                 )
                 Text(
-                    text = "写代码、读文档、聊想法。The quick brown fox jumps over the lazy dog.",
+                    text = "I think, therefore I am.",
                     style = DdType.bodySmall.copy(fontFamily = family, fontSize = 13.sp, lineHeight = 19.sp),
                     color = colors.inkTertiary,
                     maxLines = 1,

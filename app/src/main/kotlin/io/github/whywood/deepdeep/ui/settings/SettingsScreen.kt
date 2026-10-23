@@ -152,15 +152,6 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.Sparkles, R.string.settings_features)
-                DdHairline()
-                PlaceholderRow(DdIcons.Plug, R.string.settings_connectors)
-                DdHairline()
-                PlaceholderRow(DdIcons.Shield, R.string.settings_permissions)
-            }
-
-            Spacer(Modifier.height(16.dp))
-            SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Globe,
                     title = stringResource(R.string.settings_provider),

@@ -53,15 +53,17 @@ internal fun ProcessSection(
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
-    showReasoning: Boolean = true,
-    expandByDefault: Boolean = false,
+    autoCollapseProcess: Boolean = true,
+    excludedStepId: Long? = null,
 ) {
     val colors = deepDeepColors()
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
-    val expanded = if (expansionOverride < 0) {
-        message.streaming || expandByDefault
-    } else {
-        expansionOverride == 1
+    val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
+    val answerStarted = message.streaming && trailingText?.text?.isNotBlank() == true
+    val expanded = when {
+        expansionOverride >= 0 -> expansionOverride == 1
+        autoCollapseProcess -> message.streaming && !answerStarted
+        else -> true
     }
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -71,7 +73,7 @@ internal fun ProcessSection(
     val state = stringResource(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val reasoningCount = if (showReasoning) message.steps.count { it is AssistantStep.Reasoning } else 0
+    val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
     val toolCount = message.steps.count { it is AssistantStep.Tool }
     val duration = message.finishedAt?.let { finished ->
         if (message.startedAt > 0 && finished > message.startedAt) finished - message.startedAt else null
@@ -142,7 +144,7 @@ internal fun ProcessSection(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 message.steps
-                    .filter { showReasoning || it !is AssistantStep.Reasoning }
+                    .filter { step -> step.id != excludedStepId }
                     .forEach { step ->
                         when (step) {
                             is AssistantStep.Reasoning -> ReasoningCard(

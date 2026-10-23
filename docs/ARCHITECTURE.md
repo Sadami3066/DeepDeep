@@ -81,7 +81,7 @@ Compose ChatScreen
 ## Provider 图标与字体
 
 - Provider 图标按 provider id 映射到 `app/src/main/res/drawable/provider_*.xml`；彩色标保持原色（白底圆），单色标 tint；无可靠官方标的 Radius 回退 InitialBadge。
-- 字体 5 套（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora）随 APK；`DdFonts.apply` 切换 `DdType` getter 使用的 family，中文回退系统；切换后重建 Activity 以刷新全部页面。
+- 字体 5 套（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora）随 APK，默认 Newsreader；`DdFonts.apply` 切换 `DdType` getter 使用的 family，中文回退系统；切换后重建 Activity 以刷新全部页面。
 - 许可统一在设置「开源许可」列出；Provider 图标的商标归各品牌方。
 
 ## 消息模型
@@ -89,7 +89,7 @@ Compose ChatScreen
 - 一个 UI assistant message 对应一个用户回合。
 - `AssistantStep` 有序保存 `Reasoning`、`Text`、`Tool`；`AssistantMessage.text` 是最终回复。
 - 历史映射按用户消息分 turn，把连续 assistant/tool 消息聚合成一个 message；工具前的文本留在过程，工具后的最终文本成为 answer。
-- 实时发送时文本先进入过程的 `Text` step，结束时把尾部最终文本移到 answer。
+- 实时发送时文本先进入过程的 `Text` step；「过程自动折叠」开启时，最后一段 `Text` 一开始输出就作为流式 answer 移到过程外，过程折叠；关闭时过程始终展开，直到用户手动收起。结束时把尾部最终文本正式移到 answer。
 
 ## UI 与动效
 

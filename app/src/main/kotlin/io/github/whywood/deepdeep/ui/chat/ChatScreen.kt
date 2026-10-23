@@ -114,10 +114,7 @@ fun ChatScreen(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
-    sendHidesKeyboard: Boolean = true,
-    followStreaming: Boolean = true,
-    showReasoning: Boolean = true,
-    expandProcessByDefault: Boolean = false,
+    autoCollapseProcess: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -178,9 +175,9 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(controller, followStreaming) {
+    LaunchedEffect(controller) {
         snapshotFlow { latestMessages }.collect {
-            if (followStreaming) controller.followContent()
+            controller.followContent()
         }
     }
 
@@ -270,8 +267,7 @@ fun ChatScreen(
                                     onOpenAttachment = onOpenAttachment,
                                     onOpenFile = onOpenFile,
                                     attachmentRoot = attachmentRoot,
-                                    showReasoning = showReasoning,
-                                    expandProcessByDefault = expandProcessByDefault,
+                                    autoCollapseProcess = autoCollapseProcess,
                                 )
                             }
                         }
@@ -317,10 +313,8 @@ fun ChatScreen(
             attachmentRoot = attachmentRoot,
             onValueChange = onInputChange,
             onSend = {
-                if (sendHidesKeyboard) {
-                    keyboard?.hide()
-                    focusManager.clearFocus()
-                }
+                keyboard?.hide()
+                focusManager.clearFocus()
                 onSend()
             },
             onStop = onStop,

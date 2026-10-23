@@ -75,7 +75,7 @@ import kotlinx.coroutines.launch
 internal fun DeepDeepApp(
     graph: AppGraph,
     theme: ThemeMode,
-    fontStyle: DdFontStyle = DdFontStyle.INSTRUMENT,
+    fontStyle: DdFontStyle = DdFontStyle.NEWSREADER,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
@@ -217,7 +217,7 @@ internal fun DeepDeepApp(
         onOpenSessionConsumed()
     }
 
-    CompositionLocalProvider(LocalHapticsEnabled provides uiPreferences.hapticsEnabled) {
+    CompositionLocalProvider(LocalHapticsEnabled provides true) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         AnimatedScreenHost(
             navigator = navigator,
@@ -245,10 +245,7 @@ internal fun DeepDeepApp(
                         previewAttachment = it
                     },
                     attachmentRoot = attachmentRoot,
-                    sendHidesKeyboard = uiPreferences.sendHidesKeyboard,
-                    followStreaming = uiPreferences.followStreaming,
-                    showReasoning = uiPreferences.showReasoning,
-                    expandProcessByDefault = uiPreferences.expandProcessByDefault,
+                    autoCollapseProcess = uiPreferences.autoCollapseProcess,
                     onOpenFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {

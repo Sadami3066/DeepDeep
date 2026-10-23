@@ -71,44 +71,33 @@ fun ChatSettingsScreen(
             )
             Spacer(Modifier.height(20.dp))
             SettingsGroup {
-                SwitchRow(
-                    icon = DdIcons.Phone,
-                    title = R.string.settings_haptics,
-                    checked = preferences.hapticsEnabled,
-                    onCheckedChange = { onToggle(UiToggle.HAPTICS, it) },
-                )
+                AlwaysOnRow(icon = DdIcons.Phone, title = R.string.settings_haptics)
                 DdHairline()
-                SwitchRow(
-                    icon = DdIcons.Message,
-                    title = R.string.settings_send_hides_keyboard,
-                    checked = preferences.sendHidesKeyboard,
-                    onCheckedChange = { onToggle(UiToggle.SEND_HIDES_KEYBOARD, it) },
-                )
+                AlwaysOnRow(icon = DdIcons.Message, title = R.string.settings_send_hides_keyboard)
                 DdHairline()
-                SwitchRow(
-                    icon = DdIcons.AudioLines,
-                    title = R.string.settings_follow_streaming,
-                    checked = preferences.followStreaming,
-                    onCheckedChange = { onToggle(UiToggle.FOLLOW_STREAMING, it) },
-                )
+                AlwaysOnRow(icon = DdIcons.AudioLines, title = R.string.settings_follow_streaming)
                 DdHairline()
-                SwitchRow(
-                    icon = DdIcons.Brain,
-                    title = R.string.settings_show_reasoning,
-                    checked = preferences.showReasoning,
-                    onCheckedChange = { onToggle(UiToggle.SHOW_REASONING, it) },
-                )
+                AlwaysOnRow(icon = DdIcons.Brain, title = R.string.settings_show_reasoning)
                 DdHairline()
                 SwitchRow(
                     icon = DdIcons.ChevronDown,
-                    title = R.string.settings_expand_process,
-                    checked = preferences.expandProcessByDefault,
-                    onCheckedChange = { onToggle(UiToggle.EXPAND_PROCESS, it) },
+                    title = R.string.settings_auto_collapse_process,
+                    checked = preferences.autoCollapseProcess,
+                    onCheckedChange = { onToggle(UiToggle.AUTO_COLLAPSE_PROCESS, it) },
                 )
             }
             Spacer(Modifier.height(40.dp))
         }
     }
+}
+
+@Composable
+private fun AlwaysOnRow(icon: DdIcon, @StringRes title: Int) {
+    DdListRow(
+        icon = icon,
+        title = stringResource(title),
+        value = stringResource(R.string.settings_always_on),
+    )
 }
 
 @Composable
