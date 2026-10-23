@@ -527,7 +527,11 @@ internal fun isWorkspaceFileReference(value: String): Boolean {
     val lower = trimmed.lowercase()
     return when {
         lower.startsWith("attachments/") || lower.startsWith("workspace/") -> true
-        lower.startsWith("/") && lower.contains("/files/workspace/") -> true
+        lower.startsWith("files/home/") || lower.startsWith("files/workspaces/") -> true
+        lower.startsWith("/") &&
+            (lower.contains("/files/home/") ||
+                lower.contains("/files/workspaces/") ||
+                lower.contains("/files/workspace/")) -> true
         lower.startsWith("file://") -> true
         else -> false
     }

@@ -48,8 +48,8 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 13. 新建入口：顶栏无 +；只可从抽屉工作区行展开后的 +（或长按工作区菜单「新建会话」）创建，Home 也如此。
 14. 旧 UI 清理：设置运行环境页无嵌套色块/错位；Provider 已保存 key 显示掩码占位；会话搜索、归档搜索、Provider 搜索使用同一胶囊搜索框；对话框弹键盘时按钮仍可见。
 15. 性能：抽屉连开合 10 次、键盘聚焦/收起 5 次、长会话滚动 10 秒，用 `dumpsys gfxinfo <pkg> reset` → 操作 → `dumpsys gfxinfo <pkg>` 对比 Janky/Slow UI；流式回答期间不应有整段卡死。
-16. Markdown：反引号内相对/绝对路径不再显示彩色代码胶囊；workspace 路径仍可点击预览；普通行内代码底色更轻；多反引号 code span 正常。
-17. 空态/图标：新会话空态有 mascot 插画（浅/深色）；抽屉 Home/工作区/会话、设置交互行使用 1.75 描边新图标。
+16. Markdown：反引号内相对/绝对路径不再显示彩色代码胶囊；`attachments/…`、`files/home/…`、`files/workspaces/…` 的 host 绝对路径均可点击打开文件预览；普通行内代码底色更轻；多反引号 code span 正常。
+17. 空态/图标：新会话空态有 mascot 插画（浅/深色）；抽屉继续使用原有图标库（工作区 Folder / 会话 Message 建立层级），不依赖 assets/icons 新图标集。
 
 ## 证据
 

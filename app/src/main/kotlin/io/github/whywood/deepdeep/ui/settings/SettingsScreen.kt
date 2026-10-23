@@ -137,9 +137,9 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                PlaceholderRow(DdIcons.User, R.string.settings_profile)
+                PlaceholderRow(DdIcons.Settings, R.string.settings_profile)
                 DdHairline()
-                PlaceholderRow(DdIcons.FileText, R.string.settings_billing)
+                PlaceholderRow(DdIcons.File, R.string.settings_billing)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -196,21 +196,21 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
                 SwitchRow(
-                    icon = DdIcons.Smartphone,
+                    icon = DdIcons.Phone,
                     title = R.string.settings_haptics,
                     checked = preferences.hapticsEnabled,
                     onCheckedChange = { onToggle(UiToggle.HAPTICS, it) },
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.MessagesSquare,
+                    icon = DdIcons.Message,
                     title = R.string.settings_send_hides_keyboard,
                     checked = preferences.sendHidesKeyboard,
                     onCheckedChange = { onToggle(UiToggle.SEND_HIDES_KEYBOARD, it) },
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.Volume2,
+                    icon = DdIcons.AudioLines,
                     title = R.string.settings_follow_streaming,
                     checked = preferences.followStreaming,
                     onCheckedChange = { onToggle(UiToggle.FOLLOW_STREAMING, it) },

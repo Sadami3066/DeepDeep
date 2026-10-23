@@ -256,15 +256,11 @@ private fun ApiKeySection(
     }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            DdIcon(icon = DdIcons.KeyRound, tint = colors.inkTertiary, size = 13.dp)
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = stringResource(R.string.settings_provider_api_key),
-                style = DdType.micro,
-                color = colors.inkTertiary,
-            )
-        }
+        Text(
+            text = stringResource(R.string.settings_provider_api_key),
+            style = DdType.micro,
+            color = colors.inkTertiary,
+        )
         Spacer(Modifier.height(8.dp))
         DdTextField(
             value = draft,

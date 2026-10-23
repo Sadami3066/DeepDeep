@@ -51,7 +51,7 @@
 - Provider detail shows masked saved key placeholder (`sk-*****`) instead of "已保存，输入新 Key 可替换"
 
 - UI v4 performance: IME bottom inset read moved to layout phase (janky frames 15.57% -> 7.64%, slow-UI frames 66 -> 35); drawer scrim alpha moved to draw phase; 16ms stream delta batching (streaming same-prompt 20s: janky 29.95% -> 23.76%, slow-UI 339 -> 238); stability config now includes AttachmentRef + File, full compiler report has no unstable ChatScreen params
-- UI v4 visual: 1.75 stroke icon set unified; drawer Home/workspace/session/archive/schedule icons and 5 settings rows/icons plus Provider API Key icon from new Lucide assets; mascot welcome WebP (480px, ~56KB) in new-chat empty state (light/dark)
+- UI v4 visual: original icon library kept (attempted new Lucide asset set reverted); drawer hierarchy uses existing Folder/Message icons; mascot welcome WebP (480px, ~56KB) in new-chat empty state (light/dark)
 - UI v4 markdown: CommonMark code spans (multi-backtick, space trim, newline normalization); workspace file refs render as links (no code chip); path-like inline code renders monospace/no background; other inline code uses subtle neutral codeBackground; new tests + docs
 
 ## Checks
@@ -79,6 +79,7 @@
 - `artifacts/validation/ui-round3/`: drawer workspace tree, workspace pin order, session pin icon, dialog above keyboard, runtime settings fixed, provider masked key, provider search, session search, archived search
 - `artifacts/validation/ui-round4/`: new icon drawer/settings, mascot empty state light/dark, markdown path rendering (links vs monospace vs codeBackground)
 - `artifacts/validation/perf/`: performance baseline/after notes and raw gfxinfo dumps
+- `artifacts/validation/ui-round5/`: original icon library restored in drawer/settings, simple-prompt natural Markdown answer, `files/home` absolute path rendered clickable and preview opened
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 

@@ -32,7 +32,7 @@
 - 键盘：IME 高度变化逐帧驱动聊天内容上移/回落，不做「键盘完全展开后二次跳动」；键盘弹起时打开抽屉也保持平滑。
 - 附件：composer 回形针打开系统文件选择器（可多选）；选中后在输入框上方显示 Claude 式预览卡（图片缩略图 / 文本内容片段 / 文件图标 + 名称），右上角圆形 X 可移除，最多 5 个；发送后附件在气泡外单独横向排列：图片与文件统一 140dp 方形卡（图片按裁切填满、文件卡带扩展名徽标），下方才是文字气泡（回复引用仍在气泡内）。文件复制到 workspace/attachments 供 agent 用 read/bash 读取，消息里以 `<attachments>` 块携带路径。
 - 附件预览：点击气泡附件或 composer 预览卡打开全屏预览；图片直接渲染、`.md` 用聊天同款 Markdown 渲染、其他文本等宽滚动、其他类型显示“无法预览此文件”；右上角分享按钮通过 FileProvider 调起系统分享。
-- 文件引用：assistant 消息中的 `attachments/…`、`workspace/…`、`/…/files/workspace/…`、`file://` 路径、行内 code 路径和指向这些路径的 markdown 链接都渲染为可点击链接（accent + 下划线，不再套 monospace/背景胶囊），点击按 workspace 解析后打开预览；文件不存在时 Toast 提示。
+- 文件引用：assistant 消息中的 `attachments/…`、`workspace/…`、`/…/files/home/…`、`/…/files/workspaces/…`、旧 `/…/files/workspace/…`、`file://` 路径、行内 code 路径和指向这些路径的 markdown 链接都渲染为可点击链接（accent + 下划线，不再套 monospace/背景胶囊），点击按 workspace 解析后打开预览；文件不存在时 Toast 提示。
 - 行内代码：反引号 code span 按 CommonMark 规则匹配（多反引号、首尾空格裁剪、换行归一化）；workspace 路径仍是链接样式；其他相对/绝对/文件路径用 monospace + 次级文字、无背景；普通行内代码使用很浅的中性 `codeBackground`，不再用整块 wash 背景。
 - 自动跟随：用户上拖后暂停并显示“回到底部”。
 - 新会话空态：mascot 立绘（480 WebP，透明底）居中显示在 greeting 上方，浅色/深色主题均可用；无会话内容时不占列表空间。
@@ -44,13 +44,13 @@
 - 工作区支持置顶：长按工作区 → 置顶/取消置顶，置顶工作区排在列表最前并显示小 pin 图标；Home 不可重命名/删除。
 - 会话置顶只在所属工作区内生效：置顶会话排在该工作区最前，行尾用 13dp pin 图标替代相对时间；运行中的会话行尾显示 12dp spinner。
 - 工作区行展开时行尾出现 +，在该工作区新建会话；长按工作区菜单：置顶/取消置顶、新建会话，非 Home 追加重命名/删除。长按会话：重命名、置顶、归档、删除。
-- 层级：工作区为主级（folder 图标 + 15sp medium ink 名称），会话为次级（message 小图标 + 13.5sp inkSecondary，缩进对齐工作区名称），工作区之间 6dp 分组留白，空工作区提示缩进且降级。
+- 层级：工作区为主级（原有 Folder 图标 + 15sp medium ink 名称），会话为次级（原有 Message 小图标 + 13.5sp inkSecondary，缩进对齐工作区名称），工作区之间 6dp 分组留白，空工作区提示缩进且降级。
 - 工作区与会话的展开/收起用 LazyColumn item 动画；首次打开会话显示短转圈，历史加载完成后替换，不横向推入页面。
 - 再次打开访问过的会话：立即展示内存中的消息快照（无转圈），SDK session 在后台打开；在此期间发送会等待 session 就绪后再提交。
 
 ## 图标与素材
 
-- 图标来源：`assets/icons/lucide-app-v1`（Lucide 微调版，1.75 描边），仅将实际用到的 SVG 转为 `design` 模块 VectorDrawable；线宽统一 1.75。Home/工作区展开/会话/归档/定时任务/设置交互行等使用新图标，旧图标保持兼容。
+- 图标继续使用 `design` 模块原有的 XML VectorDrawable 图标库；抽屉工作区/会话行复用原有 Folder / Message 小图标建立层级，不再引入 `assets/icons` 的新图标集。
 - 空态插画：`assets/mascot/generated/mascot_welcome.png` 导出为 `app` 的 480×480 透明 WebP（约 56KB）；`assets/` 其余候选图不进入 APK。
 - 所有图标仍由 `DdIcon` 统一 tint，不新增图标动效。
 
@@ -65,7 +65,7 @@
 ## 抽屉
 
 - 顶部功能项带图标：聊天、已归档、技能、插件、定时任务（无全局「新建对话」，新建只在工作区行内）。
-- 工作区标题行右侧 + 新建工作区；下方为工作区树，无选中强调色；展开状态只靠行尾 chevron 的旋转表达。工作区行左侧 folder 小图标、会话行左侧 message 小图标并缩进，用图标与字号/字重建立主次。
+- 工作区标题行右侧 + 新建工作区；下方为工作区树，无选中强调色；展开状态只靠行尾 chevron 的旋转表达。工作区行左侧 Folder、会话行左侧 Message 小图标并缩进，用图标与字号/字重建立主次。
 - 长按菜单锚定在点击位置，白色浮层；菜单项左侧图标 + 左对齐文字，删除项统一 danger 红。
 - 工作区行右侧自左至右：置顶 pin（已置顶时）、新建会话 +（展开时）、chevron（展开时旋转 90°）。
 - 所有滚动列表项插入/移除使用 `Modifier.animateItem()`，无 Material 默认 loading/ripple。
