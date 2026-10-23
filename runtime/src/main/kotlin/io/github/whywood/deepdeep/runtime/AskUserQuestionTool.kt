@@ -74,7 +74,7 @@ private val askUserQuestionParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("questions")) })
 }
 
-fun askUserQuestionTool(questionCenter: QuestionCenter): CodingTool = CodingTool(
+fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding): CodingTool = CodingTool(
     name = "ask_user_question",
     description = "Ask the user one to five structured questions and wait for the answer. Use options for choices and omit options for free-form input. Mark a recommended option by appending (Recommended) to its label.",
     parameters = askUserQuestionParameters,
@@ -87,19 +87,24 @@ fun askUserQuestionTool(questionCenter: QuestionCenter): CodingTool = CodingTool
     ),
     execute = { toolCallId, args, signal, _ ->
         signal?.throwIfAborted()
-        try {
-            val questions = parseQuestions(args)
-            when (val outcome = questionCenter.ask(toolCallId, questions, signal)) {
-                is QuestionOutcome.Answered -> textResult(answersJson(questions, outcome.answers).toString())
-                QuestionOutcome.Cancelled -> textResult("用户取消了提问", isError = true)
-                QuestionOutcome.Unavailable -> textResult("用户当前不在前台，无法回答问题", isError = true)
+        val sessionId = binding.current()?.sessionId
+        if (sessionId == null) {
+            textResult("Session is not bound", isError = true)
+        } else {
+            try {
+                val questions = parseQuestions(args)
+                when (val outcome = questionCenter.ask(sessionId, toolCallId, questions, signal)) {
+                    is QuestionOutcome.Answered -> textResult(answersJson(questions, outcome.answers).toString())
+                    QuestionOutcome.Cancelled -> textResult("用户取消了提问", isError = true)
+                    QuestionOutcome.Unavailable -> textResult("用户当前不在前台，无法回答问题", isError = true)
+                }
+            } catch (error: RequestAbortedException) {
+                throw error
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                textResult(error.message ?: "提问参数无效", isError = true)
             }
-        } catch (error: RequestAbortedException) {
-            throw error
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            textResult(error.message ?: "提问参数无效", isError = true)
         }
     },
 )

@@ -1,0 +1,4 @@
+<resources>
+    <string name="cmd_palette_description">命令列表</string>
+    <string name="cmd_palette_title">命令</string>
+</resources>

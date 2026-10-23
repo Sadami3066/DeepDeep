@@ -1,0 +1,5 @@
+<resources>
+    <string name="present_share">分享</string>
+    <string name="present_open_failed">没有可以打开该文件的应用</string>
+    <string name="present_share_failed">无法分享该文件</string>
+</resources>

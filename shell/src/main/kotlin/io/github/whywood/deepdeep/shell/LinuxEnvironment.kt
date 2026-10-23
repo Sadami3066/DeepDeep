@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 class LinuxEnvironment(
     context: Context,
     val workspaceDir: File = File(context.applicationContext.filesDir, "workspace"),
+    private val sharedStorageEnabled: () -> Boolean = { false },
 ) : LinuxExecutor {
     private val appContext = context.applicationContext
     val rootfsDir: File = File(appContext.filesDir, "linux/rootfs")
@@ -27,6 +28,7 @@ class LinuxEnvironment(
         rootfsDir = rootfsDir,
         workspaceDir = workspaceDir,
         tempDir = File(appContext.cacheDir, "proot-tmp"),
+        sharedStorageEnabled = sharedStorageEnabled,
     )
 
     val state: StateFlow<LinuxInstallState> = installer.state

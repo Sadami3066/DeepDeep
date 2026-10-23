@@ -28,12 +28,12 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -85,10 +87,18 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.GoalView
+import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QuestionAnswer
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.ui.goal.GoalBar
+import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import java.time.LocalTime
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -123,6 +133,26 @@ fun ChatScreen(
     onOpenSchedules: () -> Unit,
     onRetry: (Long) -> Unit,
     reloading: Boolean,
+    usage: SessionUsage? = null,
+    compacting: Boolean = false,
+    commandItems: List<CommandItem> = emptyList(),
+    onCommand: (ChatCommand) -> Unit = {},
+    goal: GoalView? = null,
+    onOpenGoal: () -> Unit = {},
+    onPauseGoal: () -> Unit = {},
+    onResumeGoal: () -> Unit = {},
+    jobCount: Int = 0,
+    onOpenJobs: () -> Unit = {},
+    modelsOpen: Boolean = false,
+    onModelsOpenChange: (Boolean) -> Unit = {},
+    onOpenUsage: () -> Unit = {},
+    pendingQuestions: List<PendingQuestion> = emptyList(),
+    onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
+    foreignQuestion: PendingQuestion? = null,
+    onOpenForeignQuestion: (String) -> Unit = {},
+    onOpenPresentFile: (String) -> Unit = {},
+    onSharePresentFile: (String) -> Unit = {},
+    onOpenFiles: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -135,7 +165,17 @@ fun ChatScreen(
     val density = LocalDensity.current
     val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
     val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
-    val targetBottomInsetPx = maxOf(imeBottomPx, navigationBottomPx).toFloat()
+    val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    var stableStatusTopPx by remember { mutableIntStateOf(statusTopPx) }
+    var stableNavigationBottomPx by remember { mutableIntStateOf(navigationBottomPx) }
+    SideEffect {
+        if (windowFocused) {
+            stableStatusTopPx = statusTopPx
+            stableNavigationBottomPx = navigationBottomPx
+        }
+    }
+    val targetBottomInsetPx = maxOf(imeBottomPx, stableNavigationBottomPx).toFloat()
     val animatedBottomInset = remember { Animatable(0f) }
     LaunchedEffect(targetBottomInsetPx) {
         animatedBottomInset.animateTo(
@@ -210,6 +250,13 @@ fun ChatScreen(
         if (state.sending) controller.followContent()
     }
 
+    LaunchedEffect(pendingQuestions.map { it.requestId }) {
+        if (pendingQuestions.isNotEmpty()) {
+            delay(60)
+            controller.jumpToBottom(animate = true)
+        }
+    }
+
 
     Column(
         modifier
@@ -243,7 +290,11 @@ fun ChatScreen(
                 keyboard?.hide()
                 onOpenSchedules()
             },
-            modifier = Modifier.statusBarsPadding(),
+            onOpenFiles = {
+                keyboard?.hide()
+                onOpenFiles()
+            },
+            modifier = Modifier.padding(top = with(density) { stableStatusTopPx.toDp() }),
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (state.switchingConversation) {
@@ -283,10 +334,36 @@ fun ChatScreen(
                                     onRetry = onRetry,
                                     attachmentRoot = attachmentRoot,
                                     autoCollapseProcess = autoCollapseProcess,
+                                    pendingQuestions = pendingQuestions,
+                                    onAnswerQuestion = onAnswerQuestion,
+                                    onOpenPresentFile = onOpenPresentFile,
+                                    onSharePresentFile = onSharePresentFile,
                                 )
                             }
                         }
                     }
+                    pendingQuestions
+                        .firstOrNull { pending ->
+                            state.messages.none { message ->
+                                message.steps.any { step ->
+                                    step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
+                                }
+                            }
+                        }
+                        ?.let { pending ->
+                            item(key = "pending-question-${pending.requestId}") {
+                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                    Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
+                                        AskQuestionCard(
+                                            questions = pending.questions,
+                                            answers = null,
+                                            submitted = false,
+                                            onAnswer = { answers -> onAnswerQuestion(pending, answers) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                 }
             }
             if (controller.showJumpToBottom) {
@@ -312,7 +389,98 @@ fun ChatScreen(
                 )
             }
         }
+        AnimatedVisibility(
+            visible = compacting || state.compacting,
+            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_compacting),
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+            }
+        }
+        foreignQuestion?.let { foreign ->
+            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier
+                        .widthIn(max = 780.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.raised)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .testTag("chat_foreign_question"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.chat_question_other),
+                        modifier = Modifier.weight(1f),
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                        color = colors.inkSecondary,
+                    )
+                    DdTextAction(
+                        text = stringResource(R.string.chat_question_other_action),
+                        onClick = { onOpenForeignQuestion(foreign.sessionId) },
+                    )
+                }
+            }
+        }
+        goal?.let { view ->
+            GoalBar(
+                view = view,
+                onOpen = onOpenGoal,
+                onPause = onPauseGoal,
+                onResume = onResumeGoal,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+        }
         state.error?.let { ErrorRow(it) }
+        val paletteQuery = commandQuery(state.input)
+        var lastPaletteQuery by remember { mutableStateOf("") }
+        LaunchedEffect(paletteQuery) {
+            if (paletteQuery != null) lastPaletteQuery = paletteQuery
+        }
+        AnimatedVisibility(
+            visible = paletteQuery != null && !state.sending,
+            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+        ) {
+            SlashPalette(
+                items = commandItems,
+                query = paletteQuery ?: lastPaletteQuery,
+                onPick = { item -> ChatCommand.byName(item.id)?.let(onCommand) },
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+        val currentUsage = usage ?: state.usage
+        val showUsageMeter = currentUsage != null && currentUsage.contextWindow > 0
+        if (showUsageMeter || jobCount > 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 2.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                JobsMeter(
+                    count = jobCount,
+                    onClick = onOpenJobs,
+                    modifier = Modifier.padding(end = 10.dp),
+                )
+                if (currentUsage != null && currentUsage.contextWindow > 0) {
+                    ContextMeter(
+                        usedTokens = currentUsage.contextTokens,
+                        windowTokens = currentUsage.contextWindow,
+                        onClick = onOpenUsage,
+                    )
+                }
+            }
+        }
         ChatComposer(
             value = state.input,
             ready = state.ready && state.historyLoaded && !state.switchingConversation,
@@ -343,6 +511,8 @@ fun ChatScreen(
             onRemoveAttachment = onRemoveAttachment,
             onOpenAttachment = onOpenAttachment,
             onOpenSettings = onOpenSettings,
+            modelsOpen = modelsOpen,
+            onModelsOpenChange = onModelsOpenChange,
             modifier = Modifier
                 .onSizeChanged { composerHeightPx = it.height }
                 .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),

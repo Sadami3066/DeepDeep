@@ -13,7 +13,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,11 +86,10 @@ internal fun AttachmentCards(
     root: File,
     onOpen: (AttachmentRef) -> Unit,
 ) {
-    FlowRow(
-        modifier = Modifier.widthIn(max = 560.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        maxItemsInEachRow = 3,
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         attachments.forEach { attachment ->
             if (attachment.kind == AttachmentKind.IMAGE) {

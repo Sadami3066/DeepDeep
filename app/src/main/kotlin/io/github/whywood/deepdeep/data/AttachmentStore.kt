@@ -21,6 +21,7 @@ interface AttachmentStore {
     suspend fun import(uri: Uri, root: File): AttachmentImport
     fun file(ref: AttachmentRef, root: File): File
     fun shareIntent(ref: AttachmentRef, root: File): Intent?
+    fun viewIntent(ref: AttachmentRef, root: File): Intent? = null
     fun resolve(raw: String, root: File): AttachmentRef?
 }
 
@@ -68,23 +69,21 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
             trimmed.replace("%20", " ")
         } ?: return null
         val candidates = buildList {
-            when {
-                decoded.startsWith("workspace/") -> {
-                    add(File(home, decoded.removePrefix("workspace/")))
-                    add(File(root, decoded.removePrefix("workspace/")))
-                }
-
-                decoded.startsWith("$ATTACHMENTS_DIRECTORY/") || !decoded.contains('/') -> {
-                    add(File(root, decoded))
-                    if (root.absolutePath != home.absolutePath) add(File(home, decoded))
-                }
-
-                else -> {
+            if (decoded.startsWith("/")) {
+                if (decoded.startsWith("/workspace/")) {
+                    val relative = decoded.removePrefix("/workspace/")
+                    add(File(root, relative))
+                    add(File(home, relative))
+                } else {
                     add(File(decoded))
                     if (decoded.contains("/files/workspace/")) {
                         add(File(decoded.replace("/files/workspace/", "/files/home/")))
                     }
                 }
+            } else {
+                val relative = decoded.removePrefix("workspace/")
+                add(File(root, relative))
+                if (root.absolutePath != home.absolutePath) add(File(home, relative))
             }
         }
         val roots = listOf(root, home).mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
@@ -117,6 +116,18 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
             type = ref.mime.ifBlank { "application/octet-stream" }
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, ref.name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    override fun viewIntent(ref: AttachmentRef, root: File): Intent? {
+        val target = file(ref, root)
+        if (!target.isFile) return null
+        val uri = runCatching {
+            FileProvider.getUriForFile(appContext, "${appContext.packageName}.files", target)
+        }.getOrNull() ?: return null
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, ref.mime.ifBlank { "application/octet-stream" })
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }

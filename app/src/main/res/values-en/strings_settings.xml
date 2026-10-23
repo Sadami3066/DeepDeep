@@ -55,6 +55,8 @@
     <string name="settings_linux_unsupported">Linux is not supported on this device (arm64-v8a only).</string>
     <string name="settings_linux_size_label">Space used</string>
     <string name="settings_linux_size_value">%1$d MB</string>
+    <string name="settings_linux_shared_storage">Shared storage</string>
+    <string name="settings_linux_shared_storage_grant">Grant All files access in system settings</string>
     <string name="settings_provider_title">Providers</string>
     <string name="settings_provider_search">Search providers</string>
     <string name="settings_provider_all_count">All providers · %1$d</string>
@@ -140,4 +142,5 @@
     <string name="dev_bundle_office_body">PDF, Excel, Word, PPT, and OCR</string>
     <string name="dev_bundle_dev">Development</string>
     <string name="dev_bundle_dev_body">Git, GitHub CLI, GCC, Make, and CMake</string>
+    <string name="settings_background_job_wake">Wake when a background job finishes</string>
 </resources>

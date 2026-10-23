@@ -25,11 +25,12 @@ class QuestionCenterTest {
         val center = QuestionCenter { true }
         var outcome: QuestionOutcome? = null
         val job = launch {
-            outcome = center.ask("call-1", listOf(question("q1")))
+            outcome = center.ask("session-1", "call-1", listOf(question("q1")))
         }
         runCurrent()
         assertEquals(1, center.pending.value.size)
         val pending = center.pending.value.single()
+        assertEquals("session-1", pending.sessionId)
         assertEquals("call-1", pending.toolCallId)
         assertEquals(listOf(question("q1")), pending.questions)
 
@@ -47,7 +48,7 @@ class QuestionCenterTest {
         val center = QuestionCenter { true }
         var outcome: QuestionOutcome? = null
         val job = launch {
-            outcome = center.ask("call-1", listOf(question("q1")))
+            outcome = center.ask("session-1", "call-1", listOf(question("q1")))
         }
         runCurrent()
         center.cancel(center.pending.value.single().requestId)
@@ -59,7 +60,7 @@ class QuestionCenterTest {
     @Test
     fun askReturnsUnavailableWhenNotForeground() = runTest {
         val center = QuestionCenter { false }
-        assertSame(QuestionOutcome.Unavailable, center.ask("call-1", listOf(question("q1"))))
+        assertSame(QuestionOutcome.Unavailable, center.ask("session-1", "call-1", listOf(question("q1"))))
         assertTrue(center.pending.value.isEmpty())
     }
 
@@ -69,7 +70,7 @@ class QuestionCenterTest {
         val signal = RunSignal()
         var outcome: QuestionOutcome? = null
         val job = launch {
-            outcome = center.ask("call-1", listOf(question("q1")), signal)
+            outcome = center.ask("session-1", "call-1", listOf(question("q1")), signal)
         }
         runCurrent()
         assertEquals(1, center.pending.value.size)
@@ -82,31 +83,112 @@ class QuestionCenterTest {
     }
 
     @Test
-    fun pendingQuestionsAreFifo() = runTest {
+    fun sameSessionQuestionsStayPendingTogether() = runTest {
         val center = QuestionCenter { true }
         var first: QuestionOutcome? = null
         var second: QuestionOutcome? = null
         val firstJob = launch {
-            first = center.ask("call-1", listOf(question("q1")))
+            first = center.ask("session-1", "call-1", listOf(question("q1")))
         }
         runCurrent()
         val secondJob = launch {
-            second = center.ask("call-2", listOf(question("q2")))
+            second = center.ask("session-1", "call-2", listOf(question("q2")))
         }
         runCurrent()
 
         val pending = center.pending.value
-        assertEquals(2, pending.size)
-        assertEquals("call-1", pending[0].toolCallId)
-        assertEquals("call-2", pending[1].toolCallId)
+        assertEquals(listOf("call-1", "call-2"), pending.map { it.toolCallId })
 
         center.answer(pending[0].requestId, listOf(QuestionAnswer("q1", selected = listOf("A"))))
         firstJob.join()
-        assertEquals(1, center.pending.value.size)
-        assertEquals("call-2", center.pending.value.single().toolCallId)
+        assertEquals("A", (first as QuestionOutcome.Answered).answers.single().selected.single())
+        assertEquals(listOf("call-2"), center.pending.value.map { it.toolCallId })
 
-        center.answer(pending[1].requestId, listOf(QuestionAnswer("q2", custom = "custom")))
+        center.answer(
+            center.pending.value.single().requestId,
+            listOf(QuestionAnswer("q2", custom = "custom")),
+        )
         secondJob.join()
+        assertEquals("custom", (second as QuestionOutcome.Answered).answers.single().custom)
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
+    fun cancelRemovesOnlyTheTargetQuestion() = runTest {
+        val center = QuestionCenter { true }
+        var first: QuestionOutcome? = null
+        var second: QuestionOutcome? = null
+        val firstJob = launch {
+            first = center.ask("session-1", "call-1", listOf(question("q1")))
+        }
+        runCurrent()
+        val secondJob = launch {
+            second = center.ask("session-1", "call-2", listOf(question("q2")))
+        }
+        runCurrent()
+
+        center.cancel(center.pending.value.first { it.toolCallId == "call-1" }.requestId)
+        firstJob.join()
+        assertSame(QuestionOutcome.Cancelled, first)
+        assertEquals(listOf("call-2"), center.pending.value.map { it.toolCallId })
+
+        center.answer(
+            center.pending.value.single().requestId,
+            listOf(QuestionAnswer("q2", selected = listOf("B"))),
+        )
+        secondJob.join()
+        assertEquals("B", (second as QuestionOutcome.Answered).answers.single().selected.single())
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
+    fun abortCancelsEveryQuestionSharingTheSignal() = runTest {
+        val center = QuestionCenter { true }
+        val signal = RunSignal()
+        var first: QuestionOutcome? = null
+        var second: QuestionOutcome? = null
+        val firstJob = launch {
+            first = center.ask("session-1", "call-1", listOf(question("q1")), signal)
+        }
+        runCurrent()
+        val secondJob = launch {
+            second = center.ask("session-1", "call-2", listOf(question("q2")), signal)
+        }
+        runCurrent()
+        assertEquals(2, center.pending.value.size)
+
+        signal.abort("user stopped the run")
+        firstJob.join()
+        secondJob.join()
+
+        assertSame(QuestionOutcome.Cancelled, first)
+        assertSame(QuestionOutcome.Cancelled, second)
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
+    fun differentSessionsRunInParallel() = runTest {
+        val center = QuestionCenter { true }
+        var first: QuestionOutcome? = null
+        var second: QuestionOutcome? = null
+        val firstJob = launch {
+            first = center.ask("session-1", "call-1", listOf(question("q1")))
+        }
+        val secondJob = launch {
+            second = center.ask("session-2", "call-2", listOf(question("q2")))
+        }
+        runCurrent()
+
+        assertEquals(2, center.pending.value.size)
+        val firstPending = center.pending.value.first { it.sessionId == "session-1" }
+        val secondPending = center.pending.value.first { it.sessionId == "session-2" }
+        center.answer(firstPending.requestId, listOf(QuestionAnswer("q1", selected = listOf("A"))))
+        center.answer(secondPending.requestId, listOf(QuestionAnswer("q2", selected = listOf("B"))))
+        firstJob.join()
+        secondJob.join()
+
+        assertEquals("A", (first as QuestionOutcome.Answered).answers.single().selected.single())
+        assertEquals("B", (second as QuestionOutcome.Answered).answers.single().selected.single())
         assertTrue(center.pending.value.isEmpty())
     }
 
@@ -124,7 +206,7 @@ class QuestionCenterTest {
         val questions = listOf(question("q1"), question("q2"))
         var outcome: QuestionOutcome? = null
         val job = launch {
-            outcome = center.ask("call-1", questions)
+            outcome = center.ask("session-1", "call-1", questions)
         }
         runCurrent()
         val answers = listOf(

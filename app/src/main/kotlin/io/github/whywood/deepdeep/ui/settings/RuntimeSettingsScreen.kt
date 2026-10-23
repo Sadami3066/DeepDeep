@@ -33,11 +33,13 @@ fun RuntimeSettingsScreen(
     linuxState: LinuxInstallState,
     linuxSupported: Boolean,
     linuxEnabled: Boolean,
+    sharedStorageEnabled: Boolean,
     devPackages: DevPackagesState,
     onBack: () -> Unit,
     onInstall: () -> Unit,
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onSharedStorageChange: (Boolean) -> Unit,
     onInstallBundle: (DevBundle) -> Unit,
     onRefreshPackages: () -> Unit,
     modifier: Modifier = Modifier,
@@ -81,9 +83,11 @@ fun RuntimeSettingsScreen(
                     state = linuxState,
                     supported = linuxSupported,
                     enabled = linuxEnabled,
+                    sharedStorageEnabled = sharedStorageEnabled,
                     onInstall = onInstall,
                     onReset = onReset,
                     onEnabledChange = onEnabledChange,
+                    onSharedStorageChange = onSharedStorageChange,
                 )
             }
             Spacer(Modifier.height(24.dp))

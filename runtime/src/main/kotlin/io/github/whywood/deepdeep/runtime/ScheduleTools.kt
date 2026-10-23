@@ -149,14 +149,14 @@ private val deleteParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("id")) })
 }
 
-fun scheduleTools(cwd: Path, context: AppToolContext, binding: ScheduleBinding): List<CodingTool> = listOf(
+fun scheduleTools(cwd: Path, context: AppToolContext, binding: SessionBinding): List<CodingTool> = listOf(
     scheduleCreateTool(cwd, context, binding),
     scheduleListTool(cwd, context, binding),
     scheduleUpdateTool(cwd, context, binding),
     scheduleDeleteTool(cwd, context, binding),
 )
 
-private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
+private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_create",
     description = "Create a reminder bound to the current conversation. When it fires, a reminder message is posted into this same conversation and starts a run here; no separate session or workspace is created.",
     parameters = createParameters,
@@ -193,7 +193,7 @@ private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: Sche
     },
 )
 
-private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
+private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_list",
     description = "List the reminders bound to the current conversation with trigger, next run time, enabled state and last delivery result.",
     parameters = listParameters,
@@ -217,7 +217,7 @@ private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: Schedu
     },
 )
 
-private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
+private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_update",
     description = "Update a reminder bound to the current conversation. Only provided fields change; the reminder cannot be rebound to another conversation.",
     parameters = updateParameters,
@@ -251,7 +251,7 @@ private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: Sche
     },
 )
 
-private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: ScheduleBinding): CodingTool = CodingTool(
+private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_delete",
     description = "Delete a reminder bound to the current conversation by id.",
     parameters = deleteParameters,
@@ -278,7 +278,7 @@ private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: Sche
     },
 )
 
-private fun requireSession(binding: ScheduleBinding): BoundSession =
+private fun requireSession(binding: SessionBinding): BoundSession =
     binding.current() ?: throw IllegalArgumentException("当前会话未绑定")
 
 private suspend fun scheduleToolResult(block: suspend () -> dev.pi.agent.AgentToolResult): dev.pi.agent.AgentToolResult =

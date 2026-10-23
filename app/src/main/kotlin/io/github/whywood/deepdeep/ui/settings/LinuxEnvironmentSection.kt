@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,10 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcons
@@ -36,9 +44,11 @@ internal fun LinuxEnvironmentSection(
     state: LinuxInstallState,
     supported: Boolean,
     enabled: Boolean,
+    sharedStorageEnabled: Boolean,
     onInstall: () -> Unit,
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onSharedStorageChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -47,6 +57,12 @@ internal fun LinuxEnvironmentSection(
     val installing = state is LinuxInstallState.Installing
     val failed = state as? LinuxInstallState.Failed
     var resetConfirm by remember { mutableStateOf(false) }
+    var sharedStorageGranted by remember { mutableStateOf(isSharedStorageGranted()) }
+
+    LifecycleResumeEffect(Unit) {
+        sharedStorageGranted = isSharedStorageGranted()
+        onPauseOrDispose {}
+    }
 
     Column(modifier.fillMaxWidth()) {
         if (!supported) {
@@ -111,6 +127,13 @@ internal fun LinuxEnvironmentSection(
                 )
             },
         )
+        DdHairline()
+        SharedStorageRow(
+            granted = sharedStorageGranted,
+            checked = sharedStorageEnabled,
+            available = installed && supported && enabled,
+            onCheckedChange = onSharedStorageChange,
+        )
         if (installedState != null) {
             DdHairline()
             DdListRow(
@@ -158,4 +181,47 @@ internal fun LinuxEnvironmentSection(
             },
         )
     }
+}
+
+@Composable
+private fun SharedStorageRow(
+    granted: Boolean,
+    checked: Boolean,
+    available: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    DdListRow(
+        title = stringResource(R.string.settings_linux_shared_storage),
+        subtitle = if (granted) null else stringResource(R.string.settings_linux_shared_storage_grant),
+        subtitleMaxLines = 2,
+        enabled = available,
+        onClick = if (granted) null else ({ openSharedStorageSettings(context) }),
+        showChevron = !granted,
+        modifier = Modifier.testTag("linux_shared_storage"),
+        trailing = if (granted) {
+            {
+                DdSwitch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    enabled = available,
+                    stateDescription = stringResource(
+                        if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
+                    ),
+                    modifier = Modifier.testTag("linux_shared_storage_switch"),
+                )
+            }
+        } else {
+            null
+        },
+    )
+}
+
+private fun openSharedStorageSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+    val intent = Intent(
+        Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+        "package:${context.packageName}".toUri(),
+    )
+    runCatching { context.startActivity(intent) }
 }

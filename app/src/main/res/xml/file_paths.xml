@@ -2,4 +2,5 @@
 <paths>
     <files-path name="home" path="home/" />
     <files-path name="workspace" path="workspace/" />
+    <files-path name="workspaces" path="workspaces/" />
 </paths>

@@ -1,0 +1,16 @@
+<resources>
+    <string name="usage_title">会话统计</string>
+    <string name="usage_context">上下文占用</string>
+    <string name="usage_context_value">~%1$s / %2$s</string>
+    <string name="usage_compact_threshold">自动压缩阈值 %1$s</string>
+    <string name="usage_input">输入</string>
+    <string name="usage_output">输出</string>
+    <string name="usage_cache_read">缓存读取</string>
+    <string name="usage_cache_write">缓存写入</string>
+    <string name="usage_cost">费用</string>
+    <string name="usage_cost_value">$%1$s</string>
+    <string name="usage_footnote">上下文 = provider 最近一次用量 + 新增内容估算；累计 token 与费用来自 provider 上报</string>
+    <string name="usage_meter_percent">%1$d%%</string>
+    <string name="usage_meter_description">上下文占用 %1$d%%</string>
+    <string name="usage_cumulative">本会话累计（provider 上报）</string>
+</resources>

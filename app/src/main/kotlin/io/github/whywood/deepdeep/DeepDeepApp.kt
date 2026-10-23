@@ -33,12 +33,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.UiPreferences
@@ -49,16 +51,25 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
+import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
-import io.github.whywood.deepdeep.ui.questions.AskQuestionSheet
+import io.github.whywood.deepdeep.ui.chat.CommandItem
+import io.github.whywood.deepdeep.ui.chat.ParsedCommand
+import io.github.whywood.deepdeep.ui.chat.UsageSheet
+import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
+import io.github.whywood.deepdeep.ui.chat.parseChatCommand
+import io.github.whywood.deepdeep.ui.goal.GoalSheet
+import io.github.whywood.deepdeep.ui.files.FileBrowserSheet
+import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
+import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
@@ -74,6 +85,7 @@ import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -130,6 +142,9 @@ internal fun DeepDeepApp(
         withCode = { base, code ->
             errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)
         },
+        nothingToCompact = stringResource(R.string.chat_compact_none),
+        compactionBusy = stringResource(R.string.chat_compact_busy),
+        compactionUnavailable = stringResource(R.string.chat_compact_unavailable),
     )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
@@ -161,9 +176,23 @@ internal fun DeepDeepApp(
     val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
+    val sharedStorageEnabled by graph.linuxSettings.sharedStorageEnabled.collectAsStateWithLifecycle(
+        initialValue = false,
+    )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
+    val presentOpenFailed = stringResource(R.string.present_open_failed)
+    val presentShareFailed = stringResource(R.string.present_share_failed)
+    val openWorkspaceFile: (String) -> Unit = { raw ->
+        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+        if (resolved == null) {
+            Toast.makeText(context, attachmentMissingMessage, Toast.LENGTH_SHORT).show()
+        } else {
+            previewRoot = attachmentRoot
+            previewAttachment = resolved
+        }
+    }
     val navigator = rememberAppNavigator()
     val density = LocalDensity.current
     val drawerWidthPx = with(density) { 304.dp.toPx() }
@@ -171,7 +200,19 @@ internal fun DeepDeepApp(
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
-    val activeQuestion = pendingQuestions.firstOrNull()
+    val activeQuestions = pendingQuestions.filter { it.sessionId == state.conversationId }
+    val foreignQuestion = pendingQuestions.firstOrNull { it.sessionId != state.conversationId }
+    val goals by graph.goalService.goals.collectAsStateWithLifecycle()
+    val activeGoal = state.conversationId?.let { goals[it] }?.takeIf { it.goal.phase != io.github.whywood.deepdeep.runtime.GoalPhase.COMPLETE }
+    val allJobs by graph.jobRegistry.jobs.collectAsStateWithLifecycle()
+    val activeJobs = allJobs.filter { it.sessionId == state.conversationId }
+    var modelsOpen by remember { mutableStateOf(false) }
+    var usageSheetOpen by remember { mutableStateOf(false) }
+    var goalSheetOpen by remember { mutableStateOf(false) }
+    var jobsSheetOpen by remember { mutableStateOf(false) }
+    var filesSheetOpen by remember { mutableStateOf(false) }
+    var selectedJobId by remember { mutableStateOf<String?>(null) }
+    var jobOutput by remember { mutableStateOf<String?>(null) }
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
         initialValue = PersonalizationUi(),
     )
@@ -195,6 +236,80 @@ internal fun DeepDeepApp(
         label = "drawer-progress",
     )
     val activeProvider = graph.providerCatalog.summary(state.providerId)
+    val appResources = LocalResources.current
+
+    val commandItems = listOf(
+        CommandItem(
+            id = ChatCommand.COMPACT.commandName,
+            name = ChatCommand.COMPACT.commandName,
+            title = stringResource(R.string.chat_cmd_compact),
+            description = stringResource(R.string.chat_cmd_compact_desc),
+            enabled = state.conversationId != null && !state.sending && !state.compacting,
+        ),
+        CommandItem(
+            id = ChatCommand.GOAL.commandName,
+            name = ChatCommand.GOAL.commandName,
+            title = stringResource(R.string.chat_cmd_goal),
+            description = stringResource(R.string.chat_cmd_goal_desc),
+            enabled = state.conversationId != null,
+        ),
+    )
+
+    fun rejectCommandArgs(name: String) {
+        chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_usage, name))
+    }
+
+    fun runGoalCommand(args: String) {
+        val sessionId = state.conversationId
+        if (sessionId == null) {
+            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_session_not_ready))
+            return
+        }
+        when (args) {
+            "" -> goalSheetOpen = true
+            "pause" -> scope.launch { graph.goalService.pause(sessionId) }
+            "resume" -> scope.launch { graph.goalService.resume(sessionId) }
+            "clear" -> scope.launch { graph.goalService.clear(sessionId) }
+            else -> scope.launch {
+                if (graph.goalService.create(sessionId, args) == null) {
+                    chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+                }
+            }
+        }
+    }
+
+    fun runChatCommand(command: ChatCommand, args: String) {
+        when (command) {
+            ChatCommand.COMPACT -> if (args.isEmpty()) chatViewModel.compactContext() else rejectCommandArgs(command.commandName)
+            ChatCommand.GOAL -> runGoalCommand(args.trim())
+        }
+    }
+
+    fun pickCommand(command: ChatCommand) {
+        val trigger = findCommandTrigger(state.input)
+        if (trigger != null) {
+            chatViewModel.onInputChange(state.input.removeRange(trigger.start, state.input.length).trimEnd())
+        }
+        runChatCommand(command, "")
+    }
+
+    fun submitChatInput() {
+        when (val parsed = parseChatCommand(state.input)) {
+            ParsedCommand.None -> chatViewModel.send()
+            is ParsedCommand.Found -> {
+                if (!parsed.command.takesArguments && parsed.args.isNotEmpty()) {
+                    rejectCommandArgs(parsed.command.commandName)
+                } else {
+                    chatViewModel.onInputChange("")
+                    runChatCommand(parsed.command, parsed.args)
+                }
+            }
+
+            is ParsedCommand.Unknown -> {
+                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_unknown, parsed.name))
+            }
+        }
+    }
 
     fun closeDrawer() {
         drawerOpen = false
@@ -251,7 +366,7 @@ internal fun DeepDeepApp(
                     state = state.copy(configured = state.providerId in configuredProviders),
                     nickname = nickname,
                     onInputChange = chatViewModel::onInputChange,
-                    onSend = chatViewModel::send,
+                    onSend = ::submitChatInput,
                     onStop = chatViewModel::stop,
                     onOpenDrawer = { drawerOpen = true },
                     onOpenSettings = ::openSettings,
@@ -289,7 +404,58 @@ internal fun DeepDeepApp(
                     onOpenSchedules = { navigator.push(AppDestination.Schedules) },
                     onRetry = chatViewModel::retry,
                     reloading = state.reloading,
-                    onOpenFile = { raw ->
+                    usage = state.usage,
+                    compacting = state.compacting,
+                    commandItems = commandItems,
+                    onCommand = ::pickCommand,
+                    goal = activeGoal,
+                    onOpenGoal = { goalSheetOpen = true },
+                    onPauseGoal = {
+                        state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
+                    },
+                    onResumeGoal = {
+                        state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
+                    },
+                    jobCount = activeJobs.count { it.status == JobStatus.RUNNING },
+                    onOpenJobs = {
+                        selectedJobId = null
+                        jobOutput = null
+                        jobsSheetOpen = true
+                    },
+                    modelsOpen = modelsOpen,
+                    onModelsOpenChange = { modelsOpen = it },
+                    onOpenUsage = { usageSheetOpen = true },
+                    pendingQuestions = activeQuestions,
+                    onAnswerQuestion = { pending, answers ->
+                        graph.questionCenter.answer(pending.requestId, answers)
+                    },
+                    foreignQuestion = foreignQuestion,
+                    onOpenForeignQuestion = { sessionId ->
+                        navigator.reset(AppDestination.Chat)
+                        chatViewModel.openConversationById(sessionId)
+                    },
+                    onOpenFile = openWorkspaceFile,
+                    onOpenFiles = { filesSheetOpen = true },
+                    onOpenPresentFile = { raw ->
+                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                        if (resolved == null) {
+                            Toast.makeText(
+                                context,
+                                attachmentMissingMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else if (resolved.kind != AttachmentKind.OTHER) {
+                            previewRoot = attachmentRoot
+                            previewAttachment = resolved
+                        } else {
+                            val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
+                            val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
+                            if (!opened) {
+                                Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onSharePresentFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
                             Toast.makeText(
@@ -298,8 +464,12 @@ internal fun DeepDeepApp(
                                 Toast.LENGTH_SHORT,
                             ).show()
                         } else {
-                            previewRoot = attachmentRoot
-                            previewAttachment = resolved
+                            val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
+                            if (intent != null) {
+                                context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+                            } else {
+                                Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                 )
@@ -337,6 +507,7 @@ internal fun DeepDeepApp(
                         linuxState = linuxState,
                         linuxSupported = graph.linuxEnvironment.isSupported,
                         linuxEnabled = linuxEnabled,
+                        sharedStorageEnabled = sharedStorageEnabled,
                         devPackages = devPackages,
                         onBack = ::back,
                         onInstall = { scope.launch { graph.linuxEnvironment.install() } },
@@ -352,6 +523,9 @@ internal fun DeepDeepApp(
                                 graph.linuxSettings.setEnabled(enabled)
                                 graph.host.reconfigure()
                             }
+                        },
+                        onSharedStorageChange = { enabled ->
+                            scope.launch { graph.linuxSettings.setSharedStorageEnabled(enabled) }
                         },
                         onInstallBundle = graph.devPackageManager::installBundle,
                         onRefreshPackages = graph.devPackageManager::refresh,
@@ -627,14 +801,110 @@ internal fun DeepDeepApp(
                 },
             )
         }
-        activeQuestion?.let { pending ->
-            key(pending.requestId) {
-                AskQuestionSheet(
-                    pending = pending,
-                    onAnswer = { answers -> graph.questionCenter.answer(pending.requestId, answers) },
-                    onCancel = { graph.questionCenter.cancel(pending.requestId) },
-                )
+        if (usageSheetOpen) {
+            state.usage?.let { usage ->
+                UsageSheet(usage = usage, onDismiss = { usageSheetOpen = false })
             }
+        }
+        if (goalSheetOpen) {
+            GoalSheet(
+                view = activeGoal,
+                onDismiss = { goalSheetOpen = false },
+                onCreate = { objective ->
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.create(id, objective)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+                onEdit = { objective ->
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.edit(id, objective)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+                onPause = {
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.pause(id)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+                onResume = {
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.resume(id)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+                onComplete = {
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.complete(id)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+                onClear = {
+                    state.conversationId?.let { id ->
+                        scope.launch {
+                            graph.goalService.clear(id)
+                            goalSheetOpen = false
+                        }
+                    }
+                },
+            )
+        }
+        LaunchedEffect(jobsSheetOpen, selectedJobId) {
+            val id = selectedJobId
+            if (!jobsSheetOpen || id == null) return@LaunchedEffect
+            while (true) {
+                val job = graph.jobRegistry.jobs.value.firstOrNull { it.id == id } ?: break
+                jobOutput = runCatching { graph.jobRegistry.read(id).output }.getOrNull()
+                if (job.status != JobStatus.RUNNING) break
+                delay(800)
+            }
+        }
+        if (jobsSheetOpen) {
+            JobsSheet(
+                jobs = activeJobs,
+                selectedJobId = selectedJobId,
+                output = jobOutput,
+                onSelect = { id ->
+                    if (selectedJobId == id) {
+                        selectedJobId = null
+                        jobOutput = null
+                    } else {
+                        selectedJobId = id
+                        jobOutput = null
+                        scope.launch { jobOutput = graph.jobRegistry.read(id).output }
+                    }
+                },
+                onCloseOutput = {
+                    selectedJobId = null
+                    jobOutput = null
+                },
+                onKill = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
+                onClearSettled = { graph.jobRegistry.clearSettled() },
+                onDismiss = { jobsSheetOpen = false },
+            )
+        }
+        if (filesSheetOpen) {
+            val rootLabel = state.workspaces
+                .firstOrNull { it.cwd == state.conversationCwd }
+                ?.name
+                ?: attachmentRoot.name
+            FileBrowserSheet(
+                root = attachmentRoot,
+                rootLabel = rootLabel,
+                onOpenFile = openWorkspaceFile,
+                onDismiss = { filesSheetOpen = false },
+            )
         }
     }
     }

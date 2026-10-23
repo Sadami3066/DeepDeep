@@ -29,6 +29,7 @@ data class QuestionAnswer(
 
 data class PendingQuestion(
     val requestId: String,
+    val sessionId: String,
     val toolCallId: String,
     val questions: List<UserQuestion>,
 )
@@ -49,6 +50,7 @@ class QuestionCenter(private val isForeground: () -> Boolean) {
     val pending: StateFlow<List<PendingQuestion>> = pendingState.asStateFlow()
 
     suspend fun ask(
+        sessionId: String,
         toolCallId: String,
         questions: List<UserQuestion>,
         signal: RunSignal? = null,
@@ -61,6 +63,7 @@ class QuestionCenter(private val isForeground: () -> Boolean) {
             waiters[requestId] = deferred
             pendingState.value = pendingState.value + PendingQuestion(
                 requestId = requestId,
+                sessionId = sessionId,
                 toolCallId = toolCallId,
                 questions = questions,
             )

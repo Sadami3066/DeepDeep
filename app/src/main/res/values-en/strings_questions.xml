@@ -11,4 +11,15 @@
     <string name="ask_next">Next</string>
     <string name="ask_submit">Submit</string>
     <string name="ask_cancel">Cancel</string>
+    <string name="ask_card_waiting">Agent is waiting for your answer</string>
+    <string name="ask_card_expand">Expand</string>
+    <string name="ask_card_collapse">Collapse</string>
+    <string name="ask_card_submitted">Submitted, waiting for the agent…</string>
+    <string name="ask_card_answered_count">Answered · %1$d questions</string>
+    <string name="ask_card_skipped">Skipped</string>
+    <string name="ask_card_custom_hint">Type your answer</string>
+    <string name="ask_card_validation">Choose an option or type an answer</string>
+    <string name="ask_card_answered">Answered</string>
+    <string name="ask_card_question">Question</string>
+    <string name="ask_card_multi_hint">Select one or more</string>
 </resources>

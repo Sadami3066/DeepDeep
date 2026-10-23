@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
 data class QuotedMessage(
@@ -40,4 +41,6 @@ data class ChatUiState(
     val historyLoaded: Boolean = false,
     val switchingConversation: Boolean = false,
     val reloading: Boolean = false,
+    val usage: SessionUsage? = null,
+    val compacting: Boolean = false,
 )

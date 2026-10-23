@@ -6,8 +6,8 @@
 
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
-| SDK 原生 | app 进程 + PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash` |
-| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete` |
+| SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
+| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present` |
 | Android 能力 | app 进程 | 设计；通知、Intent、联系人等需要单独评审权限 |
 | Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
 
@@ -18,12 +18,13 @@
 `PiSessionEngine` 创建会话时：
 
 ```text
-defaultCodingTools(...) + appTools(cwd, AppToolContext)
+defaultCodingTools(...)
+  + appTools(cwd, AppToolContext, SessionBinding)
 ```
 
-`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`；`ScheduleBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
+`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与额外的工具工厂列表（goal、job）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.1.3，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
 
-取消：长任务通过 `RunSignal` 监听；UI 等待型工具在 signal abort 时结束等待。
+取消：等待型工具通过 `RunSignal` 监听；signal abort 时结束等待。
 
 ## ask_user_question
 
@@ -52,72 +53,46 @@ defaultCodingTools(...) + appTools(cwd, AppToolContext)
 - 用户跳过：`selected = []` 且无 `custom`。
 - 用户取消或 App 不在前台：工具返回错误，不继续等待。
 - 等待队列只在内存中；进程退出后不恢复。
-- UI 是覆盖全 App 的 bottom sheet：一次一题、进度、选项、多选、自定义答案、跳过/上一题/下一题/提交；`(Recommended)` 显示为「推荐」标签，回传仍保留原始 label。
-- 已在历史中的工具调用只显示参数/结果，不重新变成可交互问题。
+- UI 内联在聊天消息里：一次一题、进度、选项、多选、自定义答案、跳过/上一题/下一题/提交；`(Recommended)` 显示为「推荐」标签，回传仍保留原始 label。提交后工具结果到达即折叠为只读问答摘要。
+- 服务端按 `sessionId` 记录待答问题；已在历史中的工具调用只显示参数/结果，不重新变成可交互问题。
 
-## schedule
+## goal
 
-数据文件：`files/schedules/schedules.json`，`schemaVersion` 2。
+三个工具，输出统一紧凑 JSON：`{"goal":{id,revision,objective,phase,roundsStarted,maxRounds,blockedReason?,createdAt,updatedAt}|null,"activation":{"armed":bool}}`。
 
-```json
-{
-  "schemaVersion": 2,
-  "schedules": [
-    {
-      "id": "a1b2c3d4e5f6",
-      "name": "每日简报",
-      "prompt": "整理今天的日程并给出建议",
-      "trigger": { "type": "weekly", "time": "09:00", "days": [1,2,3,4,5] },
-      "enabled": true,
-      "sessionId": "01a167c8-2d77-7943-9854-5e670c5c1c23",
-      "sessionFile": "agent/sessions/--...--/2026-10-23T08-02-14-519Z_01a167c8....jsonl",
-      "cwd": "files/home",
-      "nextRunAt": 1760058000000,
-      "lastDeliveredAt": null,
-      "lastError": null,
-      "createdAt": 1760000000000,
-      "updatedAt": 1760000000000
-    }
-  ]
-}
-```
-
-触发类型：
-
-| `frequency` | 参数 | 说明 |
+| 工具 | 参数 | 语义 |
 |---|---|---|
-| `once` | `date`, `time` | 必须是未来时间 |
-| `daily` | `time` | 每天 |
-| `weekdays` | `time` | 周一至周五 |
-| `weekends` | `time` | 周六、周日 |
-| `weekly` | `time`, `weekdays` | 自定义 ISO 星期 |
+| `get_goal` | 无 | 读取当前会话的目标 |
+| `create_goal` | `objective`, `max_goal_rounds?` | 仅用户直接回合可创建；不传则不限轮次，传则 1–50 |
+| `update_goal` | `goal_id`, `revision`, `action=edit/pause/resume/complete/blocked`, `objective?`, `max_goal_rounds?`, `blocked_reason?` | 编辑/暂停/继续仅用户回合；完成允许用户或目标轮；阻塞仅目标轮且已进行 ≥3 轮 |
 
-工具：
+- 目标按会话持久化在 `files/goals/goals.json`；`revision` 每次变更 +1，调用必须带最新 revision。
+- 目标处于 ACTIVE 时，每轮成功结束由宿主自动投递下一轮 `<goal_round>`；默认不限轮次，显式设置上限时达到上限置 BLOCKED(`round-limit`)；目标轮失败或用户停止则暂停。
+- 进程重启后目标保留但为暂停态，需要用户点继续。
 
-- `schedule_create`：创建提醒；绑定到调用它的会话，不指定工作区。
-- `schedule_list`：列出当前会话的 id、名称、触发、下次投递、启用状态、上次投递与错误码。
-- `schedule_update`：局部更新名称、内容、触发或启用状态并重算 `nextRunAt`；不能改绑会话。
-- `schedule_delete`：按 id 删除当前会话的提醒。
-- 四个工具都只作用于调用会话的提醒；结果取消 `execution` 字段，`lastError` 返回错误码。
+## 后台任务
 
-投递：
+创建是 App 层工具 `job_start`，控制是 `job_output` / `job_list` / `job_kill`。SDK 的 `bash` 只在前台阻塞执行（参数 `command`、`timeout`），不创建后台任务。
 
-- `ScheduleService` 在 `AgentService` 内运行；没有固定 tick，按最近的 `nextRunAt` 唤醒，存储变更与会话事件即时重算。
-- 到点把 `[定时提醒] 名称` 消息投进绑定会话并开始一次运行；同一会话多条同时到点合并成一条批量提醒。
-- 一次性提醒投递后停用；周期提醒按规则推进；失败记录 `SESSION_MISSING` / `OPEN_FAILED` / `DELIVERY_FAILED`。
-- 服务被杀时不唤醒，下次打开 App 补投一次。投递与手动执行共用同一条路径。
-- 存储使用 Mutex + 临时文件替换；JSON 损坏时保留原文件并报错。
-- 触发时间使用设备本地时区；时间计算可注入 `Clock` 便于测试。
+| 工具 | 参数 | 语义 |
+|---|---|---|
+| `job_start` | `command`, `label?` | 立即返回 job id，命令在调用会话 cwd 对应的 Linux 环境后台运行；`label` 是任务列表里的短标签，省略时用命令预览 |
+| `job_output` | `job_id`, `wait?`, `timeout_ms?` | 返回自上次读取以来的增量 + `[status: ...]`；wait=true 阻塞到有新输出或任务结束，上限 600 秒 |
+| `job_list` | 无 | 列出当前会话的任务 |
+| `job_kill` | `job_id`, `reason?` | 停止运行中的任务 |
 
-会话绑定：
+- 输出保存在内存环形缓冲（运行中 256KB，结束后保留 16KB），模型的增量游标与 UI 快照互不影响；任务 sheet 打开时，运行中输出每秒刷新；被淘汰的旧输出会在 `job_output` 结果里标记为 dropped。
+- 命令在会话 cwd 对应的 Linux 环境里执行（`/workspace` 绑定该工作区），需要先安装 Linux 环境；设置里开启「共享目录」并授予所有文件访问权限后，Android 公共目录同时挂载在 `/storage/emulated/0` 与 `/sdcard`，可直接读写。
+- 每个会话最多 10 个运行中任务；会话归档/删除时统一清理。
+- 任务完成时按聊天设置「后台任务完成时唤醒」决定是否让模型开一轮处理结果；唤醒轮不在聊天消息流里留提示，关闭时任务只留在任务列表。
+- 任务随进程结束；需要跨进程请用定时提醒。
 
-- 工具通过 `ScheduleBinding.current()` 取调用会话；没有绑定时返回错误结果。
-- 删除会话会删除其提醒；归档会话会停用其提醒。
-- 任务页与工具写同一个存储，服务订阅存储变更，界面实时更新。
+## 交付
 
-## 安全
+| 工具 | 参数 | 语义 |
+|---|---|---|
+| `present` | `files`（1–4 项，每项 `{path}`） | 把已生成的文件作为交付物展示给用户：聊天里显示与附件同尺寸的文件卡，点击打开、右上角分享 |
 
-- App 层工具拥有 app 自身权限；不要提供绕过系统权限的隐藏能力。
-- 技能、AGENTS.md 与定时任务都是本地明文；不写入 API Key。
-- `ask_user_question` 只在 App 前台可用；后台任务不得挂起等待用户。
-- 新增 Android 能力工具前先确定权限、前台限制与失败时的用户可见反馈。
+- 只做展示，不读写文件、不校验文件存在性；路径由 App 侧按当前工作区解析，找不到时点打开会 Toast 提示。
+- 工具结果是紧凑 JSON `{"files":[{"path":"…"}]}`；UI 从会话历史里的工具结果解析卡片，重开会话后仍能渲染。
+- 适合报告、幻灯片、视频、网页、图片等已经落盘的文件；纯文本结论仍走普通回复。

@@ -61,6 +61,8 @@
     <string name="settings_linux_unsupported">此设备不支持 Linux（仅 arm64-v8a）。</string>
     <string name="settings_linux_size_label">占用空间</string>
     <string name="settings_linux_size_value">%1$d MB</string>
+    <string name="settings_linux_shared_storage">共享目录</string>
+    <string name="settings_linux_shared_storage_grant">需要在系统设置中授予「所有文件访问权限」</string>
 
     <string name="settings_provider_title">厂商</string>
     <string name="settings_provider_search">搜索厂商</string>
@@ -147,4 +149,5 @@
     <string name="dev_bundle_office_body">PDF、Excel、Word、PPT 处理与 OCR</string>
     <string name="dev_bundle_dev">开发编程</string>
     <string name="dev_bundle_dev_body">Git、GitHub CLI、GCC、Make 与 CMake</string>
+    <string name="settings_background_job_wake">后台任务完成时唤醒</string>
 </resources>

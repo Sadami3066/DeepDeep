@@ -47,6 +47,9 @@ data class ChatUiStrings(
     val retry: String,
     val autoRetrying: (Int, Int) -> String,
     val withCode: (String, String) -> String,
+    val nothingToCompact: String,
+    val compactionBusy: String,
+    val compactionUnavailable: String,
 ) {
     fun activity(activity: RuntimeActivity?): String? = when (activity) {
         null -> null
@@ -147,6 +150,9 @@ data class ChatUiStrings(
             retry = "Retry",
             autoRetrying = { attempt, max -> "Retrying $attempt/$max" },
             withCode = { base, code -> "$base ($code)" },
+            nothingToCompact = "No compactable history",
+            compactionBusy = "Cannot compact while a reply is running",
+            compactionUnavailable = "This session cannot be compacted",
         )
     }
 }

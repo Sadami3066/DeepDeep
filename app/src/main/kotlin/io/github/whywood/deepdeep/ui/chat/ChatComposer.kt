@@ -94,10 +94,11 @@ internal fun ChatComposer(
     onRemoveAttachment: (String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenSettings: () -> Unit,
+    modelsOpen: Boolean = false,
+    onModelsOpenChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var showModels by remember { mutableStateOf(false) }
     var showProviders by remember { mutableStateOf(false) }
     var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !sending
@@ -243,7 +244,7 @@ internal fun ChatComposer(
                     ComposerChip(
                         text = label,
                         onClick = {
-                            if (configured) showModels = true else onOpenSettings()
+                            if (configured) onModelsOpenChange(true) else onOpenSettings()
                         },
                         enabled = !sending,
                         contentDescription = stringResource(R.string.assistant_model_chip, label),
@@ -311,11 +312,11 @@ internal fun ChatComposer(
         }
     }
 
-    if (showModels) {
-        DdSheet(onDismiss = { showModels = false }) {
+    if (modelsOpen) {
+        DdSheet(onDismiss = { onModelsOpenChange(false) }) {
             DdSheetHeader(
                 title = stringResource(R.string.assistant_model_sheet),
-                onClose = { showModels = false },
+                onClose = { onModelsOpenChange(false) },
             )
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                 Spacer(Modifier.height(8.dp))
@@ -375,7 +376,7 @@ internal fun ChatComposer(
                     DdListRow(
                         title = stringResource(R.string.assistant_open_settings),
                         onClick = {
-                            showModels = false
+                            onModelsOpenChange(false)
                             onOpenSettings()
                         },
                         showChevron = true,
@@ -385,7 +386,7 @@ internal fun ChatComposer(
                         DdListRow(
                             title = option.displayName,
                             onClick = {
-                                showModels = false
+                                onModelsOpenChange(false)
                                 onModelChange(option.id)
                             },
                             trailing = {

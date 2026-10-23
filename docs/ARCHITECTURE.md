@@ -78,19 +78,25 @@ Compose ChatScreen
 
 ## App 工具
 
-- `PiSessionEngine` 在 `defaultCodingTools` 后追加 `appTools(cwd, AppToolContext, ScheduleBinding)`；工具由 `CodingTool` 定义，不修改 SDK。
-- `QuestionCenter` 维护待答队列并暴露 `StateFlow`，`ask_user_question` 工具等待 UI 回答；App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
-- `ScheduleBinding` 在会话创建后绑定 `AgentSession`，schedule 工具据此把提醒绑定到调用它的会话。
+- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与 `extraToolFactories`（goal、job 工具）。SDK 固定 pi2kotlin 0.1.3，不修改。
+- `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
+- `SessionBinding` 在会话创建后绑定 `AgentSession`，schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
 - 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。
-- 工具分类与契约见 `docs/TOOLS.md`，调度语义见 `docs/SCHEDULING.md`。
+- `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。默认不限轮次，显式传 `max_goal_rounds` 才有上限；加载后目标为未激活（显示暂停），需用户继续。
+- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。
+- `/` 命令是 UI 层能力：`ChatCommand` 定义命令表，`parseChatCommand` 解析，`DeepDeepApp` 分发；命令不写入会话 JSONL，压缩等提示类结果以 `NoticeEvent` 进入消息流。
+- 上下文用量：宿主 `usage()` 用 `SessionManager.getSessionStats()` + `estimateContextTokens(buildSessionContext())` 计算，`UsageChanged` 推给 UI；`/compact` 调用 `AgentSession.compact()`。
+- 工具分类与契约见 `docs/TOOLS.md`，调度语义见 `docs/SCHEDULING.md`，命令见 `docs/COMMANDS.md`。
 
 ## 运行时事件
 
 - `SessionRuntimeEvent(sessionId, event)` 是宿主唯一的事件出口；会话级事件带 sessionId，宿主级事件用空 sessionId。
-- 事件类型：`RunStarted`、`ActivityChanged`、`TextDelta`、`ReasoningDelta`、`ToolStarted`、`ToolFinished`、`RunFinished`、`RunFailed`、`SessionListChanged`、`TurnInjected`、`SessionRemoved`、`SessionArchived`。
+- 事件类型：`RunStarted`、`ActivityChanged`、`TextDelta`、`ReasoningDelta`、`ToolStarted`、`ToolFinished`、`RunFinished`、`RunFailed`、`SessionListChanged`、`TurnInjected`、`SessionRemoved`、`SessionArchived`、`NoticeEvent`、`BackgroundTurnStarted`、`UsageChanged`。
 - `RunFailed` 由宿主在运行结束后检查最后一条 assistant 消息的 stopReason 产生（`Error`），带厂商错误原文；UI 统一本地化后展示在失败轮上。
 - `TurnInjected` 是宿主主动注入的用户消息（定时提醒），UI 追加用户气泡；空闲时同时补一个流式 assistant 占位。
+- `NoticeEvent` 是本地提示（压缩结果、目标轮次、目标完成/阻塞），UI 在消息流里渲染为一条灰字，不写入会话。
+- `BackgroundTurnStarted` 表示目标续跑或后台任务唤醒开启了新的一轮：目标轮带 `TurnNotice.GoalRound`，UI 追加提示与流式 assistant；后台任务唤醒带 `TurnNotice.JobFinished`，UI 追加一行极简任务标记与流式 assistant。`UsageChanged` 携带会话的上下文与累计用量。
 - UI 只订阅事件与状态流，不轮询；`ScheduleService.schedules` 是任务页的数据源。
 
 ## 通知
@@ -105,6 +111,8 @@ Compose ChatScreen
 ## 开发包
 
 - `DevPackageCatalog` 定义 3 个场景组合（环境基础 / 日常办公 / 开发编程）；`DevPackageManager` 在 proot 内执行 `apk update` + `apk add`，办公组合随后用 pip 安装 `python-docx`/`python-pptx`/`pdfplumber`。
+- `PRootExecutor` 把会话 cwd 绑定到 `/workspace`；设置里开启「共享目录」且已授予所有文件访问权限时，额外把 `/storage/emulated/0` 绑定到 guest 的同名路径与 `/sdcard`，开启状态运行期切换、下一次 bash 生效。
+- `PiSessionEngine` 在共享目录开启时给系统提示追加一节（英文），说明公共目录挂载位置与谨慎修改用户文件；会话创建时读取当前开关。
 - `LinuxEnvironment.executeStreaming` / `PRootExecutor.executeStreaming` 提供逐行输出回调；按 `(n/m) Installing` 更新进度。
 - 安装状态不单独持久化，进入运行环境页时用 `apk info -e` 查询真实状态；Linux 重置后自动清空。
 - 一次只允许一个安装；失败保留最后输出片段；安装任务由 app scope 持有，离开页面不取消。
@@ -157,6 +165,7 @@ filesDir/
   agent/            agentDir，SDK sessions/skills
   skills/<id>/      技能仓库（SDK 不扫描）
   schedules/        schedules.json（提醒绑定到对话）
+  goals/            goals.json（按会话的目标与轮次）
   linux/rootfs/     Alpine rootfs
 ```
 
@@ -170,9 +179,8 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 
 ## 工具
 
-- pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`
-- `bash`：`LinuxShellExecutor` → `LinuxEnvironment` → PRoot/Alpine
-- App 层：`ask_user_question`、`schedule_create/list/update/delete`
+- pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`
 - 不注册 `device_info`、`open_app` 等 Android 能力工具
 
 ## 功能接线

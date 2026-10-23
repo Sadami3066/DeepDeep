@@ -7,12 +7,14 @@ import dev.pi.ai.StopReason
 import dev.pi.ai.TextContent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
+import dev.pi.coding.compaction.estimateContextTokens
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.SessionEvent
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -33,8 +35,11 @@ class AgentRuntimeHost(
     private val workspaceStore: WorkspaceStore,
     private val providers: ProviderCatalog,
     private val backgroundScope: CoroutineScope,
+    private val goalDriver: GoalDriver? = null,
+    private val sessionCleaner: ((String) -> Unit)? = null,
+    private val sessionArchived: ((String) -> Unit)? = null,
 ) : AgentRuntime {
-    private class Handle(
+    internal class Handle(
         val engine: PiSessionEngine,
         val session: AgentSession,
         val cwd: String,
@@ -44,6 +49,7 @@ class AgentRuntimeHost(
         var stopRequested = false
         var terminalEmitted = false
         var busy = false
+        var turnSource: TurnSource = TurnSource.USER
     }
 
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
@@ -107,6 +113,7 @@ class AgentRuntimeHost(
         sessions.forEach { session ->
             runCatching { stop(session.id) }
             mutex.withLock { detach(session.id) }
+            sessionCleaner?.invoke(session.id)
         }
         sessions.forEach { session ->
             catalog.delete(session.filePath)
@@ -157,24 +164,27 @@ class AgentRuntimeHost(
 
     override suspend fun send(sessionId: String, text: String) {
         val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
-        runTurn(handle, beginRun(handle), text)
+        runTurn(handle, beginRun(handle, TurnSource.USER), text)
     }
 
     override suspend fun retryLastTurn(sessionId: String) {
         val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
         check(!handle.busy) { "Agent session is busy" }
         if (!handle.session.canRetryLastAssistant()) error("Nothing to retry")
-        val runId = beginRun(handle)
+        val runId = beginRun(handle, TurnSource.RETRY)
         try {
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "retry session=${handle.session.sessionId} run=$runId")
             handle.session.retryLastAssistant()
-            if (!handle.stopRequested && !handle.terminalEmitted) finishRun(handle, runId)
+            if (!handle.stopRequested) {
+                val status = if (handle.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
+                maybeContinueGoal(handle, status)
+            }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            if (!handle.stopRequested && !handle.terminalEmitted) {
+            if (!handle.stopRequested) {
                 emitTerminal(
                     handle = handle,
                     runId = runId,
@@ -182,6 +192,7 @@ class AgentRuntimeHost(
                     status = RunStatus.FAILED,
                     message = error.message,
                 )
+                maybeContinueGoal(handle, RunStatus.FAILED)
             }
         } finally {
             handle.busy = false
@@ -200,38 +211,65 @@ class AgentRuntimeHost(
             eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
             return
         }
-        val runId = beginRun(handle)
+        val runId = beginRun(handle, TurnSource.REMINDER)
         emit(handle, RuntimeEvent.TurnInjected(runId, text, reminder))
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
         backgroundScope.launch { runTurn(handle, runId, text) }
+    }
+
+    suspend fun deliverBackgroundTurn(
+        sessionId: String,
+        notice: TurnNotice?,
+        prompt: String,
+        source: TurnSource,
+    ) {
+        val handle = mutex.withLock { handles[sessionId] } ?: return
+        if (handle.busy || handle.session.isStreaming) {
+            if (notice != null) emit(handle, NoticeEvent(handle.runId.orEmpty(), notice))
+            handle.session.followUp(prompt)
+            return
+        }
+        val runId = beginRun(handle, source)
+        emit(handle, BackgroundTurnStarted(runId, notice))
+        backgroundScope.launch { runTurn(handle, runId, prompt, setTitle = false) }
     }
 
     override suspend fun activeRunId(sessionId: String): String? = mutex.withLock {
         handles[sessionId]?.runId
     }
 
-    private fun beginRun(handle: Handle): String {
+    private suspend fun beginRun(handle: Handle, source: TurnSource = TurnSource.USER): String {
         val runId = UUID.randomUUID().toString()
+        handle.turnSource = source
         handle.runId = runId
         handle.stopRequested = false
         handle.terminalEmitted = false
         handle.busy = true
         publishBusy()
+        goalDriver?.noteTurn(handle.session.sessionId, source)
         return runId
     }
 
-    private suspend fun runTurn(handle: Handle, runId: String, text: String) {
+    private suspend fun runTurn(
+        handle: Handle,
+        runId: String,
+        text: String,
+        setTitle: Boolean = true,
+    ) {
         try {
-            ensureTitle(handle, text)
+            if (setTitle) ensureTitle(handle, text)
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text)
-            if (!handle.stopRequested && !handle.terminalEmitted) finishRun(handle, runId)
+            if (!handle.stopRequested) {
+                val status = if (handle.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
+                maybeContinueGoal(handle, status)
+            }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            if (!handle.stopRequested && !handle.terminalEmitted) {
+            if (!handle.stopRequested) {
                 emitTerminal(
                     handle = handle,
                     runId = runId,
@@ -239,6 +277,7 @@ class AgentRuntimeHost(
                     status = RunStatus.FAILED,
                     message = error.message,
                 )
+                maybeContinueGoal(handle, RunStatus.FAILED)
             }
         } finally {
             handle.busy = false
@@ -266,10 +305,15 @@ class AgentRuntimeHost(
             )
         }
         handle.session.abort()
+        goalDriver?.let { driver -> backgroundScope.launch { driver.pauseOnStop(sessionId) } }
     }
 
-    override suspend fun history(sessionId: String): List<AssistantMessage> = mutex.withLock {
-        handles[sessionId]?.let { handle -> handle.engine.history(handle.session) }.orEmpty()
+    override suspend fun history(sessionId: String): List<AssistantMessage> {
+        val loaded = mutex.withLock {
+            handles[sessionId]?.let { handle -> handle to handle.engine.history(handle.session) }
+        } ?: return emptyList()
+        emitUsage(loaded.first)
+        return loaded.second
     }
 
     override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
@@ -297,6 +341,7 @@ class AgentRuntimeHost(
 
     override suspend fun setSessionArchived(id: String, archived: Boolean) {
         catalog.setArchived(id, archived)
+        if (archived) sessionArchived?.invoke(id)
         eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionArchived(archived = archived)))
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
@@ -304,6 +349,7 @@ class AgentRuntimeHost(
     override suspend fun deleteSession(id: String) {
         val summary = catalog.find(visibleCwds(), id)
         mutex.withLock { detach(id) }
+        sessionCleaner?.invoke(id)
         if (summary != null) {
             catalog.delete(summary.filePath)
             catalog.removeMeta(id)
@@ -318,7 +364,9 @@ class AgentRuntimeHost(
         val model = providers.sdkModel(config.providerId, config.modelId) ?: return
         val snapshot = mutex.withLock { handles.values.toList() }
         snapshot.forEach { handle ->
-            runCatching { handle.session.setModel(model, config.thinkingLevel.runtimeValue()) }
+            if (runCatching { handle.session.setModel(model, config.thinkingLevel.runtimeValue()) }.isSuccess) {
+                emitUsage(handle)
+            }
         }
     }
 
@@ -333,6 +381,52 @@ class AgentRuntimeHost(
     }
 
     override suspend fun currentConfig(): ModelConfig = modelConfigStore.read()
+
+    override suspend fun usage(sessionId: String): SessionUsage? {
+        val handle = mutex.withLock { handles[sessionId] } ?: return null
+        return runCatching {
+            val stats = handle.session.sessionManager.getSessionStats()
+            val contextTokens = estimateContextTokens(
+                handle.session.sessionManager.buildSessionContext().messages,
+            ).tokens
+            SessionUsage(
+                contextTokens = contextTokens,
+                contextWindow = handle.session.model.contextWindow,
+                inputTokens = stats.inputTokens,
+                outputTokens = stats.outputTokens,
+                cacheReadTokens = stats.cacheReadTokens,
+                cacheWriteTokens = stats.cacheWriteTokens,
+                cost = stats.totalCost,
+            )
+        }.getOrNull()
+    }
+
+    override suspend fun compact(sessionId: String): CompactionOutcome {
+        val handle = mutex.withLock { handles[sessionId] } ?: return CompactionOutcome.Unavailable
+        if (handle.busy || handle.session.isStreaming) {
+            emitUsage(handle)
+            return CompactionOutcome.Busy
+        }
+        val outcome = try {
+            val result = handle.session.compact()
+            if (result == null) {
+                CompactionOutcome.Empty
+            } else {
+                CompactionOutcome.Done(result.tokensBefore, result.estimatedTokensAfter)
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            CompactionOutcome.Failed(error.message)
+        }
+        emitUsage(handle)
+        return outcome
+    }
+
+    internal suspend fun emitUsage(handle: Handle, runId: String = handle.runId.orEmpty()) {
+        val current = usage(handle.session.sessionId) ?: return
+        emit(handle, UsageChanged(runId, current))
+    }
 
     suspend fun reconfigure() {
         val snapshot = mutex.withLock {
@@ -401,7 +495,7 @@ class AgentRuntimeHost(
         eventsBuffer.tryEmit(SessionRuntimeEvent(handle.session.sessionId, event))
     }
 
-    private suspend fun finishRun(handle: Handle, runId: String) {
+    private suspend fun finishRun(handle: Handle, runId: String): RunStatus {
         val last = handle.session.messages.asReversed().firstNotNullOfOrNull { it.asAssistantMessage() }
         val status = when (last?.stopReason) {
             StopReason.Error -> RunStatus.FAILED
@@ -415,6 +509,25 @@ class AgentRuntimeHost(
             status = status,
             message = last?.errorMessage,
         )
+        return status
+    }
+
+    private suspend fun maybeContinueGoal(handle: Handle, status: RunStatus) {
+        if (handle.stopRequested) return
+        val driver = goalDriver ?: return
+        val sessionId = handle.session.sessionId
+        val round = driver.nextRound(sessionId, handle.turnSource, status == RunStatus.DONE) ?: return
+        backgroundScope.launch {
+            delay(400)
+            if (!handle.busy) {
+                deliverBackgroundTurn(
+                    sessionId = sessionId,
+                    notice = TurnNotice.GoalRound(round.round, round.maxRounds, round.objective),
+                    prompt = round.prompt,
+                    source = TurnSource.GOAL,
+                )
+            }
+        }
     }
 
     private suspend fun emitTerminal(
@@ -431,35 +544,51 @@ class AgentRuntimeHost(
         } else {
             emit(handle, RuntimeEvent.RunFinished(runId, text, status, System.currentTimeMillis()))
         }
+        emitUsage(handle, runId)
     }
 
     private suspend fun onSessionEvent(handle: Handle, event: SessionEvent) {
-        val runId = handle.runId ?: return
+        val runId = handle.runId.orEmpty()
+        val active = runId.isNotEmpty()
         when (event) {
-            is SessionEvent.AgentEventReceived -> onAgentEvent(handle, runId, event.event)
-            is SessionEvent.RetryScheduled -> emit(
-                handle,
-                RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Retrying(event.attempt)),
-            )
+            is SessionEvent.AgentEventReceived -> if (active) onAgentEvent(handle, runId, event.event)
+            is SessionEvent.RetryScheduled -> if (active) {
+                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Retrying(event.attempt)))
+            }
 
-            is SessionEvent.RetryExhausted -> emitTerminal(
-                handle = handle,
-                runId = runId,
-                text = handle.session.getLastAssistantText().orEmpty(),
-                status = RunStatus.FAILED,
-                message = event.errorMessage.orEmpty(),
-            )
+            is SessionEvent.RetryExhausted -> if (active) {
+                emitTerminal(
+                    handle = handle,
+                    runId = runId,
+                    text = handle.session.getLastAssistantText().orEmpty(),
+                    status = RunStatus.FAILED,
+                    message = event.errorMessage.orEmpty(),
+                )
+            }
 
-            is SessionEvent.CompactionStarted -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Compacting))
-            is SessionEvent.CompactionFinished -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
-            is SessionEvent.CompactionFailed -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.CompactionFailed))
-            is SessionEvent.SessionError -> emitTerminal(
-                handle = handle,
-                runId = runId,
-                text = handle.session.getLastAssistantText().orEmpty(),
-                status = RunStatus.FAILED,
-                message = event.message,
-            )
+            is SessionEvent.CompactionStarted -> if (active) {
+                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Compacting))
+            }
+
+            is SessionEvent.CompactionFinished -> {
+                if (active) emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+                emit(handle, NoticeEvent(runId, TurnNotice.Compacted(event.tokensBefore, event.tokensAfter)))
+                emitUsage(handle, runId)
+            }
+
+            is SessionEvent.CompactionFailed -> if (active) {
+                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.CompactionFailed))
+            }
+
+            is SessionEvent.SessionError -> if (active) {
+                emitTerminal(
+                    handle = handle,
+                    runId = runId,
+                    text = handle.session.getLastAssistantText().orEmpty(),
+                    status = RunStatus.FAILED,
+                    message = event.message,
+                )
+            }
 
             else -> Unit
         }
@@ -502,6 +631,7 @@ class AgentRuntimeHost(
                     ),
                 )
                 emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+                emitUsage(handle, runId)
             }
 
             else -> Unit

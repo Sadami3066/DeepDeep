@@ -8,7 +8,7 @@ data class BoundSession(
     val cwd: String,
 )
 
-class ScheduleBinding {
+class SessionBinding {
     @Volatile
     private var bound: BoundSession? = null
 

@@ -31,6 +31,7 @@ internal fun ChatTopBar(
     reminderCount: Int,
     onOpenSchedules: () -> Unit,
     reloading: Boolean,
+    onOpenFiles: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -89,6 +90,15 @@ internal fun ChatTopBar(
                     onDismissRequest = { menuOpen = false },
                     menuWidth = 148.dp,
                 ) {
+                    DdMenuItem(
+                        text = stringResource(R.string.files_menu),
+                        icon = DdIcons.Folder,
+                        onClick = {
+                            menuOpen = false
+                            onOpenFiles()
+                        },
+                        testTag = "assistant_files",
+                    )
                     DdMenuItem(
                         text = stringResource(R.string.assistant_reload),
                         icon = DdIcons.Refresh,

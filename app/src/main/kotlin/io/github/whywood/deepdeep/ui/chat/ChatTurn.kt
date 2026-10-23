@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,10 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.PendingQuestion
+import io.github.whywood.deepdeep.runtime.QuestionAnswer
+import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 
 private val UserBubbleShape = RoundedCornerShape(
     topStart = 20.dp,
@@ -67,7 +72,16 @@ internal fun ChatTurn(
     onRetry: (Long) -> Unit,
     attachmentRoot: File,
     autoCollapseProcess: Boolean = true,
+    pendingQuestions: List<PendingQuestion> = emptyList(),
+    onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
+    onOpenPresentFile: (String) -> Unit = {},
+    onSharePresentFile: (String) -> Unit = {},
 ) {
+    val notice = message.notice
+    if (notice != null) {
+        NoticeRow(notice)
+        return
+    }
     if (message.role == AssistantRole.USER) {
         UserBubble(
             message = message,
@@ -87,7 +101,104 @@ internal fun ChatTurn(
             onOpenFile = onOpenFile,
             onRetry = onRetry,
             autoCollapseProcess = autoCollapseProcess,
+            pendingQuestions = pendingQuestions,
+            onAnswerQuestion = onAnswerQuestion,
+            onOpenPresentFile = onOpenPresentFile,
+            onSharePresentFile = onSharePresentFile,
         )
+    }
+}
+
+@Composable
+private fun NoticeRow(notice: TurnNotice) {
+    when (notice) {
+        is TurnNotice.GoalRound -> GoalRoundNotice(notice)
+
+        is TurnNotice.JobFinished -> JobFinishedNotice(notice)
+
+        is TurnNotice.Compacted -> NoticeText(
+            stringResource(
+                R.string.chat_notice_compacted,
+                formatTokenCount(notice.tokensBefore),
+                notice.tokensAfter?.let(::formatTokenCount) ?: "?",
+            ),
+        )
+
+        is TurnNotice.GoalFinished -> NoticeText(
+            stringResource(
+                if (notice.completed) R.string.chat_notice_goal_completed else R.string.chat_notice_goal_blocked,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun NoticeText(text: String) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = text,
+            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+            color = colors.inkTertiary,
+        )
+    }
+}
+
+@Composable
+private fun JobFinishedNotice(notice: TurnNotice.JobFinished) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 12.dp)
+        Spacer(Modifier.width(5.dp))
+        Text(
+            text = stringResource(
+                if (notice.failed) R.string.chat_notice_job_failed else R.string.chat_notice_job,
+                notice.label,
+            ),
+            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+            color = colors.inkTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun GoalRoundNotice(notice: TurnNotice.GoalRound) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        DdIcon(icon = DdIcons.Sparkles, tint = colors.accent, size = 14.dp)
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = if (notice.maxRounds > 0) {
+                    stringResource(R.string.chat_notice_goal_round, notice.round, notice.maxRounds)
+                } else {
+                    stringResource(R.string.chat_notice_goal_round_unbounded, notice.round)
+                },
+                style = DdType.micro,
+                color = colors.inkTertiary,
+            )
+            if (notice.objective.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = notice.objective,
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                    color = colors.inkSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -190,6 +301,10 @@ private fun AssistantTurn(
     onOpenFile: (String) -> Unit,
     onRetry: (Long) -> Unit,
     autoCollapseProcess: Boolean,
+    pendingQuestions: List<PendingQuestion>,
+    onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
+    onOpenPresentFile: (String) -> Unit,
+    onSharePresentFile: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -202,6 +317,17 @@ private fun AssistantTurn(
     val answer = message.text.trim().ifBlank { streamingAnswer.trim() }
     val excludedStepId = if (message.text.isBlank() && streamingAnswer.isNotBlank()) trailingText?.id else null
     val readable = remember(answer) { markdownToPlainText(answer) }
+    val liveQuestions = pendingQuestions.associateBy { it.toolCallId }
+    val liveAsk = message.steps.filterIsInstance<AssistantStep.Tool>()
+        .map { it.trace }
+        .filter { it.name == "ask_user_question" }
+        .mapNotNull { trace -> liveQuestions[trace.toolCallId] }
+        .firstOrNull()
+    val presentedFiles = message.steps.filterIsInstance<AssistantStep.Tool>()
+        .map { it.trace }
+        .filter { it.name == "present" }
+        .flatMap { trace -> parsePresentedFiles(trace).orEmpty() }
+        .distinctBy { it.path }
     Column(Modifier.fillMaxWidth()) {
         val hasVisibleProcess = message.steps.any { it.id != excludedStepId }
         if (hasVisibleProcess) {
@@ -213,9 +339,23 @@ private fun AssistantTurn(
                 autoCollapseProcess = autoCollapseProcess,
                 excludedStepId = excludedStepId,
             )
-            if (answer.isNotEmpty()) Spacer(Modifier.height(6.dp))
+        }
+        if (liveAsk != null) {
+            if (hasVisibleProcess) Spacer(Modifier.height(12.dp))
+            key(liveAsk.requestId) {
+                AskQuestionCard(
+                    questions = liveAsk.questions,
+                    answers = null,
+                    submitted = false,
+                    onAnswer = { answers -> onAnswerQuestion(liveAsk, answers) },
+                )
+            }
         }
         if (answer.isNotEmpty()) {
+            when {
+                liveAsk != null -> Spacer(Modifier.height(14.dp))
+                hasVisibleProcess -> Spacer(Modifier.height(6.dp))
+            }
             SelectableMessageText(
                 messageId = message.id,
                 onQuote = { text -> onQuote(message.id, text) },
@@ -223,6 +363,14 @@ private fun AssistantTurn(
             ) {
                 ChatMarkdown(answer, onFileClick = onOpenFile)
             }
+        }
+        if (presentedFiles.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            PresentCard(
+                files = presentedFiles,
+                onOpen = onOpenPresentFile,
+                onShare = onSharePresentFile,
+            )
         }
         when (message.status) {
             MessageStatus.STOPPED -> StatusMark(
@@ -256,19 +404,24 @@ private fun FailedMark(message: AssistantMessage, onRetry: (Long) -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        if (message.retrying) {
-            DdSpinner(
-                modifier = Modifier.padding(top = 6.dp).testTag("assistant_retrying_spinner"),
-                color = colors.accent,
-                size = 16.dp,
-                strokeWidth = 1.8.dp,
-            )
-        } else {
-            DdTextAction(
-                text = stringResource(R.string.assistant_retry),
-                onClick = { onRetry(message.id) },
-                modifier = Modifier.testTag("assistant_retry"),
-            )
+        Box(
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            if (message.retrying) {
+                DdSpinner(
+                    modifier = Modifier.testTag("assistant_retrying_spinner"),
+                    color = colors.accent,
+                    size = 16.dp,
+                    strokeWidth = 1.8.dp,
+                )
+            } else {
+                DdTextAction(
+                    text = stringResource(R.string.assistant_retry),
+                    onClick = { onRetry(message.id) },
+                    modifier = Modifier.testTag("assistant_retry"),
+                )
+            }
         }
     }
 }

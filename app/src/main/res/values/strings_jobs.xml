@@ -1,0 +1,17 @@
+<resources>
+    <string name="jobs_title">后台任务</string>
+    <string name="jobs_empty_title">暂无后台任务</string>
+    <string name="jobs_empty_hint">助手在后台运行的命令会显示在这里。</string>
+    <string name="jobs_status_running">运行中</string>
+    <string name="jobs_status_done">已完成</string>
+    <string name="jobs_status_failed">失败</string>
+    <string name="jobs_status_killed">已停止</string>
+    <string name="jobs_output">输出</string>
+    <string name="jobs_output_loading">读取中…</string>
+    <string name="jobs_output_empty">没有输出</string>
+    <string name="jobs_output_close">关闭</string>
+    <string name="jobs_kill">停止</string>
+    <string name="jobs_kill_confirm">再次确认</string>
+    <string name="jobs_clear_settled">清除已结束</string>
+    <string name="jobs_meter_description">%1$d 个后台任务运行中</string>
+</resources>

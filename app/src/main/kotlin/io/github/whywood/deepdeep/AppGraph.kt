@@ -13,8 +13,16 @@ import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
+import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.GoalService
+import io.github.whywood.deepdeep.runtime.GoalStore
+import io.github.whywood.deepdeep.runtime.JobRegistry
+import io.github.whywood.deepdeep.runtime.TurnSource
+import io.github.whywood.deepdeep.runtime.goalTools
+import io.github.whywood.deepdeep.runtime.jobTools
+import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
@@ -28,16 +36,21 @@ import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class AppGraph(context: Context) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val jobWake = MutableStateFlow(true)
+    private val sharedStorage = MutableStateFlow(false)
 
     init {
         StorageMigration.migrate(appContext.filesDir)
@@ -53,9 +66,26 @@ class AppGraph(context: Context) {
     val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
     val appPreferences = AppPreferences(appContext)
+
+    init {
+        scope.launch {
+            appPreferences.preferences.collect { preferences -> jobWake.value = preferences.backgroundJobWake }
+        }
+    }
+    init {
+        scope.launch {
+            linuxSettings.sharedStorageEnabled.collect { enabled ->
+                sharedStorage.value = enabled && isSharedStorageGranted()
+            }
+        }
+    }
     val personalizationStore = PersonalizationStore(appContext)
     val fontPreferences = FontPreferences(appContext)
-    val linuxEnvironment = LinuxEnvironment(appContext, homeDir)
+    val linuxEnvironment = LinuxEnvironment(
+        appContext,
+        homeDir,
+        sharedStorageEnabled = { sharedStorage.value },
+    )
     val credentials = SdkCredentialStore(apiKeyStore, scope)
     val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
     val sessionMetaStore = SessionMetaStore(appContext)
@@ -69,25 +99,49 @@ class AppGraph(context: Context) {
     )
     val agentDocStore = AgentDocStore()
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
+    val goalService: GoalService by lazy { GoalService(GoalStore(File(appContext.filesDir, "goals")), scope) }
+    val jobRegistry: JobRegistry by lazy {
+        JobRegistry(
+            scope = scope,
+            notifier = { sessionId, notice, prompt ->
+                host.deliverBackgroundTurn(sessionId, notice, prompt, TurnSource.JOB)
+            },
+            wakeEnabled = { jobWake.value },
+            runnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
+        )
+    }
     val questionCenter = QuestionCenter(isForeground = { AppVisibility.foreground })
     private val appToolContext: AppToolContext by lazy {
         AppToolContext(
             scheduleService = scheduleService,
             questionCenter = questionCenter,
+            extraToolFactories = listOf(
+                { binding -> goalTools(binding, goalService) },
+                { binding -> jobTools(binding, jobRegistry) },
+                { binding -> listOf(presentTool { binding.current() }) },
+            ),
         )
     }
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
+
+    private fun linuxEnvironmentFor(cwd: String?): LinuxEnvironment {
+        val directory = cwd?.takeIf { it.isNotBlank() }?.let(::File) ?: homeDir
+        return synchronized(shellEnvironments) {
+            shellEnvironments.getOrPut(directory.absolutePath) {
+                LinuxEnvironment(
+                    appContext,
+                    directory,
+                    sharedStorageEnabled = { sharedStorage.value },
+                )
+            }
+        }
+    }
 
     private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
         if (!linuxSettings.isEnabled()) {
             null
         } else {
-            val environment = synchronized(shellEnvironments) {
-                shellEnvironments.getOrPut(cwd.absolutePath) {
-                    LinuxEnvironment(appContext, cwd)
-                }
-            }
-            LinuxShellExecutor(environment)
+            LinuxShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
         }
     }
 
@@ -99,6 +153,7 @@ class AppGraph(context: Context) {
             shellExecutor = shellExecutorFor(cwd),
             providers = providerCatalog,
             personalization = { personalizationStore.read().toRuntime() },
+            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             toolContext = appToolContext,
         )
     }
@@ -112,6 +167,12 @@ class AppGraph(context: Context) {
         workspaceStore = workspaceStore,
         providers = providerCatalog,
         backgroundScope = scope,
+        goalDriver = goalService,
+        sessionCleaner = { sessionId: String ->
+            jobRegistry.clearSession(sessionId)
+            scope.launch { goalService.clearSession(sessionId) }
+        },
+        sessionArchived = { sessionId -> jobRegistry.clearSession(sessionId) },
     )
 
     val notificationCenter by lazy { NotificationCenter(appContext, host) }

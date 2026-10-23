@@ -15,6 +15,7 @@ class PRootExecutor(
     private val rootfsDir: File,
     private val workspaceDir: File,
     private val tempDir: File,
+    private val sharedStorageEnabled: () -> Boolean = { false },
     private val maxOutputBytes: Int = 64 * 1024,
     private val pidReader: (File) -> Long = ::readPidFile,
 ) : LinuxExecutor {
@@ -73,6 +74,12 @@ class PRootExecutor(
         add("/proc")
         add("-b")
         add("/sys")
+        if (sharedStorageEnabled()) {
+            add("-b")
+            add("/storage/emulated/0:/storage/emulated/0")
+            add("-b")
+            add("/storage/emulated/0:/sdcard")
+        }
         add("-b")
         add("${workspaceDir.absolutePath}:/workspace")
         add("-w")
@@ -95,6 +102,10 @@ class PRootExecutor(
         require(rootfsDir.isDirectory) { "rootfs not installed: $rootfsDir" }
         workspaceDir.mkdirs()
         tempDir.mkdirs()
+        if (sharedStorageEnabled()) {
+            File(rootfsDir, "storage/emulated/0").mkdirs()
+            File(rootfsDir, "sdcard").mkdirs()
+        }
 
         val startedAt = System.nanoTime()
         val pidFile = File(tempDir, "proot-${UUID.randomUUID()}.pid")

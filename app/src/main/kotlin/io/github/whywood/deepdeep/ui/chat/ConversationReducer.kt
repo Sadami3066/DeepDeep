@@ -3,11 +3,16 @@ package io.github.whywood.deepdeep.ui.chat
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.BackgroundTurnStarted
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.NoticeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.runtime.UsageChanged
 
 internal data class ConversationState(
     val messages: List<AssistantMessage> = emptyList(),
@@ -16,6 +21,7 @@ internal data class ConversationState(
     val activity: String? = null,
     val activityStartedAt: Long? = null,
     val loaded: Boolean = false,
+    val usage: SessionUsage? = null,
 )
 
 internal fun reduce(
@@ -57,12 +63,7 @@ internal fun reduce(
             } else {
                 steps += AssistantStep.Text(nextStepId(steps), event.text)
             }
-            message.copy(
-                steps = steps,
-                error = null,
-                retrying = false,
-                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
-            )
+            message.copy(steps = steps).clearFailureOnProgress()
         }
     }
 
@@ -75,21 +76,13 @@ internal fun reduce(
             } else {
                 steps += AssistantStep.Reasoning(nextStepId(steps), event.text)
             }
-            message.copy(
-                steps = steps,
-                error = null,
-                retrying = false,
-                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
-            )
+            message.copy(steps = steps).clearFailureOnProgress()
         }
     }
 
     is RuntimeEvent.ToolStarted -> state.onRun(event.runId) {
         updateAssistant(event.runId) { message ->
             message.copy(
-                error = null,
-                retrying = false,
-                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
                 steps = message.steps + AssistantStep.Tool(
                     ToolTrace(
                         id = nextStepId(message.steps),
@@ -99,7 +92,7 @@ internal fun reduce(
                         startedAt = event.startedAt,
                     ),
                 ),
-            )
+            ).clearFailureOnProgress()
         }
     }
 
@@ -123,10 +116,13 @@ internal fun reduce(
 
     is RuntimeEvent.TurnInjected -> state.injectTurn(event, strings, now)
 
+    is NoticeEvent -> state.appendNotice(event.notice, now)
+    is BackgroundTurnStarted -> state.startBackgroundTurn(event, strings, now)
+    is UsageChanged -> state.copy(usage = event.usage)
+
     is RuntimeEvent.SessionListChanged -> state
     is RuntimeEvent.SessionRemoved -> state
     is RuntimeEvent.SessionArchived -> state
-    else -> state
 }
 
 internal fun ConversationState.finishWithStatus(
@@ -266,6 +262,15 @@ internal fun reminderDisplayText(text: String): String {
     }
 }
 
+private fun AssistantMessage.clearFailureOnProgress(): AssistantMessage = if (retrying) {
+    this
+} else {
+    copy(
+        error = null,
+        status = if (status == MessageStatus.FAILED) MessageStatus.RUNNING else status,
+    )
+}
+
 private fun ConversationState.onRun(
     runId: String,
     transform: ConversationState.() -> ConversationState,
@@ -339,6 +344,56 @@ private fun ConversationState.injectTurn(
     )
     return copy(
         messages = messages + user + assistant,
+        sending = true,
+        activity = strings.thinking,
+        activityStartedAt = activityStartedAt ?: now,
+    )
+}
+
+internal fun ConversationState.appendNotice(
+    notice: TurnNotice,
+    now: Long = System.currentTimeMillis(),
+): ConversationState {
+    val message = AssistantMessage(
+        id = nextMessageId(messages),
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        status = MessageStatus.DONE,
+        startedAt = now,
+        finishedAt = now,
+        notice = notice,
+    )
+    return copy(messages = messages + message)
+}
+
+private fun ConversationState.startBackgroundTurn(
+    event: BackgroundTurnStarted,
+    strings: ChatUiStrings,
+    now: Long,
+): ConversationState {
+    val added = event.notice?.let { notice ->
+        AssistantMessage(
+            id = nextMessageId(messages),
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            status = MessageStatus.DONE,
+            startedAt = now,
+            finishedAt = now,
+            notice = notice,
+        )
+    }
+    val assistantId = nextMessageId(messages + listOfNotNull(added))
+    val assistant = AssistantMessage(
+        id = assistantId,
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        streaming = true,
+        status = MessageStatus.RUNNING,
+        startedAt = now,
+        runId = event.runId,
+    )
+    return copy(
+        messages = messages + listOfNotNull(added, assistant),
         sending = true,
         activity = strings.thinking,
         activityStartedAt = activityStartedAt ?: now,

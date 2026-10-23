@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
@@ -307,6 +308,46 @@ class ChatViewModel(
     fun stop() {
         flushPendingDeltas()
         mutableState.value.conversationId?.let(runtime::stop)
+    }
+
+    fun compactContext() {
+        flushPendingDeltas()
+        val current = mutableState.value
+        if (!current.ready || !current.historyLoaded) return
+        val sessionId = current.conversationId ?: return
+        if (current.sending || current.switchingConversation || current.compacting) return
+        mutableState.update { it.copy(compacting = true, error = null) }
+        viewModelScope.launch {
+            val outcome = try {
+                runtime.compact(sessionId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                CompactionOutcome.Failed(error.message)
+            }
+            mutableState.update { it.copy(compacting = false) }
+            when (outcome) {
+                is CompactionOutcome.Done -> {
+                    reloadHistoryAfterCompaction(sessionId)
+                    refreshUsage(sessionId)
+                }
+
+                CompactionOutcome.Empty -> showCommandError(uiStrings.nothingToCompact, sessionId)
+                CompactionOutcome.Busy -> showCommandError(uiStrings.compactionBusy, sessionId)
+                CompactionOutcome.Unavailable -> showCommandError(uiStrings.compactionUnavailable, sessionId)
+                is CompactionOutcome.Failed -> showCommandError(uiStrings.runError(outcome.message), sessionId)
+            }
+        }
+    }
+
+    fun showCommandError(message: String) {
+        mutableState.update { it.copy(error = message) }
+    }
+
+    private fun showCommandError(message: String, sessionId: String) {
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { it.copy(error = message) }
+        }
     }
 
     suspend fun reloadSession(): Result<Unit> {
@@ -615,6 +656,8 @@ class ChatViewModel(
                 sending = cached?.sending ?: false,
                 activity = cached?.activity,
                 activityStartedAt = cached?.activityStartedAt,
+                usage = cached?.usage,
+                compacting = false,
                 historyLoaded = cached?.loaded == true,
                 switchingConversation = cached == null,
                 input = "",
@@ -633,14 +676,15 @@ class ChatViewModel(
                 withContext(ioDispatcher) { runtime.openSession(summary.filePath, summary.cwd) }
                 val history = withContext(ioDispatcher) { runtime.history(summary.id) }
                 val activeRunId = withContext(ioDispatcher) { runtime.activeRunId(summary.id) }
+                val usage = withContext(ioDispatcher) { runtime.usage(summary.id) }
                 val localized = history.map { message ->
                     message.error?.let { raw -> message.copy(error = uiStrings.runError(raw)) } ?: message
                 }
                 val title = summary.title.ifBlank { titleFrom(localized) }
                 val snapshot = if (activeRunId == null) {
-                    ConversationState(messages = localized, title = title, loaded = true)
+                    ConversationState(messages = localized, title = title, loaded = true, usage = usage)
                 } else {
-                    ConversationState(messages = localized, title = title, loaded = true)
+                    ConversationState(messages = localized, title = title, loaded = true, usage = usage)
                         .adoptActiveRun(activeRunId, uiStrings.thinking, System.currentTimeMillis())
                 }
                 conversationCache[summary.id] = snapshot
@@ -652,6 +696,7 @@ class ChatViewModel(
                             sending = snapshot.sending,
                             activity = snapshot.activity,
                             activityStartedAt = snapshot.activityStartedAt,
+                            usage = snapshot.usage,
                             historyLoaded = true,
                             switchingConversation = false,
                         )
@@ -690,6 +735,8 @@ class ChatViewModel(
                         sending = false,
                         activity = null,
                         activityStartedAt = null,
+                        usage = null,
+                        compacting = false,
                         historyLoaded = true,
                         switchingConversation = false,
                         input = "",
@@ -720,7 +767,41 @@ class ChatViewModel(
             activity = current.activity,
             activityStartedAt = current.activityStartedAt,
             loaded = loaded,
+            usage = current.usage,
         )
+    }
+
+    private suspend fun refreshUsage(sessionId: String) {
+        val usage = withContext(ioDispatcher) { runtime.usage(sessionId) } ?: return
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { it.copy(usage = usage) }
+            cacheCurrentSession()
+        } else {
+            conversationCache[sessionId]?.let { cached ->
+                conversationCache[sessionId] = cached.copy(usage = usage)
+            }
+        }
+    }
+
+    private suspend fun reloadHistoryAfterCompaction(sessionId: String) {
+        if (mutableState.value.conversationId != sessionId) return
+        val current = mutableState.value
+        if (current.sending) return
+        val history = withContext(ioDispatcher) { runtime.history(sessionId) }
+        val localized = history.map { message ->
+            message.error?.let { raw -> message.copy(error = uiStrings.runError(raw)) } ?: message
+        }
+        var nextId = (localized.maxOfOrNull { it.id } ?: -1L) + 1
+        val notices = current.messages.takeLastWhile { it.notice != null }.map { it.copy(id = nextId++) }
+        val next = localized + notices
+        mutableState.update {
+            it.copy(
+                messages = next,
+                historyLoaded = true,
+                conversationTitle = it.conversationTitle.ifBlank { titleFrom(next) },
+            )
+        }
+        cacheCurrentSession()
     }
 
     private fun onSessionEvent(scoped: SessionRuntimeEvent) {
@@ -819,6 +900,7 @@ class ChatViewModel(
         sending = sending,
         activity = activity,
         activityStartedAt = activityStartedAt,
+        usage = usage,
     )
 
     private fun ChatUiState.applyConversation(state: ConversationState): ChatUiState = copy(
@@ -827,6 +909,7 @@ class ChatViewModel(
         sending = state.sending,
         activity = state.activity,
         activityStartedAt = state.activityStartedAt,
+        usage = state.usage,
     )
 
     private fun finishRunError(sessionId: String, message: String) {
@@ -947,7 +1030,7 @@ class ChatViewModel(
     }
 
     private companion object {
-        const val MAX_ATTACHMENTS = 15
+        const val MAX_ATTACHMENTS = 20
         const val LEGACY_NEW_TITLE = "新对话"
         const val MAX_AUTO_RETRIES = 5
         const val AUTO_RETRY_DELAY_MS = 2_000L

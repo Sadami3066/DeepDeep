@@ -1,0 +1,7 @@
+<resources>
+    <string name="files_title">文件</string>
+    <string name="files_menu">目录文件</string>
+    <string name="files_empty">空目录</string>
+    <string name="files_up">上一级</string>
+    <string name="files_unreadable">无法读取此目录</string>
+</resources>

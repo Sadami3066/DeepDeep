@@ -1,0 +1,7 @@
+<resources>
+    <string name="files_title">Files</string>
+    <string name="files_menu">Files</string>
+    <string name="files_empty">Empty folder</string>
+    <string name="files_up">Up</string>
+    <string name="files_unreadable">Could not read this folder</string>
+</resources>

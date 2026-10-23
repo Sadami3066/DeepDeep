@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +29,28 @@ class PRootExecutorTest {
         assertTrue(command.containsAll(listOf("-b", "/dev", "/proc", "/sys")))
         assertTrue(command.contains("${fixture.workspace.absolutePath}:/workspace"))
         assertTrue(command.containsAll(listOf("-w", "/workspace", "--kill-on-exit", "/bin/sh", "-c", "echo hi")))
+    }
+
+    @Test
+    fun sharedStorageDisabledOmitsBindMounts() {
+        val command = fixture().executor.buildCommand("echo hi")
+
+        assertFalse(command.contains("/storage/emulated/0:/storage/emulated/0"))
+        assertFalse(command.contains("/storage/emulated/0:/sdcard"))
+    }
+
+    @Test
+    fun sharedStorageEnabledAddsBindMountsAndTargetDirectories() = runBlocking {
+        val fixture = fixture(sharedStorageEnabled = { true })
+
+        val command = fixture.executor.buildCommand("echo hi")
+
+        assertTrue(command.contains("/storage/emulated/0:/storage/emulated/0"))
+        assertTrue(command.contains("/storage/emulated/0:/sdcard"))
+        val result = fixture.executor.execute("echo hi")
+        assertEquals(0, result.exitCode)
+        assertTrue(File(fixture.rootfs, "storage/emulated/0").isDirectory)
+        assertTrue(File(fixture.rootfs, "sdcard").isDirectory)
     }
 
     @Test
@@ -96,6 +119,7 @@ class PRootExecutorTest {
     private fun fixture(
         maxOutputBytes: Int = 1024,
         pidReader: ((File) -> Long)? = null,
+        sharedStorageEnabled: () -> Boolean = { false },
     ): Fixture {
         val rootfs = temp.newFolder("rootfs")
         val workspace = temp.newFolder("workspace")
@@ -117,6 +141,7 @@ class PRootExecutorTest {
                 rootfsDir = rootfs,
                 workspaceDir = workspace,
                 tempDir = tempDir,
+                sharedStorageEnabled = sharedStorageEnabled,
                 maxOutputBytes = maxOutputBytes,
             )
         } else {
@@ -126,6 +151,7 @@ class PRootExecutorTest {
                 rootfsDir = rootfs,
                 workspaceDir = workspace,
                 tempDir = tempDir,
+                sharedStorageEnabled = sharedStorageEnabled,
                 maxOutputBytes = maxOutputBytes,
                 pidReader = pidReader,
             )

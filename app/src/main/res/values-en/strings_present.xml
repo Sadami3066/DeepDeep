@@ -1,0 +1,5 @@
+<resources>
+    <string name="present_share">Share</string>
+    <string name="present_open_failed">No app can open this file</string>
+    <string name="present_share_failed">Could not share this file</string>
+</resources>

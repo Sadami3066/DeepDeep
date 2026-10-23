@@ -1,0 +1,17 @@
+<resources>
+    <string name="jobs_title">Background jobs</string>
+    <string name="jobs_empty_title">No background jobs</string>
+    <string name="jobs_empty_hint">Commands run in the background show up here.</string>
+    <string name="jobs_status_running">Running</string>
+    <string name="jobs_status_done">Done</string>
+    <string name="jobs_status_failed">Failed</string>
+    <string name="jobs_status_killed">Stopped</string>
+    <string name="jobs_output">Output</string>
+    <string name="jobs_output_loading">Loading…</string>
+    <string name="jobs_output_empty">No output</string>
+    <string name="jobs_output_close">Close</string>
+    <string name="jobs_kill">Stop</string>
+    <string name="jobs_kill_confirm">Confirm</string>
+    <string name="jobs_clear_settled">Clear finished</string>
+    <string name="jobs_meter_description">%1$d background jobs running</string>
+</resources>

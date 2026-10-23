@@ -1,0 +1,16 @@
+<resources>
+    <string name="usage_title">Session usage</string>
+    <string name="usage_context">Context occupancy</string>
+    <string name="usage_context_value">~%1$s / %2$s</string>
+    <string name="usage_compact_threshold">Auto-compact at %1$s</string>
+    <string name="usage_input">Input</string>
+    <string name="usage_output">Output</string>
+    <string name="usage_cache_read">Cache read</string>
+    <string name="usage_cache_write">Cache write</string>
+    <string name="usage_cost">Cost</string>
+    <string name="usage_cost_value">$%1$s</string>
+    <string name="usage_footnote">Context = latest provider usage plus an estimate of new content; totals and cost are provider reported</string>
+    <string name="usage_meter_percent">%1$d%%</string>
+    <string name="usage_meter_description">Context usage %1$d%%</string>
+    <string name="usage_cumulative">Session totals (provider reported)</string>
+</resources>

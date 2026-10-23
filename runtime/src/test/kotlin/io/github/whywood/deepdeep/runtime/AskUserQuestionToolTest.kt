@@ -39,9 +39,17 @@ class AskUserQuestionToolTest {
     private fun answerEntries(result: AgentToolResult): JsonArray =
         Json.parseToJsonElement(resultText(result)).jsonObject.getValue("answers").jsonArray
 
+    private fun boundBinding(sessionId: String = "session-1"): SessionBinding {
+        val binding = SessionBinding()
+        val field = SessionBinding::class.java.getDeclaredField("bound")
+        field.isAccessible = true
+        field.set(binding, BoundSession(sessionId, null, "/tmp"))
+        return binding
+    }
+
     @Test
     fun toolExposesDshQuestionSchema() {
-        val tool = askUserQuestionTool(QuestionCenter { false })
+        val tool = askUserQuestionTool(QuestionCenter { false }, boundBinding())
         assertEquals("ask_user_question", tool.name)
         val properties = tool.parameters.getValue("properties").jsonObject
         val questions = properties.getValue("questions").jsonObject
@@ -54,7 +62,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun invalidArgumentsReturnErrorText() = runTest {
-        val tool = askUserQuestionTool(QuestionCenter { false })
+        val tool = askUserQuestionTool(QuestionCenter { false }, boundBinding())
         val result = tool.execute(
             "call-invalid",
             buildJsonObject { putJsonArray("questions") {} },
@@ -66,9 +74,29 @@ class AskUserQuestionToolTest {
     }
 
     @Test
+    fun unboundSessionReturnsErrorText() = runTest {
+        val center = QuestionCenter { true }
+        val tool = askUserQuestionTool(center, SessionBinding())
+        val result = tool.execute(
+            "call-unbound",
+            questionsArgs(
+                {
+                    put("id", "q1")
+                    put("question", "Hello?")
+                },
+            ),
+            null,
+            null,
+        )
+        assertEquals(true, result.isError)
+        assertEquals("Session is not bound", resultText(result))
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
     fun answersAreSerializedForTheModel() = runTest {
         val center = QuestionCenter { true }
-        val tool = askUserQuestionTool(center)
+        val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(
             {
@@ -91,6 +119,7 @@ class AskUserQuestionToolTest {
         runCurrent()
 
         val pending = center.pending.value.single()
+        assertEquals("session-1", pending.sessionId)
         assertEquals(2, pending.questions.size)
         assertTrue(pending.questions[0].options[1].label.endsWith("(Recommended)"))
         assertTrue(pending.questions[1].multiSelect)
@@ -122,7 +151,7 @@ class AskUserQuestionToolTest {
     @Test
     fun customTextAndCamelCaseMultiSelectFallbackAreSupported() = runTest {
         val center = QuestionCenter { true }
-        val tool = askUserQuestionTool(center)
+        val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(
             {
@@ -150,7 +179,7 @@ class AskUserQuestionToolTest {
     @Test
     fun skippedQuestionsAreOmitted() = runTest {
         val center = QuestionCenter { true }
-        val tool = askUserQuestionTool(center)
+        val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(
             {

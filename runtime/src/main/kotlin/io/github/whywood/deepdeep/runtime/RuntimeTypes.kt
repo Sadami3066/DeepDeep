@@ -124,6 +124,7 @@ data class AssistantMessage(
     val error: String? = null,
     val reminder: String? = null,
     val retrying: Boolean = false,
+    val notice: TurnNotice? = null,
 )
 
 enum class RunStatus {
@@ -297,4 +298,8 @@ interface AgentRuntime {
     suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel)
 
     suspend fun currentConfig(): ModelConfig
+
+    suspend fun usage(sessionId: String): SessionUsage? = null
+
+    suspend fun compact(sessionId: String): CompactionOutcome = CompactionOutcome.Unavailable
 }

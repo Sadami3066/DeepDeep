@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,6 +46,9 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.ui.questions.AnsweredAskCard
+import io.github.whywood.deepdeep.ui.questions.parseQuestionRecord
 import java.util.Locale
 
 @Composable
@@ -153,11 +157,26 @@ internal fun ProcessSection(
                                 onToggle = { onToggleStep(step.id) },
                             )
 
-                            is AssistantStep.Tool -> ToolCard(
-                                tool = step.trace,
-                                onToggle = { onToggleStep(step.trace.id) },
-                                onCopyOutput = onCopyOutput,
-                            )
+                            is AssistantStep.Tool -> {
+                                ToolCard(
+                                    tool = step.trace,
+                                    onToggle = { onToggleStep(step.trace.id) },
+                                    onCopyOutput = onCopyOutput,
+                                )
+                                val record = if (step.trace.status == ToolActivityStatus.DONE) {
+                                    parseQuestionRecord(step.trace)
+                                } else {
+                                    null
+                                }
+                                if (record != null) {
+                                    key(step.trace.toolCallId) {
+                                        AnsweredAskCard(
+                                            record = record,
+                                            toolCallId = step.trace.toolCallId,
+                                        )
+                                    }
+                                }
+                            }
 
                             is AssistantStep.Text -> ChatMarkdown(
                                 text = step.text.trim(),

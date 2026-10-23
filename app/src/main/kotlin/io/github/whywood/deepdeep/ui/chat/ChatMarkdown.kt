@@ -120,8 +120,8 @@ private fun MarkdownBlockItem(
     onFileClick: ((String) -> Unit)?,
 ) {
     when (block) {
-        is MarkdownBlock.Heading -> Text(
-            text = rememberedInline(block.text, document, colors, onFileClick),
+        is MarkdownBlock.Heading -> InlineCodeText(
+            rendered = rememberedInline(block.text, document, colors, onFileClick),
             style = DdType.body.copy(
                 fontSize = when (block.level) {
                     1 -> 22.sp
@@ -138,8 +138,8 @@ private fun MarkdownBlockItem(
             color = colors.ink,
         )
 
-        is MarkdownBlock.Paragraph -> Text(
-            text = rememberedInline(block.text, document, colors, onFileClick),
+        is MarkdownBlock.Paragraph -> InlineCodeText(
+            rendered = rememberedInline(block.text, document, colors, onFileClick),
             style = DdType.body,
             color = colors.ink,
         )
@@ -226,8 +226,8 @@ private fun FootnoteList(
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
                     )
-                    Text(
-                        text = rememberedInline(footnote.text, document, colors, onFileClick),
+                    InlineCodeText(
+                        rendered = rememberedInline(footnote.text, document, colors, onFileClick),
                         modifier = Modifier.weight(1f),
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
@@ -331,8 +331,8 @@ private fun ListItemBody(
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             ListMarker(item.marker, colors, depth)
-            Text(
-                text = rememberedInline(item.text, document, colors, onFileClick),
+            InlineCodeText(
+                rendered = rememberedInline(item.text, document, colors, onFileClick),
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
                 style = DdType.body,
                 color = if (item.marker is MarkdownMarker.Task && item.marker.checked) {
@@ -410,7 +410,7 @@ private fun TableBlock(
             fun measure(cell: String, style: TextStyle) {
                 if (cell.isEmpty()) return
                 val measured = textMeasurer.measure(
-                    text = renderInline(cell, document, colors, onFileClick),
+                    text = renderInline(cell, document, colors, onFileClick).text,
                     style = style,
                     overflow = TextOverflow.Clip,
                     softWrap = false,
@@ -492,8 +492,8 @@ private fun TableRow(
     ) {
         widths.forEachIndexed { index, width ->
             Box(Modifier.width(width).padding(horizontal = horizontalPadding, vertical = verticalPadding)) {
-                Text(
-                    text = rememberedInline(cells.getOrNull(index).orEmpty(), document, colors, onFileClick),
+                InlineCodeText(
+                    rendered = rememberedInline(cells.getOrNull(index).orEmpty(), document, colors, onFileClick),
                     style = style,
                     color = if (header) colors.ink else colors.inkSecondary,
                 )
@@ -536,7 +536,7 @@ private fun rememberedInline(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
-): AnnotatedString = remember(text, document.links, document.footnoteNumbers, colors, onFileClick) {
+): RenderedInline = remember(text, document.links, document.footnoteNumbers, colors, onFileClick) {
     renderInline(text, document, colors, onFileClick)
 }
 
@@ -545,8 +545,12 @@ private fun renderInline(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
-): AnnotatedString = buildAnnotatedString {
-    appendInlineNodes(inlineNodes(text, document.links, document.footnoteNumbers), colors, onFileClick)
+): RenderedInline {
+    val codeRanges = mutableListOf<IntRange>()
+    val rendered = buildAnnotatedString {
+        appendInlineNodes(inlineNodes(text, document.links, document.footnoteNumbers), colors, onFileClick, codeRanges)
+    }
+    return RenderedInline(rendered, codeRanges)
 }
 
 private fun AnnotatedString.Builder.appendFileReference(
@@ -574,6 +578,7 @@ private fun AnnotatedString.Builder.appendInlineNodes(
     nodes: List<InlineNode>,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
+    codeRanges: MutableList<IntRange>,
 ) {
     nodes.forEach { node ->
         when (node) {
@@ -585,9 +590,11 @@ private fun AnnotatedString.Builder.appendInlineNodes(
                         append(node.text)
                     }
                 } else {
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = colors.codeBackground)) {
+                    val start = length
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
                         append(node.text)
                     }
+                    if (start < length) codeRanges += start until length
                 }
             }
 
@@ -603,15 +610,15 @@ private fun AnnotatedString.Builder.appendInlineNodes(
             }
 
             is InlineNode.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Link -> {
@@ -626,13 +633,13 @@ private fun AnnotatedString.Builder.appendInlineNodes(
                     )
                     withLink(annotation) {
                         withStyle(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)) {
-                            appendInlineNodes(node.children, colors, onFileClick)
+                            appendInlineNodes(node.children, colors, onFileClick, codeRanges)
                         }
                     }
                 } else {
                     withLink(LinkAnnotation.Url(node.destination)) {
                         withStyle(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)) {
-                            appendInlineNodes(node.children, colors, onFileClick)
+                            appendInlineNodes(node.children, colors, onFileClick, codeRanges)
                         }
                     }
                 }
@@ -653,15 +660,15 @@ private fun AnnotatedString.Builder.appendInlineNodes(
             }
 
             is InlineNode.Colored -> withStyle(SpanStyle(color = Color(node.color))) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Superscript -> withStyle(SpanStyle(baselineShift = BaselineShift.Superscript)) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Subscript -> withStyle(SpanStyle(baselineShift = BaselineShift.Subscript)) {
-                appendInlineNodes(node.children, colors, onFileClick)
+                appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
             is InlineNode.Math -> withStyle(

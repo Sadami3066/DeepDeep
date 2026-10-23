@@ -75,7 +75,7 @@
     <string name="chat_error_request_failed">请求失败，请稍后重试。</string>
     <string name="chat_error_runtime_start">运行时启动失败</string>
     <string name="chat_error_preparing">正在准备会话，请稍候…</string>
-    <string name="chat_error_max_attachments">最多添加 15 个附件</string>
+    <string name="chat_error_max_attachments">最多添加 20 个附件</string>
     <string name="chat_error_attachment_too_large">附件超过 25MB，无法添加</string>
     <string name="chat_error_attachment_failed">附件添加失败</string>
     <string name="chat_error_restoring">正在恢复会话，请稍候…</string>
@@ -102,4 +102,25 @@
     <string name="assistant_model_provider">厂商</string>
     <string name="chat_error_insufficient_balance">余额不足，请充值后重试</string>
     <string name="chat_error_model_unavailable">模型不可用，请切换模型</string>
+    <string name="chat_compact_none">没有可压缩的上下文</string>
+    <string name="chat_compact_busy">回复进行中，暂不能压缩</string>
+    <string name="chat_compact_unavailable">当前会话暂不可压缩</string>
+    <string name="chat_compacting">正在压缩上下文…</string>
+    <string name="chat_notice_compacted">上下文已压缩：%1$s → %2$s</string>
+    <string name="chat_notice_goal_round">目标 · 第 %1$d/%2$d 轮</string>
+    <string name="chat_notice_goal_completed">目标已完成</string>
+    <string name="chat_notice_goal_blocked">目标已阻塞</string>
+    <string name="chat_notice_job">后台任务 · %1$s</string>
+    <string name="chat_notice_job_failed">后台任务失败 · %1$s</string>
+    <string name="chat_cmd_compact">压缩上下文</string>
+    <string name="chat_cmd_compact_desc">立即压缩较早的历史，释放上下文</string>
+    <string name="chat_cmd_goal">目标</string>
+    <string name="chat_cmd_goal_desc">创建长期目标，或暂停、继续、清除</string>
+    <string name="chat_cmd_unknown">未知命令：/%1$s</string>
+    <string name="chat_cmd_usage">/%1$s 不接受参数</string>
+    <string name="chat_question_other">另一个会话正在等待回答</string>
+    <string name="chat_question_other_action">前往回答</string>
+    <string name="chat_question_waiting">Agent 正在等待你的回答</string>
+    <string name="chat_cmd_goal_invalid">目标内容不能为空</string>
+    <string name="chat_notice_goal_round_unbounded">目标 · 第 %1$d 轮</string>
 </resources>

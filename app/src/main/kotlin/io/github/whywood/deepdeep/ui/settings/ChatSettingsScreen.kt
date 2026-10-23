@@ -84,6 +84,13 @@ fun ChatSettingsScreen(
                     checked = preferences.autoRetry,
                     onCheckedChange = { onToggle(UiToggle.AUTO_RETRY, it) },
                 )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Terminal,
+                    title = R.string.settings_background_job_wake,
+                    checked = preferences.backgroundJobWake,
+                    onCheckedChange = { onToggle(UiToggle.BACKGROUND_JOB_WAKE, it) },
+                )
             }
             Spacer(Modifier.height(40.dp))
         }

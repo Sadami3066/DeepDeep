@@ -1,5 +1,38 @@
 # Status
 
+## Done: 交付卡片、路径解析、行内代码、proot 共享目录、文件浏览
+
+- 交付卡片美化：文件类型图标 + 文件名，分享改为右上角无底色图标；多文件横向滚动
+- 路径解析：相对子路径（如 `src/…`）按会话 cwd 解析，`/workspace/…` 与 `workspace/…` 统一映射；FileProvider 增加 `workspaces/`，workspace 会话里的交付文件可正常打开和分享
+- 行内代码：背景按文字基线计算高度（上 0.84em / 下 0.32em），完整包住 j/y/g 等下行字母
+- PRoot 共享目录：设置 → 运行环境新增「共享目录」，授予「所有文件访问权限」后可开启，`/storage/emulated/0` 与 `/sdcard` 绑定进 Linux 环境，并在系统提示里告知模型；运行期切换下一次 bash 生效
+- 修复分享面板打开/关闭时聊天整体上下位移：系统分享面板会临时隐藏状态栏，窗口失焦期间冻结状态栏/导航栏 inset，不再跟随瞬时变化（消息操作栏分享与交付卡片分享都生效）
+- 右上角「...」菜单新增「目录文件」：打开当前工作区文件浏览器 sheet（工作区名/相对路径、目录在前、文件带大小、逐级返回、点文件打开）
+- 281 unit tests green（runtime 109 / app 152 / shell 20），lint、模块边界、debug 构建通过
+
+
+## Done: chat polish — 提问卡、展开动画、后台任务标记、交付卡片
+
+- 提问：同一时间只显示一张互动卡；同一轮里并发或先后多次 `ask_user_question` 时，回答完当前问题后同一位置出现下一题。回答结束后互动卡消失，回答按工具调用顺序收进过程：ask 工具行后面出现「已回答 · N 个问题」，可平滑展开只读问答
+- 修复已答卡片展开/收起的瞬闪：改为与思考/工具卡相同的「常驻标题行 + 单个 AnimatedVisibility」，不再两个并列区域互切
+- 修复断网重试的跳变：重试操作占固定 44dp 槽（spinner 与文字同槽），retrying 期间失败行保留到收尾再清理，不再瞬间塌陷
+- 后台任务完成提示收敛为一行极简标记：Terminal 图标 + 「后台任务 · 名称」（失败时文案对应），不显示完成/失败卡片
+- 行内代码：主题浅蓝底（accentSoft）+ 3dp 微圆角，换行时按行拆分；路径样式、`Kbd`、代码块不变
+- 交付卡片：`present` 工具把生成的文件展示为与附件同尺寸（140dp）的方形文件卡，横向滚动；只显示文件名，整卡点击打开，右上角分享图标
+- 附件：上限 20；发送后的附件单行横向滚动，不再换行
+- 279 unit tests green（runtime 109 / app 152 / shell 18），lint、模块边界、debug 构建通过
+
+## Done: P12 commands, compaction, token usage, goals, background jobs, inline questions
+
+- `/` 命令：`/compact`、`/goal`；输入框上方是可过滤的命令面板，未知命令不发送，命令不进入模型上下文
+- Manual compaction: `/compact` runs the SDK compact and reports before→after tokens; auto compaction keeps the SDK thresholds; busy/empty/failure each have a localized message
+- Token usage: a ring in the composer shows context occupancy; the session sheet shows context/window, auto-compaction threshold, input/output/cache read/cache write tokens and cost, with `~` marking estimates
+- Goals: per-session goal store, `get_goal`/`create_goal`/`update_goal` tools with direct-human authority checks, automatic round continuation up to the cap, pause/resume/complete/clear, goal bar + sheet, restart leaves goals paused
+- 后台任务：`job_start` 创建（`command` 必填、`label` 可选），`job_output`/`job_list`/`job_kill` 读取与停止；进程内注册表使用环形输出（运行中 256KB / 结束后 16KB）与增量游标，每会话最多 10 个运行中任务；完成后按「后台任务完成时唤醒」决定是否开新一轮；任务数显示在 composer 上方的 token 用量行左侧，点击打开后台任务 sheet
+- Questions are now an inline card in the chat transcript instead of a bottom sheet: pager, options, multi-select, custom answer, skip, collapse, read-only answer summary after settling, cross-conversation prompt
+- New events (`NoticeEvent`, `BackgroundTurnStarted`, `UsageChanged`) and session-scoped pending questions; no SDK changes
+- `/` 只由人使用（`/compact`、`/goal`），在任意词边界触发并可过滤滚动；目标默认不限轮次，目标轮提示带 objective，进程重启后显示暂停（激活状态只存内存）；上下文用量环移到 composer 上方；上下文占用标注为 provider 用量 + 估算，累计 token 与费用来自 provider 上报；后台任务沿用 DSH 限制（256KB 环形缓冲、每会话 10 个、等待上限 600s、归档清理、运行中每秒刷新），由 App 层 `job_start` 创建，SDK 保持 pi2kotlin 0.1.3 的原生 `bash`（前台阻塞，不提供后台参数），后台任务提示只有唤醒轮的一行极简标记
+
 ## Done: P11.3 model switching, regenerate retry, auto-retry
 
 - Model sheet: a provider row lets you switch between configured providers; the model list below follows the selected provider

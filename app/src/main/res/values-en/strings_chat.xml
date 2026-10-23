@@ -75,7 +75,7 @@
     <string name="chat_error_request_failed">Request failed. Try again.</string>
     <string name="chat_error_runtime_start">Runtime failed to start</string>
     <string name="chat_error_preparing">Preparing session…</string>
-    <string name="chat_error_max_attachments">Up to 15 attachments</string>
+    <string name="chat_error_max_attachments">Up to 20 attachments</string>
     <string name="chat_error_attachment_too_large">Attachment exceeds 25 MB</string>
     <string name="chat_error_attachment_failed">Failed to add attachment</string>
     <string name="chat_error_restoring">Restoring session…</string>
@@ -102,4 +102,25 @@
     <string name="assistant_model_provider">Provider</string>
     <string name="chat_error_insufficient_balance">Insufficient balance. Top up and try again.</string>
     <string name="chat_error_model_unavailable">Model unavailable. Switch models.</string>
+    <string name="chat_compact_none">No compactable history</string>
+    <string name="chat_compact_busy">Cannot compact while a reply is running</string>
+    <string name="chat_compact_unavailable">This session cannot be compacted</string>
+    <string name="chat_compacting">Compacting context…</string>
+    <string name="chat_notice_compacted">Context compacted: %1$s → %2$s</string>
+    <string name="chat_notice_goal_round">Goal · round %1$d/%2$d</string>
+    <string name="chat_notice_goal_completed">Goal completed</string>
+    <string name="chat_notice_goal_blocked">Goal blocked</string>
+    <string name="chat_notice_job">Background job · %1$s</string>
+    <string name="chat_notice_job_failed">Background job failed · %1$s</string>
+    <string name="chat_cmd_compact">Compact context</string>
+    <string name="chat_cmd_compact_desc">Condense older history now to free context</string>
+    <string name="chat_cmd_goal">Goal</string>
+    <string name="chat_cmd_goal_desc">Create a long-running goal, or pause, resume, clear</string>
+    <string name="chat_cmd_unknown">Unknown command: /%1$s</string>
+    <string name="chat_cmd_usage">/%1$s takes no arguments</string>
+    <string name="chat_question_other">Another conversation is waiting for an answer</string>
+    <string name="chat_question_other_action">Go answer</string>
+    <string name="chat_question_waiting">The agent is waiting for your answer</string>
+    <string name="chat_cmd_goal_invalid">Goal objective cannot be empty</string>
+    <string name="chat_notice_goal_round_unbounded">Goal · round %1$d</string>
 </resources>

@@ -25,6 +25,7 @@ class PiSessionEngine(
     private val shellExecutor: ShellExecutor?,
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
+    private val sharedStorage: suspend () -> Boolean = { false },
     private val toolContext: AppToolContext? = null,
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
@@ -39,7 +40,7 @@ class PiSessionEngine(
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
-        val binding = ScheduleBinding()
+        val binding = SessionBinding()
         val tools = buildList {
             addAll(
                 defaultCodingTools(
@@ -67,13 +68,18 @@ class PiSessionEngine(
                 hooks = CodingHooks(
                     extraSystemPromptSections = {
                         val current = runCatching { personalization() }.getOrDefault(Personalization())
-                        buildPersonalizationSections(
+                        val sections = buildPersonalizationSections(
                             personalization = current,
                             providerId = resolved.providerId,
                             modelId = modelId,
                             cwd = cwd.toString(),
                             now = OffsetDateTime.now(),
                         )
+                        if (runCatching { sharedStorage() }.getOrDefault(false)) {
+                            sections + sharedStorageSection()
+                        } else {
+                            sections
+                        }
                     },
                 ),
                 credentials = credentials,
@@ -113,6 +119,17 @@ class PiSessionEngine(
     }.getOrDefault(0L)
 }
 
+
+private fun sharedStorageSection(): Map<String, String> = mapOf(
+    "shared_storage" to wrapPromptSection(
+        "shared_storage",
+        listOf(
+            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place.",
+            "Download, Documents, Pictures, DCIM, Music and Movies under it are readable and writable.",
+            "Treat these as the user's real files: look before changing, and do not delete or overwrite anything unless the user asked for it.",
+        ).joinToString("\n") { "- $it" },
+    ),
+)
 
 fun ThinkingLevel.runtimeValue(): String = when (this) {
     ThinkingLevel.OFF -> "off"
