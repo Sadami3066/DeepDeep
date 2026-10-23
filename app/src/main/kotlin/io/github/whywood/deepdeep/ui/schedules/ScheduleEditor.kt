@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.*
@@ -84,7 +85,7 @@ internal fun ScheduleEditor(
                 )
                 RepeatRow(draft.repeat) { draft = draft.copy(repeat = it); validationError = null }
                 if (draft.repeat) {
-                    FieldLabel(stringResource(R.string.schedules_cron_expression_label))
+                    Spacer(Modifier.height(12.dp))
                     DdTextField(
                         draft.cronExpression,
                         { draft = draft.copy(cronExpression = it); validationError = null },
@@ -97,6 +98,7 @@ internal fun ScheduleEditor(
                         stringResource(R.string.schedules_date_label),
                         dateFormatter.format(draft.date),
                         Modifier.testTag("schedule_date_row"),
+                        0.dp,
                     ) { showDatePicker = true }
                     TimeRow(draft.time) { showTimePicker = true }
                 }
@@ -185,14 +187,25 @@ private fun FieldLabel(text: String) {
 
 @Composable
 private fun TimeRow(time: LocalTime, onClick: () -> Unit) {
-    EditorRow(stringResource(R.string.schedules_time_label), time.format(SCHEDULE_TIME_FORMAT), Modifier.testTag("schedule_time_row"), onClick)
+    EditorRow(
+        stringResource(R.string.schedules_time_label),
+        time.format(SCHEDULE_TIME_FORMAT),
+        Modifier.testTag("schedule_time_row"),
+        onClick = onClick,
+    )
 }
 
 @Composable
-private fun EditorRow(label: String, value: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun EditorRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    topPadding: Dp = 12.dp,
+    onClick: () -> Unit,
+) {
     val colors = deepDeepColors()
     Row(
-        modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 52.dp).padding(vertical = 12.dp),
+        modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 52.dp).padding(top = topPadding, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = DdType.body, color = colors.ink, maxLines = 1)
@@ -221,7 +234,7 @@ private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 
 @Composable
 private fun RepeatRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.schedules_repeat_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
         DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }

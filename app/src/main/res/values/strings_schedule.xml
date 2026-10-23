@@ -32,7 +32,6 @@
     <string name="schedules_frequency_weekdays">工作日</string>
     <string name="schedules_frequency_weekends">周末</string>
     <string name="schedules_frequency_weekly">每周</string>
-    <string name="schedules_cron_expression_label">cron 表达式</string>
     <string name="schedules_next_run_line">下次：%1$s</string>
     <string name="schedules_time_label">时间</string>
     <string name="schedules_date_label">日期</string>
