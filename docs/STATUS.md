@@ -4,7 +4,7 @@
 
 - Settings: removed 功能 / 连接器 / 权限 rows
 - Fonts: default Newsreader; font preview sample is 「我思故我在」+「I think, therefore I am.」
-- Chat settings: haptics / keyboard / streaming / reasoning are always on with no switches; process setting renamed 「过程自动折叠」, default on
+- Chat settings: only 「过程自动折叠」 remains in the UI; haptics / keyboard / streaming / reasoning are always on but removed from the UI
 - Process auto-collapse: collapses when the final result text starts streaming, answer continues outside the process; off keeps it expanded
 - Provider icons: replaced with the user-supplied 42 color logos (light + night PNGs); Chinese label is now 厂商
 - Evidence: `artifacts/validation/round8/` (settings, font samples, chat settings, collapse-at-streaming)

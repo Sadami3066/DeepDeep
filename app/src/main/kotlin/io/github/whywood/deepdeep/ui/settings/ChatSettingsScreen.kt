@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
-import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
@@ -71,14 +70,6 @@ fun ChatSettingsScreen(
             )
             Spacer(Modifier.height(20.dp))
             SettingsGroup {
-                AlwaysOnRow(icon = DdIcons.Phone, title = R.string.settings_haptics)
-                DdHairline()
-                AlwaysOnRow(icon = DdIcons.Message, title = R.string.settings_send_hides_keyboard)
-                DdHairline()
-                AlwaysOnRow(icon = DdIcons.AudioLines, title = R.string.settings_follow_streaming)
-                DdHairline()
-                AlwaysOnRow(icon = DdIcons.Brain, title = R.string.settings_show_reasoning)
-                DdHairline()
                 SwitchRow(
                     icon = DdIcons.ChevronDown,
                     title = R.string.settings_auto_collapse_process,
@@ -89,15 +80,6 @@ fun ChatSettingsScreen(
             Spacer(Modifier.height(40.dp))
         }
     }
-}
-
-@Composable
-private fun AlwaysOnRow(icon: DdIcon, @StringRes title: Int) {
-    DdListRow(
-        icon = icon,
-        title = stringResource(title),
-        value = stringResource(R.string.settings_always_on),
-    )
 }
 
 @Composable
