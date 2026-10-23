@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep
 
 import android.content.Context
 import dev.pi.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.FileAttachmentStore
@@ -9,17 +10,22 @@ import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
+import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
+import io.github.whywood.deepdeep.runtime.QuestionCenter
+import io.github.whywood.deepdeep.runtime.ScheduleStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
+import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
@@ -54,6 +60,21 @@ class AppGraph(context: Context) {
     val sessionMetaStore = SessionMetaStore(appContext)
     val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
     val workspaceStore = WorkspaceStore(appContext)
+    val skillRepository = SkillRepository(
+        repoDir = File(appContext.filesDir, "skills"),
+        agentDir = agentDir,
+        homeDir = homeDir,
+        workspacesDir = workspacesDir,
+    )
+    val agentDocStore = AgentDocStore()
+    val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
+    val questionCenter = QuestionCenter(isForeground = { AppVisibility.foreground })
+    private val appToolContext = AppToolContext(
+        scheduleStore = scheduleStore,
+        questionCenter = questionCenter,
+        workspaceStore = workspaceStore,
+        homeDir = homeDir,
+    )
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
 
     private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
@@ -77,6 +98,7 @@ class AppGraph(context: Context) {
             shellExecutor = shellExecutorFor(cwd),
             providers = providerCatalog,
             personalization = { personalizationStore.read().toRuntime() },
+            toolContext = appToolContext,
         )
     }
 

@@ -24,14 +24,10 @@ object StorageMigration {
         }
         workspaces.mkdirs()
 
-        val rewrites = listOf(
-            "/files/$LEGACY_WORKSPACE" to "/files/$HOME",
-            "/files/$LEGACY_PROJECTS/" to "/files/$WORKSPACES/",
-        )
-        migrateSessions(File(filesDir, "agent/sessions"), rewrites)
+        migrateSessions(File(filesDir, "agent/sessions"))
     }
 
-    private fun migrateSessions(sessionRoot: File, rewrites: List<Pair<String, String>>) {
+    private fun migrateSessions(sessionRoot: File) {
         if (!sessionRoot.isDirectory) return
         val directories = sessionRoot.listFiles()?.filter { it.isDirectory }.orEmpty()
         for (directory in directories) {
@@ -42,7 +38,7 @@ object StorageMigration {
                 val header = runCatching { JSONObject(lines.first()) }.getOrNull() ?: continue
                 val cwd = header.optString("cwd")
                 if (cwd.isBlank()) continue
-                val migratedCwd = rewrites.fold(cwd) { value, (from, to) -> value.replace(from, to) }
+                val migratedCwd = StorageCwdMigration.migrate(cwd)
                 if (migratedCwd != cwd) {
                     header.put("cwd", migratedCwd)
                     val content = buildString {
@@ -77,4 +73,15 @@ object StorageMigration {
         }
         return "--$encoded--"
     }
+}
+
+internal object StorageCwdMigration {
+    private val legacyWorkspace = Regex("(/files/)workspace(?=/|$)")
+    private val legacyProjects = Regex("(/files/)projects(?=/|$)")
+    private val brokenWorkspaces = Regex("(/files/)homes(?=/|$)")
+
+    fun migrate(cwd: String): String = cwd
+        .replace(legacyWorkspace, "$1home")
+        .replace(legacyProjects, "$1workspaces")
+        .replace(brokenWorkspaces, "$1workspaces")
 }

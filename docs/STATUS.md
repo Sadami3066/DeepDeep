@@ -1,5 +1,14 @@
 # Status
 
+## Done: P11 skills, workspace settings, app tools
+
+- Skills: 技能页从抽屉进入；zip 安装（单技能、路径/大小校验）到 `files/skills`；全局开关复制到 `files/agent/skills`；删除清理仓库与所有启用副本
+- Workspace settings: 长按工作区「设置」替代「新建会话」；项目技能 bottom sheet（只列未全局技能，复制到 `.pi/skills`）；AGENTS.md bottom sheet（64KB、override 优先、空内容删除）
+- App tools: `ask_user_question`（DSH schema，全 App bottom sheet，题库/多选/自定义/跳过/取消）与 `schedule_create/list/update/delete`（只落库并计算 nextRunAt，不执行）
+- Storage migration: fixed `/files/workspace` prefix matching `/files/workspaces`; repairs sessions previously rewritten to `/files/homes` back to `/files/workspaces`
+- Docs: 新增 `docs/TOOLS.md`；重写 `docs/SKILLS.md`、`docs/SCHEDULING.md`；更新架构/UI/测试说明
+- Evidence: `artifacts/validation/round9/`
+
 ## Done: P10.2 final polish
 
 - Settings: removed 功能 / 连接器 / 权限 rows
@@ -85,9 +94,10 @@
 ## Checks
 
 - `verifyModuleBoundaries` pass
-- `:runtime:testDebugUnitTest`, `:app:testDebugUnitTest`, `:shell:testDebugUnitTest` pass
+- `:runtime:testDebugUnitTest`, `:app:testDebugUnitTest`, `:shell:testDebugUnitTest` pass（166 tests：105 app / 43 runtime / 18 shell）
 - `lintDebug` 0 errors
 - `assembleDebug` / `assembleRelease` pass
+- P11 device smoke: zip install, global copy on/off, WorkA project skill copy, AGENTS.md saved into session `<project_context>`, session `<skills>` contains demo-skill, ask sheet answered, schedule JSON contains daily/weekdays tasks
 - Device smoke: expandable workspace tree + per-workspace session creation, workspace pin ordering persistence across restart, session pin icon, custom dialog above keyboard, runtime page layout, masked Provider key, unified search fields, segmented control without ripple
 - Perf smoke (gfxinfo): drawer/IME/scroll/streaming scenarios captured before/after in `artifacts/validation/perf/`
 - Markdown/visual smoke: light/dark empty state with mascot, new icons in drawer/settings, path table rendering with clickable workspace refs and no code chips
@@ -116,6 +126,6 @@ Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 ## Pending
 
 - root: `ShellExecutor` extension point; implementation deferred until root testing is authorized
-- scheduled tasks: implementation per `docs/SCHEDULING.md` (service tick + catch-up)
-- skills: implementation per `docs/SKILLS.md` (global/workspace CRUD, enable/disable)
+- scheduled tasks: execution engine + task page + hidden schedule workspace per `docs/SCHEDULING.md`
+- skills: editing/creation, `.md` import, market, hot reload
 - proactive cron scheduling tied to interaction style

@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -51,6 +52,9 @@ import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
+import io.github.whywood.deepdeep.ui.questions.AskQuestionSheet
+import io.github.whywood.deepdeep.ui.skills.SkillsScreen
+import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
@@ -149,6 +153,8 @@ internal fun DeepDeepApp(
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
+    val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
+    val activeQuestion = pendingQuestions.firstOrNull()
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
         initialValue = PersonalizationUi(),
     )
@@ -401,6 +407,26 @@ internal fun DeepDeepApp(
                         navigator.reset(AppDestination.Chat)
                     },
                 )
+
+                AppDestination.Skills -> SkillsScreen(
+                    repository = graph.skillRepository,
+                    onBack = ::back,
+                )
+
+                is AppDestination.WorkspaceSettings -> {
+                    val workspace = state.workspaces.firstOrNull { it.id == destination.workspaceId }
+                    if (workspace == null) {
+                        LaunchedEffect(destination.workspaceId) { navigator.pop() }
+                    } else {
+                        WorkspaceSettingsScreen(
+                            workspace = workspace,
+                            skillRepository = graph.skillRepository,
+                            agentDocStore = graph.agentDocStore,
+                            onBack = ::back,
+                            onOpenSkills = { navigator.push(AppDestination.Skills) },
+                        )
+                    }
+                }
             }
         }
 
@@ -444,6 +470,10 @@ internal fun DeepDeepApp(
                         drawerOpen = false
                         navigator.push(AppDestination.Search)
                     },
+                    onOpenSkills = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Skills)
+                    },
                     onCreateWorkspace = {
                         drawerOpen = false
                         workspaceCreateOpen = true
@@ -462,6 +492,10 @@ internal fun DeepDeepApp(
                     onNewSessionInWorkspace = { workspaceId ->
                         drawerOpen = false
                         chatViewModel.newSession(workspaceId)
+                    },
+                    onWorkspaceSettings = { workspaceId ->
+                        drawerOpen = false
+                        navigator.push(AppDestination.WorkspaceSettings(workspaceId))
                     },
                     onRenameWorkspace = { workspaceId ->
                         drawerOpen = false
@@ -539,6 +573,15 @@ internal fun DeepDeepApp(
                     }
                 },
             )
+        }
+        activeQuestion?.let { pending ->
+            key(pending.requestId) {
+                AskQuestionSheet(
+                    pending = pending,
+                    onAnswer = { answers -> graph.questionCenter.answer(pending.requestId, answers) },
+                    onCancel = { graph.questionCenter.cancel(pending.requestId) },
+                )
+            }
         }
     }
     }

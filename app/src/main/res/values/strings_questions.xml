@@ -1,0 +1,14 @@
+<resources>
+    <string name="ask_title">需要你的回答</string>
+    <string name="ask_progress">%1$d / %2$d</string>
+    <string name="ask_custom_label">其他</string>
+    <string name="ask_custom_placeholder">输入自定义回答…</string>
+    <string name="ask_recommended">推荐</string>
+    <string name="ask_multi_hint">可多选</string>
+    <string name="ask_validation">请选择或填写回答</string>
+    <string name="ask_skip">跳过</string>
+    <string name="ask_previous">上一题</string>
+    <string name="ask_next">下一题</string>
+    <string name="ask_submit">提交</string>
+    <string name="ask_cancel">取消</string>
+</resources>

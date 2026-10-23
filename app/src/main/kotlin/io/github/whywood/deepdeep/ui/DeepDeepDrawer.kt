@@ -104,10 +104,12 @@ fun DeepDeepDrawer(
     onChat: () -> Unit,
     onArchived: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenSkills: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
     onNewSessionInWorkspace: (String) -> Unit,
+    onWorkspaceSettings: (String) -> Unit,
     onRenameWorkspace: (String) -> Unit,
     onDeleteWorkspace: (String) -> Unit,
     onConversation: (String) -> Unit,
@@ -207,7 +209,7 @@ fun DeepDeepDrawer(
             DrawerNavItem(
                 icon = DdIcons.Sparkles,
                 label = stringResource(R.string.drawer_nav_skills),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
+                onClick = onOpenSkills,
                 testTag = "drawer_skills",
             )
             DrawerNavItem(
@@ -252,6 +254,7 @@ fun DeepDeepDrawer(
                         onDismissMenu = { workspaceMenuTarget = null },
                         onTogglePinned = { onToggleWorkspacePinned(entry.workspace.id) },
                         onNewSession = { onNewSessionInWorkspace(entry.workspace.id) },
+                        onSettings = { onWorkspaceSettings(entry.workspace.id) },
                         onRename = { onRenameWorkspace(entry.workspace.id) },
                         onDelete = { onDeleteWorkspace(entry.workspace.id) },
                     )
@@ -361,6 +364,7 @@ private fun DrawerWorkspaceRow(
     onDismissMenu: () -> Unit,
     onTogglePinned: () -> Unit,
     onNewSession: () -> Unit,
+    onSettings: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -463,13 +467,13 @@ private fun DrawerWorkspaceRow(
                 testTag = "workspace_action_pin",
             )
             DdMenuItem(
-                text = stringResource(R.string.drawer_workspace_new_session),
+                text = stringResource(R.string.drawer_workspace_settings),
                 onClick = {
                     onDismissMenu()
-                    onNewSession()
+                    onSettings()
                 },
-                icon = DdIcons.Plus,
-                testTag = "workspace_action_new_session",
+                icon = DdIcons.Settings,
+                testTag = "workspace_action_settings",
             )
             if (!workspace.isHome) {
                 DdMenuItem(

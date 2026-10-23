@@ -45,7 +45,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 10. 安全：Key 不明文落盘、不进 logcat、不进 APK。
 11. 工作区树：点击工作区行展开/收起，可同时展开多个；行尾 chevron 旋转；工作区行展开后 + 在该工作区新建会话。
 12. 置顶：长按工作区置顶/取消置顶（pin 图标 + 排到最前，重启仍保留）；长按会话置顶后行尾显示 pin 图标，仅在所属工作区内排序。
-13. 新建入口：顶栏无 +；只可从抽屉工作区行展开后的 +（或长按工作区菜单「新建会话」）创建，Home 也如此。
+13. 新建入口：顶栏无 +；只可从抽屉工作区行展开后的 + 创建，Home 也如此；长按工作区菜单不再提供「新建会话」。
 14. 旧 UI 清理：设置运行环境页无嵌套色块/错位；厂商已保存 key 显示掩码占位；会话搜索、归档搜索、厂商搜索使用同一胶囊搜索框；对话框弹键盘时按钮仍可见。
 15. 性能：抽屉连开合 10 次、键盘聚焦/收起 5 次、长会话滚动 10 秒，用 `dumpsys gfxinfo <pkg> reset` → 操作 → `dumpsys gfxinfo <pkg>` 对比 Janky/Slow UI；流式回答期间不应有整段卡死。
 16. Markdown：反引号内相对/绝对路径不再显示彩色代码胶囊；`attachments/…`、`files/home/…`、`files/workspaces/…` 的 host 绝对路径均可点击打开文件预览；普通行内代码底色更轻；多反引号 code span 正常。
@@ -61,10 +61,18 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 26. 聊天设置：页面只保留「过程自动折叠」一个开关，且默认开启；个性化提示词无 8000 字上限，计数只显示字数；附件最多 15 个。
 27. 过程折叠时机：发一个先调用 sleep、再输出长回答的请求；最后结果文本开始流式时过程立即折叠且回答在过程外继续增长；关闭「过程自动折叠」后结束后过程仍展开。
 28. 字体：默认 Newsreader；字体页 5 行预览均显示「我思故我在 / I think, therefore I am.」，中文在行右下；设置页无功能/连接器/权限。
+29. Skills：抽屉「技能」进入；右上角安装一个合法 `.zip`；仓库出现技能且开关默认关闭；`run-as` 确认 `files/skills/<id>/SKILL.md`、`files/agent/skills` 不存在。
+30. Skills 全局：打开开关后 `files/agent/skills/<id>` 出现；关闭后消失；重装同名技能会更新仓库与已启用副本。
+31. Workspace settings：长按工作区菜单有「设置」、无「新建会话」；页面显示项目技能和 AGENTS.md 计数。
+32. 项目技能：关闭全局后，项目技能 sheet 只列未全局技能；勾选保存后 `files/workspaces/<id>/.pi/skills/<id>` 存在；新建会话 JSONL 的 `<skills>` 含该技能；取消勾选后副本消失。
+33. AGENTS.md：编辑并保存后工作区根目录出现文件；新建会话 JSONL 的 `<project_context>` 含保存内容；有 `AGENTS.override.md` 时显示实际文件名。
+34. ask_user_question：聊天要求模型提问；sheet 显示题干/选项/自定义/跳过/提交；选择后工具继续并回答；关闭或跳过会结束等待；App 不在前台时不挂起。
+35. schedule：聊天创建 daily/weekdays 任务；`files/schedules/schedules.json` 有正确 `nextRunAt` 与触发；`schedule_list/update/delete` 可操作；工具结果包含 `execution: "not_enabled"`，不声称已执行。
+36. 重启迁移：工作区 AGENTS.md、项目技能和工作区会话在重启后仍生效；`files/agent/sessions` 下不出现 `files-homes-*` 目录，`/files/workspaces/...` 不被误写。
 
 ## 证据
 
-`artifacts/validation/polish/`、`artifacts/validation/round6/`，设备日志用：
+`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`，设备日志用：
 
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat

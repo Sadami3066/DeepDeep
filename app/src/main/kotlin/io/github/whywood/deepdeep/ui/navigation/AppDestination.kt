@@ -59,8 +59,20 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Skills : AppDestination {
+        override val routeKey: String = "skills"
+        override val depth: Int = 1
+    }
+
+    data class WorkspaceSettings(val workspaceId: String) : AppDestination {
+        override val routeKey: String = "workspaces/$workspaceId/settings"
+        override val depth: Int = 1
+    }
+
     companion object {
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
+        private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
+        private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
 
         fun fromRouteKey(routeKey: String): AppDestination? = when {
             routeKey == Chat.routeKey -> Chat
@@ -73,8 +85,17 @@ sealed interface AppDestination {
             routeKey == ChatSettings.routeKey -> ChatSettings
             routeKey == Privacy.routeKey -> Privacy
             routeKey == Search.routeKey -> Search
+            routeKey == Skills.routeKey -> Skills
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
+
+            routeKey.startsWith(WORKSPACE_SETTINGS_PREFIX) && routeKey.endsWith(WORKSPACE_SETTINGS_SUFFIX) -> {
+                val id = routeKey
+                    .removePrefix(WORKSPACE_SETTINGS_PREFIX)
+                    .removeSuffix(WORKSPACE_SETTINGS_SUFFIX)
+                WorkspaceSettings(id).takeIf { id.isNotBlank() }
+            }
+
             else -> null
         }
     }

@@ -2,7 +2,7 @@
 
 ## 会话与工作目录（Home / Workspace）
 
-- 工作目录从 `workspace` 更名 `home`；数据迁移在 AppGraph 初始化前执行：`files/workspace`→`files/home`，旧 session 目录按 cwd 编码重命名并重写 JSONL 头的 cwd。
+- 工作目录从 `workspace` 更名 `home`；数据迁移在 AppGraph 初始化前执行：`files/workspace`→`files/home`，旧 session 目录按 cwd 编码重命名并重写 JSONL 头的 cwd。迁移只匹配完整路径段，不能把 `files/workspaces/...` 误写成 `files/homes/...`；旧版本写坏的 `/files/homes` 会话会修复回 `/files/workspaces`。
 - Home 是默认工作区；用户在抽屉「工作区」里可新建/重命名/删除 workspace，目录为 `files/workspaces/<id>`，WorkspaceStore(DataStore) 只存 id/name/cwd/createdAt；旧 `files/projects`、旧 `projects` DataStore 与旧 session 目录/cwd 均做幂等迁移。
 - 每条 session 绑定创建时的 cwd（home 或某个 workspace）；session 文件仍由 pi SDK 按 `AgentPaths.sessionsForCwd()` 存放在 `agent/sessions/<encoded-cwd>/`，列表由 `SessionCatalog` 按已知 cwd 聚合后叠加 SessionMetaStore（置顶/归档/标题覆盖）。
 - 抽屉按工作区分组展示全部未归档会话（`ChatViewModel.refreshSessions()` 读取 `runtime.allSessions()`，用 session.cwd 匹配工作区）；工作区置顶是 UI 偏好，存 `AppPreferences`（`pinned_workspace_ids`），会话置顶仍由 SessionMetaStore 持久化。
@@ -61,6 +61,21 @@ Compose ChatScreen
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
 - SDK 的 hook extra 不会自动包 section 标签，因此包装在 runtime 内完成；旧 `deepdeep_environment` 已移除。
 - 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效；修改个性化不需要重启会话。Skills 的 `<skills>` section 仍由 SDK 注入。
+
+## Skills 与工作区规范
+
+- 技能仓库 `files/skills/<id>` 不被 SDK 扫描；全局开启复制到 `files/agent/skills/<id>`，项目开启复制到 `<cwd>/.pi/skills/<id>`。
+- 项目技能只列未全局启用的仓库技能；全局开启会移除对应项目副本，避免关闭全局后项目副本继续生效。
+- 使用复制而非软链接：PRoot 只绑定当前 cwd 到 `/workspace`，仓库在 cwd 外，软链接内的脚本在 `bash` 中无法解析。
+- AGENTS.md 由 SDK 原生读取：先 `agentDir`，再 cwd 祖先；每个目录按 `AGENTS.override.md`、`AGENTS.md`、`AGENTS.MD`、`CLAUDE.md`、`CLAUDE.MD` 取第一个。App 编辑工作区根目录的有效文件，保存后新会话生效。
+- 技能/AGENTS.md 都在 `createAgentSession` 时加载；已有会话保持旧快照，不自动重建。
+
+## App 工具
+
+- `PiSessionEngine` 在 `defaultCodingTools` 后追加 `appTools(cwd, AppToolContext)`；工具由 `CodingTool` 定义，不修改 SDK。
+- `QuestionCenter` 维护待答队列并暴露 `StateFlow`，`ask_user_question` 工具等待 UI 回答；App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
+- `ScheduleStore` 保存 `files/schedules/schedules.json`；schedule 工具只落库并计算 `nextRunAt`，没有调度器。
+- 工具分类与契约见 `docs/TOOLS.md`。
 
 ## 通知
 
@@ -124,6 +139,8 @@ filesDir/
   home/             cwd，同时是 Alpine /workspace
   workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
+  skills/<id>/      技能仓库（SDK 不扫描）
+  schedules/        schedules.json
   linux/rootfs/     Alpine rootfs
 ```
 
@@ -131,14 +148,16 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 
 ## 设计中的系统
 
-- 定时任务：`docs/SCHEDULING.md`（服务内调度 + 下次打开补跑；本轮不实现）。
-- Skills：`docs/SKILLS.md`（App 管文件与 UI，SDK 已负责扫描和 `<skills>` 注入；本轮不实现）。
+- 定时任务：`docs/SCHEDULING.md`（工具已落库；执行器、任务页、隐藏工作区后续实现）。
+- Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现）。
+- 工具分类：`docs/TOOLS.md`。
 
 ## 工具
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`
 - `bash`：`LinuxShellExecutor` → `LinuxEnvironment` → PRoot/Alpine
-- 不注册 `device_info`、`open_app` 等自定义工具
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`
+- 不注册 `device_info`、`open_app` 等 Android 能力工具
 
 ## root 扩展
 

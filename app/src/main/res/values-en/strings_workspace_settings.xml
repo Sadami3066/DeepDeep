@@ -1,0 +1,36 @@
+<resources>
+    <string name="workspace_settings_label">Workspace settings</string>
+    <string name="workspace_settings_back">Back</string>
+    <string name="workspace_settings_skills">Project skills</string>
+    <string name="workspace_settings_skills_count">%1$d</string>
+    <string name="workspace_settings_skills_none">None enabled</string>
+    <string name="workspace_settings_agents_doc">AGENTS.md</string>
+    <string name="workspace_settings_agents_set">Set</string>
+    <string name="workspace_settings_agents_unset">Not set</string>
+    <string name="workspace_settings_loading">…</string>
+
+    <string name="project_skills_title">Project skills</string>
+    <string name="project_skills_note">Changes apply to new sessions.</string>
+    <string name="project_skills_save">Save</string>
+    <string name="project_skills_save_failed">Save failed. Try again.</string>
+    <string name="project_skills_empty_title">No skills available yet</string>
+    <string name="project_skills_empty_hint">Install skills first, then choose which project skills this workspace enables.</string>
+    <string name="project_skills_empty_action">Install skills</string>
+
+    <string name="agents_doc_title">AGENTS.md</string>
+    <string name="agents_doc_default_file">AGENTS.md</string>
+    <string name="agents_doc_placeholder">Write AGENTS.md for this workspace…</string>
+    <string name="agents_doc_counter">%1$d chars</string>
+    <string name="agents_doc_note">Changes apply to new sessions.</string>
+    <string name="agents_doc_save">Save</string>
+    <string name="agents_doc_delete">Delete</string>
+    <string name="agents_doc_cancel">Cancel</string>
+    <string name="agents_doc_too_large">Content exceeds the 64 KB limit.</string>
+    <string name="agents_doc_save_failed">Save failed. Try again.</string>
+    <string name="agents_doc_delete_title">Delete AGENTS.md?</string>
+    <string name="agents_doc_delete_message">This deletes the AGENTS document for this workspace.</string>
+    <string name="agents_doc_delete_confirm">Delete</string>
+    <string name="agents_doc_discard_title">Discard changes?</string>
+    <string name="agents_doc_discard_message">Your edits have not been saved.</string>
+    <string name="agents_doc_discard_confirm">Discard</string>
+</resources>

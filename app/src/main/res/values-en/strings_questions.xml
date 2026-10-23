@@ -1,0 +1,14 @@
+<resources>
+    <string name="ask_title">Question</string>
+    <string name="ask_progress">%1$d / %2$d</string>
+    <string name="ask_custom_label">Other</string>
+    <string name="ask_custom_placeholder">Type your own answer…</string>
+    <string name="ask_recommended">Recommended</string>
+    <string name="ask_multi_hint">Select one or more</string>
+    <string name="ask_validation">Choose an option or type an answer</string>
+    <string name="ask_skip">Skip</string>
+    <string name="ask_previous">Previous</string>
+    <string name="ask_next">Next</string>
+    <string name="ask_submit">Submit</string>
+    <string name="ask_cancel">Cancel</string>
+</resources>

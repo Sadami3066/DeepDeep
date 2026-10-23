@@ -1,0 +1,35 @@
+<resources>
+    <string name="skills_title">Skills</string>
+    <string name="skills_back">Back</string>
+    <string name="skills_install">Install skill</string>
+    <string name="skills_empty_title">No skills yet</string>
+    <string name="skills_empty_hint">Install a skill pack to teach the assistant new workflows</string>
+    <string name="skills_install_hint">Choose a .zip skill pack</string>
+    <string name="skills_footer_warning">Skills can ask the assistant to read files or run commands. Only install from sources you trust.</string>
+    <string name="skills_footer_session">Takes effect in new chats</string>
+    <string name="skills_global_enabled">Enabled globally</string>
+    <string name="skills_global_disabled">Not enabled globally</string>
+    <string name="skills_manual">Manual</string>
+    <string name="skills_install_success">"%1$s" installed</string>
+    <string name="skills_install_failed_title">Install failed</string>
+    <string name="skills_error_title">Something went wrong</string>
+    <string name="skills_install_too_large">Skill pack must be under 32 MB</string>
+    <string name="skills_install_unreadable">Could not read the selected file</string>
+    <string name="skills_error_not_zip">Not a valid skill pack (needs .zip)</string>
+    <string name="skills_error_empty">The skill pack is empty</string>
+    <string name="skills_error_no_skill">The skill pack has no SKILL.md</string>
+    <string name="skills_error_multiple_skills">The skill pack contains more than one skill</string>
+    <string name="skills_error_missing_description">SKILL.md is missing a description</string>
+    <string name="skills_error_unsafe_path">The skill pack contains unsafe paths</string>
+    <string name="skills_error_io">Could not read or write files</string>
+    <string name="skills_delete_title">Delete skill</string>
+    <string name="skills_delete_message">"%1$s" will be deleted and cannot be recovered.</string>
+    <string name="skills_delete_confirm">Delete</string>
+    <string name="skills_cancel">Cancel</string>
+    <string name="skills_close">Close</string>
+    <string name="skills_detail_status">Status</string>
+    <string name="skills_detail_enabled">Enabled</string>
+    <string name="skills_detail_disabled">Disabled</string>
+    <string name="skills_detail_content">SKILL.md</string>
+    <string name="skills_detail_empty">No content</string>
+</resources>

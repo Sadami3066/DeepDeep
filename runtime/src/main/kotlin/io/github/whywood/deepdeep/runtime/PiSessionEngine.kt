@@ -36,6 +36,7 @@ class PiSessionEngine(
     private val shellExecutor: ShellExecutor?,
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
+    private val toolContext: AppToolContext? = null,
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -48,12 +49,19 @@ class PiSessionEngine(
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
-        val tools = defaultCodingTools(
-            cwd = cwd,
-            fs = fs,
-            mutationQueue = FileMutationQueue(),
-            shellExecutor = activeShell,
-        )
+        val tools = buildList {
+            addAll(
+                defaultCodingTools(
+                    cwd = cwd,
+                    fs = fs,
+                    mutationQueue = FileMutationQueue(),
+                    shellExecutor = activeShell,
+                ),
+            )
+            toolContext?.let { context ->
+                addAll(appTools(cwd, context))
+            }
+        }
         return createAgentSession(
             AgentSessionOptions(
                 cwd = cwd,

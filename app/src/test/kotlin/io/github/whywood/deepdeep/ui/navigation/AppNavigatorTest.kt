@@ -52,9 +52,12 @@ class AppNavigatorTest {
             AppDestination.ProviderDetail("openai"),
             AppDestination.Archived,
             AppDestination.RuntimeSettings,
+            AppDestination.Skills,
+            AppDestination.WorkspaceSettings("workspace-1"),
         )
         destinations.forEach { destination ->
             assertEquals(destination, AppDestination.fromRouteKey(destination.routeKey))
         }
+        assertEquals(null, AppDestination.fromRouteKey("workspaces//settings"))
     }
 }

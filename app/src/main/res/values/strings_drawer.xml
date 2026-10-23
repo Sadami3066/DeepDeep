@@ -29,6 +29,7 @@
     <string name="drawer_search_clear">清除搜索</string>
     <string name="drawer_coming_soon">即将推出</string>
     <string name="drawer_workspace_new_session">新建会话</string>
+    <string name="drawer_workspace_settings">设置</string>
     <string name="drawer_workspace_empty">暂无会话</string>
     <string name="workspace_section">工作区</string>
     <string name="workspace_create">新建工作区</string>
