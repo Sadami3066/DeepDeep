@@ -84,6 +84,7 @@ private sealed interface FilePreview {
 @Composable
 internal fun AttachmentCards(
     attachments: List<AttachmentRef>,
+    root: File,
     onOpen: (AttachmentRef) -> Unit,
 ) {
     FlowRow(
@@ -94,9 +95,9 @@ internal fun AttachmentCards(
     ) {
         attachments.forEach { attachment ->
             if (attachment.kind == AttachmentKind.IMAGE) {
-                ImageAttachmentCard(attachment = attachment, onOpen = onOpen)
+                ImageAttachmentCard(attachment = attachment, root = root, onOpen = onOpen)
             } else {
-                FileAttachmentCard(attachment = attachment, onOpen = onOpen)
+                FileAttachmentCard(attachment = attachment, root = root, onOpen = onOpen)
             }
         }
     }
@@ -105,12 +106,13 @@ internal fun AttachmentCards(
 @Composable
 private fun ImageAttachmentCard(
     attachment: AttachmentRef,
+    root: File,
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
-        val file = attachmentFile(context, attachment)
+        val file = attachmentFile(context, attachment, root)
         value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
     }
     DdPressable(
@@ -139,6 +141,7 @@ private fun ImageAttachmentCard(
 @Composable
 private fun FileAttachmentCard(
     attachment: AttachmentRef,
+    root: File,
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -198,6 +201,7 @@ private fun FileAttachmentCard(
 @Composable
 internal fun AttachmentChips(
     attachments: List<AttachmentRef>,
+    root: File,
     onRemove: (String) -> Unit,
     onOpen: (AttachmentRef) -> Unit,
     modifier: Modifier = Modifier,
@@ -212,6 +216,7 @@ internal fun AttachmentChips(
         attachments.forEach { attachment ->
             AttachmentPreviewCard(
                 attachment = attachment,
+                root = root,
                 onRemove = { onRemove(attachment.id) },
                 onOpen = { onOpen(attachment) },
             )
@@ -222,6 +227,7 @@ internal fun AttachmentChips(
 @Composable
 private fun AttachmentPreviewCard(
     attachment: AttachmentRef,
+    root: File,
     onRemove: () -> Unit,
     onOpen: () -> Unit,
 ) {
@@ -240,7 +246,7 @@ private fun AttachmentPreviewCard(
         when (attachment.kind) {
             AttachmentKind.IMAGE -> {
                 val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
-                    val file = attachmentFile(context, attachment)
+                    val file = attachmentFile(context, attachment, root)
                     value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
                 }
                 val image = bitmap
@@ -260,7 +266,7 @@ private fun AttachmentPreviewCard(
 
             AttachmentKind.TEXT -> {
                 val snippet by produceState(initialValue = "", attachment.id) {
-                    val file = attachmentFile(context, attachment)
+                    val file = attachmentFile(context, attachment, root)
                     value = withContext(Dispatchers.IO) {
                         runCatching {
                             file.bufferedReader().use { reader ->
@@ -509,8 +515,8 @@ private fun attachmentIcon(kind: AttachmentKind) = when (kind) {
     else -> DdIcons.File
 }
 
-private fun attachmentFile(context: Context, attachment: AttachmentRef): File =
-    File(File(context.filesDir, "workspace"), attachment.path)
+private fun attachmentFile(context: Context, attachment: AttachmentRef, root: File): File =
+    File(root, attachment.path)
 
 private fun isMarkdownAttachment(attachment: AttachmentRef): Boolean {
     val name = attachment.name.lowercase()

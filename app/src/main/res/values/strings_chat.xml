@@ -51,6 +51,7 @@
     <string name="assistant_stop">停止</string>
     <string name="assistant_stopped">已停止</string>
     <string name="assistant_thinking_chip">思考 · %1$s</string>
+    <string name="assistant_thinking_max">最大</string>
     <string name="assistant_thinking_high">高</string>
     <string name="assistant_thinking_low">低</string>
     <string name="assistant_thinking_medium">中</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import java.io.File
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
+import io.github.whywood.deepdeep.ui.projects.ProjectPickerDialog
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
@@ -71,6 +73,10 @@ internal fun DeepDeepApp(
         },
     )
     val state by chatViewModel.state.collectAsStateWithLifecycle()
+    val attachmentRoot = remember(state.conversationCwd) {
+        state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File) ?: graph.homeDir
+    }
+    var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -87,6 +93,7 @@ internal fun DeepDeepApp(
     val drawerWidthPx = with(density) { 304.dp.toPx() }
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    var projectsOpen by remember { mutableStateOf(false) }
     val drawerProgress by animateFloatAsState(
         targetValue = if (drawerOpen) 1f else 0f,
         animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
@@ -142,9 +149,13 @@ internal fun DeepDeepApp(
                     attachments = state.attachments,
                     onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
                     onRemoveAttachment = chatViewModel::removeAttachment,
-                    onOpenAttachment = { previewAttachment = it },
+                    onOpenAttachment = {
+                        previewRoot = attachmentRoot
+                        previewAttachment = it
+                    },
+                    attachmentRoot = attachmentRoot,
                     onOpenFile = { raw ->
-                        val resolved = graph.attachmentStore.resolve(raw)
+                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
                             Toast.makeText(
                                 context,
@@ -152,6 +163,7 @@ internal fun DeepDeepApp(
                                 Toast.LENGTH_SHORT,
                             ).show()
                         } else {
+                            previewRoot = attachmentRoot
                             previewAttachment = resolved
                         }
                     },
@@ -278,6 +290,11 @@ internal fun DeepDeepApp(
                 activeConversationId = state.conversationId,
                 historyLoaded = state.historyLoaded,
                 archivedCount = state.archivedCount,
+                currentProjectName = state.projects.firstOrNull { it.id == state.currentProjectId }?.name ?: "Home",
+                onOpenProjects = {
+                    drawerOpen = false
+                    projectsOpen = true
+                },
                 userName = "Milous",
                 onChat = ::openChat,
                 onArchived = {
@@ -300,13 +317,32 @@ internal fun DeepDeepApp(
                 )
             }
         }
+        if (projectsOpen) {
+            ProjectPickerDialog(
+                projects = state.projects,
+                currentProjectId = state.currentProjectId,
+                onSelect = { projectId ->
+                    projectsOpen = false
+                    chatViewModel.selectProject(projectId)
+                },
+                onCreate = { name ->
+                    projectsOpen = false
+                    chatViewModel.createProject(name)
+                },
+                onDismiss = { projectsOpen = false },
+            )
+        }
         previewAttachment?.let { attachment ->
+            val root = previewRoot ?: attachmentRoot
             AttachmentPreviewDialog(
                 attachment = attachment,
-                file = graph.attachmentStore.file(attachment),
-                onDismiss = { previewAttachment = null },
+                file = graph.attachmentStore.file(attachment, root),
+                onDismiss = {
+                    previewAttachment = null
+                    previewRoot = null
+                },
                 onShare = {
-                    val intent = graph.attachmentStore.shareIntent(attachment)
+                    val intent = graph.attachmentStore.shareIntent(attachment, root)
                     if (intent != null) {
                         context.startActivity(Intent.createChooser(intent, shareChooserTitle))
                     }

@@ -14,33 +14,33 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
-import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
+import io.github.whywood.deepdeep.runtime.RuntimeProject
+import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-private data class CachedConversation(
-    val messages: List<AssistantMessage>,
-    val title: String,
-    val nextMessageId: Long,
-    val nextStepId: Long,
+private data class ConversationSnapshot(
+    val messages: List<AssistantMessage> = emptyList(),
+    val title: String = "",
+    val sending: Boolean = false,
+    val activity: String? = null,
+    val activityStartedAt: Long? = null,
 )
 
 class ChatViewModel(
@@ -54,18 +54,16 @@ class ChatViewModel(
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
 
-    private var nextMessageId = 0L
-    private var nextStepId = 0L
-    private var activeAssistantId: Long? = null
-    private var activeRunId: String? = null
-    private val conversationCache = mutableMapOf<String, CachedConversation>()
-    private val openMutex = Mutex()
-    private var openingJob: Job? = null
-    private var pendingSessionId: String? = null
-    private var sessionEpoch = 0
+    private val conversationCache = mutableMapOf<String, ConversationSnapshot>()
+    private val sessionOpenJobs = mutableMapOf<String, Job>()
 
     init {
-        viewModelScope.launch { runtime.events.collect(::handle) }
+        viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
+        viewModelScope.launch {
+            runtime.busySessionIds.collect { ids ->
+                mutableState.update { it.copy(busySessionIds = ids) }
+            }
+        }
         viewModelScope.launch {
             modelConfigStore.config.collect { applyConfig(it) }
         }
@@ -76,7 +74,7 @@ class ChatViewModel(
                 val config = providers.resolveConfig(modelConfigStore.read())
                 modelConfigStore.save(config)
                 applyConfig(config)
-                loadHistory()
+                restoreInitialSession()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -104,12 +102,17 @@ class ChatViewModel(
     fun attach(uri: Uri) {
         val current = mutableState.value
         if (current.sending || current.switchingConversation) return
+        val root = current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
+        if (root == null) {
+            mutableState.update { it.copy(error = "正在准备会话，请稍候…") }
+            return
+        }
         if (current.attachments.size >= MAX_ATTACHMENTS) {
             mutableState.update { it.copy(error = "最多添加 5 个附件") }
             return
         }
         viewModelScope.launch {
-            when (val result = withContext(ioDispatcher) { attachmentStore.import(uri) }) {
+            when (val result = withContext(ioDispatcher) { attachmentStore.import(uri, root) }) {
                 is AttachmentImport.Imported -> mutableState.update {
                     if (it.attachments.size >= MAX_ATTACHMENTS) {
                         it.copy(error = "最多添加 5 个附件")
@@ -118,13 +121,8 @@ class ChatViewModel(
                     }
                 }
 
-                AttachmentImport.TooLarge -> mutableState.update {
-                    it.copy(error = "文件超过 25MB，无法添加")
-                }
-
-                AttachmentImport.Failed -> mutableState.update {
-                    it.copy(error = "无法读取该文件")
-                }
+                is AttachmentImport.TooLarge -> mutableState.update { it.copy(error = "附件超过 25MB，无法添加") }
+                is AttachmentImport.Failed -> mutableState.update { it.copy(error = "附件添加失败") }
             }
         }
     }
@@ -141,18 +139,21 @@ class ChatViewModel(
             mutableState.update { it.copy(error = "正在恢复会话，请稍候…") }
             return
         }
+        val sessionId = current.conversationId
+        if (sessionId == null) {
+            mutableState.update { it.copy(error = "会话尚未就绪，请稍候…") }
+            return
+        }
         if (current.sending || current.switchingConversation) return
         val text = current.input.trim()
         if (text.isEmpty()) return
         val prompt = buildPrompt(current.quote, current.attachments, text)
-        val userMessage = AssistantMessage(nextMessageId++, AssistantRole.USER, prompt)
-        val assistantId = nextMessageId++
-        activeAssistantId = assistantId
-        activeRunId = null
+        val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
+        val assistantId = nextId + 1
         val now = System.currentTimeMillis()
         mutableState.update {
             it.copy(
-                messages = it.messages + userMessage + AssistantMessage(
+                messages = it.messages + AssistantMessage(nextId, AssistantRole.USER, prompt) + AssistantMessage(
                     id = assistantId,
                     role = AssistantRole.ASSISTANT,
                     text = "",
@@ -170,108 +171,69 @@ class ChatViewModel(
                 conversationTitle = it.conversationTitle.ifBlank { titleFrom(text) },
             )
         }
+        cacheCurrentSession()
         viewModelScope.launch {
             try {
-                openingJob?.join()
-                runtime.send(prompt)
+                sessionOpenJobs[sessionId]?.join()
+                runtime.send(sessionId, prompt)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                finishWithError(activeRunId, error.message ?: "请求失败，请稍后重试。")
+                finishWithError(sessionId, error.message ?: "请求失败，请稍后重试。")
             }
         }
     }
 
     fun stop() {
-        runtime.stop()
+        mutableState.value.conversationId?.let(runtime::stop)
     }
 
     fun newChat() {
-        if (mutableState.value.sending) return
+        viewModelScope.launch {
+            cacheCurrentSession()
+            createSession(mutableState.value.currentProjectId)
+        }
+    }
+
+    fun selectProject(projectId: String) {
+        if (mutableState.value.currentProjectId == projectId) return
+        viewModelScope.launch {
+            cacheCurrentSession()
+            val projects = withContext(ioDispatcher) { runtime.projects() }
+            val project = projects.firstOrNull { it.id == projectId } ?: return@launch
+            mutableState.update { it.copy(currentProjectId = project.id, error = null) }
+            val sessions = withContext(ioDispatcher) { runtime.sessions(project.id) }
+            refreshProjectSessions(project, sessions)
+            val recent = sessions.firstOrNull()
+            if (recent != null) {
+                switchToSummary(recent)
+            } else {
+                createSession(project.id)
+            }
+        }
+    }
+
+    fun createProject(name: String) {
         viewModelScope.launch {
             try {
-                withContext(ioDispatcher) { runtime.newChat() }
-                resetForSession()
+                val project = withContext(ioDispatcher) { runtime.createProject(name) }
+                val projects = withContext(ioDispatcher) { runtime.projects() }
+                mutableState.update { it.copy(projects = projects) }
+                selectProject(project.id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "新建会话失败")) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: "创建项目失败")) }
             }
         }
     }
 
     fun openConversation(id: String) {
         val current = mutableState.value
-        if (current.sending || current.switchingConversation) return
-        if (current.historyLoaded && current.conversationId == id) return
-        val summary = (current.conversations + current.archivedConversations)
-            .firstOrNull { it.id == id } ?: return
+        if (current.conversationId == id && current.historyLoaded) return
+        val summary = (current.conversations + current.archivedConversations).firstOrNull { it.id == id } ?: return
         cacheCurrentSession()
-        activeAssistantId = null
-        activeRunId = null
-        val cached = conversationCache[id]
-        if (cached != null) {
-            nextMessageId = cached.nextMessageId
-            nextStepId = cached.nextStepId
-            mutableState.update {
-                it.copy(
-                    messages = cached.messages,
-                    conversationId = id,
-                    conversationTitle = cached.title.ifBlank { summary.title },
-                    historyLoaded = true,
-                    switchingConversation = false,
-                    sending = false,
-                    activity = null,
-                    activityStartedAt = null,
-                    error = null,
-                    quote = null,
-                    attachments = emptyList(),
-                )
-            }
-            openSession(summary, fresh = false)
-        } else {
-            openSession(summary, fresh = true)
-        }
-    }
-
-    private fun openSession(summary: ConversationSummary, fresh: Boolean) {
-        val epoch = ++sessionEpoch
-        pendingSessionId = summary.id
-        if (fresh) {
-            mutableState.update {
-                it.copy(switchingConversation = true, error = null, quote = null, attachments = emptyList())
-            }
-        }
-        openingJob = viewModelScope.launch {
-            try {
-                openMutex.withLock {
-                    if (epoch == sessionEpoch) {
-                        withContext(ioDispatcher) { runtime.open(summary.filePath) }
-                    }
-                }
-                if (epoch != sessionEpoch) return@launch
-                if (fresh) {
-                    loadHistory(minimumSwitchMillis = 220L)
-                } else {
-                    pendingSessionId = null
-                    refreshSessions()
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                if (epoch == sessionEpoch) {
-                    pendingSessionId = null
-                    mutableState.update {
-                        it.copy(
-                            switchingConversation = false,
-                            error = userFacingError(error.message ?: "打开会话失败"),
-                        )
-                    }
-                }
-            } finally {
-                if (epoch == sessionEpoch) pendingSessionId = null
-            }
-        }
+        switchToSummary(summary)
     }
 
     fun setModel(modelId: String) {
@@ -350,100 +312,464 @@ class ChatViewModel(
     }
 
     fun deleteSession(id: String) {
-        if (mutableState.value.sending) return
         viewModelScope.launch {
             val wasActive = mutableState.value.conversationId == id
             conversationCache.remove(id)
-            runCatching { runtime.deleteSession(id) }
+            if (wasActive) runtime.stop(id)
+            runCatching { withContext(ioDispatcher) { runtime.deleteSession(id) } }
             if (wasActive) {
-                resetForSession()
+                val projectId = mutableState.value.currentProjectId
+                val sessions = withContext(ioDispatcher) { runtime.sessions(projectId) }
+                val next = sessions.firstOrNull()
+                if (next != null) switchToSummary(next) else createSession(projectId)
             } else {
                 refreshSessions()
             }
         }
     }
 
-    private suspend fun loadHistory(minimumSwitchMillis: Long = 0L) {
-        val startedAt = System.currentTimeMillis()
-        val messages = runtime.history()
-        val sessions = runtime.sessions(includeArchived = false)
-        val allSessions = runtime.sessions(includeArchived = true)
-        val currentId = runtime.currentSessionId
-        val summary = allSessions.firstOrNull { it.id == currentId }
-        val remaining = minimumSwitchMillis - (System.currentTimeMillis() - startedAt)
-        if (remaining > 0L) delay(remaining)
-        nextMessageId = (messages.maxOfOrNull { it.id } ?: -1L) + 1
-        nextStepId = (messages.flatMap { it.steps }.maxOfOrNull { it.id } ?: -1L) + 1
+    private suspend fun restoreInitialSession() {
+        val projects = withContext(ioDispatcher) { runtime.projects() }
+        val sessions = withContext(ioDispatcher) {
+            projects.flatMap { project -> runtime.sessions(project.id) }
+        }
+        val recent = sessions.maxByOrNull { it.updatedAt }
+        val home = projects.firstOrNull { it.isHome } ?: projects.firstOrNull()
+        if (home == null) {
+            mutableState.update {
+                it.copy(ready = true, historyLoaded = true, error = "运行时未就绪")
+            }
+            return
+        }
+        val project = recent?.let { summary -> projects.firstOrNull { it.cwd == summary.cwd } } ?: home
         mutableState.update {
             it.copy(
                 ready = true,
-                messages = messages,
-                conversations = sessions,
-                archivedConversations = allSessions.filter { item -> item.archived },
-                archivedCount = allSessions.count { item -> item.archived },
-                conversationId = summary?.id ?: currentId,
-                conversationTitle = summary?.title ?: titleFrom(messages),
-                historyLoaded = true,
-                switchingConversation = false,
+                projects = projects,
+                currentProjectId = project.id,
+                conversationCwd = recent?.cwd ?: home.cwd,
+                conversations = sessions.filter { session -> session.cwd == project.cwd },
+                historyLoaded = recent != null,
             )
         }
-        cacheCurrentSession()
+        if (recent != null) {
+            switchToSummary(recent)
+        } else {
+            createSession(project.id)
+        }
     }
 
-    private suspend fun resetForSession(
-        conversationId: String? = null,
-        conversationTitle: String = "",
-    ) {
-        activeAssistantId = null
-        activeRunId = null
-        nextMessageId = 0
-        nextStepId = 0
+    private fun switchToSummary(summary: ConversationSummary) {
+        val cached = conversationCache[summary.id]
+        val projectId = mutableState.value.projects
+            .firstOrNull { project -> project.cwd == summary.cwd }
+            ?.id
+            ?: mutableState.value.currentProjectId
         mutableState.update {
             it.copy(
-                messages = emptyList(),
+                conversationId = summary.id,
+                conversationCwd = summary.cwd,
+                currentProjectId = projectId,
+                conversationTitle = cached?.title?.ifBlank { summary.title } ?: summary.title,
+                messages = cached?.messages ?: emptyList(),
+                sending = cached?.sending ?: false,
+                activity = cached?.activity,
+                activityStartedAt = cached?.activityStartedAt,
+                historyLoaded = cached != null,
+                switchingConversation = cached == null,
                 input = "",
                 quote = null,
                 attachments = emptyList(),
-                sending = false,
-                activity = null,
-                activityStartedAt = null,
                 error = null,
-                conversationId = conversationId,
-                conversationTitle = conversationTitle,
             )
         }
-        loadHistory()
+        openSession(summary)
     }
 
-    private suspend fun refreshSessions() {
-        val sessions = runtime.sessions(includeArchived = false)
-        val allSessions = runtime.sessions(includeArchived = true)
-        val currentId = runtime.currentSessionId
-        val summary = allSessions.firstOrNull { it.id == currentId }
-        val pending = pendingSessionId
-        val canApply = pending == null || summary?.id == pending
-        mutableState.update {
-            it.copy(
-                conversations = sessions,
-                archivedConversations = allSessions.filter { item -> item.archived },
-                archivedCount = allSessions.count { item -> item.archived },
-                conversationId = if (canApply) summary?.id ?: it.conversationId else it.conversationId,
-                conversationTitle = if (canApply) summary?.title ?: it.conversationTitle else it.conversationTitle,
-            )
+    private fun openSession(summary: ConversationSummary) {
+        if (sessionOpenJobs.containsKey(summary.id)) return
+        val cached = conversationCache[summary.id]
+        val job = viewModelScope.launch {
+            try {
+                withContext(ioDispatcher) { runtime.openSession(summary.filePath, summary.cwd) }
+                if (cached == null) {
+                    val messages = withContext(ioDispatcher) { runtime.history(summary.id) }
+                    val snapshot = ConversationSnapshot(
+                        messages = messages,
+                        title = summary.title.ifBlank { titleFrom(messages) },
+                    )
+                    conversationCache[summary.id] = snapshot
+                    if (mutableState.value.conversationId == summary.id) {
+                        mutableState.update {
+                            it.copy(
+                                messages = snapshot.messages,
+                                conversationTitle = snapshot.title,
+                                historyLoaded = true,
+                                switchingConversation = false,
+                            )
+                        }
+                    }
+                } else {
+                    if (mutableState.value.conversationId == summary.id) {
+                        mutableState.update { it.copy(historyLoaded = true, switchingConversation = false) }
+                    }
+                }
+                refreshSessions()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (mutableState.value.conversationId == summary.id) {
+                    mutableState.update {
+                        it.copy(switchingConversation = false, error = userFacingError(error.message ?: "打开会话失败"))
+                    }
+                }
+            } finally {
+                sessionOpenJobs.remove(summary.id)
+            }
         }
-        if (canApply) cacheCurrentSession()
+        sessionOpenJobs[summary.id] = job
+    }
+
+    private fun createSession(projectId: String) {
+        viewModelScope.launch {
+            try {
+                val opened = withContext(ioDispatcher) { runtime.newSession(projectId) }
+                val projectCwd = opened.cwd
+                conversationCache[opened.sessionId] = ConversationSnapshot()
+                mutableState.update {
+                    it.copy(
+                        conversationId = opened.sessionId,
+                        conversationCwd = projectCwd,
+                        currentProjectId = it.projects.firstOrNull { project -> project.cwd == projectCwd }?.id
+                            ?: projectId,
+                        conversationTitle = "",
+                        messages = emptyList(),
+                        sending = false,
+                        activity = null,
+                        activityStartedAt = null,
+                        historyLoaded = true,
+                        switchingConversation = false,
+                        input = "",
+                        quote = null,
+                        attachments = emptyList(),
+                        error = null,
+                    )
+                }
+                refreshSessions()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = userFacingError(error.message ?: "新建会话失败")) }
+            }
+        }
     }
 
     private fun cacheCurrentSession() {
         val current = mutableState.value
         val id = current.conversationId ?: return
         if (!current.historyLoaded) return
-        conversationCache[id] = CachedConversation(
+        conversationCache[id] = ConversationSnapshot(
             messages = current.messages,
             title = current.conversationTitle,
-            nextMessageId = nextMessageId,
-            nextStepId = nextStepId,
+            sending = current.sending,
+            activity = current.activity,
+            activityStartedAt = current.activityStartedAt,
         )
+    }
+
+    private fun onSessionEvent(scoped: SessionRuntimeEvent) {
+        val event = scoped.event
+        if (event is RuntimeEvent.SessionListChanged) {
+            viewModelScope.launch { refreshSessions() }
+            return
+        }
+        val activeId = mutableState.value.conversationId
+        if (scoped.sessionId == activeId) {
+            val reduced = reduce(mutableState.value.snapshot(), event)
+            mutableState.update {
+                it.copy(
+                    messages = reduced.messages,
+                    sending = reduced.sending,
+                    activity = reduced.activity,
+                    activityStartedAt = reduced.activityStartedAt,
+                    error = if (event is RuntimeEvent.RunFailed) {
+                        userFacingError(event.message)
+                    } else {
+                        it.error
+                    },
+                )
+            }
+        } else {
+            val snapshot = conversationCache[scoped.sessionId] ?: ConversationSnapshot()
+            conversationCache[scoped.sessionId] = reduce(snapshot, event)
+        }
+    }
+
+    private fun ChatUiState.snapshot(): ConversationSnapshot = ConversationSnapshot(
+        messages = messages,
+        title = conversationTitle,
+        sending = sending,
+        activity = activity,
+        activityStartedAt = activityStartedAt,
+    )
+
+    private fun reduce(snapshot: ConversationSnapshot, event: RuntimeEvent): ConversationSnapshot = when (event) {
+        is RuntimeEvent.RunStarted -> {
+            val target = snapshot.messages.lastOrNull { it.role == AssistantRole.ASSISTANT && it.streaming }
+            if (target == null) {
+                snapshot
+            } else {
+                snapshot.copy(
+                    messages = snapshot.messages.map {
+                        if (it.id == target.id) it.copy(runId = event.runId) else it
+                    },
+                    sending = true,
+                    activity = "思考中",
+                    activityStartedAt = event.startedAt,
+                )
+            }
+        }
+
+        is RuntimeEvent.ActivityChanged -> {
+            if (!snapshot.matchesRun(event.runId)) {
+                snapshot
+            } else {
+                snapshot.copy(
+                    activity = event.activity,
+                    activityStartedAt = if (event.activity == null) null else {
+                        snapshot.activityStartedAt ?: System.currentTimeMillis()
+                    },
+                )
+            }
+        }
+
+        is RuntimeEvent.TextDelta -> {
+            if (!snapshot.matchesRun(event.runId)) {
+                snapshot
+            } else {
+                snapshot.updateAssistant(event.runId) { message ->
+                    val steps = message.steps.toMutableList()
+                    val last = steps.lastOrNull()
+                    if (last is AssistantStep.Text) {
+                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
+                    } else {
+                        steps += AssistantStep.Text(nextStepId(steps), event.text)
+                    }
+                    message.copy(steps = steps)
+                }
+            }
+        }
+
+        is RuntimeEvent.ReasoningDelta -> {
+            if (!snapshot.matchesRun(event.runId)) {
+                snapshot
+            } else {
+                snapshot.updateAssistant(event.runId) { message ->
+                    val steps = message.steps.toMutableList()
+                    val last = steps.lastOrNull()
+                    if (last is AssistantStep.Reasoning) {
+                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
+                    } else {
+                        steps += AssistantStep.Reasoning(nextStepId(steps), event.text)
+                    }
+                    message.copy(steps = steps)
+                }
+            }
+        }
+
+        is RuntimeEvent.ToolStarted -> {
+            if (!snapshot.matchesRun(event.runId)) {
+                snapshot
+            } else {
+                snapshot.updateAssistant(event.runId) { message ->
+                    message.copy(
+                        steps = message.steps + AssistantStep.Tool(
+                            ToolTrace(
+                                id = nextStepId(message.steps),
+                                name = event.name,
+                                arguments = event.arguments,
+                                toolCallId = event.callId,
+                                startedAt = event.startedAt,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+
+        is RuntimeEvent.ToolFinished -> {
+            if (!snapshot.matchesRun(event.runId)) {
+                snapshot
+            } else {
+                snapshot.updateAssistant(event.runId) { message ->
+                    val index = message.steps.indexOfLast { step ->
+                        step is AssistantStep.Tool && step.trace.toolCallId == event.callId
+                    }
+                    if (index == -1) {
+                        message.copy(
+                            steps = message.steps + AssistantStep.Tool(
+                                ToolTrace(
+                                    id = nextStepId(message.steps),
+                                    name = event.name,
+                                    arguments = emptyMap(),
+                                    status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
+                                    output = event.result.takeIf { !event.isError && it.isNotBlank() },
+                                    error = event.result.takeIf { event.isError && it.isNotBlank() },
+                                    toolCallId = event.callId,
+                                    durationMs = event.durationMs,
+                                ),
+                            ),
+                        )
+                    } else {
+                        val trace = (message.steps[index] as AssistantStep.Tool).trace.copy(
+                            status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
+                            output = event.result.takeIf { !event.isError && it.isNotBlank() },
+                            error = event.result.takeIf { event.isError && it.isNotBlank() },
+                            durationMs = event.durationMs,
+                        )
+                        message.copy(
+                            steps = message.steps.toMutableList().also { it[index] = AssistantStep.Tool(trace) },
+                        )
+                    }
+                }
+            }
+        }
+
+        is RuntimeEvent.RunFinished -> finishWithStatus(snapshot, event.runId, event.text, event.status, event.finishedAt)
+
+        is RuntimeEvent.RunFailed -> finishWithError(snapshot, event.runId, event.message)
+
+        is RuntimeEvent.SessionListChanged -> snapshot
+    }
+
+    private fun ConversationSnapshot.matchesRun(runId: String): Boolean =
+        messages.any { it.runId == runId }
+
+    private fun ConversationSnapshot.updateAssistant(
+        runId: String,
+        transform: (AssistantMessage) -> AssistantMessage,
+    ): ConversationSnapshot {
+        val index = messages.indexOfLast { it.runId == runId }
+        if (index == -1) return this
+        val target = messages[index]
+        return copy(messages = messages.toMutableList().also { it[index] = transform(target) })
+    }
+
+    private fun nextStepId(steps: List<AssistantStep>): Long =
+        (steps.maxOfOrNull { it.id } ?: -1L) + 1
+
+    private fun finishWithStatus(
+        snapshot: ConversationSnapshot,
+        runId: String,
+        text: String,
+        status: RunStatus,
+        finishedAt: Long,
+    ): ConversationSnapshot {
+        val index = snapshot.messages.indexOfLast { it.runId == runId }
+        if (index == -1) return snapshot.copy(sending = false, activity = null, activityStartedAt = null)
+        val message = snapshot.messages[index]
+        val finalText = text.ifBlank { message.text }
+        val finalized = message.copy(
+            text = finalText,
+            streaming = false,
+            status = when (status) {
+                RunStatus.DONE -> MessageStatus.DONE
+                RunStatus.STOPPED -> MessageStatus.STOPPED
+                RunStatus.FAILED -> MessageStatus.FAILED
+            },
+            finishedAt = finishedAt,
+            steps = consumeFinalText(
+                message.steps.map { step ->
+                    if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
+                        step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
+                    } else {
+                        step
+                    }
+                },
+                finalText,
+            ),
+        )
+        return snapshot.copy(
+            messages = snapshot.messages.toMutableList().also { it[index] = finalized },
+            sending = false,
+            activity = null,
+            activityStartedAt = null,
+        )
+    }
+
+    private fun finishWithError(
+        snapshot: ConversationSnapshot,
+        runId: String,
+        message: String,
+    ): ConversationSnapshot {
+        val index = snapshot.messages.indexOfLast { it.runId == runId }
+        if (index == -1) return snapshot.copy(sending = false, activity = null, activityStartedAt = null)
+        val current = snapshot.messages[index]
+        val failed = current.copy(
+            text = current.text.ifBlank { "（没有收到回复）" },
+            streaming = false,
+            status = MessageStatus.FAILED,
+            finishedAt = System.currentTimeMillis(),
+            steps = current.steps.map { step ->
+                if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
+                    step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
+                } else {
+                    step
+                }
+            },
+        )
+        return snapshot.copy(
+            messages = snapshot.messages.toMutableList().also { it[index] = failed },
+            sending = false,
+            activity = null,
+            activityStartedAt = null,
+        )
+    }
+
+    private fun finishWithError(sessionId: String, message: String) {
+        if (mutableState.value.conversationId != sessionId) return
+        val reduced = finishWithError(mutableState.value.snapshot(), "", message)
+        mutableState.update {
+            it.copy(
+                messages = reduced.messages,
+                sending = reduced.sending,
+                activity = reduced.activity,
+                activityStartedAt = reduced.activityStartedAt,
+                error = userFacingError(message),
+            )
+        }
+    }
+
+    private suspend fun refreshSessions() {
+        val current = mutableState.value
+        val projects = withContext(ioDispatcher) { runtime.projects() }
+        val project = projects.firstOrNull { it.id == current.currentProjectId }
+            ?: projects.firstOrNull { it.isHome }
+            ?: projects.firstOrNull()
+        val sessions = project?.let { withContext(ioDispatcher) { runtime.sessions(it.id) } }.orEmpty()
+        val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
+        mutableState.update {
+            val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
+            it.copy(
+                ready = true,
+                projects = projects,
+                currentProjectId = project?.id ?: it.currentProjectId,
+                conversations = sessions,
+                archivedConversations = archived,
+                archivedCount = archived.size,
+                conversationTitle = title ?: it.conversationTitle,
+            )
+        }
+        cacheCurrentSession()
+    }
+
+    private fun refreshProjectSessions(project: RuntimeProject, sessions: List<ConversationSummary>) {
+        mutableState.update {
+            it.copy(
+                currentProjectId = project.id,
+                conversations = sessions,
+            )
+        }
     }
 
     private fun quoteExcerpt(text: String): String {
@@ -486,218 +812,6 @@ class ChatViewModel(
         }
     }
 
-    private fun handle(event: RuntimeEvent) {
-        when (event) {
-            is RuntimeEvent.RunStarted -> {
-                activeRunId = event.runId
-                val id = activeAssistantId ?: return
-                mutableState.update { state ->
-                    state.copy(
-                        messages = state.messages.map { message ->
-                            if (message.id == id) message.copy(runId = event.runId) else message
-                        },
-                        sending = true,
-                        activity = "思考中",
-                        activityStartedAt = event.startedAt,
-                    )
-                }
-            }
-
-            is RuntimeEvent.ActivityChanged -> {
-                if (!matchesRun(event.runId)) return
-                mutableState.update {
-                    it.copy(
-                        activity = event.activity,
-                        activityStartedAt = if (event.activity == null) null else (it.activityStartedAt ?: System.currentTimeMillis()),
-                    )
-                }
-            }
-
-            is RuntimeEvent.TextDelta -> {
-                if (!matchesRun(event.runId)) return
-                updateAssistant { message ->
-                    val steps = message.steps.toMutableList()
-                    val last = steps.lastOrNull()
-                    if (last is AssistantStep.Text) {
-                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
-                    } else {
-                        steps += AssistantStep.Text(nextStepId++, event.text)
-                    }
-                    message.copy(steps = steps)
-                }
-            }
-
-            is RuntimeEvent.ReasoningDelta -> {
-                if (!matchesRun(event.runId)) return
-                updateAssistant { message ->
-                    val steps = message.steps.toMutableList()
-                    val last = steps.lastOrNull()
-                    if (last is AssistantStep.Reasoning) {
-                        steps[steps.lastIndex] = last.copy(text = last.text + event.text)
-                    } else {
-                        steps += AssistantStep.Reasoning(nextStepId++, event.text)
-                    }
-                    message.copy(steps = steps)
-                }
-            }
-
-            is RuntimeEvent.ToolStarted -> {
-                if (!matchesRun(event.runId)) return
-                updateAssistant { message ->
-                    message.copy(
-                        steps = message.steps + AssistantStep.Tool(
-                            ToolTrace(
-                                id = nextStepId++,
-                                name = event.name,
-                                arguments = event.arguments,
-                                toolCallId = event.callId,
-                                startedAt = event.startedAt,
-                            ),
-                        ),
-                    )
-                }
-            }
-
-            is RuntimeEvent.ToolFinished -> {
-                if (!matchesRun(event.runId)) return
-                updateAssistant { message ->
-                    val index = message.steps.indexOfLast { step ->
-                        step is AssistantStep.Tool && step.trace.toolCallId == event.callId
-                    }
-                    if (index == -1) {
-                        message.copy(
-                            steps = message.steps + AssistantStep.Tool(
-                                ToolTrace(
-                                    id = nextStepId++,
-                                    name = event.name,
-                                    arguments = emptyMap(),
-                                    status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                                    output = event.result.takeIf { !event.isError && it.isNotBlank() },
-                                    error = event.result.takeIf { event.isError && it.isNotBlank() },
-                                    toolCallId = event.callId,
-                                    durationMs = event.durationMs,
-                                ),
-                            ),
-                        )
-                    } else {
-                        val trace = (message.steps[index] as AssistantStep.Tool).trace.copy(
-                            status = if (event.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = event.result.takeIf { !event.isError && it.isNotBlank() },
-                            error = event.result.takeIf { event.isError && it.isNotBlank() },
-                            durationMs = event.durationMs,
-                        )
-                        message.copy(
-                            steps = message.steps.toMutableList().also { it[index] = AssistantStep.Tool(trace) },
-                        )
-                    }
-                }
-            }
-
-            is RuntimeEvent.RunFinished -> {
-                if (!matchesRun(event.runId)) return
-                finishWithStatus(event.text, event.status, event.finishedAt)
-            }
-
-            is RuntimeEvent.RunFailed -> {
-                if (!matchesRun(event.runId)) return
-                finishWithError(event.runId, event.message)
-            }
-
-            is RuntimeEvent.SessionListChanged -> {
-                viewModelScope.launch { refreshSessions() }
-            }
-        }
-    }
-
-    private fun matchesRun(runId: String): Boolean = activeRunId == runId
-
-    private fun updateAssistant(transform: (AssistantMessage) -> AssistantMessage) {
-        val id = activeAssistantId ?: return
-        mutableState.update { state ->
-            state.copy(messages = state.messages.map { if (it.id == id) transform(it) else it })
-        }
-    }
-
-    private fun finishWithStatus(text: String, status: RunStatus, finishedAt: Long) {
-        val id = activeAssistantId
-        if (id != null) {
-            mutableState.update { state ->
-                state.copy(
-                    messages = state.messages.map { message ->
-                        if (message.id != id) return@map message
-                        val finalText = text.ifBlank { message.text }
-                        message.copy(
-                            text = finalText,
-                            streaming = false,
-                            status = when (status) {
-                                RunStatus.DONE -> MessageStatus.DONE
-                                RunStatus.STOPPED -> MessageStatus.STOPPED
-                                RunStatus.FAILED -> MessageStatus.FAILED
-                            },
-                            finishedAt = finishedAt,
-                            steps = consumeFinalText(
-                                message.steps.map { step ->
-                                    if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
-                                        step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
-                                    } else {
-                                        step
-                                    }
-                                },
-                                finalText,
-                            ),
-                        )
-                    },
-                    sending = false,
-                    activity = null,
-                    activityStartedAt = null,
-                )
-            }
-        } else {
-            mutableState.update { it.copy(sending = false, activity = null, activityStartedAt = null) }
-        }
-        activeAssistantId = null
-        activeRunId = null
-        viewModelScope.launch { refreshSessions() }
-    }
-
-    private fun finishWithError(runId: String?, message: String) {
-        if (runId != null && !matchesRun(runId)) return
-        val id = activeAssistantId
-        if (id != null) {
-            mutableState.update { state ->
-                state.copy(
-                    messages = state.messages.map { item ->
-                        if (item.id != id) return@map item
-                        item.copy(
-                            text = item.text.ifBlank { "（没有收到回复）" },
-                            streaming = false,
-                            status = MessageStatus.FAILED,
-                            finishedAt = System.currentTimeMillis(),
-                            steps = item.steps.map { step ->
-                                if (step is AssistantStep.Tool && step.trace.status == ToolActivityStatus.RUNNING) {
-                                    step.copy(trace = step.trace.copy(status = ToolActivityStatus.FAILED))
-                                } else {
-                                    step
-                                }
-                            },
-                        )
-                    },
-                    sending = false,
-                    activity = null,
-                    activityStartedAt = null,
-                    error = userFacingError(message),
-                )
-            }
-        } else {
-            mutableState.update {
-                it.copy(sending = false, activity = null, activityStartedAt = null, error = userFacingError(message))
-            }
-        }
-        activeAssistantId = null
-        activeRunId = null
-        viewModelScope.launch { refreshSessions() }
-    }
-
     private fun consumeFinalText(steps: List<AssistantStep>, finalText: String): List<AssistantStep> {
         val final = finalText.trim()
         if (final.isEmpty()) return steps
@@ -735,5 +849,4 @@ class ChatViewModel(
     private companion object {
         const val MAX_ATTACHMENTS = 5
     }
-
 }

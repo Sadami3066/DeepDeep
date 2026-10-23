@@ -68,6 +68,7 @@ class ProviderCatalog(
             if ("low" in levels) add(ThinkingLevel.LOW)
             if ("medium" in levels) add(ThinkingLevel.MEDIUM)
             if ("high" in levels) add(ThinkingLevel.HIGH)
+            if ("max" in levels) add(ThinkingLevel.MAX)
         }.distinct()
     }
 

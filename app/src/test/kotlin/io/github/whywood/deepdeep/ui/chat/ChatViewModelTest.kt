@@ -14,16 +14,20 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ModelSettings
+import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
+import io.github.whywood.deepdeep.runtime.RuntimeProject
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -50,10 +54,19 @@ class ChatViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun viewModel(runtime: FakeRuntime) = ChatViewModel(
+        runtime,
+        FakeProviders(),
+        FakeSettings(),
+        FakeAttachmentStore(),
+        prepareRuntime = {},
+        ioDispatcher = dispatcher,
+    )
+
     @Test
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
         viewModel.onInputChange("hello")
@@ -66,9 +79,9 @@ class ChatViewModelTest {
         assertEquals(MessageStatus.RUNNING, sending.messages.last().status)
         assertTrue(sending.conversationTitle.isNotBlank())
 
-        runtime.emit(RuntimeEvent.RunStarted(runtime.runId, 1000L))
-        runtime.emit(RuntimeEvent.TextDelta(runtime.runId, "hi"))
-        runtime.emit(RuntimeEvent.RunFinished(runtime.runId, "hi", RunStatus.DONE, 2000L))
+        runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.TextDelta(runtime.runId, "hi"))
+        runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.RunFinished(runtime.runId, "hi", RunStatus.DONE, 2000L))
         advanceUntilIdle()
 
         val finished = viewModel.state.value
@@ -80,29 +93,31 @@ class ChatViewModelTest {
     @Test
     fun ignoresStaleRunEvents() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
         viewModel.send()
-        runtime.emit(RuntimeEvent.RunStarted("run-1", 1000L))
-        runtime.emit(RuntimeEvent.TextDelta("run-2", "stale"))
-        runtime.emit(RuntimeEvent.TextDelta("run-1", "fresh"))
-        runtime.emit(RuntimeEvent.RunFinished("run-1", "fresh", RunStatus.DONE, 2000L))
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted("run-1", 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-2", "stale"))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-1", "fresh"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-1", "fresh", RunStatus.DONE, 2000L))
         advanceUntilIdle()
         assertEquals("fresh", viewModel.state.value.messages.last().text)
     }
 
-
     @Test
     fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("do it")
         viewModel.send()
-        runtime.emit(RuntimeEvent.RunStarted(runtime.runId, 1000L))
-        runtime.emit(RuntimeEvent.TextDelta(runtime.runId, "starting"))
-        runtime.emit(
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "starting"))
+        runtime.emitFor(
+            sessionId,
             RuntimeEvent.ToolStarted(
                 runId = runtime.runId,
                 callId = "call-1",
@@ -111,7 +126,8 @@ class ChatViewModelTest {
                 startedAt = 1200L,
             ),
         )
-        runtime.emit(
+        runtime.emitFor(
+            sessionId,
             RuntimeEvent.ToolFinished(
                 runId = runtime.runId,
                 callId = "call-1",
@@ -121,8 +137,8 @@ class ChatViewModelTest {
                 durationMs = 1000L,
             ),
         )
-        runtime.emit(RuntimeEvent.TextDelta(runtime.runId, "done"))
-        runtime.emit(RuntimeEvent.RunFinished(runtime.runId, "done", RunStatus.DONE, 3000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "done"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "done", RunStatus.DONE, 3000L))
         advanceUntilIdle()
 
         val message = viewModel.state.value.messages.last()
@@ -135,17 +151,16 @@ class ChatViewModelTest {
 
     @Test
     fun switchingBackShowsCachedMessagesBeforeSessionOpens() = runTest(dispatcher) {
-        val first = ConversationSummary("session-a", "A", 1L, "a.jsonl")
-        val second = ConversationSummary("session-b", "B", 2L, "b.jsonl")
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
         val runtime = FakeRuntime().apply {
-            sessionId = "session-a"
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
                 "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
             )
         }
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = viewModel(runtime)
         advanceUntilIdle()
         assertEquals("from a", viewModel.state.value.messages.single().text)
 
@@ -164,9 +179,70 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun backgroundRunKeepsStreamingAfterSwitchingAway() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to emptyList(),
+                "session-b" to listOf(AssistantMessage(1, AssistantRole.USER, "from b")),
+            )
+        }
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        assertEquals("from b", viewModel.state.value.messages.single().text)
+
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, " more"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "partial more", RunStatus.DONE, 2000L))
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+        val finished = viewModel.state.value
+        assertEquals("partial more", finished.messages.last().text)
+        assertEquals(MessageStatus.DONE, finished.messages.last().status)
+        assertFalse(finished.sending)
+    }
+
+    @Test
+    fun newChatCanStartWhilePreviousSessionIsRunning() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        val firstSession = viewModel.state.value.conversationId!!
+        runtime.emitFor(firstSession, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        assertTrue(viewModel.state.value.sending)
+
+        viewModel.newChat()
+        advanceUntilIdle()
+        val secondSession = viewModel.state.value.conversationId!!
+        assertTrue(secondSession != firstSession)
+        assertFalse(viewModel.state.value.sending)
+
+        runtime.emitFor(firstSession, RuntimeEvent.TextDelta(runtime.runId, "background"))
+        runtime.emitFor(firstSession, RuntimeEvent.RunFinished(runtime.runId, "background", RunStatus.DONE, 2000L))
+
+        viewModel.openConversation(firstSession)
+        advanceUntilIdle()
+        assertEquals("background", viewModel.state.value.messages.last().text)
+        assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
+    }
+
+    @Test
     fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
         val runtime = FakeRuntime()
-        val viewModel = ChatViewModel(runtime, FakeProviders(), FakeSettings(), FakeAttachmentStore(), prepareRuntime = {}, ioDispatcher = dispatcher)
+        val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
         viewModel.quote(9, "**重点**内容")
@@ -182,33 +258,62 @@ class ChatViewModelTest {
     }
 
     private class FakeRuntime : AgentRuntime {
-        private val flow = MutableSharedFlow<RuntimeEvent>(extraBufferCapacity = 64)
+        private val flow = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 64)
+        private val busy = MutableStateFlow<Set<String>>(emptySet())
         val runId = "run-1"
-        override val events: SharedFlow<RuntimeEvent> = flow
-        var sessionId: String = "session-1"
-        override val currentSessionId: String get() = sessionId
-        override val currentSessionFile: String get() = "$sessionId.jsonl"
-        override var busy: Boolean = false
+        override val events: SharedFlow<SessionRuntimeEvent> = flow
+        override val busySessionIds: StateFlow<Set<String>> = busy
         var sessions: List<ConversationSummary> = emptyList()
         var histories: Map<String, List<AssistantMessage>> = emptyMap()
         val openCalls = mutableListOf<String>()
         val sent = mutableListOf<String>()
+        private var createdCount = 0
+        private val extraProjects = mutableListOf<RuntimeProject>()
+
         override suspend fun start() = Unit
         override suspend fun ensureStarted() = Unit
-        override suspend fun send(text: String) {
+
+        override suspend fun projects(): List<RuntimeProject> =
+            listOf(RuntimeProject(HOME_ID, "Home", HOME_CWD, isHome = true)) + extraProjects
+
+        override suspend fun createProject(name: String): RuntimeProject {
+            val project = RuntimeProject("project-$name", name, "/projects/$name", createdAt = 1L)
+            extraProjects += project
+            return project
+        }
+
+        override suspend fun renameProject(id: String, name: String) = Unit
+        override suspend fun deleteProject(id: String) = Unit
+
+        override suspend fun newSession(projectId: String): OpenedSession {
+            createdCount += 1
+            val id = "session-$createdCount"
+            sessions = sessions + ConversationSummary(id, "", createdCount.toLong(), "$id.jsonl", HOME_CWD)
+            return OpenedSession(id, "$id.jsonl", HOME_CWD)
+        }
+
+        override suspend fun openSession(filePath: String, cwd: String): OpenedSession {
+            openCalls += filePath
+            val summary = sessions.firstOrNull { it.filePath == filePath }
+            return OpenedSession(summary?.id ?: filePath, filePath, cwd)
+        }
+
+        override suspend fun closeSession(sessionId: String) = Unit
+
+        override suspend fun send(sessionId: String, text: String) {
             sent += text
         }
 
-        override fun stop() = Unit
-        override suspend fun newChat() = Unit
-        override suspend fun open(filePath: String) {
-            openCalls += filePath
-            sessions.firstOrNull { it.filePath == filePath }?.let { sessionId = it.id }
-        }
+        override fun stop(sessionId: String) = Unit
 
-        override suspend fun history(): List<AssistantMessage> = histories[sessionId].orEmpty()
-        override suspend fun sessions(includeArchived: Boolean): List<ConversationSummary> =
-            if (includeArchived) sessions else sessions.filter { !it.archived }
+        override suspend fun history(sessionId: String): List<AssistantMessage> =
+            histories[sessionId].orEmpty()
+
+        override suspend fun sessions(projectId: String): List<ConversationSummary> =
+            sessions.filter { !it.archived }
+
+        override suspend fun archivedSessions(): List<ConversationSummary> =
+            sessions.filter { it.archived }
 
         override suspend fun renameSession(id: String, title: String) = Unit
         override suspend fun setSessionPinned(id: String, pinned: Boolean) = Unit
@@ -217,7 +322,9 @@ class ChatViewModelTest {
         override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) = Unit
         override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) = Unit
         override suspend fun currentConfig(): ModelConfig = ModelConfig()
-        suspend fun emit(event: RuntimeEvent) = flow.emit(event)
+
+        suspend fun emitFor(sessionId: String, event: RuntimeEvent) =
+            flow.emit(SessionRuntimeEvent(sessionId, event))
     }
 
     private class FakeProviders : ProviderDirectory {
@@ -233,18 +340,23 @@ class ChatViewModelTest {
     }
 
     private class FakeAttachmentStore : AttachmentStore {
-        override suspend fun import(uri: Uri): AttachmentImport = AttachmentImport.Failed
+        override suspend fun import(uri: Uri, root: java.io.File): AttachmentImport = AttachmentImport.Failed
 
-        override fun file(ref: AttachmentRef): java.io.File = java.io.File(ref.path)
+        override fun file(ref: AttachmentRef, root: java.io.File): java.io.File = java.io.File(root, ref.path)
 
-        override fun shareIntent(ref: AttachmentRef): Intent? = null
+        override fun shareIntent(ref: AttachmentRef, root: java.io.File): Intent? = null
 
-        override fun resolve(raw: String): AttachmentRef? = null
+        override fun resolve(raw: String, root: java.io.File): AttachmentRef? = null
     }
 
     private class FakeSettings : ModelSettings {
         override val config: Flow<ModelConfig> = MutableStateFlow(ModelConfig())
         override suspend fun read(): ModelConfig = ModelConfig()
         override suspend fun save(config: ModelConfig) = Unit
+    }
+
+    private companion object {
+        const val HOME_ID = "home"
+        const val HOME_CWD = "/home"
     }
 }

@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -34,12 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AppLanguage
+import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -76,7 +82,10 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val context = LocalContext.current
+    val languagePreferences = remember(context) { LanguagePreferences(context) }
     var showLicenses by remember { mutableStateOf(false) }
+    var language by remember { mutableStateOf(languagePreferences.read()) }
     val activeModel = listOfNotNull(
         providerName?.takeIf { it.isNotBlank() },
         modelName?.takeIf { it.isNotBlank() },
@@ -168,7 +177,16 @@ fun SettingsScreen(
                 DdHairline()
                 PlaceholderRow(DdIcons.Font, R.string.settings_font)
                 DdHairline()
-                PlaceholderRow(DdIcons.Globe, R.string.settings_language)
+                LanguageRow(
+                    language = language,
+                    onLanguageChange = { selected ->
+                        if (selected != language) {
+                            language = selected
+                            languagePreferences.save(selected)
+                            context.findActivity()?.recreate()
+                        }
+                    },
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -333,6 +351,88 @@ private fun themeLabel(mode: ThemeMode): String = stringResource(
         ThemeMode.DARK -> R.string.settings_theme_dark
     },
 )
+
+@Composable
+private fun LanguageRow(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+) {
+    val colors = deepDeepColors()
+    var expanded by remember { mutableStateOf(false) }
+    DdPressable(
+        onClick = { expanded = true },
+        modifier = Modifier.fillMaxWidth().testTag("settings_language"),
+        shape = RoundedCornerShape(20.dp),
+        contentDescription = stringResource(R.string.settings_language),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIcon(icon = DdIcons.Globe, tint = colors.inkSecondary, size = 20.dp)
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text = stringResource(R.string.settings_language),
+                modifier = Modifier.weight(1f),
+                style = DdType.body,
+                color = colors.ink,
+                maxLines = 1,
+            )
+            Box {
+                Text(
+                    text = languageLabel(language),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+                DdMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    menuWidth = 184.dp,
+                ) {
+                    AppLanguage.entries.forEach { option ->
+                        DdMenuItem(
+                            text = languageLabel(option),
+                            onClick = {
+                                onLanguageChange(option)
+                                expanded = false
+                            },
+                            selected = option == language,
+                            trailing = {
+                                if (option == language) {
+                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.width(6.dp))
+            DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
+        }
+    }
+}
+
+@Composable
+private fun languageLabel(language: AppLanguage): String = stringResource(
+    when (language) {
+        AppLanguage.SYSTEM -> R.string.settings_language_system
+        AppLanguage.CHINESE -> R.string.settings_language_chinese
+        AppLanguage.ENGLISH -> R.string.settings_language_english
+    },
+)
+
+private fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
+}
 
 @Composable
 private fun LicenseSheet(onClose: () -> Unit) {

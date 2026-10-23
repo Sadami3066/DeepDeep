@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.service.AgentService
@@ -20,6 +22,10 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguagePreferences.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

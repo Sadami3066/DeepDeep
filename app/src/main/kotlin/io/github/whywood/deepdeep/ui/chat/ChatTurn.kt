@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
+import java.io.File
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -56,6 +57,7 @@ internal fun ChatTurn(
     onQuote: (Long, String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
+    attachmentRoot: File,
 ) {
     if (message.role == AssistantRole.USER) {
         UserBubble(
@@ -63,6 +65,7 @@ internal fun ChatTurn(
             onCopy = onCopy,
             onQuote = onQuote,
             onOpenAttachment = onOpenAttachment,
+            attachmentRoot = attachmentRoot,
         )
     } else {
         AssistantTurn(
@@ -83,6 +86,7 @@ private fun UserBubble(
     onCopy: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
+    attachmentRoot: File,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -98,7 +102,7 @@ private fun UserBubble(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (parsed.attachments.isNotEmpty()) {
-                AttachmentCards(attachments = parsed.attachments, onOpen = onOpenAttachment)
+                AttachmentCards(attachments = parsed.attachments, root = attachmentRoot, onOpen = onOpenAttachment)
             }
             if (content.quote != null || content.body.isNotEmpty()) {
                 SelectableMessageText(

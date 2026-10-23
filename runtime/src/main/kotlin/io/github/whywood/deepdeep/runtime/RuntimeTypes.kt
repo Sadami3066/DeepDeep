@@ -7,6 +7,7 @@ enum class ThinkingLevel {
     LOW,
     MEDIUM,
     HIGH,
+    MAX,
 }
 
 data class ModelOption(
@@ -30,8 +31,28 @@ data class ConversationSummary(
     val title: String,
     val updatedAt: Long,
     val filePath: String,
+    val cwd: String = "",
     val pinned: Boolean = false,
     val archived: Boolean = false,
+)
+
+data class RuntimeProject(
+    val id: String,
+    val name: String,
+    val cwd: String,
+    val createdAt: Long = 0L,
+    val isHome: Boolean = false,
+)
+
+data class OpenedSession(
+    val sessionId: String,
+    val filePath: String?,
+    val cwd: String,
+)
+
+data class SessionRuntimeEvent(
+    val sessionId: String,
+    val event: RuntimeEvent,
 )
 
 enum class AssistantRole {
@@ -188,26 +209,36 @@ interface ModelSettings {
 }
 
 interface AgentRuntime {
-    val events: SharedFlow<RuntimeEvent>
-    val currentSessionId: String?
-    val currentSessionFile: String?
-    val busy: Boolean
+    val events: SharedFlow<SessionRuntimeEvent>
+    val busySessionIds: kotlinx.coroutines.flow.StateFlow<Set<String>>
 
     suspend fun start()
 
     suspend fun ensureStarted()
 
-    suspend fun send(text: String)
+    suspend fun projects(): List<RuntimeProject>
 
-    fun stop()
+    suspend fun createProject(name: String): RuntimeProject
 
-    suspend fun newChat()
+    suspend fun renameProject(id: String, name: String)
 
-    suspend fun open(filePath: String)
+    suspend fun deleteProject(id: String)
 
-    suspend fun history(): List<AssistantMessage>
+    suspend fun newSession(projectId: String): OpenedSession
 
-    suspend fun sessions(includeArchived: Boolean = false): List<ConversationSummary>
+    suspend fun openSession(filePath: String, cwd: String): OpenedSession
+
+    suspend fun closeSession(sessionId: String)
+
+    suspend fun send(sessionId: String, text: String)
+
+    fun stop(sessionId: String)
+
+    suspend fun history(sessionId: String): List<AssistantMessage>
+
+    suspend fun sessions(projectId: String): List<ConversationSummary>
+
+    suspend fun archivedSessions(): List<ConversationSummary>
 
     suspend fun renameSession(id: String, title: String)
 

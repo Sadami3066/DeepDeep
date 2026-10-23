@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">deepdeep</string>
+    <string name="service_channel_name">deepdeep status</string>
+    <string name="service_running">deepdeep is running</string>
+    <string name="service_stop">Stop</string>
+</resources>

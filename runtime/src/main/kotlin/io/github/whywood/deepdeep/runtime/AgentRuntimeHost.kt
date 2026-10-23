@@ -7,266 +7,362 @@ import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.SessionEvent
+import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path.Companion.toPath
 
 class AgentRuntimeHost(
-    private val engine: PiSessionEngine,
+    private val homeDir: File,
+    private val projectsDir: File,
+    private val engineFactory: suspend (File) -> PiSessionEngine,
     private val modelConfigStore: ModelConfigStore,
-    private val sessionRepository: SessionRepository,
+    private val catalog: SessionCatalog,
+    private val projectStore: ProjectStore,
     private val providers: ProviderCatalog,
-    private val shellEnabled: suspend () -> Boolean = { true },
 ) : AgentRuntime {
-    private val eventsBuffer = MutableSharedFlow<RuntimeEvent>(
+    private class Handle(
+        val engine: PiSessionEngine,
+        val session: AgentSession,
+        val cwd: String,
+    ) {
+        var unsubscribe: (() -> Unit)? = null
+        var runId: String? = null
+        var stopRequested = false
+        var terminalEmitted = false
+        var busy = false
+    }
+
+    private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
         extraBufferCapacity = 512,
         onBufferOverflow = BufferOverflow.SUSPEND,
     )
-    override val events: SharedFlow<RuntimeEvent> = eventsBuffer.asSharedFlow()
+    override val events: SharedFlow<SessionRuntimeEvent> = eventsBuffer.asSharedFlow()
+
+    private val busyState = MutableStateFlow<Set<String>>(emptySet())
+    override val busySessionIds: StateFlow<Set<String>> = busyState.asStateFlow()
 
     private val mutex = Mutex()
-    private var session: AgentSession? = null
-    private var unsubscribe: (() -> Unit)? = null
+    private val handles = mutableMapOf<String, Handle>()
     private var started = false
-    private var stopRequested = false
-    private var terminalEmitted = false
-    private var currentRunId: String? = null
-
-    @Volatile
-    override var busy: Boolean = false
-        private set
-
-    override val currentSessionId: String?
-        get() = session?.sessionId
-
-    override val currentSessionFile: String?
-        get() = session?.sessionFile?.toString()
 
     override suspend fun start() = mutex.withLock {
         if (started) return@withLock
+        homeDir.mkdirs()
+        projectsDir.mkdirs()
         started = true
-        val recent = sessionRepository.list(includeArchived = true).firstOrNull { !it.archived }
-        if (recent != null) {
-            openLocked(recent.filePath.toPath())
-        } else {
-            newLocked()
-        }
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
     }
 
     override suspend fun ensureStarted() {
         if (!started) start()
     }
 
-    override suspend fun send(text: String) = mutex.withLock {
-        val active = session ?: error("Agent session is not ready")
+    override suspend fun projects(): List<RuntimeProject> = buildList {
+        add(homeProject())
+        addAll(projectStore.read().filter { it.id != HOME_ID })
+    }
+
+    override suspend fun createProject(name: String): RuntimeProject = mutex.withLock {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty()) { "项目名称不能为空" }
+        val id = UUID.randomUUID().toString().replace("-", "").take(12)
+        val directory = File(projectsDir, id).apply { mkdirs() }
+        val project = RuntimeProject(
+            id = id,
+            name = trimmed,
+            cwd = directory.absolutePath,
+            createdAt = System.currentTimeMillis(),
+        )
+        projectStore.add(project)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        project
+    }
+
+    override suspend fun renameProject(id: String, name: String) {
+        if (id == HOME_ID) return
+        val project = projectStore.read().firstOrNull { it.id == id } ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        projectStore.add(project.copy(name = trimmed))
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+    }
+
+    override suspend fun deleteProject(id: String) {
+        if (id == HOME_ID) return
+        projectStore.remove(id)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+    }
+
+    override suspend fun newSession(projectId: String): OpenedSession = mutex.withLock {
+        val project = projectFor(projectId)
+        val handle = attach(project.cwd, null)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), project.cwd)
+    }
+
+    override suspend fun openSession(filePath: String, cwd: String): OpenedSession = mutex.withLock {
+        handles.values.firstOrNull { it.session.sessionFile?.toString() == filePath }?.let { existing ->
+            OpenedSession(existing.session.sessionId, filePath, existing.cwd)
+        } ?: run {
+            val handle = attach(cwd, filePath)
+            OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), cwd)
+        }
+    }
+
+    override suspend fun closeSession(sessionId: String) = mutex.withLock {
+        detach(sessionId)
+    }
+
+    override suspend fun send(sessionId: String, text: String) {
+        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
         val runId = UUID.randomUUID().toString()
-        currentRunId = runId
-        stopRequested = false
-        terminalEmitted = false
-        busy = true
+        handle.runId = runId
+        handle.stopRequested = false
+        handle.terminalEmitted = false
+        handle.busy = true
+        publishBusy()
         try {
-            ensureTitle(active, text)
-            eventsBuffer.emit(RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
-            eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "思考中"))
-            Log.i(TAG, "send run=$runId chars=${text.length}")
-            active.prompt(text)
-            if (!stopRequested && !terminalEmitted) {
-                emitTerminal(
-                    runId = runId,
-                    text = active.getLastAssistantText().orEmpty(),
-                    status = RunStatus.DONE,
-                )
+            ensureTitle(handle, text)
+            emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
+            emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
+            Log.i(TAG, "send session=$sessionId run=$runId chars=${text.length}")
+            handle.session.prompt(text)
+            if (!handle.stopRequested && !handle.terminalEmitted) {
+                emitTerminal(handle, runId, handle.session.getLastAssistantText().orEmpty(), RunStatus.DONE)
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            if (!stopRequested && !terminalEmitted) {
-                emitTerminal(runId = runId, text = active.getLastAssistantText().orEmpty(), status = RunStatus.FAILED, message = error.message)
+            if (!handle.stopRequested && !handle.terminalEmitted) {
+                emitTerminal(
+                    handle = handle,
+                    runId = runId,
+                    text = handle.session.getLastAssistantText().orEmpty(),
+                    status = RunStatus.FAILED,
+                    message = error.message,
+                )
             }
         } finally {
-            busy = false
-            currentRunId = null
-            eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, null))
+            handle.busy = false
+            if (handle.runId == runId) handle.runId = null
+            publishBusy()
+            emit(handle, RuntimeEvent.ActivityChanged(runId, null))
         }
     }
 
-    override fun stop() {
-        val runId = currentRunId ?: return
-        if (stopRequested) return
-        stopRequested = true
-        if (!terminalEmitted) {
-            terminalEmitted = true
-            eventsBuffer.tryEmit(
+    override fun stop(sessionId: String) {
+        val handle = handles[sessionId] ?: return
+        val runId = handle.runId ?: return
+        if (handle.stopRequested) return
+        handle.stopRequested = true
+        if (!handle.terminalEmitted) {
+            handle.terminalEmitted = true
+            emitNow(
+                handle,
                 RuntimeEvent.RunFinished(
                     runId = runId,
-                    text = session?.getLastAssistantText().orEmpty(),
+                    text = handle.session.getLastAssistantText().orEmpty(),
                     status = RunStatus.STOPPED,
                     finishedAt = System.currentTimeMillis(),
                 ),
             )
         }
-        session?.abort()
+        handle.session.abort()
     }
 
-    override suspend fun newChat() = mutex.withLock {
-        detachLocked()
-        newLocked()
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+    override suspend fun history(sessionId: String): List<AssistantMessage> = mutex.withLock {
+        handles[sessionId]?.let { handle -> handle.engine.history(handle.session) }.orEmpty()
     }
 
-    override suspend fun open(filePath: String) = mutex.withLock {
-        detachLocked()
-        openLocked(filePath.toPath())
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+    override suspend fun sessions(projectId: String): List<ConversationSummary> {
+        val project = projectFor(projectId)
+        return catalog.list(project.cwd).filterNot { it.archived }
     }
 
-    override suspend fun history(): List<AssistantMessage> = mutex.withLock {
-        session?.let { engine.history(it) }.orEmpty()
-    }
-
-    override suspend fun sessions(includeArchived: Boolean): List<ConversationSummary> =
-        sessionRepository.list(includeArchived)
+    override suspend fun archivedSessions(): List<ConversationSummary> =
+        catalog.listAll(allCwds()).filter { it.archived }
 
     override suspend fun renameSession(id: String, title: String) {
-        sessionRepository.rename(id, title)
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+        catalog.rename(id, title)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
     override suspend fun setSessionPinned(id: String, pinned: Boolean) {
-        sessionRepository.setPinned(id, pinned)
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+        catalog.setPinned(id, pinned)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
     override suspend fun setSessionArchived(id: String, archived: Boolean) {
-        sessionRepository.setArchived(id, archived)
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+        catalog.setArchived(id, archived)
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    override suspend fun deleteSession(id: String) = mutex.withLock {
-        if (session?.sessionId == id) {
-            detachLocked()
-            newLocked()
+    override suspend fun deleteSession(id: String) {
+        val summary = catalog.find(allCwds(), id)
+        mutex.withLock { detach(id) }
+        if (summary != null) {
+            catalog.delete(summary.filePath)
+            catalog.removeMeta(id)
         }
-        sessionRepository.delete(id)
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) = mutex.withLock {
+    override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) {
         val config = providers.resolveConfig(ModelConfig(providerId, modelId, thinkingLevel))
         modelConfigStore.save(config)
-        val active = session ?: return@withLock
-        val model = providers.sdkModel(config.providerId, config.modelId) ?: return@withLock
-        active.setModel(model, config.thinkingLevel.runtimeValue())
+        val model = providers.sdkModel(config.providerId, config.modelId) ?: return
+        val snapshot = mutex.withLock { handles.values.toList() }
+        snapshot.forEach { handle ->
+            runCatching { handle.session.setModel(model, config.thinkingLevel.runtimeValue()) }
+        }
     }
 
-    override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) = mutex.withLock {
+    override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) {
         val config = modelConfigStore.read()
         val updated = providers.resolveConfig(config.copy(thinkingLevel = thinkingLevel))
         modelConfigStore.save(updated)
-        session?.setThinkingLevel(updated.thinkingLevel.runtimeValue())
-        Unit
+        val snapshot = mutex.withLock { handles.values.toList() }
+        snapshot.forEach { handle ->
+            runCatching { handle.session.setThinkingLevel(updated.thinkingLevel.runtimeValue()) }
+        }
     }
 
     override suspend fun currentConfig(): ModelConfig = modelConfigStore.read()
 
-    suspend fun reconfigure() = mutex.withLock {
-        val file = currentSessionFile
-        detachLocked()
-        if (file != null) openLocked(file.toPath()) else newLocked()
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+    suspend fun reconfigure() {
+        val snapshot = mutex.withLock {
+            handles.values.map { handle ->
+                Triple(handle.session.sessionId, handle.cwd, handle.session.sessionFile?.toString())
+            }
+        }
+        mutex.withLock {
+            snapshot.forEach { (sessionId, _, _) -> detach(sessionId) }
+            snapshot.forEach { (_, cwd, file) -> attach(cwd, file) }
+        }
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    suspend fun close() = mutex.withLock {
-        detachLocked()
-        started = false
+    private fun homeProject(): RuntimeProject = RuntimeProject(
+        id = HOME_ID,
+        name = HOME_NAME,
+        cwd = homeDir.absolutePath,
+        isHome = true,
+    )
+
+    private suspend fun projectFor(projectId: String): RuntimeProject {
+        if (projectId == HOME_ID || projectId.isBlank()) return homeProject()
+        return projectStore.read().firstOrNull { it.id == projectId } ?: homeProject()
     }
 
-    private suspend fun newLocked() {
+    private suspend fun allCwds(): List<String> =
+        listOf(homeDir.absolutePath) + projectStore.read().map { it.cwd }
+
+    private suspend fun attach(cwd: String, file: String?): Handle {
+        val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile?.toString() == file }
+        if (existing != null && file != null) return existing
+        val engine = engineFactory(File(cwd))
         val config = modelConfigStore.read()
-        val created = engine.createSession(null, config, shellEnabled())
-        attach(created)
+        val session = engine.createSession(file?.toPath(), config)
+        val handle = Handle(engine = engine, session = session, cwd = cwd)
+        handles[session.sessionId] = handle
+        handle.unsubscribe = session.subscribe { event -> onSessionEvent(handle, event) }
+        return handle
     }
 
-    private suspend fun openLocked(file: okio.Path) {
-        val config = modelConfigStore.read()
-        val created = engine.createSession(file, config, shellEnabled())
-        attach(created)
+    private suspend fun detach(sessionId: String) {
+        val handle = handles.remove(sessionId) ?: return
+        handle.busy = false
+        handle.unsubscribe?.invoke()
+        handle.unsubscribe = null
+        handle.session.close()
+        publishBusy()
     }
 
-    private suspend fun attach(created: AgentSession) {
-        session = created
-        unsubscribe = created.subscribe { event -> handle(event) }
+    private fun publishBusy() {
+        busyState.value = handles.values.filter { it.busy }.mapTo(mutableSetOf()) { it.session.sessionId }
     }
 
-    private suspend fun detachLocked() {
-        unsubscribe?.invoke()
-        unsubscribe = null
-        session?.close()
-        session = null
-        busy = false
-        currentRunId = null
+    private suspend fun ensureTitle(handle: Handle, text: String) {
+        if (handle.session.sessionManager.getSessionName() != null) return
+        handle.session.sessionManager.appendSessionInfo(handle.engine.titleFor(text))
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    private suspend fun ensureTitle(active: AgentSession, text: String) {
-        if (active.sessionManager.getSessionName() != null) return
-        active.sessionManager.appendSessionInfo(engine.titleFor(text))
-        eventsBuffer.emit(RuntimeEvent.SessionListChanged())
+    private fun emit(handle: Handle, event: RuntimeEvent) {
+        emitNow(handle, event)
+    }
+
+    private fun emitNow(handle: Handle, event: RuntimeEvent) {
+        eventsBuffer.tryEmit(SessionRuntimeEvent(handle.session.sessionId, event))
     }
 
     private suspend fun emitTerminal(
+        handle: Handle,
         runId: String,
         text: String,
         status: RunStatus,
         message: String? = null,
     ) {
-        if (terminalEmitted) return
-        terminalEmitted = true
+        if (handle.terminalEmitted) return
+        handle.terminalEmitted = true
         if (status == RunStatus.FAILED) {
-            eventsBuffer.emit(RuntimeEvent.RunFailed(runId, message ?: "请求失败，请稍后重试。"))
+            emit(handle, RuntimeEvent.RunFailed(runId, message ?: "请求失败，请稍后重试。"))
         } else {
-            eventsBuffer.emit(RuntimeEvent.RunFinished(runId, text, status, System.currentTimeMillis()))
+            emit(handle, RuntimeEvent.RunFinished(runId, text, status, System.currentTimeMillis()))
         }
     }
 
-    private suspend fun handle(event: SessionEvent) {
-        val runId = currentRunId ?: return
+    private suspend fun onSessionEvent(handle: Handle, event: SessionEvent) {
+        val runId = handle.runId ?: return
         when (event) {
-            is SessionEvent.AgentEventReceived -> handleAgentEvent(runId, event.event)
-            is SessionEvent.RetryScheduled -> eventsBuffer.emit(
+            is SessionEvent.AgentEventReceived -> onAgentEvent(handle, runId, event.event)
+            is SessionEvent.RetryScheduled -> emit(
+                handle,
                 RuntimeEvent.ActivityChanged(runId, "重试中（第 ${event.attempt} 次）"),
             )
 
             is SessionEvent.RetryExhausted -> emitTerminal(
+                handle = handle,
                 runId = runId,
-                text = session?.getLastAssistantText().orEmpty(),
+                text = handle.session.getLastAssistantText().orEmpty(),
                 status = RunStatus.FAILED,
                 message = event.errorMessage ?: "重试失败",
             )
 
-            is SessionEvent.CompactionStarted -> eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "压缩上下文…"))
-            is SessionEvent.CompactionFinished -> eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "思考中"))
-            is SessionEvent.CompactionFailed -> eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "压缩失败"))
-            is SessionEvent.SessionError -> emitTerminal(runId, session?.getLastAssistantText().orEmpty(), RunStatus.FAILED, event.message)
+            is SessionEvent.CompactionStarted -> emit(handle, RuntimeEvent.ActivityChanged(runId, "压缩上下文…"))
+            is SessionEvent.CompactionFinished -> emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
+            is SessionEvent.CompactionFailed -> emit(handle, RuntimeEvent.ActivityChanged(runId, "压缩失败"))
+            is SessionEvent.SessionError -> emitTerminal(
+                handle = handle,
+                runId = runId,
+                text = handle.session.getLastAssistantText().orEmpty(),
+                status = RunStatus.FAILED,
+                message = event.message,
+            )
+
             else -> Unit
         }
     }
 
-    private suspend fun handleAgentEvent(runId: String, event: AgentEvent) {
+    private suspend fun onAgentEvent(handle: Handle, runId: String, event: AgentEvent) {
         when (event) {
             is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
-                is TextDeltaEvent -> eventsBuffer.emit(RuntimeEvent.TextDelta(runId, update.delta))
-                is ThinkingDeltaEvent -> eventsBuffer.emit(RuntimeEvent.ReasoningDelta(runId, update.delta))
+                is TextDeltaEvent -> emit(handle, RuntimeEvent.TextDelta(runId, update.delta))
+                is ThinkingDeltaEvent -> emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
                 else -> Unit
             }
 
             is AgentEvent.ToolExecutionStart -> {
-                eventsBuffer.emit(
+                emit(
+                    handle,
                     RuntimeEvent.ToolStarted(
                         runId = runId,
                         callId = event.toolCallId,
@@ -277,11 +373,12 @@ class AgentRuntimeHost(
                         startedAt = System.currentTimeMillis(),
                     ),
                 )
-                eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "运行 ${event.toolName}"))
+                emit(handle, RuntimeEvent.ActivityChanged(runId, "运行 ${event.toolName}"))
             }
 
             is AgentEvent.ToolExecutionEnd -> {
-                eventsBuffer.emit(
+                emit(
+                    handle,
                     RuntimeEvent.ToolFinished(
                         runId = runId,
                         callId = event.toolCallId,
@@ -291,11 +388,16 @@ class AgentRuntimeHost(
                         durationMs = event.durationMs,
                     ),
                 )
-                eventsBuffer.emit(RuntimeEvent.ActivityChanged(runId, "思考中"))
+                emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
             }
 
             else -> Unit
         }
+    }
+
+    companion object {
+        const val HOME_ID = "home"
+        const val HOME_NAME = "Home"
     }
 }
 

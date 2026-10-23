@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
+import java.io.File
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -99,6 +100,7 @@ fun ChatScreen(
     onRemoveAttachment: (String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
+    attachmentRoot: File,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -228,6 +230,7 @@ fun ChatScreen(
                                     onQuote = onQuoteMessage,
                                     onOpenAttachment = onOpenAttachment,
                                     onOpenFile = onOpenFile,
+                                    attachmentRoot = attachmentRoot,
                                 )
                             }
                         }
@@ -270,6 +273,7 @@ fun ChatScreen(
             thinkingLevels = thinkingLevels,
             quote = state.quote,
             attachments = attachments,
+            attachmentRoot = attachmentRoot,
             onValueChange = onInputChange,
             onSend = {
                 keyboard?.hide()

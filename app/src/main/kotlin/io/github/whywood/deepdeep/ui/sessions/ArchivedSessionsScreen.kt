@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -64,7 +67,12 @@ fun ArchivedSessionsScreen(
     var menuAnchor by remember { mutableStateOf(Offset.Zero) }
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var deleteTarget by remember { mutableStateOf<ConversationSummary?>(null) }
+    var query by remember { mutableStateOf("") }
     val ordered = remember(archivedSessions) { archivedSessions.sortedByDescending { it.updatedAt } }
+    val filtered = remember(ordered, query) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) ordered else ordered.filter { it.title.contains(trimmed, ignoreCase = true) }
+    }
     BackHandler(onBack = onBack)
     Column(
         modifier
@@ -112,31 +120,45 @@ fun ArchivedSessionsScreen(
                 color = colors.inkTertiary,
             )
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                items(ordered, key = { it.id }) { session ->
-                    ArchivedSessionRow(
-                        session = session,
-                        menuExpanded = menuTarget?.id == session.id,
-                        onClick = { onOpen(session.id) },
-                        onLongClick = { offset ->
-                            menuAnchor = offset
-                            menuTarget = session
-                        },
-                        menuAnchor = menuAnchor,
-                        onDismissMenu = { menuTarget = null },
-                        onAction = { action ->
-                            when (action) {
-                                SessionAction.RENAME -> renameTarget = session
-                                SessionAction.TOGGLE_PIN -> Unit
-                                SessionAction.TOGGLE_ARCHIVE -> onUnarchive(session.id)
-                                SessionAction.DELETE -> deleteTarget = session
-                            }
-                        },
-                        testTag = "archived_${session.id}",
-                    )
+            ArchivedSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            if (filtered.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.drawer_search_empty),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    items(filtered, key = { it.id }) { session ->
+                        ArchivedSessionRow(
+                            session = session,
+                            menuExpanded = menuTarget?.id == session.id,
+                            onClick = { onOpen(session.id) },
+                            onLongClick = { offset ->
+                                menuAnchor = offset
+                                menuTarget = session
+                            },
+                            menuAnchor = menuAnchor,
+                            onDismissMenu = { menuTarget = null },
+                            onAction = { action ->
+                                when (action) {
+                                    SessionAction.RENAME -> renameTarget = session
+                                    SessionAction.TOGGLE_PIN -> Unit
+                                    SessionAction.TOGGLE_ARCHIVE -> onUnarchive(session.id)
+                                    SessionAction.DELETE -> deleteTarget = session
+                                }
+                            },
+                            testTag = "archived_${session.id}",
+                        )
+                    }
                 }
             }
         }
@@ -228,5 +250,55 @@ private fun ArchivedSessionRow(
             onAction = onAction,
             anchor = menuAnchor,
         )
+    }
+}
+
+@Composable
+private fun ArchivedSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.raised)
+            .border(1.dp, colors.hairline.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            .padding(start = 14.dp, end = 6.dp)
+            .testTag("archived_search"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.weight(1f).testTag("archived_search_field"),
+            textStyle = DdType.bodySmall.copy(color = colors.ink),
+            cursorBrush = SolidColor(colors.accent),
+            singleLine = true,
+            decorationBox = { inner ->
+                if (query.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.drawer_search_archived_placeholder),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+                inner()
+            },
+        )
+        if (query.isNotEmpty()) {
+            DdIconButton(
+                icon = DdIcons.Close,
+                onClick = { onQueryChange("") },
+                contentDescription = stringResource(R.string.drawer_search_clear),
+                modifier = Modifier.testTag("archived_search_clear"),
+                size = 32.dp,
+                iconSize = 15.dp,
+                tint = colors.inkTertiary,
+            )
+        }
     }
 }

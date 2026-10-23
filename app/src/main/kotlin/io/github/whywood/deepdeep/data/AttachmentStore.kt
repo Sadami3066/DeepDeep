@@ -18,25 +18,23 @@ sealed interface AttachmentImport {
 }
 
 interface AttachmentStore {
-    suspend fun import(uri: Uri): AttachmentImport
-    fun file(ref: AttachmentRef): File
-    fun shareIntent(ref: AttachmentRef): Intent?
-    fun resolve(raw: String): AttachmentRef?
+    suspend fun import(uri: Uri, root: File): AttachmentImport
+    fun file(ref: AttachmentRef, root: File): File
+    fun shareIntent(ref: AttachmentRef, root: File): Intent?
+    fun resolve(raw: String, root: File): AttachmentRef?
 }
 
-class FileAttachmentStore(context: Context) : AttachmentStore {
+class FileAttachmentStore(context: Context, private val home: File) : AttachmentStore {
     private val appContext = context.applicationContext
-    private val workspace = File(appContext.filesDir, "workspace")
-    private val directory = File(workspace, ATTACHMENTS_DIRECTORY)
 
-    override suspend fun import(uri: Uri): AttachmentImport = withContext(Dispatchers.IO) {
+    override suspend fun import(uri: Uri, root: File): AttachmentImport = withContext(Dispatchers.IO) {
         val resolver = appContext.contentResolver
         val meta = queryMeta(resolver, uri) ?: return@withContext AttachmentImport.Failed
         if (meta.size > MAX_BYTES) return@withContext AttachmentImport.TooLarge
         val name = sanitizeAttachmentName(meta.name)
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
         val relativePath = "$ATTACHMENTS_DIRECTORY/${id}_$name"
-        val target = File(workspace, relativePath)
+        val target = File(root, relativePath)
         target.parentFile?.mkdirs()
         val copied = runCatching {
             resolver.openInputStream(uri)?.use { input ->
@@ -59,9 +57,9 @@ class FileAttachmentStore(context: Context) : AttachmentStore {
         )
     }
 
-    override fun file(ref: AttachmentRef): File = File(workspace, ref.path)
+    override fun file(ref: AttachmentRef, root: File): File = File(root, ref.path)
 
-    override fun resolve(raw: String): AttachmentRef? {
+    override fun resolve(raw: String, root: File): AttachmentRef? {
         val trimmed = raw.trim().trim('<', '>', '"', '\'')
         if (trimmed.isEmpty()) return null
         val decoded = if (trimmed.startsWith("file://")) {
@@ -69,30 +67,48 @@ class FileAttachmentStore(context: Context) : AttachmentStore {
         } else {
             trimmed.replace("%20", " ")
         } ?: return null
-        val candidate = when {
-            decoded.startsWith(workspace.absolutePath) -> File(decoded)
-            decoded.contains("/files/workspace/") -> File(decoded)
-            decoded.startsWith("workspace/") -> File(workspace, decoded.removePrefix("workspace/"))
-            else -> File(workspace, decoded)
+        val candidates = buildList {
+            when {
+                decoded.startsWith("workspace/") -> {
+                    add(File(home, decoded.removePrefix("workspace/")))
+                    add(File(root, decoded.removePrefix("workspace/")))
+                }
+
+                decoded.startsWith("$ATTACHMENTS_DIRECTORY/") || !decoded.contains('/') -> {
+                    add(File(root, decoded))
+                    if (root.absolutePath != home.absolutePath) add(File(home, decoded))
+                }
+
+                else -> {
+                    add(File(decoded))
+                    if (decoded.contains("/files/workspace/")) {
+                        add(File(decoded.replace("/files/workspace/", "/files/home/")))
+                    }
+                }
+            }
         }
-        val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: return null
-        val root = runCatching { workspace.canonicalFile }.getOrNull() ?: return null
-        if (!canonical.path.startsWith(root.path + File.separator)) return null
-        if (!canonical.isFile) return null
-        val relative = canonical.relativeTo(root).path.replace(File.separatorChar, '/')
-        val mime = guessMime(canonical.name)
-        return AttachmentRef(
-            id = relative,
-            name = canonical.name,
-            mime = mime,
-            size = canonical.length(),
-            path = relative,
-            kind = attachmentKind(mime, canonical.name),
-        )
+        val roots = listOf(root, home).mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+        for (candidate in candidates) {
+            val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: continue
+            if (roots.none { canonical.path.startsWith(it.path + File.separator) }) continue
+            if (!canonical.isFile) continue
+            val base = roots.firstOrNull { canonical.path.startsWith(it.path + File.separator) } ?: continue
+            val relative = canonical.relativeTo(base).path.replace(File.separatorChar, '/')
+            val mime = guessMime(canonical.name)
+            return AttachmentRef(
+                id = relative,
+                name = canonical.name,
+                mime = mime,
+                size = canonical.length(),
+                path = relative,
+                kind = attachmentKind(mime, canonical.name),
+            )
+        }
+        return null
     }
 
-    override fun shareIntent(ref: AttachmentRef): Intent? {
-        val target = file(ref)
+    override fun shareIntent(ref: AttachmentRef, root: File): Intent? {
+        val target = file(ref, root)
         if (!target.isFile) return null
         val uri = runCatching {
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.files", target)

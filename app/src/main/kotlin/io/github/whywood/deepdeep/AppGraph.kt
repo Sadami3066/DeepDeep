@@ -4,15 +4,17 @@ import android.content.Context
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
+import io.github.whywood.deepdeep.runtime.ProjectStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
+import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
-import io.github.whywood.deepdeep.runtime.SessionRepository
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
@@ -24,27 +26,52 @@ class AppGraph(context: Context) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val workspace: File = File(appContext.filesDir, "workspace").apply { mkdirs() }
+    init {
+        StorageMigration.migrate(appContext.filesDir)
+    }
+
+    val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
+    val projectsDir: File = File(appContext.filesDir, "projects").apply { mkdirs() }
     val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
 
     val apiKeyStore = ApiKeyStore(appContext)
     val modelConfigStore = ModelConfigStore(appContext)
-    val attachmentStore = FileAttachmentStore(appContext)
+    val attachmentStore = FileAttachmentStore(appContext, homeDir)
     val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
-    val linuxEnvironment = LinuxEnvironment(appContext, workspace)
-    val shellExecutor = LinuxShellExecutor(linuxEnvironment)
+    val linuxEnvironment = LinuxEnvironment(appContext, homeDir)
     val credentials = SdkCredentialStore(apiKeyStore, scope)
     val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
     val sessionMetaStore = SessionMetaStore(appContext)
-    val engine = PiSessionEngine(workspace, agentDir, credentials, shellExecutor, providerCatalog)
-    val sessionRepository = SessionRepository(engine, sessionMetaStore)
+    val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
+    val projectStore = ProjectStore(appContext)
+    private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
+
+    private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
+        if (!linuxSettings.isEnabled()) {
+            null
+        } else {
+            val environment = synchronized(shellEnvironments) {
+                shellEnvironments.getOrPut(cwd.absolutePath) {
+                    LinuxEnvironment(appContext, cwd)
+                }
+            }
+            LinuxShellExecutor(environment)
+        }
+    }
+
+    private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+        PiSessionEngine(cwd, agentDir, credentials, shellExecutorFor(cwd), providerCatalog)
+    }
+
     val host = AgentRuntimeHost(
-        engine = engine,
+        homeDir = homeDir,
+        projectsDir = projectsDir,
+        engineFactory = engineFactory,
         modelConfigStore = modelConfigStore,
-        sessionRepository = sessionRepository,
+        catalog = sessionCatalog,
+        projectStore = projectStore,
         providers = providerCatalog,
-        shellEnabled = { linuxSettings.isEnabled() },
     )
 
     suspend fun prepare() {

@@ -61,6 +61,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ModelOption
+import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
 @Composable
@@ -76,6 +77,7 @@ internal fun ChatComposer(
     thinkingLevels: List<ThinkingLevel>,
     quote: QuotedMessage?,
     attachments: List<AttachmentRef>,
+    attachmentRoot: File,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -177,6 +179,7 @@ internal fun ChatComposer(
                         if (attachments.isNotEmpty()) {
                             AttachmentChips(
                                 attachments = attachments,
+                                root = attachmentRoot,
                                 onRemove = onRemoveAttachment,
                                 onOpen = onOpenAttachment,
                                 modifier = Modifier.padding(bottom = 10.dp),
@@ -416,5 +419,6 @@ internal fun thinkingLabel(level: ThinkingLevel): String = stringResource(
         ThinkingLevel.LOW -> R.string.assistant_thinking_low
         ThinkingLevel.MEDIUM -> R.string.assistant_thinking_medium
         ThinkingLevel.HIGH -> R.string.assistant_thinking_high
+        ThinkingLevel.MAX -> R.string.assistant_thinking_max
     },
 )
