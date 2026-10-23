@@ -35,6 +35,7 @@ class PiSessionEngine(
     private val transport = okHttpTransport()
 
     suspend fun createSession(file: Path?, config: ModelConfig, shellEnabled: Boolean = true): AgentSession {
+        ensureSystemPromptFile(agentDirectory.toFile())
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
@@ -76,6 +77,7 @@ class PiSessionEngine(
                     },
                 ),
                 credentials = credentials,
+                extraSystemPromptSections = buildToolPromptSections(tools),
                 projectTrusted = true,
             ),
         )

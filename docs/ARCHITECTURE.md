@@ -55,12 +55,13 @@ Compose ChatScreen
 
 ## 个性化与提示词
 
-- `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；运行时只向 `PiSessionEngine` 提供 `Personalization(nickname, interaction, instruction)`。
-- `PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个自定义 section：
-  - `system`：DeepDeep 身份、当前时间/模型/工作区、proot 事实、交互模式规则、隐藏说明；手动包 `<system>…</system>`。
+- 基础系统提示词由 SDK 的 `SYSTEM.md` 覆盖机制替换：`PiSessionEngine` 在创建会话前确保 `files/agent/SYSTEM.md` 存在（已存在则保留用户编辑），SDK 读到后不再使用自带的 "You are an expert coding assistant operating inside pi" 前言。工作区里放 `.pi/SYSTEM.md` 可覆盖全局这一份。
+- 自定义前言会让 SDK 跳过它自己的 `<tools>`/`<rules>` section，因此 runtime 按实际工具列表重建这两段（`promptSnippet`、`promptGuidelines` + 简洁/路径规则），作为静态 section 随会话初始化写入。
+- `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；`PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个动态 section：
+  - `environment`：当前时间、模型、工作区、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
-- SDK 的 hook extra 不会自动包 section 标签，因此包装在 runtime 内完成；旧 `deepdeep_environment` 已移除。
-- 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效；修改个性化不需要重启会话。Skills 的 `<skills>` section 仍由 SDK 注入。
+- hook extra 不会自动包 section 标签，包装在 runtime 内完成。
+- 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效（只追加变化的 section）；修改个性化不需要重启会话。Skills 的 `<skills>`、AGENTS 的 `<project_context>` section 由 SDK 注入。
 
 ## Skills 与工作区规范
 
