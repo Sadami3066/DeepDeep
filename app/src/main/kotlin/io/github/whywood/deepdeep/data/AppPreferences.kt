@@ -15,22 +15,26 @@ private val Context.appPreferencesDataStore by preferencesDataStore(name = "app_
 
 data class UiPreferences(
     val autoCollapseProcess: Boolean = true,
+    val autoRetry: Boolean = true,
     val pinnedWorkspaceIds: Set<String> = emptySet(),
 )
 
 enum class UiToggle {
     AUTO_COLLAPSE_PROCESS,
+    AUTO_RETRY,
 }
 
 class AppPreferences(context: Context) {
     private val store = context.applicationContext.appPreferencesDataStore
     private val autoCollapseKey = booleanPreferencesKey("auto_collapse_process")
+    private val autoRetryKey = booleanPreferencesKey("auto_retry")
     private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
 
     val preferences: Flow<UiPreferences> = store.data
         .map { values ->
             UiPreferences(
                 autoCollapseProcess = values[autoCollapseKey] ?: true,
+                autoRetry = values[autoRetryKey] ?: true,
                 pinnedWorkspaceIds = values[pinnedWorkspacesKey] ?: emptySet(),
             )
         }
@@ -44,6 +48,7 @@ class AppPreferences(context: Context) {
         store.edit { values ->
             when (toggle) {
                 UiToggle.AUTO_COLLAPSE_PROCESS -> values[autoCollapseKey] = enabled
+                UiToggle.AUTO_RETRY -> values[autoRetryKey] = enabled
             }
         }
     }

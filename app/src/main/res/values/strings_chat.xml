@@ -73,7 +73,6 @@
     <string name="chat_status_compaction_failed">压缩失败</string>
     <string name="chat_status_running_tool_format">运行 %1$s</string>
     <string name="chat_error_request_failed">请求失败，请稍后重试。</string>
-    <string name="chat_error_empty_reply">（没有收到回复）</string>
     <string name="chat_error_runtime_start">运行时启动失败</string>
     <string name="chat_error_preparing">正在准备会话，请稍候…</string>
     <string name="chat_error_max_attachments">最多添加 15 个附件</string>
@@ -97,6 +96,10 @@
     <string name="assistant_reminder_label">定时提醒 · %1$s</string>
     <string name="assistant_reminders">定时提醒</string>
     <string name="assistant_retry">重试</string>
+    <string name="chat_status_auto_retry">自动重试 %1$d/%2$d</string>
+    <string name="chat_error_with_code">%1$s（%2$s）</string>
+    <string name="assistant_retrying">重试中</string>
+    <string name="assistant_model_provider">厂商</string>
     <string name="chat_error_insufficient_balance">余额不足，请充值后重试</string>
     <string name="chat_error_model_unavailable">模型不可用，请切换模型</string>
 </resources>

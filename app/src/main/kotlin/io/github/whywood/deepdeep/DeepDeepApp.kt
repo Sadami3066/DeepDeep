@@ -74,6 +74,7 @@ import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @Composable
@@ -90,6 +91,8 @@ internal fun DeepDeepApp(
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
     val retryTemplate = stringResource(R.string.chat_status_retrying_format)
     val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
+    val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
+    val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
     val chatUiStrings = ChatUiStrings(
         thinking = stringResource(R.string.chat_status_thinking),
         retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
@@ -97,7 +100,6 @@ internal fun DeepDeepApp(
         compactionFailed = stringResource(R.string.chat_status_compaction_failed),
         runningTool = { name -> runningToolTemplate.replace("%1\$s", name) },
         requestFailed = stringResource(R.string.chat_error_request_failed),
-        emptyReply = stringResource(R.string.chat_error_empty_reply),
         runtimeStartFailed = stringResource(R.string.chat_error_runtime_start),
         preparingSession = stringResource(R.string.chat_error_preparing),
         maxAttachments = stringResource(R.string.chat_error_max_attachments),
@@ -122,6 +124,12 @@ internal fun DeepDeepApp(
         insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
         modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
         retry = stringResource(R.string.assistant_retry),
+        autoRetrying = { attempt, max ->
+            autoRetryTemplate.replace("%1\$d", attempt.toString()).replace("%2\$d", max.toString())
+        },
+        withCode = { base, code ->
+            errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)
+        },
     )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
@@ -132,6 +140,7 @@ internal fun DeepDeepApp(
                     modelConfigStore = graph.modelConfigStore,
                     attachmentStore = graph.attachmentStore,
                     prepareRuntime = graph::prepare,
+                    autoRetry = graph.appPreferences.preferences.map { preferences -> preferences.autoRetry },
                     uiStrings = chatUiStrings,
                 )
             }
@@ -256,7 +265,11 @@ internal fun DeepDeepApp(
                             ).show()
                         }
                     },
+                    providers = graph.providerCatalog.summaries.filter { summary ->
+                        summary.id in configuredProviders
+                    },
                     onModelChange = chatViewModel::setModel,
+                    onProviderChange = chatViewModel::setProvider,
                     onThinkingLevelChange = chatViewModel::setThinkingLevel,
                     onToggleStep = chatViewModel::toggleStep,
                     onQuoteMessage = chatViewModel::quote,

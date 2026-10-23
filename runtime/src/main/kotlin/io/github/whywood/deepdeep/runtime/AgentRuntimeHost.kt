@@ -160,6 +160,37 @@ class AgentRuntimeHost(
         runTurn(handle, beginRun(handle), text)
     }
 
+    override suspend fun retryLastTurn(sessionId: String) {
+        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
+        check(!handle.busy) { "Agent session is busy" }
+        if (!handle.session.canRetryLastAssistant()) error("Nothing to retry")
+        val runId = beginRun(handle)
+        try {
+            emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
+            emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+            Log.i(TAG, "retry session=${handle.session.sessionId} run=$runId")
+            handle.session.retryLastAssistant()
+            if (!handle.stopRequested && !handle.terminalEmitted) finishRun(handle, runId)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            if (!handle.stopRequested && !handle.terminalEmitted) {
+                emitTerminal(
+                    handle = handle,
+                    runId = runId,
+                    text = handle.session.getLastAssistantText().orEmpty(),
+                    status = RunStatus.FAILED,
+                    message = error.message,
+                )
+            }
+        } finally {
+            handle.busy = false
+            if (handle.runId == runId) handle.runId = null
+            publishBusy()
+            emit(handle, RuntimeEvent.ActivityChanged(runId, null))
+        }
+    }
+
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
         val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
         if (handle.busy || handle.session.isStreaming) {
@@ -196,21 +227,7 @@ class AgentRuntimeHost(
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text)
-            if (!handle.stopRequested && !handle.terminalEmitted) {
-                val last = handle.session.messages.asReversed().firstNotNullOfOrNull { it.asAssistantMessage() }
-                val status = when (last?.stopReason) {
-                    StopReason.Error -> RunStatus.FAILED
-                    StopReason.Aborted -> RunStatus.STOPPED
-                    else -> RunStatus.DONE
-                }
-                emitTerminal(
-                    handle = handle,
-                    runId = runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
-                    status = status,
-                    message = last?.errorMessage,
-                )
-            }
+            if (!handle.stopRequested && !handle.terminalEmitted) finishRun(handle, runId)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -382,6 +399,22 @@ class AgentRuntimeHost(
 
     private fun emitNow(handle: Handle, event: RuntimeEvent) {
         eventsBuffer.tryEmit(SessionRuntimeEvent(handle.session.sessionId, event))
+    }
+
+    private suspend fun finishRun(handle: Handle, runId: String) {
+        val last = handle.session.messages.asReversed().firstNotNullOfOrNull { it.asAssistantMessage() }
+        val status = when (last?.stopReason) {
+            StopReason.Error -> RunStatus.FAILED
+            StopReason.Aborted -> RunStatus.STOPPED
+            else -> RunStatus.DONE
+        }
+        emitTerminal(
+            handle = handle,
+            runId = runId,
+            text = handle.session.getLastAssistantText().orEmpty(),
+            status = status,
+            message = last?.errorMessage,
+        )
     }
 
     private suspend fun emitTerminal(

@@ -73,7 +73,6 @@
     <string name="chat_status_compaction_failed">Compaction failed</string>
     <string name="chat_status_running_tool_format">Running %1$s</string>
     <string name="chat_error_request_failed">Request failed. Try again.</string>
-    <string name="chat_error_empty_reply">(No reply got)</string>
     <string name="chat_error_runtime_start">Runtime failed to start</string>
     <string name="chat_error_preparing">Preparing session…</string>
     <string name="chat_error_max_attachments">Up to 15 attachments</string>
@@ -97,6 +96,10 @@
     <string name="assistant_reminder_label">Scheduled reminder · %1$s</string>
     <string name="assistant_reminders">Scheduled reminders</string>
     <string name="assistant_retry">Retry</string>
+    <string name="chat_status_auto_retry">Retrying %1$d/%2$d</string>
+    <string name="chat_error_with_code">%1$s (%2$s)</string>
+    <string name="assistant_retrying">Retrying</string>
+    <string name="assistant_model_provider">Provider</string>
     <string name="chat_error_insufficient_balance">Insufficient balance. Top up and try again.</string>
     <string name="chat_error_model_unavailable">Model unavailable. Switch models.</string>
 </resources>

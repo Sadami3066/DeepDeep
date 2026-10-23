@@ -476,6 +476,8 @@ class ScheduleServiceTest {
 
         override suspend fun send(sessionId: String, text: String) = Unit
 
+        override suspend fun retryLastTurn(sessionId: String) = Unit
+
         override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
             deliveryFailure?.let { throw it }
             deliveries += Delivery(sessionId, text, reminder)

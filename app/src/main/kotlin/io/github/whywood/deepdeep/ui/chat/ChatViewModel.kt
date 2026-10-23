@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
+import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -26,8 +27,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -41,6 +44,7 @@ class ChatViewModel(
     private val modelConfigStore: ModelSettings,
     private val attachmentStore: AttachmentStore,
     private val prepareRuntime: suspend () -> Unit,
+    private val autoRetry: Flow<Boolean> = flowOf(false),
     private val uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
@@ -52,6 +56,9 @@ class ChatViewModel(
     private val pendingDeltas = mutableListOf<RuntimeEvent>()
     private var pendingDeltaJob: Job? = null
     private var pendingDeltaRunId: String? = null
+    private var autoRetryEnabled = false
+    private val autoRetryAttempts = mutableMapOf<String, Int>()
+    private val autoRetryJobs = mutableMapOf<String, Job>()
 
     init {
         viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
@@ -62,6 +69,9 @@ class ChatViewModel(
         }
         viewModelScope.launch {
             modelConfigStore.config.collect { applyConfig(it) }
+        }
+        viewModelScope.launch {
+            autoRetry.collect { autoRetryEnabled = it }
         }
         viewModelScope.launch {
             try {
@@ -151,15 +161,113 @@ class ChatViewModel(
         val current = mutableState.value
         if (!current.ready || !current.historyLoaded) return
         if (current.sending || current.switchingConversation) return
-        val index = current.messages.indexOfFirst { it.id == messageId }
-        if (index <= 0) return
-        val prompt = current.messages.take(index).lastOrNull { it.role == AssistantRole.USER }?.text ?: return
-        startTurn(prompt)
+        val sessionId = current.conversationId ?: return
+        val index = current.messages.indexOfLast { it.id == messageId }
+        if (index < 0 || index != current.messages.lastIndex) return
+        val failed = current.messages[index]
+        if (failed.role != AssistantRole.ASSISTANT || failed.status != MessageStatus.FAILED) return
+        clearAutoRetry(sessionId)
+        beginRetry(sessionId)
+    }
+
+    private fun beginRetry(sessionId: String) {
+        val now = System.currentTimeMillis()
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { state ->
+                state.copy(
+                    messages = markRetryingTail(state.messages, now),
+                    sending = true,
+                    activity = uiStrings.thinking,
+                    activityStartedAt = now,
+                    error = null,
+                )
+            }
+            cacheCurrentSession()
+        } else {
+            val cached = conversationCache[sessionId] ?: return
+            conversationCache[sessionId] = cached.copy(
+                messages = markRetryingTail(cached.messages, now),
+                sending = true,
+                activity = uiStrings.thinking,
+                activityStartedAt = now,
+            )
+        }
+        autoRetryJobs.remove(sessionId)
+        viewModelScope.launch {
+            try {
+                sessionOpenJobs[sessionId]?.join()
+                runtime.retryLastTurn(sessionId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                finishRunError(sessionId, error.message ?: uiStrings.requestFailed)
+            }
+        }
+    }
+
+    private fun markRetryingTail(messages: List<AssistantMessage>, now: Long): List<AssistantMessage> {
+        val index = messages.indexOfLast {
+            it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
+        }
+        if (index < 0) {
+            return messages + AssistantMessage(
+                id = (messages.maxOfOrNull { it.id } ?: -1L) + 1,
+                role = AssistantRole.ASSISTANT,
+                text = "",
+                streaming = true,
+                status = MessageStatus.RUNNING,
+                startedAt = now,
+            )
+        }
+        val retrying = messages[index].copy(
+            streaming = true,
+            retrying = true,
+            runId = "",
+            finishedAt = null,
+        )
+        return messages.take(index) + retrying
+    }
+
+    private fun maybeAutoRetry(sessionId: String, failure: RuntimeEvent.RunFailed) {
+        if (!autoRetryEnabled) return
+        if (!uiStrings.canAutoRetry(uiStrings.runErrorKind(failure.message))) return
+        val attempt = (autoRetryAttempts[sessionId] ?: 0) + 1
+        if (attempt > MAX_AUTO_RETRIES) {
+            clearAutoRetry(sessionId)
+            return
+        }
+        autoRetryAttempts[sessionId] = attempt
+        autoRetryJobs.remove(sessionId)?.cancel()
+        autoRetryJobs[sessionId] = viewModelScope.launch {
+            val label = uiStrings.autoRetrying(attempt, MAX_AUTO_RETRIES)
+            if (mutableState.value.conversationId == sessionId) {
+                mutableState.update {
+                    it.copy(sending = true, activity = label, activityStartedAt = System.currentTimeMillis())
+                }
+            } else {
+                conversationCache[sessionId]?.let { cached ->
+                    conversationCache[sessionId] = cached.copy(
+                        sending = true,
+                        activity = label,
+                        activityStartedAt = System.currentTimeMillis(),
+                    )
+                }
+            }
+            delay(AUTO_RETRY_DELAY_MS)
+            if (runtime.busySessionIds.value.contains(sessionId)) return@launch
+            beginRetry(sessionId)
+        }
+    }
+
+    private fun clearAutoRetry(sessionId: String) {
+        autoRetryAttempts.remove(sessionId)
+        autoRetryJobs.remove(sessionId)?.cancel()
     }
 
     private fun startTurn(prompt: String) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
+        clearAutoRetry(sessionId)
         val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
         val assistantId = nextId + 1
         val now = System.currentTimeMillis()
@@ -352,6 +460,25 @@ class ChatViewModel(
             try {
                 runtime.setModel(current.providerId, option.id, thinking)
                 applyConfig(ModelConfig(current.providerId, option.id, thinking))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchModelFailed)) }
+            }
+        }
+    }
+
+    fun setProvider(providerId: String) {
+        if (mutableState.value.sending) return
+        val current = mutableState.value
+        if (providerId == current.providerId) return
+        val options = providers.models(providerId)
+        val model = options.firstOrNull { it.id == current.modelId } ?: options.firstOrNull() ?: return
+        val thinking = current.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
+        viewModelScope.launch {
+            try {
+                runtime.setModel(providerId, model.id, thinking)
+                applyConfig(ModelConfig(providerId, model.id, thinking))
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -642,6 +769,11 @@ class ChatViewModel(
             val cached = conversationCache[scoped.sessionId] ?: ConversationState()
             conversationCache[scoped.sessionId] = reduce(cached, event, uiStrings)
         }
+        when (event) {
+            is RuntimeEvent.RunFailed -> maybeAutoRetry(scoped.sessionId, event)
+            is RuntimeEvent.RunFinished -> if (event.status != RunStatus.FAILED) clearAutoRetry(scoped.sessionId)
+            else -> Unit
+        }
     }
 
     private fun bufferActiveDelta(event: RuntimeEvent) {
@@ -698,7 +830,12 @@ class ChatViewModel(
     )
 
     private fun finishRunError(sessionId: String, message: String) {
-        if (mutableState.value.conversationId != sessionId) return
+        if (mutableState.value.conversationId != sessionId) {
+            conversationCache[sessionId]?.let { cached ->
+                conversationCache[sessionId] = cached.finishWithError("", message, uiStrings)
+            }
+            return
+        }
         val reduced = mutableState.value.conversationState().finishWithError("", message, uiStrings)
         val hasFailure = reduced.messages.any { it.status == MessageStatus.FAILED && it.error != null }
         mutableState.update {
@@ -812,5 +949,7 @@ class ChatViewModel(
     private companion object {
         const val MAX_ATTACHMENTS = 15
         const val LEGACY_NEW_TITLE = "新对话"
+        const val MAX_AUTO_RETRIES = 5
+        const val AUTO_RETRY_DELAY_MS = 2_000L
     }
 }

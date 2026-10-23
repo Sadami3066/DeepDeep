@@ -26,6 +26,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -75,6 +76,13 @@ fun ChatSettingsScreen(
                     title = R.string.settings_auto_collapse_process,
                     checked = preferences.autoCollapseProcess,
                     onCheckedChange = { onToggle(UiToggle.AUTO_COLLAPSE_PROCESS, it) },
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Refresh,
+                    title = R.string.settings_auto_retry,
+                    checked = preferences.autoRetry,
+                    onCheckedChange = { onToggle(UiToggle.AUTO_RETRY, it) },
                 )
             }
             Spacer(Modifier.height(40.dp))

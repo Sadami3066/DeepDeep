@@ -87,6 +87,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import java.time.LocalTime
 import kotlin.math.roundToInt
@@ -104,7 +105,9 @@ fun ChatScreen(
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
     onReload: () -> Unit,
+    providers: List<ProviderSummary>,
     onModelChange: (String) -> Unit,
+    onProviderChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
     onToggleStep: (messageId: Long, stepId: Long) -> Unit,
     onQuoteMessage: (Long, String) -> Unit,
@@ -318,6 +321,8 @@ fun ChatScreen(
             modelLabel = if (configured) state.modelLabel else "",
             modelId = state.modelId,
             models = state.models,
+            providerId = state.providerId,
+            providers = providers,
             thinkingLevel = state.thinkingLevel,
             thinkingLevels = thinkingLevels,
             quote = state.quote,
@@ -331,6 +336,7 @@ fun ChatScreen(
             },
             onStop = onStop,
             onModelChange = onModelChange,
+            onProviderChange = onProviderChange,
             onThinkingLevelChange = onThinkingLevelChange,
             onClearQuote = onClearQuote,
             onPickAttachment = onPickAttachment,

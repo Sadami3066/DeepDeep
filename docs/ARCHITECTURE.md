@@ -45,6 +45,9 @@ Compose ChatScreen
 - `AgentRuntime` 是接口，`AgentRuntimeHost` 实现；Chat 层可替换/测试。
 - 每次发送生成 `runId`；流式事件带 runId，UI 丢弃旧 run 的迟到事件。
 - `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
+- 重试：`AgentRuntime.retryLastTurn` 走 SDK 的 `retryLastAssistant()`——先按 context edit 移除末尾失败的 assistant 回合，再从原用户消息继续运行并复用重试循环，所以不会追加新的用户消息；`AgentSession.canRetryLastAssistant()` 用来判断是否可重试。
+- 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。
+- 模型切换：`ChatViewModel.setProvider` 用 `ProviderDirectory.models()` 选该厂商当前或首个模型，经 `runtime.setModel` 持久化并同步到所有已打开会话；composer 的模型 sheet 顶部提供已配置厂商下拉。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
 - ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
 - OpenCode（Zen / Go）的网关要求每个请求带 `x-opencode-session`，否则返回 400 `MissingSessionID`；SDK 0.1.2 起由 `Models` 层用 `StreamOptions.sessionId` 自动注入，coding agent 把会话 id 传进 `AgentOptions`。

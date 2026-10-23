@@ -1,5 +1,13 @@
 # Status
 
+## Done: P11.3 model switching, regenerate retry, auto-retry
+
+- Model sheet: a provider row lets you switch between configured providers; the model list below follows the selected provider
+- Retry now regenerates the failed reply instead of resending the user message: the SDK removes the failed assistant turn with a context edit and continues from the original user message (`retryLastTurn` / `retryLastAssistant`)
+- Chat settings gained an auto-retry switch (default on): retryable failures regenerate automatically up to 5 times with a 2s interval and a "Retrying n/5" status line; timeouts, auth/balance errors and missing models are not retried
+- Retry keeps the failed bubble and its error line in place and swaps the Retry action for a spinner, assistant failures no longer write a placeholder text, and errors render as a localized reason plus status code; the provider picker uses a dedicated anchored `DdDropdown` distinct from the context menu
+- pi2kotlin 0.1.3 (session header for OpenCode Go + regenerate API), 233 unit tests green
+
 ## Done: P11.2 visible failures, conversation-bound reminders, editable schedules
 
 - Run failures: the host inspects the final assistant stop reason, so 401/402/429/5xx/timeout/network/model-missing errors show a localized message with Retry instead of an empty reply; history reloads keep the failed turn; background notifications carry the error

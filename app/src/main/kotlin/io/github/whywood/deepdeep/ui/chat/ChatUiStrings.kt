@@ -2,6 +2,18 @@ package io.github.whywood.deepdeep.ui.chat
 
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 
+enum class RunErrorKind {
+    INVALID_API_KEY,
+    INSUFFICIENT_BALANCE,
+    RATE_LIMITED,
+    TIMEOUT,
+    NETWORK,
+    MODEL_UNAVAILABLE,
+    TOOL_ARGS,
+    SERVER,
+    UNKNOWN,
+}
+
 data class ChatUiStrings(
     val thinking: String,
     val retrying: (Int) -> String,
@@ -9,7 +21,6 @@ data class ChatUiStrings(
     val compactionFailed: String,
     val runningTool: (String) -> String,
     val requestFailed: String,
-    val emptyReply: String,
     val runtimeStartFailed: String,
     val preparingSession: String,
     val maxAttachments: String,
@@ -34,6 +45,8 @@ data class ChatUiStrings(
     val insufficientBalance: String,
     val modelUnavailable: String,
     val retry: String,
+    val autoRetrying: (Int, Int) -> String,
+    val withCode: (String, String) -> String,
 ) {
     fun activity(activity: RuntimeActivity?): String? = when (activity) {
         null -> null
@@ -44,29 +57,62 @@ data class ChatUiStrings(
         is RuntimeActivity.RunningTool -> runningTool(activity.name)
     }
 
-    fun runError(raw: String?): String {
+    fun runErrorKind(raw: String?): RunErrorKind {
         val text = raw?.trim().orEmpty()
-        if (text.isEmpty()) return requestFailed
+        if (text.isEmpty()) return RunErrorKind.UNKNOWN
         return when {
-            text.contains("API key", ignoreCase = true) || text.contains("401") -> invalidApiKey
+            text.contains("API key", ignoreCase = true) || text.contains("401") -> RunErrorKind.INVALID_API_KEY
             text.contains("402") ||
                 text.contains("Insufficient Balance", ignoreCase = true) ||
-                text.contains("insufficient_quota", ignoreCase = true) -> insufficientBalance
+                text.contains("insufficient_quota", ignoreCase = true) -> RunErrorKind.INSUFFICIENT_BALANCE
 
-            text.contains("429") -> rateLimited
-            text.contains("timed out", ignoreCase = true) -> timeout
-            text.contains("Network", ignoreCase = true) -> networkError
-            text.contains("404") || text.contains("model not found", ignoreCase = true) -> modelUnavailable
+            text.contains("429") -> RunErrorKind.RATE_LIMITED
+            text.contains("timed out", ignoreCase = true) ||
+                text.contains("timeout", ignoreCase = true) -> RunErrorKind.TIMEOUT
+
+            text.contains("Network", ignoreCase = true) -> RunErrorKind.NETWORK
+            text.contains("404") || text.contains("model not found", ignoreCase = true) -> RunErrorKind.MODEL_UNAVAILABLE
             text.contains("tool input", ignoreCase = true) ||
-                text.contains("invalid JSON", ignoreCase = true) -> invalidToolArgs
+                text.contains("invalid JSON", ignoreCase = true) -> RunErrorKind.TOOL_ARGS
 
-            SERVER_ERROR.containsMatchIn(text) -> serviceUnavailable
-            else -> requestFailed + "\n" + text.take(300)
+            SERVER_ERROR.containsMatchIn(text) -> RunErrorKind.SERVER
+            else -> RunErrorKind.UNKNOWN
         }
+    }
+
+    fun canAutoRetry(kind: RunErrorKind): Boolean = when (kind) {
+        RunErrorKind.TIMEOUT,
+        RunErrorKind.INVALID_API_KEY,
+        RunErrorKind.INSUFFICIENT_BALANCE,
+        RunErrorKind.MODEL_UNAVAILABLE,
+        -> false
+
+        else -> true
+    }
+
+    fun runError(raw: String?): String {
+        val text = raw?.trim().orEmpty()
+        val code = ERROR_CODE.find(text)?.groupValues?.getOrNull(1)
+        val base = when (runErrorKind(text)) {
+            RunErrorKind.INVALID_API_KEY -> invalidApiKey
+            RunErrorKind.INSUFFICIENT_BALANCE -> insufficientBalance
+            RunErrorKind.RATE_LIMITED -> rateLimited
+            RunErrorKind.TIMEOUT -> timeout
+            RunErrorKind.NETWORK -> networkError
+            RunErrorKind.MODEL_UNAVAILABLE -> modelUnavailable
+            RunErrorKind.TOOL_ARGS -> invalidToolArgs
+            RunErrorKind.SERVER -> serviceUnavailable
+            RunErrorKind.UNKNOWN -> requestFailed
+        }
+        val kind = runErrorKind(text)
+        val showCode = code != null && kind != RunErrorKind.TIMEOUT &&
+            kind != RunErrorKind.NETWORK && kind != RunErrorKind.TOOL_ARGS
+        return if (showCode) withCode(base, code!!) else base
     }
 
     companion object {
         private val SERVER_ERROR = Regex("\\b5\\d{2}\\b")
+        private val ERROR_CODE = Regex("\\b([1-5]\\d{2})\\b")
 
         fun fallback(): ChatUiStrings = ChatUiStrings(
             thinking = "Thinking",
@@ -75,7 +121,6 @@ data class ChatUiStrings(
             compactionFailed = "Compaction failed",
             runningTool = { name -> "Running $name" },
             requestFailed = "Request failed. Try again.",
-            emptyReply = "(No reply got)",
             runtimeStartFailed = "Runtime failed to start",
             preparingSession = "Preparing session…",
             maxAttachments = "Up to 15 attachments",
@@ -100,6 +145,8 @@ data class ChatUiStrings(
             insufficientBalance = "Insufficient balance. Top up and try again.",
             modelUnavailable = "Model unavailable. Switch models.",
             retry = "Retry",
+            autoRetrying = { attempt, max -> "Retrying $attempt/$max" },
+            withCode = { base, code -> "$base ($code)" },
         )
     }
 }

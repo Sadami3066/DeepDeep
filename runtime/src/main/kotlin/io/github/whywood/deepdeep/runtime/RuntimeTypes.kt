@@ -123,6 +123,7 @@ data class AssistantMessage(
     val runId: String = "",
     val error: String? = null,
     val reminder: String? = null,
+    val retrying: Boolean = false,
 )
 
 enum class RunStatus {
@@ -266,6 +267,8 @@ interface AgentRuntime {
     suspend fun reloadSession(sessionId: String): String
 
     suspend fun send(sessionId: String, text: String)
+
+    suspend fun retryLastTurn(sessionId: String)
 
     suspend fun deliverReminder(sessionId: String, text: String, reminder: String?)
 

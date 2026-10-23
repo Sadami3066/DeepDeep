@@ -51,7 +51,9 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
@@ -61,6 +63,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ModelOption
+import io.github.whywood.deepdeep.runtime.ProviderSummary
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
@@ -73,6 +76,8 @@ internal fun ChatComposer(
     modelLabel: String,
     modelId: String,
     models: List<ModelOption>,
+    providerId: String,
+    providers: List<ProviderSummary>,
     thinkingLevel: ThinkingLevel,
     thinkingLevels: List<ThinkingLevel>,
     quote: QuotedMessage?,
@@ -82,6 +87,7 @@ internal fun ChatComposer(
     onSend: () -> Unit,
     onStop: () -> Unit,
     onModelChange: (String) -> Unit,
+    onProviderChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
     onClearQuote: () -> Unit,
     onPickAttachment: () -> Unit,
@@ -92,6 +98,7 @@ internal fun ChatComposer(
 ) {
     val colors = deepDeepColors()
     var showModels by remember { mutableStateOf(false) }
+    var showProviders by remember { mutableStateOf(false) }
     var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !sending
     val sendActive = sending || canSend
@@ -312,6 +319,52 @@ internal fun ChatComposer(
             )
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                 Spacer(Modifier.height(8.dp))
+                if (providers.isNotEmpty()) {
+                    val providerName = providers.firstOrNull { it.id == providerId }?.name ?: providerId
+                    DdDropdown(
+                        expanded = showProviders,
+                        onDismissRequest = { showProviders = false },
+                        anchor = {
+                            DdListRow(
+                                title = stringResource(R.string.assistant_model_provider),
+                                trailing = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = providerName,
+                                            style = DdType.bodySmall,
+                                            color = colors.inkTertiary,
+                                            maxLines = 1,
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
+                                    }
+                                },
+                                onClick = { showProviders = true },
+                                modifier = Modifier.testTag("assistant_provider_row"),
+                            )
+                        },
+                    ) {
+                        providers.forEach { provider ->
+                            DdMenuItem(
+                                text = provider.name,
+                                onClick = {
+                                    showProviders = false
+                                    onProviderChange(provider.id)
+                                },
+                                selected = provider.id == providerId,
+                                trailing = if (provider.id == providerId) {
+                                    {
+                                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
+                                    }
+                                } else {
+                                    null
+                                },
+                                testTag = "assistant_provider_${provider.id}",
+                            )
+                        }
+                    }
+                    DdHairline()
+                }
                 if (models.isEmpty()) {
                     DdListRow(
                         title = stringResource(R.string.assistant_model_unconfigured),

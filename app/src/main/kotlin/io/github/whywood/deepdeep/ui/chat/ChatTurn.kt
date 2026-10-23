@@ -34,6 +34,7 @@ import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -255,11 +256,20 @@ private fun FailedMark(message: AssistantMessage, onRetry: (Long) -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        DdTextAction(
-            text = stringResource(R.string.assistant_retry),
-            onClick = { onRetry(message.id) },
-            modifier = Modifier.testTag("assistant_retry"),
-        )
+        if (message.retrying) {
+            DdSpinner(
+                modifier = Modifier.padding(top = 6.dp).testTag("assistant_retrying_spinner"),
+                color = colors.accent,
+                size = 16.dp,
+                strokeWidth = 1.8.dp,
+            )
+        } else {
+            DdTextAction(
+                text = stringResource(R.string.assistant_retry),
+                onClick = { onRetry(message.id) },
+                modifier = Modifier.testTag("assistant_retry"),
+            )
+        }
     }
 }
 

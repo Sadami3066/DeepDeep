@@ -16,5 +16,6 @@
 14. P11 — skills repository with zip install + global/project enable, workspace settings + AGENTS.md editor, app tools (`ask_user_question` UI, schedule CRUD + local store only) (done)
 15. P11.1 — project skills include global rows, chat reload, scheduled executor + schedule page + hidden schedule workspace, storage migration repair (done)
 16. P11.2 — visible run failures with i18n + retry, conversation-bound reminder delivery (ScheduleService, no hidden workspace), editable schedule page with manual run and new UI, conversation state reducer and feature wiring checklist (done)
-17. Next — workspace-level session migration/archive; full-text search; schedule editor trigger presets (cron/custom intervals); root ShellExecutor when authorized
-18. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it
+17. P11.3 — model sheet provider switching, regenerate-on-retry, auto-retry switch with UI feedback (done)
+18. Next — workspace-level session migration/archive; full-text search; schedule editor trigger presets (cron/custom intervals); root ShellExecutor when authorized
+19. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it

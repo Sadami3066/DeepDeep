@@ -72,7 +72,7 @@ class ConversationReducerTest {
         val message = reduced.messages.single()
         assertEquals(MessageStatus.FAILED, message.status)
         assertEquals("partial", message.text)
-        assertEquals(strings.insufficientBalance, message.error)
+        assertEquals(strings.withCode(strings.insufficientBalance, "402"), message.error)
         assertEquals(4000L, message.finishedAt)
         assertEquals(ToolActivityStatus.FAILED, (message.steps.single() as AssistantStep.Tool).trace.status)
         assertFalse(reduced.sending)

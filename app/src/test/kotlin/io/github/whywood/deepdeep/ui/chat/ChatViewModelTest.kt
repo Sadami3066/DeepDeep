@@ -54,12 +54,13 @@ class ChatViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(runtime: FakeRuntime) = ChatViewModel(
+    private fun viewModel(runtime: FakeRuntime, autoRetry: Boolean = false) = ChatViewModel(
         runtime,
         FakeProviders(),
         FakeSettings(),
         FakeAttachmentStore(),
         prepareRuntime = {},
+        autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
         ioDispatcher = dispatcher,
     )
 
@@ -348,7 +349,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun retryResendsPreviousUserText() = runTest(dispatcher) {
+    fun retryRegeneratesReplyWithoutResendingUserText() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
@@ -361,26 +362,78 @@ class ChatViewModelTest {
 
         val failed = viewModel.state.value.messages.last()
         assertEquals(MessageStatus.FAILED, failed.status)
-        assertEquals(ChatUiStrings.fallback().insufficientBalance, failed.error)
+        assertEquals(ChatUiStrings.fallback().withCode(ChatUiStrings.fallback().insufficientBalance, "402"), failed.error)
 
         viewModel.retry(failed.id)
         advanceUntilIdle()
 
-        assertEquals(listOf("hello", "hello"), runtime.sent)
-        assertEquals(4, viewModel.state.value.messages.size)
-        assertEquals(AssistantRole.USER, viewModel.state.value.messages[2].role)
-        assertEquals(MessageStatus.RUNNING, viewModel.state.value.messages[3].status)
+        assertEquals(listOf("hello"), runtime.sent)
+        assertEquals(1, runtime.retried)
+        val messages = viewModel.state.value.messages
+        assertEquals(2, messages.size)
+        assertEquals(AssistantRole.USER, messages[0].role)
+        assertTrue(messages[1].retrying)
+        assertEquals(MessageStatus.FAILED, messages[1].status)
+
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted("run-2", 5000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-2", "world"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-2", "world", RunStatus.DONE, 6000L))
+        advanceUntilIdle()
+        val finished = viewModel.state.value.messages.last()
+        assertEquals(MessageStatus.DONE, finished.status)
+        assertEquals("world", finished.text)
+        assertFalse(finished.retrying)
+        assertNull(finished.error)
+    }
+
+    @Test
+    fun autoRetryRegeneratesAfterTransientFailure() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        advanceUntilIdle()
+
+        assertEquals(1, runtime.retried)
+        val messages = viewModel.state.value.messages
+        assertEquals(2, messages.size)
+        assertTrue(messages.last().retrying)
+        assertEquals(MessageStatus.FAILED, messages.last().status)
+        assertTrue(viewModel.state.value.sending)
+    }
+
+    @Test
+    fun autoRetrySkipsTimeouts() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "request timed out"))
+        advanceUntilIdle()
+
+        assertEquals(0, runtime.retried)
+        assertEquals(MessageStatus.FAILED, viewModel.state.value.messages.last().status)
+        assertFalse(viewModel.state.value.sending)
     }
 
     @Test
     fun runErrorMapsInsufficientBalance() {
         val strings = ChatUiStrings.fallback()
-        assertEquals(strings.insufficientBalance, strings.runError("402 Insufficient Balance"))
+        assertEquals(strings.withCode(strings.insufficientBalance, "402"), strings.runError("402 Insufficient Balance"))
         assertEquals(strings.insufficientBalance, strings.runError("insufficient_quota"))
-        assertEquals(strings.invalidApiKey, strings.runError("401 API key invalid"))
-        assertEquals(strings.modelUnavailable, strings.runError("404 model not found"))
-        assertEquals(strings.serviceUnavailable, strings.runError("HTTP 503"))
-        assertTrue(strings.runError("weird failure").startsWith(strings.requestFailed))
+        assertEquals(strings.withCode(strings.invalidApiKey, "401"), strings.runError("401 API key invalid"))
+        assertEquals(strings.withCode(strings.modelUnavailable, "404"), strings.runError("404 model not found"))
+        assertEquals(strings.withCode(strings.serviceUnavailable, "503"), strings.runError("HTTP 503"))
+        assertEquals(strings.requestFailed, strings.runError("weird failure"))
+        assertEquals(strings.timeout, strings.runError("request timed out"))
+        assertEquals(strings.requestFailed, strings.runError(null))
     }
 
     private class FakeRuntime : AgentRuntime {
@@ -438,6 +491,12 @@ class ChatViewModelTest {
 
         override suspend fun send(sessionId: String, text: String) {
             sent += text
+        }
+
+        var retried = 0
+
+        override suspend fun retryLastTurn(sessionId: String) {
+            retried += 1
         }
 
         override fun stop(sessionId: String) = Unit

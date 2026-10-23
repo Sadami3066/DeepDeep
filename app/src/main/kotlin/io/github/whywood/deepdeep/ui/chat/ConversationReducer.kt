@@ -57,7 +57,12 @@ internal fun reduce(
             } else {
                 steps += AssistantStep.Text(nextStepId(steps), event.text)
             }
-            message.copy(steps = steps)
+            message.copy(
+                steps = steps,
+                error = null,
+                retrying = false,
+                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
+            )
         }
     }
 
@@ -70,13 +75,21 @@ internal fun reduce(
             } else {
                 steps += AssistantStep.Reasoning(nextStepId(steps), event.text)
             }
-            message.copy(steps = steps)
+            message.copy(
+                steps = steps,
+                error = null,
+                retrying = false,
+                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
+            )
         }
     }
 
     is RuntimeEvent.ToolStarted -> state.onRun(event.runId) {
         updateAssistant(event.runId) { message ->
             message.copy(
+                error = null,
+                retrying = false,
+                status = if (message.status == MessageStatus.FAILED) MessageStatus.RUNNING else message.status,
                 steps = message.steps + AssistantStep.Tool(
                     ToolTrace(
                         id = nextStepId(message.steps),
@@ -129,12 +142,14 @@ internal fun ConversationState.finishWithStatus(
     val finalized = message.copy(
         text = finalText,
         streaming = false,
+        error = if (status == RunStatus.FAILED) message.error else null,
         status = when (status) {
             RunStatus.DONE -> MessageStatus.DONE
             RunStatus.STOPPED -> MessageStatus.STOPPED
             RunStatus.FAILED -> MessageStatus.FAILED
         },
         finishedAt = finishedAt,
+        retrying = false,
         steps = consumeFinalText(failRunningTools(message.steps), finalText),
     )
     return copy(
@@ -159,8 +174,9 @@ internal fun ConversationState.finishWithError(
     if (index == -1) return copy(sending = false, activity = null, activityStartedAt = null)
     val current = messages[index]
     val failed = current.copy(
-        text = current.text.ifBlank { strings.emptyReply },
+        text = current.text,
         streaming = false,
+        retrying = false,
         status = MessageStatus.FAILED,
         finishedAt = now,
         error = strings.runError(rawError),

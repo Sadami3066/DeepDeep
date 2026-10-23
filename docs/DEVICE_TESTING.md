@@ -83,8 +83,13 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 48. 生命周期：删除绑定对话后任务从任务页消失；归档绑定对话后任务变已停用。
 49. 失败可见：断网或使用无效 API Key 发送；该轮显示本地化错误（如「余额不足」「Invalid or expired API key」）+「重试」；恢复网络后点重试成功；杀进程重开历史里仍能看到失败轮。
 50. 补跑：到点前杀进程，重开 App 后补投一次且不重复；改设备时区后任务按新本地时间重算。
-52. OpenCode Go：切到 opencode-go 的模型（如 deepseek-v4.1-flash / claude-haiku-5-5）发一条消息；不再出现 400 `MissingSessionID`，正常回复；会话 JSONL 无 `stopReason=error`。
 51. 系统提示词：新会话的 JSONL 初始 system 消息里 `preamble` 是 DeepDeep 自己的前言（不再出现 "You are an expert coding assistant operating inside pi"），`<rules>` 仍在、`<tools>` 文本段不再生成（工具定义走 system 消息的 `toolsAdded`）；下一轮只追加 `<environment>` / `<instruction>` patch，不再有重复身份的 `<system>` section。`files/agent/SYSTEM.md` 首次启动生成，手动改动后不会被覆盖。
+52. OpenCode Go：切到 opencode-go 的模型（如 deepseek-v4.1-flash / claude-haiku-5-5）发一条消息；不再出现 400 `MissingSessionID`，正常回复；会话 JSONL 无 `stopReason=error`。
+53. 模型 sheet 厂商切换：点 composer 模型 chip，sheet 顶部「厂商」行下方弹出专属下拉（不是上下文菜单），只列已配置 Key 的厂商；切换后模型列表更新、当前模型生效，重启后保持。
+54. 重试（重新生成）：关掉自动重试，断网发送得到失败轮 → 恢复网络点「重试」：失败气泡和错误行保持不动，「重试」文字变成蓝色小圈圈，随后流式生成（不消失不重影）；用户消息不重复出现；会话 JSONL 里失败回合被 context edit 移除。
+55. 自动重试：默认已开启（聊天设置可关），断网发送 → 状态行显示「自动重试 n/5」并自动重试，恢复网络后自动成功；超时类错误不自动重试。
+56. 自动重试上限：持续断网时最多自动重试 5 次后停下，失败轮保留错误与「重试」。
+57. 失败文案：错误轮显示「原因（错误码）」本地化文案，不出现「没有收到回复」占位；英文界面不出现中文；未知错误只显示「Request failed」，原始文本只在会话 JSONL。
 
 ## 证据
 
