@@ -512,7 +512,8 @@ private fun UnpreviewableContent(attachment: AttachmentRef) {
 
 private fun attachmentIcon(kind: AttachmentKind) = when (kind) {
     AttachmentKind.IMAGE -> DdIcons.Image
-    else -> DdIcons.File
+    AttachmentKind.TEXT -> DdIcons.FileText
+    AttachmentKind.OTHER -> DdIcons.File
 }
 
 private fun attachmentFile(context: Context, attachment: AttachmentRef, root: File): File =

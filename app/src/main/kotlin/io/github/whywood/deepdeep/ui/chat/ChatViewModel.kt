@@ -28,12 +28,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val STREAM_DELTA_BATCH_MS = 16L
 
 private data class ConversationSnapshot(
     val messages: List<AssistantMessage> = emptyList(),
@@ -57,6 +60,9 @@ class ChatViewModel(
 
     private val conversationCache = mutableMapOf<String, ConversationSnapshot>()
     private val sessionOpenJobs = mutableMapOf<String, Job>()
+    private val pendingDeltas = mutableListOf<RuntimeEvent>()
+    private var pendingDeltaJob: Job? = null
+    private var pendingDeltaRunId: String? = null
 
     init {
         viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
@@ -135,6 +141,7 @@ class ChatViewModel(
     }
 
     fun send() {
+        flushPendingDeltas()
         val current = mutableState.value
         if (!current.ready || !current.historyLoaded) {
             mutableState.update { it.copy(error = uiStrings.restoringSession) }
@@ -186,6 +193,7 @@ class ChatViewModel(
     }
 
     fun stop() {
+        flushPendingDeltas()
         mutableState.value.conversationId?.let(runtime::stop)
     }
 
@@ -364,6 +372,12 @@ class ChatViewModel(
     fun deleteSession(id: String) {
         viewModelScope.launch {
             val wasActive = mutableState.value.conversationId == id
+            if (wasActive) {
+                pendingDeltaJob?.cancel()
+                pendingDeltaJob = null
+                pendingDeltas.clear()
+                pendingDeltaRunId = null
+            }
             conversationCache.remove(id)
             if (wasActive) runtime.stop(id)
             runCatching { withContext(ioDispatcher) { runtime.deleteSession(id) } }
@@ -515,6 +529,7 @@ class ChatViewModel(
     }
 
     private fun cacheCurrentSession() {
+        flushPendingDeltas()
         val current = mutableState.value
         val id = current.conversationId ?: return
         if (!current.historyLoaded) return
@@ -530,11 +545,17 @@ class ChatViewModel(
     private fun onSessionEvent(scoped: SessionRuntimeEvent) {
         val event = scoped.event
         if (event is RuntimeEvent.SessionListChanged) {
+            flushPendingDeltas()
             viewModelScope.launch { refreshSessions() }
             return
         }
         val activeId = mutableState.value.conversationId
         if (scoped.sessionId == activeId) {
+            if (event is RuntimeEvent.TextDelta || event is RuntimeEvent.ReasoningDelta) {
+                bufferActiveDelta(event)
+                return
+            }
+            flushPendingDeltas()
             val reduced = reduce(mutableState.value.snapshot(), event)
             mutableState.update {
                 it.copy(
@@ -552,6 +573,45 @@ class ChatViewModel(
         } else {
             val snapshot = conversationCache[scoped.sessionId] ?: ConversationSnapshot()
             conversationCache[scoped.sessionId] = reduce(snapshot, event)
+        }
+    }
+
+    private fun bufferActiveDelta(event: RuntimeEvent) {
+        val runId = when (event) {
+            is RuntimeEvent.TextDelta -> event.runId
+            is RuntimeEvent.ReasoningDelta -> event.runId
+            else -> return
+        }
+        if (pendingDeltas.isNotEmpty() && pendingDeltaRunId != runId) {
+            flushPendingDeltas()
+        }
+        pendingDeltaRunId = runId
+        pendingDeltas += event
+        if (pendingDeltaJob == null) {
+            pendingDeltaJob = viewModelScope.launch {
+                delay(STREAM_DELTA_BATCH_MS)
+                pendingDeltaJob = null
+                applyPendingDeltas()
+            }
+        }
+    }
+
+    private fun flushPendingDeltas() {
+        pendingDeltaJob?.cancel()
+        pendingDeltaJob = null
+        applyPendingDeltas()
+    }
+
+    private fun applyPendingDeltas() {
+        if (pendingDeltas.isEmpty()) return
+        val events = pendingDeltas.toList()
+        pendingDeltas.clear()
+        pendingDeltaRunId = null
+        var snapshot = mutableState.value.snapshot()
+        events.forEach { event -> snapshot = reduce(snapshot, event) }
+        val reduced = snapshot
+        mutableState.update {
+            it.copy(messages = reduced.messages)
         }
     }
 

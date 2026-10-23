@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -354,7 +355,7 @@ internal fun DeepDeepApp(
                 Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = drawerProgress }
-                    .background(colors.scrim.copy(alpha = 0.32f * drawerProgress))
+                    .drawBehind { drawRect(colors.scrim.copy(alpha = 0.32f * drawerProgress)) }
                     .then(
                         if (drawerOpen) {
                             Modifier.clickable { drawerOpen = false }

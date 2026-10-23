@@ -191,7 +191,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_chat",
             )
             DrawerNavItem(
-                icon = DdIcons.Folder,
+                icon = DdIcons.Bookmark,
                 label = stringResource(R.string.drawer_nav_archived),
                 onClick = onArchived,
                 testTag = "drawer_archived",
@@ -217,7 +217,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_plugins",
             )
             DrawerNavItem(
-                icon = DdIcons.Clock,
+                icon = DdIcons.Calendar,
                 label = stringResource(R.string.drawer_nav_scheduled),
                 onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
                 testTag = "drawer_scheduled",
@@ -410,7 +410,15 @@ private fun DrawerWorkspaceRow(
                 .padding(start = 10.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Folder, tint = colors.inkTertiary, size = 16.dp)
+            DdIcon(
+                icon = when {
+                    workspace.isHome -> DdIcons.House
+                    expanded -> DdIcons.FolderOpen
+                    else -> DdIcons.Folder
+                },
+                tint = colors.inkTertiary,
+                size = 16.dp,
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = workspace.name,
@@ -600,7 +608,7 @@ private fun DrawerSessionRow(
                 .padding(start = 34.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Message, tint = colors.inkTertiary, size = 13.dp)
+            DdIcon(icon = DdIcons.MessagesSquare, tint = colors.inkTertiary, size = 13.dp)
             Spacer(Modifier.width(6.dp))
             Text(
                 text = conversation.title,

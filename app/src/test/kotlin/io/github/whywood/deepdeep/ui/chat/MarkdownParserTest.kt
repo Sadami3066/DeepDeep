@@ -376,6 +376,41 @@ class MarkdownParserTest {
         assertEquals("notes and site", inlinePlainText(source))
     }
 
+    @Test
+    fun parsesCommonMarkCodeSpans() {
+        assertEquals(InlineNode.Code("a ` b"), inlineNodes("``a ` b``").single())
+        assertEquals(InlineNode.Code("code"), inlineNodes("` code `").single())
+        assertEquals(InlineNode.Code("a b"), inlineNodes("`a\nb`").single())
+        assertEquals(InlineNode.Code("a b"), inlineNodes("`a\tb`").single())
+        assertEquals(InlineNode.Code("  "), inlineNodes("`  `").single())
+        assertEquals("``a`", inlinePlainText("``a`"))
+    }
+
+    @Test
+    fun classifiesPathLikeInlineCode() {
+        assertTrue(isPathLikeInlineCode("src/main/Main.kt"))
+        assertTrue(isPathLikeInlineCode("../notes.md"))
+        assertTrue(isPathLikeInlineCode("/data/user/0/io.github.whywood.deepdeep/files/home"))
+        assertTrue(isPathLikeInlineCode("./build.gradle.kts"))
+        assertTrue(isPathLikeInlineCode("basics.md"))
+        assertTrue(isPathLikeInlineCode("README.md"))
+        assertFalse(isPathLikeInlineCode("https://example.com/a"))
+        assertFalse(isPathLikeInlineCode("http://example.com"))
+        assertFalse(isPathLikeInlineCode("mailto:user@example.com"))
+        assertFalse(isPathLikeInlineCode("sk-1234"))
+        assertFalse(isPathLikeInlineCode("val x = 1"))
+        assertFalse(isPathLikeInlineCode("414514"))
+    }
+
+    @Test
+    fun pathLikeCodeSpansStayCodeNodes() {
+        assertEquals(InlineNode.Code("src/main/Main.kt"), inlineNodes("`src/main/Main.kt`").single())
+        assertEquals(
+            InlineNode.FileRef("attachments/x.md", "attachments/x.md", code = true),
+            inlineNodes("`attachments/x.md`").single(),
+        )
+    }
+
     private fun listBlock(source: String): MarkdownBlock.ListBlock =
         parseMarkdown(source).single() as MarkdownBlock.ListBlock
 

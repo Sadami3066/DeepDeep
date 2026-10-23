@@ -9,5 +9,6 @@
 7. P6 — markdown upgrade (nested lists, images, table scroll, highlighting), message action menu/quote, conversation switch cache (done)
 8. P7 — text selection actions (text toolbar, draggable handles, outside dismiss), file attachments (thumbnails, markdown preview, share), clickable file references in assistant messages (done)
 9. P8 — drawer v3: expandable workspace tree with per-workspace sessions, workspace pin, session pin icon, no section labels/selection accent; legacy UI cleanup (DdDialog/DdSearchField/DdTextField/DdSpinner, runtime env row fix, masked saved API key) (done)
-10. Next — workspace-level session migration/archive; full-text search (message body); skills/plugins/scheduled implementations; root ShellExecutor when authorized; scheduled prompts/event triggers
-11. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it
+10. P9 — performance (deferred IME/drawer reads, stream delta batching, stability report), asset icons/mascot empty state, modern markdown inline-code/path rendering (done)
+11. Next — workspace-level session migration/archive; full-text search (message body); skills/plugins/scheduled implementations; root ShellExecutor when authorized; scheduled prompts/event triggers
+12. Later — phone capabilities via root shell/scripts; custom tools only when shell cannot express it

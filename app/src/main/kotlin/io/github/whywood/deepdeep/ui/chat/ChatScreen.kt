@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
@@ -69,6 +72,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -85,6 +89,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import java.time.LocalTime
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -132,7 +137,20 @@ fun ChatScreen(
             animationSpec = tween(DdMotion.BASE + 80, easing = DdMotion.EaseInOut),
         )
     }
-    val bottomInset = with(density) { animatedBottomInset.value.toDp() }
+    val bottomInset = Modifier.layout { measurable, constraints ->
+        val inset = animatedBottomInset.value.roundToInt().coerceAtLeast(0)
+        val available = constraints.maxHeight
+        if (available == androidx.compose.ui.unit.Constraints.Infinity) {
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+        } else {
+            val contentHeight = (available - inset).coerceAtLeast(0)
+            val placeable = measurable.measure(
+                constraints.copy(minHeight = 0, maxHeight = contentHeight),
+            )
+            layout(placeable.width, placeable.height + inset) { placeable.place(0, 0) }
+        }
+    }
     var composerHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val shareChooserTitle = stringResource(R.string.assistant_share_chooser)
@@ -191,7 +209,7 @@ fun ChatScreen(
         modifier
             .fillMaxSize()
             .background(colors.paper)
-            .padding(bottom = bottomInset)
+            .then(bottomInset)
             .onGloballyPositioned { rootOrigin = it.positionInWindow() }
             .pointerInput(selectionCoordinator, selectionClearMargin) {
                 awaitEachGesture {
@@ -344,6 +362,13 @@ private fun EmptyState(
                     ),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(R.drawable.mascot_welcome),
+                        contentDescription = null,
+                        modifier = Modifier.size(148.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = greeting(),
                         modifier = Modifier.testTag("home_greeting"),

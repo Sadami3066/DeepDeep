@@ -240,6 +240,28 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun batchesRapidDeltasWithoutLosingText() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("stream")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "a"))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "b"))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "c"))
+        advanceUntilIdle()
+        val streamed = viewModel.state.value.messages.last()
+        assertEquals("abc", streamed.steps.filterIsInstance<AssistantStep.Text>().last().text)
+
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "abc", RunStatus.DONE, 2000L))
+        advanceUntilIdle()
+        assertEquals("abc", viewModel.state.value.messages.last().text)
+        assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
+    }
+
+    @Test
     fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val viewModel = viewModel(runtime)

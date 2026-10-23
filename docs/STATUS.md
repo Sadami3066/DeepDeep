@@ -50,6 +50,10 @@
 - settings runtime-environment page fixed (removed nested wash card and misaligned size line; DdSwitch/DdSpinner/DdDialog standard rows)
 - Provider detail shows masked saved key placeholder (`sk-*****`) instead of "已保存，输入新 Key 可替换"
 
+- UI v4 performance: IME bottom inset read moved to layout phase (janky frames 15.57% -> 7.64%, slow-UI frames 66 -> 35); drawer scrim alpha moved to draw phase; 16ms stream delta batching (streaming same-prompt 20s: janky 29.95% -> 23.76%, slow-UI 339 -> 238); stability config now includes AttachmentRef + File, full compiler report has no unstable ChatScreen params
+- UI v4 visual: 1.75 stroke icon set unified; drawer Home/workspace/session/archive/schedule icons and 5 settings rows/icons plus Provider API Key icon from new Lucide assets; mascot welcome WebP (480px, ~56KB) in new-chat empty state (light/dark)
+- UI v4 markdown: CommonMark code spans (multi-backtick, space trim, newline normalization); workspace file refs render as links (no code chip); path-like inline code renders monospace/no background; other inline code uses subtle neutral codeBackground; new tests + docs
+
 ## Checks
 
 - `verifyModuleBoundaries` pass
@@ -57,6 +61,8 @@
 - `lintDebug` 0 errors
 - `assembleDebug` / `assembleRelease` pass
 - Device smoke: expandable workspace tree + per-workspace session creation, workspace pin ordering persistence across restart, session pin icon, custom dialog above keyboard, runtime page layout, masked Provider key, unified search fields, segmented control without ripple
+- Perf smoke (gfxinfo): drawer/IME/scroll/streaming scenarios captured before/after in `artifacts/validation/perf/`
+- Markdown/visual smoke: light/dark empty state with mascot, new icons in drawer/settings, path table rendering with clickable workspace refs and no code chips
 
 ## Evidence
 
@@ -71,6 +77,8 @@
 - `artifacts/validation/attachments/`: selection toolbar, selection quote, file picker, composer chips, attachment bubble, image/text preview, share sheet, image thumbnail, markdown preview, clickable file references
 - `artifacts/validation/claude-re/`: Claude Android selection toolbar/overflow/handle-drag/tap-outside screenshots
 - `artifacts/validation/ui-round3/`: drawer workspace tree, workspace pin order, session pin icon, dialog above keyboard, runtime settings fixed, provider masked key, provider search, session search, archived search
+- `artifacts/validation/ui-round4/`: new icon drawer/settings, mascot empty state light/dark, markdown path rendering (links vs monospace vs codeBackground)
+- `artifacts/validation/perf/`: performance baseline/after notes and raw gfxinfo dumps
 
 Device: Redmi 22101316UCP / Android 13 / arm64-v8a.
 

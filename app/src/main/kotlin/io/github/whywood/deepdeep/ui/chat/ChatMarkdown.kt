@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import android.os.Trace
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,7 +70,14 @@ internal fun ChatMarkdown(
     onFileClick: ((String) -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
-    val document = remember(text) { parseMarkdownDocument(text) }
+    val document = remember(text) {
+        Trace.beginSection("deepdeep.markdown.parse")
+        try {
+            parseMarkdownDocument(text)
+        } finally {
+            Trace.endSection()
+        }
+    }
     val fileClick = rememberFileClickHandler(onFileClick)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MarkdownBlocks(document.blocks, document, colors, fileClick)
@@ -544,7 +552,6 @@ private fun renderInline(
 private fun AnnotatedString.Builder.appendFileReference(
     text: String,
     path: String,
-    code: Boolean,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit),
 ) {
@@ -557,21 +564,8 @@ private fun AnnotatedString.Builder.appendFileReference(
         },
     )
     withLink(annotation) {
-        if (code) {
-            withStyle(
-                SpanStyle(
-                    fontFamily = FontFamily.Monospace,
-                    background = colors.wash,
-                    color = colors.accent,
-                    textDecoration = TextDecoration.Underline,
-                ),
-            ) {
-                append(text)
-            }
-        } else {
-            withStyle(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)) {
-                append(text)
-            }
+        withStyle(SpanStyle(color = colors.accent, textDecoration = TextDecoration.Underline)) {
+            append(text)
         }
     }
 }
@@ -585,10 +579,16 @@ private fun AnnotatedString.Builder.appendInlineNodes(
         when (node) {
             is InlineNode.Text -> append(node.text)
 
-            is InlineNode.Code -> withStyle(
-                SpanStyle(fontFamily = FontFamily.Monospace, background = colors.wash),
-            ) {
-                append(node.text)
+            is InlineNode.Code -> {
+                if (isPathLikeInlineCode(node.text)) {
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = colors.inkSecondary)) {
+                        append(node.text)
+                    }
+                } else {
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = colors.codeBackground)) {
+                        append(node.text)
+                    }
+                }
             }
 
             is InlineNode.Kbd -> withStyle(
@@ -640,15 +640,15 @@ private fun AnnotatedString.Builder.appendInlineNodes(
 
             is InlineNode.FileRef -> {
                 if (onFileClick == null) {
-                    if (node.code) {
-                        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = colors.wash)) {
+                    if (node.code || isPathLikeInlineCode(node.path)) {
+                        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = colors.inkSecondary)) {
                             append(node.text)
                         }
                     } else {
                         append(node.text)
                     }
                 } else {
-                    appendFileReference(node.text, node.path, node.code, colors, onFileClick)
+                    appendFileReference(node.text, node.path, colors, onFileClick)
                 }
             }
 

@@ -80,7 +80,11 @@ Compose ChatScreen
 - 附件：`data/Attachment.kt` 定义 `AttachmentRef` 与会话文本编解码（`<attachments>` 块）；`FileAttachmentStore` 把 URI 复制到 `workspace/attachments/`、生成预览类型，并提供 `resolve(raw)` 把消息里的相对/绝对/file:// 路径映射回 workspace 内文件；`ChatViewModel` 负责待发附件与 prompt 拼装；`AttachmentUi` 负责气泡缩略图卡、composer chips、全屏预览（图片/文本/Markdown/不可预览）与 FileProvider 分享。
 - 文件引用：Markdown 行内 AST 增加 `FileRef`（`MarkdownParser.isWorkspaceFileReference` 保守判定），`ChatMarkdown.onFileClick` 把引用渲染成可点击链接；未传回调时外观与普通文本一致。
 - 消息长度操作在 `ChatTurn` / `ChatActions`（长按锚定菜单、引用预览在 `ChatComposer`）。
-- Compose stability config 位于 `app/compose-stability.conf`，把 runtime 模型与 UI state 声明为 stable，避免流式更新重组合全部消息。
+- Compose stability config 位于 `app/compose-stability.conf`，把 runtime 模型、UI state、AttachmentRef 与 java.io.File 声明为 stable；ChatScreen 热路径无不稳定参数。
+- 流式增量在 `ChatViewModel` 侧合并：`TextDelta`/`ReasoningDelta` 进入最多 16ms 的批次，其他事件先 flush 再处理，保证工具/文本顺序和结束文本完整；后台会话仍直接写入缓存。
+- IME bottom inset 动画值在 layout phase 读取（自定义 `Modifier.layout`），抽屉遮罩 alpha 在 draw phase 读取；避免动画期间整页重组。
+- Markdown 行内 code 由 `isPathLikeInlineCode` 分类：workspace 文件引用渲染为链接，普通路径渲染为无背景 monospace，其他 code 使用中性 `codeBackground`；code span 匹配遵循 CommonMark（多反引号/空格裁剪/换行归一化）。
+- 图标来自 `assets/icons/lucide-app-v1` 的 Lucide 微调版，按需转为 design 模块 VectorDrawable（线宽 1.75）；空态插画来自 `assets/mascot` 并导出为 app drawable-nodpi WebP，候选原图不打包。
 
 ## 存储
 

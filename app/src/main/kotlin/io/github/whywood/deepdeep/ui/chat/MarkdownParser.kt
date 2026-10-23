@@ -498,6 +498,28 @@ private fun indexOfIgnoreCase(text: String, needle: String, start: Int): Int {
     return -1
 }
 
+private fun normalizeCodeSpan(content: String): String {
+    val normalized = content.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
+    if (normalized.length >= 2 &&
+        normalized.first() == ' ' &&
+        normalized.last() == ' ' &&
+        normalized.any { it != ' ' }
+    ) {
+        return normalized.substring(1, normalized.length - 1)
+    }
+    return normalized
+}
+
+internal fun isPathLikeInlineCode(text: String): Boolean {
+    if (text.isEmpty() || text.any { it.isWhitespace() }) return false
+    val lower = text.lowercase()
+    if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("mailto:")) return false
+    if (text.startsWith("./") || text.startsWith("../") || text.startsWith("~/") || text.startsWith("/")) return true
+    if (text.contains('/') || text.contains('\\')) return true
+    if (hasKnownFileExtension(text)) return true
+    return text.length >= 3 && text[0].isLetter() && text[1] == ':' && (text[2] == '\\' || text[2] == '/')
+}
+
 internal fun isWorkspaceFileReference(value: String): Boolean {
     val trimmed = value.trim()
     if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return false
@@ -614,9 +636,28 @@ private class InlineScanner(
                 }
             }
             if (char == '`') {
-                val end = text.indexOf('`', index + 1)
-                if (end > index) {
-                    val content = text.substring(index + 1, end)
+                var openEnd = index
+                while (openEnd < text.length && text[openEnd] == '`') openEnd++
+                val runLength = openEnd - index
+                var scan = openEnd
+                var closeStart = -1
+                var closeEnd = -1
+                while (scan < text.length) {
+                    if (text[scan] == '`') {
+                        var runEnd = scan
+                        while (runEnd < text.length && text[runEnd] == '`') runEnd++
+                        if (runEnd - scan == runLength) {
+                            closeStart = scan
+                            closeEnd = runEnd
+                            break
+                        }
+                        scan = runEnd
+                    } else {
+                        scan++
+                    }
+                }
+                if (closeStart >= 0) {
+                    val content = normalizeCodeSpan(text.substring(openEnd, closeStart))
                     flush()
                     val fileReference = content.trim()
                     nodes += if (isWorkspaceFileReference(fileReference)) {
@@ -624,10 +665,10 @@ private class InlineScanner(
                     } else {
                         InlineNode.Code(content)
                     }
-                    index = end + 1
+                    index = closeEnd
                 } else {
-                    buffer.append('`')
-                    index++
+                    buffer.append(text, index, openEnd)
+                    index = openEnd
                 }
                 continue
             }

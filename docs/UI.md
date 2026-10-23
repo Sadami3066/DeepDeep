@@ -32,8 +32,10 @@
 - 键盘：IME 高度变化逐帧驱动聊天内容上移/回落，不做「键盘完全展开后二次跳动」；键盘弹起时打开抽屉也保持平滑。
 - 附件：composer 回形针打开系统文件选择器（可多选）；选中后在输入框上方显示 Claude 式预览卡（图片缩略图 / 文本内容片段 / 文件图标 + 名称），右上角圆形 X 可移除，最多 5 个；发送后附件在气泡外单独横向排列：图片与文件统一 140dp 方形卡（图片按裁切填满、文件卡带扩展名徽标），下方才是文字气泡（回复引用仍在气泡内）。文件复制到 workspace/attachments 供 agent 用 read/bash 读取，消息里以 `<attachments>` 块携带路径。
 - 附件预览：点击气泡附件或 composer 预览卡打开全屏预览；图片直接渲染、`.md` 用聊天同款 Markdown 渲染、其他文本等宽滚动、其他类型显示“无法预览此文件”；右上角分享按钮通过 FileProvider 调起系统分享。
-- 文件引用：assistant 消息中的 `attachments/…`、`workspace/…`、`/…/files/workspace/…`、`file://` 路径、行内 code 路径和指向这些路径的 markdown 链接都渲染为可点击链接，点击按 workspace 解析后打开预览；文件不存在时 Toast 提示。
+- 文件引用：assistant 消息中的 `attachments/…`、`workspace/…`、`/…/files/workspace/…`、`file://` 路径、行内 code 路径和指向这些路径的 markdown 链接都渲染为可点击链接（accent + 下划线，不再套 monospace/背景胶囊），点击按 workspace 解析后打开预览；文件不存在时 Toast 提示。
+- 行内代码：反引号 code span 按 CommonMark 规则匹配（多反引号、首尾空格裁剪、换行归一化）；workspace 路径仍是链接样式；其他相对/绝对/文件路径用 monospace + 次级文字、无背景；普通行内代码使用很浅的中性 `codeBackground`，不再用整块 wash 背景。
 - 自动跟随：用户上拖后暂停并显示“回到底部”。
+- 新会话空态：mascot 立绘（480 WebP，透明底）居中显示在 greeting 上方，浅色/深色主题均可用；无会话内容时不占列表空间。
 
 ## 切换会话
 
@@ -46,11 +48,19 @@
 - 工作区与会话的展开/收起用 LazyColumn item 动画；首次打开会话显示短转圈，历史加载完成后替换，不横向推入页面。
 - 再次打开访问过的会话：立即展示内存中的消息快照（无转圈），SDK session 在后台打开；在此期间发送会等待 session 就绪后再提交。
 
+## 图标与素材
+
+- 图标来源：`assets/icons/lucide-app-v1`（Lucide 微调版，1.75 描边），仅将实际用到的 SVG 转为 `design` 模块 VectorDrawable；线宽统一 1.75。Home/工作区展开/会话/归档/定时任务/设置交互行等使用新图标，旧图标保持兼容。
+- 空态插画：`assets/mascot/generated/mascot_welcome.png` 导出为 `app` 的 480×480 透明 WebP（约 56KB）；`assets/` 其余候选图不进入 APK。
+- 所有图标仍由 `DdIcon` 统一 tint，不新增图标动效。
+
 ## 性能
 
-- `app/compose-stability.conf` 把 runtime 模型与 `ChatUiState` 标记为 stable；编译报告确认 ChatScreen / ChatTurn / ChatMarkdown 等全部 restartable + skippable，流式更新不会重组合所有可见消息。
+- `app/compose-stability.conf` 把 runtime 模型、`ChatUiState`、`AttachmentRef`、`File` 标记为 stable；全量编译报告显示 ChatScreen 等热路径已无不稳定参数（剩余仅 ViewModel 内部 dispatcher）。
+- IME 底部 inset 动画值与抽屉遮罩 alpha 都改到 layout/draw phase 读取，键盘/抽屉动画期间不再逐帧重组整个聊天页或根节点。
+- 流式输出在 `ChatViewModel` 内按 16ms 合并 `TextDelta`/`ReasoningDelta`，非 delta 事件、结束、切换、缓存前强制 flush，保证文本与工具顺序及最终文本不丢。
 - 按压 wash 的动画值只在 draw phase 读取（`DdPressable`）；图片淡入 alpha 只在 graphicsLayer 读取；Markdown inline span 与高亮结果按文本 remember。
-- 流式 Markdown 解析保持 O(n)，10KB 解析有单测冒烟上界。
+- 流式 Markdown 解析保持 O(n)；`ChatMarkdown` 的解析区间用 `deepdeep.markdown.parse` Trace 标记，可用 Perfetto 观察。
 
 ## 抽屉
 
