@@ -3,9 +3,10 @@
 ## Done: P10.2 final polish
 
 - Settings: removed 功能 / 连接器 / 权限 rows
-- Fonts: default Newsreader; font preview sample is 「我思故为在」+「I think, therefore I am.」
+- Fonts: default Newsreader; font preview sample is 「我思故我在」+「I think, therefore I am.」
 - Chat settings: haptics / keyboard / streaming / reasoning are always on with no switches; process setting renamed 「过程自动折叠」, default on
 - Process auto-collapse: collapses when the final result text starts streaming, answer continues outside the process; off keeps it expanded
+- Provider icons: replaced with the user-supplied 42 color logos (light + night PNGs); Chinese label is now 厂商
 - Evidence: `artifacts/validation/round8/` (settings, font samples, chat settings, collapse-at-streaming)
 
 ## Done: P10.1 follow-up polish
@@ -22,7 +23,7 @@
 - Prompt assembly: `<system>` (identity/environment/hidden interaction rules) + `<instruction>` (user preference) injected through SDK hook; old `deepdeep_environment` removed; XML escaping
 - Notifications: foreground service shows session title/activity, multi-session count, stop action; background completion notification opens the session; download progress channel
 - Runtime: 3 developer-tool bundles (environment basics / office / development), background `apk update/add` with line streaming, optional pip post-install for office, notification progress, installed-state refresh
-- Provider icons: 42 providers (15 color, 26 mono, Radius fallback), list/detail wiring
+- Provider icons: 42 providers, all color (LobeHub + Radius official), light/dark variants, list/detail wiring
 - Fonts: Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora bundled; Chinese falls back to system; font picker persists and rebuilds
 - Design docs: `docs/SCHEDULING.md`, `docs/SKILLS.md`
 - Unit tests for prompt assembly and package catalog; existing tests green

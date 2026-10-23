@@ -2,16 +2,13 @@ package io.github.whywood.deepdeep.ui.settings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -51,6 +48,7 @@ internal val ProviderDrawables: Map<String, Int> = mapOf(
     "qwen-token-plan" to R.drawable.provider_qwen_token_plan,
     "qwen-token-plan-cn" to R.drawable.provider_qwen_token_plan_cn,
     "qwen-token-plan-individual" to R.drawable.provider_qwen_token_plan_individual,
+    "radius" to R.drawable.provider_radius,
     "together" to R.drawable.provider_together,
     "typesafe" to R.drawable.provider_typesafe,
     "vercel-ai-gateway" to R.drawable.provider_vercel_ai_gateway,
@@ -61,24 +59,6 @@ internal val ProviderDrawables: Map<String, Int> = mapOf(
     "xiaomi-token-plan-sgp" to R.drawable.provider_xiaomi_token_plan_sgp,
     "zai" to R.drawable.provider_zai,
     "zai-coding-cn" to R.drawable.provider_zai_coding_cn,
-)
-
-internal val ColorProviderIds: Set<String> = setOf(
-    "ant-ling",
-    "deepseek",
-    "fireworks",
-    "google",
-    "huggingface",
-    "kimi-coding",
-    "meta",
-    "minimax",
-    "mistral",
-    "nvidia",
-    "openrouter",
-    "qwen-token-plan",
-    "qwen-token-plan-cn",
-    "qwen-token-plan-individual",
-    "together",
 )
 
 @Composable
@@ -94,29 +74,18 @@ fun ProviderIcon(
         return
     }
     val colors = deepDeepColors()
-    val colored = providerId in ColorProviderIds
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(if (colored) Color.White else colors.wash)
-            .then(if (colored) Modifier.border(1.dp, colors.hairline, CircleShape) else Modifier),
+            .background(colors.wash),
         contentAlignment = Alignment.Center,
     ) {
-        if (colored) {
-            Image(
-                painter = painterResource(drawable),
-                contentDescription = null,
-                modifier = Modifier.size(iconSize),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Icon(
-                painter = painterResource(drawable),
-                contentDescription = null,
-                modifier = Modifier.size(iconSize),
-                tint = colors.inkSecondary,
-            )
-        }
+        Image(
+            painter = painterResource(drawable),
+            contentDescription = null,
+            modifier = Modifier.size(iconSize),
+            contentScale = ContentScale.Fit,
+        )
     }
 }

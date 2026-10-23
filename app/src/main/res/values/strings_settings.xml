@@ -27,7 +27,7 @@
     <string name="settings_privacy">隐私</string>
     <string name="settings_sign_out">退出登录</string>
 
-    <string name="settings_provider">Provider</string>
+    <string name="settings_provider">厂商</string>
     <string name="settings_environment">运行环境</string>
     <string name="settings_theme">颜色模式</string>
     <string name="settings_theme_system">跟随系统</string>
@@ -40,8 +40,8 @@
     <string name="settings_license_sans">Instrument Sans</string>
     <string name="settings_license_serif">Newsreader</string>
     <string name="settings_license_icons">Lucide Icons</string>
-    <string name="settings_license_provider_icons">Provider logos</string>
-    <string name="settings_license_provider_icons_body">models.dev · 各品牌方商标</string>
+    <string name="settings_license_provider_icons">厂商图标</string>
+    <string name="settings_license_provider_icons_body">LobeHub MIT · Radius 官方图示</string>
     <string name="settings_license_geist">Geist</string>
     <string name="settings_license_plex">IBM Plex Sans</string>
     <string name="settings_license_lora">Lora</string>
@@ -66,17 +66,17 @@
     <string name="settings_linux_size_label">占用空间</string>
     <string name="settings_linux_size_value">%1$d MB</string>
 
-    <string name="settings_provider_title">Provider</string>
-    <string name="settings_provider_search">搜索 Provider</string>
-    <string name="settings_provider_all_count">全部 Provider · %1$d</string>
+    <string name="settings_provider_title">厂商</string>
+    <string name="settings_provider_search">搜索厂商</string>
+    <string name="settings_provider_all_count">全部厂商 · %1$d</string>
     <string name="settings_provider_result_count">搜索结果 · %1$d</string>
     <string name="settings_provider_models_count">%1$d 个模型</string>
     <string name="settings_provider_current">当前</string>
-    <string name="settings_provider_no_result">没有匹配的 Provider</string>
+    <string name="settings_provider_no_result">没有匹配的厂商</string>
     <string name="settings_provider_extra_config">需要额外配置</string>
-    <string name="settings_provider_extra_config_body">该 Provider 不支持 API Key，需要 OAuth 或专用登录方式。</string>
+    <string name="settings_provider_extra_config_body">该厂商不支持 API Key，需要 OAuth 或专用登录方式。</string>
     <string name="settings_provider_oauth_hint">OAuth 尚未接入</string>
-    <string name="settings_provider_oauth_body">该 Provider 支持 OAuth 登录，当前版本暂未接入。</string>
+    <string name="settings_provider_oauth_body">该厂商支持 OAuth 登录，当前版本暂未接入。</string>
     <string name="settings_provider_api_key">API Key</string>
     <string name="settings_provider_api_key_saved">已保存，输入新 Key 可替换</string>
     <string name="settings_provider_api_key_hint">输入 API Key</string>
@@ -90,7 +90,7 @@
     <string name="settings_provider_default_base_url">默认</string>
     <string name="settings_provider_no_models">暂无可用模型</string>
     <string name="settings_provider_reasoning">推理</string>
-    <string name="settings_provider_activate">设为当前 Provider</string>
+    <string name="settings_provider_activate">设为当前厂商</string>
     <string name="settings_provider_in_use">当前正在使用</string>
 
     <string name="personalization_nickname_title">称呼</string>
@@ -117,7 +117,7 @@
 
     <string name="privacy_local_title">本地保存</string>
     <string name="privacy_local_body">对话、工作区文件和 API Key 只保存在应用私有目录。</string>
-    <string name="privacy_provider_title">只发送给所选 Provider</string>
+    <string name="privacy_provider_title">只发送给所选厂商</string>
     <string name="privacy_provider_body">只有你选择的模型服务会收到对话内容，DeepDeep 不上传副本。</string>
     <string name="privacy_tracking_title">无统计与广告</string>
     <string name="privacy_tracking_body">不接入分析、广告或第三方追踪 SDK。</string>

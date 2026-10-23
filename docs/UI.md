@@ -53,8 +53,8 @@
 - 图标继续使用 `design` 模块原有的 XML VectorDrawable 图标库；抽屉工作区/会话行复用原有 Folder / Message 小图标建立层级，不再引入 `assets/icons` 的新图标集。
 - 空态插画：`assets/mascot/generated/mascot_welcome.png` 导出为 `app` 的 480×480 透明 WebP（约 56KB）；`assets/` 其余候选图不进入 APK。
 - 所有普通图标仍由 `DdIcon` 统一 tint，不新增图标动效。
-- Provider 图标：42 家各自使用品牌标；15 家官方彩色标保留原色（白底圆 + 发丝线），26 家官方单色标用主题 ink 着色（wash 圆）；Radius 没有可靠官方标，回退为 InitialBadge。来源为 models.dev / lobehub，许可见「开源许可」。
-- 字体：5 套随 APK 打包的拉丁字体（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora），默认 Newsreader；中文始终回退系统字体。字体页只切换排版，不改变颜色、字号层级或代码等宽，预览词为「我思故为在 / I think, therefore I am.」。
+- 厂商图标：42 家全部使用彩色品牌标（浅色/深色两套随系统切换），不再区分单色/彩色；来源为 LobeHub MIT + Radius 官方图示，许可见「开源许可」。
+- 字体：5 套随 APK 打包的拉丁字体（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora），默认 Newsreader；中文始终回退系统字体。字体页只切换排版，不改变颜色、字号层级或代码等宽，预览词为「我思故我在 / I think, therefore I am.」。
 
 ## 个性化
 
@@ -92,25 +92,25 @@
 - `DdSwitch`：52×32dp 轨道、24dp thumb、thumb 柔和阴影、弹簧滑动，无 ripple。
 - `DdSegmentedControl`：wash 容器 + 选中 pill 柔和阴影、弹簧位移；点击不显示按压反馈（无方框 ripple）。
 - `DdDialog`：自写居中卡片（raised、24dp 圆角、标题 heading、右对齐文字操作），不使用 Material AlertDialog；键盘弹起时窗口随 IME 上移，操作按钮始终可见。
-- `DdSearchField`：统一胶囊搜索框（raised、发丝边框、搜索图标、清除按钮、可选 Esc 回调），用于会话搜索、归档搜索与 Provider 搜索。
-- `DdTextField`：统一输入框（聚焦 accent 边框动画、密码变换、IME Done），用于 Provider API Key 与重命名输入。
+- `DdSearchField`：统一胶囊搜索框（raised、发丝边框、搜索图标、清除按钮、可选 Esc 回调），用于会话搜索、归档搜索与 厂商搜索。
+- `DdTextField`：统一输入框（聚焦 accent 边框动画、密码变换、IME Done），用于 厂商 API Key 与重命名输入。
 - `DdSpinner`：自写旋转弧线 loading，替代所有 Material CircularProgressIndicator。
 
 ## 设置
 
-Claude 式分组卡，无分组标题、无冗余说明；行只保留标题 + 右侧短值。真实项：个性化、Provider、运行环境、聊天设置、颜色模式、字体样式、通知、隐私、关于/许可；已删除功能/连接器/权限占位项，仅保留退出登录占位。思考等级只在聊天 composer。
+Claude 式分组卡，无分组标题、无冗余说明；行只保留标题 + 右侧短值。真实项：个性化、厂商、运行环境、聊天设置、颜色模式、字体样式、通知、隐私、关于/许可；已删除功能/连接器/权限占位项，仅保留退出登录占位。思考等级只在聊天 composer。
 
 - 个人资料已改为「个性化」；账号卡显示当前称呼与模型，点击进入个性化。
 - 颜色模式用分段控件（跟随系统/浅色/深色）；聊天设置页 4 项固定开启、过程自动折叠默认开启。
 - 字体页：5 行字体预览卡，当前项勾选；默认 Newsreader；选择后保存并重建 Activity，所有页面使用新字体。
 - 运行环境页用同一套分组行：Linux 开关（DdSwitch）、占用空间（标题 + 右值）、重置（确认用 DdDialog）；下方只有 3 个安装组合：环境基础 / 日常办公 / 开发编程，不再提供单项工具；组合可显示部分安装并继续安装，底部提示更多需求可在对话里让 DeepDeep 自行安装。
-- Provider 详情：已保存 API Key 时输入框占位显示掩码（如 `sk-*****`），输入新 Key 才替换；Provider 列表搜索使用统一 `DdSearchField`，列表与详情显示品牌图标。
-- 隐私页：只读说明本地保存、仅发送给所选 Provider、无统计/广告、卸载删除本地数据。
+- 厂商详情：已保存 API Key 时输入框占位显示掩码（如 `sk-*****`），输入新 Key 才替换；厂商列表搜索使用统一 `DdSearchField`，列表与详情显示品牌图标。
+- 隐私页：只读说明本地保存、仅发送给所选厂商、无统计/广告、卸载删除本地数据。
 - 账单与用量、时间与专注、共享已移除。
 
 ## 导航与动效
 
-- 设置层级（个性化、字体、聊天设置、隐私、Provider 列表/详情、运行环境）使用 `AnimatedScreenHost`：右侧 18% 推入 + 淡入，返回反向；系统返回手势触发 pop。
+- 设置层级（个性化、字体、聊天设置、隐私、厂商列表/详情、运行环境）使用 `AnimatedScreenHost`：右侧 18% 推入 + 淡入，返回反向；系统返回手势触发 pop。
 - `DdMotion` 统一时长/缓动；`DdTypingDots` 是唯一的“思考中”循环动画。
 - 页面切换无尺寸回弹；按压 140ms 灰 wash；抽屉 260ms ease-out。
 - 页面切换不用于会话切换——会话切换只替换内容和短 loading。

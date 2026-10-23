@@ -63,7 +63,7 @@ import io.github.whywood.deepdeep.shell.LinuxInstallState
 private const val INSTRUMENT_SANS_URL = "https://github.com/Instrument/instrument-sans"
 private const val NEWSREADER_URL = "https://github.com/productiontype/Newsreader"
 private const val LUCIDE_URL = "https://github.com/lucide-icons/lucide"
-private const val MODELS_DEV_URL = "https://models.dev"
+private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
 private const val GEIST_URL = "https://github.com/vercel/geist-font"
 private const val IBM_PLEX_URL = "https://github.com/IBM/plex"
 private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
@@ -475,7 +475,7 @@ private fun LicenseSheet(onClose: () -> Unit) {
             LicenseRow(
                 title = stringResource(R.string.settings_license_provider_icons),
                 subtitle = stringResource(R.string.settings_license_provider_icons_body),
-                onClick = { uriHandler.openUri(MODELS_DEV_URL) },
+                onClick = { uriHandler.openUri(PROVIDER_LOGOS_URL) },
             )
             DdHairline()
             LicenseRow(

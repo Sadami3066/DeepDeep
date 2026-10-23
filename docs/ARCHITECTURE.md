@@ -80,7 +80,7 @@ Compose ChatScreen
 
 ## Provider 图标与字体
 
-- Provider 图标按 provider id 映射到 `app/src/main/res/drawable/provider_*.xml`；彩色标保持原色（白底圆），单色标 tint；无可靠官方标的 Radius 回退 InitialBadge。
+- Provider 图标按 provider id 映射到 `drawable-nodpi` / `drawable-night-nodpi` 的彩色 PNG；浅色/深色各一套，全部原色显示；Radius 也有官方图示。
 - 字体 5 套（Instrument Sans / Geist / IBM Plex Sans / Newsreader / Lora）随 APK，默认 Newsreader；`DdFonts.apply` 切换 `DdType` getter 使用的 family，中文回退系统；切换后重建 Activity 以刷新全部页面。
 - 许可统一在设置「开源许可」列出；Provider 图标的商标归各品牌方。
 

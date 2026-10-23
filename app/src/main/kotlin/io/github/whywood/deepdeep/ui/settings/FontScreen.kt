@@ -119,23 +119,31 @@ private fun FontPreviewRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = 88.dp)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .heightIn(min = 96.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.Bottom,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = DdType.label.copy(fontFamily = family),
-                    color = colors.ink,
-                    maxLines = 1,
-                )
-                Text(
-                    text = "我思故为在",
-                    style = DdType.body.copy(fontFamily = family),
-                    color = colors.inkSecondary,
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = DdType.label.copy(fontFamily = family),
+                        color = colors.ink,
+                        maxLines = 1,
+                    )
+                    if (selected) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = currentLabel,
+                            style = DdType.chip,
+                            color = colors.accent,
+                            maxLines = 1,
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "I think, therefore I am.",
                     style = DdType.bodySmall.copy(fontFamily = family, fontSize = 13.sp, lineHeight = 19.sp),
@@ -144,17 +152,14 @@ private fun FontPreviewRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (selected) {
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = currentLabel,
-                    style = DdType.chip,
-                    color = colors.accent,
-                    maxLines = 1,
-                )
-                Spacer(Modifier.width(4.dp))
-                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "我思故我在",
+                modifier = Modifier.padding(bottom = 2.dp),
+                style = DdType.body.copy(fontFamily = family, fontSize = 18.sp, lineHeight = 26.sp),
+                color = colors.inkSecondary,
+                maxLines = 1,
+            )
         }
     }
 }
