@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
+import java.time.DayOfWeek
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
@@ -113,5 +115,32 @@ class ScheduleCronTest {
             } catch (_: InvalidCronExpressionException) {
             }
         }
+    }
+
+    @Test
+    fun summarizesCommonExpressions() {
+        assertEquals(CronSummary.EveryMinute, summarizeCron("* * * * *"))
+        assertEquals(CronSummary.EveryMinutes(15), summarizeCron("*/15 * * * *"))
+        assertEquals(CronSummary.EveryMinutes(7), summarizeCron("*/7 * * * *"))
+        assertEquals(CronSummary.EveryHours(1, 0), summarizeCron("0 * * * *"))
+        assertEquals(CronSummary.EveryHours(2, 30), summarizeCron("30 */2 * * *"))
+        assertEquals(CronSummary.Daily(LocalTime.of(9, 30)), summarizeCron("30 9 * * *"))
+        assertEquals(
+            CronSummary.Weekly(
+                setOf(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY,
+                ),
+                LocalTime.of(9, 0),
+            ),
+            summarizeCron("0 9 * * 1-5"),
+        )
+        assertEquals(CronSummary.Monthly(1, LocalTime.of(9, 0)), summarizeCron("0 9 1 * *"))
+        assertEquals(CronSummary.Yearly(1, 1, LocalTime.of(0, 0)), summarizeCron("0 0 1 1 *"))
+        assertEquals(CronSummary.Custom("15,45 8-10 * * *"), summarizeCron("15,45 8-10 * * *"))
+        assertNull(summarizeCron("bad cron"))
     }
 }

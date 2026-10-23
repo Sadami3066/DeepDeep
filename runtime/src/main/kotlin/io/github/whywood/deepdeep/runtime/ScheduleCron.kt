@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -15,6 +16,17 @@ internal class CronExpression private constructor(
     private val dayOfMonthRestricted: Boolean,
     private val dayOfWeekRestricted: Boolean,
 ) {
+    internal fun minuteValues(): Set<Int> = (0..59).filter { minutes[it] }.toSet()
+
+    internal fun hourValues(): Set<Int> = (0..23).filter { hours[it] }.toSet()
+
+    internal fun dayOfMonthValues(): Set<Int> = (1..31).filter { daysOfMonth[it] }.toSet()
+
+    internal fun monthValues(): Set<Int> = (1..12).filter { months[it] }.toSet()
+
+    internal fun weekdayValues(): Set<DayOfWeek> =
+        DayOfWeek.entries.filter { daysOfWeek[it.value % 7] }.toSet()
+
     fun nextRun(now: ZonedDateTime): ZonedDateTime? {
         val zone = now.zone
         var date = now.toLocalDate()
@@ -143,4 +155,82 @@ internal class CronExpression private constructor(
             throw InvalidCronExpressionException("$label 段取值无效：$token")
         }
     }
+}
+
+sealed interface CronSummary {
+    data object EveryMinute : CronSummary
+
+    data class EveryMinutes(val every: Int) : CronSummary
+
+    data class EveryHours(val every: Int, val minute: Int) : CronSummary
+
+    data class Daily(val time: LocalTime) : CronSummary
+
+    data class Weekly(val days: Set<DayOfWeek>, val time: LocalTime) : CronSummary
+
+    data class Monthly(val day: Int, val time: LocalTime) : CronSummary
+
+    data class Yearly(val month: Int, val day: Int, val time: LocalTime) : CronSummary
+
+    data class Custom(val expression: String) : CronSummary
+}
+
+fun summarizeCron(expression: String): CronSummary? {
+    val cron = try {
+        CronExpression.parse(expression)
+    } catch (_: InvalidCronExpressionException) {
+        return null
+    }
+    val minutes = cron.minuteValues()
+    val hours = cron.hourValues()
+    val dom = cron.dayOfMonthValues()
+    val months = cron.monthValues()
+    val dows = cron.weekdayValues()
+    val time = if (minutes.size == 1 && hours.size == 1) {
+        LocalTime.of(hours.first(), minutes.first())
+    } else {
+        null
+    }
+    val minutesAll = minutes.size == FULL_MINUTES
+    val hoursAll = hours.size == FULL_HOURS
+    val domAll = dom.size == FULL_DAYS
+    val monthsAll = months.size == FULL_MONTHS
+    val dowsAll = dows.size == FULL_WEEKDAYS
+    return when {
+        minutesAll && hoursAll && domAll && monthsAll && dowsAll -> CronSummary.EveryMinute
+        domAll && monthsAll && dowsAll -> when {
+            hoursAll && minutes.size == 1 -> CronSummary.EveryHours(1, minutes.first())
+            hoursAll -> stepOf(minutes, FULL_MINUTES)?.let { CronSummary.EveryMinutes(it) }
+                ?: CronSummary.Custom(expression)
+            time != null -> CronSummary.Daily(time)
+            minutes.size == 1 -> stepOf(hours, FULL_HOURS)?.let {
+                CronSummary.EveryHours(it, minutes.first())
+            } ?: CronSummary.Custom(expression)
+            else -> CronSummary.Custom(expression)
+        }
+        time != null && minutes.size == 1 && hours.size == 1 -> when {
+            domAll && monthsAll -> CronSummary.Weekly(dows, time)
+            dom.size == 1 && monthsAll -> CronSummary.Monthly(dom.first(), time)
+            dom.size == 1 && months.size == 1 -> CronSummary.Yearly(months.first(), dom.first(), time)
+            else -> CronSummary.Custom(expression)
+        }
+        else -> CronSummary.Custom(expression)
+    }
+}
+
+private const val FULL_MINUTES = 60
+private const val FULL_HOURS = 24
+private const val FULL_DAYS = 31
+private const val FULL_MONTHS = 12
+private const val FULL_WEEKDAYS = 7
+
+private fun stepOf(values: Set<Int>, full: Int): Int? {
+    if (values.size <= 1) return null
+    val sorted = values.sorted()
+    if (sorted.first() != 0) return null
+    val step = sorted[1] - sorted[0]
+    if (step <= 1) return null
+    if (sorted.indices.any { sorted[it] != it * step }) return null
+    if (sorted.last() + step < full) return null
+    return step
 }

@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +24,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 internal val SCHEDULE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -267,15 +270,55 @@ private fun ruleLabel(trigger: ScheduleTrigger): String = when (trigger) {
         },
     )
 
-    is ScheduleTrigger.Interval -> when (trigger.unit) {
-        IntervalUnit.MINUTES -> stringResource(R.string.schedules_rule_interval_minutes, trigger.every)
-        IntervalUnit.HOURS -> stringResource(R.string.schedules_rule_interval_hours, trigger.every)
-        IntervalUnit.DAYS -> stringResource(R.string.schedules_rule_interval_days, trigger.every)
-    }
-
-    is ScheduleTrigger.Monthly -> stringResource(R.string.schedules_rule_monthly, trigger.day)
-    is ScheduleTrigger.Cron -> stringResource(R.string.schedules_rule_cron, trigger.expression)
+    is ScheduleTrigger.Cron -> cronSummaryLabel(trigger.expression) ?: trigger.expression
 }
+
+@Composable
+internal fun cronSummaryLabel(expression: String): String? {
+    val locale = LocalConfiguration.current.locales[0]
+    val separator = stringResource(R.string.schedules_cron_weekday_separator)
+    return when (val summary = summarizeCron(expression)) {
+        null -> null
+        CronSummary.EveryMinute -> stringResource(R.string.schedules_cron_every_minute)
+        is CronSummary.EveryMinutes -> stringResource(R.string.schedules_cron_every_minutes, summary.every)
+        is CronSummary.EveryHours -> if (summary.every == 1) {
+            if (summary.minute == 0) {
+                stringResource(R.string.schedules_cron_hourly)
+            } else {
+                stringResource(R.string.schedules_cron_hourly_at, summary.minute)
+            }
+        } else {
+            stringResource(R.string.schedules_cron_every_hours, summary.every, summary.minute)
+        }
+
+        is CronSummary.Daily -> stringResource(R.string.schedules_cron_daily, summary.time.format(SCHEDULE_TIME_FORMAT))
+        is CronSummary.Weekly -> stringResource(
+            R.string.schedules_cron_weekly,
+            weekdayLabel(summary.days, locale, separator),
+            summary.time.format(SCHEDULE_TIME_FORMAT),
+        )
+
+        is CronSummary.Monthly -> stringResource(
+            R.string.schedules_cron_monthly,
+            summary.day,
+            summary.time.format(SCHEDULE_TIME_FORMAT),
+        )
+
+        is CronSummary.Yearly -> stringResource(
+            R.string.schedules_cron_yearly,
+            summary.month,
+            summary.day,
+            summary.time.format(SCHEDULE_TIME_FORMAT),
+        )
+
+        is CronSummary.Custom -> summary.expression
+    }
+}
+
+private fun weekdayLabel(days: Set<DayOfWeek>, locale: Locale, separator: String): String =
+    DayOfWeek.entries
+        .filter { it in days }
+        .joinToString(separator) { it.getDisplayName(TextStyle.SHORT, locale) }
 
 @Composable
 private fun nextDeliveryLabel(timestamp: Long?): String {
@@ -300,10 +343,7 @@ internal fun deliveryErrorRes(error: ScheduleError?): Int = when (error) {
 internal fun draftErrorRes(error: DraftError): Int = when (error) {
     DraftError.EMPTY_NAME -> R.string.schedule_error_empty_name
     DraftError.EMPTY_PROMPT -> R.string.schedule_error_empty_prompt
-    DraftError.EMPTY_WEEKDAYS -> R.string.schedule_error_empty_weekdays
     DraftError.PAST_TIME -> R.string.schedule_error_past_time
-    DraftError.INVALID_INTERVAL -> R.string.schedule_error_invalid_interval
-    DraftError.INVALID_DAY_OF_MONTH -> R.string.schedule_error_invalid_day_of_month
     DraftError.INVALID_CRON -> R.string.schedule_error_invalid_cron
     DraftError.NO_CONVERSATION -> R.string.schedule_error_no_conversation
 }

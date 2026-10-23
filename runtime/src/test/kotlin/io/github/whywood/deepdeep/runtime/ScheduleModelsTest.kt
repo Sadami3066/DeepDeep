@@ -210,54 +210,6 @@ class ScheduleModelsTest {
     }
 
     @Test
-    fun intervalMinutesAlignToTheHour() {
-        assertEquals(
-            ZonedDateTime.of(2026, 10, 23, 12, 30, 0, 0, zone),
-            ScheduleTrigger.Interval(30, IntervalUnit.MINUTES).nextRun(now),
-        )
-        assertEquals(
-            ZonedDateTime.of(2026, 10, 23, 12, 1, 0, 0, zone),
-            ScheduleTrigger.Interval(7, IntervalUnit.MINUTES).nextRun(now),
-        )
-    }
-
-    @Test
-    fun intervalHoursAlignToMidnight() {
-        assertEquals(
-            ZonedDateTime.of(2026, 10, 23, 14, 0, 0, 0, zone),
-            ScheduleTrigger.Interval(2, IntervalUnit.HOURS).nextRun(now),
-        )
-        assertEquals(
-            ZonedDateTime.of(2026, 10, 23, 15, 0, 0, 0, zone),
-            ScheduleTrigger.Interval(5, IntervalUnit.HOURS).nextRun(now),
-        )
-    }
-
-    @Test
-    fun intervalDaysFollowStartDate() {
-        val trigger = ScheduleTrigger.Interval(
-            every = 2,
-            unit = IntervalUnit.DAYS,
-            time = LocalTime.of(9, 0),
-            startDate = LocalDate.of(2026, 10, 20),
-        )
-        assertEquals(ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, zone), trigger.nextRun(now))
-    }
-
-    @Test
-    fun monthlyClampsToShorterMonths() {
-        assertEquals(
-            ZonedDateTime.of(2026, 10, 31, 9, 0, 0, 0, zone),
-            ScheduleTrigger.Monthly(31, LocalTime.of(9, 0)).nextRun(now),
-        )
-        val jan31 = ZonedDateTime.of(2027, 1, 31, 12, 0, 0, 0, zone)
-        assertEquals(
-            ZonedDateTime.of(2027, 2, 28, 9, 0, 0, 0, zone),
-            ScheduleTrigger.Monthly(31, LocalTime.of(9, 0)).nextRun(jan31),
-        )
-    }
-
-    @Test
     fun cronPicksTheNextMatchingMinute() {
         assertEquals(
             ZonedDateTime.of(2026, 10, 26, 9, 0, 0, 0, zone),
@@ -272,29 +224,14 @@ class ScheduleModelsTest {
     @Test
     fun validationRejectsInvalidTriggers() {
         assertNotNull(ScheduleTrigger.Weekly(emptySet(), LocalTime.of(9, 0)).validationError(now))
-        assertNotNull(ScheduleTrigger.Monthly(32, LocalTime.of(9, 0)).validationError(now))
-        assertNotNull(ScheduleTrigger.Interval(0, IntervalUnit.MINUTES).validationError(now))
-        assertNotNull(ScheduleTrigger.Interval(2, IntervalUnit.DAYS).validationError(now))
         assertNotNull(ScheduleTrigger.Cron("not a cron").validationError(now))
         assertNotNull(ScheduleTrigger.Cron("0 0 30 2 *").validationError(now))
         assertNull(ScheduleTrigger.Cron("0 9 * * 1-5").validationError(now))
     }
 
     @Test
-    fun newTriggerJsonRoundTrip() {
-        val triggers = listOf(
-            ScheduleTrigger.Interval(90, IntervalUnit.MINUTES),
-            ScheduleTrigger.Interval(
-                2,
-                IntervalUnit.DAYS,
-                LocalTime.of(9, 0),
-                LocalDate.of(2026, 10, 24),
-            ),
-            ScheduleTrigger.Monthly(15, LocalTime.of(21, 30)),
-            ScheduleTrigger.Cron("0 9 * * 1-5"),
-        )
-        triggers.forEach { trigger ->
-            assertEquals(trigger, scheduleTriggerFromJsonObject(trigger.toJsonObject()))
-        }
+    fun cronTriggerJsonRoundTrip() {
+        val trigger = ScheduleTrigger.Cron("0 9 * * 1-5")
+        assertEquals(trigger, scheduleTriggerFromJsonObject(trigger.toJsonObject()))
     }
 }

@@ -22,27 +22,12 @@ enum class ScheduleError {
     DELIVERY_FAILED,
 }
 
-enum class IntervalUnit {
-    MINUTES,
-    HOURS,
-    DAYS,
-}
-
 sealed interface ScheduleTrigger {
     data class Once(val date: LocalDate, val time: LocalTime) : ScheduleTrigger
 
     data class Daily(val time: LocalTime) : ScheduleTrigger
 
     data class Weekly(val days: Set<DayOfWeek>, val time: LocalTime) : ScheduleTrigger
-
-    data class Interval(
-        val every: Int,
-        val unit: IntervalUnit,
-        val time: LocalTime? = null,
-        val startDate: LocalDate? = null,
-    ) : ScheduleTrigger
-
-    data class Monthly(val day: Int, val time: LocalTime) : ScheduleTrigger
 
     data class Cron(val expression: String) : ScheduleTrigger
 }
@@ -92,8 +77,6 @@ fun ScheduleTrigger.nextRun(now: ZonedDateTime): ZonedDateTime? = when (this) {
             result
         }
     }
-    is ScheduleTrigger.Interval -> intervalNextRun(now)
-    is ScheduleTrigger.Monthly -> monthlyNextRun(now)
     is ScheduleTrigger.Cron -> nextRunForCron(now)
 }
 
@@ -101,16 +84,6 @@ fun ScheduleTrigger.validationError(now: ZonedDateTime): String? = when (this) {
     is ScheduleTrigger.Once -> if (nextRun(now) == null) "once 的时间必须在未来" else null
     is ScheduleTrigger.Daily -> null
     is ScheduleTrigger.Weekly -> if (days.isEmpty()) "weekly 至少需要一个星期" else null
-    is ScheduleTrigger.Interval -> when (unit) {
-        IntervalUnit.MINUTES -> if (every !in 1..1440) "interval 分钟需要在 1..1440" else null
-        IntervalUnit.HOURS -> if (every !in 1..24) "interval 小时需要在 1..24" else null
-        IntervalUnit.DAYS -> when {
-            every !in 1..365 -> "interval 天需要在 1..365"
-            time == null || startDate == null -> "interval 天需要 time 与 start_date"
-            else -> null
-        }
-    }
-    is ScheduleTrigger.Monthly -> if (day !in 1..31) "monthly 的 day_of_month 需要在 1..31" else null
     is ScheduleTrigger.Cron -> {
         val parsed = try {
             CronExpression.parse(expression)
@@ -119,51 +92,6 @@ fun ScheduleTrigger.validationError(now: ZonedDateTime): String? = when (this) {
         }
         if (parsed.nextRun(now) == null) "cron 在未来 5 年内没有匹配时间" else null
     }
-}
-
-private fun ScheduleTrigger.Interval.intervalNextRun(now: ZonedDateTime): ZonedDateTime? = when (unit) {
-    IntervalUnit.MINUTES -> {
-        val step = every.coerceIn(1, 1440)
-        val dayStart = now.toLocalDate().atStartOfDay(now.zone)
-        val minutesSince = java.time.Duration.between(dayStart, now).toMinutes()
-        dayStart.plusMinutes((minutesSince / step + 1) * step)
-    }
-    IntervalUnit.HOURS -> {
-        val step = every.coerceIn(1, 24)
-        val dayStart = now.toLocalDate().atStartOfDay(now.zone)
-        val hoursSince = java.time.Duration.between(dayStart, now).toHours()
-        dayStart.plusHours((hoursSince / step + 1) * step)
-    }
-    IntervalUnit.DAYS -> {
-        val start = startDate
-        val at = time
-        if (start == null || at == null) {
-            null
-        } else {
-            val step = every.coerceIn(1, 365).toLong()
-            var date: LocalDate = start
-            var candidate = ZonedDateTime.of(date, at, now.zone)
-            var guard = 0
-            while (!candidate.isAfter(now) && guard < 4096) {
-                date = date.plusDays(step)
-                candidate = ZonedDateTime.of(date, at, now.zone)
-                guard++
-            }
-            candidate.takeIf { guard < 4096 }
-        }
-    }
-}
-
-private fun ScheduleTrigger.Monthly.monthlyNextRun(now: ZonedDateTime): ZonedDateTime? {
-    val targetDay = day.coerceIn(1, 31)
-    var firstOfMonth = now.toLocalDate().withDayOfMonth(1)
-    repeat(25) {
-        val candidateDate = firstOfMonth.withDayOfMonth(minOf(targetDay, firstOfMonth.lengthOfMonth()))
-        val candidate = ZonedDateTime.of(candidateDate, time, now.zone)
-        if (candidate.isAfter(now)) return candidate
-        firstOfMonth = firstOfMonth.plusMonths(1)
-    }
-    return null
 }
 
 private fun ScheduleTrigger.Cron.nextRunForCron(now: ZonedDateTime): ZonedDateTime? =
@@ -189,18 +117,6 @@ fun ScheduleTrigger.toJsonObject(): JsonObject = buildJsonObject {
             putJsonArray("days") {
                 trigger.days.sortedBy { it.value }.forEach { add(JsonPrimitive(it.value)) }
             }
-            put("time", trigger.time.toString())
-        }
-        is ScheduleTrigger.Interval -> {
-            put("type", "interval")
-            put("every", trigger.every)
-            put("unit", trigger.unit.name.lowercase())
-            trigger.time?.let { put("time", it.toString()) }
-            trigger.startDate?.let { put("startDate", it.toString()) }
-        }
-        is ScheduleTrigger.Monthly -> {
-            put("type", "monthly")
-            put("day", trigger.day)
             put("time", trigger.time.toString())
         }
         is ScheduleTrigger.Cron -> {
@@ -251,53 +167,6 @@ fun scheduleTriggerFromJsonObject(json: JsonObject): ScheduleTrigger {
                 ?: throw CorruptScheduleDataException("weekly trigger 缺少 days")
             val parsed = days.map { element -> weekdayFromJsonElement(element) }.toSet()
             ScheduleTrigger.Weekly(parsed, json.timeOrCorrupt("time"))
-        }
-        "interval" -> {
-            val every = json.intOrCorrupt("every")
-            val unit = when (json.stringOrCorrupt("unit").lowercase()) {
-                "minutes" -> IntervalUnit.MINUTES
-                "hours" -> IntervalUnit.HOURS
-                "days" -> IntervalUnit.DAYS
-                else -> throw CorruptScheduleDataException("interval unit 无效")
-            }
-            val intervalTime = json.optionalString("time")?.let { raw ->
-                try {
-                    LocalTime.parse(raw)
-                } catch (error: DateTimeParseException) {
-                    throw CorruptScheduleDataException("时间格式无效：$raw", error)
-                }
-            }
-            val startDate = json.optionalString("startDate")?.let { raw ->
-                try {
-                    LocalDate.parse(raw)
-                } catch (error: DateTimeParseException) {
-                    throw CorruptScheduleDataException("日期格式无效：$raw", error)
-                }
-            }
-            when (unit) {
-                IntervalUnit.MINUTES -> if (every !in 1..1440) {
-                    throw CorruptScheduleDataException("interval 分钟无效：$every")
-                }
-
-                IntervalUnit.HOURS -> if (every !in 1..24) {
-                    throw CorruptScheduleDataException("interval 小时无效：$every")
-                }
-
-                IntervalUnit.DAYS -> {
-                    if (every !in 1..365) {
-                        throw CorruptScheduleDataException("interval 天无效：$every")
-                    }
-                    if (intervalTime == null || startDate == null) {
-                        throw CorruptScheduleDataException("interval 天缺少 time 或 startDate")
-                    }
-                }
-            }
-            ScheduleTrigger.Interval(every, unit, intervalTime, startDate)
-        }
-        "monthly" -> {
-            val day = json.intOrCorrupt("day")
-            if (day !in 1..31) throw CorruptScheduleDataException("monthly day 无效：$day")
-            ScheduleTrigger.Monthly(day, json.timeOrCorrupt("time"))
         }
         "cron" -> {
             val expression = json.stringOrCorrupt("expression").trim()
@@ -364,10 +233,6 @@ private fun JsonObject.stringOrCorrupt(name: String): String =
 
 private fun JsonObject.booleanOrCorrupt(name: String): Boolean =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
-        ?: throw CorruptScheduleDataException("字段无效：$name")
-
-private fun JsonObject.intOrCorrupt(name: String): Int =
-    (this[name] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
         ?: throw CorruptScheduleDataException("字段无效：$name")
 
 private fun JsonObject.longOrCorrupt(name: String): Long =
