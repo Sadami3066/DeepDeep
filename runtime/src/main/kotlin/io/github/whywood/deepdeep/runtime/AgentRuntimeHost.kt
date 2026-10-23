@@ -132,7 +132,7 @@ class AgentRuntimeHost(
         try {
             ensureTitle(handle, text)
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
-            emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
+            emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "send session=$sessionId run=$runId chars=${text.length}")
             handle.session.prompt(text)
             if (!handle.stopRequested && !handle.terminalEmitted) {
@@ -314,7 +314,7 @@ class AgentRuntimeHost(
         if (handle.terminalEmitted) return
         handle.terminalEmitted = true
         if (status == RunStatus.FAILED) {
-            emit(handle, RuntimeEvent.RunFailed(runId, message ?: "请求失败，请稍后重试。"))
+            emit(handle, RuntimeEvent.RunFailed(runId, message.orEmpty()))
         } else {
             emit(handle, RuntimeEvent.RunFinished(runId, text, status, System.currentTimeMillis()))
         }
@@ -326,7 +326,7 @@ class AgentRuntimeHost(
             is SessionEvent.AgentEventReceived -> onAgentEvent(handle, runId, event.event)
             is SessionEvent.RetryScheduled -> emit(
                 handle,
-                RuntimeEvent.ActivityChanged(runId, "重试中（第 ${event.attempt} 次）"),
+                RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Retrying(event.attempt)),
             )
 
             is SessionEvent.RetryExhausted -> emitTerminal(
@@ -334,12 +334,12 @@ class AgentRuntimeHost(
                 runId = runId,
                 text = handle.session.getLastAssistantText().orEmpty(),
                 status = RunStatus.FAILED,
-                message = event.errorMessage ?: "重试失败",
+                message = event.errorMessage.orEmpty(),
             )
 
-            is SessionEvent.CompactionStarted -> emit(handle, RuntimeEvent.ActivityChanged(runId, "压缩上下文…"))
-            is SessionEvent.CompactionFinished -> emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
-            is SessionEvent.CompactionFailed -> emit(handle, RuntimeEvent.ActivityChanged(runId, "压缩失败"))
+            is SessionEvent.CompactionStarted -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Compacting))
+            is SessionEvent.CompactionFinished -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+            is SessionEvent.CompactionFailed -> emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.CompactionFailed))
             is SessionEvent.SessionError -> emitTerminal(
                 handle = handle,
                 runId = runId,
@@ -373,7 +373,7 @@ class AgentRuntimeHost(
                         startedAt = System.currentTimeMillis(),
                     ),
                 )
-                emit(handle, RuntimeEvent.ActivityChanged(runId, "运行 ${event.toolName}"))
+                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.RunningTool(event.toolName)))
             }
 
             is AgentEvent.ToolExecutionEnd -> {
@@ -388,7 +388,7 @@ class AgentRuntimeHost(
                         durationMs = event.durationMs,
                     ),
                 )
-                emit(handle, RuntimeEvent.ActivityChanged(runId, "思考中"))
+                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             }
 
             else -> Unit

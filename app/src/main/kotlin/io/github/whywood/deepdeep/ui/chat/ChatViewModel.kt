@@ -49,6 +49,7 @@ class ChatViewModel(
     private val modelConfigStore: ModelSettings,
     private val attachmentStore: AttachmentStore,
     private val prepareRuntime: suspend () -> Unit,
+    private val uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
@@ -79,7 +80,7 @@ class ChatViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 mutableState.update {
-                    it.copy(ready = true, historyLoaded = true, error = userFacingError(error.message ?: "运行时启动失败"))
+                    it.copy(ready = true, historyLoaded = true, error = userFacingError(error.message ?: uiStrings.runtimeStartFailed))
                 }
             }
         }
@@ -104,25 +105,25 @@ class ChatViewModel(
         if (current.sending || current.switchingConversation) return
         val root = current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
         if (root == null) {
-            mutableState.update { it.copy(error = "正在准备会话，请稍候…") }
+            mutableState.update { it.copy(error = uiStrings.preparingSession) }
             return
         }
         if (current.attachments.size >= MAX_ATTACHMENTS) {
-            mutableState.update { it.copy(error = "最多添加 5 个附件") }
+            mutableState.update { it.copy(error = uiStrings.maxAttachments) }
             return
         }
         viewModelScope.launch {
             when (val result = withContext(ioDispatcher) { attachmentStore.import(uri, root) }) {
                 is AttachmentImport.Imported -> mutableState.update {
                     if (it.attachments.size >= MAX_ATTACHMENTS) {
-                        it.copy(error = "最多添加 5 个附件")
+                        it.copy(error = uiStrings.maxAttachments)
                     } else {
                         it.copy(attachments = it.attachments + result.ref, error = null)
                     }
                 }
 
-                is AttachmentImport.TooLarge -> mutableState.update { it.copy(error = "附件超过 25MB，无法添加") }
-                is AttachmentImport.Failed -> mutableState.update { it.copy(error = "附件添加失败") }
+                is AttachmentImport.TooLarge -> mutableState.update { it.copy(error = uiStrings.attachmentTooLarge) }
+                is AttachmentImport.Failed -> mutableState.update { it.copy(error = uiStrings.attachmentFailed) }
             }
         }
     }
@@ -136,12 +137,12 @@ class ChatViewModel(
     fun send() {
         val current = mutableState.value
         if (!current.ready || !current.historyLoaded) {
-            mutableState.update { it.copy(error = "正在恢复会话，请稍候…") }
+            mutableState.update { it.copy(error = uiStrings.restoringSession) }
             return
         }
         val sessionId = current.conversationId
         if (sessionId == null) {
-            mutableState.update { it.copy(error = "会话尚未就绪，请稍候…") }
+            mutableState.update { it.copy(error = uiStrings.sessionNotReady) }
             return
         }
         if (current.sending || current.switchingConversation) return
@@ -165,7 +166,7 @@ class ChatViewModel(
                 quote = null,
                 attachments = emptyList(),
                 sending = true,
-                activity = "思考中",
+                activity = uiStrings.thinking,
                 activityStartedAt = now,
                 error = null,
                 conversationTitle = it.conversationTitle.ifBlank { titleFrom(text) },
@@ -179,7 +180,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                finishWithError(sessionId, error.message ?: "请求失败，请稍后重试。")
+                finishWithError(sessionId, error.message ?: uiStrings.requestFailed)
             }
         }
     }
@@ -223,7 +224,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "创建项目失败")) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.createProjectFailed)) }
             }
         }
     }
@@ -248,7 +249,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "切换模型失败")) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchModelFailed)) }
             }
         }
     }
@@ -262,7 +263,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "切换思考档位失败")) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchThinkingFailed)) }
             }
         }
     }
@@ -348,7 +349,8 @@ class ChatViewModel(
                 projects = projects,
                 currentProjectId = project.id,
                 conversationCwd = recent?.cwd ?: home.cwd,
-                conversations = sessions.filter { session -> session.cwd == project.cwd },
+                conversations = sessions.filter { session -> session.cwd == project.cwd }
+                    .map { session -> session.copy(title = localizedTitle(session.title)) },
                 historyLoaded = recent != null,
             )
         }
@@ -420,7 +422,7 @@ class ChatViewModel(
             } catch (error: Exception) {
                 if (mutableState.value.conversationId == summary.id) {
                     mutableState.update {
-                        it.copy(switchingConversation = false, error = userFacingError(error.message ?: "打开会话失败"))
+                        it.copy(switchingConversation = false, error = userFacingError(error.message ?: uiStrings.openConversationFailed))
                     }
                 }
             } finally {
@@ -459,7 +461,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: "新建会话失败")) }
+                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.newChatFailed)) }
             }
         }
     }
@@ -493,7 +495,7 @@ class ChatViewModel(
                     activity = reduced.activity,
                     activityStartedAt = reduced.activityStartedAt,
                     error = if (event is RuntimeEvent.RunFailed) {
-                        userFacingError(event.message)
+                        userFacingError(event.message.ifBlank { uiStrings.requestFailed })
                     } else {
                         it.error
                     },
@@ -524,7 +526,7 @@ class ChatViewModel(
                         if (it.id == target.id) it.copy(runId = event.runId) else it
                     },
                     sending = true,
-                    activity = "思考中",
+                    activity = uiStrings.thinking,
                     activityStartedAt = event.startedAt,
                 )
             }
@@ -534,9 +536,10 @@ class ChatViewModel(
             if (!snapshot.matchesRun(event.runId)) {
                 snapshot
             } else {
+                val label = uiStrings.activity(event.activity)
                 snapshot.copy(
-                    activity = event.activity,
-                    activityStartedAt = if (event.activity == null) null else {
+                    activity = label,
+                    activityStartedAt = if (label == null) null else {
                         snapshot.activityStartedAt ?: System.currentTimeMillis()
                     },
                 )
@@ -706,7 +709,7 @@ class ChatViewModel(
         if (index == -1) return snapshot.copy(sending = false, activity = null, activityStartedAt = null)
         val current = snapshot.messages[index]
         val failed = current.copy(
-            text = current.text.ifBlank { "（没有收到回复）" },
+            text = current.text.ifBlank { uiStrings.emptyReply },
             streaming = false,
             status = MessageStatus.FAILED,
             finishedAt = System.currentTimeMillis(),
@@ -754,10 +757,10 @@ class ChatViewModel(
                 ready = true,
                 projects = projects,
                 currentProjectId = project?.id ?: it.currentProjectId,
-                conversations = sessions,
-                archivedConversations = archived,
+                conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
+                archivedConversations = archived.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedCount = archived.size,
-                conversationTitle = title ?: it.conversationTitle,
+                conversationTitle = title?.let(::localizedTitle) ?: it.conversationTitle,
             )
         }
         cacheCurrentSession()
@@ -767,7 +770,7 @@ class ChatViewModel(
         mutableState.update {
             it.copy(
                 currentProjectId = project.id,
-                conversations = sessions,
+                conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
             )
         }
     }
@@ -825,14 +828,14 @@ class ChatViewModel(
     }
 
     private fun userFacingError(message: String): String = when {
-        message.contains("API key", ignoreCase = true) || message.contains("401") -> "API Key 无效或已过期"
-        message.contains("429") -> "请求太频繁，请稍后再试"
-        message.contains("timed out", ignoreCase = true) -> "请求超时，请检查网络"
-        message.contains("Network", ignoreCase = true) -> "无法连接模型服务，请检查网络"
+        message.contains("API key", ignoreCase = true) || message.contains("401") -> uiStrings.invalidApiKey
+        message.contains("429") -> uiStrings.rateLimited
+        message.contains("timed out", ignoreCase = true) -> uiStrings.timeout
+        message.contains("Network", ignoreCase = true) -> uiStrings.networkError
         message.contains("tool input", ignoreCase = true) || message.contains("invalid JSON", ignoreCase = true) ->
-            "模型返回了无效的工具参数，请重试"
+            uiStrings.invalidToolArgs
 
-        message.contains("500") || message.contains("503") -> "模型服务暂时不可用"
+        message.contains("500") || message.contains("503") -> uiStrings.serviceUnavailable
         else -> message
     }
 
@@ -840,6 +843,9 @@ class ChatViewModel(
         val normalized = text.trim().replace(Regex("\\s+"), " ")
         return if (normalized.length <= 28) normalized else normalized.take(28) + "…"
     }
+
+    private fun localizedTitle(title: String): String =
+        if (title.isBlank() || title == "新对话") uiStrings.newChatTitle else title
 
     private fun titleFrom(messages: List<AssistantMessage>): String {
         val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return "新对话"

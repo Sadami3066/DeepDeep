@@ -74,7 +74,7 @@ class ChatViewModelTest {
 
         val sending = viewModel.state.value
         assertTrue(sending.sending)
-        assertEquals("思考中", sending.activity)
+        assertEquals(ChatUiStrings.fallback().thinking, sending.activity)
         assertEquals(2, sending.messages.size)
         assertEquals(MessageStatus.RUNNING, sending.messages.last().status)
         assertTrue(sending.conversationTitle.isNotBlank())

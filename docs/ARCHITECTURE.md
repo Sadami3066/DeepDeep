@@ -10,7 +10,7 @@
 ## 多会话并发
 
 - `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor、run 状态；会话之间互不关闭。
-- 运行事件统一包装为 `SessionRuntimeEvent(sessionId, event)`；ChatViewModel 用 `conversationCache` 保存每个会话的消息/流式状态，活跃会话直接更新 UI，后台会话事件写入缓存，切回时立即恢复并继续接收。
+- 运行事件统一包装为 `SessionRuntimeEvent(sessionId, event)`；活动状态是类型化的 `RuntimeActivity`（思考/重试/压缩/运行工具），由 ChatViewModel 结合 `ChatUiStrings`（字符串资源）本地化后进入 UI，runtime 层不承载用户可见文案；ChatViewModel 用 `conversationCache` 保存每个会话的消息/流式状态，活跃会话直接更新 UI，后台会话事件写入缓存，切回时立即恢复并继续接收。
 - 发送/停止按 sessionId 定向；`busySessionIds` StateFlow 供 UI 展示后台运行状态；新建会话/切换项目不打断正在运行的任务。模型与思考档位是全局配置，变更会同步到所有已打开会话。
 
 ## 模块

@@ -32,7 +32,7 @@
 - conversation switch cache: finished turns cached per conversation, reopening a visited conversation renders instantly while the SDK session opens in background
 - performance: Compose stability config for runtime models + ChatUiState, draw-phase press wash, memoized markdown spans, image fade read in graphics layer
 
-- i18n: values-en full English translations (app/chat/drawer/settings) + in-app language switcher (system/zh/en, persisted, attachBaseContext locale, no appcompat); remaining hardcoded strings in runtime/chat error+activity text are a known follow-up
+- i18n: values-en full English translations (app/chat/drawer/settings + status/error strings) + in-app language switcher (system/zh/en, persisted, attachBaseContext locale, no appcompat); runtime activity is a typed RuntimeActivity localized in ChatViewModel, session default titles localized
 - search: independent drawer search (inline, title filter, empty hint, back/ESC close) and archived-screen search; drawer placeholders 技能/插件/定时任务 show toast
 - projects: workspace renamed to home with session/data migration; create/select projects (files/projects/<id>) from drawer; sessions bound to cwd; project picker dialog
 - multi-session concurrency: per-session runtime pool, background runs keep streaming while switching/new chat; busySessionIds; per-session cache restores instantly

@@ -129,6 +129,18 @@ enum class RunStatus {
     FAILED,
 }
 
+sealed interface RuntimeActivity {
+    data object Thinking : RuntimeActivity
+
+    data class Retrying(val attempt: Int) : RuntimeActivity
+
+    data object Compacting : RuntimeActivity
+
+    data object CompactionFailed : RuntimeActivity
+
+    data class RunningTool(val name: String) : RuntimeActivity
+}
+
 sealed interface RuntimeEvent {
     val runId: String
 
@@ -139,7 +151,7 @@ sealed interface RuntimeEvent {
 
     data class ActivityChanged(
         override val runId: String,
-        val activity: String?,
+        val activity: RuntimeActivity?,
     ) : RuntimeEvent
 
     data class TextDelta(

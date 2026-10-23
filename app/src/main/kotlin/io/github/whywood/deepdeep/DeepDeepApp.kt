@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
+import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
@@ -59,6 +60,36 @@ internal fun DeepDeepApp(
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val retryTemplate = stringResource(R.string.chat_status_retrying_format)
+    val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
+    val chatUiStrings = ChatUiStrings(
+        thinking = stringResource(R.string.chat_status_thinking),
+        retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
+        compacting = stringResource(R.string.chat_status_compacting),
+        compactionFailed = stringResource(R.string.chat_status_compaction_failed),
+        runningTool = { name -> runningToolTemplate.replace("%1\$s", name) },
+        requestFailed = stringResource(R.string.chat_error_request_failed),
+        emptyReply = stringResource(R.string.chat_error_empty_reply),
+        runtimeStartFailed = stringResource(R.string.chat_error_runtime_start),
+        preparingSession = stringResource(R.string.chat_error_preparing),
+        maxAttachments = stringResource(R.string.chat_error_max_attachments),
+        attachmentTooLarge = stringResource(R.string.chat_error_attachment_too_large),
+        attachmentFailed = stringResource(R.string.chat_error_attachment_failed),
+        restoringSession = stringResource(R.string.chat_error_restoring),
+        sessionNotReady = stringResource(R.string.chat_error_session_not_ready),
+        createProjectFailed = stringResource(R.string.chat_error_create_project),
+        switchModelFailed = stringResource(R.string.chat_error_switch_model),
+        switchThinkingFailed = stringResource(R.string.chat_error_switch_thinking),
+        openConversationFailed = stringResource(R.string.chat_error_open_conversation),
+        newChatFailed = stringResource(R.string.chat_error_new_chat),
+        newChatTitle = stringResource(R.string.chat_title_new),
+        invalidApiKey = stringResource(R.string.chat_error_invalid_api_key),
+        rateLimited = stringResource(R.string.chat_error_rate_limited),
+        timeout = stringResource(R.string.chat_error_timeout),
+        networkError = stringResource(R.string.chat_error_network),
+        invalidToolArgs = stringResource(R.string.chat_error_invalid_tool_args),
+        serviceUnavailable = stringResource(R.string.chat_error_service_unavailable),
+    )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
@@ -68,6 +99,7 @@ internal fun DeepDeepApp(
                     modelConfigStore = graph.modelConfigStore,
                     attachmentStore = graph.attachmentStore,
                     prepareRuntime = graph::prepare,
+                    uiStrings = chatUiStrings,
                 )
             }
         },

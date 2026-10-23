@@ -132,7 +132,11 @@ private fun LoadedImage(
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Image(
             bitmap = imageBitmap,
-            contentDescription = if (label.isBlank()) "预览" else "$label，预览",
+            contentDescription = if (label.isBlank()) {
+                stringResource(R.string.assistant_image_preview)
+            } else {
+                "$label · ${stringResource(R.string.assistant_image_preview)}"
+            },
             modifier = Modifier
                 .size(width = with(density) { widthPx.toDp() }, height = with(density) { heightPx.toDp() })
                 .clip(RoundedCornerShape(12.dp))
