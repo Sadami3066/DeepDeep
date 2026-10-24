@@ -1,5 +1,14 @@
 # Status
 
+## Done: 官方插件页与飞书 CLI 接入
+
+- 抽象插件框架：`OfficialPlugin` 契约 + `PluginManager`（`app/.../plugin/`）。框架不含 Linux/CLI/登录概念；安装记录、互斥、技能同步、系统提示、进度通知、`plugin_setup` 工具由框架负责
+- 抽屉新增「插件」；列表/详情/删除/更新/重新安装；每插件自己的状态与操作（飞书：连接、重新授权、退出登录、重新检测）
+- 首个插件飞书：按需下载官方 CLI（npmmirror + GitHub 兜底、SHA-256 校验、guest `/usr/local/bin/lark-cli`），设备流建应用/登录，状态由飞书插件自己探测（`lark-cli auth status --json`）
+- Agent 与 UI 同步：`plugin_setup` 工具走同一个 `PluginManager.setup` 与同一个 setup sheet；Agent 直接用 bash 改 CLI 状态后，插件页进入/恢复/运行结束会重新探测；每轮 `official_plugins` 系统提示按当前状态生成
+- 插件技能写 `files/agent/skills/deepdeep-feishu`（`.deepdeep-plugin` 标记）；不预设定时任务、总结模板或界面
+- 353 unit tests green（runtime 142 / app 191 / shell 20），lint、模块边界、debug 构建通过
+
 ## Done: Provider OAuth、App MCP 与导航收敛
 
 - Provider OAuth：内置 9 家 OAuth 厂商（Anthropic、OpenAI、GitHub Copilot、OpenAI Codex、xAI、OpenRouter、Kimi、Meta、Radius）可在设置页登录/退出；OAuth token 与 API Key 同样用 Android Keystore 加密保存，同一厂商只保留一种认证；登录后厂商立即视为已配置并可选用

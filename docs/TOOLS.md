@@ -7,7 +7,7 @@
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
 | SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
-| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present` |
+| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup` |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
 | Android 能力 | app 进程 | 设计；通知、Intent、联系人等需要单独评审权限 |
 | Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
@@ -56,6 +56,17 @@ defaultCodingTools(...)
 - 等待队列只在内存中；进程退出后不恢复。
 - UI 内联在聊天消息里：一次一题、进度、选项、多选、自定义答案、跳过/上一题/下一题/提交；`(Recommended)` 显示为「推荐」标签，回传仍保留原始 label。提交后工具结果到达即折叠为只读问答摘要。
 - 服务端按 `sessionId` 记录待答问题；已在历史中的工具调用只显示参数/结果，不重新变成可交互问题。
+
+## plugin_setup
+
+| 参数 | 语义 |
+|---|---|
+| `plugin` | 官方插件 id，当前只有 `feishu` |
+
+- 打开插件的准备流程（安装确认、浏览器链接、等待完成）；步骤由插件自己定义，App 只渲染通用 sheet。
+- 仅在 App 前台可用；后台运行调用会返回错误。
+- 用户取消时返回 `ok=false` 与取消原因，模型应询问具体情况而不是循环重试。
+- 详见 `docs/PLUGINS.md`。
 
 ## goal
 

@@ -30,6 +30,7 @@ class PiSessionEngine(
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
     private val sharedStorage: suspend () -> Boolean = { false },
+    private val pluginPromptBody: suspend () -> String? = { null },
     private val toolContext: AppToolContext? = null,
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
@@ -79,10 +80,21 @@ class PiSessionEngine(
                             cwd = cwd.toString(),
                             now = OffsetDateTime.now(),
                         )
-                        if (runCatching { sharedStorage() }.getOrDefault(false)) {
+                        val withShared = if (runCatching { sharedStorage() }.getOrDefault(false)) {
                             sections + sharedStorageSection()
                         } else {
                             sections
+                        }
+                        val pluginBody = runCatching { pluginPromptBody() }.getOrNull()?.trim()
+                        if (pluginBody.isNullOrEmpty()) {
+                            withShared
+                        } else {
+                            withShared + (
+                                "official_plugins" to wrapPromptSection(
+                                    "official_plugins",
+                                    escapePromptXml(pluginBody),
+                                )
+                            )
                         }
                     },
                 ),

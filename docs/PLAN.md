@@ -21,5 +21,6 @@
 19. P12.1 — device-feedback polish: job notices as one-line markers, multiple questions serialized into one interactive card with answers collected into the process, baseline-centered inline code chips, `present` tool with delivery cards, PRoot shared storage (MANAGE_EXTERNAL_STORAGE bind of /sdcard), workspace file browser, share-panel inset jitter fixes (done)
 20. P12.2 — reminder repeats collapsed to once/cron: five-field cron parser with validation and next-run support, human-readable cron summary in editor and list, legacy daily/weekly migrated on edit, tool parameters (done)
 21. P13 — provider OAuth sign-in (9 built-in flows, encrypted credentials, loopback browser callback), MCP (streamable HTTP config/test/OAuth/tool_search integration), drawer restructure (MCP entry, chat/archived entries removed, archived moved to settings) (done)
-22. Next — workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+22. P14 — abstract official plugin framework (contract, records, skills, prompt section, global setup sheet, `plugin_setup` tool) + Feishu CLI plugin (install/status/device-flow setup/actions) (done)
+23. Next — workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
 23. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it

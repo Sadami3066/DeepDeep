@@ -102,6 +102,7 @@ fun DeepDeepDrawer(
     onOpenSearch: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
+    onOpenPlugins: () -> Unit,
     onScheduled: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
@@ -193,6 +194,12 @@ fun DeepDeepDrawer(
                 label = stringResource(R.string.drawer_nav_mcp),
                 onClick = onOpenMcp,
                 testTag = "drawer_mcp",
+            )
+            DrawerNavItem(
+                icon = DdIcons.Puzzle,
+                label = stringResource(R.string.drawer_nav_plugins),
+                onClick = onOpenPlugins,
+                testTag = "drawer_plugins",
             )
             DrawerNavItem(
                 icon = DdIcons.Clock,

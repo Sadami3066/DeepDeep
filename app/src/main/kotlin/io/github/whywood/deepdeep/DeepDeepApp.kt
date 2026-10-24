@@ -51,6 +51,9 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
+import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
+import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
+import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
@@ -184,6 +187,7 @@ internal fun DeepDeepApp(
         initialValue = false,
     )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
+    val pluginsState by graph.pluginManager.state.collectAsStateWithLifecycle()
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val presentOpenFailed = stringResource(R.string.present_open_failed)
@@ -611,6 +615,18 @@ internal fun DeepDeepApp(
                     onReconnect = { server -> scope.launch { graph.host.reconnectMcp(server) } },
                 )
 
+                AppDestination.Plugins -> PluginsScreen(
+                    manager = graph.pluginManager,
+                    onBack = ::back,
+                    onOpenPlugin = { pluginId -> navigator.push(AppDestination.PluginDetail(pluginId)) },
+                )
+
+                is AppDestination.PluginDetail -> PluginDetailScreen(
+                    manager = graph.pluginManager,
+                    pluginId = destination.id,
+                    onBack = ::back,
+                )
+
                 AppDestination.Archived -> ArchivedSessionsScreen(
                     archivedSessions = state.archivedConversations,
                     onBack = ::back,
@@ -707,6 +723,10 @@ internal fun DeepDeepApp(
                     onOpenMcp = {
                         drawerOpen = false
                         navigator.push(AppDestination.Mcp)
+                    },
+                    onOpenPlugins = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Plugins)
                     },
                     onScheduled = {
                         drawerOpen = false
@@ -915,6 +935,12 @@ internal fun DeepDeepApp(
                 rootLabel = rootLabel,
                 onOpenFile = openWorkspaceFile,
                 onDismiss = { filesSheetOpen = false },
+            )
+        }
+        pluginsState.interaction?.let { interaction ->
+            PluginSetupSheet(
+                manager = graph.pluginManager,
+                interaction = interaction,
             )
         }
     }

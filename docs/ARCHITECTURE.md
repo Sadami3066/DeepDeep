@@ -66,6 +66,15 @@ Compose ChatScreen
 - `McpConfigStore` 负责读写配置并保留未知/stdio 字段；`McpServerProbe` 独立探测连接与工具数（供 MCP 页状态展示），`McpOAuthService` 负责 MCP OAuth 登录/退出。保存配置后 `AgentRuntimeHost.reloadMcp()` 对已打开会话热更新，登录后 `reconnectMcp()` 重连。
 - `McpOAuthSession` 用本机 loopback 回调（`startOAuthCallbackServerOrNull`）接收浏览器授权结果，失败时回退到粘贴回调链接。
 
+## 官方插件
+
+- 插件在 `app/.../plugin/`：`OfficialPlugin` 契约只描述生命周期，不包含 Linux/CLI/登录概念；具体实现放在 `plugin/<name>/`（飞书为 `plugin/feishu/`）。
+- `PluginManager` 负责安装记录（`files/plugins/plugins.json`，原子写）、全局互斥、安装/卸载/更新、状态刷新、技能同步（`files/agent/skills` + `.deepdeep-plugin` 标记）、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
+- 安装/登录态的判定属于插件个体：飞书插件自己执行 `lark-cli auth status --json` 并映射为 `Ready`/`NotReady`/`Failed`；框架只显示它返回的文案。
+- Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会重新探测。
+- `PiSessionEngine` 增加 `pluginPromptBody` 参数，在 hooks 中每轮注入 `official_plugins` section；插件技能由框架写入 `agent/skills`，新会话生效。
+- 飞书插件安装官方 CLI 到 guest `/usr/local/bin/lark-cli`，凭证留在 CLI 自己的 `/root/.lark-cli` 与 `/root/.local/share/lark-cli`；不上报运行环境包列表。
+
 ## 个性化与提示词
 
 - 基础系统提示词由 SDK 的 `SYSTEM.md` 覆盖机制替换：`PiSessionEngine` 在创建会话前确保 `files/agent/SYSTEM.md` 存在（已存在则保留用户编辑），SDK 读到后不再使用自带的 "You are an expert coding assistant operating inside pi" 前言。工作区里放 `.pi/SYSTEM.md` 可覆盖全局这一份。
@@ -172,10 +181,12 @@ filesDir/
   home/             cwd，同时是 Alpine /workspace
   workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
+  agent/skills/     全局技能；插件技能也在这里，带 .deepdeep-plugin 标记
+  plugins/          plugins.json（官方插件安装记录）
   skills/<id>/      技能仓库（SDK 不扫描）
   schedules/        schedules.json（提醒绑定到对话）
   goals/            goals.json（按会话的目标与轮次）
-  linux/rootfs/     Alpine rootfs
+  linux/rootfs/     Alpine rootfs（插件二进制在 guest /usr/local/bin）
 ```
 
 API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
@@ -183,13 +194,14 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 ## 设计中的系统
 
 - 定时任务：`docs/SCHEDULING.md`（提醒投递、任务页编辑、手动执行已实现）。
-- Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现）。
+- Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现；插件技能单独说明）。
+- 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、安装/连接、UI 与 Agent 同步）。
 - 工具分类：`docs/TOOLS.md`。
 
 ## 工具
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
-- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`
 - 不注册 `device_info`、`open_app` 等 Android 能力工具
 
 ## 功能接线

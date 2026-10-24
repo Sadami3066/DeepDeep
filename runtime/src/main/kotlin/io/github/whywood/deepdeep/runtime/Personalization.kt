@@ -71,7 +71,7 @@ private fun interactionInstructions(style: InteractionStyle): String = when (sty
 internal fun wrapPromptSection(name: String, content: String): String =
     "<$name>\n$content\n</$name>"
 
-private fun escapePromptXml(value: String): String = value
+internal fun escapePromptXml(value: String): String = value
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")

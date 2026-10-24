@@ -74,6 +74,16 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Plugins : AppDestination {
+        override val routeKey: String = "plugins"
+        override val depth: Int = 1
+    }
+
+    data class PluginDetail(val id: String) : AppDestination {
+        override val routeKey: String = "plugins/$id"
+        override val depth: Int = 2
+    }
+
     data class WorkspaceSettings(val workspaceId: String) : AppDestination {
         override val routeKey: String = "workspaces/$workspaceId/settings"
         override val depth: Int = 1
@@ -81,6 +91,7 @@ sealed interface AppDestination {
 
     companion object {
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
+        private const val PLUGIN_DETAIL_PREFIX = "plugins/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
 
@@ -98,6 +109,12 @@ sealed interface AppDestination {
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp
             routeKey == Schedules.routeKey -> Schedules
+            routeKey == Plugins.routeKey -> Plugins
+            routeKey.startsWith(PLUGIN_DETAIL_PREFIX) ->
+                PluginDetail(routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)).takeIf {
+                    it.id.isNotBlank() && !it.id.contains('/')
+                }
+
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
 

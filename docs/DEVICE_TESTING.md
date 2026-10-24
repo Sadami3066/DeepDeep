@@ -107,7 +107,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 
 ## 证据
 
-`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`、`artifacts/validation/round11/`，设备日志用：
+`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`、`artifacts/validation/round11/`、`artifacts/validation/round26/`，设备日志用：
 
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat
@@ -117,3 +117,10 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 72. MCP OAuth：对没有 Authorization 头的服务器点「登录」→ 浏览器授权 → 返回后显示「已登录」并自动重连；「退出登录」后状态回到需要登录。收不到回调时粘贴回调链接也能完成。
 73. MCP 工具：打开一个会话，让模型使用 MCP 工具（或请求「用 tool_search 找 MCP 工具」）；过程里出现 `server · tool` 形式的工具行与结果；工具输出进入对话，删除/停用服务器后新会话不再提供对应工具。
 74. 导航收敛：抽屉只剩 技能 / MCP / 定时任务，无「聊天」「已归档」；设置页「已归档」显示数量，点击进入归档列表并能返回；已归档会话可在归档页打开/恢复。
+
+75. 插件页：抽屉出现「插件」；列表只有飞书一行，未安装时行尾是「下载」；没有自动下载；`bash` 里 `command -v lark-cli` 失败；运行环境页的包列表不出现 lark-cli。
+76. 插件安装：点「下载」→ 行内出现下载进度 → 完成后显示「已安装 · 未连接」、详情页版本 1.0.98；`bash` 里 `lark-cli --version` 输出 `lark-cli version 1.0.98`；杀进程重开后仍是已安装。
+77. 插件连接：详情「连接飞书」→ 通用 sheet 出现建应用链接 → 在浏览器完成飞书账号登录并创建应用 → 回到 App 后自动进入账号授权 → 完成后状态变为「已连接 · 账号」；杀掉重开不需要重新登录。若浏览器没有飞书登录态，会停在扫码登录页，需要用户先登录。
+78. Agent 驱动：新对话里说「帮我连接飞书」→ 模型调用 `plugin_setup`，弹出同一个 sheet；首次会先显示「需要先下载插件」；完成后工具返回结果，模型能继续；取消时工具返回取消，模型询问原因而不是自动重试。
+79. 显示同步：在聊天里让 Agent 用 `bash` 运行 `lark-cli --version` 能成功；让 Agent 运行 `lark-cli auth logout` 后进入插件页，状态重新探测为未连接；插件页/App 恢复时状态与 CLI 实际状态一致。
+80. 插件删除与异常：删除确认后 `plugins.json` 为空、guest 内二进制/CLI 配置/凭证、`agent/skills/deepdeep-feishu` 都不存在；断网下载失败不留半安装；安装记录损坏时页面显示错误且文件保留；中英切换、深浅色下插件页、详情页与 setup sheet 正常。
