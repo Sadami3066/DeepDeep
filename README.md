@@ -39,7 +39,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 
 - JDK 17+
 - Android SDK Platform 36
-- `pi2kotlin 0.2.1` 已发布到 mavenLocal：在 `../pi2kotlin` 执行 `./gradlew publishToMavenLocal`
+- `pi2kotlin 0.2.2` 已发布到 mavenLocal：在 `../pi2kotlin` 执行 `./gradlew publishToMavenLocal`
 
 ## 构建
 

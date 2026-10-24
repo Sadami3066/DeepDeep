@@ -24,7 +24,7 @@ defaultCodingTools(...)
   + appTools(cwd, AppToolContext, SessionBinding)
 ```
 
-`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、额外的工具工厂列表（goal、job）与 `pluginTools`（由 `PluginManager` 收集已启用插件的工具）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.1，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
+`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、额外的工具工厂列表（goal、job）与 `pluginTools`（由 `PluginManager` 收集已启用插件的工具）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.2，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
 
 取消：等待型工具通过 `RunSignal` 监听；signal abort 时结束等待。
 
