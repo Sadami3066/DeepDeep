@@ -1,5 +1,13 @@
 # Status
 
+## Done: 会话 system prompt 去重与内联技能
+
+- 修掉每轮对话都往 JSONL 追加 system 消息的 bug：根因是 `environment` section 带微秒级当前时间，每次 diff 都变化；现改为日期 + 时区（同一天内稳定），并把环境/偏好/插件/共享目录等动态 section 作为 `initialSystemPromptSections` 写进会话首条 system 快照，不再每轮补一次
+- pi2kotlin SDK 新增 `AgentSessionOptions.initialSystemPromptSections`（0.2.2）：只写入首条 system 快照，后续仍由 hooks 动态 diff；DeepDeep 升级到 0.2.2 并本地发布
+- 真机连续 7 轮对话的会话 JSONL 只有 3 条 system 消息：首条完整快照 + MCP 连接后的 `mcp_servers` + 延迟工具声明；不再随用户轮次增长
+- `/skill:<name>` 支持写在消息中间或末尾（如「使用一下这个 skill /skill:workshop」），一条消息可提及多个技能，代码块/行内代码中的 `/skill:` 不展开；技能块仍从用户气泡中隐藏
+- 555 unit tests green（runtime 266 / app 269 / shell 20），lint 0 errors、模块边界与 debug 构建通过；pi2kotlin 1434 JVM tests green、本地发布 48/48 校验通过
+
 ## Done: 页面驱动一次性 Agent
 
 - bridge 新增 `agent.models` / `agent.capabilities` / `agent.run`：页面 JS 可以列出已配置模型与完整工具/技能目录，并用 `app.agent.run({prompt, providerId, modelId, thinkingLevel, systemPrompt, maxTurns, tools, skills})` 启动一次性 Agent，只拿到最终文本；并行/串行编排完全由页面 JS 决定

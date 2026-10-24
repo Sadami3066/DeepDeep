@@ -56,6 +56,16 @@ class PiSessionEngine(
         val binding = SessionBinding()
         val allTools = buildTools(activeShell, binding)
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
+        val initialSections = buildSessionSystemPromptSections(
+            personalization = runCatching { personalization() }.getOrDefault(Personalization()),
+            providerId = resolved.providerId,
+            modelId = modelId,
+            cwd = cwd.toString(),
+            now = OffsetDateTime.now(),
+            sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
+            pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
+            extra = extraSystemPromptSections,
+        )
         val session = createAgentSession(
             AgentSessionOptions(
                 cwd = cwd,
@@ -69,39 +79,21 @@ class PiSessionEngine(
                 shellExecutor = activeShell,
                 hooks = CodingHooks(
                     extraSystemPromptSections = {
-                        val current = runCatching { personalization() }.getOrDefault(Personalization())
-                        val sections = buildPersonalizationSections(
-                            personalization = current,
+                        buildSessionSystemPromptSections(
+                            personalization = runCatching { personalization() }.getOrDefault(Personalization()),
                             providerId = resolved.providerId,
                             modelId = modelId,
                             cwd = cwd.toString(),
                             now = OffsetDateTime.now(),
+                            sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
+                            pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
+                            extra = extraSystemPromptSections,
                         )
-                        val withShared = if (runCatching { sharedStorage() }.getOrDefault(false)) {
-                            sections + sharedStorageSection()
-                        } else {
-                            sections
-                        }
-                        val pluginBody = runCatching { pluginPromptBody() }.getOrNull()?.trim()
-                        val withPlugins = if (pluginBody.isNullOrEmpty()) {
-                            withShared
-                        } else {
-                            withShared + (
-                                "official_plugins" to wrapPromptSection(
-                                    "official_plugins",
-                                    escapePromptXml(pluginBody),
-                                )
-                            )
-                        }
-                        if (extraSystemPromptSections.isEmpty()) {
-                            withPlugins
-                        } else {
-                            withPlugins + extraSystemPromptSections
-                        }
                     },
                 ),
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
+                initialSystemPromptSections = initialSections,
                 projectTrusted = true,
                 mcp = McpOptions(
                     enabled = mcpEnabled,
@@ -165,18 +157,6 @@ class PiSessionEngine(
         OffsetDateTime.parse(value).toInstant().toEpochMilli()
     }.getOrDefault(0L)
 }
-
-
-private fun sharedStorageSection(): Map<String, String> = mapOf(
-    "shared_storage" to wrapPromptSection(
-        "shared_storage",
-        listOf(
-            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place.",
-            "Download, Documents, Pictures, DCIM, Music and Movies under it are readable and writable.",
-            "Treat these as the user's real files: look before changing, and do not delete or overwrite anything unless the user asked for it.",
-        ).joinToString("\n") { "- $it" },
-    ),
-)
 
 fun ThinkingLevel.runtimeValue(): String = when (this) {
     ThinkingLevel.OFF -> "off"

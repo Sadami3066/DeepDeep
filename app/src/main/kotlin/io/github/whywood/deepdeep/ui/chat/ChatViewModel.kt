@@ -181,6 +181,11 @@ class ChatViewModel(
 
             else -> Unit
         }
+        val mentions = extractSkillMentions(text)
+        if (mentions != null) {
+            expandInlineAndSend(mentions)
+            return
+        }
         startTurn(buildPrompt(current.quote, current.attachments, text))
     }
 
@@ -354,6 +359,38 @@ class ChatViewModel(
             startTurn(
                 buildPrompt(current.quote, current.attachments, expansion.prompt),
                 titleSeed = args.trim().ifBlank { expansion.name },
+            )
+        }
+    }
+
+    private fun expandInlineAndSend(mentions: SkillMentions) {
+        val current = mutableState.value
+        val sessionId = current.conversationId ?: return
+        mutableState.update { it.copy(sending = true, error = null) }
+        viewModelScope.launch {
+            val expansions = withContext(ioDispatcher) {
+                mentions.names.map { name -> skillExpander?.expand(current.conversationCwd, name, "") }
+            }
+            if (mutableState.value.conversationId != sessionId) return@launch
+            val missing = mentions.names.getOrNull(expansions.indexOfFirst { it == null })
+            if (missing != null) {
+                mutableState.update { it.copy(sending = false, error = uiStrings.skillMissing(missing)) }
+                return@launch
+            }
+            val prompt = buildString {
+                expansions.forEachIndexed { index, expansion ->
+                    if (index > 0) append("\n\n")
+                    append(expansion?.prompt.orEmpty())
+                }
+                val body = mentions.text.trim()
+                if (body.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n\n")
+                    append(body)
+                }
+            }
+            startTurn(
+                buildPrompt(current.quote, current.attachments, prompt),
+                titleSeed = mentions.text.trim().ifBlank { expansions.firstOrNull()?.name.orEmpty() },
             )
         }
     }

@@ -10,16 +10,22 @@ private val SKILL_BLOCK = Regex(
 )
 
 fun parseSkillInvocation(text: String): SkillInvocation? {
-    val match = SKILL_BLOCK.find(text) ?: return null
-    val name = match.groupValues[1].trim()
+    val matches = SKILL_BLOCK.findAll(text).toList()
+    if (matches.isEmpty()) return null
+    val name = matches.first().groupValues[1].trim()
     if (name.isEmpty()) return null
     return SkillInvocation(
         name = name,
-        userText = text.substring(match.range.last + 1).trim(),
+        userText = text.substring(matches.last().range.last + 1).trim(),
     )
 }
 
 internal fun stripSkillInvocation(text: String): String {
-    val match = SKILL_BLOCK.find(text) ?: return text
-    return text.removeRange(match.range).trimStart('\n').trimEnd()
+    val matches = SKILL_BLOCK.findAll(text).toList()
+    if (matches.isEmpty()) return text
+    val stripped = StringBuilder(text)
+    for (match in matches.asReversed()) {
+        stripped.delete(match.range.first, match.range.last + 1)
+    }
+    return stripped.toString().trimStart('\n').trimEnd()
 }

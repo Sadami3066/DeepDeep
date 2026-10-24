@@ -81,7 +81,7 @@ Compose ChatScreen
 - 基础系统提示词由 SDK 的 `SYSTEM.md` 覆盖机制替换：`PiSessionEngine` 在创建会话前确保 `files/agent/SYSTEM.md` 存在（已存在则保留用户编辑），SDK 读到后不再使用自带的 "You are an expert coding assistant operating inside pi" 前言。工作区里放 `.pi/SYSTEM.md` 可覆盖全局这一份。
 - 自定义前言会让 SDK 跳过它自己的 `<tools>`/`<rules>` section。`<tools>` 不需要重建：模型真正拿到的工具定义来自 system 消息的 `toolsAdded` 字段，provider 层据此组装请求的 `tools`。runtime 只重建 `<rules>`（各工具 `promptGuidelines` + 简洁/路径规则）作为静态 section。
 - `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；`PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个动态 section：
-  - `environment`：当前时间、模型、工作区、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。
+  - `environment`：当前日期（不含时分秒）、模型、工作区、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。日期只按天变化，避免每轮对话都触发 system patch。
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
 - hook extra 不会自动包 section 标签，包装在 runtime 内完成。
 - 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效（只追加变化的 section）；修改个性化不需要重启会话。Skills 的 `<skills>`、AGENTS 的 `<project_context>` section 由 SDK 注入。
@@ -125,7 +125,7 @@ Compose ChatScreen
 - Bridge 暴露页面数据与轻提示：`info`、`data.get/set/remove/keys`、`ui.toast`，以及页面驱动的 `agent.models/capabilities/run`（一次性任务 Agent，见下）；页面不能调用其他 App 内部函数、不能读写其他创意或 App 数据。详情页只读，修改页面统一回到聊天。
 - 代码与数据分离：页面数据保存在 `files/workshop/userdata/<id>.db`（SQLite KV）；页面经 bridge 读写，Agent 经 `workshop_data_get/set/delete/keys` 工具读写同一数据层（不暴露原始 SQLite），重写页面不影响数据；删除创意同时删除目录与 DB。
 - 创建流程由普通会话完成：`workshop_create` 在 `files/workshop/build/` 建草稿（只写 manifest.json）→ Agent 用绝对路径写页面 → `workshop_load` 校验入口/清单/大小并原子移动到 `apps/<id>/`，聊天里出现入口卡片；工坊页进入时扫描 `apps/` 作为导入兜底，草稿目录不展示。
-- 内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）由 `BuiltinSkills` 在 AppGraph 初始化时写入技能仓库与全局生效目录，教普通 Agent 格式、工具、页面规范与数据 bridge。`SkillCatalog` 读取已启用技能；`/skill:<name>` 在发送前把技能文件内容渲染成 `<skill>` 块作为用户消息（同 pi 的 skill command 语义），UI 隐藏该块、只显示用户文字。
+- 内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）由 `BuiltinSkills` 在 AppGraph 初始化时写入技能仓库与全局生效目录，教普通 Agent 格式、工具、页面规范与数据 bridge。`SkillCatalog` 读取已启用技能；`/skill:<name>` 在发送前把技能文件内容渲染成 `<skill>` 块作为用户消息（同 pi 的 skill command 语义），命令可出现在消息任意位置、单条可加载多个技能；UI 隐藏该块、只显示用户文字。
 - 工坊页 `+` 会新建 Home 会话并预填 `/skill:workshop `；列表图标/说明来自 manifest，缺失 icon 使用 ✦。
 
 - 页面驱动 Agent：`WorkshopBridgeRouter` 增加 `agent.models/capabilities/run`，`WorkshopAgentService` 实现 `WorkshopAgentGateway`。每次 run 在 App 进程内用一次性的 `PiSessionEngine` 执行：临时 workspace/agentDir、限定工具（`toolsFilter`）、按请求复制的 skills、页面 systemPrompt 写入临时 `APPEND_SYSTEM.md`、关闭 MCP；返回最后一条 assistant 文本。没有 JSONL 会话、没有后台任务、没有 run 持久化；调用协程属于 WebView 生命周期，页面关闭即取消。

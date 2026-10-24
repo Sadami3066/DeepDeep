@@ -83,7 +83,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 48. 生命周期：删除绑定对话后任务从任务页消失；归档绑定对话后任务变已停用。
 49. 失败可见：断网或使用无效 API Key 发送；该轮显示本地化错误（如「余额不足」「Invalid or expired API key」）+「重试」；恢复网络后点重试成功；杀进程重开历史里仍能看到失败轮。
 50. 补跑：到点前杀进程，重开 App 后补投一次且不重复；改设备时区后任务按新本地时间重算。
-51. 系统提示词：新会话的 JSONL 初始 system 消息里 `preamble` 是 DeepDeep 自己的前言（不再出现 "You are an expert coding assistant operating inside pi"），`<rules>` 仍在、`<tools>` 文本段不再生成（工具定义走 system 消息的 `toolsAdded`）；下一轮只追加 `<environment>` / `<instruction>` patch，不再有重复身份的 `<system>` section。`files/agent/SYSTEM.md` 首次启动生成，手动改动后不会被覆盖。
+51. 系统提示词：新会话的 JSONL 初始 system 消息里已经包含 `preamble`、`rules`、`environment`、`instruction`、插件等全部当前 section，`preamble` 是 DeepDeep 自己的前言（不再出现 "You are an expert coding assistant operating inside pi"），`<tools>` 文本段不再生成（工具定义走 system 消息的 `toolsAdded`）。连续对话多轮后 JSONL 不应每轮新增 system 消息；只有 MCP 连接、工具/技能/偏好真正变化时才允许追加 patch。`files/agent/SYSTEM.md` 首次启动生成，手动改动后不会被覆盖。
 52. OpenCode Go：切到 opencode-go 的模型（如 deepseek-v4.1-flash / claude-haiku-5-5）发一条消息；不再出现 400 `MissingSessionID`，正常回复；会话 JSONL 无 `stopReason=error`。
 53. 模型 sheet 厂商切换：点 composer 模型 chip，sheet 顶部「厂商」行下方弹出专属下拉（不是上下文菜单），只列已配置 Key 的厂商；切换后模型列表更新、当前模型生效，重启后保持。
 54. 重试（重新生成）：关掉自动重试，断网发送得到失败轮 → 恢复网络点「重试」：失败气泡和错误行保持不动，「重试」文字变成蓝色小圈圈，随后流式生成（不消失不重影）；用户消息不重复出现；会话 JSONL 里失败回合被 context edit 移除。
@@ -91,7 +91,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 56. 自动重试上限：持续断网时最多自动重试 5 次后停下，失败轮保留错误与「重试」。
 57. 失败文案：错误轮显示「原因（错误码）」本地化文案，不出现「没有收到回复」占位；英文界面不出现中文；未知错误只显示「Request failed」，原始文本只在会话 JSONL。
 
-58. 命令面板：行首输入 `/` 出现命令背板，顺序为 App 命令（压缩/目标/创意工坊技能）在上、已启用技能 `/skill:<name>` 在下，输入 `co`/`skill` 可过滤；点选只把完整命令补全到输入框（不直接执行），命令 token 显示强调色、光标在末尾；在文字后空格输入 `/` 同样展开面板；输入 `/foo` 发送时提示未知命令且消息不发送。
+58. 命令面板：行首输入 `/` 出现命令背板，顺序为 App 命令（压缩/目标/创意工坊技能）在上、已启用技能 `/skill:<name>` 在下，输入 `co`/`skill` 可过滤；点选只把完整命令补全到输入框（不直接执行），命令 token 显示强调色、光标在末尾；在文字后空格输入 `/` 同样展开面板；输入 `/foo` 发送时提示未知命令且消息不发送。`/skill:<name>` 可以写在消息中间或末尾，发送时同样展开技能；一条消息可提及多个技能，代码块/行内代码里的 `/skill:` 不展开。
 59. 手动压缩：长对话中点 `/compact` 或输入 `/compact 任意文字` 发送，都会忽略后面的文字直接压缩；状态区显示「正在压缩上下文…」，完成后消息流出现「上下文已压缩：A → B」，上下文环下降；再点一次提示「没有可压缩的上下文」。
 60. 上下文统计：composer 右侧出现百分比圆环；点开统计 sheet，上下文/窗口、阈值、输入/输出/缓存/费用齐全，数值带 `~`；切换会话后数字随之切换。
 61. 目标：输入 `/goal 写一份周报草稿` 发送，目标条直接出现（不再有目标 sheet）；`/goal pause`、`/goal resume`、`/goal clear` 直接操作；空 `/goal` 提示目标不能为空；模型完成后自动进入下一轮并显示带 Sparkles 的目标轮提示（第 N 轮 + objective），轮次持续增加且没有 10 轮限制；点「暂停」后不再续跑，「继续」恢复；目标条不可点击；杀进程重开后目标显示暂停，点继续可恢复。

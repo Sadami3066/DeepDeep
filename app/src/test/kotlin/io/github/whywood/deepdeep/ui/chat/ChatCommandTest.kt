@@ -73,6 +73,52 @@ class ChatCommandTest {
     }
 
     @Test
+    fun extractsSkillMentionsFromAnyPosition() {
+        assertEquals(
+            SkillMentions(listOf("workshop"), "使用一下这个skill"),
+            extractSkillMentions("使用一下这个skill /skill:workshop"),
+        )
+        assertEquals(
+            SkillMentions(listOf("workshop"), "用这个做"),
+            extractSkillMentions("/skill:workshop 用这个做"),
+        )
+        assertEquals(
+            SkillMentions(listOf("pdf-tools"), "看一下"),
+            extractSkillMentions("看一下 /skill:pdf-tools"),
+        )
+    }
+
+    @Test
+    fun extractsMultipleSkillMentionsAndDeduplicates() {
+        assertEquals(
+            SkillMentions(listOf("workshop", "pdf-tools"), "先做 再导出"),
+            extractSkillMentions("/skill:workshop 先做 /skill:pdf-tools 再导出"),
+        )
+        assertEquals(
+            SkillMentions(listOf("workshop"), "两次"),
+            extractSkillMentions("/skill:workshop 两次 /skill:workshop"),
+        )
+    }
+
+    @Test
+    fun ignoresSkillMentionsThatAreNotStandaloneTokens() {
+        assertEquals(null, extractSkillMentions("x/skill:workshop"))
+        assertEquals(null, extractSkillMentions("/skill:Workshop"))
+        assertEquals(null, extractSkillMentions("/skill:"))
+        assertEquals(null, extractSkillMentions("plain"))
+    }
+
+    @Test
+    fun ignoresSkillMentionsInsideCode() {
+        assertEquals(null, extractSkillMentions("`/skill:workshop`"))
+        assertEquals(null, extractSkillMentions("```\n/skill:workshop\n```"))
+        assertEquals(
+            SkillMentions(listOf("workshop"), "```\n/skill:workshop\n```\n看代码"),
+            extractSkillMentions("```\n/skill:workshop\n```\n看代码 /skill:workshop"),
+        )
+    }
+
+    @Test
     fun commandQueryStopsAtWhitespace() {
         assertNull(commandQuery("hello"))
         assertEquals("compact", commandQuery("/compact"))

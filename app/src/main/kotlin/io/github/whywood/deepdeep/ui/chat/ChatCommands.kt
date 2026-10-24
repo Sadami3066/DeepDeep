@@ -72,3 +72,87 @@ fun formatTokenCount(value: Long): String = when {
 
     else -> String.format(java.util.Locale.US, "%.1fM", value / 1_000_000.0)
 }
+
+data class SkillMentions(
+    val names: List<String>,
+    val text: String,
+)
+
+fun extractSkillMentions(input: String): SkillMentions? {
+    if (!input.contains("/skill:")) return null
+    val code = codeRanges(input)
+    val names = LinkedHashSet<String>()
+    val text = StringBuilder(input.length)
+    var index = 0
+    while (index < input.length) {
+        val name = if (code[index]) null else skillNameAt(input, index)
+        if (name == null) {
+            text.append(input[index])
+            index++
+            continue
+        }
+        names.add(name)
+        index += SKILL_PREFIX.length + name.length
+    }
+    if (names.isEmpty()) return null
+    return SkillMentions(names.toList(), text.toString().trim().replace(Regex("[ \\t]{2,}"), " "))
+}
+
+private const val SKILL_PREFIX = "/skill:"
+
+private fun skillNameAt(input: String, index: Int): String? {
+    if (!input.startsWith(SKILL_PREFIX, index)) return null
+    if (index > 0 && !input[index - 1].isWhitespace()) return null
+    val start = index + SKILL_PREFIX.length
+    var end = start
+    while (end < input.length && input[end].isSkillNameChar()) end++
+    if (end == start) return null
+    val name = input.substring(start, end)
+    if (!SKILL_NAME.matches(name)) return null
+    if (end < input.length && (input[end] == '/' || input[end] == ':')) return null
+    return name
+}
+
+private fun Char.isSkillNameChar(): Boolean = this in 'a'..'z' || this in '0'..'9' || this == '_' || this == '-'
+
+private fun codeRanges(input: String): BooleanArray {
+    val marked = BooleanArray(input.length)
+    var lineStart = 0
+    var fenceStart = -1
+    while (lineStart < input.length) {
+        val lineEnd = input.indexOf('\n', lineStart).let { if (it < 0) input.length else it }
+        val line = input.substring(lineStart, lineEnd)
+        if (line.trimStart().startsWith("```")) {
+            if (fenceStart < 0) {
+                fenceStart = lineStart
+            } else {
+                mark(marked, fenceStart, lineEnd)
+                fenceStart = -1
+            }
+        } else if (fenceStart >= 0) {
+            mark(marked, lineStart, lineEnd)
+        } else {
+            var tick = lineStart
+            while (tick < lineEnd) {
+                if (input[tick] != '`') {
+                    tick++
+                    continue
+                }
+                val close = input.indexOf('`', tick + 1)
+                if (close >= 0 && close < lineEnd) {
+                    mark(marked, tick, close)
+                    tick = close + 1
+                } else {
+                    break
+                }
+            }
+        }
+        lineStart = lineEnd + 1
+    }
+    if (fenceStart >= 0) mark(marked, fenceStart, input.lastIndex)
+    return marked
+}
+
+private fun mark(marked: BooleanArray, from: Int, to: Int) {
+    for (index in from..minOf(to, marked.lastIndex)) marked[index] = true
+}

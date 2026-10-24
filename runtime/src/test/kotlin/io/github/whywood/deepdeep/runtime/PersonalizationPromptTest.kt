@@ -1,7 +1,9 @@
 package io.github.whywood.deepdeep.runtime
 
 import java.time.OffsetDateTime
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,13 +25,72 @@ class PersonalizationPromptTest {
         val environment = result.getValue("environment")
         assertTrue(environment.startsWith("<environment>"))
         assertTrue(environment.endsWith("</environment>"))
-        assertTrue(environment.contains("当前时间：2026-10-23T13:00+08:00"))
+        assertTrue(environment.contains("当前日期：2026-10-23（UTC+08:00）"))
         assertTrue(environment.contains("模型：deepseek/deepseek-v4.1-flash"))
         assertTrue(environment.contains("工作区：/data/user/0/io.github.whywood.deepdeep/files/home"))
         assertTrue(environment.contains("称呼用户为「Milous」"))
         assertTrue(environment.contains("主动"))
         assertFalse(result.containsKey("instruction"))
     }
+
+    @Test
+    fun environmentIsStableWithinTheSameDay() {
+        val morning = sectionAt("2026-10-23T08:00:00+08:00")
+        val evening = sectionAt("2026-10-23T23:59:59+08:00")
+        assertEquals(morning, evening)
+    }
+
+    @Test
+    fun environmentChangesWhenTheDateChanges() {
+        val today = sectionAt("2026-10-23T23:59:59+08:00")
+        val tomorrow = sectionAt("2026-10-24T00:00:01+08:00")
+        assertNotEquals(today, tomorrow)
+        assertTrue(tomorrow.contains("当前日期：2026-10-24"))
+    }
+
+    @Test
+    fun sessionSectionsMergePersonalizationSharedStoragePluginsAndExtras() {
+        val result = buildSessionSystemPromptSections(
+            personalization = Personalization(instruction = "be brief"),
+            providerId = "deepseek",
+            modelId = "deepseek-v4.1-flash",
+            cwd = "/tmp",
+            now = now,
+            sharedStorage = true,
+            pluginBody = "feishu ready",
+            extra = mapOf("page" to "<page>prompt</page>"),
+        )
+
+        assertEquals(
+            listOf("environment", "instruction", "shared_storage", "official_plugins", "page"),
+            result.keys.toList(),
+        )
+        assertTrue(result.getValue("official_plugins").contains("feishu ready"))
+        assertEquals("<page>prompt</page>", result.getValue("page"))
+    }
+
+    @Test
+    fun sessionSectionsSkipOptionalSectionsWhenEmpty() {
+        val result = buildSessionSystemPromptSections(
+            personalization = Personalization(),
+            providerId = "deepseek",
+            modelId = "deepseek-v4.1-flash",
+            cwd = "/tmp",
+            now = now,
+            sharedStorage = false,
+            pluginBody = "   ",
+        )
+
+        assertEquals(listOf("environment"), result.keys.toList())
+    }
+
+    private fun sectionAt(timestamp: String): String = buildPersonalizationSections(
+        personalization = Personalization(),
+        providerId = "deepseek",
+        modelId = "deepseek-v4.1-flash",
+        cwd = "/tmp",
+        now = OffsetDateTime.parse(timestamp),
+    ).getValue("environment")
 
     @Test
     fun blankNicknameFallsBackToSecondPerson() {

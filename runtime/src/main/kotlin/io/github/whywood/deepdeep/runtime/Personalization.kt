@@ -26,7 +26,7 @@ internal fun buildPersonalizationSections(
     sections["environment"] = wrapPromptSection(
         "environment",
         buildString {
-            appendLine("当前时间：${escapePromptXml(now.toString())}。")
+            appendLine("当前日期：${escapePromptXml(now.toLocalDate().toString())}（UTC${escapePromptXml(now.offset.id)}）。")
             appendLine("模型：${escapePromptXml(providerId)}/${escapePromptXml(modelId)}。")
             appendLine("工作区：${escapePromptXml(cwd)}。")
             if (nickname.isEmpty()) {
@@ -50,6 +50,37 @@ internal fun buildPersonalizationSections(
     }
     return sections
 }
+
+internal fun buildSessionSystemPromptSections(
+    personalization: Personalization,
+    providerId: String,
+    modelId: String,
+    cwd: String,
+    now: OffsetDateTime,
+    sharedStorage: Boolean,
+    pluginBody: String?,
+    extra: Map<String, String> = emptyMap(),
+): Map<String, String> {
+    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, cwd, now))
+    if (sharedStorage) sections.putAll(sharedStorageSection())
+    val body = pluginBody?.trim().orEmpty()
+    if (body.isNotEmpty()) {
+        sections["official_plugins"] = wrapPromptSection("official_plugins", escapePromptXml(body))
+    }
+    sections.putAll(extra)
+    return sections
+}
+
+internal fun sharedStorageSection(): Map<String, String> = mapOf(
+    "shared_storage" to wrapPromptSection(
+        "shared_storage",
+        listOf(
+            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place.",
+            "Download, Documents, Pictures, DCIM, Music and Movies under it are readable and writable.",
+            "Treat these as the user's real files: look before changing, and do not delete or overwrite anything unless the user asked for it.",
+        ).joinToString("\n") { "- $it" },
+    ),
+)
 
 private fun interactionLabel(style: InteractionStyle): String = when (style) {
     InteractionStyle.QUIET -> "安静"

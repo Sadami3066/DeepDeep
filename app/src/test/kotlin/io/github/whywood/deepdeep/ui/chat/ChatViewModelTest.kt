@@ -495,6 +495,40 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun trailingSkillMentionExpandsInlineBeforeSending() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("使用一下这个skill /skill:workshop")
+        viewModel.send()
+        assertTrue(viewModel.state.value.sending)
+        advanceUntilIdle()
+
+        assertEquals(listOf(Triple(HOME_CWD, "workshop", "")), expander.calls)
+        assertEquals("$SKILL_PROMPT\n\n使用一下这个skill", runtime.sent.single())
+        assertEquals("使用一下这个skill", viewModel.state.value.conversationTitle)
+    }
+
+    @Test
+    fun trailingUnknownSkillShowsErrorWithoutSending() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(null)
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("使用一下这个skill /skill:workshop")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
+        assertFalse(viewModel.state.value.sending)
+        assertTrue(runtime.sent.isEmpty())
+        assertEquals(ChatUiStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+    }
+
+    @Test
     fun refreshAvailableSkillsLoadsCwdSkills() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val expander = FakeSkillExpander(
