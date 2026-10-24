@@ -118,6 +118,16 @@ Compose ChatScreen
 - `BackgroundTurnStarted` 表示目标续跑或后台任务唤醒开启了新的一轮：目标轮带 `TurnNotice.GoalRound`，UI 追加提示与流式 assistant；后台任务唤醒带 `TurnNotice.JobFinished`，UI 追加一行极简任务标记与流式 assistant。`UsageChanged` 携带会话的上下文与累计用量。
 - UI 只订阅事件与状态流，不轮询；`ScheduleService.schedules` 是任务页的数据源。
 
+## 创意工坊
+
+- 每个创意是 `files/workshop/apps/<id>/` 下的自包含静态站点（`manifest.json` + App 生成的 `AGENTS.md` + entry + 静态资源），由 Agent 编写，App 用 WebView 渲染；每个创意运行在独立的虚拟域名 `https://<id>.workshop.local/` 下。
+- 资源由 `WebViewAssetLoader` + 自定义 PathHandler 从创意目录提供（MIME、`Cache-Control: no-store`、`Range` 206）；`WebViewCompat.addDocumentStartJavaScript` 在页面脚本前注入 bridge SDK（`window.deepdeep` / `window.app`）与主题 CSS 变量；`WebViewCompat.addWebMessageListener` 只接受该 origin 的主框架消息。
+- Agent 写作流程：`workshop_create` 在 `files/workshop/build/` 建草稿骨架（manifest、AGENTS.md、starter）→ Agent 用绝对路径写文件 → `workshop_register` 校验入口/清单/大小并原子移动到 `apps/<id>/`，成功后聊天里出现入口卡片。工坊页进入时扫描 `apps/`，手工放入的合法目录同样可被识别；草稿目录不展示。
+- 代码与数据分离：页面数据保存在 `files/workshop/userdata/<id>.db`（SQLite KV），只经 bridge 的 `data` 能力读写；Agent 重写页面不影响数据；删除创意同时删除目录与 DB。
+- 能力与权限：`manifest.json` 的 `permissions` 控制 bridge 命名空间（当前 `data.kv`、`agent.run`，后续能力按命名空间扩展）。页面触发的 `agent.run` 走沙箱模式（仅本创意目录的 read/write/edit/ls/grep/find，无 shell/MCP/App 工具）；站内「让 Agent 修改」走完整模式（cwd=创意目录，有 Linux 时含 bash，MCP 关闭，无 App 工具）。两者共用 `WorkshopAgentService` 的全局单飞、超时与取消。
+- `PiSessionEngine.createSession` 增加 `shellEnabled`、`mcpEnabled`、`toolsOverride` 参数（默认值保持聊天/MCP 行为不变），供 workshop 临时会话使用。
+- 页面错误（未捕获异常、未处理 Promise、console error、主框架加载失败）由 SDK/WebView 回报：日志型错误进入详情页红点与 Agent 面板，主框架错误显示错误页；Agent 面板可把堆栈预填成修复指令。
+
 ## 通知
 
 - `NotificationCenter` 由 `AgentService` 启动，收集 `RuntimeEvent`，维护 active runs。
@@ -187,6 +197,9 @@ filesDir/
   skills/<id>/      技能仓库（SDK 不扫描；插件技能仓库副本也在这里）
   schedules/        schedules.json（提醒绑定到对话）
   goals/            goals.json（按会话的目标与轮次）
+  workshop/apps/<id>/   创意页面（manifest.json、AGENTS.md、entry、静态资源）
+  workshop/build/       Agent 写作中的创意草稿
+  workshop/userdata/<id>.db  每个创意的数据（SQLite KV）
   linux/rootfs/     Alpine rootfs（插件二进制在 guest /usr/local/bin）
 ```
 
@@ -197,12 +210,13 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 - 定时任务：`docs/SCHEDULING.md`（提醒投递、任务页编辑、手动执行已实现）。
 - Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现；插件技能单独说明）。
 - 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、安装/连接、UI 与 Agent 同步）。
+- 创意工坊：`docs/WORKSHOP.md`（文件夹格式、bridge SDK、能力权限、创建与修改流程）。
 - 工具分类：`docs/TOOLS.md`。
 
 ## 工具
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
-- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_register`/`workshop_list`
 - 不注册 `device_info`、`open_app` 等 Android 能力工具
 
 ## 功能接线

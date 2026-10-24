@@ -152,6 +152,7 @@ fun ChatScreen(
     onOpenForeignQuestion: (String) -> Unit = {},
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
+    onOpenWorkshop: (String) -> Unit = {},
     onOpenFiles: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -328,6 +329,7 @@ fun ChatScreen(
                                     onAnswerQuestion = onAnswerQuestion,
                                     onOpenPresentFile = onOpenPresentFile,
                                     onSharePresentFile = onSharePresentFile,
+                                    onOpenWorkshop = onOpenWorkshop,
                                 )
                             }
                         }

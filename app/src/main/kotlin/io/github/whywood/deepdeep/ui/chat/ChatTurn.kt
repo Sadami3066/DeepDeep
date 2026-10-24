@@ -46,6 +46,8 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
+import io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
+import io.github.whywood.deepdeep.ui.workshop.parseRegisteredWorkshop
 
 private val UserBubbleShape = RoundedCornerShape(
     topStart = 20.dp,
@@ -74,6 +76,7 @@ internal fun ChatTurn(
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
+    onOpenWorkshop: (String) -> Unit = {},
 ) {
     val notice = message.notice
     if (notice != null) {
@@ -100,6 +103,7 @@ internal fun ChatTurn(
             onAnswerQuestion = onAnswerQuestion,
             onOpenPresentFile = onOpenPresentFile,
             onSharePresentFile = onSharePresentFile,
+            onOpenWorkshop = onOpenWorkshop,
         )
     }
 }
@@ -297,6 +301,7 @@ private fun AssistantTurn(
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
+    onOpenWorkshop: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -319,6 +324,10 @@ private fun AssistantTurn(
         .filter { it.name == "present" }
         .flatMap { trace -> parsePresentedFiles(trace).orEmpty() }
         .distinctBy { it.path }
+    val workshopApps = message.steps.filterIsInstance<AssistantStep.Tool>()
+        .map { it.trace }
+        .mapNotNull { trace -> parseRegisteredWorkshop(trace) }
+        .distinctBy { it.id }
     Column(Modifier.fillMaxWidth()) {
         val hasVisibleProcess = message.steps.any { it.id != excludedStepId }
         if (hasVisibleProcess) {
@@ -362,6 +371,14 @@ private fun AssistantTurn(
                 onOpen = onOpenPresentFile,
                 onShare = onSharePresentFile,
             )
+        }
+        if (workshopApps.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                workshopApps.forEach { app ->
+                    WorkshopChatCard(app = app, onOpen = onOpenWorkshop)
+                }
+            }
         }
         when (message.status) {
             MessageStatus.STOPPED -> StatusMark(

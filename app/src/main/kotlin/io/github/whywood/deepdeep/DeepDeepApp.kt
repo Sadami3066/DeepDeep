@@ -72,6 +72,8 @@ import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
+import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
+import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
@@ -454,6 +456,7 @@ internal fun DeepDeepApp(
                     },
                     onOpenFile = openWorkspaceFile,
                     onOpenFiles = { filesSheetOpen = true },
+                    onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                     onOpenPresentFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                         if (resolved == null) {
@@ -692,6 +695,19 @@ internal fun DeepDeepApp(
                         )
                     }
                 }
+
+                AppDestination.Workshop -> WorkshopScreen(
+                    store = graph.workshopStore,
+                    onBack = ::back,
+                    onOpen = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                )
+
+                is AppDestination.WorkshopDetail -> WorkshopViewerScreen(
+                    store = graph.workshopStore,
+                    agentService = graph.workshopAgentService,
+                    creationId = destination.id,
+                    onBack = ::back,
+                )
             }
         }
 
@@ -729,6 +745,10 @@ internal fun DeepDeepApp(
                     onOpenSearch = {
                         drawerOpen = false
                         navigator.push(AppDestination.Search)
+                    },
+                    onOpenWorkshop = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Workshop)
                     },
                     onOpenSkills = {
                         drawerOpen = false

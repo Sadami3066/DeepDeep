@@ -1,0 +1,34 @@
+<resources>
+    <string name="workshop_title">Workshop</string>
+    <string name="workshop_back">Back</string>
+    <string name="workshop_refresh">Refresh</string>
+    <string name="workshop_new">New creation</string>
+    <string name="workshop_loading">Loading</string>
+    <string name="workshop_empty_title">No creations yet</string>
+    <string name="workshop_empty_hint">Ask DeepDeep in chat to make one, or tap + to create one</string>
+    <string name="workshop_create_title">New creation</string>
+    <string name="workshop_name_label">Name</string>
+    <string name="workshop_name_hint">For example: Weekly board</string>
+    <string name="workshop_name_empty">Enter a name</string>
+    <string name="workshop_name_too_long">Names can be at most 40 characters</string>
+    <string name="workshop_type_label">Type</string>
+    <string name="workshop_type_board">Board</string>
+    <string name="workshop_type_workstation">Workstation</string>
+    <string name="workshop_type_workflow">Workflow</string>
+    <string name="workshop_create">Create</string>
+    <string name="workshop_cancel">Cancel</string>
+    <string name="workshop_creating">Creating…</string>
+    <string name="workshop_invalid">Invalid format</string>
+    <string name="workshop_invalid_title">Could not read this creation</string>
+    <string name="workshop_invalid_delete">Delete</string>
+    <string name="workshop_invalid_delete_title">Delete this creation?</string>
+    <string name="workshop_invalid_delete_message">“%1$s” will be deleted permanently.</string>
+    <string name="workshop_invalid_close">Close</string>
+    <string name="workshop_chat_card_subtitle">%1$s · Created</string>
+    <string name="workshop_reason_manifest_missing">Manifest missing</string>
+    <string name="workshop_reason_manifest_unreadable">Manifest unreadable</string>
+    <string name="workshop_reason_manifest_invalid">Manifest invalid</string>
+    <string name="workshop_reason_entry_missing">Entry point missing</string>
+    <string name="workshop_reason_id_mismatch">ID does not match folder</string>
+    <string name="workshop_create_failed">Could not create</string>
+</resources>

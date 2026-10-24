@@ -43,12 +43,15 @@ import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.goalTools
 import io.github.whywood.deepdeep.runtime.jobTools
 import io.github.whywood.deepdeep.runtime.presentTool
+import io.github.whywood.deepdeep.runtime.workshopTools
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
+import io.github.whywood.deepdeep.runtime.WorkshopAgentService
+import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
@@ -135,6 +138,7 @@ class AppGraph(context: Context) {
     )
     val agentDocStore = AgentDocStore()
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
+    val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
     val goalService: GoalService by lazy { GoalService(GoalStore(File(appContext.filesDir, "goals")), scope) }
     val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -199,6 +203,7 @@ class AppGraph(context: Context) {
             pluginController = pluginManager,
             pluginTools = { pluginManager.tools() },
             extraToolFactories = listOf(
+                { _ -> workshopTools(workshopStore) },
                 { binding -> goalTools(binding, goalService) },
                 { binding -> jobTools(binding, jobRegistry) },
                 { binding -> listOf(presentTool { binding.current() }) },
@@ -239,6 +244,26 @@ class AppGraph(context: Context) {
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { pluginManager.promptBody() },
             toolContext = appToolContext,
+        )
+    }
+
+    private val workshopEngineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+        PiSessionEngine(
+            workspace = cwd,
+            agentDir = agentDir,
+            credentials = credentials,
+            shellExecutor = shellExecutorFor(cwd),
+            providers = providerCatalog,
+            personalization = { personalizationStore.read().toRuntime() },
+            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            toolContext = null,
+        )
+    }
+
+    val workshopAgentService: WorkshopAgentService by lazy {
+        WorkshopAgentService(
+            engineFactory = workshopEngineFactory,
+            modelConfigStore = modelConfigStore,
         )
     }
 

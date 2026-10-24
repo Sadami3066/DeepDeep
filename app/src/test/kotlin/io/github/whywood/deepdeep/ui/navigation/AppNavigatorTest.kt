@@ -54,11 +54,16 @@ class AppNavigatorTest {
             AppDestination.RuntimeSettings,
             AppDestination.Skills,
             AppDestination.Schedules,
+            AppDestination.Workshop,
+            AppDestination.WorkshopDetail("study-board"),
             AppDestination.WorkspaceSettings("workspace-1"),
         )
         destinations.forEach { destination ->
             assertEquals(destination, AppDestination.fromRouteKey(destination.routeKey))
         }
         assertEquals(null, AppDestination.fromRouteKey("workspaces//settings"))
+        assertEquals(null, AppDestination.fromRouteKey("workshop/"))
+        assertEquals(null, AppDestination.fromRouteKey("workshop/UPPER"))
+        assertEquals(null, AppDestination.fromRouteKey("workshop/a/b"))
     }
 }

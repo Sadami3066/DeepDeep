@@ -13,6 +13,7 @@ import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.CodingHooks
 import dev.pi.coding.session.SessionInfo
 import dev.pi.coding.session.SessionManager
+import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.FileMutationQueue
 import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.defaultCodingTools
@@ -40,13 +41,19 @@ class PiSessionEngine(
     private val fs = FileSystem.SYSTEM
     private val transport = okHttpTransport()
 
-    suspend fun createSession(file: Path?, config: ModelConfig, shellEnabled: Boolean = true): AgentSession {
+    suspend fun createSession(
+        file: Path?,
+        config: ModelConfig,
+        shellEnabled: Boolean = true,
+        mcpEnabled: Boolean = true,
+        toolsOverride: List<CodingTool>? = null,
+    ): AgentSession {
         ensureSystemPromptFile(agentDirectory.toFile())
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
         val binding = SessionBinding()
-        val tools = buildList {
+        val tools = toolsOverride ?: buildList {
             addAll(
                 defaultCodingTools(
                     cwd = cwd,
@@ -101,16 +108,22 @@ class PiSessionEngine(
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 projectTrusted = true,
-                mcp = McpOptions(
-                    enabled = true,
-                    loadConfig = true,
-                    samplingEnabled = false,
-                    rootsEnabled = true,
-                    autoEnableToolSearch = true,
-                ),
+                mcp = if (mcpEnabled) {
+                    McpOptions(
+                        enabled = true,
+                        loadConfig = true,
+                        samplingEnabled = false,
+                        rootsEnabled = true,
+                        autoEnableToolSearch = true,
+                    )
+                } else {
+                    McpOptions(enabled = false)
+                },
             ),
         )
-        binding.attach(session)
+        if (toolsOverride == null) {
+            binding.attach(session)
+        }
         return session
     }
 

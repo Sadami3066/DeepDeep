@@ -79,6 +79,16 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Workshop : AppDestination {
+        override val routeKey: String = "workshop"
+        override val depth: Int = 1
+    }
+
+    data class WorkshopDetail(val id: String) : AppDestination {
+        override val routeKey: String = "workshop/$id"
+        override val depth: Int = 2
+    }
+
     data class PluginDetail(val id: String) : AppDestination {
         override val routeKey: String = "plugins/$id"
         override val depth: Int = 2
@@ -92,8 +102,10 @@ sealed interface AppDestination {
     companion object {
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
         private const val PLUGIN_DETAIL_PREFIX = "plugins/"
+        private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
+        private val WORKSHOP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 
         fun fromRouteKey(routeKey: String): AppDestination? = when {
             routeKey == Chat.routeKey -> Chat
@@ -110,6 +122,12 @@ sealed interface AppDestination {
             routeKey == Mcp.routeKey -> Mcp
             routeKey == Schedules.routeKey -> Schedules
             routeKey == Plugins.routeKey -> Plugins
+            routeKey == Workshop.routeKey -> Workshop
+            routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> {
+                val id = routeKey.removePrefix(WORKSHOP_DETAIL_PREFIX)
+                WorkshopDetail(id).takeIf { id.matches(WORKSHOP_ID_REGEX) }
+            }
+
             routeKey.startsWith(PLUGIN_DETAIL_PREFIX) ->
                 PluginDetail(routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)).takeIf {
                     it.id.isNotBlank() && !it.id.contains('/')

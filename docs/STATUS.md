@@ -1,5 +1,18 @@
 # Status
 
+## Done: 创意工坊（Agent 编写的 WebView 轻应用 + bridge）
+
+- 抽屉新增「创意工坊」：列表扫描 `files/workshop/apps/`，显示 emoji/名称/类型/描述；空态、刷新、新建对话框（看板/工作台/工作流）、失效目录删除
+- 每个创意独立 `https://<id>.workshop.local/` 源：`WebViewAssetLoader` + 自定义 PathHandler 提供文件（MIME、no-store、Range 206），`addDocumentStartJavaScript` 注入 SDK 与主题变量，`addWebMessageListener` 只接受该源主框架；WebView 生命周期、外部链接、渲染崩溃恢复、IME、深浅色均已接好
+- 注册机制：`workshop_create` 建 `build/` 草稿 → Agent 绝对路径写文件 → `workshop_register` 校验入口/清单/大小后原子移动到 `apps/`；成功后聊天气泡下方出现入口卡片，点开直达详情；目录扫描作为导入兜底
+- 代码与数据物理分离：页面数据存 `files/workshop/userdata/<id>.db`（每创意独立 SQLite KV），页面经 bridge 读写；Agent 重写页面不影响数据；删除创意同时删目录与 DB（含 journal）
+- bridge SDK（`window.deepdeep`/`window.app`）：`info`、`data.get/set/remove/keys`、`agent.run/cancel/onProgress`、`toast`、`log.error`；manifest 权限控制 `data.kv` / `agent.run`；主题 CSS 变量与 `color-scheme` 注入
+- 页面 Agent：页面触发的 `agent.run` 走受限模式（仅创意目录文件工具、无 shell/MCP/App 工具，全局单飞、超时、取消）；详情页 ✨ 走完整编码 Agent（cwd=创意目录，有 Linux 时含 bash），改完自动刷新
+- 报错自愈：未捕获异常/未处理 Promise/console error 汇总到 ✨ 红点，Agent 面板预填「根据报错修复」+ 堆栈；主框架加载失败显示整页错误与重试
+- 新增 `androidx.webkit:webkit` 1.18.0；`PiSessionEngine.createSession` 增加 shellEnabled/mcpEnabled/toolsOverride（默认行为不变）
+- 495 unit tests green（runtime 226 / app 249 / shell 20），lint 0 errors、模块边界与 debug 构建通过；真机验收创建（对话 + UI）、渲染交互、重启持久化、代码重写不丢数据、站内/页面 Agent、报错修复、深色主题、workflow 自动运行、扫描兜底与删除清理
+- 证据：`artifacts/validation/round30/`；格式与 bridge 说明见 `docs/WORKSHOP.md`
+
 ## Done: MCP 热更新改到 IO 并串行化
 
 - 修复会话内关闭再开启 MCP 后 `tool_search` 搜不到工具：`reloadMcp()` / `reconnectMcp()` 在 UI 主线程发起连接，SDK 读取响应体触发 `NetworkOnMainThreadException`，服务器状态停在 failed、deferred 目录为空；现统一在 `Dispatchers.IO` 执行，失败写日志不再静默

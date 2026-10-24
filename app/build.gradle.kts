@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
+    implementation(libs.webkit)
 
     debugImplementation(libs.compose.tooling)
     testImplementation(libs.junit)

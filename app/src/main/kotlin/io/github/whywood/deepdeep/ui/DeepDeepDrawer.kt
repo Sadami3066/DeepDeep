@@ -100,6 +100,7 @@ fun DeepDeepDrawer(
     reminderSessionIds: Set<String>,
     userName: String,
     onOpenSearch: () -> Unit,
+    onOpenWorkshop: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onOpenPlugins: () -> Unit,
@@ -183,6 +184,12 @@ fun DeepDeepDrawer(
         }
         Spacer(Modifier.height(18.dp))
         Column(Modifier.fillMaxWidth()) {
+            DrawerNavItem(
+                icon = DdIcons.Compose,
+                label = stringResource(R.string.drawer_nav_workshop),
+                onClick = onOpenWorkshop,
+                testTag = "drawer_workshop",
+            )
             DrawerNavItem(
                 icon = DdIcons.Sparkles,
                 label = stringResource(R.string.drawer_nav_skills),

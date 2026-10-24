@@ -134,3 +134,16 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 88. MCP 刷新与技能文案：MCP 标题右侧刷新图标触发探测，页面显示 spinner；不再有「重新检测」文字行；技能页底部无说明小字。
 89. 聊天与返回流畅度：assistant 消息底部没有复制/引用/分享图标行；长按选择仍有复制/引用/朗读，代码块复制可用；从技能/MCP/插件/定时任务返回聊天，聊天内容立即出现，不重新加载；`dumpsys gfxinfo` 无整页重建式长帧。
 90. MCP 热更新：在已打开会话的 MCP 页关闭再开启服务器，应用期间开关不可点；`adb logcat -s DeepDeepRuntime` 出现 `mcp reload ... servers=[<name>=Connected/N/] deferred=N loaded=0`，无 `NetworkOnMainThreadException`；回到聊天让模型用 `tool_search` 搜该服务器工具，能返回工具并在下一轮调用；编辑/导入/删除服务器后同样立即生效；运行环境页开启/关闭 Linux 时不再因重建会话崩溃。
+
+91. 创意工坊入口与新建：抽屉「创意工坊」→ 空态显示「还没有创意」+ 创建提示 → 点右上角 `+` → 填名称、选类型（看板/工作台/工作流）→ 创建后直接进入详情页，starter 页面正常渲染、返回正常；列表行显示 emoji 图标、「类型 · 描述」与 chevron。
+92. 对话创建：新对话里「做一个学习看板创意」→ 模型调用 `workshop_create` 建草稿、用绝对路径写入页面、调用 `workshop_register` 上架；回复下方出现入口卡片（emoji + 名称 + 「类型 · 已创建」）；点卡片直接打开该创意并正常交互；重新打开历史会话卡片仍在。
+93. 数据持久化：在看板页面添加/勾选条目 → 杀进程重开 → 数据仍在；「让 Agent 修改」重写页面后数据仍在（数据在 `files/workshop/userdata/<id>.db`，不在页面目录）。
+94. 站内修改：详情页 ✨ → 输入修改需求 → 状态流式显示 → 成功后 sheet 自动关闭并刷新页面，修改生效且数据未丢；运行中可停止。
+95. 页面调用受限 Agent：工作台 starter（或页面按钮）调用 `agent.run` → 页面显示 started/text/tool/finished 增量与最终结果；运行中再次调用返回 busy；关闭页面会取消运行；页面 Agent 只能读写本创意目录（尝试读目录外文件被拒绝），manifest 去掉 `agent.run` 后调用返回 forbidden。
+96. 报错自愈：页面未捕获异常/console error 后 ✨ 出现红点；打开 Agent 面板自动预填「根据报错修复」+ 堆栈；开始修复后成功后页面刷新、红点消失；主框架加载失败显示整页错误与重试。
+97. 注册失败路径：`workshop_create` 后删掉入口文件或把 manifest 写坏再 `workshop_register` → 工具返回错误、工坊列表不出现该创意、草稿仍在；补齐后注册成功。
+98. 扫描兜底：用 adb 把一个合法创意目录放进 `files/workshop/apps/`（含 manifest.json 与 entry）→ 进入工坊页自动出现并可使用；无效目录显示「格式无效 · 原因」并可删除；删除后目录与 `userdata/<id>.db*` 全部移除。
+99. 渲染细节：页面内图片/字体正常；`<video>` 通过 Range 播放与拖动（拦截器返回 206）；外部链接用系统浏览器打开；页面输入框键盘不遮挡；App 切换深浅色时页面 CSS 变量同步；WebView 渲染进程崩溃后自动重建。
+100. 创意工坊回归：聊天流式与停止、MCP 启停热更新、导航转场与返回均不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常。
+
+证据：`artifacts/validation/round30/`（列表/新建、聊天入口卡片、看板交互、重启持久化、Agent 修改、受限 Agent、报错红点与修复、深色主题、workflow 自动运行、扫描兜底与删除清理）。
