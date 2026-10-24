@@ -14,7 +14,7 @@ class FeishuCliTest {
         assertTrue(FeishuCli.statusCommand().contains("auth status --json"))
         assertTrue(FeishuCli.statusCommand(verify = true).contains("--verify"))
         assertTrue(FeishuCli.loginStartCommand().contains("auth login --domain"))
-        assertTrue(FeishuCli.loginStartCommand().contains("im,calendar,drive,docs,mail,task,contact"))
+        assertTrue(FeishuCli.loginStartCommand().contains("--domain all"))
         assertTrue(FeishuCli.configInitCommand().contains("config init --new --brand feishu"))
         assertTrue(FeishuCli.logoutCommand().contains("auth logout"))
         assertTrue(FeishuCli.uninstallCommand().contains(FeishuCli.INSTALL_PATH))

@@ -14,15 +14,7 @@ object FeishuCli {
     const val CONFIG_DIR = "/root/.lark-cli"
     const val DATA_DIR = "/root/.local/share/lark-cli"
 
-    val AUTH_DOMAINS: List<String> = listOf(
-        "im",
-        "calendar",
-        "drive",
-        "docs",
-        "mail",
-        "task",
-        "contact",
-    )
+    val AUTH_DOMAINS: List<String> = listOf("all")
 
     private const val ENV = "LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1"
 

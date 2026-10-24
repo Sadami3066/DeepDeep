@@ -87,7 +87,7 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 ### 连接
 
 1. 未建应用时运行 `lark-cli config init --new --brand feishu`，从输出提取链接并展示；命令会阻塞到用户在浏览器完成。
-2. 运行 `lark-cli auth login --domain im,calendar,drive,docs,mail,task,contact --no-wait --json`，拿 `verification_url` 与 `device_code`。
+2. 运行 `lark-cli auth login --domain all --no-wait --json`，拿 `verification_url` 与 `device_code`。
 3. 展示授权链接，随后运行 `lark-cli auth login --device-code <code> --json` 轮询完成。
 4. 再探测一次状态，返回结果。
 
@@ -131,5 +131,6 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 - v1 只支持官方内置插件，不支持第三方插件源或远程插件市场。
 - 飞书授权需要用户在浏览器登录飞书账号；没有登录态时只会停在登录页。
+- 授权域为 `all`（CLI 支持的全部业务域），便于直接使用消息、日历、云文档、表格、多维表格、云空间、邮箱、任务等能力；写操作仍由提示词约束。
 - 飞书写操作的安全约束是提示词层面的（写前确认、优先 `--dry-run`），没有 scope 级强制。
 - 不预设定时任务、每日总结或总结模板；需要时由用户用现有 `schedule_*` 工具与 prompt 自行组合。

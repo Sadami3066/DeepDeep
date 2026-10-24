@@ -258,6 +258,7 @@ class FeishuPlugin(
             appendLine("在 bash 中通过 `lark-cli` 访问飞书；个人数据必须加 `--as user`。")
             appendLine("发送、修改、删除等写操作前必须先向用户确认，支持时先用 `--dry-run` 预览。")
             appendLine("不熟悉命令时先运行 `lark-cli skills list` 或 `lark-cli skills read <domain>` 查看用法。")
+            appendLine("如果命令返回 missing_scopes，说明授权范围不足：让用户到插件页点「重新授权」，或调用 `plugin_setup` 重新授权。")
             append("不要自行创建定时任务或总结流程，除非用户明确要求。")
         }
 
@@ -352,6 +353,7 @@ class FeishuPlugin(
             - 读取用户个人数据必须使用 `--as user`；`--as bot` 只能访问应用自己的资源。
             - 调用前先看用法：`lark-cli <domain> --help`。
             - 不熟悉的业务域先读指南：`lark-cli skills list`、`lark-cli skills read lark-im`。
+            - 命令返回 `missing_scopes` 时，请用户到插件页重新授权（或调用 plugin_setup），不要跳过权限继续。
             - 只读优先：发送、修改、删除、授权等写操作必须先向用户确认；支持 `--dry-run` 的命令先预览。
             - 高风险写入会要求确认参数或返回退出码 10，先向用户说明再继续。
 
