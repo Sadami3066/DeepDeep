@@ -214,6 +214,7 @@ private fun UserBubble(
     val invocation = remember(parsed.text) { parseSkillInvocation(parsed.text) }
     val displayText = remember(parsed.text) { stripSkillInvocation(parsed.text) }
     val content = remember(displayText) { splitQuoted(displayText) }
+    val body = content.body.ifBlank { invocation?.let { "/skill:${it.name}" }.orEmpty() }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -240,20 +241,7 @@ private fun UserBubble(
             if (parsed.attachments.isNotEmpty()) {
                 AttachmentCards(attachments = parsed.attachments, root = attachmentRoot, onOpen = onOpenAttachment)
             }
-            if (invocation != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    DdIcon(icon = DdIcons.Compose, tint = colors.inkTertiary, size = 12.dp)
-                    Text(
-                        text = stringResource(R.string.workshop_skill_label, invocation.name),
-                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                        color = colors.inkTertiary,
-                    )
-                }
-            }
-            if (content.quote != null || content.body.isNotEmpty()) {
+            if (content.quote != null || body.isNotEmpty()) {
                 SelectableMessageText(
                     messageId = message.id,
                     onQuote = { text -> onQuote(message.id, text) },
@@ -267,11 +255,11 @@ private fun UserBubble(
                     ) {
                         if (content.quote != null) {
                             QuoteContext(content.quote)
-                            if (content.body.isNotEmpty()) Spacer(Modifier.height(6.dp))
+                            if (body.isNotEmpty()) Spacer(Modifier.height(6.dp))
                         }
-                        if (content.body.isNotEmpty()) {
+                        if (body.isNotEmpty()) {
                             Text(
-                                text = content.body,
+                                text = body,
                                 style = DdType.body,
                                 color = colors.onUserBubble,
                             )

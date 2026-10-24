@@ -85,7 +85,8 @@ class SkillCatalogTest {
         writeSkill(File(agentDir, "skills/foo/SKILL.md"), "foo", "Foo helper", "FOO BODY")
         writeSkill(File(projectDir, ".pi/skills/bar/SKILL.md"), "bar", "Bar helper", "BAR BODY")
 
-        val listed = SkillCatalog(agentDir).list(projectDir.absolutePath).toMap()
+        val listed = SkillCatalog(agentDir).list(projectDir.absolutePath)
+            .associate { skill -> skill.name to skill.description }
 
         assertEquals("Foo helper", listed["foo"])
         assertEquals("Bar helper", listed["bar"])

@@ -40,11 +40,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,6 +123,14 @@ internal fun ChatComposer(
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var lastQuote by remember { mutableStateOf<QuotedMessage?>(null) }
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(value, TextRange(value.length)))
+    }
+    LaunchedEffect(value) {
+        if (textFieldValue.text != value) {
+            textFieldValue = TextFieldValue(value, TextRange(value.length))
+        }
+    }
 
     LaunchedEffect(quote) {
         if (quote != null) {
@@ -196,8 +213,11 @@ internal fun ChatComposer(
                             )
                         }
                         BasicTextField(
-                            value = value,
-                            onValueChange = onValueChange,
+                            value = textFieldValue,
+                            onValueChange = { next ->
+                                textFieldValue = next
+                                onValueChange(next.text)
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 42.dp)
@@ -210,12 +230,13 @@ internal fun ChatComposer(
                                 color = if (configured) colors.ink else colors.inkTertiary,
                             ),
                             cursorBrush = SolidColor(colors.accent),
+                            visualTransformation = SlashCommandColor(colors.accent),
                             maxLines = 8,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
                             decorationBox = { inner ->
                                 Box {
-                                    if (value.isEmpty()) {
+                                    if (textFieldValue.text.isEmpty()) {
                                         Text(
                                             text = placeholder,
                                             style = DdType.body.copy(fontSize = 16.sp, lineHeight = 25.sp),
@@ -484,3 +505,18 @@ internal fun thinkingLabel(level: ThinkingLevel): String = stringResource(
         ThinkingLevel.MAX -> R.string.assistant_thinking_max
     },
 )
+
+private class SlashCommandColor(private val color: Color) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val match = SLASH_COMMAND.find(text.text) ?: return TransformedText(text, OffsetMapping.Identity)
+        val styled = buildAnnotatedString {
+            append(text)
+            addStyle(SpanStyle(color = color), match.range.first, match.range.last + 1)
+        }
+        return TransformedText(styled, OffsetMapping.Identity)
+    }
+
+    private companion object {
+        val SLASH_COMMAND = Regex("^/[A-Za-z0-9:_-]+")
+    }
+}

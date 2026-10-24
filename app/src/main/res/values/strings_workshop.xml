@@ -11,7 +11,6 @@
     <string name="workshop_invalid_delete_message">「%1$s」删除后无法恢复。</string>
     <string name="workshop_invalid_close">关闭</string>
     <string name="workshop_chat_card_created">已创建</string>
-    <string name="workshop_skill_label">技能 · %1$s</string>
     <string name="workshop_reason_manifest_missing">缺少 manifest 文件</string>
     <string name="workshop_reason_manifest_unreadable">manifest 无法读取</string>
     <string name="workshop_reason_manifest_invalid">manifest 格式错误</string>

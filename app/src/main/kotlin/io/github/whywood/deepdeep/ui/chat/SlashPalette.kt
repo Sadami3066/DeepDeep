@@ -45,7 +45,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 private const val SLASH_ENTER_MILLIS = 140
 private const val SLASH_MAX_HEIGHT_DP = 300
 private const val SLASH_ROW_HEIGHT_DP = 52
-private const val SLASH_NAME_WIDTH_DP = 96
+private const val SLASH_NAME_WIDTH_DP = 150
 private const val SLASH_DISABLED_ALPHA = 0.4f
 
 data class CommandItem(
@@ -54,6 +54,7 @@ data class CommandItem(
     val title: String,
     val description: String,
     val enabled: Boolean,
+    val insertText: String,
 )
 
 @Composable

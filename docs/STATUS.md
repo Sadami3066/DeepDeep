@@ -1,9 +1,18 @@
 # Status
 
+## Done: 斜杠命令统一
+
+- 命令面板点选只把完整命令补全到输入框，不再直接执行；composer 对行首 `/command` token 使用主题强调色，光标落在补全内容末尾，补参数后发送才执行
+- 面板顺序固定为 App 命令（压缩/目标/创意工坊技能）在上、已启用技能 `/skill:<name>` 在下；技能列表来自当前会话 cwd 的 SDK 技能发现，打开面板时刷新，已停用技能不显示；点选技能补全 `/skill:<name> `
+- `/goal <目标>` 直接创建目标，删除目标 sheet（目标条改为纯状态展示，保留暂停/继续）；`/goal pause|resume|clear` 直接操作，空参数提示目标不能为空
+- `/compact` 忽略后面的任意文字，直接执行原生压缩，不把文字当压缩指导，也不再报「不接受参数」
+- 加载技能后的用户气泡不再显示「技能 · name」标记；只剩需求文字（无需求时显示 `/skill:<name>` 纯文本），原始 `<skill>` 块始终隐藏
+- 494 unit tests green、lint 0 errors；真机验收面板补全/强调色、技能列表顺序、goal 直接创建与 pause/clear、compact 忽略文字、气泡无技能标记
+
 ## Done: 创意工坊 v2（技能驱动的普通会话 + 无分类轻应用）
 
 - 创意不再有类型/分类：`manifest.json` 只要求 `id`/`name`/`entry`（可选 `icon`/`version`/`description`），任何自包含 HTML/CSS/JS 页面都可以；旧 manifest 的 `type`/`permissions` 解析时忽略，旧创意照常打开
-- 创建回到普通对话：内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）在启动时写入技能仓库与全局生效目录；`/workshop-skill` 或 `/skill:<name>` 在发送前把技能文件渲染成 `<skill>` 块读入本轮，聊天里显示「技能 · name」标签而不是原始 XML；工坊页 `+` 直接新建 Home 会话并预填 `/workshop-skill `
+- 创建回到普通对话：内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）在启动时写入技能仓库与全局生效目录；`/workshop-skill` 或 `/skill:<name>` 在发送前把技能文件渲染成 `<skill>` 块读入本轮，聊天里只显示需求文字、不显示技能标记或原始 XML；工坊页 `+` 直接新建 Home 会话并预填 `/workshop-skill `
 - 工具收敛为 `workshop_create`（只建 manifest 草稿）、`workshop_load`（校验入口/清单/大小后原子安装）、`workshop_list`（列出现有创意路径）；不再生成 AGENTS.md/starter，也没有新建对话框与类型选择
 - WebView 仍是每创意独立虚拟域名 + `WebViewAssetLoader` + 文档启动 SDK + 主题变量；bridge 只保留 `info`、`data.get/set/remove/keys`、`toast`，页面不能调用 Agent；详情页只读，修改统一回到聊天
 - 列表行 = icon（缺省 ✦）+ 名称 + 说明；失效目录显示原因并可删除；代码与数据继续物理分离，删除时清理 DB 与 journal

@@ -1,25 +1,11 @@
 <resources>
-    <string name="goal_title">Goal</string>
-    <string name="goal_create_title">Create goal</string>
-    <string name="goal_objective_label">Objective</string>
-    <string name="goal_objective_hint">Describe what the assistant should accomplish</string>
-    <string name="goal_create">Create</string>
-    <string name="goal_save">Save</string>
     <string name="goal_pause">Pause</string>
     <string name="goal_resume">Resume</string>
-    <string name="goal_complete">Complete</string>
-    <string name="goal_clear">Clear</string>
-    <string name="goal_clear_confirm">Confirm clear</string>
-    <string name="goal_phase_label">Phase</string>
-    <string name="goal_rounds_label">Rounds</string>
-    <string name="goal_rounds_value">%1$d/%2$d</string>
     <string name="goal_round">Round %1$d of %2$d</string>
     <string name="goal_phase_active">Active</string>
     <string name="goal_phase_paused">Paused</string>
     <string name="goal_phase_blocked">Blocked</string>
     <string name="goal_phase_complete">Complete</string>
-    <string name="goal_blocked_reason">Blocked reason</string>
     <string name="goal_untitled">Untitled goal</string>
     <string name="goal_round_unbounded">Round %1$d</string>
-    <string name="goal_rounds_unbounded">Round %1$d (unlimited)</string>
 </resources>

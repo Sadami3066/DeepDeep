@@ -11,7 +11,6 @@
     <string name="workshop_invalid_delete_message">“%1$s” will be deleted permanently.</string>
     <string name="workshop_invalid_close">Close</string>
     <string name="workshop_chat_card_created">Created</string>
-    <string name="workshop_skill_label">Skill · %1$s</string>
     <string name="workshop_reason_manifest_missing">Manifest missing</string>
     <string name="workshop_reason_manifest_unreadable">Manifest unreadable</string>
     <string name="workshop_reason_manifest_invalid">Manifest invalid</string>

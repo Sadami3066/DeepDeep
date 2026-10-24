@@ -22,6 +22,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
+import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -53,6 +54,8 @@ class ChatViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
+    private val mutableAvailableSkills = MutableStateFlow<List<SkillSummary>>(emptyList())
+    val availableSkills: StateFlow<List<SkillSummary>> = mutableAvailableSkills.asStateFlow()
 
     private val conversationCache = mutableMapOf<String, ConversationState>()
     private val sessionOpenJobs = mutableMapOf<String, Job>()
@@ -96,6 +99,20 @@ class ChatViewModel(
 
     fun onInputChange(value: String) {
         mutableState.update { it.copy(input = value, error = null) }
+    }
+
+    fun refreshAvailableSkills() {
+        val cwd = mutableState.value.conversationCwd
+        if (cwd.isBlank()) {
+            mutableAvailableSkills.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            val skills = withContext(ioDispatcher) {
+                runCatching { skillExpander?.list(cwd) }.getOrNull()
+            }.orEmpty()
+            if (mutableState.value.conversationCwd == cwd) mutableAvailableSkills.value = skills
+        }
     }
 
     fun quote(messageId: Long, text: String) {

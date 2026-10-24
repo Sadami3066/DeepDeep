@@ -62,11 +62,11 @@ import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
+import io.github.whywood.deepdeep.ui.chat.commandQuery
 import io.github.whywood.deepdeep.ui.chat.ParsedCommand
 import io.github.whywood.deepdeep.ui.chat.UsageSheet
 import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
 import io.github.whywood.deepdeep.ui.chat.parseChatCommand
-import io.github.whywood.deepdeep.ui.goal.GoalSheet
 import io.github.whywood.deepdeep.ui.files.FileBrowserSheet
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
@@ -175,6 +175,7 @@ internal fun DeepDeepApp(
         },
     )
     val state by chatViewModel.state.collectAsStateWithLifecycle()
+    val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
     val attachmentRoot = remember(state.conversationCwd) {
         state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File) ?: graph.homeDir
     }
@@ -233,7 +234,6 @@ internal fun DeepDeepApp(
     val activeJobs = allJobs.filter { it.sessionId == state.conversationId }
     var modelsOpen by remember { mutableStateOf(false) }
     var usageSheetOpen by remember { mutableStateOf(false) }
-    var goalSheetOpen by remember { mutableStateOf(false) }
     var jobsSheetOpen by remember { mutableStateOf(false) }
     var filesSheetOpen by remember { mutableStateOf(false) }
     var selectedJobId by remember { mutableStateOf<String?>(null) }
@@ -263,32 +263,57 @@ internal fun DeepDeepApp(
     val activeProvider = graph.providerCatalog.summary(state.providerId)
     val appResources = LocalResources.current
 
-    val commandItems = listOf(
-        CommandItem(
-            id = ChatCommand.WORKSHOP_SKILL.commandName,
-            name = ChatCommand.WORKSHOP_SKILL.commandName,
-            title = stringResource(R.string.chat_cmd_workshop_skill),
-            description = stringResource(R.string.chat_cmd_workshop_skill_desc),
-            enabled = state.conversationId != null && !state.sending,
-        ),
-        CommandItem(
-            id = ChatCommand.COMPACT.commandName,
-            name = ChatCommand.COMPACT.commandName,
-            title = stringResource(R.string.chat_cmd_compact),
-            description = stringResource(R.string.chat_cmd_compact_desc),
-            enabled = state.conversationId != null && !state.sending && !state.compacting,
-        ),
-        CommandItem(
-            id = ChatCommand.GOAL.commandName,
-            name = ChatCommand.GOAL.commandName,
-            title = stringResource(R.string.chat_cmd_goal),
-            description = stringResource(R.string.chat_cmd_goal_desc),
-            enabled = state.conversationId != null,
-        ),
-    )
+    LaunchedEffect(state.ready, state.conversationId, state.conversationCwd) {
+        if (state.ready) chatViewModel.refreshAvailableSkills()
+    }
+    val paletteOpen = commandQuery(state.input) != null
+    LaunchedEffect(paletteOpen) {
+        if (paletteOpen) chatViewModel.refreshAvailableSkills()
+    }
 
-    fun rejectCommandArgs(name: String) {
-        chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_usage, name))
+    val commandItems = buildList {
+        add(
+            CommandItem(
+                id = ChatCommand.COMPACT.commandName,
+                name = ChatCommand.COMPACT.commandName,
+                title = stringResource(R.string.chat_cmd_compact),
+                description = stringResource(R.string.chat_cmd_compact_desc),
+                enabled = state.conversationId != null && !state.sending && !state.compacting,
+                insertText = "/${ChatCommand.COMPACT.commandName} ",
+            ),
+        )
+        add(
+            CommandItem(
+                id = ChatCommand.GOAL.commandName,
+                name = ChatCommand.GOAL.commandName,
+                title = stringResource(R.string.chat_cmd_goal),
+                description = stringResource(R.string.chat_cmd_goal_desc),
+                enabled = state.conversationId != null,
+                insertText = "/${ChatCommand.GOAL.commandName} ",
+            ),
+        )
+        add(
+            CommandItem(
+                id = ChatCommand.WORKSHOP_SKILL.commandName,
+                name = ChatCommand.WORKSHOP_SKILL.commandName,
+                title = stringResource(R.string.chat_cmd_workshop_skill),
+                description = stringResource(R.string.chat_cmd_workshop_skill_desc),
+                enabled = state.conversationId != null && !state.sending,
+                insertText = WORKSHOP_SKILL_PREFILL,
+            ),
+        )
+        availableSkills.filter { it.name != "workshop" }.forEach { skill ->
+            add(
+                CommandItem(
+                    id = "skill:${skill.name}",
+                    name = "skill:${skill.name}",
+                    title = skill.name,
+                    description = skill.description,
+                    enabled = state.conversationId != null && !state.sending,
+                    insertText = "/skill:${skill.name} ",
+                ),
+            )
+        }
     }
 
     fun runGoalCommand(args: String) {
@@ -298,7 +323,7 @@ internal fun DeepDeepApp(
             return
         }
         when (args) {
-            "" -> goalSheetOpen = true
+            "" -> chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
             "pause" -> scope.launch { graph.goalService.pause(sessionId) }
             "resume" -> scope.launch { graph.goalService.resume(sessionId) }
             "clear" -> scope.launch { graph.goalService.clear(sessionId) }
@@ -312,28 +337,21 @@ internal fun DeepDeepApp(
 
     fun runChatCommand(command: ChatCommand, args: String) {
         when (command) {
-            ChatCommand.COMPACT -> if (args.isEmpty()) chatViewModel.compactContext() else rejectCommandArgs(command.commandName)
+            ChatCommand.COMPACT -> chatViewModel.compactContext()
             ChatCommand.GOAL -> runGoalCommand(args.trim())
             ChatCommand.WORKSHOP_SKILL -> chatViewModel.send()
         }
     }
 
-    fun pickCommand(command: ChatCommand) {
+    fun pickCommand(item: CommandItem) {
         val trigger = findCommandTrigger(state.input)
-        if (command == ChatCommand.WORKSHOP_SKILL) {
-            val base = if (trigger != null) {
-                state.input.removeRange(trigger.start, state.input.length).trimEnd()
-            } else {
-                state.input.trimEnd()
-            }
-            val prefix = if (base.isEmpty() || base.endsWith("\n")) "" else " "
-            chatViewModel.onInputChange(base + prefix + WORKSHOP_SKILL_PREFILL)
-            return
+        val base = if (trigger != null) {
+            state.input.removeRange(trigger.start, state.input.length).trimEnd()
+        } else {
+            state.input.trimEnd()
         }
-        if (trigger != null) {
-            chatViewModel.onInputChange(state.input.removeRange(trigger.start, state.input.length).trimEnd())
-        }
-        runChatCommand(command, "")
+        val separator = if (base.isEmpty() || base.last().isWhitespace()) "" else " "
+        chatViewModel.onInputChange(base + separator + item.insertText)
     }
 
     fun submitChatInput() {
@@ -341,15 +359,11 @@ internal fun DeepDeepApp(
             ParsedCommand.None -> chatViewModel.send()
             is ParsedCommand.Skill -> chatViewModel.send()
             is ParsedCommand.Found -> {
-                when {
-                    parsed.command == ChatCommand.WORKSHOP_SKILL -> chatViewModel.send()
-                    !parsed.command.takesArguments && parsed.args.isNotEmpty() ->
-                        rejectCommandArgs(parsed.command.commandName)
-
-                    else -> {
-                        chatViewModel.onInputChange("")
-                        runChatCommand(parsed.command, parsed.args)
-                    }
+                if (parsed.command == ChatCommand.WORKSHOP_SKILL) {
+                    chatViewModel.send()
+                } else {
+                    chatViewModel.onInputChange("")
+                    runChatCommand(parsed.command, parsed.args)
                 }
             }
 
@@ -460,9 +474,8 @@ internal fun DeepDeepApp(
                     usage = state.usage,
                     compacting = state.compacting,
                     commandItems = commandItems,
-                    onCommand = ::pickCommand,
+                    onPickCommand = ::pickCommand,
                     goal = activeGoal,
-                    onOpenGoal = { goalSheetOpen = true },
                     onPauseGoal = {
                         state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
                     },
@@ -903,60 +916,6 @@ internal fun DeepDeepApp(
             state.usage?.let { usage ->
                 UsageSheet(usage = usage, onDismiss = { usageSheetOpen = false })
             }
-        }
-        if (goalSheetOpen) {
-            GoalSheet(
-                view = activeGoal,
-                onDismiss = { goalSheetOpen = false },
-                onCreate = { objective ->
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.create(id, objective)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-                onEdit = { objective ->
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.edit(id, objective)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-                onPause = {
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.pause(id)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-                onResume = {
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.resume(id)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-                onComplete = {
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.complete(id)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-                onClear = {
-                    state.conversationId?.let { id ->
-                        scope.launch {
-                            graph.goalService.clear(id)
-                            goalSheetOpen = false
-                        }
-                    }
-                },
-            )
         }
         LaunchedEffect(jobsSheetOpen, selectedJobId) {
             val id = selectedJobId

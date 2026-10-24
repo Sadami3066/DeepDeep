@@ -136,9 +136,8 @@ fun ChatScreen(
     usage: SessionUsage? = null,
     compacting: Boolean = false,
     commandItems: List<CommandItem> = emptyList(),
-    onCommand: (ChatCommand) -> Unit = {},
+    onPickCommand: (CommandItem) -> Unit = {},
     goal: GoalView? = null,
-    onOpenGoal: () -> Unit = {},
     onPauseGoal: () -> Unit = {},
     onResumeGoal: () -> Unit = {},
     jobCount: Int = 0,
@@ -425,7 +424,6 @@ fun ChatScreen(
         goal?.let { view ->
             GoalBar(
                 view = view,
-                onOpen = onOpenGoal,
                 onPause = onPauseGoal,
                 onResume = onResumeGoal,
                 modifier = Modifier.padding(horizontal = 12.dp),
@@ -445,7 +443,7 @@ fun ChatScreen(
             SlashPalette(
                 items = commandItems,
                 query = paletteQuery ?: lastPaletteQuery,
-                onPick = { item -> ChatCommand.byName(item.id)?.let(onCommand) },
+                onPick = { item -> onPickCommand(item) },
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }

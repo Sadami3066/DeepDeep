@@ -23,6 +23,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
+import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -494,6 +495,23 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun refreshAvailableSkillsLoadsCwdSkills() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(
+            result = null,
+            available = listOf(SkillSummary("foo", "Foo helper")),
+        )
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.refreshAvailableSkills()
+        advanceUntilIdle()
+
+        assertEquals(listOf("foo"), viewModel.availableSkills.value.map { it.name })
+        assertEquals(listOf(HOME_CWD), expander.listCalls)
+    }
+
+    @Test
     fun missingSkillExpanderShowsError() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val viewModel = viewModel(runtime)
@@ -539,12 +557,21 @@ class ChatViewModelTest {
         assertTrue(viewModel.state.value.messages.isEmpty())
     }
 
-    private class FakeSkillExpander(private val result: SkillExpansion?) : SkillExpander {
+    private class FakeSkillExpander(
+        private val result: SkillExpansion?,
+        private val available: List<SkillSummary> = emptyList(),
+    ) : SkillExpander {
         val calls = mutableListOf<Triple<String, String, String>>()
+        val listCalls = mutableListOf<String>()
 
         override suspend fun expand(cwd: String, name: String, args: String): SkillExpansion? {
             calls += Triple(cwd, name, args)
             return result
+        }
+
+        override suspend fun list(cwd: String): List<SkillSummary> {
+            listCalls += cwd
+            return available
         }
     }
 
