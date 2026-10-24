@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -29,7 +27,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -50,21 +47,14 @@ import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SqliteWorkshopData
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopEntry
-import io.github.whywood.deepdeep.runtime.WorkshopPageError
 import io.github.whywood.deepdeep.runtime.WorkshopStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-private const val MAX_PAGE_ERRORS = 20
 
 @Composable
 fun WorkshopViewerScreen(
     store: WorkshopStore,
-    agentService: WorkshopAgentService,
     creationId: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -74,11 +64,9 @@ fun WorkshopViewerScreen(
     var entry by remember(creationId) { mutableStateOf<WorkshopEntry?>(null) }
     var loadKey by remember(creationId) { mutableIntStateOf(0) }
     var reloadKey by remember(creationId) { mutableIntStateOf(0) }
-    var pageErrors by remember(creationId) { mutableStateOf<List<WorkshopPageError>>(emptyList()) }
     var fatalError by remember(creationId) { mutableStateOf<String?>(null) }
     var canGoBack by remember(creationId) { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    var agentOpen by remember { mutableStateOf(false) }
     var renameOpen by remember { mutableStateOf(false) }
     var deleteOpen by remember { mutableStateOf(false) }
     var dialogError by remember { mutableStateOf(false) }
@@ -91,18 +79,11 @@ fun WorkshopViewerScreen(
     val data = remember(creationId, valid) {
         creation?.let { SqliteWorkshopData(store.dataFile(creationId)) }
     }
-    val agent = remember(creationId, valid) {
-        creation?.let { agentService.runnerFor(it) }
-    }
     val supported = remember {
         WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
             WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     }
     val actionFailedText = stringResource(R.string.workshop_action_failed)
-    val addPageError: (WorkshopPageError) -> Unit = { error ->
-        val key = errorKey(error)
-        pageErrors = (pageErrors.filterNot { errorKey(it) == key } + error).takeLast(MAX_PAGE_ERRORS)
-    }
 
     LaunchedEffect(creationId, loadKey) {
         entry = runCatching { store.load(creationId) }.getOrElse { WorkshopEntry.Missing }
@@ -113,14 +94,8 @@ fun WorkshopViewerScreen(
             onBack()
         }
     }
-    DisposableEffect(data, agent) {
-        onDispose {
-            data?.close()
-            val runner = agent
-            if (runner != null) {
-                CoroutineScope(Dispatchers.IO).launch { runCatching { runner.cancel() } }
-            }
-        }
+    DisposableEffect(data) {
+        onDispose { data?.close() }
     }
     BackHandler(enabled = canGoBack) { webViewState.goBack() }
 
@@ -144,7 +119,6 @@ fun WorkshopViewerScreen(
         if (working) return
         working = true
         scope.launch {
-            runCatching { agent?.cancel() }
             runCatching { data?.close() }
             val deleted = runCatching { store.delete(creationId) }.getOrDefault(false)
             working = false
@@ -189,32 +163,6 @@ fun WorkshopViewerScreen(
             )
             Box {
                 DdIconButton(
-                    icon = DdIcons.Sparkles,
-                    onClick = {
-                        if (valid) {
-                            dialogError = false
-                            agentOpen = true
-                        }
-                    },
-                    contentDescription = stringResource(R.string.workshop_agent_edit),
-                    modifier = Modifier.testTag("workshop_agent"),
-                    tint = colors.ink,
-                    iconSize = 21.dp,
-                )
-                if (pageErrors.isNotEmpty()) {
-                    Box(
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 6.dp, end = 6.dp)
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(colors.danger)
-                            .testTag("workshop_error_dot"),
-                    )
-                }
-            }
-            Box {
-                DdIconButton(
                     icon = DdIcons.More,
                     onClick = { menuOpen = true },
                     contentDescription = stringResource(R.string.workshop_more),
@@ -233,7 +181,6 @@ fun WorkshopViewerScreen(
                         onClick = {
                             menuOpen = false
                             fatalError = null
-                            pageErrors = emptyList()
                             reloadKey++
                         },
                         testTag = "workshop_reload",
@@ -273,17 +220,15 @@ fun WorkshopViewerScreen(
                     }
                 }
 
-                creation != null && data != null && agent != null -> {
+                creation != null && data != null -> {
                     if (supported) {
                         WorkshopWebView(
                             creation = creation,
                             data = data,
-                            agent = agent,
                             reloadKey = reloadKey,
-                            onPageError = addPageError,
+                            onFatalError = { message -> fatalError = message },
                             onHistoryChanged = { canGoBack = it },
                             onRenderCrash = { canGoBack = false },
-                            onFatalError = { message -> fatalError = message },
                             modifier = Modifier.fillMaxSize(),
                             state = webViewState,
                         )
@@ -305,7 +250,6 @@ fun WorkshopViewerScreen(
                     message = failure,
                     onRetry = {
                         fatalError = null
-                        pageErrors = emptyList()
                         reloadKey++
                     },
                 )
@@ -375,20 +319,6 @@ fun WorkshopViewerScreen(
                     color = colors.danger,
                     enabled = !working,
                 )
-            },
-        )
-    }
-
-    if (agentOpen && creation != null) {
-        WorkshopAgentSheet(
-            service = agentService,
-            creation = creation,
-            initialError = pageErrors.lastOrNull(),
-            onDismiss = { agentOpen = false },
-            onApplied = {
-                fatalError = null
-                pageErrors = emptyList()
-                reloadKey++
             },
         )
     }
@@ -464,6 +394,3 @@ private fun InvalidEntry(onRetry: () -> Unit) {
         )
     }
 }
-
-private fun errorKey(error: WorkshopPageError): String =
-    error.message + "|" + error.source + "|" + error.line + "|" + error.column

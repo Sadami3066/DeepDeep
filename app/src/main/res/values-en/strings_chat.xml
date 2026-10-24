@@ -82,6 +82,7 @@
     <string name="chat_error_switch_thinking">Failed to switch thinking level</string>
     <string name="chat_error_open_conversation">Failed to open conversation</string>
     <string name="chat_error_new_chat">Failed to start new chat</string>
+    <string name="chat_error_skill_missing">Skill not found: %1$s</string>
     <string name="chat_title_new">New chat</string>
     <string name="chat_error_invalid_api_key">Invalid or expired API key</string>
     <string name="chat_error_rate_limited">Too many requests. Try again later.</string>
@@ -113,6 +114,8 @@
     <string name="chat_cmd_compact_desc">Condense older history now to free context</string>
     <string name="chat_cmd_goal">Goal</string>
     <string name="chat_cmd_goal_desc">Create a long-running goal, or pause, resume, clear</string>
+    <string name="chat_cmd_workshop_skill">Workshop skill</string>
+    <string name="chat_cmd_workshop_skill_desc">Load the bundled workshop skill so the agent can build an interactive mini app</string>
     <string name="chat_cmd_unknown">Unknown command: /%1$s</string>
     <string name="chat_cmd_usage">/%1$s takes no arguments</string>
     <string name="chat_question_other">Another conversation is waiting for an answer</string>

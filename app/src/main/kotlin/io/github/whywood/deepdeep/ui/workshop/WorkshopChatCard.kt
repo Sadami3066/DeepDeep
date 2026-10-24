@@ -26,8 +26,6 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.WorkshopManifest
-import io.github.whywood.deepdeep.runtime.WorkshopSpec
-import io.github.whywood.deepdeep.runtime.WorkshopType
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -38,13 +36,14 @@ import kotlinx.serialization.json.jsonObject
 data class WorkshopCardApp(
     val id: String,
     val name: String,
-    val type: WorkshopType,
     val icon: String,
     val version: String,
 )
 
+private const val ICON_FALLBACK = "✦"
+
 fun parseRegisteredWorkshop(trace: ToolTrace): WorkshopCardApp? {
-    if (trace.name != "workshop_register") return null
+    if (trace.name != "workshop_load" && trace.name != "workshop_register") return null
     val raw = trace.output?.takeIf { it.isNotBlank() } ?: return null
     return try {
         val root = Json.parseToJsonElement(raw).jsonObject
@@ -52,14 +51,11 @@ fun parseRegisteredWorkshop(trace: ToolTrace): WorkshopCardApp? {
         val app = root["app"] as? JsonObject ?: return null
         val id = app.stringOrNull("id")?.trim().orEmpty()
         val name = app.stringOrNull("name")?.trim().orEmpty()
-        val wire = app.stringOrNull("type")?.trim().orEmpty()
-        val type = WorkshopType.entries.firstOrNull { it.wire == wire } ?: return null
         if (id.isEmpty() || name.isEmpty()) return null
         WorkshopCardApp(
             id = id,
             name = name,
-            type = type,
-            icon = app.stringOrNull("icon")?.trim().orEmpty().ifBlank { WorkshopSpec.defaultIcon(type) },
+            icon = app.stringOrNull("icon")?.trim().orEmpty().ifBlank { ICON_FALLBACK },
             version = app.stringOrNull("version")?.trim().orEmpty().ifBlank { WorkshopManifest.DEFAULT_VERSION },
         )
     } catch (_: Exception) {
@@ -89,7 +85,7 @@ fun WorkshopChatCard(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = app.icon.ifBlank { WorkshopSpec.defaultIcon(app.type) }, fontSize = 22.sp)
+            Text(text = app.icon.ifBlank { ICON_FALLBACK }, fontSize = 22.sp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -101,10 +97,7 @@ fun WorkshopChatCard(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = stringResource(
-                        R.string.workshop_chat_card_subtitle,
-                        stringResource(workshopTypeLabelRes(app.type)),
-                    ),
+                    text = stringResource(R.string.workshop_chat_card_created),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 1,

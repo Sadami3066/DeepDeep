@@ -50,6 +50,7 @@ data class ChatUiStrings(
     val nothingToCompact: String,
     val compactionBusy: String,
     val compactionUnavailable: String,
+    val skillMissing: (String) -> String = { name -> "Skill not found: $name" },
 ) {
     fun activity(activity: RuntimeActivity?): String? = when (activity) {
         null -> null
@@ -153,6 +154,7 @@ data class ChatUiStrings(
             nothingToCompact = "No compactable history",
             compactionBusy = "Cannot compact while a reply is running",
             compactionUnavailable = "This session cannot be compacted",
+            skillMissing = { name -> "Skill not found: $name" },
         )
     }
 }

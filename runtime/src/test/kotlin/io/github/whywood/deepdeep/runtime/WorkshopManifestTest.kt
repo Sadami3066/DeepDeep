@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -14,6 +16,10 @@ class WorkshopManifestTest {
         return "\"$escaped\""
     }
 
+    private fun minimal(): WorkshopManifest = WorkshopManifest.parse(
+        manifestJson("id" to string("mini-app"), "name" to string("Mini App")),
+    )
+
     private fun assertManifestFails(text: String) {
         try {
             WorkshopManifest.parse(text)
@@ -22,23 +28,39 @@ class WorkshopManifestTest {
         }
     }
 
+    private fun assertManifestFailsMessage(fragment: String, text: String) {
+        try {
+            WorkshopManifest.parse(text)
+            fail("expected WorkshopManifestException")
+        } catch (error: WorkshopManifestException) {
+            assertTrue(
+                "expected message to contain '$fragment' but was '${error.message}'",
+                error.message.orEmpty().contains(fragment),
+            )
+        }
+    }
+
+    private fun assertManifestFailsWith(fragment: String, block: () -> Unit) {
+        try {
+            block()
+            fail("expected WorkshopManifestException")
+        } catch (error: WorkshopManifestException) {
+            assertTrue(
+                "expected message to contain '$fragment' but was '${error.message}'",
+                error.message.orEmpty().contains(fragment),
+            )
+        }
+    }
+
     @Test
     fun minimalManifestUsesDefaults() {
-        val manifest = WorkshopManifest.parse(
-            manifestJson(
-                "id" to string("todo"),
-                "name" to string("Todo"),
-                "type" to string("board"),
-            ),
-        )
-        assertEquals("todo", manifest.id)
-        assertEquals("Todo", manifest.name)
-        assertEquals(WorkshopType.BOARD, manifest.type)
-        assertEquals("🗂️", manifest.icon)
+        val manifest = minimal()
+        assertEquals("mini-app", manifest.id)
+        assertEquals("Mini App", manifest.name)
+        assertEquals("", manifest.icon)
         assertEquals("1.0.0", manifest.version)
         assertEquals("index.html", manifest.entry)
         assertEquals("", manifest.description)
-        assertEquals(emptySet<String>(), manifest.permissions)
     }
 
     @Test
@@ -47,86 +69,103 @@ class WorkshopManifestTest {
             manifestJson(
                 "id" to string("todo-board_2"),
                 "name" to string("  Todo Board  "),
-                "type" to string("workstation"),
                 "icon" to string("✅"),
                 "version" to string("2.1.0"),
                 "entry" to string("pages/main.html"),
                 "description" to string("  A small board  "),
-                "permissions" to "[\"data.kv\",\"agent.run\"]",
             ),
         )
         assertEquals("todo-board_2", manifest.id)
         assertEquals("Todo Board", manifest.name)
-        assertEquals(WorkshopType.WORKSTATION, manifest.type)
         assertEquals("✅", manifest.icon)
         assertEquals("2.1.0", manifest.version)
         assertEquals("pages/main.html", manifest.entry)
         assertEquals("A small board", manifest.description)
-        assertEquals(setOf("data.kv", "agent.run"), manifest.permissions)
     }
 
     @Test
-    fun unknownManifestFieldsAreIgnored() {
+    fun legacyFieldsAreIgnored() {
         val manifest = WorkshopManifest.parse(
             manifestJson(
-                "id" to string("app"),
-                "name" to string("App"),
-                "type" to string("workflow"),
-                "extra" to "{\"nested\":true}",
+                "id" to string("legacy-app"),
+                "name" to string("Legacy App"),
+                "type" to string("board"),
+                "permissions" to "[\"data.kv\",\"agent.run\"]",
+                "createdAt" to "1700000000",
+                "starter" to "true",
             ),
         )
-        assertEquals(WorkshopType.WORKFLOW, manifest.type)
+        assertEquals("legacy-app", manifest.id)
+        assertEquals("", manifest.icon)
+        val encoded = Json.parseToJsonElement(manifest.toJson()).jsonObject
+        assertEquals(
+            setOf("id", "name", "icon", "version", "entry", "description"),
+            encoded.keys,
+        )
+    }
+
+    @Test
+    fun toJsonEmitsExactlyTheManifestFields() {
+        val encoded = Json.parseToJsonElement(minimal().toJson()).jsonObject
+        assertEquals(
+            listOf("id", "name", "icon", "version", "entry", "description"),
+            encoded.keys.toList(),
+        )
     }
 
     @Test
     fun missingRequiredFieldsFail() {
         assertManifestFails("{}")
         assertManifestFails(manifestJson("id" to string("app")))
-        assertManifestFails(manifestJson("id" to string("app"), "name" to string("App")))
-        assertManifestFails(manifestJson("name" to string("App"), "type" to string("board")))
-        assertFailsWithMessage("id is required", "{}")
+        assertManifestFails(manifestJson("name" to string("App")))
+        assertManifestFailsMessage("id is required", "{}")
+        assertManifestFailsMessage("name is required", manifestJson("id" to string("app")))
     }
 
-    private fun assertFailsWithMessage(fragment: String, text: String) {
-        try {
-            WorkshopManifest.parse(text)
-            fail("expected WorkshopManifestException")
-        } catch (error: WorkshopManifestException) {
-            assertTrue("expected message to contain '$fragment' but was '${error.message}'", error.message.orEmpty().contains(fragment))
-        }
+    @Test
+    fun nonObjectOrInvalidJsonFails() {
+        assertManifestFails("[]")
+        assertManifestFails("not json")
+        assertManifestFails("")
     }
 
     @Test
     fun invalidIdsFail() {
-        assertManifestFails(manifestJson("id" to string("Upper"), "name" to string("A"), "type" to string("board")))
-        assertManifestFails(manifestJson("id" to string("-lead"), "name" to string("A"), "type" to string("board")))
-        assertManifestFails(manifestJson("id" to string("a".repeat(49)), "name" to string("A"), "type" to string("board")))
-        assertManifestFails(manifestJson("id" to string("a b"), "name" to string("A"), "type" to string("board")))
+        assertManifestFails(manifestJson("id" to string("Upper"), "name" to string("A")))
+        assertManifestFails(manifestJson("id" to string("-lead"), "name" to string("A")))
+        assertManifestFails(manifestJson("id" to string("a".repeat(49)), "name" to string("A")))
+        assertManifestFails(manifestJson("id" to string("a b"), "name" to string("A")))
     }
 
     @Test
-    fun nameAndTypeValidation() {
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("  "), "type" to string("board")))
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("a".repeat(41)), "type" to string("board")))
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "type" to string("Board")))
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "type" to string("game")))
-        WorkshopManifest.parse(manifestJson("id" to string("a"), "name" to string("a".repeat(40)), "type" to string("board")))
+    fun nameValidation() {
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("  ")))
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("a".repeat(41))))
+        WorkshopManifest.parse(manifestJson("id" to string("a"), "name" to string("a".repeat(40))))
     }
 
     @Test
-    fun iconVersionAndDescriptionLimits() {
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "icon" to string("123456789")))
-        assertEquals("12345678", WorkshopManifest.parse(
-            manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "icon" to string("12345678")),
+    fun iconIsOptionalAndLimited() {
+        assertEquals("", minimal().icon)
+        assertEquals("", WorkshopManifest.parse(
+            manifestJson("id" to string("a"), "name" to string("A"), "icon" to string("   ")),
         ).icon)
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "version" to string("1".repeat(21))))
+        assertEquals("12345678", WorkshopManifest.parse(
+            manifestJson("id" to string("a"), "name" to string("A"), "icon" to string("12345678")),
+        ).icon)
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "icon" to string("123456789")))
+    }
+
+    @Test
+    fun versionAndDescriptionLimits() {
         assertEquals("1".repeat(20), WorkshopManifest.parse(
-            manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "version" to string("1".repeat(20))),
+            manifestJson("id" to string("a"), "name" to string("A"), "version" to string("1".repeat(20))),
         ).version)
-        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "description" to string("d".repeat(301))))
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "version" to string("1".repeat(21))))
         assertEquals(300, WorkshopManifest.parse(
-            manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board"), "description" to string("d".repeat(300))),
+            manifestJson("id" to string("a"), "name" to string("A"), "description" to string("d".repeat(300))),
         ).description.length)
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "description" to string("d".repeat(301))))
     }
 
     @Test
@@ -134,7 +173,6 @@ class WorkshopManifestTest {
         fun withEntry(entry: String): String = manifestJson(
             "id" to string("a"),
             "name" to string("A"),
-            "type" to string("board"),
             "entry" to string(entry),
         )
         assertManifestFails(withEntry("../evil.html"))
@@ -149,35 +187,11 @@ class WorkshopManifestTest {
     }
 
     @Test
-    fun permissionsAreTrimmedDedupedAndKeepUnknownNames() {
-        val manifest = WorkshopManifest.parse(
-            manifestJson(
-                "id" to string("a"),
-                "name" to string("A"),
-                "type" to string("board"),
-                "permissions" to "[\"data.kv\",\" data.kv \",\"custom.permission\",\"agent.run\"]",
-            ),
-        )
-        assertEquals(setOf("data.kv", "custom.permission", "agent.run"), manifest.permissions)
-        val none = WorkshopManifest.parse(
-            manifestJson("id" to string("a"), "name" to string("A"), "type" to string("board")),
-        )
-        assertTrue(none.permissions.isEmpty())
-    }
-
-    @Test
-    fun invalidPermissionsFail() {
-        fun withPermissions(value: String): String = manifestJson(
-            "id" to string("a"),
-            "name" to string("A"),
-            "type" to string("board"),
-            "permissions" to value,
-        )
-        assertManifestFails(withPermissions("[\"Data.KV\"]"))
-        assertManifestFails(withPermissions("[\"bad permission\"]"))
-        assertManifestFails(withPermissions("[\"1data\"]"))
-        assertManifestFails(withPermissions("\"data.kv\""))
-        assertManifestFails(withPermissions("[1]"))
+    fun wrongFieldTypesFail() {
+        assertManifestFails(manifestJson("id" to "1", "name" to string("A")))
+        assertManifestFails(manifestJson("id" to string("a"), "name" to "true"))
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "icon" to "1"))
+        assertManifestFails(manifestJson("id" to string("a"), "name" to string("A"), "entry" to "[]"))
     }
 
     @Test
@@ -185,7 +199,6 @@ class WorkshopManifestTest {
         val text = manifestJson(
             "id" to string("a"),
             "name" to string("A"),
-            "type" to string("board"),
             "padding" to string("x".repeat(WorkshopManifest.MAX_BYTES)),
         )
         assertManifestFails(text)
@@ -197,12 +210,10 @@ class WorkshopManifestTest {
             manifestJson(
                 "id" to string("round-trip"),
                 "name" to string("Round Trip"),
-                "type" to string("workflow"),
                 "icon" to string("⚙️"),
                 "version" to string("3.0.0"),
                 "entry" to string("app/index.html"),
                 "description" to string("desc"),
-                "permissions" to "[\"agent.run\",\"data.kv\"]",
             ),
         )
         val encoded = original.toJson()
@@ -212,38 +223,20 @@ class WorkshopManifestTest {
 
     @Test
     fun withNameTrimsAndValidates() {
-        val manifest = WorkshopManifest.parse(
-            manifestJson("id" to string("a"), "name" to string("Old"), "type" to string("board")),
-        )
+        val manifest = minimal()
         val renamed = manifest.withName("  New Name  ")
         assertEquals("New Name", renamed.name)
         assertEquals(manifest.id, renamed.id)
-        assertEquals(manifest.permissions, renamed.permissions)
-        assertManifestFailsThrown { manifest.withName("   ") }
-        assertManifestFailsThrown { manifest.withName("a".repeat(41)) }
-    }
-
-    private fun assertManifestFailsThrown(block: () -> Unit) {
-        try {
-            block()
-            fail("expected WorkshopManifestException")
-        } catch (_: WorkshopManifestException) {
-        }
+        assertEquals(manifest.icon, renamed.icon)
+        assertManifestFailsWith("name must be") { manifest.withName("   ") }
+        assertManifestFailsWith("name must be") { manifest.withName("a".repeat(41)) }
     }
 
     @Test
-    fun typeWireValues() {
-        assertEquals("board", WorkshopType.BOARD.wire)
-        assertEquals("workstation", WorkshopType.WORKSTATION.wire)
-        assertEquals("workflow", WorkshopType.WORKFLOW.wire)
-        assertEquals(WorkshopType.BOARD, WorkshopType.fromWire("board"))
-        assertEquals(WorkshopType.WORKSTATION, WorkshopType.fromWire(" workstation "))
-        assertEquals(null, WorkshopType.fromWire(null))
-        assertEquals(null, WorkshopType.fromWire("game"))
-    }
-
-    @Test
-    fun permissionsKnownSet() {
-        assertEquals(setOf("data.kv", "agent.run"), WorkshopPermissions.KNOWN)
+    fun companionConstants() {
+        assertEquals("index.html", WorkshopManifest.DEFAULT_ENTRY)
+        assertEquals("1.0.0", WorkshopManifest.DEFAULT_VERSION)
+        assertEquals(64 * 1024, WorkshopManifest.MAX_BYTES)
+        assertTrue(WorkshopManifest.ID_REGEX.matches("abc-123_x"))
     }
 }

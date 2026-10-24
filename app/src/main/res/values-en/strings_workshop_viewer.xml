@@ -1,4 +1,5 @@
 <resources>
+    <string name="workshop_back">Back</string>
     <string name="workshop_reload">Reload</string>
     <string name="workshop_more">More</string>
     <string name="workshop_rename">Rename</string>
@@ -9,23 +10,12 @@
     <string name="workshop_delete_title">Delete creation</string>
     <string name="workshop_delete_message">Deleting “%1$s” removes its page and all of its data permanently.</string>
     <string name="workshop_delete_confirm">Delete</string>
+    <string name="workshop_cancel">Cancel</string>
+    <string name="workshop_loading">Loading</string>
     <string name="workshop_page_failed">Page error</string>
     <string name="workshop_page_retry">Retry</string>
     <string name="workshop_webview_unsupported">The WebView on this system does not support Workshop</string>
     <string name="workshop_link_failed">Could not open link</string>
-    <string name="workshop_agent_edit">Edit with Agent</string>
-    <string name="workshop_agent_title">Edit with Agent</string>
-    <string name="workshop_agent_hint">The Agent edits this creation’s files directly and the page reloads when it finishes.</string>
-    <string name="workshop_agent_placeholder">Describe the change, for example: switch to a dark theme and add a search box</string>
-    <string name="workshop_agent_start">Start</string>
-    <string name="workshop_agent_stop">Stop</string>
-    <string name="workshop_agent_thinking">Thinking…</string>
-    <string name="workshop_agent_tool">Using %1$s</string>
-    <string name="workshop_agent_generating">Generating…</string>
-    <string name="workshop_agent_failed">Update failed</string>
-    <string name="workshop_agent_done">Done</string>
-    <string name="workshop_agent_error_fix">Fix this error</string>
-    <string name="workshop_close">Close</string>
     <string name="workshop_action_failed">Action failed</string>
     <string name="workshop_renderer_crashed">Page renderer crashed</string>
     <string name="workshop_http_error">HTTP %1$d</string>

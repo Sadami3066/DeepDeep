@@ -65,7 +65,6 @@ class WorkshopStore(
 
     suspend fun createDraft(
         name: String,
-        type: WorkshopType,
         description: String = "",
         icon: String? = null,
     ): CreatedDraft = withContext(Dispatchers.IO) {
@@ -73,7 +72,6 @@ class WorkshopStore(
         val manifest = newManifest(
             id = uniqueId(slug(name)),
             name = name,
-            type = type,
             description = description,
             icon = icon,
         )
@@ -83,8 +81,6 @@ class WorkshopStore(
         }
         try {
             writeManifest(directory, manifest)
-            writeTextAtomic(File(directory, AGENTS_FILE), WorkshopSpec.agentsMd(manifest))
-            writeTextAtomic(File(directory, manifest.entry), WorkshopSpec.starterHtml(manifest))
         } catch (error: Exception) {
             directory.deleteRecursively()
             throw error
@@ -92,44 +88,44 @@ class WorkshopStore(
         CreatedDraft(manifest = manifest, directory = directory)
     }
 
-    suspend fun install(draftPath: String): WorkshopCreation = withContext(Dispatchers.IO) {
+    suspend fun loadDraft(draftPath: String): WorkshopCreation = withContext(Dispatchers.IO) {
         ensureRoot()
         val draft = File(draftPath).canonicalFile
         if (!draft.toPath().startsWith(buildDir.canonicalFile.toPath()) || draft == buildDir.canonicalFile) {
-            throw WorkshopInstallException("draft path is not inside the workshop build folder: $draftPath")
+            throw WorkshopLoadException("draft path is not inside the workshop build folder: $draftPath")
         }
         if (!draft.isDirectory) {
-            throw WorkshopInstallException("draft folder does not exist: $draftPath")
+            throw WorkshopLoadException("draft folder does not exist: $draftPath")
         }
         if (Files.isSymbolicLink(draft.toPath())) {
-            throw WorkshopInstallException("draft folder is a symbolic link: $draftPath")
+            throw WorkshopLoadException("draft folder is a symbolic link: $draftPath")
         }
         val manifestFile = File(draft, MANIFEST_FILE)
         if (!manifestFile.isFile) {
-            throw WorkshopInstallException("draft is missing manifest.json: $draftPath")
+            throw WorkshopLoadException("draft is missing manifest.json: $draftPath")
         }
         val text = try {
             manifestFile.readText()
         } catch (error: Exception) {
-            throw WorkshopInstallException("draft manifest.json cannot be read: ${error.message}")
+            throw WorkshopLoadException("draft manifest.json cannot be read: ${error.message}")
         }
         val manifest = try {
             WorkshopManifest.parse(text)
         } catch (error: WorkshopManifestException) {
-            throw WorkshopInstallException("draft manifest.json is invalid: ${error.message}")
+            throw WorkshopLoadException("draft manifest.json is invalid: ${error.message}")
         }
         val entry = File(draft, manifest.entry)
         val entryCanonical = entry.canonicalFile
         if (!entryCanonical.toPath().startsWith(draft.toPath()) || !entryCanonical.isFile) {
-            throw WorkshopInstallException("draft entry is missing: ${manifest.entry}")
+            throw WorkshopLoadException("draft entry is missing: ${manifest.entry}")
         }
         validateDraftContents(draft)
         if (!appsDir.exists() && !appsDir.mkdirs()) {
-            throw WorkshopInstallException("cannot create workshop apps folder: ${appsDir.absolutePath}")
+            throw WorkshopLoadException("cannot create workshop apps folder: ${appsDir.absolutePath}")
         }
         val target = File(appsDir, manifest.id)
         if (Files.exists(target.toPath(), LinkOption.NOFOLLOW_LINKS)) {
-            throw WorkshopInstallException("an app with id '${manifest.id}' already exists")
+            throw WorkshopLoadException("an app with id '${manifest.id}' already exists")
         }
         try {
             try {
@@ -138,36 +134,12 @@ class WorkshopStore(
                 Files.move(draft.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
         } catch (_: FileAlreadyExistsException) {
-            throw WorkshopInstallException("an app with id '${manifest.id}' already exists")
+            throw WorkshopLoadException("an app with id '${manifest.id}' already exists")
         } catch (error: IOException) {
-            throw WorkshopInstallException("cannot install app '${manifest.id}': ${error.message}")
+            throw WorkshopLoadException("cannot load app '${manifest.id}': ${error.message}")
         }
         if (!userdataDir.exists()) userdataDir.mkdirs()
         WorkshopCreation(manifest = manifest, directory = target)
-    }
-
-    suspend fun createInstalled(name: String, type: WorkshopType): WorkshopCreation = withContext(Dispatchers.IO) {
-        ensureRoot()
-        val manifest = newManifest(
-            id = uniqueId(slug(name)),
-            name = name,
-            type = type,
-            description = "",
-            icon = null,
-        )
-        val directory = File(appsDir, manifest.id)
-        if (!directory.mkdirs()) {
-            throw WorkshopManifestException("cannot create app directory: ${directory.absolutePath}")
-        }
-        try {
-            writeManifest(directory, manifest)
-            writeTextAtomic(File(directory, AGENTS_FILE), WorkshopSpec.agentsMd(manifest))
-            writeTextAtomic(File(directory, manifest.entry), WorkshopSpec.starterHtml(manifest))
-        } catch (error: Exception) {
-            directory.deleteRecursively()
-            throw error
-        }
-        WorkshopCreation(manifest = manifest, directory = directory)
     }
 
     suspend fun rename(id: String, name: String): WorkshopCreation? = withContext(Dispatchers.IO) {
@@ -201,11 +173,10 @@ class WorkshopStore(
     private fun newManifest(
         id: String,
         name: String,
-        type: WorkshopType,
         description: String,
         icon: String?,
     ): WorkshopManifest {
-        val resolvedIcon = icon?.trim()?.takeIf { it.isNotEmpty() } ?: WorkshopSpec.defaultIcon(type)
+        val resolvedIcon = icon?.trim().orEmpty()
         if (resolvedIcon.length > 8) {
             throw WorkshopManifestException("icon must be at most 8 characters")
         }
@@ -216,12 +187,10 @@ class WorkshopStore(
         return WorkshopManifest(
             id = id,
             name = WorkshopManifest.normalizedName(name),
-            type = type,
             icon = resolvedIcon,
             version = WorkshopManifest.DEFAULT_VERSION,
             entry = WorkshopManifest.DEFAULT_ENTRY,
             description = resolvedDescription,
-            permissions = WorkshopPermissions.KNOWN,
         )
     }
 
@@ -404,28 +373,28 @@ class WorkshopStore(
             object : SimpleFileVisitor<Path>() {
                 override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
                     if (attrs.isSymbolicLink) {
-                        throw WorkshopInstallException("draft contains a symbolic link: ${dir.fileName}")
+                        throw WorkshopLoadException("draft contains a symbolic link: ${dir.fileName}")
                     }
                     return FileVisitResult.CONTINUE
                 }
 
                 override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                     if (attrs.isSymbolicLink) {
-                        throw WorkshopInstallException("draft contains a symbolic link: ${file.fileName}")
+                        throw WorkshopLoadException("draft contains a symbolic link: ${file.fileName}")
                     }
                     fileCount += 1
                     totalBytes += attrs.size()
                     if (fileCount > MAX_FILES) {
-                        throw WorkshopInstallException("draft has more than $MAX_FILES files")
+                        throw WorkshopLoadException("draft has more than $MAX_FILES files")
                     }
                     if (totalBytes > MAX_TOTAL_BYTES) {
-                        throw WorkshopInstallException("draft is larger than ${MAX_TOTAL_BYTES / (1024 * 1024)} MB")
+                        throw WorkshopLoadException("draft is larger than ${MAX_TOTAL_BYTES / (1024 * 1024)} MB")
                     }
                     return FileVisitResult.CONTINUE
                 }
 
                 override fun visitFileFailed(file: Path, error: IOException): FileVisitResult {
-                    throw WorkshopInstallException("cannot read draft file ${file.fileName}: ${error.message}")
+                    throw WorkshopLoadException("cannot read draft file ${file.fileName}: ${error.message}")
                 }
             },
         )
@@ -444,7 +413,6 @@ class WorkshopStore(
         const val BUILD_DIR = "build"
         const val USERDATA_DIR = "userdata"
         const val MANIFEST_FILE = "manifest.json"
-        const val AGENTS_FILE = "AGENTS.md"
         const val MAX_FILES = 200
         const val MAX_TOTAL_BYTES = 50L * 1024 * 1024
         const val ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"

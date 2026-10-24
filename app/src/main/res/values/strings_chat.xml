@@ -82,6 +82,7 @@
     <string name="chat_error_switch_thinking">切换思考档位失败</string>
     <string name="chat_error_open_conversation">打开会话失败</string>
     <string name="chat_error_new_chat">新建会话失败</string>
+    <string name="chat_error_skill_missing">未找到技能：%1$s</string>
     <string name="chat_title_new">新对话</string>
     <string name="chat_error_invalid_api_key">API Key 无效或已过期</string>
     <string name="chat_error_rate_limited">请求太频繁，请稍后再试</string>
@@ -113,6 +114,8 @@
     <string name="chat_cmd_compact_desc">立即压缩较早的历史，释放上下文</string>
     <string name="chat_cmd_goal">目标</string>
     <string name="chat_cmd_goal_desc">创建长期目标，或暂停、继续、清除</string>
+    <string name="chat_cmd_workshop_skill">创意工坊技能</string>
+    <string name="chat_cmd_workshop_skill_desc">加载内置创意工坊技能，让 Agent 构建可交互的小应用</string>
     <string name="chat_cmd_unknown">未知命令：/%1$s</string>
     <string name="chat_cmd_usage">/%1$s 不接受参数</string>
     <string name="chat_question_other">另一个会话正在等待回答</string>

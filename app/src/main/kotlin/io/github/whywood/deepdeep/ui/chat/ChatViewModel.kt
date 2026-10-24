@@ -21,6 +21,7 @@ import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
+import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -47,6 +48,7 @@ class ChatViewModel(
     private val prepareRuntime: suspend () -> Unit,
     private val autoRetry: Flow<Boolean> = flowOf(false),
     private val uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
+    private val skillExpander: SkillExpander? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
@@ -154,6 +156,19 @@ class ChatViewModel(
         if (current.sending || current.switchingConversation) return
         val text = current.input.trim()
         if (text.isEmpty()) return
+        when (val parsed = parseChatCommand(text)) {
+            is ParsedCommand.Skill -> {
+                expandAndSend(parsed.name, parsed.args)
+                return
+            }
+
+            is ParsedCommand.Found -> if (parsed.command == ChatCommand.WORKSHOP_SKILL) {
+                expandAndSend("workshop", parsed.args)
+                return
+            }
+
+            else -> Unit
+        }
         startTurn(buildPrompt(current.quote, current.attachments, text))
     }
 
@@ -265,7 +280,7 @@ class ChatViewModel(
         autoRetryJobs.remove(sessionId)?.cancel()
     }
 
-    private fun startTurn(prompt: String) {
+    private fun startTurn(prompt: String, titleSeed: String = prompt) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
         clearAutoRetry(sessionId)
@@ -289,7 +304,13 @@ class ChatViewModel(
                 activity = uiStrings.thinking,
                 activityStartedAt = now,
                 error = null,
-                conversationTitle = it.conversationTitle.ifBlank { titleFrom(prompt) },
+                conversationTitle = if (
+                    it.conversationTitle.isBlank() || it.conversationTitle == uiStrings.newChatTitle
+                ) {
+                    titleFrom(titleSeed)
+                } else {
+                    it.conversationTitle
+                },
             )
         }
         cacheCurrentSession()
@@ -302,6 +323,26 @@ class ChatViewModel(
             } catch (error: Exception) {
                 finishRunError(sessionId, error.message ?: uiStrings.requestFailed)
             }
+        }
+    }
+
+    private fun expandAndSend(name: String, args: String) {
+        val current = mutableState.value
+        val sessionId = current.conversationId ?: return
+        mutableState.update { it.copy(sending = true, error = null) }
+        viewModelScope.launch {
+            val expansion = withContext(ioDispatcher) {
+                skillExpander?.expand(current.conversationCwd, name, args)
+            }
+            if (mutableState.value.conversationId != sessionId) return@launch
+            if (expansion == null) {
+                mutableState.update { it.copy(sending = false, error = uiStrings.skillMissing(name)) }
+                return@launch
+            }
+            startTurn(
+                buildPrompt(current.quote, current.attachments, expansion.prompt),
+                titleSeed = args.trim().ifBlank { expansion.name },
+            )
         }
     }
 
@@ -378,10 +419,10 @@ class ChatViewModel(
         }
     }
 
-    fun newSession(workspaceId: String) {
+    fun newSession(workspaceId: String, initialInput: String = "") {
         viewModelScope.launch {
             cacheCurrentSession()
-            createSession(workspaceId)
+            createSession(workspaceId, initialInput)
         }
     }
 
@@ -718,7 +759,7 @@ class ChatViewModel(
         sessionOpenJobs[summary.id] = job
     }
 
-    private fun createSession(workspaceId: String) {
+    private fun createSession(workspaceId: String, initialInput: String = "") {
         viewModelScope.launch {
             try {
                 val opened = withContext(ioDispatcher) { runtime.newSession(workspaceId) }
@@ -739,7 +780,7 @@ class ChatViewModel(
                         compacting = false,
                         historyLoaded = true,
                         switchingConversation = false,
-                        input = "",
+                        input = initialInput,
                         quote = null,
                         attachments = emptyList(),
                         error = null,

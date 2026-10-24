@@ -1,39 +1,38 @@
 # 创意工坊
 
-状态：已实现。每个创意是一个自包含的网页文件夹，由 Agent 编写，App 用 WebView 渲染成可交互的轻应用。
+状态：已实现。一个创意就是 Agent 写的一个自包含网页文件夹（HTML/CSS/JS/JSON），App 用 WebView 把它渲染成手机里的轻应用；没有预设分类，做什么完全由对话里的需求和 Agent 决定（爱心动画、待办、课程表、小游戏、计算器……都可以）。
 
 ## 入口
 
-- 抽屉「创意工坊」进入列表；右上角刷新图标重新扫描，`+` 新建。
-- 列表按最近修改排序，行上显示名称与「类型 · 说明」；格式不符的文件夹显示为「格式无效」，可删除。
-- 点任意行打开详情：全屏页面 + 顶部返回 / 名称 / ✨（让 Agent 修改）/ 更多（重新加载、重命名、删除）。
-
-## 三种创意
-
-| 类型 | 适合什么 | 页面行为 |
-|---|---|---|
-| 看板 `board` | 课程表、待办、日程等点击型工具 | 人类操作，数据经 bridge 持久化 |
-| 工作台 `workstation` | AI 视频剪辑、提示词工作台等需要人类参与的工具 | 人类点击为主，可调用 Agent 生成中间结果 |
-| 工作流 `workflow` | 打开即自动运行、人类只看进度/结果的流程页 | 页面自行调用 Agent，无需人类逐步操作 |
-
-三种类型共用同一套渲染与 bridge 能力；区别在默认骨架和展示文案。`workflow` 在页面打开时自动运行页面里的逻辑（页面关闭即停止）；后台/定时执行属于后续能力。
+- 抽屉「创意工坊」进入列表；右上角刷新图标重新扫描，`+` 直接新建一个 Home 会话，并在输入框预填 `/workshop-skill `。
+- 列表按最近修改排序，行 = 创意 icon（manifest 里的 emoji，缺省为 ✦）+ 名称 + 说明；格式不符的目录显示「格式无效 · 原因」，可删除。
+- 点行打开详情：全屏页面 + 顶部返回 / 名称 / 更多（重新加载、重命名、删除）。详情页只读，不在页面内驱动 Agent。
 
 ## 创建与修改
 
-两种方式，结果相同：
+创建由普通的 DeepDeep 会话完成，不需要额外入口或分类：
 
-1. **在对话里让 Agent 创建**：例如「做一个学习看板创意」。Agent 会先建草稿、按格式写页面，最后调用注册工具上架；成功后聊天回复下方出现入口卡片，点一下就能打开。
-2. **工坊页右上角 `+`**：填名称、选类型，直接生成一个可运行的起始页，再点 ✨ 让 Agent 继续做。
+1. 在会话输入框里用 `/workshop-skill ` 开头（工坊页 `+` 会自动打开这样的新会话并预填），也可以手动输入 `/skill:workshop `。
+2. `/workshop-skill` 会把内置的 workshop 技能完整读入当前会话（技能文件同时出现在「技能」页，可查看），DeepDeep 随即知道创意工坊的格式、工具和页面规范。
+3. 后面直接描述你想做的东西，例如「做一个点一下会跳动的爱心」「做一个本周课程表，可以自己加课」；Agent 会调用 `workshop_create` 建草稿、用文件工具写页面、调用 `workshop_load` 装载进 App，然后在聊天里给出入口卡片。
+4. 点卡片或到「创意工坊」列表打开。
 
-新建的创意默认带 `data.kv` 与 `agent.run` 两项权限；手工放进 `apps/` 的创意需要自己在 manifest 里声明。
+修改已有创意：从工坊退出回到聊天，直接说「把那个爱心改成点两下才跳」或「课程表加一列备注」。Agent 会用 `workshop_list` 找到该创意的目录并修改文件；用户重新打开就能看到新版本，不需要重新「安装」。
 
-修改已有创意：打开详情并点 ✨，输入需求（例如「改成深色并加周末课程」），Agent 会读取当前页面文件并直接修改，完成后页面自动刷新。看板/工作台的数据保存在 App 侧，重写页面不会丢失。
+## 斜杠命令
 
-页面里的 JavaScript 还可以主动调用受限 Agent（见下方 `agent.run`），适合「按钮触发生成」这类交互；需要跑命令、处理媒体的重活请用详情页的 ✨。
+| 命令 | 作用 |
+|---|---|
+| `/workshop-skill [需求]` | 强制加载内置的 workshop 技能；后面的文字作为本次需求一起发出去 |
+| `/skill:<name> [需求]` | 强制加载任意已启用技能（全局或当前工作区），技能内容会以 `<skill>` 块进入当前会话；未知技能会提示 |
+
+- 这种「强制加载」把技能文件的完整内容作为本轮上下文的一部分发给模型，而不是只依赖系统提示里的技能目录。
+- 新会话默认已经能看到已启用技能的目录；`/skill:` 用于确保某个技能一定被读入，尤其适合技能很多或刚改过技能文件时。
+- workshop 技能随 App 内置，App 启动时确保它在技能仓库与全局生效目录里；更新 App 会刷新内容。
 
 ## 文件夹格式
 
-Agent 写入的位置（App 私有目录）：
+Agent 使用的位置（App 私有目录）：
 
 ```
 files/workshop/
@@ -45,81 +44,60 @@ files/workshop/
 已上架创意目录：
 
 ```
-apps/study-board/
+apps/heart-app/
   manifest.json          必需，应用元信息
-  AGENTS.md              给 Agent 的格式与接口说明
-  index.html             入口页面（可在 manifest 里改）
+  index.html             入口页面
   style.css / app.js …   页面自己的静态资源
-  assets/ …              图片、字体等
 ```
 
 `manifest.json`：
 
 ```json
 {
-  "id": "study-board",
-  "name": "学习看板",
-  "type": "board",
-  "icon": "📚",
+  "id": "heart-app",
+  "name": "爱心",
+  "icon": "💗",
   "version": "1.0.0",
   "entry": "index.html",
-  "description": "课程表 + 待办，点按编辑",
-  "permissions": ["data.kv", "agent.run"]
+  "description": "点一下会跳动的爱心"
 }
 ```
 
-- `id`：只能用小写字母、数字、`-`、`_`，且与目录名一致。
-- `name`：1–40 字；`description`：≤300 字；`icon`：一个 emoji，省略时按类型给默认值。
-- `entry`：目录内的相对路径，必须以 `.html` 结尾。
-- `permissions`：页面要用到的桥能力，当前支持 `data.kv`、`agent.run`。
-- 页面必须是可独立运行的静态站点：移动端 viewport、相对路径引用资源、无构建步骤；支持 `prefers-color-scheme` 深浅色。
+- `id` 由工具生成、与目录名一致；`name` 1–40 字；`icon` 是一个 emoji（可省略）；`entry` 默认 `index.html`。
+- 没有类型、分类或权限字段；旧版本 manifest 里的 `type` / `permissions` 会被忽略，不影响打开。
+- 页面必须是可独立运行的静态站点：移动端 viewport、相对路径引用资源、无构建步骤；支持深/浅色。
+- 页面数据不要写进代码目录；持久化数据走 bridge，存在 App 侧 SQLite。
 
 ## 页面接口
 
-App 会在页面脚本运行前注入 `window.deepdeep`（别名 `window.app`），并提供主题 CSS 变量。所有方法返回 Promise。
+App 会在页面脚本运行前注入 `window.deepdeep`（别名 `window.app`），所有方法返回 Promise：
 
 ```js
 const todos = await app.data.get("todos");
-await app.data.set("todos", [...todos, { id: 1, text: "写完作业", done: false }]);
-
-const answer = await app.agent.run({
-  prompt: "根据课程表和待办安排今天的学习任务",
-  context: { courses, todos },
-  onEvent: (event) => renderProgress(event),
-});
-
+await app.data.set("todos", [...todos, { text: "写作业", done: false }]);
 app.toast("已保存");
 ```
 
 | 接口 | 说明 |
 |---|---|
-| `app.info()` | `{ app: { id, name, type, icon, version }, capabilities }` |
-| `app.data.get(key)` / `app.data.set(key, value)` / `app.data.remove(key)` / `app.data.keys()` | 每个创意独立的键值数据，值可以是任意 JSON，单值上限 256KB |
-| `app.agent.run({ prompt, context?, onEvent? })` | 调受限 Agent，返回最终文本；`onEvent` 收到 `started` / `text` / `tool` / `finished` |
-| `app.agent.cancel()` | 取消当前运行 |
-| `app.agent.onProgress(fn)` | 订阅运行事件，返回取消订阅函数 |
+| `app.info()` | `{ app: { id, name, icon, version } }` |
+| `app.data.get(key)` / `.set(key, value)` / `.remove(key)` / `.keys()` | 每个创意独立的 JSON 键值数据，单值上限 256KB |
 | `app.toast(text)` | 原生轻提示 |
-| `app.log.error(message, stack?)` | 手动上报错误（未捕获异常会自动上报） |
 
-- 每个创意同一时间只有一个 Agent 运行；运行中再次调用会返回 busy。
-- 页面触发的 Agent 只能读写本创意的页面文件，不能读 App 其他数据、不能执行 shell 或 MCP；需要完整能力时用详情页的 ✨。
-- 页面可以使用 `fetch` 读取本创意内的静态文件；写数据请走 `app.data`。
-
-## 主题与错误
-
-- 注入的 CSS 变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，同时设置 `color-scheme`；页面可直接使用，App 切换主题时同步更新。
-- 未捕获异常、未处理的 Promise 拒绝与 `console.error` 会回报给 App：详情页 ✨ 按钮上出现红点，打开 Agent 面板可以「根据报错修复」，把堆栈交给 Agent 直接改；主框架加载失败则显示整页错误与重试。
+- 主题变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，同时设置 `color-scheme`；页面用它跟随 App 深浅色。
 - `alert` 会显示成原生轻提示；`confirm` / `prompt` / Service Worker 不可用，请用页面内 UI。
+- 页面不能调用 Agent、不能读写其他创意或 App 数据；需要改页面时退出创意，在聊天里说。
 
 ## 数据与安全
 
-- 页面代码与数据物理分开：`apps/<id>/` 是代码，`userdata/<id>.db` 是数据（SQLite）。Agent 重写整个页面不会影响数据。
+- 代码与数据物理分开：`apps/<id>/` 是代码，`userdata/<id>.db` 是数据；Agent 重写整个页面不影响数据。
 - 删除创意会删除页面目录和对应数据，无法恢复。
-- 每个创意运行在独立虚拟域名下，只能访问自己的页面文件；页面发起的 Agent 调用受权限声明和路径沙箱限制。
-- 创意内容由本机 Agent/用户生成；页面可以请求外部网络，但不会自动获得 App 的其他能力。后续能力按需扩展，并在 `manifest.json` 中声明权限。
+- 每个创意运行在独立虚拟域名下，只能访问自己的页面文件；页面可以请求外部网络，但不会自动获得 App 的其他能力。
+- 创意内容由本机 DeepDeep/用户生成；不要在页面或代码里写 API Key、Cookie 等敏感信息。
 
 ## 限制
 
-- 创意列表不提供导入/导出或市场；直接把合法目录放进 `apps/` 会被扫描到。
-- 后台/定时运行工作流、媒体选择、完整 Agent 等能力尚未开放，后续按 App 能力逐步加入。
-- 页面数据目前是键值存储，不支持 SQL 查询；需要复杂查询时可以在数据之上自行建索引。
+- 不支持在创意页面里调用 Agent，也不支持页面内编辑；修改统一回到聊天。
+- 创意列表不提供导入/导出或市场；把合法目录直接放进 `apps/` 会被扫描到。
+- 数据目前是键值存储，不支持 SQL 查询；后台/定时运行、媒体选择等能力后续按需扩展。
+- 内置 workshop 技能随 App 更新，用户对它的修改可能在下次启动时被刷新。

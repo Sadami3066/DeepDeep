@@ -5,7 +5,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -19,7 +18,7 @@ import org.junit.Test
 
 class WorkshopBridgeTest {
     @Test
-    fun infoReturnsAppAndCapabilities() = runTest {
+    fun infoReturnsTheAppIdentity() = runTest {
         val bridge = Bridge()
         val response = bridge.call("info")
 
@@ -28,20 +27,10 @@ class WorkshopBridgeTest {
         val app = result.getValue("app").jsonObject
         assertEquals("garden", app.text("id"))
         assertEquals("Garden", app.text("name"))
-        assertEquals("board", app.text("type"))
+        assertEquals("🌱", app.text("icon"))
         assertEquals("1.0.0", app.text("version"))
-        assertEquals(
-            listOf("data.kv", "agent.run"),
-            result.getValue("capabilities").jsonArray.map { it.jsonPrimitive.content },
-        )
-    }
-
-    @Test
-    fun infoCapabilitiesFollowPermissions() = runTest {
-        val bridge = Bridge(permissions = setOf(WorkshopPermissions.DATA_KV))
-        val result = bridge.call("info").getValue("result").jsonObject
-
-        assertEquals(listOf("data.kv"), result.getValue("capabilities").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(setOf("id", "name", "icon", "version"), app.keys)
+        assertFalse(result.containsKey("capabilities"))
     }
 
     @Test
@@ -65,7 +54,10 @@ class WorkshopBridgeTest {
 
         val removeResponse = bridge.call("data.remove", buildJsonObject { put("key", "todos") })
         assertTrue(removeResponse.getValue("result").jsonPrimitive.boolean)
-        assertFalse(bridge.call("data.remove", buildJsonObject { put("key", "todos") }).getValue("result").jsonPrimitive.boolean)
+        assertFalse(
+            bridge.call("data.remove", buildJsonObject { put("key", "todos") })
+                .getValue("result").jsonPrimitive.boolean,
+        )
 
         val missing = bridge.call("data.get", buildJsonObject { put("key", "todos") })
         assertEquals(JsonNull, missing.getValue("result"))
@@ -81,18 +73,6 @@ class WorkshopBridgeTest {
     }
 
     @Test
-    fun dataMethodsRequirePermission() = runTest {
-        val bridge = Bridge(permissions = emptySet())
-
-        assertEquals("forbidden", bridge.call("data.get", buildJsonObject { put("key", "x") }).errorCode())
-        assertEquals(
-            "forbidden",
-            bridge.call("data.set", buildJsonObject { put("key", "x"); put("value", 1) }).errorCode(),
-        )
-        assertEquals("forbidden", bridge.call("data.keys", buildJsonObject {}).errorCode())
-    }
-
-    @Test
     fun invalidKeyIsRejected() = runTest {
         val bridge = Bridge()
 
@@ -102,19 +82,22 @@ class WorkshopBridgeTest {
         )
         assertEquals(
             "data_invalid_key",
-            bridge.call("data.get", buildJsonObject { put("key", "-leading") }).errorCode(),
+            bridge.call("data.set", buildJsonObject { put("key", "-leading"); put("value", 1) }).errorCode(),
+        )
+        assertEquals(
+            "data_invalid_key",
+            bridge.call("data.remove", buildJsonObject { put("key", "a".repeat(65)) }).errorCode(),
         )
     }
 
     @Test
     fun oversizedValueIsRejected() = runTest {
         val bridge = Bridge()
-        val oversized = "x".repeat(256 * 1024 + 1)
         val response = bridge.call(
             "data.set",
             buildJsonObject {
                 put("key", "blob")
-                put("value", oversized)
+                put("value", "x".repeat(256 * 1024 + 1))
             },
         )
 
@@ -126,108 +109,9 @@ class WorkshopBridgeTest {
     fun dataFailuresMapToDataCorrupt() = runTest {
         val bridge = Bridge()
         bridge.data.failure = IllegalStateException("database is closed")
-        val response = bridge.call("data.get", buildJsonObject { put("key", "todos") })
 
-        assertEquals("data_corrupt", response.errorCode())
-    }
-
-    @Test
-    fun agentRunStreamsEventsAndReturnsText() = runTest {
-        val agent = FakeAgent()
-        val bridge = Bridge(agent = agent)
-        val context = buildJsonObject { put("page", "board") }
-
-        val response = bridge.call(
-            "agent.run",
-            buildJsonObject {
-                put("prompt", "  add a header  ")
-                put("context", context)
-            },
-        )
-
-        assertTrue(response.bool("ok"))
-        assertEquals("final text", response.getValue("result").jsonObject.text("text"))
-        assertEquals("add a header", agent.lastInstruction)
-        assertEquals(context, agent.lastContext)
-        assertEquals(
-            listOf("started", "text", "text", "tool", "finished"),
-            bridge.emitted.map { it.text("type") },
-        )
-        assertTrue(bridge.emitted.all { it.text("event") == "agent" })
-        assertEquals("Hel", bridge.emitted[1].text("delta"))
-        assertEquals("lo", bridge.emitted[2].text("delta"))
-        assertEquals("read", bridge.emitted[3].text("name"))
-    }
-
-    @Test
-    fun agentRunRequiresRunner() = runTest {
-        val bridge = Bridge(agent = null)
-        val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hello") })
-
-        assertEquals("forbidden", response.errorCode())
-    }
-
-    @Test
-    fun agentRunRequiresPermission() = runTest {
-        val bridge = Bridge(permissions = emptySet(), agent = FakeAgent())
-        val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hello") })
-
-        assertEquals("forbidden", response.errorCode())
-    }
-
-    @Test
-    fun agentRunRejectsBadPrompts() = runTest {
-        val bridge = Bridge(agent = FakeAgent())
-
-        assertEquals("invalid_params", bridge.call("agent.run", buildJsonObject { put("prompt", "   ") }).errorCode())
-        assertEquals("invalid_params", bridge.call("agent.run", buildJsonObject {}).errorCode())
-        assertEquals(
-            "invalid_params",
-            bridge.call("agent.run", buildJsonObject { put("prompt", "x".repeat(8001)) }).errorCode(),
-        )
-    }
-
-    @Test
-    fun agentRunRejectsOversizedContext() = runTest {
-        val bridge = Bridge(agent = FakeAgent())
-        val response = bridge.call(
-            "agent.run",
-            buildJsonObject {
-                put("prompt", "hello")
-                put("context", "x".repeat(32 * 1024 + 1))
-            },
-        )
-
-        assertEquals("invalid_params", response.errorCode())
-    }
-
-    @Test
-    fun agentFailuresMapToBridgeCodes() = runTest {
-        val cases = listOf(
-            "busy" to "busy",
-            "timeout" to "agent_timeout",
-            "agent_cancelled" to "agent_cancelled",
-            "model_missing" to "model_missing",
-            "agent_failed" to "agent_failed",
-            "unexpected" to "agent_failed",
-        )
-        cases.forEach { (code, expected) ->
-            val agent = FakeAgent().apply { failure = WorkshopAgentException(code, "boom") }
-            val bridge = Bridge(agent = agent)
-            val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hello") })
-            assertEquals(expected, response.errorCode())
-        }
-    }
-
-    @Test
-    fun agentCancelForwardsToRunner() = runTest {
-        val agent = FakeAgent()
-        val bridge = Bridge(agent = agent)
-        val response = bridge.call("agent.cancel", buildJsonObject {})
-
-        assertTrue(response.bool("ok"))
-        assertTrue(response.getValue("result").jsonPrimitive.boolean)
-        assertEquals(1, agent.cancelCount)
+        assertEquals("data_corrupt", bridge.call("data.get", buildJsonObject { put("key", "todos") }).errorCode())
+        assertEquals("data_corrupt", bridge.call("data.keys", buildJsonObject {}).errorCode())
     }
 
     @Test
@@ -236,6 +120,7 @@ class WorkshopBridgeTest {
         val response = bridge.call("ui.toast", buildJsonObject { put("text", "saved") })
 
         assertTrue(response.bool("ok"))
+        assertTrue(response.getValue("result").jsonPrimitive.boolean)
         assertEquals(listOf("saved"), bridge.toastMessages)
         assertEquals("invalid_params", bridge.call("ui.toast", buildJsonObject { put("text", "x".repeat(201)) }).errorCode())
         assertEquals("invalid_params", bridge.call("ui.toast", buildJsonObject {}).errorCode())
@@ -244,7 +129,7 @@ class WorkshopBridgeTest {
     @Test
     fun unknownMethodIsRejected() = runTest {
         val bridge = Bridge()
-        assertEquals("unknown_method", bridge.call("workshop.nope", buildJsonObject {}).errorCode())
+        assertEquals("unknown_method", bridge.call("agent.run", buildJsonObject {}).errorCode())
     }
 
     @Test
@@ -276,22 +161,23 @@ class WorkshopBridgeTest {
         assertEquals("invalid_params", bridge.call("data.set", buildJsonObject { put("key", "x") }).errorCode())
     }
 
-    private class Bridge(
-        permissions: Set<String> = setOf(WorkshopPermissions.DATA_KV, WorkshopPermissions.AGENT_RUN),
-        agent: WorkshopAgentRunner? = null,
-    ) {
+    @Test
+    fun requestsNeverEmitEvents() = runTest {
+        val bridge = Bridge()
+        bridge.call("info")
+        bridge.call("data.keys", buildJsonObject {})
+        bridge.call("ui.toast", buildJsonObject { put("text", "hi") })
+
+        assertTrue(bridge.emitted.isEmpty())
+    }
+
+    private class Bridge {
         val data = FakeData()
         val toastMessages = mutableListOf<String>()
         val emitted = mutableListOf<JsonObject>()
         private val router = WorkshopBridgeRouter(
-            WorkshopManifest(
-                id = "garden",
-                name = "Garden",
-                type = WorkshopType.BOARD,
-                permissions = permissions,
-            ),
+            WorkshopManifest(id = "garden", name = "Garden", icon = "🌱", version = "1.0.0"),
             data,
-            agent,
             { toastMessages.add(it) },
         )
 
@@ -334,34 +220,6 @@ class WorkshopBridgeTest {
         }
 
         override fun close() {}
-    }
-
-    private class FakeAgent : WorkshopAgentRunner {
-        var failure: WorkshopAgentException? = null
-        var result = "final text"
-        var lastInstruction: String? = null
-        var lastContext: JsonElement? = null
-        var cancelCount = 0
-
-        override suspend fun run(
-            instruction: String,
-            context: JsonElement?,
-            onEvent: (WorkshopAgentEvent) -> Unit,
-        ): String {
-            lastInstruction = instruction
-            lastContext = context
-            failure?.let { throw it }
-            onEvent(WorkshopAgentEvent.Started)
-            onEvent(WorkshopAgentEvent.Text("Hel"))
-            onEvent(WorkshopAgentEvent.Text("lo"))
-            onEvent(WorkshopAgentEvent.Tool("read"))
-            onEvent(WorkshopAgentEvent.Finished)
-            return result
-        }
-
-        override suspend fun cancel() {
-            cancelCount++
-        }
     }
 }
 

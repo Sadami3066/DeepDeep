@@ -21,6 +21,8 @@ import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
+import io.github.whywood.deepdeep.runtime.SkillExpander
+import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -54,13 +56,18 @@ class ChatViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(runtime: FakeRuntime, autoRetry: Boolean = false) = ChatViewModel(
+    private fun viewModel(
+        runtime: FakeRuntime,
+        autoRetry: Boolean = false,
+        skillExpander: SkillExpander? = null,
+    ) = ChatViewModel(
         runtime,
         FakeProviders(),
         FakeSettings(),
         FakeAttachmentStore(),
         prepareRuntime = {},
         autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
+        skillExpander = skillExpander,
         ioDispatcher = dispatcher,
     )
 
@@ -436,6 +443,111 @@ class ChatViewModelTest {
         assertEquals(strings.requestFailed, strings.runError(null))
     }
 
+    @Test
+    fun workshopSkillExpandsPromptBeforeSending() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/workshop-skill build a todo app")
+        viewModel.send()
+        assertTrue(viewModel.state.value.sending)
+        advanceUntilIdle()
+
+        assertEquals(listOf(Triple(HOME_CWD, "workshop", "build a todo app")), expander.calls)
+        assertEquals(SKILL_PROMPT, runtime.sent.single())
+        assertEquals(SKILL_PROMPT, viewModel.state.value.messages.first().text)
+        assertEquals("build a todo app", viewModel.state.value.conversationTitle)
+        assertEquals("", viewModel.state.value.input)
+    }
+
+    @Test
+    fun workshopSkillWithoutArgsUsesSkillNameAsTitle() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/workshop-skill")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
+        assertEquals(SKILL_PROMPT, runtime.sent.single())
+        assertEquals("workshop", viewModel.state.value.conversationTitle)
+    }
+
+    @Test
+    fun skillNamespaceExpandsNamedSkill() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(SkillExpansion("pdf-tools", SKILL_PROMPT))
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/skill:pdf-tools extract tables")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(Triple(HOME_CWD, "pdf-tools", "extract tables"), expander.calls.single())
+        assertEquals(SKILL_PROMPT, runtime.sent.single())
+    }
+
+    @Test
+    fun missingSkillExpanderShowsError() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/skill:nope do it")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.sending)
+        assertTrue(runtime.sent.isEmpty())
+        assertEquals(ChatUiStrings.fallback().skillMissing("nope"), viewModel.state.value.error)
+        assertEquals("/skill:nope do it", viewModel.state.value.input)
+    }
+
+    @Test
+    fun unknownSkillShowsErrorWithoutSending() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val expander = FakeSkillExpander(null)
+        val viewModel = viewModel(runtime, skillExpander = expander)
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/workshop-skill build something")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(Triple(HOME_CWD, "workshop", "build something"), expander.calls.single())
+        assertFalse(viewModel.state.value.sending)
+        assertTrue(runtime.sent.isEmpty())
+        assertEquals(ChatUiStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+    }
+
+    @Test
+    fun newSessionPrefillsInput() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        viewModel.newSession(HOME_ID, initialInput = "/workshop-skill build a todo app")
+        advanceUntilIdle()
+
+        assertEquals("/workshop-skill build a todo app", viewModel.state.value.input)
+        assertTrue(viewModel.state.value.messages.isEmpty())
+    }
+
+    private class FakeSkillExpander(private val result: SkillExpansion?) : SkillExpander {
+        val calls = mutableListOf<Triple<String, String, String>>()
+
+        override suspend fun expand(cwd: String, name: String, args: String): SkillExpansion? {
+            calls += Triple(cwd, name, args)
+            return result
+        }
+    }
+
     private class FakeRuntime : AgentRuntime {
         private val flow = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 64)
         private val busy = MutableStateFlow<Set<String>>(emptySet())
@@ -564,5 +676,7 @@ class ChatViewModelTest {
     private companion object {
         const val HOME_ID = "home"
         const val HOME_CWD = "/home"
+        const val SKILL_PROMPT =
+            "<skill name=\"workshop\" location=\"/home/skills/workshop/SKILL.md\">\n# Workshop\n</skill>\n\nbuild a todo app"
     }
 }

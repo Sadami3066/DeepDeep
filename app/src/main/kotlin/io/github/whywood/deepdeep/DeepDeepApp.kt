@@ -77,6 +77,7 @@ import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
+import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.chat.displayToolName
@@ -114,6 +115,7 @@ internal fun DeepDeepApp(
     val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
     val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
     val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
+    val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
     val chatUiStrings = ChatUiStrings(
         thinking = stringResource(R.string.chat_status_thinking),
         retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
@@ -154,6 +156,7 @@ internal fun DeepDeepApp(
         nothingToCompact = stringResource(R.string.chat_compact_none),
         compactionBusy = stringResource(R.string.chat_compact_busy),
         compactionUnavailable = stringResource(R.string.chat_compact_unavailable),
+        skillMissing = { name -> skillMissingTemplate.replace("%1\$s", name) },
     )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
@@ -166,6 +169,7 @@ internal fun DeepDeepApp(
                     prepareRuntime = graph::prepare,
                     autoRetry = graph.appPreferences.preferences.map { preferences -> preferences.autoRetry },
                     uiStrings = chatUiStrings,
+                    skillExpander = graph.skillCatalog,
                 )
             }
         },
@@ -261,6 +265,13 @@ internal fun DeepDeepApp(
 
     val commandItems = listOf(
         CommandItem(
+            id = ChatCommand.WORKSHOP_SKILL.commandName,
+            name = ChatCommand.WORKSHOP_SKILL.commandName,
+            title = stringResource(R.string.chat_cmd_workshop_skill),
+            description = stringResource(R.string.chat_cmd_workshop_skill_desc),
+            enabled = state.conversationId != null && !state.sending,
+        ),
+        CommandItem(
             id = ChatCommand.COMPACT.commandName,
             name = ChatCommand.COMPACT.commandName,
             title = stringResource(R.string.chat_cmd_compact),
@@ -303,11 +314,22 @@ internal fun DeepDeepApp(
         when (command) {
             ChatCommand.COMPACT -> if (args.isEmpty()) chatViewModel.compactContext() else rejectCommandArgs(command.commandName)
             ChatCommand.GOAL -> runGoalCommand(args.trim())
+            ChatCommand.WORKSHOP_SKILL -> chatViewModel.send()
         }
     }
 
     fun pickCommand(command: ChatCommand) {
         val trigger = findCommandTrigger(state.input)
+        if (command == ChatCommand.WORKSHOP_SKILL) {
+            val base = if (trigger != null) {
+                state.input.removeRange(trigger.start, state.input.length).trimEnd()
+            } else {
+                state.input.trimEnd()
+            }
+            val prefix = if (base.isEmpty() || base.endsWith("\n")) "" else " "
+            chatViewModel.onInputChange(base + prefix + WORKSHOP_SKILL_PREFILL)
+            return
+        }
         if (trigger != null) {
             chatViewModel.onInputChange(state.input.removeRange(trigger.start, state.input.length).trimEnd())
         }
@@ -317,12 +339,17 @@ internal fun DeepDeepApp(
     fun submitChatInput() {
         when (val parsed = parseChatCommand(state.input)) {
             ParsedCommand.None -> chatViewModel.send()
+            is ParsedCommand.Skill -> chatViewModel.send()
             is ParsedCommand.Found -> {
-                if (!parsed.command.takesArguments && parsed.args.isNotEmpty()) {
-                    rejectCommandArgs(parsed.command.commandName)
-                } else {
-                    chatViewModel.onInputChange("")
-                    runChatCommand(parsed.command, parsed.args)
+                when {
+                    parsed.command == ChatCommand.WORKSHOP_SKILL -> chatViewModel.send()
+                    !parsed.command.takesArguments && parsed.args.isNotEmpty() ->
+                        rejectCommandArgs(parsed.command.commandName)
+
+                    else -> {
+                        chatViewModel.onInputChange("")
+                        runChatCommand(parsed.command, parsed.args)
+                    }
                 }
             }
 
@@ -334,6 +361,12 @@ internal fun DeepDeepApp(
 
     fun closeDrawer() {
         drawerOpen = false
+    }
+
+    fun openWorkshopCreate() {
+        drawerOpen = false
+        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, WORKSHOP_SKILL_PREFILL)
+        navigator.reset(AppDestination.Chat)
     }
 
     fun openChat() {
@@ -700,11 +733,11 @@ internal fun DeepDeepApp(
                     store = graph.workshopStore,
                     onBack = ::back,
                     onOpen = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                    onCreate = ::openWorkshopCreate,
                 )
 
                 is AppDestination.WorkshopDetail -> WorkshopViewerScreen(
                     store = graph.workshopStore,
-                    agentService = graph.workshopAgentService,
                     creationId = destination.id,
                     onBack = ::back,
                 )
@@ -980,3 +1013,5 @@ internal fun DeepDeepApp(
     }
     }
 }
+
+private const val WORKSHOP_SKILL_PREFILL = "/workshop-skill "

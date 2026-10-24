@@ -7,7 +7,7 @@
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
 | SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
-| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_register`/`workshop_list` |
+| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list` |
 | 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch` |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
 | Android 能力 | app 进程 | 设计；通知、Intent、联系人等需要单独评审权限 |
@@ -128,11 +128,11 @@ defaultCodingTools(...)
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
-| `workshop_create` | `name`, `type`（board/workstation/workflow）, `description?`, `icon?` | 在 `files/workshop/build/` 建一个创意草稿（manifest.json、AGENTS.md、入口 starter），返回草稿绝对路径 |
-| `workshop_register` | `path`（草稿绝对路径） | 校验清单、入口、大小与路径后原子移动到 `files/workshop/apps/<id>/`，成功后聊天里出现入口卡片；失败返回错误让 Agent 当场修 |
-| `workshop_list` | 无 | 列出已上架创意（含可编辑的绝对路径）与未注册草稿 |
+| `workshop_create` | `name`, `description?`, `icon?` | 在 `files/workshop/build/` 建一个草稿（只写 manifest.json），返回草稿绝对路径 |
+| `workshop_load` | `path`（草稿绝对路径） | 校验清单、入口、大小与路径后原子移动到 `files/workshop/apps/<id>/`，成功后聊天里出现入口卡片；失败返回错误让 Agent 当场修 |
+| `workshop_list` | 无 | 列出已上架创意（含可编辑的绝对路径）与未完成草稿 |
 
-- 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入；动手前先读草稿里的 `AGENTS.md`（格式、bridge SDK、页面规范）。
-- 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要再次注册；工坊页进入时重新扫描。
-- 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。
-- 页面可通过 `agent.run` 调用受限 Agent；站内「让 Agent 修改」由用户触发完整编码 Agent。能力与权限详见 `docs/WORKSHOP.md`。
+- 创意形态完全由需求决定，没有分类/模板字段；格式与页面规范由内置 workshop 技能（`/workshop-skill` 或 `/skill:workshop` 强制加载）说明。
+- 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入。
+- 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要重新 load；工坊页进入时重新扫描。
+- 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。页面不能调用 Agent，修改统一回到聊天。

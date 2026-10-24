@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.BuiltinSkills
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
 import io.github.whywood.deepdeep.runtime.InstallationIdStore
@@ -50,7 +51,7 @@ import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
+import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
@@ -76,6 +77,10 @@ class AppGraph(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
+
+    private companion object {
+        const val WORKSHOP_SKILL_ID = "workshop"
+    }
 
     init {
         StorageMigration.migrate(appContext.filesDir)
@@ -139,6 +144,7 @@ class AppGraph(context: Context) {
     val agentDocStore = AgentDocStore()
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
     val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
+    val skillCatalog = SkillCatalog(agentDir)
     val goalService: GoalService by lazy { GoalService(GoalStore(File(appContext.filesDir, "goals")), scope) }
     val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -247,26 +253,6 @@ class AppGraph(context: Context) {
         )
     }
 
-    private val workshopEngineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        PiSessionEngine(
-            workspace = cwd,
-            agentDir = agentDir,
-            credentials = credentials,
-            shellExecutor = shellExecutorFor(cwd),
-            providers = providerCatalog,
-            personalization = { personalizationStore.read().toRuntime() },
-            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
-            toolContext = null,
-        )
-    }
-
-    val workshopAgentService: WorkshopAgentService by lazy {
-        WorkshopAgentService(
-            engineFactory = workshopEngineFactory,
-            modelConfigStore = modelConfigStore,
-        )
-    }
-
     val host = AgentRuntimeHost(
         homeDir = homeDir,
         workspacesDir = workspacesDir,
@@ -289,6 +275,7 @@ class AppGraph(context: Context) {
     val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     init {
+        ensureBuiltinSkills()
         scope.launch { pluginManager.start() }
         scope.launch {
             host.events.collect { event ->
@@ -304,6 +291,18 @@ class AppGraph(context: Context) {
         LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
         importDebugKey()
         credentials.preloadAll()
+    }
+
+    private fun ensureBuiltinSkills() {
+        val content = runCatching {
+            appContext.assets.open("skills/workshop/SKILL.md").bufferedReader().use { it.readText() }
+        }.getOrNull() ?: return
+        BuiltinSkills.ensure(
+            repoDir = File(appContext.filesDir, "skills"),
+            agentDir = agentDir,
+            id = WORKSHOP_SKILL_ID,
+            content = content,
+        )
     }
 
     private suspend fun importDebugKey() {

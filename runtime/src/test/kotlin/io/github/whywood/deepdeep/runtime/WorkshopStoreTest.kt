@@ -3,10 +3,11 @@ package io.github.whywood.deepdeep.runtime
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -34,158 +35,175 @@ class WorkshopStoreTest {
         file.writeText(text)
     }
 
-    private fun manifestText(id: String, name: String = "App", type: String = "board"): String =
-        "{\"id\":\"$id\",\"name\":\"$name\",\"type\":\"$type\"}"
+    private fun manifestText(
+        id: String,
+        name: String = "App",
+        icon: String = "",
+        version: String = "1.0.0",
+        entry: String = "index.html",
+        description: String = "",
+    ): String = buildJsonObject {
+        put("id", id)
+        put("name", name)
+        put("icon", icon)
+        put("version", version)
+        put("entry", entry)
+        put("description", description)
+    }.toString()
 
-    private fun appDir(name: String): File = File(store.appsDir, name)
+    private fun appDir(id: String): File = File(store.appsDir, id)
+
+    private fun installApp(
+        id: String,
+        name: String = "App",
+        icon: String = "",
+        description: String = "",
+    ): File {
+        val directory = appDir(id)
+        directory.mkdirs()
+        writeText(File(directory, "manifest.json"), manifestText(id, name, icon, description = description))
+        writeText(File(directory, "index.html"), "<html></html>")
+        return directory
+    }
 
     private fun draftDir(name: String): File = File(store.buildDir, name)
 
-    private suspend fun installFailure(path: String): String = try {
-        store.install(path)
-        fail("expected WorkshopInstallException")
+    private suspend fun loadFailure(path: String): String = try {
+        store.loadDraft(path)
+        fail("expected WorkshopLoadException")
         ""
-    } catch (error: WorkshopInstallException) {
+    } catch (error: WorkshopLoadException) {
+        error.message.orEmpty()
+    }
+
+    private suspend fun manifestFailure(block: suspend () -> Unit): String = try {
+        block()
+        fail("expected WorkshopManifestException")
+        ""
+    } catch (error: WorkshopManifestException) {
         error.message.orEmpty()
     }
 
     @Test
-    fun createDraftWritesTheFullSkeleton() = runTest {
-        val draft = store.createDraft("My Board", WorkshopType.BOARD, description = "Demo board")
+    fun createDraftWritesOnlyManifest() = runTest {
+        val draft = store.createDraft("My Board")
         val directory = draft.directory
         assertTrue(directory.isDirectory)
         assertEquals(store.buildDir, directory.parentFile)
         assertEquals("my-board", draft.manifest.id)
-        assertEquals("Demo board", draft.manifest.description)
-        assertEquals("🗂️", draft.manifest.icon)
-        assertTrue(directory.name.startsWith("my-board-"))
-        assertEquals(14, directory.name.length)
+        assertEquals("My Board", draft.manifest.name)
+        assertEquals("", draft.manifest.icon)
+        assertEquals("1.0.0", draft.manifest.version)
+        assertEquals("index.html", draft.manifest.entry)
+        assertEquals("", draft.manifest.description)
+        assertEquals(listOf("manifest.json"), directory.listFiles()!!.map { it.name })
         assertEquals(draft.manifest, WorkshopManifest.parse(File(directory, "manifest.json").readText()))
-        val agents = File(directory, "AGENTS.md").readText()
-        assertTrue(agents.contains("window.deepdeep"))
-        assertTrue(agents.contains("manifest.json"))
-        assertTrue(agents.contains("data.kv"))
-        val html = File(directory, "index.html").readText()
-        assertTrue(html.contains("window.deepdeep"))
-        assertTrue(html.contains("data.get"))
-        assertTrue(html.contains("width=device-width"))
         val drafts = store.drafts()
         assertEquals(1, drafts.size)
         assertEquals(directory, drafts.first().directory)
         assertEquals(draft.manifest.id, drafts.first().manifest?.id)
+        assertEquals(0, store.scan().creations.size)
     }
 
     @Test
-    fun starterPagesAreStandalonePerType() = runTest {
-        val drafts = listOf(
-            store.createDraft("Board Page", WorkshopType.BOARD),
-            store.createDraft("Workstation Page", WorkshopType.WORKSTATION),
-            store.createDraft("Workflow Page", WorkshopType.WORKFLOW),
-        )
-        drafts.forEach { draft ->
-            val html = File(draft.directory, "index.html").readText()
-            assertTrue(html.contains("width=device-width"))
-            assertTrue(html.contains("window.deepdeep"))
-            assertFalse(html.contains("http://"))
-            assertFalse(html.contains("https://"))
-            assertTrue(html.startsWith("<!DOCTYPE html>"))
-        }
-        assertEquals(WorkshopType.BOARD, store.drafts().first { it.manifest?.id == "board-page" }.manifest?.type)
-        val workstationHtml = File(drafts[1].directory, "index.html").readText()
-        assertTrue(workstationHtml.contains("让 Agent 生成"))
-        assertTrue(workstationHtml.contains("bridge.agent.run"))
-        val workflowHtml = File(drafts[2].directory, "index.html").readText()
-        assertTrue(workflowHtml.contains("onEvent"))
-        assertTrue(workflowHtml.contains("bridge.agent.run"))
+    fun createDraftAppliesIconAndDescription() = runTest {
+        val draft = store.createDraft("Styled", description = "  Demo app  ", icon = " 🧰 ")
+        assertEquals("🧰", draft.manifest.icon)
+        assertEquals("Demo app", draft.manifest.description)
+        assertEquals("", store.createDraft("Plain", icon = "").manifest.icon)
+        assertEquals("", store.createDraft("No Icon").manifest.icon)
+        assertTrue(manifestFailure { store.createDraft("Icon", icon = "123456789") }.contains("icon"))
+        assertTrue(manifestFailure { store.createDraft("Desc", description = "d".repeat(301)) }.contains("description"))
+        assertTrue(manifestFailure { store.createDraft("a".repeat(41)) }.contains("name"))
     }
 
     @Test
     fun createDraftSlugsAndFallsBack() = runTest {
-        assertEquals("todo-list", store.createDraft("Todo List", WorkshopType.BOARD).manifest.id)
-        assertEquals("todo-list-2", store.createDraft("Todo List", WorkshopType.BOARD).manifest.id)
-        val fallback = store.createDraft("我的 看板！", WorkshopType.BOARD)
+        assertEquals("todo-list", store.createDraft("Todo List").manifest.id)
+        assertEquals("todo-list-2", store.createDraft("Todo List").manifest.id)
+        val fallback = store.createDraft("我的 看板！")
         assertTrue(fallback.manifest.id.startsWith("app-"))
         assertTrue(WorkshopManifest.ID_REGEX.matches(fallback.manifest.id))
-        val installed = store.createInstalled("Todo List", WorkshopType.WORKSTATION)
-        assertEquals("todo-list-3", installed.manifest.id)
-        assertNotEquals("todo-list", installed.manifest.id)
+        installApp("listed-app")
+        assertEquals("listed-app-2", store.createDraft("Listed App").manifest.id)
     }
 
     @Test
-    fun installMovesDraftIntoApps() = runTest {
-        val draft = store.createDraft("Install Me", WorkshopType.BOARD)
-        val creation = store.install(draft.directory.absolutePath)
+    fun loadDraftMovesDraftIntoApps() = runTest {
+        val draft = store.createDraft("Load Me")
+        writeText(File(draft.directory, "index.html"), "<html><body>hi</body></html>")
+        writeText(File(draft.directory, "style.css"), "body{}")
+        val creation = store.loadDraft(draft.directory.absolutePath)
         assertEquals(draft.manifest, creation.manifest)
-        assertEquals(File(store.appsDir, draft.manifest.id), creation.directory)
+        assertEquals(File(store.appsDir, "load-me"), creation.directory)
         assertFalse(draft.directory.exists())
-        assertTrue(File(creation.directory, "index.html").isFile)
-        assertTrue(File(creation.directory, "AGENTS.md").isFile)
+        assertEquals(
+            setOf("manifest.json", "index.html", "style.css"),
+            creation.directory.listFiles()!!.map { it.name }.toSet(),
+        )
         assertTrue(store.userdataDir.isDirectory)
         assertTrue(store.drafts().isEmpty())
-        val loaded = store.load(creation.manifest.id)
+        val loaded = store.load("load-me")
         assertTrue(loaded is WorkshopEntry.Valid)
         assertEquals(creation.manifest, (loaded as WorkshopEntry.Valid).creation.manifest)
     }
 
     @Test
-    fun installRejectsMissingEntry() = runTest {
-        val draft = store.createDraft("No Entry", WorkshopType.BOARD)
-        assertTrue(File(draft.directory, "index.html").delete())
-        val message = installFailure(draft.directory.absolutePath)
-        assertTrue(message.contains("entry"))
+    fun loadDraftRejectsMissingEntry() = runTest {
+        val draft = store.createDraft("No Entry")
+        assertTrue(loadFailure(draft.directory.absolutePath).contains("entry"))
     }
 
     @Test
-    fun installRejectsInvalidManifest() = runTest {
-        val draft = store.createDraft("Broken Manifest", WorkshopType.BOARD)
+    fun loadDraftRejectsInvalidManifest() = runTest {
+        val draft = store.createDraft("Broken")
         File(draft.directory, "manifest.json").writeText("{\"id\":")
-        val message = installFailure(draft.directory.absolutePath)
-        assertTrue(message.contains("invalid"))
+        assertTrue(loadFailure(draft.directory.absolutePath).contains("invalid"))
+        val noManifest = draftDir("legacy-abcde").also { it.mkdirs() }
+        writeText(File(noManifest, "index.html"), "<html></html>")
+        assertTrue(loadFailure(noManifest.absolutePath).contains("manifest.json"))
     }
 
     @Test
-    fun installRejectsTooManyFiles() = runTest {
-        val draft = store.createDraft("Too Many", WorkshopType.BOARD)
+    fun loadDraftRejectsTooManyFiles() = runTest {
+        val draft = store.createDraft("Too Many")
+        writeText(File(draft.directory, "index.html"), "<html></html>")
         repeat(201) { index -> File(draft.directory, "file-$index.txt").writeText("x") }
-        val message = installFailure(draft.directory.absolutePath)
-        assertTrue(message.contains("200"))
+        assertTrue(loadFailure(draft.directory.absolutePath).contains("200"))
     }
 
     @Test
-    fun installRejectsDuplicateId() = runTest {
-        val installed = store.createInstalled("Duplicate", WorkshopType.BOARD)
-        val draft = draftDir("${installed.manifest.id}-abcde")
+    fun loadDraftRejectsDuplicateId() = runTest {
+        installApp("duplicate")
+        val draft = draftDir("duplicate-abcde")
         draft.mkdirs()
-        writeText(File(draft, "manifest.json"), manifestText(installed.manifest.id))
+        writeText(File(draft, "manifest.json"), manifestText("duplicate"))
         writeText(File(draft, "index.html"), "<html></html>")
-        val message = installFailure(draft.absolutePath)
-        assertTrue(message.contains("already exists"))
+        assertTrue(loadFailure(draft.absolutePath).contains("already exists"))
     }
 
     @Test
-    fun installRejectsSymlinks() = runTest {
-        val draft = store.createDraft("Symlinked", WorkshopType.BOARD)
+    fun loadDraftRejectsSymlinks() = runTest {
+        val draft = store.createDraft("Symlinked")
+        writeText(File(draft.directory, "index.html"), "<html></html>")
         Files.createSymbolicLink(
             File(draft.directory, "link.html").toPath(),
             File(root, "outside.html").toPath(),
         )
-        val message = installFailure(draft.directory.absolutePath)
-        assertTrue(message.contains("symbolic link"))
+        assertTrue(loadFailure(draft.directory.absolutePath).contains("symbolic link"))
     }
 
     @Test
-    fun installRejectsPathsOutsideBuild() = runTest {
-        assertTrue(installFailure(File(root, "elsewhere").absolutePath).contains("not inside"))
-        assertTrue(installFailure(store.buildDir.absolutePath).contains("not inside"))
-        val missing = draftDir("missing-draft")
-        val message = installFailure(missing.absolutePath)
-        assertTrue(message.contains("does not exist"))
+    fun loadDraftRejectsPathsOutsideBuild() = runTest {
+        assertTrue(loadFailure(File(root, "elsewhere").absolutePath).contains("not inside"))
+        assertTrue(loadFailure(store.buildDir.absolutePath).contains("not inside"))
+        assertTrue(loadFailure(draftDir("missing-draft").absolutePath).contains("does not exist"))
     }
 
     @Test
     fun scanSeparatesValidAndInvalidApps() = runTest {
-        val zeta = store.createInstalled("Zeta", WorkshopType.BOARD)
-        val alpha = store.createInstalled("Alpha", WorkshopType.WORKFLOW)
+        val beta = installApp("beta", name = "Beta")
+        val alpha = installApp("alpha", name = "Alpha", icon = "✅", description = "A")
         val broken = appDir("broken").also { it.mkdirs() }
         writeText(File(broken, "manifest.json"), "{not json")
         val mismatch = appDir("mismatch").also { it.mkdirs() }
@@ -199,10 +217,12 @@ class WorkshopStoreTest {
         writeText(File(hidden, "manifest.json"), manifestText("hidden"))
         writeText(File(hidden, "index.html"), "<html></html>")
         appDir("empty").mkdirs()
-        zeta.directory.setLastModified(1_000L)
-        alpha.directory.setLastModified(2_000L)
+        beta.setLastModified(1_000L)
+        alpha.setLastModified(2_000L)
         val scan = store.scan()
-        assertEquals(listOf("alpha", "zeta"), scan.creations.map { it.manifest.id })
+        assertEquals(listOf("alpha", "beta"), scan.creations.map { it.manifest.id })
+        assertEquals("✅", scan.creations[0].manifest.icon)
+        assertEquals("A", scan.creations[0].manifest.description)
         val reasons = scan.invalid.associate { it.id to it.reason }
         assertEquals(WorkshopInvalidReason.MANIFEST_INVALID, reasons["broken"])
         assertEquals(WorkshopInvalidReason.ID_MISMATCH, reasons["mismatch"])
@@ -223,8 +243,8 @@ class WorkshopStoreTest {
 
     @Test
     fun draftsIncludeUnparseableManifests() = runTest {
-        val first = store.createDraft("Draft One", WorkshopType.BOARD)
-        val second = store.createDraft("Draft Two", WorkshopType.WORKSTATION)
+        val first = store.createDraft("Draft One")
+        val second = store.createDraft("Draft Two")
         val broken = draftDir("broken-abcde").also { it.mkdirs() }
         writeText(File(broken, "manifest.json"), "{oops")
         val drafts = store.drafts()
@@ -237,47 +257,29 @@ class WorkshopStoreTest {
     }
 
     @Test
-    fun createInstalledWritesSkeletonInApps() = runTest {
-        val creation = store.createInstalled("Quick App", WorkshopType.WORKFLOW)
-        assertEquals(store.appsDir, creation.directory.parentFile)
-        assertEquals("quick-app", creation.manifest.id)
-        assertEquals(WorkshopType.WORKFLOW, creation.manifest.type)
-        assertTrue(File(creation.directory, "manifest.json").isFile)
-        assertTrue(File(creation.directory, "AGENTS.md").isFile)
-        assertTrue(File(creation.directory, "index.html").isFile)
-        assertTrue(store.scan().creations.any { it.directory == creation.directory })
-    }
-
-    @Test
     fun renameRewritesManifestName() = runTest {
-        val creation = store.createInstalled("Old Name", WorkshopType.BOARD)
-        val renamed = store.rename(creation.manifest.id, "  New Name  ")
+        installApp("old-name", name = "Old Name")
+        val renamed = store.rename("old-name", "  New Name  ")
         assertNotNull(renamed)
         assertEquals("New Name", renamed!!.manifest.name)
-        assertEquals("New Name", WorkshopManifest.parse(File(creation.directory, "manifest.json").readText()).name)
+        assertEquals("New Name", WorkshopManifest.parse(File(appDir("old-name"), "manifest.json").readText()).name)
         assertNull(store.rename("missing-app", "Anything"))
-        try {
-            store.rename(creation.manifest.id, "a".repeat(41))
-            fail("expected WorkshopManifestException")
-        } catch (_: WorkshopManifestException) {
-        }
+        assertTrue(manifestFailure { store.rename("old-name", "a".repeat(41)) }.contains("name"))
     }
 
     @Test
     fun deleteRemovesAppAndDataFiles() = runTest {
-        val creation = store.createInstalled("Delete Me", WorkshopType.BOARD)
-        val database = store.dataFile(creation.manifest.id)
-        writeText(database, "{}")
-        writeText(File(database.path + "-wal"), "")
-        writeText(File(database.path + "-shm"), "")
-        writeText(File(database.path + "-journal"), "")
-        assertTrue(store.delete(creation.manifest.id))
-        assertFalse(creation.directory.exists())
+        val directory = installApp("delete-me")
+        val database = store.dataFile("delete-me")
+        listOf(database, File(database.path + "-wal"), File(database.path + "-shm"), File(database.path + "-journal"))
+            .forEach { writeText(it, "{}") }
+        assertTrue(store.delete("delete-me"))
+        assertFalse(directory.exists())
         assertFalse(database.exists())
         assertFalse(File(database.path + "-wal").exists())
         assertFalse(File(database.path + "-shm").exists())
         assertFalse(File(database.path + "-journal").exists())
-        assertFalse(store.delete(creation.manifest.id))
+        assertFalse(store.delete("delete-me"))
         assertFalse(store.delete(".."))
         assertFalse(store.delete("apps"))
     }

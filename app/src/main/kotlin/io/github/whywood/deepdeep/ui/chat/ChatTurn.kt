@@ -211,7 +211,9 @@ private fun UserBubble(
     val colors = deepDeepColors()
     val context = LocalContext.current
     val parsed = remember(message.text) { parseAttachmentBlock(message.text) }
-    val content = remember(parsed.text) { splitQuoted(parsed.text) }
+    val invocation = remember(parsed.text) { parseSkillInvocation(parsed.text) }
+    val displayText = remember(parsed.text) { stripSkillInvocation(parsed.text) }
+    val content = remember(displayText) { splitQuoted(displayText) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -237,6 +239,19 @@ private fun UserBubble(
             }
             if (parsed.attachments.isNotEmpty()) {
                 AttachmentCards(attachments = parsed.attachments, root = attachmentRoot, onOpen = onOpenAttachment)
+            }
+            if (invocation != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    DdIcon(icon = DdIcons.Compose, tint = colors.inkTertiary, size = 12.dp)
+                    Text(
+                        text = stringResource(R.string.workshop_skill_label, invocation.name),
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                        color = colors.inkTertiary,
+                    )
+                }
             }
             if (content.quote != null || content.body.isNotEmpty()) {
                 SelectableMessageText(

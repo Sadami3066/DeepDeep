@@ -36,6 +36,42 @@ class ChatCommandTest {
     }
 
     @Test
+    fun parsesSkillNamespace() {
+        assertEquals(ParsedCommand.Skill("pdf-tools", ""), parseChatCommand("/skill:pdf-tools"))
+        assertEquals(
+            ParsedCommand.Skill("pdf-tools", "make a report"),
+            parseChatCommand("/skill:pdf-tools make a report"),
+        )
+        assertEquals(ParsedCommand.Skill("a1_b-c", "x"), parseChatCommand("/skill:a1_b-c x"))
+        assertEquals(ParsedCommand.Skill("2fa", ""), parseChatCommand("/skill:2fa"))
+    }
+
+    @Test
+    fun invalidSkillNamesAreUnknown() {
+        assertEquals(ParsedCommand.Unknown("skill:"), parseChatCommand("/skill:"))
+        assertEquals(ParsedCommand.Unknown("skill:Foo"), parseChatCommand("/skill:Foo args"))
+        assertEquals(ParsedCommand.Unknown("skill:bad.name"), parseChatCommand("/skill:bad.name x"))
+        val tooLong = "a".repeat(49)
+        assertEquals(ParsedCommand.Unknown("skill:$tooLong"), parseChatCommand("/skill:$tooLong"))
+        assertEquals(ParsedCommand.None, parseChatCommand("/Skill:foo"))
+    }
+
+    @Test
+    fun skillNamespaceDiffersFromPlainCommand() {
+        assertEquals(ParsedCommand.Unknown("skill"), parseChatCommand("/skill foo"))
+        assertEquals(ParsedCommand.Skill("nope", ""), parseChatCommand("/skill:nope"))
+    }
+
+    @Test
+    fun parsesWorkshopSkillCommand() {
+        assertEquals(ParsedCommand.Found(ChatCommand.WORKSHOP_SKILL, ""), parseChatCommand("/workshop-skill"))
+        assertEquals(
+            ParsedCommand.Found(ChatCommand.WORKSHOP_SKILL, "build a todo app"),
+            parseChatCommand("/workshop-skill build a todo app"),
+        )
+    }
+
+    @Test
     fun commandQueryStopsAtWhitespace() {
         assertNull(commandQuery("hello"))
         assertEquals("compact", commandQuery("/compact"))

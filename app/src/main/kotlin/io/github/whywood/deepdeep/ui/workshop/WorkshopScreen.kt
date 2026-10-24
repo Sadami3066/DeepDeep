@@ -47,32 +47,28 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.WorkshopCreation
 import io.github.whywood.deepdeep.runtime.WorkshopInvalid
-import io.github.whywood.deepdeep.runtime.WorkshopManifest
-import io.github.whywood.deepdeep.runtime.WorkshopSpec
 import io.github.whywood.deepdeep.runtime.WorkshopStore
-import io.github.whywood.deepdeep.runtime.WorkshopType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val ICON_FALLBACK = "✦"
 
 @Composable
 fun WorkshopScreen(
     store: WorkshopStore,
     onBack: () -> Unit,
     onOpen: (String) -> Unit,
+    onCreate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
     val loadingLabel = stringResource(R.string.workshop_loading)
-    val createFailedLabel = stringResource(R.string.workshop_create_failed)
     var creations by remember { mutableStateOf<List<WorkshopCreation>>(emptyList()) }
     var invalid by remember { mutableStateOf<List<WorkshopInvalid>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var refreshKey by remember { mutableIntStateOf(0) }
-    var creating by remember { mutableStateOf(false) }
-    var createOpen by remember { mutableStateOf(false) }
-    var createError by remember { mutableStateOf<String?>(null) }
     var invalidTarget by remember { mutableStateOf<WorkshopInvalid?>(null) }
 
     LaunchedEffect(refreshKey) {
@@ -83,28 +79,6 @@ fun WorkshopScreen(
             invalid = scan.invalid
         }
         loading = false
-    }
-
-    fun create(name: String, type: WorkshopType) {
-        if (creating) return
-        creating = true
-        createError = null
-        scope.launch {
-            val result = runCatching {
-                withContext(Dispatchers.IO) { store.createInstalled(name, type) }
-            }
-            creating = false
-            result.fold(
-                onSuccess = { creation ->
-                    createOpen = false
-                    refreshKey++
-                    onOpen(creation.manifest.id)
-                },
-                onFailure = { failure ->
-                    createError = failure.message?.takeIf { it.isNotBlank() } ?: createFailedLabel
-                },
-            )
-        }
     }
 
     fun delete(target: WorkshopInvalid) {
@@ -157,7 +131,7 @@ fun WorkshopScreen(
             }
             DdIconButton(
                 icon = DdIcons.Plus,
-                onClick = { createOpen = true },
+                onClick = onCreate,
                 contentDescription = stringResource(R.string.workshop_new),
                 modifier = Modifier.testTag("workshop_new"),
                 tint = colors.ink,
@@ -198,9 +172,13 @@ fun WorkshopScreen(
                     invalid.forEach { item ->
                         if (!first) DdHairline()
                         first = false
-                        WorkshopInvalidRow(
-                            item = item,
+                        WorkshopRow(
+                            title = item.id,
+                            subtitle = invalidSubtitle(item),
+                            icon = null,
+                            showChevron = false,
                             onClick = { invalidTarget = item },
+                            modifier = Modifier.testTag("workshop_invalid_${item.id}"),
                         )
                     }
                     Spacer(Modifier.height(32.dp))
@@ -208,18 +186,6 @@ fun WorkshopScreen(
             }
             Spacer(Modifier.height(24.dp))
         }
-    }
-
-    if (createOpen) {
-        WorkshopCreateDialog(
-            onDismiss = {
-                createOpen = false
-                createError = null
-            },
-            onCreate = { name, type -> create(name, type) },
-            creating = creating,
-            error = createError,
-        )
     }
 
     invalidTarget?.let { target ->
@@ -264,8 +230,8 @@ private fun WorkshopAppRow(
     val manifest = creation.manifest
     WorkshopRow(
         title = manifest.name,
-        subtitle = workshopSubtitle(manifest),
-        icon = manifest.icon.ifBlank { WorkshopSpec.defaultIcon(manifest.type) },
+        subtitle = manifest.description.trim().ifBlank { null },
+        icon = manifest.icon.ifBlank { ICON_FALLBACK },
         showChevron = true,
         onClick = onClick,
         modifier = Modifier.testTag("workshop_row_${manifest.id}"),
@@ -273,24 +239,9 @@ private fun WorkshopAppRow(
 }
 
 @Composable
-private fun WorkshopInvalidRow(
-    item: WorkshopInvalid,
-    onClick: () -> Unit,
-) {
-    WorkshopRow(
-        title = item.id,
-        subtitle = invalidSubtitle(item),
-        icon = null,
-        showChevron = false,
-        onClick = onClick,
-        modifier = Modifier.testTag("workshop_invalid_${item.id}"),
-    )
-}
-
-@Composable
 private fun WorkshopRow(
     title: String,
-    subtitle: String,
+    subtitle: String?,
     icon: String?,
     showChevron: Boolean,
     onClick: () -> Unit,
@@ -322,13 +273,15 @@ private fun WorkshopRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = subtitle,
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             if (showChevron) {
                 Spacer(Modifier.width(6.dp))
@@ -336,13 +289,6 @@ private fun WorkshopRow(
             }
         }
     }
-}
-
-@Composable
-private fun workshopSubtitle(manifest: WorkshopManifest): String {
-    val type = stringResource(workshopTypeLabelRes(manifest.type))
-    val description = manifest.description.trim()
-    return if (description.isEmpty()) type else "$type · $description"
 }
 
 @Composable

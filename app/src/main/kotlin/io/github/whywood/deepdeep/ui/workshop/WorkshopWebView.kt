@@ -16,6 +16,8 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -46,20 +48,14 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.WorkshopAgentRunner
 import io.github.whywood.deepdeep.runtime.WorkshopBridgeRouter
 import io.github.whywood.deepdeep.runtime.WorkshopCreation
 import io.github.whywood.deepdeep.runtime.WorkshopData
 import io.github.whywood.deepdeep.runtime.WorkshopManifest
-import io.github.whywood.deepdeep.runtime.WorkshopPageError
-import io.github.whywood.deepdeep.runtime.WorkshopPermissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 private const val TAG = "DeepDeepWorkshop"
@@ -81,12 +77,10 @@ private class WorkshopWebViewRefs {
 fun WorkshopWebView(
     creation: WorkshopCreation,
     data: WorkshopData,
-    agent: WorkshopAgentRunner,
     reloadKey: Int,
-    onPageError: (WorkshopPageError) -> Unit,
+    onFatalError: (String) -> Unit,
     onHistoryChanged: (Boolean) -> Unit,
     onRenderCrash: () -> Unit,
-    onFatalError: (String) -> Unit,
     modifier: Modifier = Modifier,
     state: WorkshopWebViewState = WorkshopWebViewState(),
 ) {
@@ -98,7 +92,7 @@ fun WorkshopWebView(
     val assetServer = remember(manifest.id) { WorkshopAssetServer(creation.directory, manifest) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     val router = remember(manifest.id) {
-        WorkshopBridgeRouter(manifest, data, agent) { text ->
+        WorkshopBridgeRouter(manifest, data) { text ->
             mainHandler.post { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
         }
     }
@@ -111,7 +105,6 @@ fun WorkshopWebView(
     val themeJson = remember(colors.dark, colors.paper, colors.ink, colors.inkSecondary, colors.accent, colors.hairline) {
         themeObject(colors).toString()
     }
-    val currentPageError = rememberUpdatedState(onPageError)
     val currentHistory = rememberUpdatedState(onHistoryChanged)
     val currentCrash = rememberUpdatedState(onRenderCrash)
     val currentFatalError = rememberUpdatedState(onFatalError)
@@ -152,7 +145,6 @@ fun WorkshopWebView(
                         refs = refs,
                         state = state,
                         onLoadingChanged = { loading = it },
-                        onPageError = { error -> currentPageError.value(error) },
                         onHistoryChanged = { canGoBack -> currentHistory.value(canGoBack) },
                         onRenderCrash = {
                             currentCrash.value()
@@ -164,12 +156,14 @@ fun WorkshopWebView(
                     )
                 },
                 modifier = Modifier.fillMaxSize(),
-                onRelease = { view ->
+                onRelease = { wrapper ->
                     refs.bridge?.detach()
                     refs.bridge = null
+                    val view = refs.webView
                     refs.webView = null
                     if (state.webView === view) state.webView = null
-                    destroyWebView(view)
+                    if (view != null) destroyWebView(view)
+                    (wrapper as? FrameLayout)?.removeAllViews()
                 },
             )
         }
@@ -197,12 +191,11 @@ private fun createWorkshopWebView(
     refs: WorkshopWebViewRefs,
     state: WorkshopWebViewState,
     onLoadingChanged: (Boolean) -> Unit,
-    onPageError: (WorkshopPageError) -> Unit,
     onHistoryChanged: (Boolean) -> Unit,
     onRenderCrash: () -> Unit,
     onFatalError: (String) -> Unit,
     themeJson: () -> String,
-): WebView {
+): View {
     val webView = WebView(context)
     if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
     webView.setBackgroundColor(colors.paper.toArgb())
@@ -222,7 +215,6 @@ private fun createWorkshopWebView(
         scope = scope,
         router = router,
         origin = assetServer.origin,
-        onPageError = onPageError,
     )
     webView.webViewClient = object : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
@@ -280,18 +272,6 @@ private fun createWorkshopWebView(
     webView.webChromeClient = object : WebChromeClient() {
         override fun onConsoleMessage(message: ConsoleMessage): Boolean {
             Log.d(TAG, message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")")
-            if (message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                onPageError(
-                    WorkshopPageError(
-                        message = message.message(),
-                        source = message.sourceId(),
-                        line = message.lineNumber(),
-                        column = null,
-                        stack = null,
-                        timestamp = System.currentTimeMillis(),
-                    ),
-                )
-            }
             return true
         }
     }
@@ -306,8 +286,10 @@ private fun createWorkshopWebView(
     refs.webView = webView
     refs.bridge = bridgeHost
     state.webView = webView
+    val container = FrameLayout(context)
+    container.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     webView.loadUrl(assetServer.origin + "/" + creation.manifest.entry)
-    return webView
+    return container
 }
 
 private fun destroyWebView(view: WebView) {
@@ -322,16 +304,8 @@ private fun buildEnvJson(manifest: WorkshopManifest, colors: DeepDeepColors): St
     putJsonObject("app") {
         put("id", manifest.id)
         put("name", manifest.name)
-        put("type", manifest.type.wire)
-        put("icon", manifest.icon)
+        put("icon", manifest.icon.ifBlank { "✦" })
         put("version", manifest.version)
-    }
-    putJsonArray("permissions") {
-        manifest.permissions.sorted().forEach { permission -> add(JsonPrimitive(permission)) }
-    }
-    putJsonArray("capabilities") {
-        if (manifest.permissions.contains(WorkshopPermissions.DATA_KV)) add(JsonPrimitive(WorkshopPermissions.DATA_KV))
-        if (manifest.permissions.contains(WorkshopPermissions.AGENT_RUN)) add(JsonPrimitive(WorkshopPermissions.AGENT_RUN))
     }
     put("theme", themeObject(colors))
 }.toString()

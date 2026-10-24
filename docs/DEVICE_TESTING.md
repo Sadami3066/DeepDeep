@@ -135,15 +135,15 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 89. 聊天与返回流畅度：assistant 消息底部没有复制/引用/分享图标行；长按选择仍有复制/引用/朗读，代码块复制可用；从技能/MCP/插件/定时任务返回聊天，聊天内容立即出现，不重新加载；`dumpsys gfxinfo` 无整页重建式长帧。
 90. MCP 热更新：在已打开会话的 MCP 页关闭再开启服务器，应用期间开关不可点；`adb logcat -s DeepDeepRuntime` 出现 `mcp reload ... servers=[<name>=Connected/N/] deferred=N loaded=0`，无 `NetworkOnMainThreadException`；回到聊天让模型用 `tool_search` 搜该服务器工具，能返回工具并在下一轮调用；编辑/导入/删除服务器后同样立即生效；运行环境页开启/关闭 Linux 时不再因重建会话崩溃。
 
-91. 创意工坊入口与新建：抽屉「创意工坊」→ 空态显示「还没有创意」+ 创建提示 → 点右上角 `+` → 填名称、选类型（看板/工作台/工作流）→ 创建后直接进入详情页，starter 页面正常渲染、返回正常；列表行显示 emoji 图标、「类型 · 描述」与 chevron。
-92. 对话创建：新对话里「做一个学习看板创意」→ 模型调用 `workshop_create` 建草稿、用绝对路径写入页面、调用 `workshop_register` 上架；回复下方出现入口卡片（emoji + 名称 + 「类型 · 已创建」）；点卡片直接打开该创意并正常交互；重新打开历史会话卡片仍在。
-93. 数据持久化：在看板页面添加/勾选条目 → 杀进程重开 → 数据仍在；「让 Agent 修改」重写页面后数据仍在（数据在 `files/workshop/userdata/<id>.db`，不在页面目录）。
-94. 站内修改：详情页 ✨ → 输入修改需求 → 状态流式显示 → 成功后 sheet 自动关闭并刷新页面，修改生效且数据未丢；运行中可停止。
-95. 页面调用受限 Agent：工作台 starter（或页面按钮）调用 `agent.run` → 页面显示 started/text/tool/finished 增量与最终结果；运行中再次调用返回 busy；关闭页面会取消运行；页面 Agent 只能读写本创意目录（尝试读目录外文件被拒绝），manifest 去掉 `agent.run` 后调用返回 forbidden。
-96. 报错自愈：页面未捕获异常/console error 后 ✨ 出现红点；打开 Agent 面板自动预填「根据报错修复」+ 堆栈；开始修复后成功后页面刷新、红点消失；主框架加载失败显示整页错误与重试。
-97. 注册失败路径：`workshop_create` 后删掉入口文件或把 manifest 写坏再 `workshop_register` → 工具返回错误、工坊列表不出现该创意、草稿仍在；补齐后注册成功。
-98. 扫描兜底：用 adb 把一个合法创意目录放进 `files/workshop/apps/`（含 manifest.json 与 entry）→ 进入工坊页自动出现并可使用；无效目录显示「格式无效 · 原因」并可删除；删除后目录与 `userdata/<id>.db*` 全部移除。
-99. 渲染细节：页面内图片/字体正常；`<video>` 通过 Range 播放与拖动（拦截器返回 206）；外部链接用系统浏览器打开；页面输入框键盘不遮挡；App 切换深浅色时页面 CSS 变量同步；WebView 渲染进程崩溃后自动重建。
-100. 创意工坊回归：聊天流式与停止、MCP 启停热更新、导航转场与返回均不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常。
+91. 创意工坊入口与列表：抽屉「创意工坊」→ 列表行显示 icon（manifest emoji，缺省 ✦）+ 名称 + 说明，无类型标签；失效目录显示「格式无效 · 原因」并可删除；空态提示用 `+` 或 `/workshop-skill` 创建。
+92. `+` 预填：点右上角 `+` → 直接回到聊天并新建 Home 会话，输入框预填 `/workshop-skill `；不出现新建对话框或类型选择。
+93. 技能可见与强制加载：技能页出现全局 `workshop` 技能，可查看/停用；在 Home 会话输入 `/workshop-skill 做一个心跳爱心` 发送 → 用户气泡上方显示「技能 · workshop」小标签、正文只有需求，不出现 `<skill>` XML；模型知道创意工坊格式并调用 `workshop_create` / 文件工具 / `workshop_load`。
+94. 普通会话创建：Agent 用绝对路径写页面并 `workshop_load` 成功后，assistant 下方出现入口卡片（emoji + 名称 + 「已创建」）；点卡片打开页面，交互正常；重新打开历史会话/重启 App 后卡片仍在。
+95. 数据与持久化：在页面里操作产生数据（如爱心点击次数）→ 杀进程重开 → 数据仍在；代码在 `files/workshop/apps/<id>/`，数据在 `files/workshop/userdata/<id>.db`，Agent 重写页面不丢数据；删除创意同时清理目录与 DB（含 journal）。
+96. 页面无 Agent：页面里 `typeof window.deepdeep.agent === 'undefined'`，API 只有 `env/info/data/toast`；没有 `permissions/capabilities`；详情页只有返回/标题/更多（重新加载/重命名/删除），没有 ✨、错误红点和 Agent sheet；用户要修改时退出到聊天。
+97. 布局视口：使用 `100vh` / `height:100%` 的页面铺满 WebView（不再只渲染顶部一条 `100vh==0` 的异常）；页面滚动、键盘、深浅色主题变量正常。
+98. 旧 manifest 兼容：把带 `type`/`permissions` 字段的 v1 创意留在 `files/workshop/apps/`，扫描与打开正常，列表不显示类型；无效目录删除后无残留。
+99. 斜杠命令：`/skill:workshop 需求` 与 `/workshop-skill 需求` 等价；`/skill:nope 需求` 提示「未找到技能」并保留输入框内容；未知 `/skill:` 名称不会误发普通消息。
+100. 回归：聊天流式/停止、技能页、MCP 启停热更新、导航转场与返回不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常。
 
-证据：`artifacts/validation/round30/`（列表/新建、聊天入口卡片、看板交互、重启持久化、Agent 修改、受限 Agent、报错红点与修复、深色主题、workflow 自动运行、扫描兜底与删除清理）。
+证据：`artifacts/validation/round30/v2_*.png`（工坊列表、`+` 预填、技能消息与入口卡片、爱心应用、点击交互、重启持久化、技能页、旧应用兼容）。

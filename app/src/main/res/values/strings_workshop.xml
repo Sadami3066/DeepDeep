@@ -1,34 +1,20 @@
 <resources>
     <string name="workshop_title">创意工坊</string>
-    <string name="workshop_back">返回</string>
     <string name="workshop_refresh">刷新</string>
     <string name="workshop_new">新建创意</string>
-    <string name="workshop_loading">加载中</string>
     <string name="workshop_empty_title">还没有创意</string>
-    <string name="workshop_empty_hint">在对话里让 DeepDeep 生成，或点右上角新建</string>
-    <string name="workshop_create_title">新建创意</string>
-    <string name="workshop_name_label">名称</string>
-    <string name="workshop_name_hint">例如：周报看板</string>
-    <string name="workshop_name_empty">请输入名称</string>
-    <string name="workshop_name_too_long">名称不能超过 40 个字符</string>
-    <string name="workshop_type_label">类型</string>
-    <string name="workshop_type_board">看板</string>
-    <string name="workshop_type_workstation">工作台</string>
-    <string name="workshop_type_workflow">工作流</string>
-    <string name="workshop_create">创建</string>
-    <string name="workshop_cancel">取消</string>
-    <string name="workshop_creating">创建中…</string>
+    <string name="workshop_empty_hint">点右上角 + 新建，或在对话里输入 /workshop-skill 让 DeepDeep 帮你做一个</string>
     <string name="workshop_invalid">格式无效</string>
     <string name="workshop_invalid_title">无法读取这个创意</string>
     <string name="workshop_invalid_delete">删除</string>
     <string name="workshop_invalid_delete_title">删除这个创意？</string>
     <string name="workshop_invalid_delete_message">「%1$s」删除后无法恢复。</string>
     <string name="workshop_invalid_close">关闭</string>
-    <string name="workshop_chat_card_subtitle">%1$s · 已创建</string>
+    <string name="workshop_chat_card_created">已创建</string>
+    <string name="workshop_skill_label">技能 · %1$s</string>
     <string name="workshop_reason_manifest_missing">缺少 manifest 文件</string>
     <string name="workshop_reason_manifest_unreadable">manifest 无法读取</string>
     <string name="workshop_reason_manifest_invalid">manifest 格式错误</string>
     <string name="workshop_reason_entry_missing">缺少入口文件</string>
     <string name="workshop_reason_id_mismatch">ID 与目录不一致</string>
-    <string name="workshop_create_failed">创建失败</string>
 </resources>

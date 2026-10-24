@@ -1,8 +1,11 @@
 package io.github.whywood.deepdeep.ui.chat
 
+private val SKILL_NAME = Regex("[a-z0-9][a-z0-9_-]{0,47}")
+
 enum class ChatCommand(val commandName: String, val takesArguments: Boolean) {
     COMPACT("compact", false),
     GOAL("goal", true),
+    WORKSHOP_SKILL("workshop-skill", true),
     ;
 
     companion object {
@@ -15,6 +18,8 @@ sealed interface ParsedCommand {
 
     data class Found(val command: ChatCommand, val args: String) : ParsedCommand
 
+    data class Skill(val name: String, val args: String) : ParsedCommand
+
     data class Unknown(val name: String) : ParsedCommand
 }
 
@@ -25,6 +30,16 @@ data class CommandTrigger(
 
 fun parseChatCommand(input: String): ParsedCommand {
     if (!input.startsWith("/")) return ParsedCommand.None
+    if (input.startsWith("/skill:")) {
+        val rest = input.substring("/skill:".length)
+        val rawName = rest.takeWhile { !it.isWhitespace() }
+        val args = rest.substring(rawName.length).trim()
+        return if (SKILL_NAME.matches(rawName)) {
+            ParsedCommand.Skill(rawName, args)
+        } else {
+            ParsedCommand.Unknown("skill:$rawName")
+        }
+    }
     val body = input.substring(1)
     val name = body.takeWhile { !it.isWhitespace() }
     if (name.isEmpty()) return ParsedCommand.Unknown("")

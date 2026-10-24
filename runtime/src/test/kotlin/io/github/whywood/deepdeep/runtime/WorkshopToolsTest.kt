@@ -46,25 +46,20 @@ class WorkshopToolsTest {
     private suspend fun execute(name: String, args: JsonObject): AgentToolResult =
         tools.getValue(name).execute("call-1", args, null, null)
 
+    private suspend fun createDraft(name: String): String {
+        val result = execute("workshop_create", buildJsonObject { put("name", name) })
+        assertNull(result.isError)
+        return resultJson(result).getValue("draft").jsonObject.getValue("path").jsonPrimitive.content
+    }
+
     @Test
     fun catalogContainsTheThreeTools() {
-        assertEquals(setOf("workshop_create", "workshop_register", "workshop_list"), tools.keys)
+        assertEquals(setOf("workshop_create", "workshop_load", "workshop_list"), tools.keys)
         val create = tools.getValue("workshop_create").parameters
-        assertEquals(
-            listOf("name", "type"),
-            create.getValue("required").jsonArray.map { it.jsonPrimitive.content },
-        )
-        val properties = create.getValue("properties").jsonObject
-        assertEquals(setOf("name", "type", "description", "icon"), properties.keys)
-        assertEquals(
-            listOf("board", "workstation", "workflow"),
-            properties.getValue("type").jsonObject.getValue("enum").jsonArray.map { it.jsonPrimitive.content },
-        )
-        assertEquals(
-            listOf("path"),
-            tools.getValue("workshop_register").parameters.getValue("required").jsonArray
-                .map { it.jsonPrimitive.content },
-        )
+        assertEquals(listOf("name"), create.getValue("required").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(setOf("name", "description", "icon"), create.getValue("properties").jsonObject.keys)
+        val load = tools.getValue("workshop_load").parameters
+        assertEquals(listOf("path"), load.getValue("required").jsonArray.map { it.jsonPrimitive.content })
         assertTrue(tools.getValue("workshop_list").parameters.getValue("properties").jsonObject.isEmpty())
     }
 
@@ -74,87 +69,93 @@ class WorkshopToolsTest {
             "workshop_create",
             buildJsonObject {
                 put("name", "Weekly Board")
-                put("type", "board")
                 put("description", "A demo board")
+                put("icon", "🗂️")
             },
         )
         assertNull(result.isError)
         val json = resultJson(result)
         assertTrue(json.getValue("ok").jsonPrimitive.boolean)
         val draft = json.getValue("draft").jsonObject
+        assertEquals(setOf("id", "name", "path"), draft.keys)
         assertEquals("weekly-board", draft.getValue("id").jsonPrimitive.content)
         assertEquals("Weekly Board", draft.getValue("name").jsonPrimitive.content)
-        assertEquals("board", draft.getValue("type").jsonPrimitive.content)
         val path = draft.getValue("path").jsonPrimitive.content
         assertTrue(File(path).isDirectory)
+        assertEquals(listOf("manifest.json"), File(path).listFiles()!!.map { it.name })
         val next = json.getValue("next").jsonPrimitive.content
-        assertTrue(next.contains("$path/AGENTS.md"))
-        assertTrue(next.contains("workshop_register with path=$path"))
-        assertEquals(1, store.drafts().size)
+        assertTrue(next.contains("Write the app files under $path"))
+        assertTrue(next.contains("entry defaults to index.html"))
+        assertTrue(next.contains("workshop_load with path=$path"))
+        val manifest = WorkshopManifest.parse(File(path, "manifest.json").readText())
+        assertEquals("🗂️", manifest.icon)
+        assertEquals("A demo board", manifest.description)
+        val expected = "{\"ok\":true,\"draft\":{\"id\":\"weekly-board\",\"name\":\"Weekly Board\",\"path\":\"$path\"},\"next\":\"Write the app files under $path with absolute paths using read/write/edit (entry defaults to index.html). Follow the workshop skill. Then call workshop_load with path=$path.\"}"
+        assertEquals(expected, resultText(result))
     }
 
     @Test
     fun createRejectsBadArguments() = runTest {
-        val missingType = execute("workshop_create", buildJsonObject { put("name", "No Type") })
-        assertEquals(true, missingType.isError)
-        assertTrue(resultText(missingType).isNotBlank())
-
-        val badType = execute(
-            "workshop_create",
-            buildJsonObject {
-                put("name", "Bad Type")
-                put("type", "game")
-            },
-        )
-        assertEquals(true, badType.isError)
-        assertTrue(resultText(badType).contains("type"))
-
-        val missingName = execute("workshop_create", buildJsonObject { put("type", "board") })
+        val missingName = execute("workshop_create", buildJsonObject {})
         assertEquals(true, missingName.isError)
         assertTrue(resultText(missingName).contains("name"))
+
+        val longName = execute("workshop_create", buildJsonObject { put("name", "a".repeat(41)) })
+        assertEquals(true, longName.isError)
+        assertTrue(resultText(longName).contains("name"))
+
+        val badIcon = execute(
+            "workshop_create",
+            buildJsonObject {
+                put("name", "Bad Icon")
+                put("icon", "123456789")
+            },
+        )
+        assertEquals(true, badIcon.isError)
+        assertTrue(resultText(badIcon).contains("icon"))
     }
 
     @Test
-    fun registerInstallsTheDraft() = runTest {
-        val draft = store.createDraft("Reg Board", WorkshopType.WORKSTATION)
-        val result = execute(
-            "workshop_register",
-            buildJsonObject { put("path", draft.directory.absolutePath) },
-        )
+    fun createWriteLoadFlow() = runTest {
+        val path = createDraft("Flow App")
+        File(path, "index.html").writeText("<!DOCTYPE html><html><body>hi</body></html>")
+        File(path, "app.js").writeText("console.log('hi');")
+        val result = execute("workshop_load", buildJsonObject { put("path", path) })
         assertNull(result.isError)
         val json = resultJson(result)
         assertTrue(json.getValue("ok").jsonPrimitive.boolean)
         val app = json.getValue("app").jsonObject
-        assertEquals("reg-board", app.getValue("id").jsonPrimitive.content)
-        assertEquals("Reg Board", app.getValue("name").jsonPrimitive.content)
-        assertEquals("workstation", app.getValue("type").jsonPrimitive.content)
-        assertEquals("🧰", app.getValue("icon").jsonPrimitive.content)
+        assertEquals(setOf("id", "name", "icon", "version"), app.keys)
+        assertEquals("flow-app", app.getValue("id").jsonPrimitive.content)
+        assertEquals("Flow App", app.getValue("name").jsonPrimitive.content)
+        assertEquals("", app.getValue("icon").jsonPrimitive.content)
         assertEquals("1.0.0", app.getValue("version").jsonPrimitive.content)
-        assertEquals(File(store.appsDir, "reg-board").absolutePath, json.getValue("path").jsonPrimitive.content)
-        assertTrue(store.load("reg-board") is WorkshopEntry.Valid)
+        val appDirectory = File(store.appsDir, "flow-app")
+        assertEquals(appDirectory.absolutePath, json.getValue("path").jsonPrimitive.content)
+        assertTrue(File(appDirectory, "index.html").isFile)
+        assertTrue(File(appDirectory, "app.js").isFile)
+        assertTrue(store.load("flow-app") is WorkshopEntry.Valid)
         assertTrue(store.drafts().isEmpty())
+        val expected = "{\"ok\":true,\"app\":{\"id\":\"flow-app\",\"name\":\"Flow App\",\"icon\":\"\",\"version\":\"1.0.0\"},\"path\":\"${appDirectory.absolutePath}\"}"
+        assertEquals(expected, resultText(result))
     }
 
     @Test
-    fun registerRejectsMissingOrInvalidPaths() = runTest {
-        val missingArgument = execute("workshop_register", buildJsonObject {})
+    fun loadRejectsMissingOrInvalidPaths() = runTest {
+        val missingArgument = execute("workshop_load", buildJsonObject {})
         assertEquals(true, missingArgument.isError)
         assertTrue(resultText(missingArgument).contains("path"))
 
         val missingDraft = execute(
-            "workshop_register",
+            "workshop_load",
             buildJsonObject { put("path", File(root, "nope").absolutePath) },
         )
         assertEquals(true, missingDraft.isError)
 
-        val draft = store.createDraft("No Entry", WorkshopType.BOARD)
-        File(draft.directory, "index.html").delete()
-        val brokenDraft = execute(
-            "workshop_register",
-            buildJsonObject { put("path", draft.directory.absolutePath) },
-        )
-        assertEquals(true, brokenDraft.isError)
-        assertTrue(resultText(brokenDraft).contains("entry"))
+        val path = createDraft("No Entry")
+        val noEntry = execute("workshop_load", buildJsonObject { put("path", path) })
+        assertEquals(true, noEntry.isError)
+        assertTrue(resultText(noEntry).contains("entry"))
     }
 
     @Test
@@ -162,9 +163,12 @@ class WorkshopToolsTest {
         val empty = resultJson(execute("workshop_list", buildJsonObject {}))
         assertEquals(0, empty.getValue("apps").jsonArray.size)
         assertEquals(0, empty.getValue("drafts").jsonArray.size)
+        assertEquals("{\"apps\":[],\"drafts\":[]}", resultText(execute("workshop_list", buildJsonObject {})))
 
-        store.createInstalled("Listed App", WorkshopType.BOARD)
-        val draft = store.createDraft("Pending Draft", WorkshopType.WORKFLOW)
+        val flowPath = createDraft("Listed App")
+        File(flowPath, "index.html").writeText("<html></html>")
+        execute("workshop_load", buildJsonObject { put("path", flowPath) })
+        val draft = store.createDraft("Pending Draft", description = "draft description", icon = "🧰")
         val broken = File(store.buildDir, "broken-abcde").also { it.mkdirs() }
         File(broken, "manifest.json").writeText("{oops")
 
@@ -172,26 +176,21 @@ class WorkshopToolsTest {
         val apps = json.getValue("apps").jsonArray
         assertEquals(1, apps.size)
         val app = apps[0].jsonObject
-        assertEquals(
-            setOf("id", "name", "type", "icon", "version", "path", "description", "permissions"),
-            app.keys,
-        )
+        assertEquals(setOf("id", "name", "icon", "version", "path", "description"), app.keys)
         assertEquals("listed-app", app.getValue("id").jsonPrimitive.content)
         assertEquals("Listed App", app.getValue("name").jsonPrimitive.content)
-        assertEquals("board", app.getValue("type").jsonPrimitive.content)
-        assertEquals(
-            setOf("agent.run", "data.kv"),
-            app.getValue("permissions").jsonArray.map { it.jsonPrimitive.content }.toSet(),
-        )
+        assertEquals("", app.getValue("icon").jsonPrimitive.content)
+        assertEquals("1.0.0", app.getValue("version").jsonPrimitive.content)
+        assertEquals(File(store.appsDir, "listed-app").absolutePath, app.getValue("path").jsonPrimitive.content)
 
         val drafts = json.getValue("drafts").jsonArray
         assertEquals(2, drafts.size)
         val draftJson = drafts.map { it.jsonObject }.first {
             it.getValue("path").jsonPrimitive.content == draft.directory.absolutePath
         }
-        assertEquals(setOf("path", "id", "name", "type"), draftJson.keys)
+        assertEquals(setOf("path", "id", "name"), draftJson.keys)
         assertEquals("pending-draft", draftJson.getValue("id").jsonPrimitive.content)
-        assertEquals("workflow", draftJson.getValue("type").jsonPrimitive.content)
+        assertEquals("Pending Draft", draftJson.getValue("name").jsonPrimitive.content)
         val brokenJson = drafts.map { it.jsonObject }.first {
             it.getValue("path").jsonPrimitive.content == broken.absolutePath
         }
@@ -199,22 +198,19 @@ class WorkshopToolsTest {
     }
 
     @Test
-    fun createThenRegisterFlowProducesListedApp() = runTest {
-        val createResult = execute(
-            "workshop_create",
-            buildJsonObject {
-                put("name", "Flow App")
-                put("type", "workflow")
-            },
+    fun iconAndDescriptionReachTheList() = runTest {
+        val path = createDraft("Styled App")
+        val manifest = WorkshopManifest.parse(File(path, "manifest.json").readText())
+        File(path, "manifest.json").writeText(
+            manifest.copy(icon = "🚀", description = "Rocket app").toJson(),
         )
-        assertNull(createResult.isError)
-        val path = resultJson(createResult).getValue("draft").jsonObject
-            .getValue("path").jsonPrimitive.content
-        val registerResult = execute("workshop_register", buildJsonObject { put("path", path) })
-        assertNull(registerResult.isError)
+        File(path, "index.html").writeText("<html></html>")
+        val loaded = execute("workshop_load", buildJsonObject { put("path", path) })
+        assertNull(loaded.isError)
+        assertEquals("🚀", resultJson(loaded).getValue("app").jsonObject.getValue("icon").jsonPrimitive.content)
         val listed = resultJson(execute("workshop_list", buildJsonObject {}))
-        val ids = listed.getValue("apps").jsonArray.map { it.jsonObject.getValue("id").jsonPrimitive.content }
-        assertEquals(listOf("flow-app"), ids)
-        assertEquals(0, listed.getValue("drafts").jsonArray.size)
+        val app = listed.getValue("apps").jsonArray[0].jsonObject
+        assertEquals("🚀", app.getValue("icon").jsonPrimitive.content)
+        assertEquals("Rocket app", app.getValue("description").jsonPrimitive.content)
     }
 }
