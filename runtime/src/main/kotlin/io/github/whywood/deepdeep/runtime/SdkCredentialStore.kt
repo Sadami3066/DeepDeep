@@ -32,11 +32,15 @@ class SdkCredentialStore(
 ) : CredentialStore {
     private val apiKeyCache = ConcurrentHashMap<String, String>()
     private val oauthCache = ConcurrentHashMap<String, JsonElement>()
+    private val pendingWrites = ConcurrentHashMap.newKeySet<String>()
     private val authKindsState = MutableStateFlow<Map<String, ProviderAuthKind>>(emptyMap())
     val authKinds: StateFlow<Map<String, ProviderAuthKind>> = authKindsState.asStateFlow()
+    private val revisionState = MutableStateFlow(0L)
+    val revision: StateFlow<Long> = revisionState.asStateFlow()
 
     suspend fun preload(vararg providerIds: String) {
         for (providerId in providerIds) {
+            if (providerId in pendingWrites) continue
             val key = apiKeys.readRecord(providerId)
             if (key.isNullOrBlank()) apiKeyCache.remove(providerId) else apiKeyCache[providerId] = key
             val raw = oauth.readRawRecords()[providerId]
@@ -46,12 +50,21 @@ class SdkCredentialStore(
     }
 
     suspend fun preloadAll() {
+        val pendingKeys = pendingWrites.toSet()
+        val pendingApiKeys = pendingKeys.associateWith { apiKeyCache[it] }
+        val pendingOauth = pendingKeys.associateWith { oauthCache[it] }
         apiKeyCache.clear()
         oauthCache.clear()
         apiKeyCache.putAll(apiKeys.readAllRecords().filterValues { it.isNotBlank() })
         oauthCache.putAll(oauth.readRawRecords())
+        pendingKeys.forEach { providerId ->
+            pendingApiKeys[providerId]?.let { apiKeyCache[providerId] = it } ?: apiKeyCache.remove(providerId)
+            pendingOauth[providerId]?.let { oauthCache[providerId] = it } ?: oauthCache.remove(providerId)
+        }
         publishKinds()
     }
+
+    fun cachedApiKey(providerId: String): String? = apiKeyCache[providerId]?.takeIf { it.isNotBlank() }
 
     fun invalidate(providerId: String) {
         apiKeyCache.remove(providerId)
@@ -110,9 +123,14 @@ class SdkCredentialStore(
         apiKeyCache[providerId] = trimmed
         oauthCache.remove(providerId)
         publishKinds()
+        pendingWrites.add(providerId)
         scope.launch(ioDispatcher) {
-            oauth.deleteRecord(providerId)
-            apiKeys.saveRecord(providerId, trimmed)
+            try {
+                oauth.deleteRecord(providerId)
+                apiKeys.saveRecord(providerId, trimmed)
+            } finally {
+                pendingWrites.remove(providerId)
+            }
         }
     }
 
@@ -135,9 +153,14 @@ class SdkCredentialStore(
         oauthCache[providerId] = credential
         apiKeyCache.remove(providerId)
         publishKinds()
+        pendingWrites.add(providerId)
         scope.launch(ioDispatcher) {
-            apiKeys.saveRecord(providerId, null)
-            oauth.saveRawRecord(providerId, credential)
+            try {
+                apiKeys.saveRecord(providerId, null)
+                oauth.saveRawRecord(providerId, credential)
+            } finally {
+                pendingWrites.remove(providerId)
+            }
         }
     }
 
@@ -145,9 +168,14 @@ class SdkCredentialStore(
         apiKeyCache.remove(providerId)
         oauthCache.remove(providerId)
         publishKinds()
+        pendingWrites.add(providerId)
         scope.launch(ioDispatcher) {
-            apiKeys.saveRecord(providerId, null)
-            oauth.deleteRecord(providerId)
+            try {
+                apiKeys.saveRecord(providerId, null)
+                oauth.deleteRecord(providerId)
+            } finally {
+                pendingWrites.remove(providerId)
+            }
         }
     }
 
@@ -158,6 +186,7 @@ class SdkCredentialStore(
         apiKeyCache.keys.forEach { providerId -> kinds[providerId] = ProviderAuthKind.API_KEY }
         oauthCache.keys.forEach { providerId -> kinds[providerId] = ProviderAuthKind.OAUTH }
         authKindsState.value = kinds
+        revisionState.value = revisionState.value + 1
     }
 
     private fun decodeBasic(raw: JsonElement): OAuthCredential? {

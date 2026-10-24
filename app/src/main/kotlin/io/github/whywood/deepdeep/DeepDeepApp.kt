@@ -175,6 +175,7 @@ internal fun DeepDeepApp(
     }
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
+    val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val configuredProviders = authKinds.keys
     val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
@@ -567,12 +568,8 @@ internal fun DeepDeepApp(
                         }
                     } else {
                         val authKind = authKinds[provider.id]
-                        val savedApiKey by produceState<String?>(
-                            initialValue = null,
-                            provider.id,
-                            authKind,
-                        ) {
-                            value = runCatching { graph.apiKeyStore.read(provider.id) }.getOrNull()
+                        val savedApiKey = remember(provider.id, credentialRevision) {
+                            graph.credentials.cachedApiKey(provider.id)
                         }
                         ProviderDetailScreen(
                             provider = provider,
@@ -583,7 +580,7 @@ internal fun DeepDeepApp(
                             savedApiKey = savedApiKey,
                             authKind = authKind,
                             oauthService = graph.providerOAuthService,
-                            onAuthChanged = { scope.launch { graph.credentials.preload(provider.id) } },
+                            onAuthChanged = {},
                             onBack = ::back,
                             onSaveApiKey = { key ->
                                 scope.launch {

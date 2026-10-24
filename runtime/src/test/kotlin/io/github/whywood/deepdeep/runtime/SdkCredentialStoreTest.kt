@@ -4,6 +4,7 @@ import dev.pi.ai.auth.ApiKeyCredential
 import dev.pi.ai.auth.OAuthCredential
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -118,6 +119,25 @@ class SdkCredentialStoreTest {
         advanceUntilIdle()
         assertTrue(apiKeys.records.isEmpty())
         assertTrue(oauth.records.isEmpty())
+    }
+
+    @Test
+    fun preloadDoesNotClobberPendingOauthWrite() = runTest {
+        val oauth = FakeOAuthStore()
+        val store = SdkCredentialStore(
+            FakeApiKeyStore(),
+            oauth,
+            this,
+            StandardTestDispatcher(testScheduler),
+        )
+        store.writeRawCredential("openai", oauthJson())
+        assertEquals(ProviderAuthKind.OAUTH, store.kindOf("openai"))
+        store.preload("openai")
+        assertEquals(ProviderAuthKind.OAUTH, store.kindOf("openai"))
+        advanceUntilIdle()
+        store.preload("openai")
+        assertEquals(ProviderAuthKind.OAUTH, store.kindOf("openai"))
+        assertTrue(oauth.records.containsKey("openai"))
     }
 
     @Test

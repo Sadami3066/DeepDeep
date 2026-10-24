@@ -7,6 +7,7 @@
 - 导航：抽屉去掉「聊天」「已归档」；「已归档」移入设置页并显示数量；占位「插件」入口由 MCP 取代
 - OpenAI ChatGPT OAuth 使用持久化的安装 UUID（`install-id`）与 `agentName=DeepDeep`，满足 SDK 的 `ext_agent_host_id` 要求
 - 浏览器授权完成后自动跳回 App（自定义 loopback 回调页 → `deepdeep://oauth/callback`），手动粘贴仅作兜底；登录 sheet 会说明自动返回
+- 修复 OAuth 登录/退出需要点两次：去掉登录回调里的异步磁盘 preload 竞争，UI 直接读凭据缓存；pendingWrites 防止 preload 覆盖未落盘写入
 - SDK 升级到 pi2kotlin 0.2.1；MCP sampling 默认关闭，不触发隐式模型调用
 - 323 unit tests green（runtime 135 / app 168 / shell 20），lint、模块边界、debug 构建通过
 
