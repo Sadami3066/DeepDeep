@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 流水线</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--dd-bg);
+    color: var(--dd-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    line-height: 1.6;
+  }
+  main { width: min(100%, 720px); margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.02em; }
+  .sub { color: var(--dd-ink-secondary); font-size: 13px; margin: 0 0 24px; }
+  label { display: block; font-size: 13px; color: var(--dd-ink-secondary); margin: 16px 0 6px; }
+  input {
+    width: 100%;
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--dd-accent); }
+  button {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 16px;
+    margin-top: 20px;
+  }
+  button.primary { background: var(--dd-accent); border-color: var(--dd-accent); color: #fff; }
+  button:disabled { opacity: .45; }
+  .status { font-size: 13px; color: var(--dd-ink-secondary); margin-top: 16px; min-height: 20px; }
+  .error { color: #d9485f; font-size: 13px; margin-top: 8px; }
+  .grid { display: grid; gap: 12px; margin-top: 16px; }
+  .card {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-width: 0;
+  }
+  .card h2 { font-size: 13px; color: var(--dd-ink-secondary); font-weight: 500; margin: 0 0 8px; }
+  .card pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font: inherit;
+    font-size: 13px;
+  }
+  .final pre { font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Agent 流水线</h1>
+  <p class="sub">两个调查 Agent 并行，汇总后交给总写 Agent。</p>
+  <label for="topic">文章主题</label>
+  <input id="topic" value="AI 手机会取代电脑吗">
+  <button class="primary" id="run">开始编排</button>
+  <div class="status" id="status"></div>
+  <div class="error" id="error"></div>
+  <div class="grid">
+    <div class="card"><h2>市场调查</h2><pre id="market">未运行</pre></div>
+    <div class="card"><h2>厂商调查</h2><pre id="competitors">未运行</pre></div>
+    <div class="card final"><h2>总写文章</h2><pre id="article">未运行</pre></div>
+  </div>
+</main>
+<script>
+(function () {
+  const el = (id) => document.getElementById(id);
+  let running = false;
+
+  async function research(prompt) {
+    return app.agent.run({
+      prompt: prompt,
+      systemPrompt: "你是行业研究员。只列带来源的事实和关键判断，不要编造。",
+      maxTurns: 12,
+      tools: ["web_search", "web_fetch"],
+      skills: []
+    });
+  }
+
+  async function run() {
+    if (running) return;
+    const topic = el("topic").value.trim();
+    if (!topic) {
+      el("error").textContent = "先写主题";
+      return;
+    }
+    running = true;
+    el("run").disabled = true;
+    el("error").textContent = "";
+    el("market").textContent = "正在调查…";
+    el("competitors").textContent = "正在调查…";
+    el("article").textContent = "";
+    el("status").textContent = "两个调查 Agent 并行工作中…";
+    try {
+      const [market, competitors] = await Promise.all([
+        research("调查这个主题的市场现状、关键数据和趋势，列 5 条带来源的要点：" + topic),
+        research("调查这个主题的主要玩家、产品差异和近期动作，列 5 条带来源的要点：" + topic)
+      ]);
+      el("market").textContent = market;
+      el("competitors").textContent = competitors;
+      el("status").textContent = "调查完成，总写 Agent 正在写稿…";
+      const article = await app.agent.run({
+        prompt: [
+          "请根据以下两份调查，写一篇 1000 字左右的公众号文章。",
+          "保留来源；不要编造数据。",
+          "",
+          "【市场调查】",
+          market,
+          "",
+          "【厂商调查】",
+          competitors
+        ].join("\n"),
+        systemPrompt: "你是资深公众号编辑，只输出文章正文。",
+        maxTurns: 8,
+        tools: [],
+        skills: []
+      });
+      el("article").textContent = article;
+      el("status").textContent = "完成";
+      await app.data.set("pipeline_last", {
+        topic: topic,
+        market: market,
+        competitors: competitors,
+        article: article,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      el("status").textContent = "失败";
+      el("error").textContent = error.message || String(error);
+    } finally {
+      running = false;
+      el("run").disabled = false;
+    }
+  }
+
+  el("run").addEventListener("click", run);
+})();
+</script>
+</body>
+</html>

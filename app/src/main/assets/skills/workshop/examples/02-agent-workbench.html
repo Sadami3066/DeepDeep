@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 工作台</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--dd-bg);
+    color: var(--dd-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    line-height: 1.6;
+  }
+  main { width: min(100%, 680px); margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.02em; }
+  .sub { color: var(--dd-ink-secondary); font-size: 13px; margin: 0 0 24px; }
+  .step { display: none; }
+  .step.on { display: block; }
+  label { display: block; font-size: 13px; color: var(--dd-ink-secondary); margin: 18px 0 6px; }
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--dd-accent); }
+  textarea { min-height: 120px; resize: vertical; }
+  .row { display: flex; gap: 10px; margin-top: 24px; }
+  button {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 16px;
+    flex: 1;
+  }
+  button.primary { background: var(--dd-accent); border-color: var(--dd-accent); color: #fff; }
+  button:disabled { opacity: .45; }
+  .meta { font-size: 12px; color: var(--dd-ink-secondary); margin-top: 12px; }
+  .error { color: #d9485f; font-size: 13px; margin-top: 12px; min-height: 20px; }
+  .output {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+  }
+  .status { font-size: 13px; color: var(--dd-ink-secondary); margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Agent 工作台</h1>
+  <p class="sub">填主题 → 选模型 → 运行 Agent → 再处理结果。</p>
+
+  <section class="step on" id="step1">
+    <label for="topic">主题</label>
+    <input id="topic" placeholder="例如：AI 手机会取代电脑吗">
+    <label for="audience">受众</label>
+    <input id="audience" placeholder="例如：大学生">
+    <label for="tone">语气</label>
+    <input id="tone" placeholder="例如：口语化、有观点">
+    <div class="row">
+      <button class="primary" id="toStep2">下一步</button>
+    </div>
+    <div class="error" id="error1"></div>
+  </section>
+
+  <section class="step" id="step2">
+    <label for="model">模型</label>
+    <select id="model"><option value="">加载中…</option></select>
+    <label><input type="checkbox" id="web" checked style="width:auto;margin-right:8px">允许联网调查</label>
+    <div class="row">
+      <button id="back1">上一步</button>
+      <button class="primary" id="run">开始运行</button>
+    </div>
+    <div class="error" id="error2"></div>
+  </section>
+
+  <section class="step" id="step3">
+    <div class="status" id="status">准备中…</div>
+    <div class="output" id="result"></div>
+    <div class="row">
+      <button id="back2">上一步</button>
+      <button class="primary" id="toStep4">下一步</button>
+    </div>
+    <div class="error" id="error3"></div>
+  </section>
+
+  <section class="step" id="step4">
+    <div class="status">对结果再处理</div>
+    <div class="output" id="result2"></div>
+    <div class="row">
+      <button id="polish">让 Agent 润色</button>
+      <button class="primary" id="save">保存结果</button>
+    </div>
+    <div class="row">
+      <button id="restart">重新开始</button>
+    </div>
+    <div class="error" id="error4"></div>
+  </section>
+</main>
+<script>
+(function () {
+  const KEY = "workbench_state";
+  const state = {
+    topic: "", audience: "", tone: "", draft: "",
+    providerId: "", modelId: "", thinkingLevel: "off"
+  };
+
+  const el = (id) => document.getElementById(id);
+  const steps = ["step1", "step2", "step3", "step4"];
+
+  function show(step) {
+    steps.forEach((id) => el(id).classList.toggle("on", id === step));
+  }
+
+  function setError(id, message) {
+    el(id).textContent = message || "";
+  }
+
+  async function save() {
+    await app.data.set(KEY, state);
+  }
+
+  async function load() {
+    const saved = await app.data.get(KEY);
+    if (saved && typeof saved === "object") Object.assign(state, saved);
+    el("topic").value = state.topic || "";
+    el("audience").value = state.audience || "";
+    el("tone").value = state.tone || "";
+    if (state.draft) {
+      el("result").textContent = state.draft;
+      el("result2").textContent = state.draft;
+    }
+  }
+
+  function selectedModel() {
+    const raw = el("model").value;
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch (e) { return {}; }
+  }
+
+  async function fillModels() {
+    const select = el("model");
+    select.innerHTML = "";
+    try {
+      const models = await app.agent.models();
+      if (!models.length) {
+        select.innerHTML = "<option value=''>没有已配置的模型</option>";
+        return;
+      }
+      for (const model of models) {
+        for (const level of model.thinkingLevels) {
+          const option = document.createElement("option");
+          option.value = JSON.stringify({
+            providerId: model.providerId,
+            modelId: model.modelId,
+            thinkingLevel: level
+          });
+          option.textContent = model.label + " · " + level;
+          select.appendChild(option);
+        }
+      }
+      if (state.providerId && state.modelId) {
+        for (const option of select.options) {
+          try {
+            const value = JSON.parse(option.value);
+            if (value.providerId === state.providerId && value.modelId === state.modelId &&
+                value.thinkingLevel === state.thinkingLevel) {
+              select.value = option.value;
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (error) {
+      select.innerHTML = "<option value=''>模型加载失败</option>";
+      setError("error2", error.message);
+    }
+  }
+
+  async function runFirst() {
+    setError("error2", "");
+    el("run").disabled = true;
+    show("step3");
+    el("status").textContent = "Agent 正在调查和写稿…";
+    el("result").textContent = "";
+    const choice = selectedModel();
+    state.topic = el("topic").value.trim();
+    state.audience = el("audience").value.trim();
+    state.tone = el("tone").value.trim();
+    state.providerId = choice.providerId || "";
+    state.modelId = choice.modelId || "";
+    state.thinkingLevel = choice.thinkingLevel || "off";
+    const tools = el("web").checked ? ["web_search", "web_fetch"] : [];
+    try {
+      const text = await app.agent.run({
+        prompt: [
+          "主题：" + (state.topic || "未填写"),
+          "受众：" + (state.audience || "普通读者"),
+          "语气：" + (state.tone || "自然、清晰"),
+          "请先调查关键信息，再写一篇 600-800 字的文章。",
+          "输出：标题、正文、3 条来源。"
+        ].join("\n"),
+        providerId: choice.providerId,
+        modelId: choice.modelId,
+        thinkingLevel: choice.thinkingLevel,
+        systemPrompt: "你是资深内容编辑。事实必须可核实；不要编造数据。",
+        maxTurns: 12,
+        tools: tools,
+        skills: []
+      });
+      state.draft = text;
+      await save();
+      el("result").textContent = text;
+      el("result2").textContent = text;
+      el("status").textContent = "完成";
+    } catch (error) {
+      el("status").textContent = "运行失败";
+      setError("error2", error.message);
+      show("step2");
+    } finally {
+      el("run").disabled = false;
+    }
+  }
+
+  async function polish() {
+    if (!state.draft) return;
+    setError("error4", "");
+    el("polish").disabled = true;
+    const choice = selectedModel();
+    try {
+      const text = await app.agent.run({
+        prompt: "请把下面内容润色得更口语化、更有节奏，保留事实和来源：\n\n" + state.draft,
+        providerId: choice.providerId,
+        modelId: choice.modelId,
+        thinkingLevel: choice.thinkingLevel,
+        systemPrompt: "你是公众号编辑，只输出润色后的正文。",
+        maxTurns: 6,
+        tools: [],
+        skills: []
+      });
+      state.draft = text;
+      await save();
+      el("result2").textContent = text;
+      app.toast("已润色");
+    } catch (error) {
+      setError("error4", error.message);
+    } finally {
+      el("polish").disabled = false;
+    }
+  }
+
+  el("toStep2").addEventListener("click", () => {
+    state.topic = el("topic").value.trim();
+    state.audience = el("audience").value.trim();
+    state.tone = el("tone").value.trim();
+    if (!state.topic) { setError("error1", "先写一个主题"); return; }
+    setError("error1", "");
+    save();
+    show("step2");
+  });
+  el("back1").addEventListener("click", () => show("step1"));
+  el("run").addEventListener("click", runFirst);
+  el("back2").addEventListener("click", () => show("step2"));
+  el("toStep4").addEventListener("click", () => show("step4"));
+  el("polish").addEventListener("click", polish);
+  el("save").addEventListener("click", async () => {
+    await save();
+    app.toast("已保存");
+  });
+  el("restart").addEventListener("click", async () => {
+    Object.assign(state, { topic: "", audience: "", tone: "", draft: "" });
+    el("topic").value = "";
+    el("audience").value = "";
+    el("tone").value = "";
+    el("result").textContent = "";
+    el("result2").textContent = "";
+    await save();
+    show("step1");
+  });
+
+  (async () => {
+    await load();
+    await fillModels();
+  })().catch((error) => setError("error1", error.message));
+})();
+</script>
+</body>
+</html>

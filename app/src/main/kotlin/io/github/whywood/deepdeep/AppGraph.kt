@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.BuiltinSkillFile
 import io.github.whywood.deepdeep.runtime.BuiltinSkills
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -312,15 +313,23 @@ class AppGraph(context: Context) {
     }
 
     private fun ensureBuiltinSkills() {
-        val content = runCatching {
-            appContext.assets.open("skills/workshop/SKILL.md").bufferedReader().use { it.readText() }
-        }.getOrNull() ?: return
+        val files = runCatching { readSkillAssets("skills/workshop") }.getOrNull().orEmpty()
+        if (files.isEmpty()) return
         BuiltinSkills.ensure(
             repoDir = File(appContext.filesDir, "skills"),
             agentDir = agentDir,
             id = WORKSHOP_SKILL_ID,
-            content = content,
+            files = files,
         )
+    }
+
+    private fun readSkillAssets(root: String): List<BuiltinSkillFile> {
+        val children = appContext.assets.list(root).orEmpty()
+        if (children.isEmpty()) {
+            val content = appContext.assets.open(root).bufferedReader().use { it.readText() }
+            return listOf(BuiltinSkillFile(root.removePrefix("skills/$WORKSHOP_SKILL_ID/"), content))
+        }
+        return children.flatMap { child -> readSkillAssets("$root/$child") }
     }
 
     private suspend fun importDebugKey() {

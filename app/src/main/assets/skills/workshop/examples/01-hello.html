@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hello Workshop</title>
+<style>
+  :root {
+    --card: color-mix(in srgb, var(--dd-bg) 82%, var(--dd-ink));
+    color-scheme: light dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--dd-bg);
+    color: var(--dd-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  main { width: min(100%, 520px); }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -.02em; }
+  p { color: var(--dd-ink-secondary); margin: 0 0 24px; line-height: 1.7; }
+  .count {
+    font-size: 88px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.06em;
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  button {
+    border: 1px solid var(--dd-hairline);
+    background: transparent;
+    color: var(--dd-ink);
+    border-radius: 14px;
+    padding: 14px 20px;
+    font: inherit;
+    font-size: 15px;
+    width: 100%;
+    text-align: left;
+    transition: background .18s ease, transform .18s ease;
+  }
+  button:active { transform: scale(.985); }
+  button + button { margin-top: 10px; }
+  .hint { margin-top: 18px; font-size: 12px; color: var(--dd-ink-secondary); }
+</style>
+</head>
+<body>
+<main>
+  <h1>你好，工坊。</h1>
+  <p>这是一个最小页面：数据存在 App 里，关掉再打开还在。</p>
+  <div class="count" id="count">0</div>
+  <button id="add">点击 +1</button>
+  <button id="reset">清零</button>
+  <div class="hint" id="hint"></div>
+</main>
+<script>
+(function () {
+  const countEl = document.getElementById("count");
+  const hintEl = document.getElementById("hint");
+  const KEY = "hello_count";
+  let count = 0;
+
+  async function render() {
+    countEl.textContent = String(count);
+    await app.data.set(KEY, count);
+  }
+
+  document.getElementById("add").addEventListener("click", async () => {
+    count += 1;
+    hintEl.textContent = "";
+    await render();
+  });
+
+  document.getElementById("reset").addEventListener("click", async () => {
+    count = 0;
+    hintEl.textContent = "已清零";
+    await render();
+  });
+
+  (async () => {
+    const saved = await app.data.get(KEY);
+    if (typeof saved === "number") count = saved;
+    countEl.textContent = String(count);
+    hintEl.textContent = "数据已保存到 app.data";
+  })().catch((error) => {
+    hintEl.textContent = "加载失败：" + error.message;
+  });
+})();
+</script>
+</body>
+</html>

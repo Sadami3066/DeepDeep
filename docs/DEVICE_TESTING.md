@@ -151,5 +151,6 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 104. 页面 Agent 生命周期：启动一个带 bash `sleep` 的 Agent 后立即返回/关闭创意页面 → App 不崩溃，正在运行的 Agent 被取消，`files/agent-runs/` 不残留运行目录；页面重新打开后不显示旧运行状态。
 105. 页面 Agent 模型选择：页面用 `models()` 渲染 provider/model 选择（如 deepseek/deepseek-flash 与 opencode-go/deepseek-v4.1-flash），选择后 run 生效；provider/model 不合法时返回错误，不会使用其他模型。
 106. 回归：聊天流式/停止、技能页、MCP 启停热更新、导航转场与返回不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常、无 agent 取消导致的崩溃。
+107. 技能包安装：`files/skills/workshop/` 与 `files/agent/skills/workshop/` 下同时存在 `SKILL.md`、`references/`（api-reference/tutorial/design-checklist）、`examples/`（4 个 html）；技能页 workshop 可见；普通会话加载 `/skill:workshop` 后 Agent 能 read `references/tutorial.md` 和 `examples/02-agent-workbench.html`。
 
-证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7），`v5_*.txt`（页面 Agent models/capabilities/PONG/并行/systemPrompt/校验错误）。
+证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7），`v5_*.txt`（页面 Agent models/capabilities/PONG/并行/systemPrompt/校验错误）；技能包文件清单见 `v6_skill_package.txt`。

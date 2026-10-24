@@ -1,0 +1,204 @@
+# 创意工坊 API 参考
+
+本文件是 workshop 技能的详细参考；路径相对 `SKILL.md` 所在目录。
+
+## manifest.json
+
+```json
+{
+  "id": "heart-app",
+  "name": "爱心",
+  "icon": "💗",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "description": "点一下会跳动的爱心"
+}
+```
+
+| 字段 | 必需 | 说明 |
+|---|---|---|
+| `id` | 是 | 工具生成，1–48 位小写字母/数字/`-`/`_`；不要修改 |
+| `name` | 是 | 1–40 字，列表标题 |
+| `icon` | 否 | 一个 emoji；缺省显示 ✦ |
+| `version` | 否 | 默认 1.0.0 |
+| `entry` | 否 | 默认 index.html，必须真实存在 |
+| `description` | 否 | 列表里的一句说明，≤300 字 |
+
+入口及静态资源放在同一目录；不要放构建产物、node_modules、密钥或用户数据。
+
+## 页面 bridge
+
+页面启动前注入 `window.deepdeep`，别名 `window.app`。所有异步接口返回 Promise。
+
+### app.info()
+
+```js
+const info = await app.info();
+// { app: { id, name, icon, version } }
+```
+
+### app.data
+
+本创意独立的 JSON KV，页面和 Agent 数据工具共享同一份数据。
+
+```js
+await app.data.set("todos", [{ text: "写作业", done: false }]);
+const todos = await app.data.get("todos");       // 不存在时为 null
+await app.data.remove("todos");                   // 返回是否删除
+const keys = await app.data.keys();               // 字符串数组
+```
+
+- key：1–64 位小写字母/数字/`-`/`_`，以字母或数字开头。
+- 单值 JSON 字符串 ≤ 256KB；超限整个请求失败。
+- 值可以是任意 JSON（对象、数组、字符串、数字、布尔、null）。
+- 页面数据与代码物理分离；重写页面文件不会清空数据。
+
+### app.toast
+
+```js
+app.toast("已保存");
+```
+
+原生轻提示，≤200 字。
+
+### 主题与浏览器 API
+
+- CSS 变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`；同时设置 `color-scheme`。
+- `alert(msg)`：被映射成 `app.toast`，不阻塞。
+- `confirm` / `prompt` / Service Worker：不可用；用页面内弹层、输入框和状态实现。
+- 普通 `fetch` 可用；失败要有兜底。
+- `localStorage` 可做缓存，但不要作为唯一数据源；持久数据用 `app.data`。
+
+## 页面驱动 Agent
+
+页面 JS 可以启动一次性、无会话的 Agent，自己决定数量、并行/串行和每个 Agent 的参数。生命周期绑定页面：页面关闭会取消正在运行的 Agent；没有后台执行。
+
+### app.agent.models()
+
+```js
+const models = await app.agent.models();
+// [
+//   { providerId: "deepseek", modelId: "deepseek-flash",
+//     label: "DeepSeek V4.1 Flash", thinkingLevels: ["off","low","high","max"] }
+// ]
+```
+
+只返回当前已配置 provider 的模型；页面用它做模型选择 UI。
+
+### app.agent.capabilities()
+
+```js
+const caps = await app.agent.capabilities();
+// {
+//   tools:  [{ name: "web_search", description: "..." }, ...],
+//   skills: [{ name: "some-skill", description: "..." }, ...]
+// }
+```
+
+返回当前页面 Agent 可请求的完整工具/技能目录（含默认编码工具、App 工具和已启用全局 skills）。`tools`/`skills` 参数只能使用这里的名称。
+
+### app.agent.run(options)
+
+```js
+const text = await app.agent.run({
+  prompt: "…",                  // 必需
+  providerId: "deepseek",       // 可选；与 modelId 成对
+  modelId: "deepseek-flash",
+  thinkingLevel: "high",        // 可选；off|low|medium|high|max
+  systemPrompt: "…",            // 可选；本次任务约束
+  maxTurns: 8,                  // 可选；1–64，默认 16
+  tools: ["web_search"],        // 可选；省略=全部，[]=无工具
+  skills: []                    // 可选；省略=全部，[]=无技能
+});
+```
+
+参数与限制：
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `prompt` | string | 必需，非空，≤64KB |
+| `providerId` / `modelId` | string | 可选成对；必须是 `models()` 返回的已配置模型；省略用默认模型 |
+| `thinkingLevel` | string | 可选；`off`/`low`/`medium`/`high`/`max`，必须在模型支持列表里 |
+| `systemPrompt` | string | 可选，≤16KB；追加到系统提示 |
+| `maxTurns` | number | 可选，1–64，默认 16；超限中止本轮 |
+| `tools` | string[] | 可选；省略=全部可用，空数组=完全不用；名称必须在 `capabilities().tools` 里，≤100 个 |
+| `skills` | string[] | 可选；同上，空数组=不加载技能 |
+
+返回：**最终文本字符串**（`Promise<string>`）。没有流式事件、没有工具调用回调、没有会话历史。
+
+错误：
+
+- Promise reject，`Error.code` 可能是：
+  - `invalid_params`：参数非法、模型/thinking/工具/技能不存在、超出限制；
+  - `agent_failed`：Agent 运行失败（模型调用错误、超时、没有返回文本等）；
+  - `agent_unavailable`：当前环境没有启用页面 Agent（正常 App 不会出现）。
+- 页面应用 `try/catch` 展示错误，不要吞掉。
+
+限制与生命周期：
+
+- 每次 `run` 都是独立的一次性 Agent；多个 `run` 之间没有上下文，结果由 JS 传递。
+- 并行：`Promise.all([...])`；串行：`await` 每一步。
+- 页面关闭/返回/WebView 销毁会取消正在运行的所有 Agent；没有后台队列。
+- 每次运行超时 180 秒。
+- 页面 Agent 当前不启用 MCP。
+- 页面 Agent 可以使用你显式请求的工具/技能；是否请求 App 工具、联网工具由页面作者决定。不要把不必要的用户隐私放进 prompt。
+
+### 模型选择示例
+
+```js
+const select = document.querySelector("#model");
+for (const model of await app.agent.models()) {
+  for (const thinking of model.thinkingLevels) {
+    const option = document.createElement("option");
+    option.value = JSON.stringify({
+      providerId: model.providerId,
+      modelId: model.modelId,
+      thinkingLevel: thinking
+    });
+    option.textContent = `${model.label} · ${thinking}`;
+    select.appendChild(option);
+  }
+}
+```
+
+### 加载态与错误
+
+```js
+button.disabled = true;
+status.textContent = "Agent 正在工作…";
+try {
+  const text = await app.agent.run({ prompt });
+  result.textContent = text;
+} catch (error) {
+  status.textContent = `失败：${error.message}`;
+} finally {
+  button.disabled = false;
+}
+```
+
+## Agent 侧数据工具（对话里的 Agent 使用）
+
+页面不需要调用这些；它们供普通 DeepDeep 会话在修改/更新创意时使用。页面通过 `app.data` 读取同一份数据。
+
+| 工具 | 参数 | 行为 |
+|---|---|---|
+| `workshop_data_get` | `app`, `key` | 读取 key，不存在返回 null |
+| `workshop_data_set` | `app`, `key`, `value` | 写入/覆盖任意 JSON，≤256KB |
+| `workshop_data_delete` | `app`, `key` | 删除 key |
+| `workshop_data_keys` | `app` | 列出 key（排序） |
+
+示例：日报页面把内容存在 `report_2026-10-24`；Agent 每天用 `workshop_data_set` 更新对应 key，页面重开读取。
+
+## 页面与 App 的边界
+
+- 页面不能调用 App 其他内部函数、不能读写其他创意或 App 数据、不能执行 shell。
+- 页面 Agent 是任务型运行：没有聊天会话、不写入聊天记录、不后台续跑。
+- 页面 Agent 的工具/技能由页面代码显式指定；App 只校验名称、参数和限制。
+- 用户关闭页面会取消运行；页面需要在离开前完成或保存结果。
+- 不要自动在页面加载时启动 Agent；由用户按钮触发，避免无感消耗 tokens。
+
+## 本地数据位置
+
+- 页面代码：`files/workshop/apps/<id>/`
+- 页面数据：`files/workshop/userdata/<id>.db`（SQLite KV，页面与数据工具共享）
+- 页面 Agent 临时运行目录由 App 管理，结束后清理；不要依赖它保存数据。

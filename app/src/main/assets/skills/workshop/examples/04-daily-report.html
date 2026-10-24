@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>每日日报</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--dd-bg);
+    color: var(--dd-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    line-height: 1.7;
+  }
+  main { width: min(100%, 720px); margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -.02em; }
+  .date { font-size: 12px; color: var(--dd-ink-secondary); }
+  .lead { color: var(--dd-ink-secondary); font-size: 13px; margin: 8px 0 20px; }
+  label { display: block; font-size: 13px; color: var(--dd-ink-secondary); margin: 16px 0 6px; }
+  input {
+    width: 100%;
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--dd-accent); }
+  button {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dd-ink);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    width: 100%;
+  }
+  button.primary { background: var(--dd-accent); border-color: var(--dd-accent); color: #fff; }
+  button:disabled { opacity: .45; }
+  .status { font-size: 13px; color: var(--dd-ink-secondary); margin-top: 12px; min-height: 20px; }
+  .error { color: #d9485f; font-size: 13px; margin-top: 8px; }
+  .report {
+    border: 1px solid var(--dd-hairline);
+    border-radius: 16px;
+    padding: 18px;
+    margin-top: 20px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+  }
+  .empty {
+    border: 1px dashed var(--dd-hairline);
+    border-radius: 16px;
+    padding: 28px 18px;
+    text-align: center;
+    color: var(--dd-ink-secondary);
+    font-size: 14px;
+    margin-top: 20px;
+  }
+  .meta { margin-top: 12px; font-size: 12px; color: var(--dd-ink-secondary); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>每日日报</h1>
+    <span class="date" id="today"></span>
+  </header>
+  <p class="lead">数据保存在 App 里；需要新内容时让页面 Agent 更新，不会重写页面。</p>
+
+  <label for="focus">今天关注什么（可选）</label>
+  <input id="focus" placeholder="例如：AI 行业、宏观经济、校园">
+  <button class="primary" id="refresh">用 Agent 刷新今天的日报</button>
+  <div class="status" id="status"></div>
+  <div class="error" id="error"></div>
+
+  <div class="empty" id="empty">今天还没有日报，点上面的按钮生成。</div>
+  <article class="report" id="report" hidden></article>
+  <div class="meta" id="meta"></div>
+</main>
+<script>
+(function () {
+  const el = (id) => document.getElementById(id);
+  const today = new Date();
+  const dateKey = today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+  el("today").textContent = dateKey;
+
+  let running = false;
+
+  function render(report) {
+    if (!report || !report.text) {
+      el("report").hidden = true;
+      el("empty").hidden = false;
+      el("meta").textContent = "";
+      return;
+    }
+    el("empty").hidden = true;
+    el("report").hidden = false;
+    el("report").textContent = report.text;
+    el("meta").textContent = "更新于 " + new Date(report.updatedAt).toLocaleString();
+  }
+
+  async function load() {
+    const latest = await app.data.get("report_latest");
+    render(latest);
+    if (latest && latest.date !== dateKey) {
+      el("status").textContent = "今天还没更新，下面是最近一期（" + latest.date + "）";
+    }
+  }
+
+  async function refresh() {
+    if (running) return;
+    running = true;
+    el("refresh").disabled = true;
+    el("error").textContent = "";
+    el("status").textContent = "Agent 正在调查和整理今天的日报…";
+    try {
+      const focus = el("focus").value.trim();
+      const text = await app.agent.run({
+        prompt: [
+          "请生成 " + dateKey + " 的日报。",
+          focus ? "关注方向：" + focus : "关注方向：AI、科技、经济领域的今日重要动态。",
+          "结构：今日摘要（3 条）、每条 2-3 句说明、来源链接。",
+          "要求：只写有来源的事实，不要编造。"
+        ].join("\n"),
+        systemPrompt: "你是严谨的新闻编辑，输出中文纯文本日报。",
+        maxTurns: 12,
+        tools: ["web_search", "web_fetch"],
+        skills: []
+      });
+      const report = { date: dateKey, text: text, updatedAt: Date.now() };
+      await app.data.set("report_" + dateKey, report);
+      await app.data.set("report_latest", report);
+      render(report);
+      el("status").textContent = "已更新";
+      app.toast("日报已更新");
+    } catch (error) {
+      el("status").textContent = "更新失败";
+      el("error").textContent = error.message || String(error);
+    } finally {
+      running = false;
+      el("refresh").disabled = false;
+    }
+  }
+
+  el("refresh").addEventListener("click", refresh);
+  (async () => {
+    await load();
+  })().catch((error) => {
+    el("error").textContent = error.message || String(error);
+  });
+})();
+</script>
+</body>
+</html>

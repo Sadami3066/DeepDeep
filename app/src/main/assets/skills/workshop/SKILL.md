@@ -1,55 +1,38 @@
 ---
 name: workshop
-description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量小应用（待办、课程表、纪念日、抽签、小游戏、动画、计算器、工具页等任何可交互页面）。当用户想要一个手机上的创意/小应用/小页面/小工具，或要修改已有创意时使用。
+description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量小应用（待办、课程表、纪念日、抽签、小游戏、动画、计算器、工具页等）。页面可以经 bridge 读写自己的数据，也可以用 app.agent 编排一次性 Agent（调查、写作、处理文件）搭建多步骤工作台。当用户想要一个手机上的创意/小应用/小页面/小工具，或要修改已有创意时使用。
 ---
 
 # 创意工坊
 
 创意工坊把 Agent 写的一个网页变成手机里的轻应用：用户在抽屉「创意工坊」打开它，像小程序一样使用。页面由你直接编写，没有预设分类或模板，形态完全由需求决定；不要套用「看板 / 工作台 / 工作流」这类分类。
 
+工坊同时提供三层能力：
+
+1. **页面数据**：页面通过 `app.data` 读写自己的 JSON KV；Agent 也可用 `workshop_data_*` 直接更新数据，不用改页面。
+2. **页面驱动 Agent**：页面 JS 用 `app.agent.models/capabilities/run` 编排一次性 Agent（可并行、可串行），只拿最终文本。
+3. **页面 UI**：HTML/CSS/JS 全部由你写，移动端优先、深浅色适配、无构建步骤。
+
 ## 什么时候使用
 
 - 用户想要一个手机上的互动小页面、小应用或小工具：待办、课程表、日程、纪念日、抽签、小游戏、动画、计算器、记账、习惯打卡、工具页等。
+- 用户想要一个多步骤工作台：表单输入 → 选模型 → Agent 调查/写作/处理 → 页面展示结果 → 再处理。
 - 用户要修改、迭代已有创意。
 - 普通报告、幻灯片、文档、图片不要用创意工坊，用 `present`。
 
-## 创建流程
+## 快速开始
 
-1. 理解需求；不确定的交互先一句话问清，不要自己脑补大功能。
-2. 调用 `workshop_create`：`name`（1–40 字）、可选 `description`（列表里的一句说明）、可选 `icon`（一个 emoji）。返回草稿的绝对路径 `<draft>`。
-3. 用 `read` / `write` / `edit` 的**绝对路径**在 `<draft>` 下写页面，入口是 `index.html`，需要的话再加 CSS、JS、图片等文件。创意目录在 bash 工作区之外，**不要用 bash 写这个目录**。
-4. 写完调用 `workshop_load`，参数 `path=<draft>`。工具会校验 manifest 与入口文件；失败就按报错修好再调，直到成功。成功后聊天里会出现入口卡片。
-5. 告诉用户去「创意工坊」打开；用一两句话说明怎么用，不要贴大段代码。
+1. 理解需求；不确定的交互先一句话问清。
+2. 调 `workshop_create`：`name`（1–40 字）、可选 `description`、可选 `icon`（emoji）。返回草稿绝对路径 `<draft>`。
+3. 用 `read`/`write`/`edit` 的绝对路径在 `<draft>` 下写 `index.html`（入口）及 CSS/JS/资源。创意目录在 bash 工作区外，不要用 bash 写。
+4. 调 `workshop_load`（`path=<draft>`）。按报错修到成功；成功后聊天出现入口卡片。
+5. 打开检查布局与交互，再告诉用户去「创意工坊」使用。
 
-## 修改流程
-
-- 先 `workshop_list` 找到该创意的 id 和绝对路径。
-- **只改界面/交互/逻辑**：直接编辑 `apps/<id>/` 下的文件，不需要再次 `workshop_load`，用户重新打开就会看到新版本。
-- **只改内容/数据**（例如日报每天更新、表单字段、配置、记录）：不要重写页面文件，用下面的数据工具改它的 JSON 数据即可；页面重新打开时会读到新数据。
-- 页面数据存在 App 侧的 SQLite（通过页面 bridge 读写），重写页面文件不会丢数据；不要直接改 `userdata` 下的数据库文件。
-
-## 更新数据（Agent 工具）
-
-每个创意都有独立的 JSON 键值数据层，页面打开时通过 `app.data` 读取。你可以直接读写它，不用改 HTML：
-
-| 工具 | 参数 | 说明 |
-|---|---|---|
-| `workshop_data_get` | `app`, `key` | 读取一个 key；不存在时返回 null |
-| `workshop_data_set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖；单值 ≤ 256KB |
-| `workshop_data_delete` | `app`, `key` | 删除 key |
-| `workshop_data_keys` | `app` | 列出已有 key |
-
-- `app` 传 `workshop_list` 返回的 id。
-- 数据是任意 JSON，表单结构/字段/默认值都由你定义：建议用清晰的小写 key，例如 `schema`、`settings`、`report:2026-10-24`；页面代码按约定读取并渲染。
-- 更新内容前先 `workshop_data_get` 或 `workshop_data_keys` 看现有结构，避免覆盖你不想动的字段；需要整体替换时再 set。
-- 写入后不需要 `workshop_load`。用户页面正开着时数据不会自动刷新，让他重新打开或点详情页的重新加载。
-- 单值超过 256KB 时拆成多个 key；不要把数据写进代码目录，也不要存敏感凭据。
-
-日报/播客这类每天更新的创意：页面只写一次，首次把 schema 和示例数据写入；以后收到「更新日报」之类指令时，用 `workshop_data_set` 更新对应日期的 key，不要重写 WebView。
+修改已有创意：`workshop_list` 找到 id 和路径；改界面/交互就编辑 `apps/<id>/` 文件；只改内容/数据用 `workshop_data_*`。
 
 ## 文件夹格式
 
-`workshop_create` 会生成 `manifest.json`：
+`manifest.json`：
 
 ```json
 {
@@ -62,13 +45,13 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 }
 ```
 
-- `id` 由工具生成，不要修改；`name`、`icon`、`description` 可以改。
-- `entry` 一般保持 `index.html`；页面入口必须真实存在。
-- 目录里只放静态资源（html/css/js/svg/png/webp/字体等）；不要放构建产物、node_modules、密钥或用户数据。
+- `id` 工具生成，不要改；`name`、`icon`、`description` 可改；`entry` 默认 `index.html`。
+- 目录内只放静态资源；不要放构建产物、node_modules、密钥或用户数据。
+- 单页优先；多页流程用 JS 切换页面 section，不需要真实多 HTML 文件，但入口文件必须存在。
 
-## 页面能力
+## 页面基础能力
 
-App 会在页面脚本运行前注入 `window.deepdeep`（别名 `window.app`），全部返回 Promise：
+页面脚本运行前会注入 `window.deepdeep`（别名 `window.app`），全部返回 Promise：
 
 ```js
 const todos = await app.data.get("todos");
@@ -78,58 +61,102 @@ app.toast("已保存");
 
 | 接口 | 说明 |
 |---|---|
-| `app.data.get(key)` / `.set(key, value)` / `.remove(key)` / `.keys()` | 每个创意独立的 JSON 键值数据，单值 ≤ 256KB；页面关闭/重装不丢 |
-| `app.toast(text)` | 原生轻提示 |
 | `app.info()` | `{ app: { id, name, icon, version } }` |
+| `app.data.get/set/remove/keys` | 本创意独立的 JSON KV，单值 ≤ 256KB |
+| `app.toast(text)` | 原生轻提示 |
+| `app.agent.*` | 页面驱动的 Agent，见下节 |
 
-- 主题变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，同时设置 `color-scheme`；用它适配 App 深浅色。
-- `alert` 会显示为原生 toast；`confirm` / `prompt` / Service Worker 不可用，用页面内 UI 代替。
-- 页面里不能调用 Agent、不能读写其他创意的数据；用户要改页面，退出创意后在聊天里告诉你。
+- 主题变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，并设置 `color-scheme`。
+- `alert` 会变成原生 toast；`confirm`/`prompt`/Service Worker 不可用，用页面内 UI。
+- 页面不能调用 App 其他内部函数、不能读写其他创意或 App 数据。
 
-## 页面里驱动 Agent
+## 页面驱动 Agent
 
-页面 JS 可以直接启动一次性 Agent，用来调查、总结、写稿、处理文件等，并在多页流程里编排。每个 Agent 无会话、无历史，只返回最终文本；调用几个、串行还是并行，全部由页面 JS 决定。
+页面 JS 可以直接启动一次性 Agent 完成调查、写作、总结、文件处理等任务，并自己编排。
 
 ```js
-const models = await app.agent.models()
+const models = await app.agent.models();
 // [{ providerId, modelId, label, thinkingLevels }]
 
-const caps = await app.agent.capabilities()
+const caps = await app.agent.capabilities();
 // { tools: [{ name, description }], skills: [{ name, description }] }
 
 const text = await app.agent.run({
   prompt: "调查 2026 年 AI 手机市场，返回 5 条带来源的要点",
   providerId: "deepseek",
-  modelId: "deepseek-v4.1-flash",
+  modelId: "deepseek-flash",
   thinkingLevel: "high",
-  systemPrompt: "你是资深行业分析师，只输出结论和来源。", // 可选
+  systemPrompt: "你是资深行业分析师，只输出结论和来源。",
   maxTurns: 8,
-  tools: ["web_search", "web_fetch"], // 省略 = 全部可用；[] = 无工具
-  skills: []                          // 省略 = 全部已启用；[] = 无技能
-})
+  tools: ["web_search", "web_fetch"],
+  skills: []
+});
 ```
 
-- 并行：`await Promise.all([app.agent.run(...), app.agent.run(...)])`；串行：把上一步返回的文本拼进下一步 prompt。
-- 结果只有最终文本，没有流式事件；页面自己显示 loading、错误和结果。
-- Agent 生命周期跟页面绑定：页面关闭/返回会取消正在运行的 Agent；需要结果就在页面里 `await` 完再离开，没有后台编排。
-- `models()` 只返回已配置的 provider/model；页面负责做模型选择 UI，App 会校验选择是否有效。
-- `tools` / `skills` 的名称必须来自 `capabilities()`；省略表示全部可用，空数组表示完全不用工具/技能。
-- `systemPrompt` 是给本次 Agent 的任务约束；`maxTurns` 默认 16，超过后 Agent 会被中止。
-- 运行失败会 reject；用 try/catch 展示错误。不要把 API Key 或用户隐私写进 prompt。
+- 每个 Agent 无会话、无历史，只返回最终文本；上下文由 JS 自己传递。
+- 并行用 `Promise.all([...])`；串行用 `await` 后把结果拼进下一步 prompt。
+- `providerId/modelId/thinkingLevel` 来自 `models()`；省略则用当前默认模型。
+- `tools`/`skills` 名称来自 `capabilities()`；**省略 = 全部可用，`[]` = 不用**。
+- `systemPrompt` 是本次任务约束；`maxTurns` 默认 16，范围 1–64，超限会中止。
+- 生命周期绑定页面：页面关闭/返回会取消正在运行的 Agent；没有后台运行。需要结果就在页面里 await 完。
+- 没有流式事件；页面自己显示 loading、错误和最终结果。
+- 页面 Agent 当前不启用 MCP。
+- 失败会 reject；用 `try/catch` 展示错误，不要吞掉。
 
-多页流程示例：第 1 页收集表单 → 第 2 页用 `models()` 渲染模型选择 → 点击开始后 `await app.agent.run(...)` → 第 3 页显示返回文本 → 第 4 页再跑一个 Agent 或本地处理结果，并用 `app.data.set` 保存。
+完整 API、限制与错误码：`references/api-reference.md`。
+
+编排模板：`references/tutorial.md`。
+
+## Agent 侧数据更新
+
+需要改已有创意的内容/数据时，不要重写页面，直接改数据：
+
+| 工具 | 参数 | 说明 |
+|---|---|---|
+| `workshop_data_get` | `app`, `key` | 读取一个 key |
+| `workshop_data_set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖，≤256KB |
+| `workshop_data_delete` | `app`, `key` | 删除 key |
+| `workshop_data_keys` | `app` | 列出 key |
+
+- 数据是任意 JSON；表单 schema、字段、默认值都可以由你定义，页面按约定读取渲染。
+- 页面正在打开时数据不会自动刷新；用户重新打开或点详情页「重新加载」。
+- 日报/播客类：页面写一次，之后用 `workshop_data_set` 更新按日期分的 key。
+
+## 修改流程
+
+- `workshop_list` 找 id/path。
+- 改界面/交互/逻辑：编辑 `apps/<id>/` 文件，不需要重新 `workshop_load`。
+- 改内容/数据：用 `workshop_data_*`，不改页面。
+- 重写页面不丢数据；不要直接改 `userdata` 下的数据库文件。
 
 ## 页面要求
 
-- 移动端优先：`<meta name="viewport" content="width=device-width, initial-scale=1">`，用 responsive 布局（flex/grid），不要固定桌面宽度或超大画布。
-- 单文件可运行优先：无构建步骤、相对路径引用资源、不依赖登录或需要密钥的远端服务；外部 `fetch` 必须有失败兜底。
-- 交互真实可用：按钮有反馈、空态和错误提示清楚、输入框可用；需要持久化的数据走 `app.data`，不要用 localStorage 当唯一真相。
-- 深浅色都可读：颜色优先用主题变量，必要时用 `@media (prefers-color-scheme: dark)` 兜底。
-- 控制体积：不引入大库/大字体，图标用 emoji 或内联 SVG；图片尽量压缩。
-- 每次 `workshop_load` 后都要真的打开检查布局与核心交互，再告诉用户完成。
+- 移动端优先：`<meta name="viewport" content="width=device-width, initial-scale=1">`，flex/grid，响应式，不做固定桌面宽度。
+- 单文件优先，无构建、相对路径、无外部登录依赖；外部 fetch 必须有失败兜底。
+- 深浅色可读：颜色优先用主题变量；必要时 `prefers-color-scheme` 兜底。
+- 交互真实：按钮反馈、空态、错误提示、输入可用；持久化数据走 `app.data`，不要只依赖 localStorage。
+- 控制体积：不引入大库/大字体；图标用 emoji 或内联 SVG。
+- 不把 API Key、Cookie、用户隐私写进页面或 prompt。
+- 页面 Agent 只在用户操作后启动（按钮），不要在页面加载时自动跑；不要让一个页面无限循环启动 Agent。
 
-## 注意
+## 文档与样例
 
-- 一次只做一个创意；需求很大时先做可用版本，再按用户反馈迭代。
-- 不要自行创建/删除/排序创意列表，也不要在工坊页之外自行安装目录。
-- 不要在页面或代码里写 API Key、Cookie 等敏感信息。
+所有参考文件都在本技能目录下，路径相对 `SKILL.md`：
+
+- `references/api-reference.md`：完整 bridge、页面 Agent、数据工具参数与错误码。
+- `references/tutorial.md`：从零搭建多步骤 Agent 工作台的完整教程与编排模式。
+- `references/design-checklist.md`：移动端/深浅色/错误处理/性能检查清单。
+- `examples/01-hello.html`：最小页面（数据、toast、主题）。
+- `examples/02-agent-workbench.html`：表单 → 选模型 → 运行 Agent → 结果 → 再处理。
+- `examples/03-agent-pipeline.html`：并行调查 Agent + 总写 Agent。
+- `examples/04-daily-report.html`：数据驱动日报 + 用 Agent 刷新内容。
+
+样例是模板，先 `read` 再按需求改写；不要直接引用技能目录里的文件路径，要把内容写进创意目录。
+
+## 完成前自测
+
+- `workshop_load` 成功，入口能打开。
+- 核心交互、空态、错误态可用；深浅色可读；小屏不溢出。
+- 页面 Agent 的模型列表、loading、错误、结果都正常。
+- 页面重开数据还在；不依赖 localStorage 作为唯一数据源。
+- 没有在页面加载时自动调用 Agent。

@@ -54,6 +54,99 @@ class BuiltinSkillsTest {
     }
 
     @Test
+    fun writesNestedFilesToBothCopies() {
+        val repoDir = tempDir("workshop-repo")
+        val agentDir = tempDir("workshop-agent")
+        val files = listOf(
+            BuiltinSkillFile("SKILL.md", "# Skill\n"),
+            BuiltinSkillFile("references/api.md", "api\n"),
+            BuiltinSkillFile("examples/hello.html", "<html></html>\n"),
+        )
+
+        assertTrue(BuiltinSkills.ensure(repoDir, agentDir, "workshop", files))
+
+        assertEquals("# Skill\n", File(repoDir, "workshop/SKILL.md").readText())
+        assertEquals("api\n", File(repoDir, "workshop/references/api.md").readText())
+        assertEquals("<html></html>\n", File(repoDir, "workshop/examples/hello.html").readText())
+        assertEquals("# Skill\n", File(agentDir, "skills/workshop/SKILL.md").readText())
+        assertEquals("api\n", File(agentDir, "skills/workshop/references/api.md").readText())
+        assertEquals("<html></html>\n", File(agentDir, "skills/workshop/examples/hello.html").readText())
+    }
+
+    @Test
+    fun updatesChangedNestedFiles() {
+        val repoDir = tempDir("workshop-repo")
+        val agentDir = tempDir("workshop-agent")
+        val old = listOf(
+            BuiltinSkillFile("SKILL.md", "old\n"),
+            BuiltinSkillFile("references/api.md", "old api\n"),
+        )
+        val new = listOf(
+            BuiltinSkillFile("SKILL.md", "old\n"),
+            BuiltinSkillFile("references/api.md", "new api\n"),
+        )
+        BuiltinSkills.ensure(repoDir, agentDir, "workshop", old)
+
+        assertTrue(BuiltinSkills.ensure(repoDir, agentDir, "workshop", new))
+
+        assertEquals("new api\n", File(repoDir, "workshop/references/api.md").readText())
+        assertEquals("new api\n", File(agentDir, "skills/workshop/references/api.md").readText())
+    }
+
+    @Test
+    fun doesNotReenableDisabledSkillWithNewFiles() {
+        val repoDir = tempDir("workshop-repo")
+        val agentDir = tempDir("workshop-agent")
+        BuiltinSkills.ensure(repoDir, agentDir, "workshop", listOf(BuiltinSkillFile("SKILL.md", "old\n")))
+        assertTrue(File(agentDir, "skills/workshop/SKILL.md").delete())
+
+        assertTrue(
+            BuiltinSkills.ensure(
+                repoDir,
+                agentDir,
+                "workshop",
+                listOf(
+                    BuiltinSkillFile("SKILL.md", "old\n"),
+                    BuiltinSkillFile("references/new.md", "new\n"),
+                ),
+            ),
+        )
+
+        assertEquals("new\n", File(repoDir, "workshop/references/new.md").readText())
+        assertFalse(File(agentDir, "skills/workshop/references/new.md").exists())
+        assertFalse(File(agentDir, "skills/workshop/SKILL.md").exists())
+    }
+
+    @Test
+    fun rejectsUnsafePaths() {
+        val repoDir = tempDir("workshop-repo")
+        val agentDir = tempDir("workshop-agent")
+
+        listOf("../escape.md", "/absolute.md", "a//b.md", "a/./b.md", "..").forEach { path ->
+            assertFalse(BuiltinSkills.ensure(repoDir, agentDir, "workshop", listOf(BuiltinSkillFile(path, "x"))))
+        }
+        assertTrue(repoDir.listFiles().isNullOrEmpty())
+        assertTrue(agentDir.listFiles().isNullOrEmpty())
+    }
+
+    @Test
+    fun rejectsDuplicateOrEmptyFiles() {
+        val repoDir = tempDir("workshop-repo")
+        val agentDir = tempDir("workshop-agent")
+
+        assertFalse(BuiltinSkills.ensure(repoDir, agentDir, "workshop", emptyList()))
+        assertFalse(
+            BuiltinSkills.ensure(
+                repoDir,
+                agentDir,
+                "workshop",
+                listOf(BuiltinSkillFile("SKILL.md", "a"), BuiltinSkillFile("SKILL.md", "b")),
+            ),
+        )
+        assertTrue(repoDir.listFiles().isNullOrEmpty())
+    }
+
+    @Test
     fun rejectsInvalidId() {
         val repoDir = tempDir("workshop-repo")
         val agentDir = tempDir("workshop-agent")

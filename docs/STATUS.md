@@ -6,7 +6,8 @@
 - `WorkshopAgentService` 在 App 进程内为每次运行创建一次性 `PiSessionEngine`：临时 workspace/agentDir、页面选择的 tools 过滤、选中的 skills 复制、页面 systemPrompt 追加到系统提示、关闭 MCP、`maxTurns` 限制、180s 超时、结束后关闭 session 并清理临时目录；不写入聊天会话/JSONL
 - Agent 生命周期绑定 WebView：`agent.run` 的协程属于 viewer/WebView scope，页面关闭/返回/销毁会取消正在运行的 Agent；没有后台任务、没有 run 持久化
 - `PiSessionEngine.createSession` 新增 toolsFilter / mcpEnabled / extraSystemPromptSections，默认行为不变；模型来自已配置 provider，页面选择由 App 校验
-- 539 unit tests green（runtime 257 / app 262 / shell 20），lint 0 errors、模块边界与 debug 构建通过；真机验证 models/capabilities、单 Agent 返回 PONG、并行 ALPHA/BETA、systemPrompt 生效、非法 tool 返回 invalid_params、长任务返回页面后取消且无残留 run 目录
+- workshop 技能升级为完整教程包：`SKILL.md` + `references/api-reference.md` + `references/tutorial.md` + `references/design-checklist.md` + 4 个可运行样例（hello / agent workbench / agent pipeline / daily report），随内置技能目录整体安装
+- 544 unit tests green（runtime 262 / app 262 / shell 20），lint 0 errors、模块边界与 debug 构建通过；真机验证 models/capabilities、单 Agent 返回 PONG、并行 ALPHA/BETA、systemPrompt 生效、非法 tool 返回 invalid_params、长任务返回页面后取消且无残留 run 目录
 
 ## Done: 创意工坊数据层 Agent 工具
 
