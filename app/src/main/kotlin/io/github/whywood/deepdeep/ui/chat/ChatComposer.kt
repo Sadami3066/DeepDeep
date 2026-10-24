@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -318,7 +320,13 @@ internal fun ChatComposer(
                 title = stringResource(R.string.assistant_model_sheet),
                 onClose = { onModelsOpenChange(false) },
             )
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp),
+            ) {
                 Spacer(Modifier.height(8.dp))
                 if (providers.isNotEmpty()) {
                     val providerName = providers.firstOrNull { it.id == providerId }?.name ?: providerId
