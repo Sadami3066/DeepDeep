@@ -40,7 +40,7 @@
     <string name="mcp_oauth_login">登录</string>
     <string name="mcp_oauth_logout">退出登录</string>
     <string name="mcp_oauth_signed_in">已登录</string>
-    <string name="mcp_oauth_waiting">在浏览器中完成授权</string>
+    <string name="mcp_oauth_waiting">在浏览器中完成授权，完成后会自动回到 DeepDeep</string>
     <string name="mcp_oauth_open">打开浏览器</string>
     <string name="mcp_oauth_manual_hint">没有收到回调？粘贴浏览器地址栏里的完整链接。</string>
     <string name="mcp_oauth_manual_placeholder">http://127.0.0.1:…/callback?code=…</string>

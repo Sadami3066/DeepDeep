@@ -40,7 +40,7 @@
     <string name="mcp_oauth_login">Sign in</string>
     <string name="mcp_oauth_logout">Sign out</string>
     <string name="mcp_oauth_signed_in">Signed in</string>
-    <string name="mcp_oauth_waiting">Finish signing in in your browser</string>
+    <string name="mcp_oauth_waiting">Finish signing in your browser; DeepDeep will be brought back automatically</string>
     <string name="mcp_oauth_open">Open browser</string>
     <string name="mcp_oauth_manual_hint">No callback yet? Paste the full link from the browser address bar.</string>
     <string name="mcp_oauth_manual_placeholder">http://127.0.0.1:…/callback?code=…</string>

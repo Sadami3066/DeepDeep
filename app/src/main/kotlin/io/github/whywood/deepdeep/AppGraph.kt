@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep
 
 import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
-import dev.pi.ai.auth.oauth.socketOAuthCallbackServerFactory
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -18,6 +17,7 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
 import io.github.whywood.deepdeep.runtime.InstallationIdStore
 import io.github.whywood.deepdeep.runtime.OAuthCredentialStore
@@ -66,7 +66,7 @@ class AppGraph(context: Context) {
 
     init {
         StorageMigration.migrate(appContext.filesDir)
-        OAuthRuntime.callbackServerFactory = socketOAuthCallbackServerFactory()
+        OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
     }
 
     val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }

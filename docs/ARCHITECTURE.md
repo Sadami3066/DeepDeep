@@ -59,7 +59,7 @@ Compose ChatScreen
 
 ## OAuth 与 MCP
 
-- Provider OAuth 使用 pi-ai 的 9 个内置 flow；`OAuthRuntime.callbackServerFactory` 在 `AppGraph` 初始化时设为 Android 的 loopback 服务器工厂。登录交互（浏览器、选择、输入）由 App 的 `OAuthLoginSession` / `OAuthLoginSheet` 承载；成功后写 OAuth 凭据并清掉该 provider 的 API Key。
+- Provider OAuth 使用 pi-ai 的 9 个内置 flow；`OAuthRuntime.callbackServerFactory` 在 `AppGraph` 初始化时设为 Android 的 loopback 服务器工厂。登录交互（浏览器、选择、输入）由 App 的 `OAuthLoginSession` / `OAuthLoginSheet` 承载；成功后写 OAuth 凭据并清掉该 provider 的 API Key。App 自定义 `DeepDeepOAuthCallbackServerFactory` 替代 SDK 默认实现：授权回调页返回后自动跳到 `deepdeep://oauth/callback`（MainActivity 已注册 VIEW intent filter），因此浏览器授权完成会直接回到 App。
 - OpenAI ChatGPT OAuth 要求每次安装的稳定 UUID（`ext_agent_host_id`）与 agent 名称：`InstallationIdStore` 在 `files/agent/install-id` 持久化一个 UUID，登录时以 `OAuthLoginOptions(deviceId=…, agentName="DeepDeep")` 传给 SDK。
 - MCP 使用 pi2kotlin 0.2.1 的 `McpManager`：配置存 `files/agent/mcp.json`（`mcpServers` 格式，原子写），OAuth token 存 `files/agent/mcp-auth.json`；App 只管理 Streamable HTTP 服务器（Android 无 stdio 子进程）。
 - `PiSessionEngine` 以 `McpOptions(loadConfig=true, samplingEnabled=false, rootsEnabled=true, autoEnableToolSearch=true)` 创建会话：deferred 工具由 `tool_search` 加载，resources 工具自动注册；工具名为 `mcp__<server>__<tool>`。

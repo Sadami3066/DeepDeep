@@ -98,6 +98,14 @@ fun OAuthLoginSheet(
                     )
                     Spacer(Modifier.height(4.dp))
                 }
+                if (state.url != null && !state.finished) {
+                    Text(
+                        text = stringResource(R.string.settings_oauth_waiting_browser),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
                 if (state.options.isNotEmpty()) {
                     state.options.forEachIndexed { index, option ->
                         if (index > 0) DdHairline()
@@ -111,6 +119,14 @@ fun OAuthLoginSheet(
                     Spacer(Modifier.height(8.dp))
                 }
                 state.prompt?.let { prompt ->
+                    if (state.url != null) {
+                        Text(
+                            text = stringResource(R.string.settings_oauth_manual_hint),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
                     Text(
                         text = prompt.message,
                         style = DdType.bodySmall,

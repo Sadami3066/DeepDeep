@@ -24,7 +24,10 @@ data class OAuthLoginState(
     val error: String? = null,
     val busy: Boolean = false,
     val finished: Boolean = false,
-)
+) {
+    val waiting: Boolean
+        get() = busy && url != null && prompt == null && options.isEmpty() && error == null && !finished
+}
 
 class OAuthLoginSession(
     val providerName: String,

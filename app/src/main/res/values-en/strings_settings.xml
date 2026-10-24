@@ -75,6 +75,7 @@
     <string name="settings_oauth_sign_out">Sign out</string>
     <string name="settings_oauth_open_browser">Open browser</string>
     <string name="settings_oauth_cancel">Cancel</string>
+    <string name="settings_oauth_waiting_browser">Finish signing in your browser and DeepDeep will be brought back automatically. If it does not return, paste the authorization code or redirect URL below.</string>
     <string name="settings_oauth_confirm">Confirm</string>
     <string name="settings_oauth_waiting">Signing in…</string>
     <string name="settings_oauth_login_failed">Sign-in failed</string>
@@ -154,4 +155,5 @@
     <string name="dev_bundle_dev">Development</string>
     <string name="dev_bundle_dev_body">Git, GitHub CLI, GCC, Make, and CMake</string>
     <string name="settings_background_job_wake">Wake when a background job finishes</string>
+    <string name="settings_oauth_manual_hint">Browser did not return automatically? Paste the authorization code or redirect URL below.</string>
 </resources>

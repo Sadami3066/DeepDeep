@@ -82,6 +82,7 @@
     <string name="settings_oauth_sign_out">退出登录</string>
     <string name="settings_oauth_open_browser">打开浏览器</string>
     <string name="settings_oauth_cancel">取消</string>
+    <string name="settings_oauth_waiting_browser">在浏览器中完成授权后会自动回到 DeepDeep；如果没有自动返回，可在下方粘贴授权码或回调链接。</string>
     <string name="settings_oauth_confirm">确认</string>
     <string name="settings_oauth_waiting">正在登录…</string>
     <string name="settings_oauth_login_failed">登录失败</string>
@@ -161,4 +162,5 @@
     <string name="dev_bundle_dev">开发编程</string>
     <string name="dev_bundle_dev_body">Git、GitHub CLI、GCC、Make 与 CMake</string>
     <string name="settings_background_job_wake">后台任务完成时唤醒</string>
+    <string name="settings_oauth_manual_hint">浏览器没有自动返回？也可以手动粘贴授权码或回调链接。</string>
 </resources>
