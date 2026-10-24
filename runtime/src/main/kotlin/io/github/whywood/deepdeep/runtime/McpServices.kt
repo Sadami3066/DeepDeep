@@ -16,6 +16,8 @@ import dev.pi.mcp.oauth.McpTokenStore
 import dev.pi.mcp.transport.StreamableHttpTransport
 import dev.pi.mcp.transport.StreamableHttpTransportOptions
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class McpProbeState {
     OK,
@@ -39,9 +41,9 @@ class McpServerProbe(
         name: String,
         config: McpServerConfig,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): McpProbeResult {
+    ): McpProbeResult = withContext(Dispatchers.IO) {
         if (config !is McpServerConfig.Http) {
-            return McpProbeResult(McpProbeState.UNSUPPORTED)
+            return@withContext McpProbeResult(McpProbeState.UNSUPPORTED)
         }
         val httpTransport = StreamableHttpTransport(
             http = transport,
@@ -57,7 +59,7 @@ class McpServerProbe(
             transport = httpTransport,
             options = McpClientOptions(requestTimeoutMs = timeoutMs),
         )
-        return try {
+        try {
             val initialized = client.initialize()
             val tools = client.listTools(McpRequestOptions(timeoutMs = timeoutMs))
             McpProbeResult(
@@ -86,7 +88,9 @@ class McpOAuthService(
     private val tokenStore: McpTokenStore,
 ) {
     suspend fun hasToken(server: String, config: McpServerConfig.Http): Boolean =
-        tokenStore.read(server, config.url)?.tokens?.accessToken?.isNotBlank() == true
+        withContext(Dispatchers.IO) {
+            tokenStore.read(server, config.url)?.tokens?.accessToken?.isNotBlank() == true
+        }
 
     suspend fun signIn(
         server: String,
@@ -94,23 +98,25 @@ class McpOAuthService(
         interaction: McpOAuthInteraction,
         redirectUri: String,
         signal: RunSignal? = null,
-    ): Result<Unit> = runCatching {
-        val provider = McpOAuthProvider(
-            options = config.oauthOptions(server),
-            transport = transport,
-            tokenStore = tokenStore,
-            onChallenge = { challenge ->
-                if (challenge.error == "insufficient_scope") Unit
-            },
-        )
-        val tokens = provider.signIn(interaction, redirectUri, signal)
-        if (tokens.accessToken.isEmpty()) {
-            throw IllegalStateException("OAuth server returned an empty access token")
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val provider = McpOAuthProvider(
+                options = config.oauthOptions(server),
+                transport = transport,
+                tokenStore = tokenStore,
+                onChallenge = { challenge ->
+                    if (challenge.error == "insufficient_scope") Unit
+                },
+            )
+            val tokens = provider.signIn(interaction, redirectUri, signal)
+            if (tokens.accessToken.isEmpty()) {
+                throw IllegalStateException("OAuth server returned an empty access token")
+            }
         }
     }
 
     suspend fun signOut(server: String, config: McpServerConfig.Http) {
-        tokenStore.clear(server, config.url)
+        withContext(Dispatchers.IO) { tokenStore.clear(server, config.url) }
     }
 }
 
