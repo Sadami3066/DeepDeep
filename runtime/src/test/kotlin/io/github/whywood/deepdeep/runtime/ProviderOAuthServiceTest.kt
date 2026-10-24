@@ -45,6 +45,8 @@ class ProviderOAuthServiceTest {
         override fun readRaw(): Map<String, JsonElement> = raw?.let { mapOf("fake" to it) } ?: emptyMap()
     }
 
+    private var capturedOptions: OAuthLoginOptions? = null
+
     private val fakeFlow = object : OAuthAuth {
         override val id: String = "fake"
         override val name: String = "Fake"
@@ -54,7 +56,10 @@ class ProviderOAuthServiceTest {
             interaction: OAuthInteraction,
             transport: HttpTransport,
             options: OAuthLoginOptions?,
-        ): OAuthToken = OAuthToken(refresh = "refresh", access = "access", expires = 1_800_000_000_000L)
+        ): OAuthToken {
+            capturedOptions = options
+            return OAuthToken(refresh = "refresh", access = "access", expires = 1_800_000_000_000L)
+        }
 
         override suspend fun refresh(
             credential: OAuthToken,
@@ -77,13 +82,20 @@ class ProviderOAuthServiceTest {
     @Test
     fun loginStoresRawOAuthCredential() = runTest {
         val store = RecordingStore()
-        val service = ProviderOAuthService(store, transport, mapOf("fake" to fakeFlow))
+        val service = ProviderOAuthService(
+            store,
+            transport,
+            mapOf("fake" to fakeFlow),
+            deviceId = { "123e4567-e89b-12d3-a456-426614174000" },
+        )
         assertTrue(service.supports("fake"))
         assertFalse(service.supports("deepseek"))
         val result = service.login("fake", interaction)
         assertTrue(result.isSuccess)
         val raw = store.raw as kotlinx.serialization.json.JsonObject
         assertEquals("access", (raw["access"] as kotlinx.serialization.json.JsonPrimitive).content)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", capturedOptions?.deviceId)
+        assertEquals("DeepDeep", capturedOptions?.agentName)
     }
 
     @Test

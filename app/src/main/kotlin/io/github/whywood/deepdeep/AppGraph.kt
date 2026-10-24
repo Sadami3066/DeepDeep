@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
+import io.github.whywood.deepdeep.runtime.InstallationIdStore
 import io.github.whywood.deepdeep.runtime.OAuthCredentialStore
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpOAuthService
@@ -103,7 +104,12 @@ class AppGraph(context: Context) {
     private val httpTransport = okHttpTransport()
     val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
     val providerCatalog = ProviderCatalog(httpTransport, credentials)
-    val providerOAuthService = ProviderOAuthService(credentials, httpTransport)
+    val providerOAuthService = ProviderOAuthService(
+        credentials = credentials,
+        transport = httpTransport,
+        deviceId = { installationId.get() },
+    )
+    private val installationId = InstallationIdStore(agentDir)
     val mcpConfigStore = McpConfigStore(agentDir)
     private val mcpTokenStore = FileMcpTokenStore(defaultMcpAuthFile(agentDir.absolutePath.toPath()))
     val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)

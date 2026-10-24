@@ -5,6 +5,7 @@
 - Provider OAuth：内置 9 家 OAuth 厂商（Anthropic、OpenAI、GitHub Copilot、OpenAI Codex、xAI、OpenRouter、Kimi、Meta、Radius）可在设置页登录/退出；OAuth token 与 API Key 同样用 Android Keystore 加密保存，同一厂商只保留一种认证；登录后厂商立即视为已配置并可选用
 - MCP：抽屉新增「MCP」，管理 Streamable HTTP 服务器（新增/编辑/删除/启停、请求头、说明、连接测试、OAuth 登录）；配置存 `files/agent/mcp.json`，保存后对已打开会话热更新；工具/资源经 SDK 进入对话，`mcp__server__tool` 命名，deferred 工具通过 `tool_search` 按需加载（Android 无 stdio）
 - 导航：抽屉去掉「聊天」「已归档」；「已归档」移入设置页并显示数量；占位「插件」入口由 MCP 取代
+- OpenAI ChatGPT OAuth 使用持久化的安装 UUID（`install-id`）与 `agentName=DeepDeep`，满足 SDK 的 `ext_agent_host_id` 要求
 - SDK 升级到 pi2kotlin 0.2.1；MCP sampling 默认关闭，不触发隐式模型调用
 - 323 unit tests green（runtime 135 / app 168 / shell 20），lint、模块边界、debug 构建通过
 

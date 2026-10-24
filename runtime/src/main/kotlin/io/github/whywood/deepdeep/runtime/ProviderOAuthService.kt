@@ -12,6 +12,7 @@ class ProviderOAuthService(
     private val credentials: CredentialStore,
     private val transport: HttpTransport,
     private val flows: Map<String, OAuthAuth> = bundledOAuthFlows(),
+    private val deviceId: suspend () -> String? = { null },
 ) {
 
     fun supports(providerId: String): Boolean = flows.containsKey(providerId)
@@ -34,12 +35,19 @@ class ProviderOAuthService(
             store = credentials,
             transport = transport,
             interaction = interaction,
-            options = options,
+            options = options ?: OAuthLoginOptions(
+                deviceId = deviceId(),
+                agentName = AGENT_NAME,
+            ),
         )
         Unit
     }
 
     suspend fun logout(providerId: String) {
         credentials.delete(providerId)
+    }
+
+    private companion object {
+        const val AGENT_NAME = "DeepDeep"
     }
 }
