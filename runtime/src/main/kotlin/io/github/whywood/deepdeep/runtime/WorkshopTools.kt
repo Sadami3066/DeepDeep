@@ -4,7 +4,9 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.agent.AgentToolResult
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
+import java.io.File
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -168,6 +170,237 @@ private fun workshopListTool(store: WorkshopStore): CodingTool = CodingTool(
         }
     },
 )
+
+private const val WORKSHOP_DATA_MAX_VALUE_CHARS = 256 * 1024
+private val WORKSHOP_DATA_KEY_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,63}")
+
+private val workshopDataGetParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("app") {
+            put("type", "string")
+            put("description", "Workshop app id, from workshop_list")
+        }
+        putJsonObject("key") {
+            put("type", "string")
+            put("description", "Data key: 1-64 lowercase letters, digits, '-' or '_', starting with a letter or digit")
+        }
+    }
+    put("required", buildJsonArray {
+        add(JsonPrimitive("app"))
+        add(JsonPrimitive("key"))
+    })
+}
+
+private val workshopDataSetParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("app") {
+            put("type", "string")
+            put("description", "Workshop app id, from workshop_list")
+        }
+        putJsonObject("key") {
+            put("type", "string")
+            put("description", "Data key: 1-64 lowercase letters, digits, '-' or '_', starting with a letter or digit")
+        }
+        putJsonObject("value") {}
+    }
+    put("required", buildJsonArray {
+        add(JsonPrimitive("app"))
+        add(JsonPrimitive("key"))
+        add(JsonPrimitive("value"))
+    })
+}
+
+private val workshopDataDeleteParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("app") {
+            put("type", "string")
+            put("description", "Workshop app id, from workshop_list")
+        }
+        putJsonObject("key") {
+            put("type", "string")
+            put("description", "Data key to delete")
+        }
+    }
+    put("required", buildJsonArray {
+        add(JsonPrimitive("app"))
+        add(JsonPrimitive("key"))
+    })
+}
+
+private val workshopDataKeysParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("app") {
+            put("type", "string")
+            put("description", "Workshop app id, from workshop_list")
+        }
+    }
+    put("required", buildJsonArray { add(JsonPrimitive("app")) })
+}
+
+private val workshopDataGuidelines = listOf(
+    "Use the workshop_data tools to read or update the JSON data persisted for a Workshop app; this is the app's data layer, not its code.",
+    "The app page reads the same data through window.app.data (get/set/remove/keys); changing data does not require rewriting page files.",
+    "Keep app code stable and update data when the user wants new daily content, form entries or other content.",
+    "Prefer one JSON document per feature, for example one key holding a todo list.",
+    "Use workshop_list to find the app id before calling a workshop_data tool.",
+    "Use lowercase keys: 1-64 letters, digits, '-' or '_', starting with a letter or digit; one value may be at most 256KB.",
+    "Never edit the SQLite database file directly.",
+)
+
+fun workshopDataTools(store: WorkshopStore): List<CodingTool> =
+    workshopDataTools(store) { file -> SqliteWorkshopData(file) }
+
+internal fun workshopDataTools(store: WorkshopStore, dataFactory: (File) -> WorkshopData): List<CodingTool> = listOf(
+    workshopDataGetTool(store, dataFactory),
+    workshopDataSetTool(store, dataFactory),
+    workshopDataDeleteTool(store, dataFactory),
+    workshopDataKeysTool(store, dataFactory),
+)
+
+private fun workshopDataGetTool(store: WorkshopStore, dataFactory: (File) -> WorkshopData): CodingTool = CodingTool(
+    name = "workshop_data_get",
+    description = "Read a JSON value from a Workshop app's persisted data layer (not its code). Missing keys return null.",
+    parameters = workshopDataGetParameters,
+    label = "workshop_data_get",
+    promptSnippet = "Read a Workshop app data value",
+    promptGuidelines = workshopDataGuidelines,
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        workshopToolResult {
+            val creation = requireWorkshopApp(store, args.requiredWorkshopString("app"))
+            val key = workshopDataKey(args.requiredWorkshopString("key"))
+            withWorkshopData(store, creation, dataFactory) { data ->
+                val value = data.get(key)
+                val result = buildJsonObject {
+                    put("ok", true)
+                    put("app", creation.manifest.id)
+                    put("key", key)
+                    put("value", value ?: JsonNull)
+                }
+                textResult(result.toString())
+            }
+        }
+    },
+)
+
+private fun workshopDataSetTool(store: WorkshopStore, dataFactory: (File) -> WorkshopData): CodingTool = CodingTool(
+    name = "workshop_data_set",
+    description = "Write or overwrite one JSON value in a Workshop app's persisted data layer (not its code); the page reads it through window.app.data.",
+    parameters = workshopDataSetParameters,
+    label = "workshop_data_set",
+    promptSnippet = "Write a Workshop app data value",
+    promptGuidelines = workshopDataGuidelines,
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        workshopToolResult {
+            val creation = requireWorkshopApp(store, args.requiredWorkshopString("app"))
+            val key = workshopDataKey(args.requiredWorkshopString("key"))
+            val value = args["value"] ?: throw IllegalArgumentException("missing argument value")
+            val encoded = value.toString()
+            if (encoded.length > WORKSHOP_DATA_MAX_VALUE_CHARS) {
+                throw IllegalArgumentException("value must be at most $WORKSHOP_DATA_MAX_VALUE_CHARS characters")
+            }
+            withWorkshopData(store, creation, dataFactory) { data ->
+                data.set(key, value)
+                val result = buildJsonObject {
+                    put("ok", true)
+                    put("app", creation.manifest.id)
+                    put("key", key)
+                }
+                textResult(result.toString())
+            }
+        }
+    },
+)
+
+private fun workshopDataDeleteTool(store: WorkshopStore, dataFactory: (File) -> WorkshopData): CodingTool = CodingTool(
+    name = "workshop_data_delete",
+    description = "Delete one key from a Workshop app's persisted data layer (not its code).",
+    parameters = workshopDataDeleteParameters,
+    label = "workshop_data_delete",
+    promptSnippet = "Delete a Workshop app data key",
+    promptGuidelines = workshopDataGuidelines,
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        workshopToolResult {
+            val creation = requireWorkshopApp(store, args.requiredWorkshopString("app"))
+            val key = workshopDataKey(args.requiredWorkshopString("key"))
+            withWorkshopData(store, creation, dataFactory) { data ->
+                val deleted = data.remove(key)
+                val result = buildJsonObject {
+                    put("ok", true)
+                    put("app", creation.manifest.id)
+                    put("key", key)
+                    put("deleted", deleted)
+                }
+                textResult(result.toString())
+            }
+        }
+    },
+)
+
+private fun workshopDataKeysTool(store: WorkshopStore, dataFactory: (File) -> WorkshopData): CodingTool = CodingTool(
+    name = "workshop_data_keys",
+    description = "List the keys stored in a Workshop app's persisted data layer (not its code).",
+    parameters = workshopDataKeysParameters,
+    label = "workshop_data_keys",
+    promptSnippet = "List Workshop app data keys",
+    promptGuidelines = workshopDataGuidelines,
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        workshopToolResult {
+            val creation = requireWorkshopApp(store, args.requiredWorkshopString("app"))
+            withWorkshopData(store, creation, dataFactory) { data ->
+                val keys = data.keys().sorted()
+                val result = buildJsonObject {
+                    put("ok", true)
+                    put("app", creation.manifest.id)
+                    putJsonArray("keys") {
+                        keys.forEach { key -> add(JsonPrimitive(key)) }
+                    }
+                }
+                textResult(result.toString())
+            }
+        }
+    },
+)
+
+private suspend fun requireWorkshopApp(store: WorkshopStore, id: String): WorkshopCreation =
+    when (val entry = store.load(id)) {
+        is WorkshopEntry.Valid -> entry.creation
+        is WorkshopEntry.Invalid -> throw IllegalArgumentException(
+            "workshop app is invalid: $id (${entry.reason.name.lowercase()}" +
+                (entry.detail?.let { ": $it" } ?: "") + ")",
+        )
+        WorkshopEntry.Missing -> throw IllegalArgumentException("workshop app not found: $id")
+    }
+
+private fun workshopDataKey(raw: String): String {
+    if (!WORKSHOP_DATA_KEY_REGEX.matches(raw)) {
+        throw IllegalArgumentException(
+            "invalid key: $raw (use 1-64 lowercase letters, digits, '-' or '_', starting with a letter or digit)",
+        )
+    }
+    return raw
+}
+
+private suspend fun withWorkshopData(
+    store: WorkshopStore,
+    creation: WorkshopCreation,
+    dataFactory: (File) -> WorkshopData,
+    block: suspend (WorkshopData) -> AgentToolResult,
+): AgentToolResult {
+    val data = dataFactory(store.dataFile(creation.manifest.id))
+    try {
+        return block(data)
+    } finally {
+        data.close()
+    }
+}
 
 private suspend fun workshopToolResult(block: suspend () -> AgentToolResult): AgentToolResult = try {
     block()

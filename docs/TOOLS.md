@@ -130,9 +130,14 @@ defaultCodingTools(...)
 |---|---|---|
 | `workshop_create` | `name`, `description?`, `icon?` | 在 `files/workshop/build/` 建一个草稿（只写 manifest.json），返回草稿绝对路径 |
 | `workshop_load` | `path`（草稿绝对路径） | 校验清单、入口、大小与路径后原子移动到 `files/workshop/apps/<id>/`，成功后聊天里出现入口卡片；失败返回错误让 Agent 当场修 |
-| `workshop_list` | 无 | 列出已上架创意（含可编辑的绝对路径）与未完成草稿 |
+| `workshop_list` | 无 | 列出已上架创意（含 id 与可编辑的绝对路径）与未完成草稿 |
+| `workshop_data_get` | `app`, `key` | 读取创意数据层的一个 JSON key，不存在返回 null |
+| `workshop_data_set` | `app`, `key`, `value` | 写入/覆盖任意 JSON 值（≤256KB） |
+| `workshop_data_delete` | `app`, `key` | 删除一个 key |
+| `workshop_data_keys` | `app` | 列出数据层 key（排序） |
 
-- 创意形态完全由需求决定，没有分类/模板字段；格式与页面规范由内置 workshop 技能（`/workshop-skill` 或 `/skill:workshop` 强制加载）说明。
+- 创意形态完全由需求决定，没有分类/模板字段；格式与页面规范由内置 workshop 技能（`/skill:workshop` 强制加载）说明。
+- 数据工具是 Agent 更新内容（日报、表单、记录）的入口，不需要重写页面；页面通过 bridge 读取同一份数据。
 - 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入。
 - 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要重新 load；工坊页进入时重新扫描。
 - 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。页面不能调用 Agent，修改统一回到聊天。

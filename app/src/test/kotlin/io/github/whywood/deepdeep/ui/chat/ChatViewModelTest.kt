@@ -451,7 +451,7 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
 
-        viewModel.onInputChange("/workshop-skill build a todo app")
+        viewModel.onInputChange("/skill:workshop build a todo app")
         viewModel.send()
         assertTrue(viewModel.state.value.sending)
         advanceUntilIdle()
@@ -470,7 +470,7 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
 
-        viewModel.onInputChange("/workshop-skill")
+        viewModel.onInputChange("/skill:workshop")
         viewModel.send()
         advanceUntilIdle()
 
@@ -534,7 +534,7 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
 
-        viewModel.onInputChange("/workshop-skill build something")
+        viewModel.onInputChange("/skill:workshop build something")
         viewModel.send()
         advanceUntilIdle()
 
@@ -550,10 +550,10 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
-        viewModel.newSession(HOME_ID, initialInput = "/workshop-skill build a todo app")
+        viewModel.newSession(HOME_ID, initialInput = "/skill:workshop build a todo app")
         advanceUntilIdle()
 
-        assertEquals("/workshop-skill build a todo app", viewModel.state.value.input)
+        assertEquals("/skill:workshop build a todo app", viewModel.state.value.input)
         assertTrue(viewModel.state.value.messages.isEmpty())
     }
 

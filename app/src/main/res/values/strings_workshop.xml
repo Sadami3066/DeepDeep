@@ -3,7 +3,7 @@
     <string name="workshop_refresh">刷新</string>
     <string name="workshop_new">新建创意</string>
     <string name="workshop_empty_title">还没有创意</string>
-    <string name="workshop_empty_hint">点右上角 + 新建，或在对话里输入 /workshop-skill 让 DeepDeep 帮你做一个</string>
+    <string name="workshop_empty_hint">点右上角 + 新建，或在对话里输入 /skill:workshop 让 DeepDeep 帮你做一个</string>
     <string name="workshop_invalid">格式无效</string>
     <string name="workshop_invalid_title">无法读取这个创意</string>
     <string name="workshop_invalid_delete">删除</string>

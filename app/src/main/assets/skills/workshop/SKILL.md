@@ -23,8 +23,29 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 
 ## 修改流程
 
-- 先 `workshop_list` 找到该创意的绝对路径，直接编辑 `apps/<id>/` 下的文件即可，不需要再次 `workshop_load`，用户重新打开就会看到新版本。
-- 页面数据存在 App 侧的 SQLite（通过页面 bridge 读写），重写页面文件不会丢数据；不要为了「迁移数据」去改动数据文件。
+- 先 `workshop_list` 找到该创意的 id 和绝对路径。
+- **只改界面/交互/逻辑**：直接编辑 `apps/<id>/` 下的文件，不需要再次 `workshop_load`，用户重新打开就会看到新版本。
+- **只改内容/数据**（例如日报每天更新、表单字段、配置、记录）：不要重写页面文件，用下面的数据工具改它的 JSON 数据即可；页面重新打开时会读到新数据。
+- 页面数据存在 App 侧的 SQLite（通过页面 bridge 读写），重写页面文件不会丢数据；不要直接改 `userdata` 下的数据库文件。
+
+## 更新数据（Agent 工具）
+
+每个创意都有独立的 JSON 键值数据层，页面打开时通过 `app.data` 读取。你可以直接读写它，不用改 HTML：
+
+| 工具 | 参数 | 说明 |
+|---|---|---|
+| `workshop_data_get` | `app`, `key` | 读取一个 key；不存在时返回 null |
+| `workshop_data_set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖；单值 ≤ 256KB |
+| `workshop_data_delete` | `app`, `key` | 删除 key |
+| `workshop_data_keys` | `app` | 列出已有 key |
+
+- `app` 传 `workshop_list` 返回的 id。
+- 数据是任意 JSON，表单结构/字段/默认值都由你定义：建议用清晰的小写 key，例如 `schema`、`settings`、`report:2026-10-24`；页面代码按约定读取并渲染。
+- 更新内容前先 `workshop_data_get` 或 `workshop_data_keys` 看现有结构，避免覆盖你不想动的字段；需要整体替换时再 set。
+- 写入后不需要 `workshop_load`。用户页面正开着时数据不会自动刷新，让他重新打开或点详情页的重新加载。
+- 单值超过 256KB 时拆成多个 key；不要把数据写进代码目录，也不要存敏感凭据。
+
+日报/播客这类每天更新的创意：页面只写一次，首次把 schema 和示例数据写入；以后收到「更新日报」之类指令时，用 `workshop_data_set` 更新对应日期的 key，不要重写 WebView。
 
 ## 文件夹格式
 

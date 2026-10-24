@@ -23,7 +23,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - 提问卡直接内联在聊天消息里，答完折叠为只读问答摘要
 - MCP：抽屉「MCP」管理 Streamable HTTP 服务器，支持 OAuth 登录与连接检测；工具经 `tool_search` 在对话中按需加载
 - 插件：抽屉「插件」管理 DeepDeep 官方内置插件（飞书 CLI、网络搜索），按需下载、启用/关闭、连接、更新、卸载；Agent 可通过 `plugin_setup` 走同一流程，插件贡献的技能与工具随启用状态注入
-- 创意工坊：抽屉「创意工坊」里每个创意是 Agent 按需求编写的 HTML/CSS/JS 文件夹，用 WebView 渲染成可交互轻应用，没有分类/模板；内置 workshop 技能可用 `/workshop-skill` 或 `/skill:workshop` 强制加载，普通会话里的 Agent 建好后用 `workshop_load` 装载；页面经 bridge 读写自己的数据，代码与数据分离
+- 创意工坊：抽屉「创意工坊」里每个创意是 Agent 按需求编写的 HTML/CSS/JS 文件夹，用 WebView 渲染成可交互轻应用，没有分类/模板；内置 workshop 技能可用 `/skill:workshop` 或 `/skill:workshop` 强制加载，普通会话里的 Agent 建好后用 `workshop_load` 装载；页面经 bridge 读写自己的数据，Agent 也可用 `workshop_data_*` 只更新数据（不改页面），代码与数据分离
 - 无 root；root 能力后续接入
 
 ## 结构

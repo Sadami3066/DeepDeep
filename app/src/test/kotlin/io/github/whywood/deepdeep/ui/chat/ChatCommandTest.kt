@@ -63,12 +63,13 @@ class ChatCommandTest {
     }
 
     @Test
-    fun parsesWorkshopSkillCommand() {
-        assertEquals(ParsedCommand.Found(ChatCommand.WORKSHOP_SKILL, ""), parseChatCommand("/workshop-skill"))
+    fun workshopIsLoadedThroughSkillNamespace() {
+        assertEquals(ParsedCommand.Skill("workshop", ""), parseChatCommand("/skill:workshop"))
         assertEquals(
-            ParsedCommand.Found(ChatCommand.WORKSHOP_SKILL, "build a todo app"),
-            parseChatCommand("/workshop-skill build a todo app"),
+            ParsedCommand.Skill("workshop", "build a todo app"),
+            parseChatCommand("/skill:workshop build a todo app"),
         )
+        assertEquals(ParsedCommand.Unknown("workshop-skill"), parseChatCommand("/workshop-skill build"))
     }
 
     @Test

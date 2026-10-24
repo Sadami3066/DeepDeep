@@ -292,17 +292,7 @@ internal fun DeepDeepApp(
                 insertText = "/${ChatCommand.GOAL.commandName} ",
             ),
         )
-        add(
-            CommandItem(
-                id = ChatCommand.WORKSHOP_SKILL.commandName,
-                name = ChatCommand.WORKSHOP_SKILL.commandName,
-                title = stringResource(R.string.chat_cmd_workshop_skill),
-                description = stringResource(R.string.chat_cmd_workshop_skill_desc),
-                enabled = state.conversationId != null && !state.sending,
-                insertText = WORKSHOP_SKILL_PREFILL,
-            ),
-        )
-        availableSkills.filter { it.name != "workshop" }.forEach { skill ->
+        availableSkills.forEach { skill ->
             add(
                 CommandItem(
                     id = "skill:${skill.name}",
@@ -339,7 +329,6 @@ internal fun DeepDeepApp(
         when (command) {
             ChatCommand.COMPACT -> chatViewModel.compactContext()
             ChatCommand.GOAL -> runGoalCommand(args.trim())
-            ChatCommand.WORKSHOP_SKILL -> chatViewModel.send()
         }
     }
 
@@ -359,12 +348,8 @@ internal fun DeepDeepApp(
             ParsedCommand.None -> chatViewModel.send()
             is ParsedCommand.Skill -> chatViewModel.send()
             is ParsedCommand.Found -> {
-                if (parsed.command == ChatCommand.WORKSHOP_SKILL) {
-                    chatViewModel.send()
-                } else {
-                    chatViewModel.onInputChange("")
-                    runChatCommand(parsed.command, parsed.args)
-                }
+                chatViewModel.onInputChange("")
+                runChatCommand(parsed.command, parsed.args)
             }
 
             is ParsedCommand.Unknown -> {
@@ -379,7 +364,7 @@ internal fun DeepDeepApp(
 
     fun openWorkshopCreate() {
         drawerOpen = false
-        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, WORKSHOP_SKILL_PREFILL)
+        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, WORKSHOP_SKILL_COMMAND)
         navigator.reset(AppDestination.Chat)
     }
 
@@ -973,4 +958,4 @@ internal fun DeepDeepApp(
     }
 }
 
-private const val WORKSHOP_SKILL_PREFILL = "/workshop-skill "
+private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "

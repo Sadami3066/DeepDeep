@@ -114,8 +114,6 @@
     <string name="chat_cmd_compact_desc">立即压缩较早的历史，释放上下文</string>
     <string name="chat_cmd_goal">目标</string>
     <string name="chat_cmd_goal_desc">用 /goal &lt;目标&gt; 直接创建长期目标；pause/resume/clear 控制</string>
-    <string name="chat_cmd_workshop_skill">创意工坊技能</string>
-    <string name="chat_cmd_workshop_skill_desc">加载内置创意工坊技能，让 Agent 构建可交互的小应用</string>
     <string name="chat_cmd_unknown">未知命令：/%1$s</string>
     <string name="chat_question_other">另一个会话正在等待回答</string>
     <string name="chat_question_other_action">前往回答</string>

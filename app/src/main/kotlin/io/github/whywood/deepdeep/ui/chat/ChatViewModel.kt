@@ -179,11 +179,6 @@ class ChatViewModel(
                 return
             }
 
-            is ParsedCommand.Found -> if (parsed.command == ChatCommand.WORKSHOP_SKILL) {
-                expandAndSend("workshop", parsed.args)
-                return
-            }
-
             else -> Unit
         }
         startTurn(buildPrompt(current.quote, current.attachments, text))

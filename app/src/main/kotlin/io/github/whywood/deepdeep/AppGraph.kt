@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.goalTools
 import io.github.whywood.deepdeep.runtime.jobTools
 import io.github.whywood.deepdeep.runtime.presentTool
+import io.github.whywood.deepdeep.runtime.workshopDataTools
 import io.github.whywood.deepdeep.runtime.workshopTools
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
@@ -209,7 +210,7 @@ class AppGraph(context: Context) {
             pluginController = pluginManager,
             pluginTools = { pluginManager.tools() },
             extraToolFactories = listOf(
-                { _ -> workshopTools(workshopStore) },
+                { _ -> workshopTools(workshopStore) + workshopDataTools(workshopStore) },
                 { binding -> goalTools(binding, goalService) },
                 { binding -> jobTools(binding, jobRegistry) },
                 { binding -> listOf(presentTool { binding.current() }) },

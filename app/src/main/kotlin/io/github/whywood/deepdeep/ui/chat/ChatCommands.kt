@@ -5,7 +5,6 @@ private val SKILL_NAME = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 enum class ChatCommand(val commandName: String) {
     COMPACT("compact"),
     GOAL("goal"),
-    WORKSHOP_SKILL("workshop-skill"),
     ;
 
     companion object {

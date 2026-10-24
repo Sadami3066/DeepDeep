@@ -3,7 +3,7 @@
     <string name="workshop_refresh">Refresh</string>
     <string name="workshop_new">New creation</string>
     <string name="workshop_empty_title">No creations yet</string>
-    <string name="workshop_empty_hint">Tap + or type /workshop-skill in chat to ask DeepDeep to make one</string>
+    <string name="workshop_empty_hint">Tap + or type /skill:workshop in chat to ask DeepDeep to make one</string>
     <string name="workshop_invalid">Invalid format</string>
     <string name="workshop_invalid_title">Could not read this creation</string>
     <string name="workshop_invalid_delete">Delete</string>

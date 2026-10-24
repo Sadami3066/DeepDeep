@@ -114,8 +114,6 @@
     <string name="chat_cmd_compact_desc">Condense older history now to free context</string>
     <string name="chat_cmd_goal">Goal</string>
     <string name="chat_cmd_goal_desc">Create a long-running goal with /goal &lt;objective&gt;; pause/resume/clear to control</string>
-    <string name="chat_cmd_workshop_skill">Workshop skill</string>
-    <string name="chat_cmd_workshop_skill_desc">Load the bundled workshop skill so the agent can build an interactive mini app</string>
     <string name="chat_cmd_unknown">Unknown command: /%1$s</string>
     <string name="chat_question_other">Another conversation is waiting for an answer</string>
     <string name="chat_question_other_action">Go answer</string>
