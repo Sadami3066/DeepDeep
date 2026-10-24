@@ -5,8 +5,6 @@
     <string name="skills_empty_title">No skills yet</string>
     <string name="skills_empty_hint">Install a skill pack to teach the assistant new workflows</string>
     <string name="skills_install_hint">Choose a .zip skill pack</string>
-    <string name="skills_footer_warning">Skills can ask the assistant to read files or run commands. Only install from sources you trust.</string>
-    <string name="skills_footer_session">Takes effect in new chats</string>
     <string name="skills_global_enabled">Enabled globally</string>
     <string name="skills_global_disabled">Not enabled globally</string>
     <string name="skills_manual">Manual</string>

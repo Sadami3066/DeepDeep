@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
+import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.plugin.PluginRecordStore
@@ -64,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class AppGraph(context: Context) {
@@ -155,9 +157,21 @@ class AppGraph(context: Context) {
                     downloader = PluginDownloader(),
                     cacheDir = appContext.cacheDir,
                 ),
+                WebSearchPlugin(
+                    context = appContext,
+                    apiKeyProvider = {
+                        credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
+                            credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
+                            credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID)
+                        }
+                    },
+                ),
             ),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
-            skillStore = PluginSkillStore(File(agentDir, "skills")),
+            skillStore = PluginSkillStore(
+                skillsDir = File(agentDir, "skills"),
+                repoDir = File(appContext.filesDir, "skills"),
+            ),
             strings = AndroidPluginStrings(appContext),
             scope = scope,
             isForeground = { AppVisibility.foreground },
@@ -167,6 +181,15 @@ class AppGraph(context: Context) {
             notifyInstallFinished = { label, success, error ->
                 notificationCenter.notifyInstallFinished(label, success, error)
             },
+            onContributionsChanged = {
+                scope.launch {
+                    host.busySessionIds.first { it.isEmpty() }
+                    host.reconfigure()
+                }
+            },
+            onSetupReady = { _ ->
+                if (!AppVisibility.foreground) scope.launch { AppVisibility.bringToFront(appContext) }
+            },
         )
     }
     private val appToolContext: AppToolContext by lazy {
@@ -174,6 +197,7 @@ class AppGraph(context: Context) {
             scheduleService = scheduleService,
             questionCenter = questionCenter,
             pluginController = pluginManager,
+            pluginTools = { pluginManager.tools() },
             extraToolFactories = listOf(
                 { binding -> goalTools(binding, goalService) },
                 { binding -> jobTools(binding, jobRegistry) },

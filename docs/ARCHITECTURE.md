@@ -68,12 +68,13 @@ Compose ChatScreen
 
 ## 官方插件
 
-- 插件在 `app/.../plugin/`：`OfficialPlugin` 契约只描述生命周期，不包含 Linux/CLI/登录概念；具体实现放在 `plugin/<name>/`（飞书为 `plugin/feishu/`）。
-- `PluginManager` 负责安装记录（`files/plugins/plugins.json`，原子写）、全局互斥、安装/卸载/更新、状态刷新、技能同步（`files/agent/skills` + `.deepdeep-plugin` 标记）、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
+- 插件在 `app/.../plugin/`：`OfficialPlugin` 契约描述生命周期与贡献，不包含 Linux/CLI/登录概念；具体实现放在 `plugin/<name>/`（飞书 `plugin/feishu/`，网络搜索 `plugin/websearch/`）。
+- `PluginManager` 负责安装记录与启用状态（`files/plugins/plugins.json`，schemaVersion 2，原子写）、全局互斥、安装/卸载/更新/启停、状态刷新、技能同步（仓库 `files/skills` + 生效 `files/agent/skills`，`.deepdeep-plugin` 标记）、工具收集、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
+- 插件贡献分三类：`promptBody`（每轮系统提示）、`skills`（技能文件）、`tools`（`CodingTool`）。只有已安装且已启用的插件参与；启停后在没有忙碌会话时调用 `host.reconfigure()`，让新会话应用最新 tools/skills。
 - 安装/登录态的判定属于插件个体：飞书插件自己执行 `lark-cli auth status --json` 并映射为 `Ready`/`NotReady`/`Failed`；框架只显示它返回的文案。
-- Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会重新探测。
-- `PiSessionEngine` 增加 `pluginPromptBody` 参数，在 hooks 中每轮注入 `official_plugins` section；插件技能由框架写入 `agent/skills`，新会话生效。
-- 飞书插件安装官方 CLI 到 guest `/usr/local/bin/lark-cli`，凭证留在 CLI 自己的 `/root/.lark-cli` 与 `/root/.local/share/lark-cli`；不上报运行环境包列表。
+- Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会重新探测；App 回前台时若 setup 已就绪会完成等待并关闭 sheet。
+- `PiSessionEngine` 增加 `pluginPromptBody` 参数，在 hooks 中每轮注入 `official_plugins` section；`AppToolContext.pluginTools` 在会话创建时收集插件工具。
+- 飞书插件安装官方 CLI 到 guest `/usr/local/bin/lark-cli`，凭证留在 CLI 自己的 `/root/.lark-cli` 与 `/root/.local/share/lark-cli`；不上报运行环境包列表。网络搜索插件不依赖 Linux，复用 DeepSeek provider 的 API Key 调 Search/Fetch API。
 
 ## 个性化与提示词
 
@@ -87,7 +88,7 @@ Compose ChatScreen
 
 ## Skills 与工作区规范
 
-- 技能仓库 `files/skills/<id>` 不被 SDK 扫描；全局开启复制到 `files/agent/skills/<id>`，项目开启复制到 `<cwd>/.pi/skills/<id>`。
+- 技能仓库 `files/skills/<id>` 不被 SDK 扫描；全局开启复制到 `files/agent/skills/<id>`，项目开启复制到 `<cwd>/.pi/skills/<id>`。插件技能同样写入仓库，并由插件启用状态控制生效副本；因此技能页能看到插件技能。
 - 项目技能页展示全部仓库技能；全局技能固定开启、不可关闭；全局开启会移除对应项目副本，避免关闭全局后项目副本继续生效。
 - 聊天右上角「重新加载」调用 `AgentRuntime.reloadSession`：关闭并重新打开当前 session 文件，重新读取 skills/AGENTS.md；运行中的会话拒绝重载。
 - 使用复制而非软链接：PRoot 只绑定当前 cwd 到 `/workspace`，仓库在 cwd 外，软链接内的脚本在 `bash` 中无法解析。
@@ -96,7 +97,7 @@ Compose ChatScreen
 
 ## App 工具
 
-- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与 `extraToolFactories`（goal、job 工具）。SDK 固定 pi2kotlin 0.2.1，不修改。
+- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、`extraToolFactories`（goal、job 工具）与 `pluginTools`（已启用插件贡献的 `CodingTool`）。SDK 固定 pi2kotlin 0.2.1，不修改。
 - `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
 - `SessionBinding` 在会话创建后绑定 `AgentSession`，schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
@@ -181,9 +182,9 @@ filesDir/
   home/             cwd，同时是 Alpine /workspace
   workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
-  agent/skills/     全局技能；插件技能也在这里，带 .deepdeep-plugin 标记
-  plugins/          plugins.json（官方插件安装记录）
-  skills/<id>/      技能仓库（SDK 不扫描）
+  agent/skills/     全局技能；插件技能也在这里（插件启用时），带 .deepdeep-plugin 标记
+  plugins/          plugins.json（官方插件安装记录与启用状态）
+  skills/<id>/      技能仓库（SDK 不扫描；插件技能仓库副本也在这里）
   schedules/        schedules.json（提醒绑定到对话）
   goals/            goals.json（按会话的目标与轮次）
   linux/rootfs/     Alpine rootfs（插件二进制在 guest /usr/local/bin）

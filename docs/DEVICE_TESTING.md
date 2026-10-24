@@ -107,7 +107,7 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 
 ## 证据
 
-`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`、`artifacts/validation/round11/`、`artifacts/validation/round26/`，设备日志用：
+`artifacts/validation/polish/`、`artifacts/validation/round6/`、`artifacts/validation/round9/`、`artifacts/validation/round10/`、`artifacts/validation/round11/`、`artifacts/validation/round26/`、`artifacts/validation/round27/`，设备日志用：
 
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat
@@ -116,11 +116,20 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 71. MCP 列表：抽屉「MCP」→「+」添加一个可用的 Streamable HTTP 服务器（https）；保存后列表出现该行，自动检测显示「已连接 · N 个工具」；「测试连接」结果一致；关闭启用开关后显示「已停用」且不再检测；删除后行消失，重启 App 配置不恢复。
 72. MCP OAuth：对没有 Authorization 头的服务器点「登录」→ 浏览器授权 → 返回后显示「已登录」并自动重连；「退出登录」后状态回到需要登录。收不到回调时粘贴回调链接也能完成。
 73. MCP 工具：打开一个会话，让模型使用 MCP 工具（或请求「用 tool_search 找 MCP 工具」）；过程里出现 `server · tool` 形式的工具行与结果；工具输出进入对话，删除/停用服务器后新会话不再提供对应工具。
-74. 导航收敛：抽屉只剩 技能 / MCP / 定时任务，无「聊天」「已归档」；设置页「已归档」显示数量，点击进入归档列表并能返回；已归档会话可在归档页打开/恢复。
+74. 导航收敛：抽屉为 技能 / MCP / 插件 / 定时任务，无「聊天」「已归档」；设置页「已归档」显示数量，点击进入归档列表并能返回；已归档会话可在归档页打开/恢复。
 
-75. 插件页：抽屉出现「插件」；列表只有飞书一行，未安装时行尾是「下载」；没有自动下载；`bash` 里 `command -v lark-cli` 失败；运行环境页的包列表不出现 lark-cli。
-76. 插件安装：点「下载」→ 行内出现下载进度 → 完成后显示「已安装 · 未连接」、详情页版本 1.0.98；`bash` 里 `lark-cli --version` 输出 `lark-cli version 1.0.98`；杀进程重开后仍是已安装。
+75. 插件页：抽屉出现「插件」；列表有飞书、网络搜索两项；未安装时行尾是「下载」；没有自动下载；`bash` 里 `command -v lark-cli` 失败；运行环境页的包列表不出现 lark-cli。
+76. 插件安装：点「下载」→ 行内出现下载进度 → 完成后显示绿点/红点、开关与详情入口；详情页版本 1.0.98；`bash` 里 `lark-cli --version` 输出 `lark-cli version 1.0.98`；杀进程重开后仍是已安装。
 77. 插件连接：详情「连接飞书」→ 通用 sheet 出现建应用链接 → 在浏览器完成飞书账号登录并创建应用 → 回到 App 后自动进入账号授权 → 完成后状态变为「已连接 · 账号」；杀掉重开不需要重新登录。若浏览器没有飞书登录态，会停在扫码登录页，需要用户先登录。
 78. Agent 驱动：新对话里说「帮我连接飞书」→ 模型调用 `plugin_setup`，弹出同一个 sheet；首次会先显示「需要先下载插件」；完成后工具返回结果，模型能继续；取消时工具返回取消，模型询问原因而不是自动重试。
 79. 显示同步：在聊天里让 Agent 用 `bash` 运行 `lark-cli --version` 能成功；让 Agent 运行 `lark-cli auth logout` 后进入插件页，状态重新探测为未连接；插件页/App 恢复时状态与 CLI 实际状态一致。
-80. 插件删除与异常：删除确认后 `plugins.json` 为空、guest 内二进制/CLI 配置/凭证、`agent/skills/deepdeep-feishu` 都不存在；断网下载失败不留半安装；安装记录损坏时页面显示错误且文件保留；中英切换、深浅色下插件页、详情页与 setup sheet 正常。
+80. 插件删除与异常：删除确认后安装记录消失、guest 内二进制/CLI 配置/凭证、仓库与生效技能目录都不存在；断网下载失败不留半安装；安装记录损坏时页面显示错误且文件保留；中英切换、深浅色下插件页、详情页与 setup sheet 正常。
+81. 插件卡片：插件页标题右侧是刷新图标，无说明小字；每行标题与摘要间距正常，右上角圆点 + 开关；断开时红点、关闭时灰点、可用时绿点；卡片无删除按钮，删除只在详情页。
+82. 插件启停：关闭飞书后，开关变灰、技能页里的飞书技能变为未启用、`files/agent/skills/deepdeep-feishu` 消失而 `files/skills/deepdeep-feishu` 保留；新会话的系统提示中不再出现飞书。重新开启后技能恢复、下一轮提示恢复。
+83. 飞书授权收敛：点「重新授权」完成浏览器授权；如果服务端裁掉了部分 scope，登录仍应成功，状态显示「缺少 N 项权限」，详情列出缺失项；sheet 自动关闭，App 尽量自动回到前台；如果进程超时但 `auth status` 已就绪，也按成功处理。
+84. 表格兜底：在缺少 `sheets:spreadsheet:read` / `base:table:read` 的账号上让 Agent 读《财务及发票管理》与多维表格；模型不应反复要求重新授权，而应使用 `lark-cli drive +export` 导出后解析；详情页「应用权限」能打开飞书开放平台应用权限页。
+85. 网络搜索：安装「网络搜索」后状态为绿点；新会话让 Agent 搜索「今天的 AI 新闻」并抓取一个 URL，过程出现 `web_search` / `web_fetch` 行，回答带来源链接；没有 DeepSeek API Key 时状态为未配置、工具返回配置提示。
+86. 网络搜索关闭：关闭网络搜索插件后，新会话不再出现 `web_search` / `web_fetch`；重新开启后新会话恢复（已有会话在空闲时重建后生效）。
+87. MCP JSON 导入：MCP 页「+」→ 粘贴 `{"mcpServers":{"mcd-mcp":{"type":"streamablehttp","url":"https://mcp.mcd.cn","headers":{"Authorization":"Bearer …"}}}}` → 导入；列表出现 `mcd-mcp`，`type` 写法被接受；一次导入多个服务器；非法 JSON 留在 sheet 内报错，原 `mcp.json` 不变。
+88. MCP 刷新与技能文案：MCP 标题右侧刷新图标触发探测，页面显示 spinner；不再有「重新检测」文字行；技能页底部无说明小字。
+89. 聊天与返回流畅度：assistant 消息底部没有复制/引用/分享图标行；长按选择仍有复制/引用/朗读，代码块复制可用；从技能/MCP/插件/定时任务返回聊天，聊天内容立即出现，不重新加载；`dumpsys gfxinfo` 无整页重建式长帧。

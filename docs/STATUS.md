@@ -1,5 +1,15 @@
 # Status
 
+## Done: 插件启停、网络搜索、MCP JSON 导入与 UI 收敛
+
+- 插件框架增加启用状态（schemaVersion 2）、`OfficialPlugin.tools()` 与动态贡献收集；关闭插件后不再注入 prompt/skill/tools，重新开启恢复；安装/启用变化在没有忙碌会话时重建会话
+- 插件技能改为仓库 + 生效双目录：技能页能看到飞书技能，关闭插件时只移除生效副本
+- 飞书：部分 scope 授权不再误判为失败，详情显示缺失权限；应用权限入口 + `drive +export` 表格兜底；授权完成后 sheet 自动关闭并尝试回到前台
+- 新增网络搜索插件：`web_search` / `web_fetch`，复用 DeepSeek API Key，走 DeepSeek Search/Fetch API
+- MCP 添加改为粘贴 `{"mcpServers":{...}}` JSON，支持 `streamablehttp` 写法与批量导入；刷新图标移到标题右侧；技能页删除底部说明
+- 插件列表改为状态圆点 + 启用开关，删除只保留在详情页；聊天页常驻底层，从技能/MCP/插件/定时任务返回不再重建消息列表；移除 assistant 底部复制/引用/分享图标行
+- 406 unit tests green（runtime 148 / app 238 / shell 20），lint、debug 构建通过；真机验证网络搜索、插件启停、技能可见、MCP 导入模板、返回流畅度
+
 ## Done: 官方插件页与飞书 CLI 接入
 
 - 抽象插件框架：`OfficialPlugin` 契约 + `PluginManager`（`app/.../plugin/`）。框架不含 Linux/CLI/登录概念；安装记录、互斥、技能同步、系统提示、进度通知、`plugin_setup` 工具由框架负责

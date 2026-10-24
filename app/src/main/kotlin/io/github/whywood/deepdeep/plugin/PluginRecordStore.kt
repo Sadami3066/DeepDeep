@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -25,6 +26,7 @@ data class PluginRecord(
     val version: String,
     val installedAt: Long,
     val skillIds: List<String> = emptyList(),
+    val enabled: Boolean = true,
 )
 
 data class PluginRecords(
@@ -55,6 +57,15 @@ class PluginRecordStore(
         }
     }
 
+    suspend fun setEnabled(id: String, enabled: Boolean) = mutex.withLock {
+        withContext(ioDispatcher) {
+            val current = loadLocked()
+            val record = current.records[id] ?: return@withContext
+            if (record.enabled == enabled) return@withContext
+            writeLocked(current.records + (id to record.copy(enabled = enabled)))
+        }
+    }
+
     private fun loadLocked(): PluginRecords {
         if (!file.isFile) return PluginRecords()
         val text = runCatching { file.readText() }.getOrElse { error ->
@@ -74,14 +85,15 @@ class PluginRecordStore(
             val skills = (item["skillIds"] as? JsonArray)
                 ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
                 .orEmpty()
-            records[id] = PluginRecord(id, version, installedAt, skills)
+            val enabled = (item["enabled"] as? JsonPrimitive)?.booleanOrNull ?: true
+            records[id] = PluginRecord(id, version, installedAt, skills, enabled)
         }
         return PluginRecords(records)
     }
 
     private fun writeLocked(records: Map<String, PluginRecord>) {
         val root = buildJsonObject {
-            put("schemaVersion", 1)
+            put("schemaVersion", 2)
             put(
                 "plugins",
                 buildJsonArray {
@@ -91,6 +103,7 @@ class PluginRecordStore(
                                 put("id", record.id)
                                 put("version", record.version)
                                 put("installedAt", record.installedAt)
+                                put("enabled", record.enabled)
                                 put(
                                     "skillIds",
                                     buildJsonArray {

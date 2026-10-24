@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -55,13 +56,14 @@ object FeishuCli {
     )
 
     fun parseLoginChallenge(output: String): LoginChallenge? {
-        val root = findJsonObject(output) ?: return null
+        val root = findLastJsonObject(output) ?: return null
         val url = root.string("verification_url") ?: return null
         val code = root.string("device_code") ?: return null
         return LoginChallenge(url, code)
     }
 
     data class AuthStatus(
+        val appId: String?,
         val appConfigured: Boolean,
         val userReady: Boolean,
         val account: String?,
@@ -70,7 +72,7 @@ object FeishuCli {
     )
 
     fun parseAuthStatus(output: String): AuthStatus? {
-        val root = findJsonObject(output) ?: return null
+        val root = findLastJsonObject(output) ?: return null
         val appId = root.string("appId")
         val user = root.objectOrNull("identities")?.objectOrNull("user")
         val available = user?.get("available")?.jsonPrimitive?.booleanOrNull ?: false
@@ -79,6 +81,7 @@ object FeishuCli {
         val scopeCount = scope.split(Regex("\\s+")).count { it.isNotBlank() }
         val message = user?.string("message") ?: root.string("note")
         return AuthStatus(
+            appId = appId,
             appConfigured = !appId.isNullOrBlank(),
             userReady = available,
             account = account,
@@ -87,17 +90,42 @@ object FeishuCli {
         )
     }
 
-    private fun findJsonObject(output: String): JsonObject? {
-        val trimmed = output.trim()
-        if (trimmed.startsWith("{")) {
-            runCatching { Json.parseToJsonElement(trimmed).jsonObject }.getOrNull()?.let { return it }
-        }
-        val start = output.indexOf('{')
-        if (start < 0) return null
+    data class LoginResult(
+        val account: String?,
+        val missingScopes: List<String>,
+        val grantedCount: Int,
+        val warning: String?,
+    )
+
+    fun parseLoginResult(output: String): LoginResult? {
+        val root = findLastJsonObject(output) ?: return null
+        val event = root.string("event")
+        if (event != null && event != "authorization_complete") return null
+        val account = root.string("user_name")
+        if (event == null && account == null) return null
+        val granted = root.stringList("granted")
+        val scope = root.string("scope").orEmpty()
+        return LoginResult(
+            account = account,
+            missingScopes = root.stringList("missing"),
+            grantedCount = if (root["granted"] != null) {
+                granted.size
+            } else {
+                scope.split(Regex("\\s+")).count { it.isNotBlank() }
+            },
+            warning = root.warningText(),
+        )
+    }
+
+    private fun findLastJsonObject(output: String): JsonObject? {
         var end = output.lastIndexOf('}')
-        while (end > start) {
-            val candidate = output.substring(start, end + 1)
-            runCatching { Json.parseToJsonElement(candidate).jsonObject }.getOrNull()?.let { return it }
+        while (end >= 0) {
+            var start = output.lastIndexOf('{', end)
+            while (start >= 0) {
+                val candidate = output.substring(start, end + 1)
+                runCatching { Json.parseToJsonElement(candidate).jsonObject }.getOrNull()?.let { return it }
+                start = output.lastIndexOf('{', start - 1)
+            }
             end = output.lastIndexOf('}', end - 1)
         }
         return null
@@ -105,6 +133,20 @@ object FeishuCli {
 
     private fun JsonObject.string(name: String): String? =
         (this[name] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+
+    private fun JsonObject.stringList(name: String): List<String> {
+        val element = this[name] ?: return emptyList()
+        return runCatching { element.jsonArray }.getOrNull()
+            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { value -> value.isNotBlank() } }
+            .orEmpty()
+    }
+
+    private fun JsonObject.warningText(): String? {
+        val element = this["warning"] ?: return null
+        (element as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.let { return it }
+        val warning = runCatching { element.jsonObject }.getOrNull() ?: return null
+        return warning.string("hint") ?: warning.string("message") ?: warning.string("type")
+    }
 
     private fun JsonObject.objectOrNull(name: String): JsonObject? {
         val element = this[name] ?: return null

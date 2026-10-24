@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin
 
 import androidx.annotation.StringRes
+import dev.pi.coding.tools.CodingTool
 
 interface OfficialPlugin {
     val id: String
@@ -35,6 +36,8 @@ interface OfficialPlugin {
     suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = emptyList()
 
     fun skills(): List<PluginSkill> = emptyList()
+
+    fun tools(): List<CodingTool> = emptyList()
 
     fun promptBody(status: PluginStatus): String? = null
 }

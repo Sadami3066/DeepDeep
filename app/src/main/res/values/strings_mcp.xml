@@ -3,8 +3,11 @@
     <string name="mcp_back">返回</string>
     <string name="mcp_add">添加服务器</string>
     <string name="mcp_empty_title">还没有 MCP 服务器</string>
-    <string name="mcp_empty_hint">添加 HTTP 服务器，它的工具会出现在对话里</string>
-    <string name="mcp_refresh">重新检测</string>
+    <string name="mcp_import_title">导入 JSON</string>
+    <string name="mcp_import_template" formatted="false">{\"mcpServers\":{\"name\":{\"type\":\"streamablehttp\",\"url\":\"https://...\",\"headers\":{\"Authorization\":\"Bearer ...\"}}}}</string>
+    <string name="mcp_import_error">导入失败，请检查 JSON 格式和必填字段</string>
+    <string name="mcp_import_save">导入</string>
+    <string name="mcp_refresh">刷新</string>
     <string name="mcp_row_subtitle">%1$s · %2$s</string>
     <string name="mcp_status_ok">已连接 · %1$d 个工具</string>
     <string name="mcp_status_auth">需要登录</string>

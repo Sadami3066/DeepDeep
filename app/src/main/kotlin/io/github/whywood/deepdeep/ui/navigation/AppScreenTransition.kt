@@ -9,8 +9,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import io.github.whywood.deepdeep.design.DdMotion
 
@@ -48,15 +51,33 @@ object AppScreenTransition {
 fun AnimatedScreenHost(
     navigator: AppNavigator,
     modifier: Modifier = Modifier,
+    base: @Composable () -> Unit,
     content: @Composable (AppDestination) -> Unit,
 ) {
-    AnimatedContent(
-        targetState = navigator.current,
-        modifier = modifier,
-        transitionSpec = { AppScreenTransition.of(this) },
-        contentKey = { it.routeKey },
-        label = "app-screen",
-    ) { destination ->
-        content(destination)
+    Box(modifier) {
+        base()
+        AnimatedContent(
+            targetState = navigator.current,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = { AppScreenTransition.of(this) },
+            contentKey = { it.routeKey },
+            label = "app-screen",
+        ) { destination ->
+            if (destination == AppDestination.Chat) {
+                Box(Modifier.fillMaxSize())
+            } else {
+                Box(Modifier.fillMaxSize().overlayTouchBarrier()) {
+                    content(destination)
+                }
+            }
+        }
+    }
+}
+
+private fun Modifier.overlayTouchBarrier(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent()
+        }
     }
 }

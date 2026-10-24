@@ -72,6 +72,7 @@ class FeishuCliTest {
         assertNotNull(status)
         assertTrue(status!!.appConfigured)
         assertTrue(status.userReady)
+        assertEquals("cli_abc", status.appId)
         assertEquals("张三", status.account)
         assertEquals(2, status.scopeCount)
     }
@@ -86,11 +87,66 @@ class FeishuCliTest {
         assertNotNull(status)
         assertFalse(status!!.appConfigured)
         assertFalse(status.userReady)
+        assertNull(status.appId)
         assertNull(status.account)
     }
 
     @Test
     fun malformedStatusReturnsNull() {
         assertNull(FeishuCli.parseAuthStatus("lark-cli: command not found"))
+    }
+
+    @Test
+    fun parsesPartialLoginResultWithMissingScopes() {
+        val output = """
+            [lark-cli] [WARN] failed to load cached requested scopes
+            {"event":"authorization_complete","user_open_id":"ou_x","user_name":"张三",
+             "scope":"im:message:readonly docs:document:export",
+             "requested":["im:message:readonly","docs:document:export","sheets:spreadsheet:readonly","base:app:readonly"],
+             "newly_granted":["im:message:readonly","docs:document:export"],"already_granted":[],
+             "missing":["sheets:spreadsheet:readonly","base:app:readonly"],
+             "granted":["im:message:readonly","docs:document:export"],
+             "warning":{"type":"missing_scope","hint":"缺少权限：sheets:spreadsheet:readonly base:app:readonly"}}
+        """.trimIndent()
+        val result = FeishuCli.parseLoginResult(output)
+        assertNotNull(result)
+        assertEquals("张三", result!!.account)
+        assertEquals(listOf("sheets:spreadsheet:readonly", "base:app:readonly"), result.missingScopes)
+        assertEquals(2, result.grantedCount)
+        assertTrue(result.warning!!.contains("缺少权限"))
+    }
+
+    @Test
+    fun parsesCleanLoginResult() {
+        val output = """
+            {"event":"authorization_complete","user_open_id":"ou_x","user_name":"张三",
+             "scope":"im:message:readonly","requested":["im:message:readonly"],
+             "newly_granted":["im:message:readonly"],"already_granted":[],
+             "missing":[],"granted":["im:message:readonly"]}
+        """.trimIndent()
+        val result = FeishuCli.parseLoginResult(output)
+        assertNotNull(result)
+        assertEquals("张三", result!!.account)
+        assertTrue(result.missingScopes.isEmpty())
+        assertEquals(1, result.grantedCount)
+        assertNull(result.warning)
+    }
+
+    @Test
+    fun parsesFinalLoginResultFromNoisyOutput() {
+        val output = """
+            {"event":"device_authorization","verification_url":"https://open.feishu.cn/page/cli?user_code=XYZ","device_code":"dc_123"}
+            {"event":"authorization_complete","user_name":"张三","missing":["base:app:readonly"],"granted":["im:message:readonly"]}
+        """.trimIndent()
+        val result = FeishuCli.parseLoginResult(output)
+        assertNotNull(result)
+        assertEquals("张三", result!!.account)
+        assertEquals(listOf("base:app:readonly"), result.missingScopes)
+    }
+
+    @Test
+    fun nonCompletedLoginOutputIsNotAResult() {
+        assertNull(FeishuCli.parseLoginResult("""{"event":"authorization_failed","error":"access_denied"}"""))
+        assertNull(FeishuCli.parseLoginResult("lark-cli: command not found"))
     }
 }

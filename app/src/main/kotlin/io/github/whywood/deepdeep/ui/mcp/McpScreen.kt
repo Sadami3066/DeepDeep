@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.ui.mcp
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.pi.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.R
@@ -80,6 +79,7 @@ fun McpScreen(
     var busyName by remember { mutableStateOf<String?>(null) }
     var failureRes by remember { mutableStateOf<Int?>(null) }
     var editor by remember { mutableStateOf<McpEditorTarget?>(null) }
+    var importing by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(refreshKey) {
@@ -151,9 +151,23 @@ fun McpScreen(
                 style = DdType.heading,
                 color = colors.ink,
             )
+            if (probing || loading) {
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
+                }
+            } else {
+                DdIconButton(
+                    icon = DdIcons.Refresh,
+                    onClick = { refreshKey++ },
+                    contentDescription = stringResource(R.string.mcp_refresh),
+                    modifier = Modifier.testTag("mcp_probe_refresh"),
+                    tint = colors.ink,
+                    iconSize = 21.dp,
+                )
+            }
             DdIconButton(
                 icon = DdIcons.Plus,
-                onClick = { editor = McpEditorTarget() },
+                onClick = { importing = true },
                 contentDescription = stringResource(R.string.mcp_add),
                 modifier = Modifier.testTag("mcp_add"),
                 tint = colors.ink,
@@ -175,11 +189,6 @@ fun McpScreen(
                     style = DdType.bodySmall,
                     color = colors.danger,
                 )
-            }
-            if (!loading && (entries.isNotEmpty() || errors.isNotEmpty())) {
-                Spacer(Modifier.height(4.dp))
-                RefreshRow(probing = probing) { refreshKey++ }
-                Spacer(Modifier.height(4.dp))
             }
             when {
                 loading -> Box(
@@ -223,6 +232,15 @@ fun McpScreen(
         )
     }
 
+    if (importing) {
+        McpImportSheet(
+            store = store,
+            onDismiss = { importing = false },
+            onReloadSessions = onReloadSessions,
+            onCommitted = { refreshKey++ },
+        )
+    }
+
     failureRes?.let { messageRes ->
         DdDialog(
             onDismissRequest = { failureRes = null },
@@ -260,34 +278,6 @@ private fun EmptyMcp() {
             style = DdType.label,
             color = colors.ink,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.mcp_empty_hint),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun RefreshRow(probing: Boolean, onClick: () -> Unit) {
-    val colors = deepDeepColors()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .testTag("mcp_probe_refresh")
-            .clickable(enabled = !probing, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.mcp_refresh),
-            modifier = Modifier.weight(1f),
-            style = DdType.label,
-            color = if (probing) colors.inkTertiary else colors.accent,
-        )
-        if (probing) DdSpinner(size = 16.dp, strokeWidth = 2.dp)
     }
 }
 

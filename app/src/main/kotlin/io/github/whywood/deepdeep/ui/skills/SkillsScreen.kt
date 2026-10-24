@@ -243,20 +243,6 @@ fun SkillsScreen(
                     Spacer(Modifier.height(16.dp))
                 }
             }
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.skills_footer_warning),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.skills_footer_session),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
             Spacer(Modifier.height(32.dp))
         }
     }

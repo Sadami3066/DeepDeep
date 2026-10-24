@@ -24,19 +24,22 @@
     <string name="plugin_feishu_error_logout">Sign-out failed: %1$s</string>
 
     <string name="plugin_feishu_status_connected">Connected · %1$s</string>
+    <string name="plugin_feishu_status_partial">Connected · %1$s · %2$d permissions missing</string>
     <string name="plugin_feishu_status_not_connected">Not connected</string>
     <string name="plugin_feishu_status_broken">Reinstall required</string>
     <string name="plugin_feishu_status_error">Status check failed: %1$s</string>
 
     <string name="plugin_feishu_action_connect">Connect Feishu</string>
+    <string name="plugin_feishu_action_app_scopes">App permissions</string>
     <string name="plugin_feishu_action_reauthorize">Reauthorize</string>
     <string name="plugin_feishu_action_logout">Sign out</string>
-    <string name="plugin_feishu_action_refresh">Check status again</string>
 
     <string name="plugin_feishu_detail_cli_version">CLI version</string>
     <string name="plugin_feishu_detail_scopes">Granted scopes</string>
+    <string name="plugin_feishu_detail_missing_scopes">Missing permissions</string>
     <string name="plugin_feishu_detail_app">Feishu app</string>
     <string name="plugin_feishu_detail_app_ready">Created</string>
     <string name="plugin_feishu_detail_app_missing">Not created</string>
     <string name="plugin_feishu_scope_count">%1$d</string>
+    <string name="plugin_feishu_missing_scopes_more">%1$d: %2$s</string>
 </resources>

@@ -89,6 +89,7 @@ fun PluginDetailScreen(
             ?: stringResource(R.string.plugins_stage_preparing)
 
         !snapshot.installed -> stringResource(R.string.plugins_status_not_installed)
+        !snapshot.enabled -> stringResource(R.string.plugins_status_disabled)
         else -> snapshot.status?.label ?: stringResource(R.string.plugins_status_installed)
     }
 
@@ -120,8 +121,16 @@ fun PluginDetailScreen(
             )
             if (operation != null) {
                 DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(8.dp))
             }
+            DdIconButton(
+                icon = DdIcons.Refresh,
+                onClick = { manager.refresh() },
+                contentDescription = stringResource(R.string.plugins_refresh),
+                modifier = Modifier.testTag("plugin_detail_refresh"),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
         }
         Column(
             modifier = Modifier
@@ -196,22 +205,24 @@ fun PluginDetailScreen(
                 }
 
                 else -> {
-                    val actions = snapshot.status?.let { plugin.actions(it) }.orEmpty()
-                    if (actions.isNotEmpty()) {
-                        SettingsGroup {
-                            actions.forEachIndexed { index, action ->
-                                if (index > 0) DdHairline()
-                                DdListRow(
-                                    title = stringResource(action.labelRes),
-                                    onClick = {
-                                        if (!busy) manager.runAction(plugin.id, action.id)
-                                    },
-                                    enabled = !busy,
-                                    modifier = Modifier.testTag("plugin_action_${action.id}"),
-                                )
+                    if (snapshot.enabled) {
+                        val actions = snapshot.status?.let { plugin.actions(it) }.orEmpty()
+                        if (actions.isNotEmpty()) {
+                            SettingsGroup {
+                                actions.forEachIndexed { index, action ->
+                                    if (index > 0) DdHairline()
+                                    DdListRow(
+                                        title = stringResource(action.labelRes),
+                                        onClick = {
+                                            if (!busy) manager.runAction(plugin.id, action.id)
+                                        },
+                                        enabled = !busy,
+                                        modifier = Modifier.testTag("plugin_action_${action.id}"),
+                                    )
+                                }
                             }
+                            Spacer(Modifier.height(24.dp))
                         }
-                        Spacer(Modifier.height(24.dp))
                     }
                     if (snapshot.updateAvailable) {
                         DdPrimaryButton(

@@ -1,8 +1,7 @@
 <resources>
     <string name="plugins_title">Plugins</string>
     <string name="plugins_back">Back</string>
-    <string name="plugins_intro">Official DeepDeep plugins, installed on demand</string>
-    <string name="plugins_refresh">Check again</string>
+    <string name="plugins_refresh">Refresh</string>
     <string name="plugins_action_download">Download</string>
     <string name="plugins_action_update">Update</string>
     <string name="plugins_action_reinstall">Reinstall</string>
@@ -22,6 +21,7 @@
     <string name="plugins_setup_title">Connect %1$s</string>
     <string name="plugins_setup_cancelled">Cancelled by the user</string>
     <string name="plugins_error_foreground">Return to DeepDeep to continue</string>
+    <string name="plugins_error_disabled">Plugin is disabled</string>
     <string name="plugins_error_busy">Another plugin operation is running</string>
     <string name="plugins_error_title">Operation failed</string>
     <string name="plugins_close">Close</string>
@@ -29,12 +29,14 @@
     <string name="plugins_status_not_installed">Not installed</string>
     <string name="plugins_status_unavailable">Unavailable</string>
     <string name="plugins_status_installed">Installed</string>
-    <string name="plugins_row_subtitle">%1$s · %2$s</string>
+    <string name="plugins_status_disabled">Off</string>
+    <string name="plugins_enable">On</string>
+    <string name="plugins_disable">Off</string>
     <string name="plugins_detail_status">Status</string>
     <string name="plugins_detail_version">Version</string>
     <string name="plugins_detail_size">Size</string>
     <string name="plugins_detail_skills">Skills</string>
-    <string name="plugins_detail_skills_value">%1$s (new sessions)</string>
+    <string name="plugins_detail_skills_value">%1$s</string>
     <string name="plugins_detail_no_skills">None</string>
     <string name="plugins_detail_actions">Actions</string>
     <string name="plugins_update_available">Update available: %1$s</string>

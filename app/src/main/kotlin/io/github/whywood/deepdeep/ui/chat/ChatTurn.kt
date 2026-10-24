@@ -63,8 +63,6 @@ private data class BubbleContent(
 internal fun ChatTurn(
     message: AssistantMessage,
     onToggleStep: (Long) -> Unit,
-    onCopy: (String) -> Unit,
-    onShare: (String) -> Unit,
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
@@ -85,7 +83,6 @@ internal fun ChatTurn(
     if (message.role == AssistantRole.USER) {
         UserBubble(
             message = message,
-            onCopy = onCopy,
             onQuote = onQuote,
             onOpenAttachment = onOpenAttachment,
             attachmentRoot = attachmentRoot,
@@ -94,8 +91,6 @@ internal fun ChatTurn(
         AssistantTurn(
             message = message,
             onToggleStep = onToggleStep,
-            onCopy = onCopy,
-            onShare = onShare,
             onCopyOutput = onCopyOutput,
             onQuote = onQuote,
             onOpenFile = onOpenFile,
@@ -205,7 +200,6 @@ private fun GoalRoundNotice(notice: TurnNotice.GoalRound) {
 @Composable
 private fun UserBubble(
     message: AssistantMessage,
-    onCopy: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     attachmentRoot: File,
@@ -294,8 +288,6 @@ private fun QuoteContext(text: String) {
 private fun AssistantTurn(
     message: AssistantMessage,
     onToggleStep: (Long) -> Unit,
-    onCopy: (String) -> Unit,
-    onShare: (String) -> Unit,
     onCopyOutput: (String) -> Unit,
     onQuote: (Long, String) -> Unit,
     onOpenFile: (String) -> Unit,
@@ -316,7 +308,6 @@ private fun AssistantTurn(
     }
     val answer = message.text.trim().ifBlank { streamingAnswer.trim() }
     val excludedStepId = if (message.text.isBlank() && streamingAnswer.isNotBlank()) trailingText?.id else null
-    val readable = remember(answer) { markdownToPlainText(answer) }
     val liveQuestions = pendingQuestions.associateBy { it.toolCallId }
     val liveAsk = message.steps.filterIsInstance<AssistantStep.Tool>()
         .map { it.trace }
@@ -381,14 +372,6 @@ private fun AssistantTurn(
             MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry)
 
             else -> Unit
-        }
-        if (!message.streaming && answer.isNotEmpty()) {
-            ChatActionBar(
-                messageId = message.id,
-                onCopy = { onCopy(readable) },
-                onQuote = { onQuote(message.id, message.text) },
-                onShare = { onShare(readable) },
-            )
         }
     }
 }

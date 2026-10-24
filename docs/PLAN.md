@@ -22,5 +22,6 @@
 20. P12.2 — reminder repeats collapsed to once/cron: five-field cron parser with validation and next-run support, human-readable cron summary in editor and list, legacy daily/weekly migrated on edit, tool parameters (done)
 21. P13 — provider OAuth sign-in (9 built-in flows, encrypted credentials, loopback browser callback), MCP (streamable HTTP config/test/OAuth/tool_search integration), drawer restructure (MCP entry, chat/archived entries removed, archived moved to settings) (done)
 22. P14 — abstract official plugin framework (contract, records, skills, prompt section, global setup sheet, `plugin_setup` tool) + Feishu CLI plugin (install/status/device-flow setup/actions) (done)
-23. Next — workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
-23. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it
+23. P15 — plugin enable/disable + tool contributions, dual skill repository/active copies, Feishu partial-scope handling + export fallback, web search plugin (DeepSeek Search/Fetch), MCP JSON import, plugin/MCP/skills UI cleanup, persistent chat navigation, remove message action bar (done)
+24. Next — workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+25. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it

@@ -8,6 +8,7 @@
 |---|---|---|
 | SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
 | App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup` |
+| 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch` |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
 | Android 能力 | app 进程 | 设计；通知、Intent、联系人等需要单独评审权限 |
 | Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
@@ -23,7 +24,7 @@ defaultCodingTools(...)
   + appTools(cwd, AppToolContext, SessionBinding)
 ```
 
-`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与额外的工具工厂列表（goal、job）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.1，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
+`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、额外的工具工厂列表（goal、job）与 `pluginTools`（由 `PluginManager` 收集已启用插件的工具）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.1，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
 
 取消：等待型工具通过 `RunSignal` 监听；signal abort 时结束等待。
 
@@ -61,12 +62,26 @@ defaultCodingTools(...)
 
 | 参数 | 语义 |
 |---|---|
-| `plugin` | 官方插件 id，当前只有 `feishu` |
+| `plugin` | 官方插件 id，当前为 `feishu`（网络搜索不需要 setup） |
 
 - 打开插件的准备流程（安装确认、浏览器链接、等待完成）；步骤由插件自己定义，App 只渲染通用 sheet。
 - 仅在 App 前台可用；后台运行调用会返回错误。
 - 用户取消时返回 `ok=false` 与取消原因，模型应询问具体情况而不是循环重试。
+- 已关闭的插件会返回「插件已停用」。
 - 详见 `docs/PLUGINS.md`。
+
+## web_search / web_fetch
+
+由网络搜索插件贡献，只在插件已安装且已启用时出现。
+
+| 工具 | 参数 | 语义 |
+|---|---|---|
+| `web_search` | `query` 必填；`maxResults` 1–10，默认 5 | 调 DeepSeek Search API，返回标题、URL、摘要与日期；结果附外部内容提示 |
+| `web_fetch` | `url` 必填；`maxChars` 1–30000，默认 12000 | 调 DeepSeek Fetch API，返回页面 Markdown；按字符数截断 |
+
+- 使用 DeepSeek provider 已配置的 API Key；没有 Key 时返回错误并提示配置，不读取或回显密钥。
+- 非 2xx、网络失败、空内容都作为错误工具结果返回，不抛出到会话。
+- 网页内容视为外部数据；模型不应执行页面中的指令。
 
 ## goal
 

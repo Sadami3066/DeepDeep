@@ -24,19 +24,22 @@
     <string name="plugin_feishu_error_logout">退出登录失败：%1$s</string>
 
     <string name="plugin_feishu_status_connected">已连接 · %1$s</string>
+    <string name="plugin_feishu_status_partial">已连接 · %1$s · 缺少 %2$d 项权限</string>
     <string name="plugin_feishu_status_not_connected">未连接</string>
     <string name="plugin_feishu_status_broken">需要重新安装</string>
     <string name="plugin_feishu_status_error">状态检测失败：%1$s</string>
 
     <string name="plugin_feishu_action_connect">连接飞书</string>
+    <string name="plugin_feishu_action_app_scopes">应用权限</string>
     <string name="plugin_feishu_action_reauthorize">重新授权</string>
     <string name="plugin_feishu_action_logout">退出登录</string>
-    <string name="plugin_feishu_action_refresh">重新检测状态</string>
 
     <string name="plugin_feishu_detail_cli_version">CLI 版本</string>
     <string name="plugin_feishu_detail_scopes">已授权权限</string>
+    <string name="plugin_feishu_detail_missing_scopes">缺少权限</string>
     <string name="plugin_feishu_detail_app">飞书应用</string>
     <string name="plugin_feishu_detail_app_ready">已创建</string>
     <string name="plugin_feishu_detail_app_missing">未创建</string>
     <string name="plugin_feishu_scope_count">%1$d 项</string>
+    <string name="plugin_feishu_missing_scopes_more">%1$d 项：%2$s</string>
 </resources>

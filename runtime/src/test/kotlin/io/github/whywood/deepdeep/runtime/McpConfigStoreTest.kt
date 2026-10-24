@@ -92,6 +92,117 @@ class McpConfigStoreTest {
     }
 
     @Test
+    fun importsUserSample() = runTest {
+        val store = McpConfigStore(directory)
+        val names = store.importServers(
+            """
+            {"mcpServers":{"mcd-mcp":{"type":"streamablehttp","url":"https://mcp.mcd.cn","headers":{"Authorization":"Bearer test-token"}}}}
+            """.trimIndent(),
+        )
+        assertEquals(listOf("mcd-mcp"), names)
+        val snapshot = store.load()
+        assertTrue(snapshot.errors.isEmpty())
+        val imported = snapshot.servers.getValue("mcd-mcp") as McpServerConfig.Http
+        assertEquals("https://mcp.mcd.cn", imported.url)
+        assertEquals("Bearer test-token", imported.headers["Authorization"])
+        assertTrue(imported.enabled)
+    }
+
+    @Test
+    fun importsMultipleServers() = runTest {
+        val store = McpConfigStore(directory)
+        val names = store.importServers(
+            """
+            {"mcpServers":{
+              "docs":{"type":"streamableHttp","url":"https://docs.example.com/mcp"},
+              "local":{"type":"stdio","command":"npx","args":["-y","server"]}
+            }}
+            """.trimIndent(),
+        )
+        assertEquals(listOf("docs", "local"), names)
+        val snapshot = store.load()
+        assertTrue(snapshot.errors.isEmpty())
+        assertTrue(snapshot.servers.getValue("docs") is McpServerConfig.Http)
+        assertTrue(snapshot.servers.getValue("local") is McpServerConfig.Stdio)
+    }
+
+    @Test
+    fun normalizesStreamableHttpTypes() = runTest {
+        val store = McpConfigStore(directory)
+        val names = store.importServers(
+            """
+            {"mcpServers":{
+              "a":{"type":"streamablehttp","url":"https://a.example.com/mcp"},
+              "b":{"type":"streamableHttp","url":"https://b.example.com/mcp"},
+              "c":{"type":"streamable_http","url":"https://c.example.com/mcp"},
+              "d":{"type":"streamable-http","url":"https://d.example.com/mcp"},
+              "e":{"type":"http","url":"https://e.example.com/mcp"}
+            }}
+            """.trimIndent(),
+        )
+        assertEquals(listOf("a", "b", "c", "d", "e"), names)
+        val snapshot = store.load()
+        assertTrue(snapshot.errors.isEmpty())
+        assertTrue(snapshot.servers.values.all { it is McpServerConfig.Http })
+    }
+
+    @Test
+    fun invalidImportLeavesFileUntouched() = runTest {
+        val store = McpConfigStore(directory)
+        store.importServers(
+            """{"mcpServers":{"docs":{"type":"http","url":"https://docs.example.com/mcp"}}}""",
+        )
+        val file = File(directory, "mcp.json")
+        val before = file.readText()
+        val failure = runCatching {
+            store.importServers(
+                """
+                {"mcpServers":{
+                  "bad":{"type":"streamablehttp","url":"not-a-url"},
+                  "good":{"type":"http","url":"https://good.example.com/mcp"}
+                }}
+                """.trimIndent(),
+            )
+        }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
+        assertEquals(before, file.readText())
+        assertEquals(setOf("docs"), store.load().servers.keys)
+        assertFalse(File(directory, "mcp.json.tmp").exists())
+    }
+
+    @Test
+    fun importOverwritesExistingAndKeepsOthers() = runTest {
+        val store = McpConfigStore(directory)
+        store.upsert("docs", http(url = "https://old.example.com/mcp"))
+        store.upsert("keep", http(url = "https://keep.example.com/mcp"))
+        val names = store.importServers(
+            """{"mcpServers":{"docs":{"type":"http","url":"https://new.example.com/mcp"}}}""",
+        )
+        assertEquals(listOf("docs"), names)
+        val snapshot = store.load()
+        assertTrue(snapshot.errors.isEmpty())
+        assertEquals(setOf("docs", "keep"), snapshot.servers.keys)
+        assertEquals(
+            "https://new.example.com/mcp",
+            (snapshot.servers.getValue("docs") as McpServerConfig.Http).url,
+        )
+        assertEquals(
+            "https://keep.example.com/mcp",
+            (snapshot.servers.getValue("keep") as McpServerConfig.Http).url,
+        )
+    }
+
+    @Test
+    fun importRequiresMcpServersObject() = runTest {
+        val store = McpConfigStore(directory)
+        assertTrue(runCatching { store.importServers("""{"servers":{}}""") }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { store.importServers("""{"mcpServers":{}}""") }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { store.importServers("{not json") }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { store.importServers("  ") }.exceptionOrNull() is IllegalArgumentException)
+        assertFalse(File(directory, "mcp.json").exists())
+    }
+
+    @Test
     fun missingFileIsEmpty() = runTest {
         val snapshot = McpConfigStore(directory).load()
         assertTrue(snapshot.entries.isEmpty())

@@ -1,8 +1,7 @@
 <resources>
     <string name="plugins_title">插件</string>
     <string name="plugins_back">返回</string>
-    <string name="plugins_intro">DeepDeep 官方插件，按需安装</string>
-    <string name="plugins_refresh">重新检测</string>
+    <string name="plugins_refresh">刷新</string>
     <string name="plugins_action_download">下载</string>
     <string name="plugins_action_update">更新</string>
     <string name="plugins_action_reinstall">重新安装</string>
@@ -22,6 +21,7 @@
     <string name="plugins_setup_title">连接 %1$s</string>
     <string name="plugins_setup_cancelled">用户取消了操作</string>
     <string name="plugins_error_foreground">需要回到 DeepDeep 才能继续</string>
+    <string name="plugins_error_disabled">插件已停用</string>
     <string name="plugins_error_busy">另一个插件操作正在进行</string>
     <string name="plugins_error_title">操作失败</string>
     <string name="plugins_close">关闭</string>
@@ -29,12 +29,14 @@
     <string name="plugins_status_not_installed">未安装</string>
     <string name="plugins_status_unavailable">不可用</string>
     <string name="plugins_status_installed">已安装</string>
-    <string name="plugins_row_subtitle">%1$s · %2$s</string>
+    <string name="plugins_status_disabled">已关闭</string>
+    <string name="plugins_enable">已启用</string>
+    <string name="plugins_disable">已关闭</string>
     <string name="plugins_detail_status">状态</string>
     <string name="plugins_detail_version">版本</string>
     <string name="plugins_detail_size">大小</string>
     <string name="plugins_detail_skills">技能</string>
-    <string name="plugins_detail_skills_value">%1$s（新会话生效）</string>
+    <string name="plugins_detail_skills_value">%1$s</string>
     <string name="plugins_detail_no_skills">无</string>
     <string name="plugins_detail_actions">操作</string>
     <string name="plugins_update_available">可更新到 %1$s</string>

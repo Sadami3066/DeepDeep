@@ -199,8 +199,6 @@ fun ChatScreen(
     }
     var composerHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
-    val shareChooserTitle = stringResource(R.string.assistant_share_chooser)
-    val shareUnavailable = stringResource(R.string.assistant_share_unavailable)
     val configured = state.configured
     val thinkingLevels = remember(state.models, state.modelId) {
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
@@ -214,12 +212,6 @@ fun ChatScreen(
     fun copyText(text: String) {
         if (copyToClipboard(context, text)) {
             Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun shareAnswer(text: String) {
-        if (!shareText(context, text, shareChooserTitle)) {
-            Toast.makeText(context, shareUnavailable, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -325,8 +317,6 @@ fun ChatScreen(
                                 ChatTurn(
                                     message = message,
                                     onToggleStep = { stepId -> onToggleStep(message.id, stepId) },
-                                    onCopy = ::copyText,
-                                    onShare = ::shareAnswer,
                                     onCopyOutput = ::copyText,
                                     onQuote = onQuoteMessage,
                                     onOpenAttachment = onOpenAttachment,

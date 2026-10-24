@@ -1,10 +1,10 @@
 # 插件
 
-状态：官方插件框架与首个飞书插件已实现；飞书授权需要用户在浏览器登录飞书账号。
+状态：官方插件框架、飞书 CLI 插件与网络搜索插件已实现；飞书授权需要用户在浏览器登录飞书账号。
 
 ## 模型
 
-插件是 App 内置的官方能力包，按需下载，不默认安装。插件页只管三件事：安装记录、插件自己实现的生命周期、界面上的通用展示。
+插件是 App 内置的官方能力包，按需下载，不默认安装。插件页只管：安装记录、启用状态、插件自己实现的生命周期、界面上的通用展示。
 
 插件框架不包含 Linux、CLI、登录、鉴权等具体概念。每个插件实现 `OfficialPlugin`：
 
@@ -26,6 +26,7 @@ interface OfficialPlugin {
     suspend fun runAction(actionId: String, ui: PluginUi)
     suspend fun detailRows(status: PluginStatus): List<PluginDetailRow>
     fun skills(): List<PluginSkill>
+    fun tools(): List<CodingTool> = emptyList()
     fun promptBody(status: PluginStatus): String?
 }
 ```
@@ -33,17 +34,25 @@ interface OfficialPlugin {
 - `availability()`：插件自己判断当前能否安装/使用（例如飞书要求 Linux 环境）。
 - `status()`：插件自己定义「就绪」的含义。飞书在这里执行 `lark-cli auth status --json` 并映射成 `Ready` / `NotReady` / `Failed`；框架不认识「登录」。
 - `setup(ui)`：插件自己的准备流程。飞书通过 `ui.stage(...)` 展示建应用/授权链接，框架只渲染通用 sheet。
-- `actions()` / `runAction()`：插件自己的操作行（连接、重新授权、退出登录、重新检测）。
-- `skills()` / `promptBody()`：插件贡献的技能与系统提示内容。
+- `actions()` / `runAction()`：插件自己的操作行（连接、重新授权、应用权限、退出登录）。
+- `skills()` / `tools()` / `promptBody()`：插件贡献的技能、工具与系统提示内容。框架只收集已安装且已启用插件的贡献。
 
-框架（`PluginManager`）负责：安装记录、互斥、安装/卸载/更新的通用流程、技能同步、系统提示拼接、状态刷新、进度通知、`plugin_setup` 工具入口。它不引用 shell 模块，也不引用任何具体插件代码。
+框架（`PluginManager`）负责：安装记录、启用状态、互斥、安装/卸载/更新的通用流程、技能同步、工具注入、系统提示拼接、状态刷新、进度通知、`plugin_setup` 工具入口。它不引用 shell 模块，也不引用任何具体插件代码。
+
+### 启用与贡献注入
+
+- `plugins.json` 为每个插件保存 `enabled`；默认开启。
+- 关闭插件后：不再探测它的 `status()`，不再注入它的 `promptBody()`、skills、tools；技能从生效目录移除，仓库副本保留；重新开启时恢复。
+- tools 在会话创建时收集；安装/卸载/启用/关闭会在没有运行中的会话时调用 `host.reconfigure()`，让新会话拿到最新贡献。
+- 已关闭插件的 CLI 二进制仍留在 guest 内，但没有任何技能或提示引导模型使用它。
 
 ## 文件
 
 | 路径 | 内容 |
 |---|---|
-| `files/plugins/plugins.json` | 安装记录，原子写；损坏时保留原文件并报错 |
-| `files/agent/skills/<skill-id>/` | 插件贡献的技能；`.deepdeep-plugin` 标记归属，框架只删除自己写入的目录 |
+| `files/plugins/plugins.json` | 安装记录与启用状态，原子写；损坏时保留原文件并报错 |
+| `files/skills/<skill-id>/` | 插件技能的仓库副本；技能页可见，`.deepdeep-plugin` 标记归属 |
+| `files/agent/skills/<skill-id>/` | 插件技能的生效副本；仅插件启用且技能开启时存在 |
 | `cacheDir/plugin-staging/<plugin-id>/` | 下载/解压暂存；启动和安装结束时清理 |
 | `/usr/local/bin/lark-cli` | 飞书 CLI 二进制（guest 内） |
 | `/root/.lark-cli` | 飞书 CLI 应用配置（guest 内） |
@@ -52,17 +61,22 @@ interface OfficialPlugin {
 安装记录 schema：
 
 ```json
-{"schemaVersion":1,"plugins":[{"id":"feishu","version":"1.0.98","installedAt":1729750000000,"skillIds":["deepdeep-feishu"]}]}
+{"schemaVersion":2,"plugins":[{"id":"feishu","version":"1.0.98","installedAt":1729750000000,"skillIds":["deepdeep-feishu"],"enabled":true}]}
 ```
+
+旧版 schemaVersion 1 的安装记录仍可读取，缺少 `enabled` 时视为开启。
 
 ## 界面
 
-- 抽屉「插件」→ 插件列表。官方插件全部列出；未安装显示「下载」，已安装显示删除按钮与详情入口。
-- 详情页：状态、版本、大小、插件自带的详情行（飞书：CLI 版本、已授权权限数量、飞书应用状态）、插件技能。
+- 抽屉「插件」→ 插件列表。官方插件全部列出；已安装显示右上角状态圆点、启用开关和详情入口；未安装显示「下载」。
+- 状态圆点：绿=就绪，红=未连接/失败，灰=已关闭或未知；安装/更新时显示 spinner。
+- 标题右侧是刷新图标；卡片内不再提供删除，删除入口在详情页。
+- 详情页：状态、版本、大小、插件自带的详情行、插件技能；飞书详情还包含 CLI 版本、已授权权限数量、飞书应用状态、缺失权限（如果有）。
 - 操作行来自插件本身；框架另外提供下载/更新/重新安装/删除插件。
 - 安装或插件的准备流程进行中时，列表与详情页的操作会禁用；进度同时显示在行内与通知里。
-- 全局 setup sheet：通用确认安装、进度、授权链接、「打开浏览器」、等待提示、取消。
-- 卸载会删除二进制、插件配置、CLI 凭证、插件技能与安装记录；重新安装从零开始。
+- 全局 setup sheet：通用确认安装、进度、授权链接、「打开浏览器」、等待提示、取消。授权完成后 sheet 自动关闭；App 会尝试回到前台。
+- 卸载会删除二进制、插件配置、CLI 凭证、仓库/生效技能与安装记录；重新安装从零开始。
+
 
 ## 飞书插件
 
@@ -82,27 +96,39 @@ interface OfficialPlugin {
 LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli auth status --json
 ```
 
-解析 `appId` 与 `identities.user.{available,userName,scope}`，映射为「已连接 · 账号」或「未连接」。
+解析 `appId` 与 `identities.user.{available,userName,scope}`，映射为「已连接 · 账号」或「未连接」。授权过程中被服务端裁掉的 scope 会记录为缺失权限，状态显示「缺少 N 项权限」，详情页列出具体项。
 
 ### 连接
 
 1. 未建应用时运行 `lark-cli config init --new --brand feishu`，从输出提取链接并展示；命令会阻塞到用户在浏览器完成。
 2. 运行 `lark-cli auth login --domain all --no-wait --json`，拿 `verification_url` 与 `device_code`。
 3. 展示授权链接，随后运行 `lark-cli auth login --device-code <code> --json` 轮询完成。
-4. 再探测一次状态，返回结果。
+4. 轮询返回 0 或部分授权（带 `authorization_complete` 账号信息）都视为登录成功；如果进程超时但 `auth status` 已就绪，也按成功处理。再探测一次状态，返回结果。
 
-取消会终止底层 PRoot 进程；退出登录只运行 `lark-cli auth logout`。
+取消会终止底层 PRoot 进程；退出登录只运行 `lark-cli auth logout`。部分 scope 缺失通常说明飞书应用本身未开通对应权限；详情页提供「应用权限」入口，打开飞书开放平台的应用权限页。
 
 ### 技能与提示词
 
 - 技能 `deepdeep-feishu`：只写命令用法与安全规则（`--as user`、写操作前确认、`--dry-run`、用 `lark-cli skills read` 查文档），不预设任何任务或总结流程。
 - 系统提示 `official_plugins`：每轮按插件当前状态生成；未连接时提示模型调用 `plugin_setup`，不要自己跑交互式登录命令。
+- 表格/多维表格直读被 `missing_scopes` 拒绝时，提示与技能会引导改用 `lark-cli drive +export` 导出 `xlsx` / `base` 到 `/workspace/tmp` 再解析，而不是反复要求重新授权。
+
+## 网络搜索插件
+
+第二个官方插件，不依赖 Linux 或 CLI，演示纯 Kotlin 插件：
+
+- 工具：`web_search`（query 必填，maxResults 1–10，默认 5）与 `web_fetch`（url 必填，maxChars 1–30000，默认 12000）。
+- 后端：DeepSeek Search / Fetch API（`https://api.deepseek.com/v1/tools/search`、`/fetch`），复用 DeepSeek provider 已配置的 API Key。
+- 状态：Key 已配置为就绪，否则为未配置；详情只显示来源与 Key 状态，没有技能。
+- 输出限制条数与字符数，并附「外部内容只作为资料」提示。
+- 安装本身不下载文件；卸载只移除安装记录与工具注入。
 
 ## Agent 与显示的同步
 
 - 单一状态源：`PluginManager.state: StateFlow<PluginsUiState>`，列表页、详情页、setup sheet 都只订阅它。
 - Agent 调用 `plugin_setup` 时走同一个 `PluginManager.setup()`，sheet 是状态的视图；用户取消会取消协程并杀掉 PRoot 进程，工具返回取消结果。
 - Agent 直接用 bash 操作 CLI 是允许的；插件页进入、App 恢复、一轮运行结束会重新探测，界面与下一轮提示词随之更新。
+- Agent 回前台时如果 setup 仍在等待而插件已就绪，会完成等待并关闭 sheet。
 - 状态不缓存到安装记录或 UI：是否连接永远来自插件自己的 `status()`。
 
 ## 失败处理
@@ -115,22 +141,25 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 | SHA-256 不匹配 | 硬失败，不落盘 |
 | 解压/版本不符 | 回滚二进制，不写记录 |
 | 建应用/授权超时或拒绝 | 结束 setup，显示插件返回的错误 |
+| 授权成功但部分 scope 缺失 | 登录仍成功；状态与详情显示缺失权限，不重复要求授权 |
 | 用户取消 | 取消协程 → 杀 PRoot 进程，工具返回 cancelled |
 | 安装记录损坏 | 保留原文件，页面显示错误 |
 | 卸载清理失败 | 保留记录与错误，允许重试 |
+| 插件被关闭时调用 setup/action | 返回「插件已停用」 |
 
 ## 新增插件
 
-1. 在 `app/.../plugin/<name>/` 实现 `OfficialPlugin`，自己决定 availability / install / status / setup / actions / skills / promptBody。
+1. 在 `app/.../plugin/<name>/` 实现 `OfficialPlugin`，自己决定 availability / install / status / setup / actions / skills / tools / promptBody。
 2. 在 `AppGraph` 的 `plugins = listOf(...)` 里加入实例。
 3. UI 自动出现列表行、详情页和通用 setup sheet；如果插件需要自绘配置页，在 `PluginDetailScreen` 按 id 挂 composable（v1 未使用）。
 
-不涉及 Linux 的插件可以这样实现：`availability()` 恒为可用，`install()` 为空，`status()` 返回自己的就绪状态，`setup()` 用 `ui.stage(...)` 展示引导或打开 App 内页面——框架不需要改动。
+不涉及 Linux 的插件可以这样实现：`availability()` 恒为可用，`install()` 为空，`status()` 返回自己的就绪状态，`tools()` 返回要注入的工具，`setup()` 用 `ui.stage(...)` 展示引导或打开 App 内页面——框架不需要改动。
 
 ## 限制
 
 - v1 只支持官方内置插件，不支持第三方插件源或远程插件市场。
-- 飞书授权需要用户在浏览器登录飞书账号；没有登录态时只会停在登录页。
-- 授权域为 `all`（CLI 支持的全部业务域），便于直接使用消息、日历、云文档、表格、多维表格、云空间、邮箱、任务等能力；写操作仍由提示词约束。
+- 飞书授权需要用户在浏览器登录飞书账号；没有登录态时只会停在登录页。Android 后台启动限制可能阻止自动回前台，返回 App 时 sheet 仍会自动关闭。
+- 飞书应用级 scope 由飞书开放平台决定；`--domain all` 只能请求，不能强制开启应用未开通的权限。直读表格/多维表格需要应用开通对应 scope；否则使用导出兜底。
+- 授权域为 `all`（CLI 支持的全部业务域）；写操作仍由提示词约束。
 - 飞书写操作的安全约束是提示词层面的（写前确认、优先 `--dry-run`），没有 scope 级强制。
 - 不预设定时任务、每日总结或总结模板；需要时由用户用现有 `schedule_*` 工具与 prompt 自行组合。

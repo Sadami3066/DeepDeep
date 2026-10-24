@@ -22,7 +22,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - 交付卡片：`present` 工具把生成的文件展示成聊天卡片，可直接打开或分享
 - 提问卡直接内联在聊天消息里，答完折叠为只读问答摘要
 - MCP：抽屉「MCP」管理 Streamable HTTP 服务器，支持 OAuth 登录与连接检测；工具经 `tool_search` 在对话中按需加载
-- 插件：抽屉「插件」管理 DeepDeep 官方内置插件（首个为飞书 CLI），按需下载、连接、更新、卸载；Agent 可通过 `plugin_setup` 走同一流程
+- 插件：抽屉「插件」管理 DeepDeep 官方内置插件（飞书 CLI、网络搜索），按需下载、启用/关闭、连接、更新、卸载；Agent 可通过 `plugin_setup` 走同一流程，插件贡献的技能与工具随启用状态注入
 - 无 root；root 能力后续接入
 
 ## 结构
@@ -48,7 +48,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 
 ## 边界
 
-- 工具：pi 原生（含前台 `bash`）+ App 层 `ask_user_question` / `schedule_*` / `goal_*` / `job_*` / `present` / `plugin_setup`；提醒在服务存活时投递回原对话，错过时下次打开补投一次。
+- 工具：pi 原生（含前台 `bash`）+ App 层 `ask_user_question` / `schedule_*` / `goal_*` / `job_*` / `present` / `plugin_setup` + 插件贡献的 `web_search` / `web_fetch`；提醒在服务存活时投递回原对话，错过时下次打开补投一次。
 - 不做权限/审批系统；只有 Linux/root 功能开关。
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据。
 - Linux 是 proot 用户空间，不是安全沙箱。

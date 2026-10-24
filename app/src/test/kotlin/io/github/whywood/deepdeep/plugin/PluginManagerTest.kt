@@ -1,12 +1,17 @@
 package io.github.whywood.deepdeep.plugin
 
+import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -27,15 +32,29 @@ class PluginManagerTest {
             "res:$id:" + args.joinToString(",")
     }
 
-    private fun newManager(scope: TestScope, plugin: OfficialPlugin = FakePlugin()): PluginManager {
+    private fun recordsFile() = File(temporaryFolder.root, "plugins/plugins.json")
+
+    private fun newManager(
+        scope: TestScope,
+        plugin: OfficialPlugin = FakePlugin(),
+        isForeground: () -> Boolean = { true },
+        onSetupReady: (String) -> Unit = {},
+        onContributionsChanged: () -> Unit = {},
+    ): PluginManager {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         return PluginManager(
             plugins = listOf(plugin),
-            recordStore = PluginRecordStore(File(temporaryFolder.root, "plugins/plugins.json"), dispatcher),
-            skillStore = PluginSkillStore(File(temporaryFolder.root, "agent/skills"), dispatcher),
+            recordStore = PluginRecordStore(recordsFile(), dispatcher),
+            skillStore = PluginSkillStore(
+                skillsDir = File(temporaryFolder.root, "agent/skills"),
+                repoDir = File(temporaryFolder.root, "skills"),
+                ioDispatcher = dispatcher,
+            ),
             strings = strings,
             scope = scope,
-            isForeground = { true },
+            isForeground = isForeground,
+            onSetupReady = onSetupReady,
+            onContributionsChanged = onContributionsChanged,
         )
     }
 
@@ -47,11 +66,35 @@ class PluginManagerTest {
         advanceUntilIdle()
 
         assertTrue(plugin.installed)
-        val records = PluginRecordStore(File(temporaryFolder.root, "plugins/plugins.json")).load()
-        assertEquals("2.0", records.records.getValue(plugin.id).version)
-        assertEquals(listOf("fake-skill"), records.records.getValue(plugin.id).skillIds)
-        assertTrue(File(temporaryFolder.root, "agent/skills/fake-skill/SKILL.md").isFile)
-        assertEquals("fake", File(temporaryFolder.root, "agent/skills/fake-skill/.deepdeep-plugin").readText())
+        val record = PluginRecordStore(recordsFile()).load().records.getValue(plugin.id)
+        assertEquals("2.0", record.version)
+        assertEquals(listOf("fake-skill"), record.skillIds)
+        assertTrue(record.enabled)
+        listOf(
+            File(temporaryFolder.root, "skills/fake-skill"),
+            File(temporaryFolder.root, "agent/skills/fake-skill"),
+        ).forEach { dir ->
+            assertTrue(File(dir, "SKILL.md").isFile)
+            assertEquals("fake", File(dir, ".deepdeep-plugin").readText())
+        }
+    }
+
+    @Test
+    fun installNotifiesContributionsAfterToolsBecomeVisible() = runTest {
+        val plugin = FakePlugin()
+        var toolsAtNotification: List<String> = emptyList()
+        lateinit var manager: PluginManager
+        manager = newManager(
+            scope = this,
+            plugin = plugin,
+            onContributionsChanged = {
+                toolsAtNotification = manager.tools().map { it.name }
+            },
+        )
+        manager.install(plugin.id)
+        advanceUntilIdle()
+
+        assertEquals(listOf("fake_tool"), toolsAtNotification)
     }
 
     @Test
@@ -62,9 +105,7 @@ class PluginManagerTest {
         advanceUntilIdle()
 
         assertFalse(plugin.installed)
-        assertNull(
-            PluginRecordStore(File(temporaryFolder.root, "plugins/plugins.json")).load().records[plugin.id],
-        )
+        assertNull(PluginRecordStore(recordsFile()).load().records[plugin.id])
         assertTrue(manager.state.value.error?.contains("需要 Linux") == true)
     }
 
@@ -78,10 +119,9 @@ class PluginManagerTest {
         advanceUntilIdle()
 
         assertFalse(plugin.installed)
-        assertTrue(
-            PluginRecordStore(File(temporaryFolder.root, "plugins/plugins.json")).load().records.isEmpty(),
-        )
+        assertTrue(PluginRecordStore(recordsFile()).load().records.isEmpty())
         assertFalse(File(temporaryFolder.root, "agent/skills/fake-skill").exists())
+        assertFalse(File(temporaryFolder.root, "skills/fake-skill").exists())
     }
 
     @Test
@@ -95,6 +135,74 @@ class PluginManagerTest {
         manager.install(plugin.id)
         advanceUntilIdle()
         assertEquals("PROMPT:未连接", manager.promptBody())
+    }
+
+    @Test
+    fun startMigratesSkillsForInstalledPlugins() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")))
+        val oldActive = File(temporaryFolder.root, "agent/skills/fake-skill")
+        oldActive.mkdirs()
+        File(oldActive, "SKILL.md").writeText("old")
+        File(oldActive, ".deepdeep-plugin").writeText(plugin.id)
+
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        assertTrue(File(temporaryFolder.root, "skills/fake-skill/SKILL.md").isFile)
+        assertTrue(File(oldActive, "SKILL.md").isFile)
+    }
+
+    @Test
+    fun toolsFilterByInstalledAndEnabled() = runTest {
+        val plugin = FakePlugin()
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+        assertTrue(manager.tools().isEmpty())
+
+        manager.install(plugin.id)
+        advanceUntilIdle()
+        assertEquals(listOf("fake_tool"), manager.tools().map { it.name })
+
+        manager.setEnabled(plugin.id, false)
+        advanceUntilIdle()
+        assertTrue(manager.tools().isEmpty())
+        assertFalse(manager.state.value.snapshot(plugin.id)!!.enabled)
+
+        manager.setEnabled(plugin.id, true)
+        advanceUntilIdle()
+        assertEquals(listOf("fake_tool"), manager.tools().map { it.name })
+    }
+
+    @Test
+    fun disabledPluginSkipsStatusAndRejectsOperations() = runTest {
+        val plugin = FakePlugin()
+        val manager = newManager(this, plugin)
+        manager.install(plugin.id)
+        advanceUntilIdle()
+        manager.setEnabled(plugin.id, false)
+        advanceUntilIdle()
+
+        plugin.statusCalls = 0
+        manager.refresh()
+        advanceUntilIdle()
+        assertEquals(0, plugin.statusCalls)
+        val snapshot = manager.state.value.snapshot(plugin.id)!!
+        assertFalse(snapshot.enabled)
+        assertNull(snapshot.status)
+        assertNull(manager.promptBody())
+
+        val setup = manager.setup(plugin.id)
+        assertFalse(setup.ok)
+        assertEquals("res:${R.string.plugins_error_disabled}", setup.error)
+        assertTrue(setup.installed)
+
+        manager.runAction(plugin.id, "do")
+        advanceUntilIdle()
+        assertEquals("res:${R.string.plugins_error_disabled}", manager.state.value.error)
     }
 
     @Test
@@ -124,7 +232,7 @@ class PluginManagerTest {
         val plugin = FakePlugin()
         plugin.installed = true
         plugin.statusValue = PluginStatus.Ready("已连接", "张三")
-        PluginRecordStore(File(temporaryFolder.root, "plugins/plugins.json")).upsert(
+        PluginRecordStore(recordsFile()).upsert(
             PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
         )
         val manager = newManager(this, plugin)
@@ -135,6 +243,112 @@ class PluginManagerTest {
         assertTrue(result.ok)
         assertEquals("张三", result.account)
         assertNull(manager.state.value.interaction)
+    }
+
+    @Test
+    fun actionLeavesNoStaleInteraction() = runTest {
+        val plugin = FakePlugin()
+        val manager = newManager(this, plugin)
+        manager.install(plugin.id)
+        advanceUntilIdle()
+
+        plugin.actionHook = { ui -> ui.stage(R.string.plugins_title) }
+        manager.runAction(plugin.id, "do")
+        advanceUntilIdle()
+
+        assertNull(manager.state.value.interaction)
+        assertFalse(manager.state.value.busy)
+    }
+
+    @Test
+    fun onAppForegroundCompletesWaitingSetupWhenReady() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        plugin.statusValue = PluginStatus.NotReady("未连接")
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val started = CompletableDeferred<Unit>()
+        val blocked = CompletableDeferred<Unit>()
+        plugin.setupHook = { ui ->
+            ui.stage(R.string.plugins_title)
+            started.complete(Unit)
+            blocked.await()
+        }
+        val result = async { manager.setup(plugin.id) }
+        advanceUntilIdle()
+        started.await()
+        assertNotNull(manager.state.value.interaction)
+
+        plugin.statusValue = PluginStatus.Ready("已连接", "外部账号")
+        manager.onAppForeground()
+        advanceUntilIdle()
+
+        val setup = result.await()
+        assertTrue(setup.ok)
+        assertTrue(setup.ready)
+        assertEquals("外部账号", setup.account)
+        assertNull(manager.state.value.interaction)
+    }
+
+    @Test
+    fun setupReadyInBackgroundCallsOnSetupReady() = runTest {
+        var foreground = true
+        var readyLabel: String? = null
+        val plugin = FakePlugin()
+        plugin.installed = true
+        plugin.statusValue = PluginStatus.NotReady("未连接")
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(
+            scope = this,
+            plugin = plugin,
+            isForeground = { foreground },
+            onSetupReady = { readyLabel = it },
+        )
+        manager.start()
+        advanceUntilIdle()
+
+        plugin.setupHook = { _ -> foreground = false }
+        val setup = manager.setup(plugin.id)
+        advanceUntilIdle()
+
+        assertTrue(setup.ok)
+        assertEquals("res:${R.string.plugins_title}", readyLabel)
+    }
+
+    @Test
+    fun actionReadyInBackgroundCallsOnSetupReady() = runTest {
+        var foreground = true
+        var readyLabel: String? = null
+        val plugin = FakePlugin()
+        plugin.installed = true
+        plugin.statusValue = PluginStatus.NotReady("未连接")
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(
+            scope = this,
+            plugin = plugin,
+            isForeground = { foreground },
+            onSetupReady = { readyLabel = it },
+        )
+        manager.start()
+        advanceUntilIdle()
+
+        plugin.actionHook = { _ ->
+            foreground = false
+            plugin.statusValue = PluginStatus.Ready("已连接", "ready")
+        }
+        manager.runAction(plugin.id, "do")
+        advanceUntilIdle()
+
+        assertEquals("res:${R.string.plugins_title}", readyLabel)
     }
 
     private class FakePlugin(
@@ -148,6 +362,9 @@ class PluginManagerTest {
 
         var installed: Boolean = false
         var statusValue: PluginStatus = PluginStatus.NotReady("未连接")
+        var statusCalls: Int = 0
+        var setupHook: (suspend (PluginUi) -> Unit)? = null
+        var actionHook: (suspend (PluginUi) -> Unit)? = null
 
         override suspend fun availability(): PluginAvailability = availability
 
@@ -160,16 +377,39 @@ class PluginManagerTest {
         }
 
         override suspend fun status(): PluginStatus {
+            statusCalls++
             if (!installed) return PluginStatus.Failed("未安装")
             return statusValue
         }
 
         override suspend fun setup(ui: PluginUi) {
-            statusValue = PluginStatus.Ready("已连接", "ready")
+            setupHook?.invoke(ui)
+            if (statusValue !is PluginStatus.Ready) {
+                statusValue = PluginStatus.Ready("已连接", "ready")
+            }
+        }
+
+        override fun actions(status: PluginStatus): List<PluginAction> =
+            listOf(PluginAction("do", R.string.plugins_title))
+
+        override suspend fun runAction(actionId: String, ui: PluginUi) {
+            actionHook?.invoke(ui)
         }
 
         override fun skills(): List<PluginSkill> = listOf(PluginSkill("fake-skill", "body"))
 
+        override fun tools(): List<CodingTool> = listOf(testTool(), testTool())
+
         override fun promptBody(status: PluginStatus): String = "PROMPT:${status.label}"
+    }
+
+    private companion object {
+        fun testTool(): CodingTool = CodingTool(
+            name = "fake_tool",
+            description = "fake",
+            parameters = buildJsonObject { put("type", "object") },
+            label = "fake_tool",
+            execute = { _, _, _, _ -> textResult("ok") },
+        )
     }
 }

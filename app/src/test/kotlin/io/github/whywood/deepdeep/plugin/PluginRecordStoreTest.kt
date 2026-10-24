@@ -57,4 +57,41 @@ class PluginRecordStoreTest {
         assertFalse(reloaded.records.isEmpty())
         assertEquals("1", reloaded.records.getValue("a").version)
     }
+
+    @Test
+    fun oldSchemaWithoutEnabledDefaultsToTrue() = runTest {
+        val file = File(temporaryFolder.root, "plugins/plugins.json")
+        file.parentFile.mkdirs()
+        file.writeText(
+            """{"schemaVersion":1,"plugins":[{"id":"feishu","version":"1.0.98","installedAt":5,"skillIds":["s"]}]}""",
+        )
+        val record = PluginRecordStore(file).load().records.getValue("feishu")
+        assertTrue(record.enabled)
+        assertEquals(listOf("s"), record.skillIds)
+    }
+
+    @Test
+    fun setEnabledPersistsAndUpgradesSchema() = runTest {
+        val file = File(temporaryFolder.root, "plugins/plugins.json")
+        val store = PluginRecordStore(file)
+        store.upsert(PluginRecord("feishu", "2.0", 7L, listOf("s")))
+        store.setEnabled("feishu", false)
+
+        val record = PluginRecordStore(file).load().records.getValue("feishu")
+        assertFalse(record.enabled)
+        assertEquals("2.0", record.version)
+        assertEquals(listOf("s"), record.skillIds)
+        assertTrue(file.readText().contains("\"schemaVersion\":2"))
+        assertTrue(file.readText().contains("\"enabled\":false"))
+
+        store.setEnabled("feishu", true)
+        assertTrue(PluginRecordStore(file).load().records.getValue("feishu").enabled)
+    }
+
+    @Test
+    fun setEnabledIgnoresMissingRecord() = runTest {
+        val file = File(temporaryFolder.root, "plugins/plugins.json")
+        PluginRecordStore(file).setEnabled("missing", false)
+        assertTrue(PluginRecordStore(file).load().records.isEmpty())
+    }
 }

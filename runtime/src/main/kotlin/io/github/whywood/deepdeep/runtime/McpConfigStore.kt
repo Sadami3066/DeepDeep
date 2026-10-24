@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -39,6 +40,34 @@ class McpConfigStore(
         val entry = config.toConfigJsonObject()
         validateEntry(name, entry)
         writeLocked(current.entries + (name to entry))
+    }
+
+    suspend fun importServers(text: String): List<String> = mutex.withLock {
+        val root = runCatching { PiJson.parseToJsonElement(text).jsonObject }.getOrElse { error ->
+            throw IllegalArgumentException("mcp.json 解析失败：${error.message ?: "invalid JSON"}")
+        }
+        val rawServers = root["mcpServers"] as? JsonObject
+            ?: throw IllegalArgumentException("mcpServers must be an object")
+        if (rawServers.isEmpty()) throw IllegalArgumentException("mcpServers must not be empty")
+        val normalized = JsonObject(rawServers.mapValues { (_, value) -> normalizeEntryType(value) })
+        val parsed = parseMcpConfig(buildJsonObject { put("mcpServers", normalized) })
+        if (parsed.errors.isNotEmpty()) {
+            throw IllegalArgumentException(parsed.errors.joinToString("; "))
+        }
+        val merged = LinkedHashMap(loadLocked().entries)
+        parsed.servers.forEach { (name, config) -> merged[name] = config.toConfigJsonObject() }
+        writeLocked(merged)
+        parsed.servers.map { it.first }
+    }
+
+    private fun normalizeEntryType(value: JsonElement): JsonElement {
+        if (value !is JsonObject) return value
+        val type = (value["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return value
+        val normalized = when (type.trim().lowercase().replace("_", "").replace("-", "")) {
+            "streamablehttp", "http" -> "streamable-http"
+            else -> return value
+        }
+        return JsonObject(value + ("type" to JsonPrimitive(normalized)))
     }
 
     suspend fun remove(name: String) = mutex.withLock {

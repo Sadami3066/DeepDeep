@@ -1,7 +1,6 @@
 <resources>
     <string name="assistant_action_copy">Copy</string>
     <string name="assistant_action_select_all">Select all</string>
-    <string name="assistant_action_share">Share</string>
     <string name="assistant_action_speak">Read aloud</string>
     <string name="assistant_attach_add">Add attachment</string>
     <string name="assistant_attach_empty">Empty file</string>
@@ -47,8 +46,6 @@
     <string name="chat_reload_done">Session reloaded</string>
     <string name="chat_reload_failed">Reload failed</string>
     <string name="chat_reload_busy">Stop the response before reloading</string>
-    <string name="assistant_share_chooser">Share answer</string>
-    <string name="assistant_share_unavailable">No app available to share</string>
     <string name="assistant_step_collapsed">Collapsed</string>
     <string name="assistant_step_expanded">Expanded</string>
     <string name="assistant_stop">Stop</string>

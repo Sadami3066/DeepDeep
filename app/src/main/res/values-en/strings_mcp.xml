@@ -3,8 +3,11 @@
     <string name="mcp_back">Back</string>
     <string name="mcp_add">Add server</string>
     <string name="mcp_empty_title">No MCP servers yet</string>
-    <string name="mcp_empty_hint">Add an HTTP server and its tools will show up in conversations</string>
-    <string name="mcp_refresh">Check again</string>
+    <string name="mcp_import_title">Import JSON</string>
+    <string name="mcp_import_template" formatted="false">{\"mcpServers\":{\"name\":{\"type\":\"streamablehttp\",\"url\":\"https://...\",\"headers\":{\"Authorization\":\"Bearer ...\"}}}}</string>
+    <string name="mcp_import_error">Import failed. Check the JSON format and required fields.</string>
+    <string name="mcp_import_save">Import</string>
+    <string name="mcp_refresh">Refresh</string>
     <string name="mcp_row_subtitle">%1$s · %2$s</string>
     <string name="mcp_status_ok">Connected · %1$d tools</string>
     <string name="mcp_status_auth">Sign-in required</string>

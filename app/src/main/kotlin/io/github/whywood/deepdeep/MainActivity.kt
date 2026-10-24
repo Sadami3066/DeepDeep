@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         AppVisibility.foreground = true
+        AppVisibility.taskId = taskId
+        graph.pluginManager.onAppForeground()
     }
 
     override fun onStop() {

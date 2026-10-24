@@ -33,7 +33,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -202,6 +204,15 @@ internal fun DeepDeepApp(
         }
     }
     val navigator = rememberAppNavigator()
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val currentDestination = navigator.current
+    LaunchedEffect(currentDestination) {
+        if (currentDestination != AppDestination.Chat) {
+            focusManager.clearFocus()
+            keyboard?.hide()
+        }
+    }
     val density = LocalDensity.current
     val drawerWidthPx = with(density) { 304.dp.toPx() }
 
@@ -368,9 +379,8 @@ internal fun DeepDeepApp(
         AnimatedScreenHost(
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),
-        ) { destination ->
-            when (destination) {
-                AppDestination.Chat -> ChatScreen(
+            base = {
+                ChatScreen(
                     state = state.copy(configured = state.providerId in configuredProviders),
                     nickname = nickname,
                     onInputChange = chatViewModel::onInputChange,
@@ -481,6 +491,10 @@ internal fun DeepDeepApp(
                         }
                     },
                 )
+            },
+        ) { destination ->
+            when (destination) {
+                AppDestination.Chat -> Box(Modifier.fillMaxSize())
 
                 AppDestination.Settings -> SettingsScreen(
                     nickname = nickname,
