@@ -4,7 +4,11 @@ import dev.pi.ai.auth.CredentialStore
 import dev.pi.ai.http.okHttpTransport
 import dev.pi.coding.AgentSessionOptions
 import dev.pi.coding.createAgentSession
+import dev.pi.coding.mcp.McpConfigLoader
+import dev.pi.coding.mcp.McpOptions
 import dev.pi.coding.paths.AgentPaths
+import dev.pi.coding.settings.SettingsManager
+import dev.pi.mcp.config.McpServerConfig
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.CodingHooks
 import dev.pi.coding.session.SessionInfo
@@ -85,10 +89,23 @@ class PiSessionEngine(
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 projectTrusted = true,
+                mcp = McpOptions(
+                    enabled = true,
+                    loadConfig = true,
+                    samplingEnabled = false,
+                    rootsEnabled = true,
+                    autoEnableToolSearch = true,
+                ),
             ),
         )
         binding.attach(session)
         return session
+    }
+
+    suspend fun loadMcpServers(): Map<String, McpServerConfig> {
+        val settings = SettingsManager.forPaths(paths, fs)
+        val loaded = McpConfigLoader(paths, fs, settings).load()
+        return loaded.servers.toMap()
     }
 
     suspend fun listSessions(): List<ConversationSummary> = SessionManager.list(paths, fs).map { info ->

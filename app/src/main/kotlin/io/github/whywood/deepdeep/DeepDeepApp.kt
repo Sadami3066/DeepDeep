@@ -50,6 +50,7 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
+import io.github.whywood.deepdeep.ui.mcp.McpScreen
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
@@ -71,6 +72,7 @@ import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
@@ -110,7 +112,7 @@ internal fun DeepDeepApp(
         retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
         compacting = stringResource(R.string.chat_status_compacting),
         compactionFailed = stringResource(R.string.chat_status_compaction_failed),
-        runningTool = { name -> runningToolTemplate.replace("%1\$s", name) },
+        runningTool = { name -> runningToolTemplate.replace("%1\$s", displayToolName(name)) },
         requestFailed = stringResource(R.string.chat_error_request_failed),
         runtimeStartFailed = stringResource(R.string.chat_error_runtime_start),
         preparingSession = stringResource(R.string.chat_error_preparing),
@@ -172,7 +174,8 @@ internal fun DeepDeepApp(
         uris.forEach(chatViewModel::attach)
     }
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
-    val configuredProviders by graph.apiKeyStore.providerIds.collectAsStateWithLifecycle(initialValue = emptySet())
+    val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
+    val configuredProviders = authKinds.keys
     val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
@@ -491,6 +494,8 @@ internal fun DeepDeepApp(
                     onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
                     onOpenFonts = { navigator.push(AppDestination.Fonts) },
                     onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
+                    archivedCount = state.archivedCount,
+                    onOpenArchived = { navigator.push(AppDestination.Archived) },
                 )
 
                 AppDestination.Providers -> ProviderListScreen(
@@ -561,10 +566,11 @@ internal fun DeepDeepApp(
                             navigator.pop()
                         }
                     } else {
+                        val authKind = authKinds[provider.id]
                         val savedApiKey by produceState<String?>(
                             initialValue = null,
                             provider.id,
-                            provider.id in configuredProviders,
+                            authKind,
                         ) {
                             value = runCatching { graph.apiKeyStore.read(provider.id) }.getOrNull()
                         }
@@ -575,17 +581,18 @@ internal fun DeepDeepApp(
                             active = provider.id == state.providerId,
                             activeModelId = state.modelId.takeIf { provider.id == state.providerId },
                             savedApiKey = savedApiKey,
+                            authKind = authKind,
+                            oauthService = graph.providerOAuthService,
+                            onAuthChanged = { scope.launch { graph.credentials.preload(provider.id) } },
                             onBack = ::back,
                             onSaveApiKey = { key ->
                                 scope.launch {
-                                    graph.apiKeyStore.save(provider.id, key)
-                                    graph.credentials.preload(provider.id)
+                                    graph.credentials.writeApiKey(provider.id, key, null)
                                 }
                             },
                             onClearApiKey = {
                                 scope.launch {
-                                    graph.apiKeyStore.save(provider.id, null)
-                                    graph.credentials.invalidate(provider.id)
+                                    graph.credentials.delete(provider.id)
                                 }
                             },
                             onActivate = { modelId ->
@@ -597,6 +604,15 @@ internal fun DeepDeepApp(
                         )
                     }
                 }
+
+                AppDestination.Mcp -> McpScreen(
+                    store = graph.mcpConfigStore,
+                    probe = graph.mcpServerProbe,
+                    oauth = graph.mcpOAuthService,
+                    onBack = ::back,
+                    onReloadSessions = { scope.launch { graph.host.reloadMcp() } },
+                    onReconnect = { server -> scope.launch { graph.host.reconnectMcp(server) } },
+                )
 
                 AppDestination.Archived -> ArchivedSessionsScreen(
                     archivedSessions = state.archivedConversations,
@@ -677,18 +693,12 @@ internal fun DeepDeepApp(
             ) {
                 DeepDeepDrawer(
                     sessions = state.conversations,
-                    archivedCount = state.archivedCount,
                     workspaces = state.workspaces,
                     pinnedWorkspaceIds = uiPreferences.pinnedWorkspaceIds,
                     expandedWorkspaceIds = expandedWorkspaceIds,
                     busySessionIds = state.busySessionIds,
                     reminderSessionIds = schedules.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
                     userName = nickname,
-                    onChat = ::openChat,
-                    onArchived = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Archived)
-                    },
                     onOpenSearch = {
                         drawerOpen = false
                         navigator.push(AppDestination.Search)
@@ -696,6 +706,10 @@ internal fun DeepDeepApp(
                     onOpenSkills = {
                         drawerOpen = false
                         navigator.push(AppDestination.Skills)
+                    },
+                    onOpenMcp = {
+                        drawerOpen = false
+                        navigator.push(AppDestination.Mcp)
                     },
                     onScheduled = {
                         drawerOpen = false

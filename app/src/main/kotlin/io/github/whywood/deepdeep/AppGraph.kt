@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep
 
 import android.content.Context
+import dev.pi.ai.auth.oauth.OAuthRuntime
+import dev.pi.ai.auth.oauth.socketOAuthCallbackServerFactory
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -16,6 +18,15 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
+import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
+import io.github.whywood.deepdeep.runtime.OAuthCredentialStore
+import io.github.whywood.deepdeep.runtime.McpConfigStore
+import io.github.whywood.deepdeep.runtime.McpOAuthService
+import io.github.whywood.deepdeep.runtime.McpServerProbe
+import dev.pi.mcp.oauth.FileMcpTokenStore
+import dev.pi.mcp.oauth.defaultMcpAuthFile
+import okio.Path.Companion.toPath
+import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.GoalStore
 import io.github.whywood.deepdeep.runtime.JobRegistry
@@ -54,13 +65,16 @@ class AppGraph(context: Context) {
 
     init {
         StorageMigration.migrate(appContext.filesDir)
+        OAuthRuntime.callbackServerFactory = socketOAuthCallbackServerFactory()
     }
 
     val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
     val workspacesDir: File = File(appContext.filesDir, "workspaces").apply { mkdirs() }
     val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
 
-    val apiKeyStore = ApiKeyStore(appContext)
+    private val secretStore = EncryptedSecretStore(appContext)
+    val apiKeyStore = ApiKeyStore(secretStore)
+    val oauthCredentialStore = OAuthCredentialStore(secretStore)
     val modelConfigStore = ModelConfigStore(appContext)
     val attachmentStore = FileAttachmentStore(appContext, homeDir)
     val linuxSettings = LinuxSettingsStore(appContext)
@@ -86,8 +100,14 @@ class AppGraph(context: Context) {
         homeDir,
         sharedStorageEnabled = { sharedStorage.value },
     )
-    val credentials = SdkCredentialStore(apiKeyStore, scope)
-    val providerCatalog = ProviderCatalog(okHttpTransport(), credentials)
+    private val httpTransport = okHttpTransport()
+    val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
+    val providerCatalog = ProviderCatalog(httpTransport, credentials)
+    val providerOAuthService = ProviderOAuthService(credentials, httpTransport)
+    val mcpConfigStore = McpConfigStore(agentDir)
+    private val mcpTokenStore = FileMcpTokenStore(defaultMcpAuthFile(agentDir.absolutePath.toPath()))
+    val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)
+    val mcpOAuthService = McpOAuthService(httpTransport, mcpTokenStore)
     val sessionMetaStore = SessionMetaStore(appContext)
     val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
     val workspaceStore = WorkspaceStore(appContext)
@@ -192,7 +212,7 @@ class AppGraph(context: Context) {
         if (!keyFile.isFile) return
         val key = keyFile.readText().trim()
         if (key.isNotEmpty()) {
-            apiKeyStore.save(ProviderCatalog.DEFAULT_PROVIDER_ID, key)
+            credentials.writeApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID, key, null)
         }
         keyFile.delete()
         directory.delete()

@@ -49,13 +49,21 @@ Compose ChatScreen
 - 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。
 - 模型切换：`ChatViewModel.setProvider` 用 `ProviderDirectory.models()` 选该厂商当前或首个模型，经 `runtime.setModel` 持久化并同步到所有已打开会话；composer 的模型 sheet 顶部提供已配置厂商下拉。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
-- ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记。
+- ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记；`ProviderOAuthService` 用 SDK 的 `bundledOAuthFlows()` 提供登录/退出，浏览器回调由 App 设置 `OAuthRuntime.callbackServerFactory` 后走本机 loopback。
 - OpenCode（Zen / Go）的网关要求每个请求带 `x-opencode-session`，否则返回 400 `MissingSessionID`；SDK 0.1.2 起由 `Models` 层用 `StreamOptions.sessionId` 自动注入，coding agent 把会话 id 传进 `AgentOptions`。
 - ModelConfigStore 保存 provider/model/thinking；聊天 composer 切换模型和思考。
-- SdkCredentialStore 使用 Android Keystore 加密的 ApiKeyStore，可按 provider 预加载/清除 key。
+- 凭据：`EncryptedSecretStore`（Android Keystore AES-GCM + DataStore `secrets`）支撑 `ApiKeyStore`（`api_key_` 前缀）与 `OAuthCredentialStore`（`oauth_` 前缀，存 OAuth 原始 JSON）；`SdkCredentialStore` 合并两者、维护内存 cache 与 `authKinds` StateFlow，并按 provider 保证 API Key / OAuth 只存在一种（写一种会清另一种）。provider OAuth token 的自动刷新由 SDK resolver 完成。
 - SessionMetaStore/SessionRepository 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
 - 会话文件读取/写入在 IO dispatcher；Chat 层注入 `ioDispatcher` 以便测试。
 - ChatViewModel 为每个已加载过的会话保留消息快照缓存；再次打开时先渲染缓存，再在后台 `open` SDK session（单 mutex 串行，epoch 丢弃过期打开），发送会等待打开完成。
+
+## OAuth 与 MCP
+
+- Provider OAuth 使用 pi-ai 的 9 个内置 flow；`OAuthRuntime.callbackServerFactory` 在 `AppGraph` 初始化时设为 Android 的 loopback 服务器工厂。登录交互（浏览器、选择、输入）由 App 的 `OAuthLoginSession` / `OAuthLoginSheet` 承载；成功后写 OAuth 凭据并清掉该 provider 的 API Key。
+- MCP 使用 pi2kotlin 0.2.1 的 `McpManager`：配置存 `files/agent/mcp.json`（`mcpServers` 格式，原子写），OAuth token 存 `files/agent/mcp-auth.json`；App 只管理 Streamable HTTP 服务器（Android 无 stdio 子进程）。
+- `PiSessionEngine` 以 `McpOptions(loadConfig=true, samplingEnabled=false, rootsEnabled=true, autoEnableToolSearch=true)` 创建会话：deferred 工具由 `tool_search` 加载，resources 工具自动注册；工具名为 `mcp__<server>__<tool>`。
+- `McpConfigStore` 负责读写配置并保留未知/stdio 字段；`McpServerProbe` 独立探测连接与工具数（供 MCP 页状态展示），`McpOAuthService` 负责 MCP OAuth 登录/退出。保存配置后 `AgentRuntimeHost.reloadMcp()` 对已打开会话热更新，登录后 `reconnectMcp()` 重连。
+- `McpOAuthSession` 用本机 loopback 回调（`startOAuthCallbackServerOrNull`）接收浏览器授权结果，失败时回退到粘贴回调链接。
 
 ## 个性化与提示词
 
@@ -78,7 +86,7 @@ Compose ChatScreen
 
 ## App 工具
 
-- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与 `extraToolFactories`（goal、job 工具）。SDK 固定 pi2kotlin 0.1.3，不修改。
+- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter` 与 `extraToolFactories`（goal、job 工具）。SDK 固定 pi2kotlin 0.2.1，不修改。
 - `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
 - `SessionBinding` 在会话创建后绑定 `AgentSession`，schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。

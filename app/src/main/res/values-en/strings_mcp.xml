@@ -1,0 +1,62 @@
+<resources>
+    <string name="mcp_title">MCP</string>
+    <string name="mcp_back">Back</string>
+    <string name="mcp_add">Add server</string>
+    <string name="mcp_empty_title">No MCP servers yet</string>
+    <string name="mcp_empty_hint">Add an HTTP server and its tools will show up in conversations</string>
+    <string name="mcp_refresh">Check again</string>
+    <string name="mcp_row_subtitle">%1$s · %2$s</string>
+    <string name="mcp_status_ok">Connected · %1$d tools</string>
+    <string name="mcp_status_auth">Sign-in required</string>
+    <string name="mcp_status_failed">Connection failed</string>
+    <string name="mcp_status_untested">Not checked</string>
+    <string name="mcp_status_disabled">Disabled</string>
+    <string name="mcp_status_unsupported">Unsupported on Android</string>
+    <string name="mcp_state_enabled">Enabled</string>
+
+    <string name="mcp_new_title">Add MCP server</string>
+    <string name="mcp_edit_title">Edit “%1$s”</string>
+    <string name="mcp_name_label">Name</string>
+    <string name="mcp_name_hint">For example: github</string>
+    <string name="mcp_url_label">URL</string>
+    <string name="mcp_url_hint">https://example.com/mcp</string>
+    <string name="mcp_description_label">Description</string>
+    <string name="mcp_description_hint">Optional</string>
+    <string name="mcp_headers_label">Headers</string>
+    <string name="mcp_headers_hint">Optional, one Key: Value per line</string>
+    <string name="mcp_enabled_label">Enabled</string>
+    <string name="mcp_stdio_hint">Local STDIO servers do not run on Android. You can delete or disable this entry.</string>
+    <string name="mcp_save">Save</string>
+    <string name="mcp_test">Test connection</string>
+    <string name="mcp_test_failed">Connection failed: %1$s</string>
+    <string name="mcp_delete">Delete server</string>
+    <string name="mcp_delete_title">Delete MCP server?</string>
+    <string name="mcp_delete_message">“%1$s” will be deleted permanently.</string>
+    <string name="mcp_delete_confirm">Delete</string>
+    <string name="mcp_cancel">Cancel</string>
+    <string name="mcp_close">Close</string>
+
+    <string name="mcp_oauth_label">Authorization</string>
+    <string name="mcp_oauth_login">Sign in</string>
+    <string name="mcp_oauth_logout">Sign out</string>
+    <string name="mcp_oauth_signed_in">Signed in</string>
+    <string name="mcp_oauth_waiting">Finish signing in in your browser</string>
+    <string name="mcp_oauth_open">Open browser</string>
+    <string name="mcp_oauth_manual_hint">No callback yet? Paste the full link from the browser address bar.</string>
+    <string name="mcp_oauth_manual_placeholder">http://127.0.0.1:…/callback?code=…</string>
+    <string name="mcp_oauth_manual_submit">Done</string>
+    <string name="mcp_oauth_cancel">Cancel sign-in</string>
+    <string name="mcp_oauth_callback_invalid">Invalid callback link</string>
+    <string name="mcp_oauth_failed">Sign-in failed: %1$s</string>
+
+    <string name="mcp_error_title">Something went wrong</string>
+    <string name="mcp_error_name_empty">Enter a name</string>
+    <string name="mcp_error_name_invalid">Names can only contain letters, digits, underscores and hyphens</string>
+    <string name="mcp_error_name_duplicate">A server with this name already exists</string>
+    <string name="mcp_error_url_invalid">URL must start with http:// or https://</string>
+    <string name="mcp_error_headers_invalid">Each header must be Key: Value</string>
+    <string name="mcp_error_save_failed">Could not save</string>
+    <string name="mcp_error_delete_failed">Could not delete</string>
+    <string name="mcp_error_toggle_failed">Could not change enabled state</string>
+    <string name="mcp_error_load_failed">Could not read MCP configuration</string>
+</resources>

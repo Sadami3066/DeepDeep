@@ -26,6 +26,11 @@ sealed interface AppDestination {
 
     data object Archived : AppDestination {
         override val routeKey: String = "archived"
+        override val depth: Int = 2
+    }
+
+    data object Mcp : AppDestination {
+        override val routeKey: String = "mcp"
         override val depth: Int = 1
     }
 
@@ -91,6 +96,7 @@ sealed interface AppDestination {
             routeKey == Privacy.routeKey -> Privacy
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
+            routeKey == Mcp.routeKey -> Mcp
             routeKey == Schedules.routeKey -> Schedules
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))

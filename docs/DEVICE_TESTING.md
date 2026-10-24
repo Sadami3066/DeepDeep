@@ -112,3 +112,8 @@ App 启动时读取 `files/import/deepseek.key`，写入 Keystore 加密存储�
 ```bash
 adb logcat -s DeepDeepRuntime DeepDeepChat
 ```
+70. Provider OAuth 登录：设置 → 厂商 → 选一家支持 OAuth 的厂商（Anthropic/OpenAI 需先选登录方式）→ 点登录 → 浏览器完成授权或取消；取消后无状态变化，成功后显示「已登录」、可退出，重启 App 仍保持；已登录 OAuth 的厂商可直接激活并在聊天中发消息；保存 API Key 后切换回 API Key 认证。
+71. MCP 列表：抽屉「MCP」→「+」添加一个可用的 Streamable HTTP 服务器（https）；保存后列表出现该行，自动检测显示「已连接 · N 个工具」；「测试连接」结果一致；关闭启用开关后显示「已停用」且不再检测；删除后行消失，重启 App 配置不恢复。
+72. MCP OAuth：对没有 Authorization 头的服务器点「登录」→ 浏览器授权 → 返回后显示「已登录」并自动重连；「退出登录」后状态回到需要登录。收不到回调时粘贴回调链接也能完成。
+73. MCP 工具：打开一个会话，让模型使用 MCP 工具（或请求「用 tool_search 找 MCP 工具」）；过程里出现 `server · tool` 形式的工具行与结果；工具输出进入对话，删除/停用服务器后新会话不再提供对应工具。
+74. 导航收敛：抽屉只剩 技能 / MCP / 定时任务，无「聊天」「已归档」；设置页「已归档」显示数量，点击进入归档列表并能返回；已归档会话可在归档页打开/恢复。

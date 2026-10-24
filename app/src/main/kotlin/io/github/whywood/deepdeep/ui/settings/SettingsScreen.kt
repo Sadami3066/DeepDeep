@@ -86,6 +86,8 @@ fun SettingsScreen(
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    archivedCount: Int = 0,
+    onOpenArchived: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -147,6 +149,22 @@ fun SettingsScreen(
                     onClick = onOpenPersonalization,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_personalization"),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            SettingsGroup {
+                DdListRow(
+                    icon = DdIcons.Folder,
+                    title = stringResource(R.string.settings_archived),
+                    value = if (archivedCount > 0) {
+                        stringResource(R.string.settings_archived_count, archivedCount)
+                    } else {
+                        null
+                    },
+                    onClick = onOpenArchived,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_archived"),
                 )
             }
 

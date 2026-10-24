@@ -8,6 +8,8 @@
     <string name="settings_status_unconfigured">未配置</string>
 
     <string name="settings_personalization">个性化</string>
+    <string name="settings_archived">已归档</string>
+    <string name="settings_archived_count">%1$d 个</string>
     <string name="settings_font">字体样式</string>
     <string name="settings_language">语言</string>
     <string name="settings_language_system">跟随系统</string>
@@ -73,8 +75,17 @@
     <string name="settings_provider_no_result">没有匹配的厂商</string>
     <string name="settings_provider_extra_config">需要额外配置</string>
     <string name="settings_provider_extra_config_body">该厂商不支持 API Key，需要 OAuth 或专用登录方式。</string>
-    <string name="settings_provider_oauth_hint">OAuth 尚未接入</string>
-    <string name="settings_provider_oauth_body">该厂商支持 OAuth 登录，当前版本暂未接入。</string>
+    <string name="settings_oauth_title">登录 %1$s</string>
+    <string name="settings_oauth_method">登录方式</string>
+    <string name="settings_oauth">OAuth</string>
+    <string name="settings_oauth_signed_in">已登录</string>
+    <string name="settings_oauth_sign_out">退出登录</string>
+    <string name="settings_oauth_open_browser">打开浏览器</string>
+    <string name="settings_oauth_cancel">取消</string>
+    <string name="settings_oauth_confirm">确认</string>
+    <string name="settings_oauth_waiting">正在登录…</string>
+    <string name="settings_oauth_login_failed">登录失败</string>
+    <string name="settings_oauth_api_key_notice">当前使用 OAuth 登录；保存 API Key 会切换认证方式。</string>
     <string name="settings_provider_api_key">API Key</string>
     <string name="settings_provider_api_key_saved">已保存，输入新 Key 可替换</string>
     <string name="settings_provider_api_key_hint">输入 API Key</string>
@@ -114,7 +125,7 @@
     <string name="personalization_preset_calm">用冷静、克制的语气回应；直接给结论和依据，不寒暄，不过度共情。</string>
 
     <string name="privacy_local_title">本地保存</string>
-    <string name="privacy_local_body">对话、工作区文件和 API Key 只保存在应用私有目录。</string>
+    <string name="privacy_local_body">对话、工作区文件、API Key 与 OAuth 凭据只保存在应用私有目录；MCP 的配置、请求头与授权 token 也只保存在本地。</string>
     <string name="privacy_provider_title">只发送给所选厂商</string>
     <string name="privacy_provider_body">只有你选择的模型服务会收到对话内容，DeepDeep 不上传副本。</string>
     <string name="privacy_tracking_title">无统计与广告</string>

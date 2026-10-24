@@ -162,6 +162,20 @@ class AgentRuntimeHost(
         reopened.session.sessionId
     }
 
+    suspend fun reloadMcp() {
+        val targets = mutex.withLock { handles.values.toList() }
+        for (handle in targets) {
+            runCatching { handle.session.mcp.reload(handle.engine.loadMcpServers()) }
+        }
+    }
+
+    suspend fun reconnectMcp(server: String) {
+        val targets = mutex.withLock { handles.values.toList() }
+        for (handle in targets) {
+            runCatching { handle.session.mcp.reconnect(server) }
+        }
+    }
+
     override suspend fun send(sessionId: String, text: String) {
         val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
         runTurn(handle, beginRun(handle, TurnSource.USER), text)

@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -47,8 +51,11 @@ import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ModelOption
+import io.github.whywood.deepdeep.runtime.ProviderAuthKind
+import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProviderDetailScreen(
@@ -58,6 +65,9 @@ fun ProviderDetailScreen(
     active: Boolean,
     activeModelId: String?,
     savedApiKey: String? = null,
+    authKind: ProviderAuthKind? = null,
+    oauthService: ProviderOAuthService? = null,
+    onAuthChanged: () -> Unit = {},
     onBack: () -> Unit,
     onSaveApiKey: (String) -> Unit,
     onClearApiKey: () -> Unit,
@@ -65,7 +75,12 @@ fun ProviderDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val oauthLoginFailed = stringResource(R.string.settings_oauth_login_failed)
+    val oauthSignedIn = authKind == ProviderAuthKind.OAUTH
     var showModelSheet by remember { mutableStateOf(false) }
+    var oauthSession by remember(provider.id) { mutableStateOf<OAuthLoginSession?>(null) }
     var selectedModelId by remember(provider.id, models) {
         mutableStateOf(
             activeModelId?.takeIf { id -> models.any { it.id == id } } ?: models.firstOrNull()?.id,
@@ -73,6 +88,39 @@ fun ProviderDetailScreen(
     }
     val selectedModel = models.firstOrNull { it.id == selectedModelId }
     val alreadyActive = active && selectedModelId != null && selectedModelId == activeModelId
+
+    fun beginOAuthLogin() {
+        val service = oauthService ?: return
+        if (oauthSession != null) return
+        val session = OAuthLoginSession(
+            providerName = provider.name,
+            onOpenUrl = { url ->
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            },
+        )
+        oauthSession = session
+        scope.launch {
+            val result = service.login(provider.id, session)
+            if (result.isSuccess) {
+                session.succeed()
+                onAuthChanged()
+                if (oauthSession === session) oauthSession = null
+            } else {
+                val detail = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() }
+                session.fail(if (detail == null) oauthLoginFailed else "$oauthLoginFailed: $detail")
+            }
+        }
+    }
+
+    fun signOutOAuth() {
+        val service = oauthService ?: return
+        scope.launch {
+            runCatching { service.logout(provider.id) }
+            onAuthChanged()
+        }
+    }
 
     Column(
         modifier
@@ -111,26 +159,27 @@ fun ProviderDetailScreen(
             ProviderOverview(provider = provider, configured = configured, active = active)
             Spacer(Modifier.height(28.dp))
             SettingsGroup {
-                if (!provider.supportsApiKey) {
+                val showOAuth = provider.hasOAuth && oauthService != null
+                if (!provider.supportsApiKey && !showOAuth) {
                     DdListRow(
                         icon = DdIcons.Info,
                         title = stringResource(R.string.settings_provider_extra_config),
                         subtitle = stringResource(R.string.settings_provider_extra_config_body),
                     )
                 }
-                if (provider.hasOAuth) {
-                    if (!provider.supportsApiKey) DdHairline()
-                    DdListRow(
-                        icon = DdIcons.Shield,
-                        title = stringResource(R.string.settings_provider_oauth_hint),
-                        subtitle = stringResource(R.string.settings_provider_oauth_body),
+                if (showOAuth) {
+                    OAuthSection(
+                        signedIn = oauthSignedIn,
+                        onLogin = { beginOAuthLogin() },
+                        onLogout = { signOutOAuth() },
                     )
                 }
                 if (provider.supportsApiKey) {
-                    if (provider.hasOAuth) DdHairline()
+                    if (showOAuth) DdHairline()
                     ApiKeySection(
-                        configured = configured,
+                        configured = savedApiKey != null,
                         savedApiKey = savedApiKey,
+                        oauthSignedIn = oauthSignedIn,
                         onSave = onSaveApiKey,
                         onClear = onClearApiKey,
                     )
@@ -175,6 +224,46 @@ fun ProviderDetailScreen(
             },
             onClose = { showModelSheet = false },
         )
+    }
+
+    oauthSession?.let { session ->
+        OAuthLoginSheet(
+            providerName = provider.name,
+            session = session,
+            onDismiss = {
+                session.cancel()
+                if (oauthSession === session) oauthSession = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun OAuthSection(
+    signedIn: Boolean,
+    onLogin: () -> Unit,
+    onLogout: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdListRow(
+        icon = DdIcons.Shield,
+        title = stringResource(R.string.settings_oauth_method),
+        value = if (signedIn) {
+            "${stringResource(R.string.settings_oauth)} · ${stringResource(R.string.settings_oauth_signed_in)}"
+        } else {
+            stringResource(R.string.settings_oauth)
+        },
+        onClick = if (signedIn) null else onLogin,
+        showChevron = !signedIn,
+    )
+    if (signedIn) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            DdTextAction(
+                text = stringResource(R.string.settings_oauth_sign_out),
+                onClick = onLogout,
+                color = colors.inkTertiary,
+            )
+        }
     }
 }
 
@@ -237,6 +326,7 @@ private fun ProviderOverview(
 private fun ApiKeySection(
     configured: Boolean,
     savedApiKey: String?,
+    oauthSignedIn: Boolean,
     onSave: (String) -> Unit,
     onClear: () -> Unit,
 ) {
@@ -256,6 +346,14 @@ private fun ApiKeySection(
     }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        if (oauthSignedIn) {
+            Text(
+                text = stringResource(R.string.settings_oauth_api_key_notice),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         Text(
             text = stringResource(R.string.settings_provider_api_key),
             style = DdType.micro,

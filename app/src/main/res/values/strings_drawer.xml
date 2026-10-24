@@ -1,8 +1,6 @@
 <resources>
-    <string name="drawer_nav_chat">聊天</string>
-    <string name="drawer_nav_archived">已归档</string>
     <string name="drawer_nav_skills">技能</string>
-    <string name="drawer_nav_plugins">插件</string>
+    <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_scheduled">定时任务</string>
     <string name="drawer_account_hint">设置</string>
     <string name="drawer_archived_count">%1$d</string>
@@ -27,8 +25,7 @@
     <string name="drawer_search_archived_placeholder">搜索已归档的对话</string>
     <string name="drawer_search_empty">没有找到相关对话</string>
     <string name="drawer_search_clear">清除搜索</string>
-    <string name="drawer_coming_soon">即将推出</string>
-    <string name="drawer_workspace_new_session">新建会话</string>
+        <string name="drawer_workspace_new_session">新建会话</string>
     <string name="drawer_workspace_settings">设置</string>
     <string name="drawer_workspace_empty">暂无会话</string>
     <string name="workspace_section">工作区</string>

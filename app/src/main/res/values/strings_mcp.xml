@@ -1,0 +1,62 @@
+<resources>
+    <string name="mcp_title">MCP</string>
+    <string name="mcp_back">返回</string>
+    <string name="mcp_add">添加服务器</string>
+    <string name="mcp_empty_title">还没有 MCP 服务器</string>
+    <string name="mcp_empty_hint">添加 HTTP 服务器，它的工具会出现在对话里</string>
+    <string name="mcp_refresh">重新检测</string>
+    <string name="mcp_row_subtitle">%1$s · %2$s</string>
+    <string name="mcp_status_ok">已连接 · %1$d 个工具</string>
+    <string name="mcp_status_auth">需要登录</string>
+    <string name="mcp_status_failed">连接失败</string>
+    <string name="mcp_status_untested">未测试</string>
+    <string name="mcp_status_disabled">已停用</string>
+    <string name="mcp_status_unsupported">Android 不支持</string>
+    <string name="mcp_state_enabled">已启用</string>
+
+    <string name="mcp_new_title">添加 MCP 服务器</string>
+    <string name="mcp_edit_title">编辑「%1$s」</string>
+    <string name="mcp_name_label">名称</string>
+    <string name="mcp_name_hint">例如：github</string>
+    <string name="mcp_url_label">地址</string>
+    <string name="mcp_url_hint">https://example.com/mcp</string>
+    <string name="mcp_description_label">说明</string>
+    <string name="mcp_description_hint">可选</string>
+    <string name="mcp_headers_label">请求头</string>
+    <string name="mcp_headers_hint">可选，每行 Key: Value</string>
+    <string name="mcp_enabled_label">启用</string>
+    <string name="mcp_stdio_hint">本地 STDIO 服务器在 Android 上不可用，可以删除或停用。</string>
+    <string name="mcp_save">保存</string>
+    <string name="mcp_test">测试连接</string>
+    <string name="mcp_test_failed">连接失败：%1$s</string>
+    <string name="mcp_delete">删除服务器</string>
+    <string name="mcp_delete_title">删除 MCP 服务器？</string>
+    <string name="mcp_delete_message">「%1$s」删除后无法恢复。</string>
+    <string name="mcp_delete_confirm">删除</string>
+    <string name="mcp_cancel">取消</string>
+    <string name="mcp_close">关闭</string>
+
+    <string name="mcp_oauth_label">授权</string>
+    <string name="mcp_oauth_login">登录</string>
+    <string name="mcp_oauth_logout">退出登录</string>
+    <string name="mcp_oauth_signed_in">已登录</string>
+    <string name="mcp_oauth_waiting">在浏览器中完成授权</string>
+    <string name="mcp_oauth_open">打开浏览器</string>
+    <string name="mcp_oauth_manual_hint">没有收到回调？粘贴浏览器地址栏里的完整链接。</string>
+    <string name="mcp_oauth_manual_placeholder">http://127.0.0.1:…/callback?code=…</string>
+    <string name="mcp_oauth_manual_submit">完成</string>
+    <string name="mcp_oauth_cancel">取消登录</string>
+    <string name="mcp_oauth_callback_invalid">回调链接无效</string>
+    <string name="mcp_oauth_failed">登录失败：%1$s</string>
+
+    <string name="mcp_error_title">操作失败</string>
+    <string name="mcp_error_name_empty">请输入名称</string>
+    <string name="mcp_error_name_invalid">名称只能包含字母、数字、下划线和连字符</string>
+    <string name="mcp_error_name_duplicate">已有同名服务器</string>
+    <string name="mcp_error_url_invalid">地址需以 http:// 或 https:// 开头</string>
+    <string name="mcp_error_headers_invalid">请求头格式应为 Key: Value</string>
+    <string name="mcp_error_save_failed">保存失败</string>
+    <string name="mcp_error_delete_failed">删除失败</string>
+    <string name="mcp_error_toggle_failed">切换启用状态失败</string>
+    <string name="mcp_error_load_failed">读取 MCP 配置失败</string>
+</resources>

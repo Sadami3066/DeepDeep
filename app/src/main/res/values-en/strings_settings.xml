@@ -6,6 +6,8 @@
     <string name="settings_status_configured">Configured</string>
     <string name="settings_status_unconfigured">Not configured</string>
     <string name="settings_personalization">Personalization</string>
+    <string name="settings_archived">Archived</string>
+    <string name="settings_archived_count">%1$d</string>
     <string name="settings_font">Font</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">Follow system</string>
@@ -66,8 +68,17 @@
     <string name="settings_provider_no_result">No matching providers</string>
     <string name="settings_provider_extra_config">Extra setup required</string>
     <string name="settings_provider_extra_config_body">This provider does not support API keys. It requires OAuth or a dedicated sign-in.</string>
-    <string name="settings_provider_oauth_hint">OAuth not available yet</string>
-    <string name="settings_provider_oauth_body">This provider supports OAuth sign-in, which is not available yet.</string>
+    <string name="settings_oauth_title">Sign in to %1$s</string>
+    <string name="settings_oauth_method">Sign-in method</string>
+    <string name="settings_oauth">OAuth</string>
+    <string name="settings_oauth_signed_in">Signed in</string>
+    <string name="settings_oauth_sign_out">Sign out</string>
+    <string name="settings_oauth_open_browser">Open browser</string>
+    <string name="settings_oauth_cancel">Cancel</string>
+    <string name="settings_oauth_confirm">Confirm</string>
+    <string name="settings_oauth_waiting">Signing in…</string>
+    <string name="settings_oauth_login_failed">Sign-in failed</string>
+    <string name="settings_oauth_api_key_notice">Signed in with OAuth. Saving an API key will switch the sign-in method.</string>
     <string name="settings_provider_api_key">API key</string>
     <string name="settings_provider_api_key_saved">Saved. Enter a new key to replace it.</string>
     <string name="settings_provider_api_key_hint">Enter API key</string>
@@ -107,7 +118,7 @@
     <string name="personalization_preset_calm">Respond calmly and with restraint; lead with conclusions and evidence, skip small talk and excessive empathy.</string>
 
     <string name="privacy_local_title">Stored locally</string>
-    <string name="privacy_local_body">Conversations, workspace files, and API keys stay in the app\'s private directory.</string>
+    <string name="privacy_local_body">Conversations, workspace files, API keys, and OAuth credentials stay in the app\'s private directory; MCP config, headers, and tokens are stored locally too.</string>
     <string name="privacy_provider_title">Only sent to your provider</string>
     <string name="privacy_provider_body">Only the model provider you choose receives conversation content; DeepDeep keeps no copy on a server.</string>
     <string name="privacy_tracking_title">No analytics or ads</string>

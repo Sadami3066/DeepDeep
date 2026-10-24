@@ -1,0 +1,43 @@
+# MCP
+
+状态：App 内已支持 Streamable HTTP 服务器管理、连接检测与 OAuth 登录。
+
+## 入口与列表
+
+- 抽屉「MCP」进入；顶部返回、标题与右上「+」。
+- 行：服务器名称 + 次行（host · 状态）+ 右侧启用开关；状态为「已连接 · N 个工具」「需要登录」「连接失败」「未测试」「已停用」「Android 不支持」。
+- 进入页面自动检测已启用的 HTTP 服务器；顶部「重新检测」手动刷新。
+- 没有服务器时显示一句空态说明。
+
+## 添加与编辑
+
+- 新建只支持 Streamable HTTP：名称（字母、数字、`_`、`-`，唯一）、地址（http/https）、说明（可选，给模型看）、请求头（可选，每行 `Key: Value`）。
+- 已有 STDIO 条目（例如从 pi 的 `mcp.json` 导入）会保留在配置里但标记「Android 不支持」，App 不会启动子进程。
+- 编辑 sheet 提供「保存」「测试连接」「删除服务器」；测试连接显示工具数或错误原因。
+- 保存后立即对已打开的会话生效，不需要重开会话。
+
+## OAuth
+
+- HTTP 服务器没有 `Authorization` 请求头时提供 OAuth「登录 / 退出登录」。
+- 登录在浏览器完成；回调由本机 loopback 接收；收不到回调时可粘贴浏览器地址栏里的完整回调链接。
+- 登录成功后自动重连并重新检测；token 刷新由客户端自动处理。
+
+## 工具与资源
+
+- 工具默认按需加载（deferred）：模型用 `tool_search` 搜索后，命中的工具在下一轮可用。
+- 工具名为 `mcp__<server>__<tool>`；聊天过程里显示为 `server · tool`。
+- 服务器声明 resources 时，会自动提供 `list_mcp_resources` / `list_mcp_resource_templates` / `read_mcp_resource`。
+- 服务器说明会进入系统提示词；工具调用超时与输出上限由客户端统一处理。
+
+## 存储与安全
+
+- 服务器配置：`files/agent/mcp.json`（`mcpServers` 格式，原子写）。
+- OAuth token：`files/agent/mcp-auth.json`（App 私有目录）。
+- 请求头与 MCP token 以本地明文保存在 App 私有目录；不要在不信任的服务器上填写长期密钥。
+- 服务器提供的工具以自己的权限访问远端服务；删除服务器会同时移除其工具。
+
+## 限制
+
+- Android 只支持 HTTP 服务器，不支持 stdio 子进程。
+- 项目 `.pi/mcp.json` 只能覆盖全局服务器的启用/暴露设置，不能新增服务器。
+- sampling 默认关闭；elicitation 暂未接入；MCP prompts 的斜杠命令暂未在输入框暴露。

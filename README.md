@@ -10,7 +10,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - Markdown：标题、段落、引用条、有序/无序/任务列表、表格、带语言标签和复制按钮的代码块
 - 菜单统一圆角、图标 + 左对齐文字；删除项红色；蓝色强调色
 - pi2kotlin 流式事件、DeepSeek provider、Alpine/proot 里的 `bash`
-- 42 家 Provider 目录 + API Key 认证入口；思考等级在 composer 切换
+- 42 家 Provider + API Key / OAuth 登录（Anthropic、OpenAI、GitHub Copilot、Codex、xAI、OpenRouter、Kimi、Meta、Radius）；思考等级在 composer 切换
 - 会话历史、置顶、归档、重命名、删除；长按菜单跟随点击位置
 - 常驻抽屉、设置层级推入转场、统一 motion tokens 与按压态
 - 技能仓库：zip 安装、全局/工作区启停、聊天内重新加载；工作区 AGENTS.md 编辑
@@ -21,13 +21,14 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - 后台任务：`job_start` 创建（`command` + 可选 `label`），`job_output` 读增量、`job_kill` 停止；完成后按聊天设置唤醒或静默
 - 交付卡片：`present` 工具把生成的文件展示成聊天卡片，可直接打开或分享
 - 提问卡直接内联在聊天消息里，答完折叠为只读问答摘要
+- MCP：抽屉「MCP」管理 Streamable HTTP 服务器，支持 OAuth 登录与连接检测；工具经 `tool_search` 在对话中按需加载
 - 无 root；root 能力后续接入
 
 ## 结构
 
 ```
 :app        Compose 聊天/设置/Provider、动画导航、前台服务、装配
-:runtime    pi2kotlin 适配、事件、Provider 目录、会话元数据、Key
+:runtime    pi2kotlin 适配、事件、Provider 目录、会话元数据、凭据、MCP 配置
 :shell      Alpine/proot 与 ShellExecutor
 :design     主题、字体、图标、motion tokens、共享组件
 ```
@@ -36,7 +37,7 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 
 - JDK 17+
 - Android SDK Platform 36
-- `pi2kotlin 0.1.3` 已发布到 mavenLocal：在 `../pi2kotlin` 执行 `./gradlew publishToMavenLocal`
+- `pi2kotlin 0.2.1` 已发布到 mavenLocal：在 `../pi2kotlin` 执行 `./gradlew publishToMavenLocal`
 
 ## 构建
 

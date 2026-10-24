@@ -85,7 +85,7 @@ internal fun ToolCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = tool.name,
+                text = displayToolName(tool.name),
                 style = DdType.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,

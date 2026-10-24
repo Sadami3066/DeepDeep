@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui
 
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -42,7 +41,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -95,17 +93,15 @@ private sealed interface DrawerEntry {
 @Composable
 fun DeepDeepDrawer(
     sessions: List<ConversationSummary>,
-    archivedCount: Int,
     workspaces: List<RuntimeWorkspace>,
     pinnedWorkspaceIds: Set<String>,
     expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
     reminderSessionIds: Set<String>,
     userName: String,
-    onChat: () -> Unit,
-    onArchived: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenMcp: () -> Unit,
     onScheduled: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
@@ -123,8 +119,6 @@ fun DeepDeepDrawer(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val context = LocalContext.current
-    val comingSoon = stringResource(R.string.drawer_coming_soon)
     var workspaceMenuTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceMenuAnchor by remember { mutableStateOf(Offset.Zero) }
     var sessionMenuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
@@ -189,26 +183,6 @@ fun DeepDeepDrawer(
         Spacer(Modifier.height(18.dp))
         Column(Modifier.fillMaxWidth()) {
             DrawerNavItem(
-                icon = DdIcons.Message,
-                label = stringResource(R.string.drawer_nav_chat),
-                onClick = onChat,
-                testTag = "drawer_chat",
-            )
-            DrawerNavItem(
-                icon = DdIcons.Folder,
-                label = stringResource(R.string.drawer_nav_archived),
-                onClick = onArchived,
-                testTag = "drawer_archived",
-                trailing = {
-                    Text(
-                        text = stringResource(R.string.drawer_archived_count, archivedCount),
-                        style = DdType.numeric,
-                        color = colors.inkTertiary,
-                    )
-                },
-            )
-            Spacer(Modifier.height(6.dp))
-            DrawerNavItem(
                 icon = DdIcons.Sparkles,
                 label = stringResource(R.string.drawer_nav_skills),
                 onClick = onOpenSkills,
@@ -216,9 +190,9 @@ fun DeepDeepDrawer(
             )
             DrawerNavItem(
                 icon = DdIcons.Plug,
-                label = stringResource(R.string.drawer_nav_plugins),
-                onClick = { Toast.makeText(context, comingSoon, Toast.LENGTH_SHORT).show() },
-                testTag = "drawer_plugins",
+                label = stringResource(R.string.drawer_nav_mcp),
+                onClick = onOpenMcp,
+                testTag = "drawer_mcp",
             )
             DrawerNavItem(
                 icon = DdIcons.Clock,
