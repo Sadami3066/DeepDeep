@@ -140,4 +140,5 @@ defaultCodingTools(...)
 - 数据工具是 Agent 更新内容（日报、表单、记录）的入口，不需要重写页面；页面通过 bridge 读取同一份数据。
 - 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入。
 - 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要重新 load；工坊页进入时重新扫描。
-- 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。页面不能调用 Agent，修改统一回到聊天。
+- 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。
+- 页面 Agent API：`app.agent.models()` / `app.agent.capabilities()` / `app.agent.run()`，一次性无会话、返回最终文本，生命周期绑定 WebView；详见 `docs/WORKSHOP.md`。

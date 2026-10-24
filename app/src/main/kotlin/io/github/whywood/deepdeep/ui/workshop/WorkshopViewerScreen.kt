@@ -47,6 +47,7 @@ import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SqliteWorkshopData
+import io.github.whywood.deepdeep.runtime.WorkshopAgentGateway
 import io.github.whywood.deepdeep.runtime.WorkshopEntry
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import kotlinx.coroutines.delay
@@ -57,6 +58,7 @@ fun WorkshopViewerScreen(
     store: WorkshopStore,
     creationId: String,
     onBack: () -> Unit,
+    agentGateway: WorkshopAgentGateway? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -225,6 +227,7 @@ fun WorkshopViewerScreen(
                         WorkshopWebView(
                             creation = creation,
                             data = data,
+                            agentGateway = agentGateway,
                             reloadKey = reloadKey,
                             onFatalError = { message -> fatalError = message },
                             onHistoryChanged = { canGoBack = it },

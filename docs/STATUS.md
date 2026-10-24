@@ -1,5 +1,13 @@
 # Status
 
+## Done: 页面驱动一次性 Agent
+
+- bridge 新增 `agent.models` / `agent.capabilities` / `agent.run`：页面 JS 可以列出已配置模型与完整工具/技能目录，并用 `app.agent.run({prompt, providerId, modelId, thinkingLevel, systemPrompt, maxTurns, tools, skills})` 启动一次性 Agent，只拿到最终文本；并行/串行编排完全由页面 JS 决定
+- `WorkshopAgentService` 在 App 进程内为每次运行创建一次性 `PiSessionEngine`：临时 workspace/agentDir、页面选择的 tools 过滤、选中的 skills 复制、页面 systemPrompt 追加到系统提示、关闭 MCP、`maxTurns` 限制、180s 超时、结束后关闭 session 并清理临时目录；不写入聊天会话/JSONL
+- Agent 生命周期绑定 WebView：`agent.run` 的协程属于 viewer/WebView scope，页面关闭/返回/销毁会取消正在运行的 Agent；没有后台任务、没有 run 持久化
+- `PiSessionEngine.createSession` 新增 toolsFilter / mcpEnabled / extraSystemPromptSections，默认行为不变；模型来自已配置 provider，页面选择由 App 校验
+- 539 unit tests green（runtime 257 / app 262 / shell 20），lint 0 errors、模块边界与 debug 构建通过；真机验证 models/capabilities、单 Agent 返回 PONG、并行 ALPHA/BETA、systemPrompt 生效、非法 tool 返回 invalid_params、长任务返回页面后取消且无残留 run 目录
+
 ## Done: 创意工坊数据层 Agent 工具
 
 - 新增 `workshop_data_get` / `workshop_data_set` / `workshop_data_delete` / `workshop_data_keys`：Agent 直接读写每个创意独立的 JSON KV 数据层，不需要改页面文件或 `workshop_load`；app 经 `workshop_list` 的 id 校验，key 统一 `[a-z0-9][a-z0-9_-]{0,63}`，单值 ≤256KB，SQLite 在每次调用内打开/关闭
@@ -21,7 +29,7 @@
 - 创意不再有类型/分类：`manifest.json` 只要求 `id`/`name`/`entry`（可选 `icon`/`version`/`description`），任何自包含 HTML/CSS/JS 页面都可以；旧 manifest 的 `type`/`permissions` 解析时忽略，旧创意照常打开
 - 创建回到普通对话：内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）在启动时写入技能仓库与全局生效目录；`/skill:<name>` 在发送前把技能文件渲染成 `<skill>` 块读入本轮，聊天里只显示需求文字、不显示技能标记或原始 XML；工坊页 `+` 直接新建 Home 会话并预填 `/skill:workshop `
 - 工具收敛为 `workshop_create`（只建 manifest 草稿）、`workshop_load`（校验入口/清单/大小后原子安装）、`workshop_list`（列出现有创意路径）；不再生成 AGENTS.md/starter，也没有新建对话框与类型选择
-- WebView 仍是每创意独立虚拟域名 + `WebViewAssetLoader` + 文档启动 SDK + 主题变量；bridge 只保留 `info`、`data.get/set/remove/keys`、`toast`，页面不能调用 Agent；详情页只读，修改统一回到聊天
+- WebView 仍是每创意独立虚拟域名 + `WebViewAssetLoader` + 文档启动 SDK + 主题变量；bridge 基础能力为 `info`、`data.get/set/remove/keys`、`toast`，页面 Agent 见上方新条目；详情页只读，修改页面统一回到聊天
 - 列表行 = icon（缺省 ✦）+ 名称 + 说明；失效目录显示原因并可删除；代码与数据继续物理分离，删除时清理 DB 与 journal
 - 修复 Compose 托管 WebView 时 CSS 视口高度为 0（`100vh`/`height:100%` 失效、页面只渲染顶部一条）的问题：WebView 先放进 FrameLayout 容器再交给 `AndroidView`
 - 505 unit tests green（runtime 223 / app 262 / shell 20），lint 0 errors、模块边界与 debug 构建通过；真机验收技能强制加载、`+` 预填、普通 Agent 创建爱心应用、入口卡片打开、bridge 数据交互与重启持久化、无页面 Agent、旧 manifest 兼容、技能页可见

@@ -86,6 +86,39 @@ app.toast("已保存");
 - `alert` 会显示为原生 toast；`confirm` / `prompt` / Service Worker 不可用，用页面内 UI 代替。
 - 页面里不能调用 Agent、不能读写其他创意的数据；用户要改页面，退出创意后在聊天里告诉你。
 
+## 页面里驱动 Agent
+
+页面 JS 可以直接启动一次性 Agent，用来调查、总结、写稿、处理文件等，并在多页流程里编排。每个 Agent 无会话、无历史，只返回最终文本；调用几个、串行还是并行，全部由页面 JS 决定。
+
+```js
+const models = await app.agent.models()
+// [{ providerId, modelId, label, thinkingLevels }]
+
+const caps = await app.agent.capabilities()
+// { tools: [{ name, description }], skills: [{ name, description }] }
+
+const text = await app.agent.run({
+  prompt: "调查 2026 年 AI 手机市场，返回 5 条带来源的要点",
+  providerId: "deepseek",
+  modelId: "deepseek-v4.1-flash",
+  thinkingLevel: "high",
+  systemPrompt: "你是资深行业分析师，只输出结论和来源。", // 可选
+  maxTurns: 8,
+  tools: ["web_search", "web_fetch"], // 省略 = 全部可用；[] = 无工具
+  skills: []                          // 省略 = 全部已启用；[] = 无技能
+})
+```
+
+- 并行：`await Promise.all([app.agent.run(...), app.agent.run(...)])`；串行：把上一步返回的文本拼进下一步 prompt。
+- 结果只有最终文本，没有流式事件；页面自己显示 loading、错误和结果。
+- Agent 生命周期跟页面绑定：页面关闭/返回会取消正在运行的 Agent；需要结果就在页面里 `await` 完再离开，没有后台编排。
+- `models()` 只返回已配置的 provider/model；页面负责做模型选择 UI，App 会校验选择是否有效。
+- `tools` / `skills` 的名称必须来自 `capabilities()`；省略表示全部可用，空数组表示完全不用工具/技能。
+- `systemPrompt` 是给本次 Agent 的任务约束；`maxTurns` 默认 16，超过后 Agent 会被中止。
+- 运行失败会 reject；用 try/catch 展示错误。不要把 API Key 或用户隐私写进 prompt。
+
+多页流程示例：第 1 页收集表单 → 第 2 页用 `models()` 渲染模型选择 → 点击开始后 `await app.agent.run(...)` → 第 3 页显示返回文本 → 第 4 页再跑一个 Agent 或本地处理结果，并用 `app.data.set` 保存。
+
 ## 页面要求
 
 - 移动端优先：`<meta name="viewport" content="width=device-width, initial-scale=1">`，用 responsive 布局（flex/grid），不要固定桌面宽度或超大画布。

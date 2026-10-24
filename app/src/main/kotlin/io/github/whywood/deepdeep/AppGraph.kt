@@ -53,6 +53,7 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
+import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
@@ -238,6 +239,22 @@ class AppGraph(context: Context) {
         } else {
             LinuxShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
         }
+    }
+
+    val workshopAgentService by lazy {
+        WorkshopAgentService(
+            providers = providerCatalog,
+            credentials = credentials,
+            agentDir = agentDir,
+            runRoot = File(appContext.filesDir, "agent-runs"),
+            appToolContext = appToolContext,
+            defaultConfig = { modelConfigStore.read() },
+            configuredProviders = { credentials.authKinds.value.keys },
+            personalization = { personalizationStore.read().toRuntime() },
+            pluginPromptBody = { pluginManager.promptBody() },
+            shellExecutorFor = shellExecutorFor,
+            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+        )
     }
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->

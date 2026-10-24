@@ -49,6 +49,37 @@
 - 数据工具写入后不需要 `workshop_load`；页面正在打开时不会自动刷新，重新打开或点详情页「重新加载」即可。
 - 数据仍保存在每创意独立的 SQLite（`files/workshop/userdata/<id>.db`），Agent 不需要也不应该直接改数据库文件。
 
+## 页面驱动 Agent
+
+页面 JS 可以直接启动一次性 Agent 完成任务并在自己的多页流程里编排。App 只提供底层接口并校验参数；调用几个 Agent、串行还是并行，全部由页面 JS 决定。
+
+```js
+const models = await app.agent.models()
+// [{ providerId, modelId, label, thinkingLevels }]
+
+const caps = await app.agent.capabilities()
+// { tools: [{ name, description }], skills: [{ name, description }] }
+
+const text = await app.agent.run({
+  prompt: "调查 2026 年 AI 手机市场，返回 5 条带来源的要点",
+  providerId: "deepseek",
+  modelId: "deepseek-flash",
+  thinkingLevel: "high",
+  systemPrompt: "你是资深行业分析师，只输出结论和来源。", // 可选
+  maxTurns: 8,
+  tools: ["web_search", "web_fetch"], // 省略 = 全部可用；[] = 无工具
+  skills: []                          // 省略 = 全部已启用；[] = 无技能
+})
+```
+
+- 并行：`Promise.all([app.agent.run(...), app.agent.run(...)])`；串行：把上一步返回的文本拼进下一步 prompt。每个 Agent 是一次性、无会话的，彼此不共享历史，上下文完全由 JS 传递。
+- 每个 Agent 只返回最终文本；没有流式事件。页面自己显示 loading、错误和结果。
+- Agent 生命周期绑定页面：页面关闭/返回/WebView 销毁会取消正在运行的 Agent；不提供后台编排，页面需要结果就在离开前 `await` 完。
+- `models()` 只返回已配置的 provider/model；页面负责模型选择 UI，App 在运行时校验。
+- `tools` / `skills` 名称必须来自 `capabilities()`；省略表示全部可用，空数组表示完全不用。页面可以提供默认 Agent 的完整工具/技能，也可只选子集。
+- 页面 Agent 不启用 MCP；临时工作区与临时 agent 目录在每次运行后清理，不写入聊天会话列表。
+- `systemPrompt` 会追加到本次 Agent 的系统提示；`maxTurns` 默认 16，超过后中止；失败会 reject，带错误信息。
+
 ## 文件夹格式
 
 Agent 使用的位置（App 私有目录）：
@@ -105,7 +136,7 @@ app.toast("已保存");
 
 - 主题变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，同时设置 `color-scheme`；页面用它跟随 App 深浅色。
 - `alert` 会显示成原生轻提示；`confirm` / `prompt` / Service Worker 不可用，请用页面内 UI。
-- 页面不能调用 Agent、不能读写其他创意或 App 数据；需要改页面时退出创意，在聊天里说。
+- 页面不能调用其他 App 内部函数、不能读写其他创意或 App 数据；页面可以按上方 `app.agent.*` 启动一次性任务 Agent；需要改页面时退出创意，在聊天里说。
 
 ## 数据与安全
 

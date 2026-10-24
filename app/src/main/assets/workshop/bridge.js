@@ -139,6 +139,23 @@
         return call('data.keys', {});
       }
     },
+    agent: {
+      models: function () {
+        return call('agent.models', {}).then(function (result) {
+          return result && Array.isArray(result.models) ? result.models : [];
+        });
+      },
+      capabilities: function () {
+        return call('agent.capabilities', {}).then(function (result) {
+          return result || { tools: [], skills: [] };
+        });
+      },
+      run: function (options) {
+        return call('agent.run', options || {}).then(function (result) {
+          return result && typeof result.text === 'string' ? result.text : '';
+        });
+      }
+    },
     toast: toast
   };
 

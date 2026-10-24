@@ -146,6 +146,10 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 99. 斜杠技能：命令面板只把 `/compact`、`/goal` 作为 App 命令显示，workshop 与其他已启用技能一起列在下方，点选补全 `/skill:<name> ` 到输入框；`/skill:workshop 需求` 与手输相同；发送后聊天气泡只显示需求文字，没有技能标记，也不显示原始 `<skill>` XML；`/skill:nope 需求` 提示「未找到技能」并保留输入框内容。
 100. 重新打开会话后，含 `<skill>` 块的历史用户消息只显示需求文字（无技能标记）；命令面板重新打开时已启用技能列表仍与技能页一致。
 101. 数据工具：在会话里让 Agent 只改某个已上架创意的数据（如「把跳动的心 taps 改成 7，不要改页面文件」）→ 模型调用 `workshop_list` 确认 app id，再 `workshop_data_get`/`workshop_data_set`；不调用 `workshop_load`、不改 `apps/<id>/` 文件；打开该创意显示新数据（点击次数 7），页面布局/代码未变；`workshop_data_keys` 能列出 key，`workshop_data_delete` 删除后页面读不到。
-102. 回归：聊天流式/停止、技能页、MCP 启停热更新、导航转场与返回不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常。
+102. 页面 Agent 基础：打开一个创意页面，页面 JS 调用 `await app.agent.models()` 得到已配置 provider/model/thinkingLevels；调用 `await app.agent.capabilities()` 得到 tools 和 skills；`app.agent.run({prompt:"Return exactly PONG", providerId/modelId, thinkingLevel:"off", maxTurns:2, tools:[], skills:[]})` 返回 `PONG`；没有进入聊天会话列表。
+103. 页面 Agent 并行/系统提示：页面用 `Promise.all` 同时启动两个 plain Agent，分别返回 ALPHA/BETA；带 `systemPrompt:"只输出大写"` 的 Agent 返回大写结果；请求不存在的 tool/skill 时 Promise reject，错误码 `invalid_params`。
+104. 页面 Agent 生命周期：启动一个带 bash `sleep` 的 Agent 后立即返回/关闭创意页面 → App 不崩溃，正在运行的 Agent 被取消，`files/agent-runs/` 不残留运行目录；页面重新打开后不显示旧运行状态。
+105. 页面 Agent 模型选择：页面用 `models()` 渲染 provider/model 选择（如 deepseek/deepseek-flash 与 opencode-go/deepseek-v4.1-flash），选择后 run 生效；provider/model 不合法时返回错误，不会使用其他模型。
+106. 回归：聊天流式/停止、技能页、MCP 启停热更新、导航转场与返回不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常、无 agent 取消导致的崩溃。
 
-证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7）。
+证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7），`v5_*.txt`（页面 Agent models/capabilities/PONG/并行/systemPrompt/校验错误）。

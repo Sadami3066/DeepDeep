@@ -13,6 +13,7 @@ import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.CodingHooks
 import dev.pi.coding.session.SessionInfo
 import dev.pi.coding.session.SessionManager
+import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.FileMutationQueue
 import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.defaultCodingTools
@@ -40,25 +41,21 @@ class PiSessionEngine(
     private val fs = FileSystem.SYSTEM
     private val transport = okHttpTransport()
 
-    suspend fun createSession(file: Path?, config: ModelConfig, shellEnabled: Boolean = true): AgentSession {
+    suspend fun createSession(
+        file: Path?,
+        config: ModelConfig,
+        shellEnabled: Boolean = true,
+        toolsFilter: ((CodingTool) -> Boolean)? = null,
+        mcpEnabled: Boolean = true,
+        extraSystemPromptSections: Map<String, String> = emptyMap(),
+    ): AgentSession {
         ensureSystemPromptFile(agentDirectory.toFile())
         val resolved = providers.resolveConfig(config)
         val modelId = resolved.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
         val binding = SessionBinding()
-        val tools = buildList {
-            addAll(
-                defaultCodingTools(
-                    cwd = cwd,
-                    fs = fs,
-                    mutationQueue = FileMutationQueue(),
-                    shellExecutor = activeShell,
-                ),
-            )
-            toolContext?.let { context ->
-                addAll(appTools(cwd, context, binding))
-            }
-        }
+        val allTools = buildTools(activeShell, binding)
+        val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         val session = createAgentSession(
             AgentSessionOptions(
                 cwd = cwd,
@@ -86,7 +83,7 @@ class PiSessionEngine(
                             sections
                         }
                         val pluginBody = runCatching { pluginPromptBody() }.getOrNull()?.trim()
-                        if (pluginBody.isNullOrEmpty()) {
+                        val withPlugins = if (pluginBody.isNullOrEmpty()) {
                             withShared
                         } else {
                             withShared + (
@@ -96,13 +93,18 @@ class PiSessionEngine(
                                 )
                             )
                         }
+                        if (extraSystemPromptSections.isEmpty()) {
+                            withPlugins
+                        } else {
+                            withPlugins + extraSystemPromptSections
+                        }
                     },
                 ),
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 projectTrusted = true,
                 mcp = McpOptions(
-                    enabled = true,
+                    enabled = mcpEnabled,
                     loadConfig = true,
                     samplingEnabled = false,
                     rootsEnabled = true,
@@ -112,6 +114,22 @@ class PiSessionEngine(
         )
         binding.attach(session)
         return session
+    }
+
+    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding())
+
+    private fun buildTools(activeShell: ShellExecutor?, binding: SessionBinding): List<CodingTool> = buildList {
+        addAll(
+            defaultCodingTools(
+                cwd = cwd,
+                fs = fs,
+                mutationQueue = FileMutationQueue(),
+                shellExecutor = activeShell,
+            ),
+        )
+        toolContext?.let { context ->
+            addAll(appTools(cwd, context, binding))
+        }
     }
 
     suspend fun loadMcpServers(): Map<String, McpServerConfig> {

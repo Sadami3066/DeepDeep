@@ -48,6 +48,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.WorkshopAgentGateway
 import io.github.whywood.deepdeep.runtime.WorkshopBridgeRouter
 import io.github.whywood.deepdeep.runtime.WorkshopCreation
 import io.github.whywood.deepdeep.runtime.WorkshopData
@@ -77,6 +78,7 @@ private class WorkshopWebViewRefs {
 fun WorkshopWebView(
     creation: WorkshopCreation,
     data: WorkshopData,
+    agentGateway: WorkshopAgentGateway? = null,
     reloadKey: Int,
     onFatalError: (String) -> Unit,
     onHistoryChanged: (Boolean) -> Unit,
@@ -91,10 +93,13 @@ fun WorkshopWebView(
     val refs = remember(manifest.id) { WorkshopWebViewRefs() }
     val assetServer = remember(manifest.id) { WorkshopAssetServer(creation.directory, manifest) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
-    val router = remember(manifest.id) {
-        WorkshopBridgeRouter(manifest, data) { text ->
-            mainHandler.post { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() }
-        }
+    val router = remember(manifest.id, agentGateway) {
+        WorkshopBridgeRouter(
+            manifest = manifest,
+            data = data,
+            toast = { text -> mainHandler.post { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() } },
+            agent = agentGateway,
+        )
     }
     val sdkSource = remember {
         runCatching {

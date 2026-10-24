@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -9,7 +10,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 object WorkshopBridgeErrors {
@@ -19,16 +22,22 @@ object WorkshopBridgeErrors {
     const val DATA_INVALID_KEY = "data_invalid_key"
     const val DATA_TOO_LARGE = "data_too_large"
     const val DATA_CORRUPT = "data_corrupt"
+    const val AGENT_UNAVAILABLE = "agent_unavailable"
+    const val AGENT_FAILED = "agent_failed"
 }
 
 private const val MAX_DATA_VALUE_CHARS = 256 * 1024
 private const val MAX_TOAST_CHARS = 200
+private const val MAX_AGENT_PROMPT_CHARS = 64 * 1024
+private const val MAX_AGENT_SYSTEM_PROMPT_CHARS = 16 * 1024
+private const val MAX_AGENT_TURNS = 64
 private val WORKSHOP_KEY_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,63}")
 
 class WorkshopBridgeRouter(
     private val manifest: WorkshopManifest,
     private val data: WorkshopData,
     private val toast: (String) -> Unit,
+    private val agent: WorkshopAgentGateway? = null,
 ) {
     suspend fun handle(rawMessage: String, emit: suspend (JsonObject) -> Unit): String {
         val request = runCatching { Json.parseToJsonElement(rawMessage) }.getOrNull() as? JsonObject
@@ -65,6 +74,9 @@ class WorkshopBridgeRouter(
         "data.remove" -> dataRemove(params)
         "data.keys" -> dataKeys()
         "ui.toast" -> showToast(params)
+        "agent.models" -> agentModels()
+        "agent.capabilities" -> agentCapabilities()
+        "agent.run" -> agentRun(params)
         else -> throw BridgeException(WorkshopBridgeErrors.UNKNOWN_METHOD, "Unknown method: $method")
     }
 
@@ -120,6 +132,170 @@ class WorkshopBridgeRouter(
         }
         toast(text)
         return JsonPrimitive(true)
+    }
+
+    private fun requireAgent(): WorkshopAgentGateway = agent
+        ?: throw BridgeException(WorkshopBridgeErrors.AGENT_UNAVAILABLE, "workshop agent is unavailable")
+
+    private suspend fun agentModels(): JsonElement {
+        val gateway = requireAgent()
+        val models = agentCall { gateway.models() }
+        return buildJsonObject {
+            putJsonArray("models") {
+                models.forEach { model ->
+                    add(
+                        buildJsonObject {
+                            put("providerId", model.providerId)
+                            put("modelId", model.modelId)
+                            put("label", model.label)
+                            putJsonArray("thinkingLevels") {
+                                model.thinkingLevels.forEach { level -> add(JsonPrimitive(level)) }
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun agentCapabilities(): JsonElement {
+        val gateway = requireAgent()
+        val capabilities = agentCall { gateway.capabilities() }
+        return buildJsonObject {
+            putJsonArray("tools") {
+                capabilities.tools.forEach { tool ->
+                    add(
+                        buildJsonObject {
+                            put("name", tool.name)
+                            put("description", tool.description)
+                        },
+                    )
+                }
+            }
+            putJsonArray("skills") {
+                capabilities.skills.forEach { skill ->
+                    add(
+                        buildJsonObject {
+                            put("name", skill.name)
+                            put("description", skill.description)
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun agentRun(params: JsonObject): JsonElement {
+        val gateway = requireAgent()
+        val request = WorkshopAgentRequest(
+            prompt = promptOf(params),
+            providerId = optionalText(params, "providerId"),
+            modelId = optionalText(params, "modelId"),
+            thinkingLevel = optionalText(params, "thinkingLevel"),
+            systemPrompt = systemPromptOf(params),
+            maxTurns = maxTurnsOf(params),
+            tools = stringListOf(params, "tools"),
+            skills = stringListOf(params, "skills"),
+        )
+        val text = agentCall { gateway.run(request) }
+        return buildJsonObject { put("text", text) }
+    }
+
+    private fun promptOf(params: JsonObject): String {
+        val prompt = (requiredText(params, "prompt") ?: throw BridgeException(
+            WorkshopBridgeErrors.INVALID_PARAMS,
+            "prompt is required",
+        )).trim()
+        if (prompt.isEmpty()) {
+            throw BridgeException(WorkshopBridgeErrors.INVALID_PARAMS, "prompt must not be empty")
+        }
+        if (prompt.length > MAX_AGENT_PROMPT_CHARS) {
+            throw BridgeException(
+                WorkshopBridgeErrors.INVALID_PARAMS,
+                "prompt must be at most $MAX_AGENT_PROMPT_CHARS characters",
+            )
+        }
+        return prompt
+    }
+
+    private fun systemPromptOf(params: JsonObject): String? {
+        val systemPrompt = optionalText(params, "systemPrompt") ?: return null
+        if (systemPrompt.length > MAX_AGENT_SYSTEM_PROMPT_CHARS) {
+            throw BridgeException(
+                WorkshopBridgeErrors.INVALID_PARAMS,
+                "systemPrompt must be at most $MAX_AGENT_SYSTEM_PROMPT_CHARS characters",
+            )
+        }
+        return systemPrompt
+    }
+
+    private fun maxTurnsOf(params: JsonObject): Int? {
+        val element = params["maxTurns"] ?: return null
+        if (element is JsonNull) return null
+        val primitive = element as? JsonPrimitive
+        if (primitive == null || primitive.isString) {
+            throw BridgeException(WorkshopBridgeErrors.INVALID_PARAMS, "maxTurns must be an integer")
+        }
+        val turns = primitive.intOrNull
+            ?: throw BridgeException(WorkshopBridgeErrors.INVALID_PARAMS, "maxTurns must be an integer")
+        if (turns < 1 || turns > MAX_AGENT_TURNS) {
+            throw BridgeException(
+                WorkshopBridgeErrors.INVALID_PARAMS,
+                "maxTurns must be between 1 and $MAX_AGENT_TURNS",
+            )
+        }
+        return turns
+    }
+
+    private fun stringListOf(params: JsonObject, field: String): List<String>? {
+        val element = params[field] ?: return null
+        if (element is JsonNull) return null
+        val array = element as? JsonArray ?: throw BridgeException(
+            WorkshopBridgeErrors.INVALID_PARAMS,
+            "$field must be an array of strings",
+        )
+        return array.map { item ->
+            val primitive = item as? JsonPrimitive
+            if (primitive == null || !primitive.isString) {
+                throw BridgeException(WorkshopBridgeErrors.INVALID_PARAMS, "$field must be an array of strings")
+            }
+            primitive.content.trim()
+        }.filter { it.isNotEmpty() }
+    }
+
+    private fun requiredText(params: JsonObject, field: String): String? {
+        val element = params[field] ?: return null
+        return textOf(element, field)
+    }
+
+    private fun optionalText(params: JsonObject, field: String): String? {
+        val element = params[field] ?: return null
+        return textOf(element, field)
+    }
+
+    private fun textOf(element: JsonElement, field: String): String? {
+        if (element is JsonNull) return null
+        val primitive = element as? JsonPrimitive
+        if (primitive == null || !primitive.isString) {
+            throw BridgeException(WorkshopBridgeErrors.INVALID_PARAMS, "$field must be a string")
+        }
+        return primitive.content.trim().takeIf { it.isNotEmpty() }
+    }
+
+    private suspend fun <T> agentCall(block: suspend () -> T): T = try {
+        block()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: IllegalArgumentException) {
+        throw BridgeException(
+            WorkshopBridgeErrors.INVALID_PARAMS,
+            error.message ?: "invalid workshop agent request",
+        )
+    } catch (error: Exception) {
+        throw BridgeException(
+            WorkshopBridgeErrors.AGENT_FAILED,
+            error.message ?: "workshop agent failed",
+        )
     }
 
     private fun keyOf(params: JsonObject): String {

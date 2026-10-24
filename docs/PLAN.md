@@ -27,5 +27,6 @@
 25. P17 — 创意工坊 v2：去掉类型/权限/模板，创意由普通会话里的 Agent 按需求决定；内置 workshop 技能 + `/skill:workshop`、`/skill:<name>` 强制加载；`workshop_create`（仅 manifest）/`workshop_load`/`workshop_list`；工坊 `+` 新建 Home 会话并预填命令；bridge 收敛为 data/toast/theme，页面不可调用 Agent，详情页只读；旧 manifest 兼容与 WebView 视口修复 (done)
 26. P18 — 斜杠命令统一：面板点选只补全 + composer 强调色，App 命令在上、启用技能在下；`/goal <目标>` 直接创建并删除目标 sheet；`/compact` 忽略尾随文字；技能加载后气泡不再显示技能标记；workshop 不再有专用别名，统一为 `/skill:workshop` (done)
 27. P19 — 创意工坊数据层工具：`workshop_data_get/set/delete/keys`，Agent 用任意 JSON 数据结构更新页面内容/表单/日报数据而不重写 WebView；应用 scope 校验、key/大小限制、SQLite 内部实现；页面继续经 bridge 读取 (done)
-28. Next — workshop capability expansion (media picker, background/scheduled mini apps, import/export), workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
-29. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it
+28. P20 — 页面驱动一次性 Agent：bridge `agent.models/capabilities/run`，页面 JS 用 provider/model/thinking/systemPrompt/maxTurns/tools/skills 编排单/多 Agent，只拿最终文本；App 侧 WorkshopAgentService + 一次性 PiSessionEngine，生命周期绑定 WebView，无会话/无后台 (done)
+29. Next — workshop capability expansion (media picker, background/scheduled mini apps, import/export), workspace-level session migration/archive; full-text search; root ShellExecutor when authorized
+30. Later — phone capabilities via root shell/scripts; wake-ups when the service is dead (AlarmManager); custom tools only when shell cannot express it

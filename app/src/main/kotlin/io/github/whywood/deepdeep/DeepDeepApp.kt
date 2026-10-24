@@ -737,6 +737,7 @@ internal fun DeepDeepApp(
                 is AppDestination.WorkshopDetail -> WorkshopViewerScreen(
                     store = graph.workshopStore,
                     creationId = destination.id,
+                    agentGateway = graph.workshopAgentService,
                     onBack = ::back,
                 )
             }
