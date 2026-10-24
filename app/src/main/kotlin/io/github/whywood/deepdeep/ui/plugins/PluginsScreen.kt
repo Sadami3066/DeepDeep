@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.ui.plugins
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -25,20 +24,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -48,7 +48,6 @@ import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.plugin.PluginOperation
 import io.github.whywood.deepdeep.plugin.PluginSnapshot
-import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
 
 @Composable
@@ -155,16 +154,6 @@ private fun PluginRow(
             ?: it.progress?.let { percent -> stringResource(R.string.plugins_downloading_percent, percent) }
             ?: stringResource(R.string.plugins_stage_preparing)
     }
-    val statusDescription = when {
-        stage != null -> stage
-        !snapshot.installed -> when (snapshot.availability) {
-            is PluginAvailability.Unavailable -> stringResource(R.string.plugins_status_unavailable)
-            PluginAvailability.Available -> stringResource(R.string.plugins_status_not_installed)
-        }
-
-        !snapshot.enabled -> stringResource(R.string.plugins_status_disabled)
-        else -> snapshot.status?.label ?: stringResource(R.string.plugins_status_installed)
-    }
     val enabled = interactive && operation == null
     DdPressable(
         onClick = onOpen,
@@ -182,6 +171,17 @@ private fun PluginRow(
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (plugin.tintIcon) {
+                DdIcon(icon = plugin.icon, tint = colors.ink, size = 24.dp)
+            } else {
+                Image(
+                    painter = painterResource(plugin.icon.res),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = name,
@@ -201,14 +201,6 @@ private fun PluginRow(
             }
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.End) {
-                if (snapshot.installed) {
-                    StatusIndicator(
-                        snapshot = snapshot,
-                        operation = operation,
-                        description = statusDescription,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
                 if (snapshot.installed) {
                     DdSwitch(
                         checked = snapshot.enabled,
@@ -232,33 +224,4 @@ private fun PluginRow(
             }
         }
     }
-}
-
-@Composable
-private fun StatusIndicator(
-    snapshot: PluginSnapshot,
-    operation: PluginOperation?,
-    description: String,
-) {
-    val colors = deepDeepColors()
-    if (operation != null) {
-        Box(Modifier.semantics { contentDescription = description }) {
-            DdSpinner(size = 12.dp, strokeWidth = 1.5.dp)
-        }
-        return
-    }
-    val color = when {
-        !snapshot.enabled -> colors.inkTertiary
-        snapshot.status is PluginStatus.Ready -> colors.success
-        snapshot.status is PluginStatus.NotReady -> colors.danger
-        snapshot.status is PluginStatus.Failed -> colors.danger
-        else -> colors.inkTertiary
-    }
-    Box(
-        Modifier
-            .size(8.dp)
-            .clip(CircleShape)
-            .background(color)
-            .semantics { contentDescription = description },
-    )
 }

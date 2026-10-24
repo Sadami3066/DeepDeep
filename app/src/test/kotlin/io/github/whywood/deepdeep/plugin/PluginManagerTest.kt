@@ -3,6 +3,8 @@ package io.github.whywood.deepdeep.plugin
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIcons
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -355,6 +357,7 @@ class PluginManagerTest {
         var availability: PluginAvailability = PluginAvailability.Available,
     ) : OfficialPlugin {
         override val id: String = "fake"
+        override val icon: DdIcon = DdIcons.Globe
         override val nameRes: Int = R.string.plugins_title
         override val summaryRes: Int = R.string.plugins_title
         override val version: String = "2.0"

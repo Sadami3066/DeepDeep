@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -171,25 +172,70 @@ class McpConfigStoreTest {
     }
 
     @Test
-    fun importOverwritesExistingAndKeepsOthers() = runTest {
+    fun importRejectsExistingAndKeepsOthers() = runTest {
         val store = McpConfigStore(directory)
         store.upsert("docs", http(url = "https://old.example.com/mcp"))
         store.upsert("keep", http(url = "https://keep.example.com/mcp"))
-        val names = store.importServers(
-            """{"mcpServers":{"docs":{"type":"http","url":"https://new.example.com/mcp"}}}""",
-        )
-        assertEquals(listOf("docs"), names)
+        val failure = runCatching {
+            store.importServers(
+                """{"mcpServers":{"docs":{"type":"http","url":"https://new.example.com/mcp"}}}""",
+            )
+        }.exceptionOrNull()
+        assertTrue(failure is IllegalArgumentException)
+        assertTrue(failure?.message?.contains("已存在") == true)
         val snapshot = store.load()
-        assertTrue(snapshot.errors.isEmpty())
         assertEquals(setOf("docs", "keep"), snapshot.servers.keys)
         assertEquals(
-            "https://new.example.com/mcp",
+            "https://old.example.com/mcp",
             (snapshot.servers.getValue("docs") as McpServerConfig.Http).url,
         )
         assertEquals(
             "https://keep.example.com/mcp",
             (snapshot.servers.getValue("keep") as McpServerConfig.Http).url,
         )
+    }
+
+    @Test
+    fun importsNamedFragment() = runTest {
+        val store = McpConfigStore(directory)
+        val names = store.importServers(
+            """
+            "mcd-mcp": {
+              "type": "streamablehttp",
+              "url": "https://mcp.mcd.cn",
+              "headers": {"Authorization": "Bearer token"}
+            }
+            }
+            """.trimIndent(),
+        )
+        assertEquals(listOf("mcd-mcp"), names)
+        val config = store.load().servers.getValue("mcd-mcp") as McpServerConfig.Http
+        assertEquals("https://mcp.mcd.cn", config.url)
+    }
+
+    @Test
+    fun editsEntryFromJsonAndCanRename() = runTest {
+        val store = McpConfigStore(directory)
+        store.upsert("old", http(url = "https://old.example.com/mcp"))
+        val before = store.entryJson("old")
+        assertNotNull(before)
+        assertTrue(before!!.startsWith("\"old\": {"))
+        val newName = store.updateFromJson(
+            "old",
+            """
+            "new": {
+              "type": "streamablehttp",
+              "url": "https://new.example.com/mcp",
+              "enabled": false
+            }
+            """.trimIndent(),
+        )
+        assertEquals("new", newName)
+        val snapshot = store.load()
+        assertFalse("old" in snapshot.servers)
+        val updated = snapshot.servers.getValue("new") as McpServerConfig.Http
+        assertEquals("https://new.example.com/mcp", updated.url)
+        assertFalse(updated.enabled)
     }
 
     @Test

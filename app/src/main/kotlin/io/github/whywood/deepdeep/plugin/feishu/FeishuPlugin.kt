@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
 import io.github.whywood.deepdeep.plugin.PluginAction
 import io.github.whywood.deepdeep.plugin.PluginActionStyle
@@ -28,6 +29,8 @@ class FeishuPlugin(
     private val cacheDir: File,
 ) : OfficialPlugin {
     override val id: String = "feishu"
+    override val icon: DdIcon = DdIcon(R.drawable.ic_plugin_feishu)
+    override val tintIcon: Boolean = false
     override val nameRes: Int = R.string.plugin_feishu_name
     override val summaryRes: Int = R.string.plugin_feishu_summary
     override val version: String = VERSION

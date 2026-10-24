@@ -2,9 +2,14 @@ package io.github.whywood.deepdeep.plugin
 
 import androidx.annotation.StringRes
 import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.design.DdIcon
 
 interface OfficialPlugin {
     val id: String
+
+    val icon: DdIcon
+
+    val tintIcon: Boolean get() = true
 
     @get:StringRes
     val nameRes: Int

@@ -42,7 +42,6 @@ import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdSpinner
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextArea
 import io.github.whywood.deepdeep.design.DdTextField
@@ -53,18 +52,17 @@ import io.github.whywood.deepdeep.runtime.McpOAuthService
 import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
+import io.github.whywood.deepdeep.runtime.parseMcpEntries
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 internal data class McpEditorTarget(
     val name: String = "",
-    val config: McpServerConfig? = null,
 )
 
 @Composable
 internal fun McpEditorSheet(
     target: McpEditorTarget,
-    existingNames: Set<String>,
     store: McpConfigStore,
     probe: McpServerProbe,
     oauth: McpOAuthService,
@@ -75,54 +73,54 @@ internal fun McpEditorSheet(
 ) {
     val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
-    val http = target.config as? McpServerConfig.Http
-    val stdio = target.config as? McpServerConfig.Stdio
-    val isNew = target.config == null
-    var draft by remember(target) {
-        mutableStateOf(http?.let { McpServerDraft.from(target.name, it) } ?: McpServerDraft())
-    }
-    var errorRes by remember { mutableStateOf<Int?>(null) }
+    var text by remember(target.name) { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<McpProbeResult?>(null) }
     var showDelete by remember { mutableStateOf(false) }
+
+    LaunchedEffect(target.name) {
+        text = store.entryJson(target.name)
+        if (text == null) error = "服务器配置不存在"
+    }
+
+    val parsed = text?.let { value ->
+        runCatching { parseMcpEntries(value).singleOrNull() }.getOrNull()
+    }
+    val http = parsed?.config as? McpServerConfig.Http
     val hasAuthorization = http?.headers?.keys?.any { it.equals("Authorization", ignoreCase = true) } == true
-    val name = if (isNew) draft.name.trim() else target.name
 
     fun save() {
+        val body = text ?: return
         if (saving) return
-        val validation = draft.validate(existingNames)
-        if (validation != null) {
-            errorRes = validation.messageRes()
-            return
-        }
-        errorRes = null
+        error = null
         saving = true
         scope.launch {
-            val result = runCatching { store.upsert(name, draft.toConfig(http)) }
+            val result = runCatching { store.updateFromJson(target.name, body) }
             saving = false
-            if (result.isSuccess) {
-                onReloadSessions()
-                onCommitted()
-                onDismiss()
-            } else {
-                errorRes = R.string.mcp_error_save_failed
-            }
+            result.fold(
+                onSuccess = {
+                    onReloadSessions()
+                    onCommitted()
+                    onDismiss()
+                },
+                onFailure = { failure -> error = failure.message ?: "保存失败" },
+            )
         }
     }
 
     fun test() {
-        if (testing || saving) return
-        val validation = draft.validate(existingNames)
-        if (validation != null) {
-            errorRes = validation.messageRes()
+        val entry = parsed ?: run {
+            error = "JSON 配置不正确"
             return
         }
-        errorRes = null
+        if (testing || saving) return
+        error = null
         testing = true
         testResult = null
         scope.launch {
-            testResult = probe.probe(name, draft.toConfig(http))
+            testResult = probe.probe(entry.name, entry.config)
             testing = false
         }
     }
@@ -138,7 +136,7 @@ internal fun McpEditorSheet(
                 onCommitted()
                 onDismiss()
             } else {
-                errorRes = R.string.mcp_error_delete_failed
+                error = "删除失败"
             }
         }
     }
@@ -146,11 +144,7 @@ internal fun McpEditorSheet(
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).testTag("mcp_editor_sheet")) {
             DdSheetHeader(
-                title = if (isNew) {
-                    stringResource(R.string.mcp_new_title)
-                } else {
-                    stringResource(R.string.mcp_edit_title, target.name)
-                },
+                title = stringResource(R.string.mcp_edit_title, target.name),
                 onClose = onDismiss,
             )
             Column(
@@ -160,51 +154,25 @@ internal fun McpEditorSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp),
             ) {
-                if (stdio != null) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.mcp_stdio_hint),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
+                Spacer(Modifier.height(8.dp))
+                if (text == null) {
+                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 } else {
-                    if (isNew) {
-                        FieldLabel(stringResource(R.string.mcp_name_label))
-                        DdTextField(
-                            value = draft.name,
-                            onValueChange = { draft = draft.copy(name = it); errorRes = null },
-                            placeholder = stringResource(R.string.mcp_name_hint),
-                            testTag = "mcp_name",
-                        )
-                    }
-                    FieldLabel(stringResource(R.string.mcp_url_label))
-                    DdTextField(
-                        value = draft.url,
-                        onValueChange = { draft = draft.copy(url = it); errorRes = null },
-                        placeholder = stringResource(R.string.mcp_url_hint),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        testTag = "mcp_url",
-                    )
-                    FieldLabel(stringResource(R.string.mcp_description_label))
-                    DdTextField(
-                        value = draft.description,
-                        onValueChange = { draft = draft.copy(description = it) },
-                        placeholder = stringResource(R.string.mcp_description_hint),
-                        singleLine = false,
-                        testTag = "mcp_description",
-                    )
-                    FieldLabel(stringResource(R.string.mcp_headers_label))
                     DdTextArea(
-                        value = draft.headers,
-                        onValueChange = { draft = draft.copy(headers = it); errorRes = null },
-                        placeholder = stringResource(R.string.mcp_headers_hint),
-                        minHeight = 96.dp,
-                        testTag = "mcp_headers",
+                        value = text.orEmpty(),
+                        onValueChange = {
+                            text = it
+                            error = null
+                            testResult = null
+                        },
+                        placeholder = "",
+                        minHeight = 280.dp,
+                        maxHeight = 420.dp,
+                        testTag = "mcp_config_json",
                     )
-                    EnableRow(draft.enabled) { draft = draft.copy(enabled = it) }
-                    errorRes?.let { messageRes ->
+                    error?.let { message ->
                         Text(
-                            text = stringResource(messageRes),
+                            text = message,
                             modifier = Modifier.padding(top = 12.dp),
                             style = DdType.bodySmall,
                             color = colors.danger,
@@ -232,47 +200,33 @@ internal fun McpEditorSheet(
                 Spacer(Modifier.height(24.dp))
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
-                if (stdio == null) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        DdTextAction(
-                            text = stringResource(R.string.mcp_test),
-                            onClick = { test() },
-                            modifier = Modifier.testTag("mcp_test"),
-                            enabled = !testing && !saving,
-                        )
-                        if (testing) {
-                            Spacer(Modifier.width(8.dp))
-                            DdSpinner(size = 16.dp, strokeWidth = 2.dp)
-                        }
-                        Spacer(Modifier.weight(1f))
-                        if (!isNew) {
-                            DdTextAction(
-                                text = stringResource(R.string.mcp_delete),
-                                onClick = { showDelete = true },
-                                modifier = Modifier.testTag("mcp_delete"),
-                                color = colors.danger,
-                                enabled = !saving,
-                            )
-                        }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    DdTextAction(
+                        text = stringResource(R.string.mcp_test),
+                        onClick = { test() },
+                        modifier = Modifier.testTag("mcp_test"),
+                        enabled = !testing && !saving && text != null,
+                    )
+                    if (testing) {
+                        Spacer(Modifier.width(8.dp))
+                        DdSpinner(size = 16.dp, strokeWidth = 2.dp)
                     }
-                    Spacer(Modifier.height(8.dp))
-                    DdPrimaryButton(
-                        text = stringResource(R.string.mcp_save),
-                        onClick = { save() },
-                        modifier = Modifier.fillMaxWidth().testTag("mcp_save"),
+                    Spacer(Modifier.weight(1f))
+                    DdTextAction(
+                        text = stringResource(R.string.mcp_delete),
+                        onClick = { showDelete = true },
+                        modifier = Modifier.testTag("mcp_delete"),
+                        color = colors.danger,
                         enabled = !saving,
                     )
-                } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        DdTextAction(
-                            text = stringResource(R.string.mcp_delete),
-                            onClick = { showDelete = true },
-                            modifier = Modifier.testTag("mcp_delete"),
-                            color = colors.danger,
-                            enabled = !saving,
-                        )
-                    }
                 }
+                Spacer(Modifier.height(8.dp))
+                DdPrimaryButton(
+                    text = stringResource(R.string.mcp_save),
+                    onClick = { save() },
+                    modifier = Modifier.fillMaxWidth().testTag("mcp_save"),
+                    enabled = !saving && text != null,
+                )
             }
         }
     }
@@ -303,38 +257,6 @@ internal fun McpEditorSheet(
                     color = colors.danger,
                 )
             },
-        )
-    }
-}
-
-@Composable
-private fun FieldLabel(text: String) {
-    Text(
-        text = text,
-        modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
-        style = DdType.micro,
-        color = deepDeepColors().inkTertiary,
-    )
-}
-
-@Composable
-private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.mcp_enabled_label),
-            modifier = Modifier.weight(1f),
-            style = DdType.body,
-            color = deepDeepColors().ink,
-        )
-        DdSwitch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            stateDescription = stringResource(
-                if (checked) R.string.mcp_state_enabled else R.string.mcp_status_disabled,
-            ),
         )
     }
 }
@@ -527,12 +449,4 @@ private fun OAuthSection(
             )
         }
     }
-}
-
-private fun McpDraftError.messageRes(): Int = when (this) {
-    McpDraftError.EMPTY_NAME -> R.string.mcp_error_name_empty
-    McpDraftError.INVALID_NAME -> R.string.mcp_error_name_invalid
-    McpDraftError.DUPLICATE_NAME -> R.string.mcp_error_name_duplicate
-    McpDraftError.INVALID_URL -> R.string.mcp_error_url_invalid
-    McpDraftError.INVALID_HEADERS -> R.string.mcp_error_headers_invalid
 }

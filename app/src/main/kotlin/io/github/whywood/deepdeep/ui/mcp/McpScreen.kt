@@ -207,7 +207,7 @@ fun McpScreen(
                             entry = entry,
                             probeResult = probes[entry.name],
                             switchEnabled = busyName == null,
-                            onOpen = { editor = McpEditorTarget(entry.name, entry.config) },
+                            onOpen = { editor = McpEditorTarget(entry.name) },
                             onToggle = { toggle(entry, it) },
                         )
                     }
@@ -221,7 +221,6 @@ fun McpScreen(
     editor?.let { target ->
         McpEditorSheet(
             target = target,
-            existingNames = entries.map { it.name }.toSet() - target.name,
             store = store,
             probe = probe,
             oauth = oauth,

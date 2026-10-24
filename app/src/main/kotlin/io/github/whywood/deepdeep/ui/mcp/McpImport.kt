@@ -40,7 +40,7 @@ internal fun McpImportSheet(
     val scope = rememberCoroutineScope()
     val template = stringResource(R.string.mcp_import_template)
     val fallbackError = stringResource(R.string.mcp_import_error)
-    var text by remember { mutableStateOf(template) }
+    var text by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var importing by remember { mutableStateOf(false) }
 
@@ -57,8 +57,8 @@ internal fun McpImportSheet(
                     onCommitted()
                     onDismiss()
                 },
-                onFailure = {
-                    error = fallbackError
+                onFailure = { failure ->
+                    error = failure.message?.takeIf { it.isNotBlank() } ?: fallbackError
                 },
             )
         }

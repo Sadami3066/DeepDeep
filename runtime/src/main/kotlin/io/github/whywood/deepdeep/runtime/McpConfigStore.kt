@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -43,31 +42,38 @@ class McpConfigStore(
     }
 
     suspend fun importServers(text: String): List<String> = mutex.withLock {
-        val root = runCatching { PiJson.parseToJsonElement(text).jsonObject }.getOrElse { error ->
-            throw IllegalArgumentException("mcp.json 解析失败：${error.message ?: "invalid JSON"}")
+        val parsed = parseMcpEntries(text)
+        val current = loadLocked().entries
+        val duplicates = parsed.map { it.name }.filter { it in current }
+        if (duplicates.isNotEmpty()) {
+            throw IllegalArgumentException("已存在同名服务器：${duplicates.joinToString("、")}")
         }
-        val rawServers = root["mcpServers"] as? JsonObject
-            ?: throw IllegalArgumentException("mcpServers must be an object")
-        if (rawServers.isEmpty()) throw IllegalArgumentException("mcpServers must not be empty")
-        val normalized = JsonObject(rawServers.mapValues { (_, value) -> normalizeEntryType(value) })
-        val parsed = parseMcpConfig(buildJsonObject { put("mcpServers", normalized) })
-        if (parsed.errors.isNotEmpty()) {
-            throw IllegalArgumentException(parsed.errors.joinToString("; "))
-        }
-        val merged = LinkedHashMap(loadLocked().entries)
-        parsed.servers.forEach { (name, config) -> merged[name] = config.toConfigJsonObject() }
+        val merged = LinkedHashMap(current)
+        parsed.forEach { entry -> merged[entry.name] = entry.config.toConfigJsonObject() }
         writeLocked(merged)
-        parsed.servers.map { it.first }
+        parsed.map { it.name }
     }
 
-    private fun normalizeEntryType(value: JsonElement): JsonElement {
-        if (value !is JsonObject) return value
-        val type = (value["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return value
-        val normalized = when (type.trim().lowercase().replace("_", "").replace("-", "")) {
-            "streamablehttp", "http" -> "streamable-http"
-            else -> return value
+    suspend fun updateFromJson(originalName: String, text: String): String = mutex.withLock {
+        val parsed = parseMcpEntries(text)
+        if (parsed.size != 1) throw IllegalArgumentException("一次只能编辑一个服务器")
+        val entry = parsed.first()
+        val current = loadLocked().entries
+        if (entry.name != originalName && entry.name in current) {
+            throw IllegalArgumentException("已存在同名服务器：${entry.name}")
         }
-        return JsonObject(value + ("type" to JsonPrimitive(normalized)))
+        val merged = LinkedHashMap(current)
+        merged.remove(originalName)
+        merged[entry.name] = entry.config.toConfigJsonObject()
+        writeLocked(merged)
+        entry.name
+    }
+
+    suspend fun entryJson(name: String): String? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            val entry = loadLocked().entries[name] ?: return@withContext null
+            formatMcpEntry(name, entry)
+        }
     }
 
     suspend fun remove(name: String) = mutex.withLock {

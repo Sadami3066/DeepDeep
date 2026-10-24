@@ -11,6 +11,7 @@
 ```kotlin
 interface OfficialPlugin {
     val id: String
+    val icon: DdIcon
     val nameRes: Int
     val summaryRes: Int
     val version: String
@@ -68,9 +69,9 @@ interface OfficialPlugin {
 
 ## 界面
 
-- 抽屉「插件」→ 插件列表。官方插件全部列出；已安装显示右上角状态圆点、启用开关和详情入口；未安装显示「下载」。
-- 状态圆点：绿=就绪，红=未连接/失败，灰=已关闭或未知；安装/更新时显示 spinner。
+- 抽屉「插件」→ 插件列表。官方插件全部列出；每行左侧是插件图标，右侧是启用开关（未安装时显示「下载」）；已安装可点进详情。
 - 标题右侧是刷新图标；卡片内不再提供删除，删除入口在详情页。
+- 插件图标来自 `OfficialPlugin.icon`：飞书使用内置的飞书 logo（`tintIcon=false` 保留品牌色），网络搜索使用 `DdIcons.Globe`（随主题 tint）。
 - 详情页：状态、版本、大小、插件自带的详情行、插件技能；飞书详情还包含 CLI 版本、已授权权限数量、飞书应用状态、缺失权限（如果有）。
 - 操作行来自插件本身；框架另外提供下载/更新/重新安装/删除插件。
 - 安装或插件的准备流程进行中时，列表与详情页的操作会禁用；进度同时显示在行内与通知里。

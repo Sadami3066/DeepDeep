@@ -3,6 +3,8 @@ package io.github.whywood.deepdeep.plugin.websearch
 import android.content.Context
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
@@ -15,6 +17,7 @@ class WebSearchPlugin(
     private val provider: WebProvider = DeepSeekWebProvider(apiKeyProvider),
 ) : OfficialPlugin {
     override val id: String = "web-search"
+    override val icon: DdIcon = DdIcons.Globe
     override val nameRes: Int = R.string.plugin_web_search_name
     override val summaryRes: Int = R.string.plugin_web_search_summary
     override val version: String = "1.0.0"
