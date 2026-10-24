@@ -65,8 +65,8 @@ fun McpScreen(
     probe: McpServerProbe,
     oauth: McpOAuthService,
     onBack: () -> Unit,
-    onReloadSessions: () -> Unit,
-    onReconnect: (String) -> Unit,
+    onReloadSessions: suspend () -> Unit,
+    onReconnect: suspend (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -114,10 +114,12 @@ fun McpScreen(
         if (busyName != null) return
         busyName = entry.name
         scope.launch {
-            val result = runCatching { store.setEnabled(entry.name, enabled) }
+            val result = runCatching {
+                store.setEnabled(entry.name, enabled)
+                onReloadSessions()
+            }
             busyName = null
             if (result.isSuccess) {
-                onReloadSessions()
                 refreshKey++
             } else {
                 failureRes = R.string.mcp_error_toggle_failed

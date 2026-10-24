@@ -13,6 +13,7 @@ import dev.pi.coding.session.SessionEvent
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okio.Path.Companion.toPath
 
 class AgentRuntimeHost(
@@ -62,6 +64,7 @@ class AgentRuntimeHost(
     override val busySessionIds: StateFlow<Set<String>> = busyState.asStateFlow()
 
     private val mutex = Mutex()
+    private val mcpMutex = Mutex()
     private val handles = mutableMapOf<String, Handle>()
     private var started = false
 
@@ -162,17 +165,41 @@ class AgentRuntimeHost(
         reopened.session.sessionId
     }
 
-    suspend fun reloadMcp() {
-        val targets = mutex.withLock { handles.values.toList() }
-        for (handle in targets) {
-            runCatching { handle.session.mcp.reload(handle.engine.loadMcpServers()) }
+    suspend fun reloadMcp() = mcpMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val targets = mutex.withLock { handles.values.toList() }
+            for (handle in targets) {
+                val loaded = runCatching { handle.engine.loadMcpServers() }
+                if (loaded.isFailure) {
+                    Log.e(TAG, "mcp reload config failed session=${handle.session.sessionId}", loaded.exceptionOrNull())
+                    continue
+                }
+                runCatching { handle.session.mcp.reload(loaded.getOrThrow()) }
+                    .onFailure { Log.e(TAG, "mcp reload failed session=${handle.session.sessionId}", it) }
+                logMcpState(handle, "reload")
+            }
         }
     }
 
-    suspend fun reconnectMcp(server: String) {
-        val targets = mutex.withLock { handles.values.toList() }
-        for (handle in targets) {
-            runCatching { handle.session.mcp.reconnect(server) }
+    private fun logMcpState(handle: Handle, phase: String) {
+        runCatching {
+            val servers = handle.session.mcp.servers.joinToString { status ->
+                "${status.name}=${status.state.name}/${status.toolCount}/${status.lastError.orEmpty()}"
+            }
+            val deferred = handle.session.mcp.deferredCatalog().size
+            val loaded = handle.session.activeToolNames.count { it.startsWith("mcp__") }
+            Log.i(TAG, "mcp $phase session=${handle.session.sessionId} servers=[$servers] deferred=$deferred loaded=$loaded")
+        }.onFailure { Log.e(TAG, "mcp $phase state unavailable", it) }
+    }
+
+    suspend fun reconnectMcp(server: String) = mcpMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val targets = mutex.withLock { handles.values.toList() }
+            for (handle in targets) {
+                runCatching { handle.session.mcp.reconnect(server) }
+                    .onFailure { Log.e(TAG, "mcp reconnect failed session=${handle.session.sessionId} server=$server", it) }
+                logMcpState(handle, "reconnect")
+            }
         }
     }
 
@@ -442,7 +469,7 @@ class AgentRuntimeHost(
         emit(handle, UsageChanged(runId, current))
     }
 
-    suspend fun reconfigure() {
+    suspend fun reconfigure() = withContext(Dispatchers.IO) {
         val snapshot = mutex.withLock {
             handles.values.map { handle ->
                 Triple(handle.session.sessionId, handle.cwd, handle.session.sessionFile?.toString())
@@ -479,6 +506,7 @@ class AgentRuntimeHost(
         val handle = Handle(engine = engine, session = session, cwd = cwd)
         handles[session.sessionId] = handle
         handle.unsubscribe = session.subscribe { event -> onSessionEvent(handle, event) }
+        logMcpState(handle, "attach")
         return handle
     }
 
@@ -603,6 +631,11 @@ class AgentRuntimeHost(
                     message = event.message,
                 )
             }
+
+            is SessionEvent.McpServerStatusChanged -> Log.i(
+                TAG,
+                "mcp status ${event.name}=${event.status.state.name}/${event.status.toolCount}/${event.status.lastError.orEmpty()}",
+            )
 
             else -> Unit
         }

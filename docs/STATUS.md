@@ -1,5 +1,13 @@
 # Status
 
+## Done: MCP 热更新改到 IO 并串行化
+
+- 修复会话内关闭再开启 MCP 后 `tool_search` 搜不到工具：`reloadMcp()` / `reconnectMcp()` 在 UI 主线程发起连接，SDK 读取响应体触发 `NetworkOnMainThreadException`，服务器状态停在 failed、deferred 目录为空；现统一在 `Dispatchers.IO` 执行，失败写日志不再静默
+- MCP 热更新串行化：启停、编辑、导入、删除、登录后的重连共用一个 mutex，快速连点或并发操作不会让连接与状态错位
+- `reconfigure()`（运行环境启停、插件贡献变化）同样会重建会话并连接 MCP，现改为在 IO 执行，避免同一异常
+- MCP 页的启停、保存、删除、导入改为等待热更新完成再收起/刷新，应用期间开关不可再点
+- 398 unit tests green（runtime 150 / app 228 / shell 20），lint、debug 构建通过；真机验证会话内关闭再开启 MCP 后状态 Connected/35、`tool_search` 返回工具并在下一轮可调用
+
 ## Done: 插件启停、网络搜索、MCP JSON 导入与 UI 收敛
 
 - 插件框架增加启用状态（schemaVersion 2）、`OfficialPlugin.tools()` 与动态贡献收集；关闭插件后不再注入 prompt/skill/tools，重新开启恢复；安装/启用变化在没有忙碌会话时重建会话

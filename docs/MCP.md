@@ -26,6 +26,8 @@
 ## 工具与资源
 
 - 工具默认按需加载（deferred）：模型用 `tool_search` 搜索后，命中的工具在下一轮可用。
+- `tool_search` 只检索尚未加载的工具；已经加载过的工具在重新加载会话后仍直接可用，不会再出现在检索结果里。
+- 启停服务器或编辑配置后立即对已打开会话生效；应用期间该服务器的开关短暂不可操作，完成后恢复正常。
 - 工具名为 `mcp__<server>__<tool>`；聊天过程里显示为 `server · tool`。
 - 服务器声明 resources 时，会自动提供 `list_mcp_resources` / `list_mcp_resource_templates` / `read_mcp_resource`。
 - 服务器说明会进入系统提示词；工具调用超时与输出上限由客户端统一处理。

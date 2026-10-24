@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 internal fun McpImportSheet(
     store: McpConfigStore,
     onDismiss: () -> Unit,
-    onReloadSessions: () -> Unit,
+    onReloadSessions: suspend () -> Unit,
     onCommitted: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -49,11 +49,13 @@ internal fun McpImportSheet(
         error = null
         importing = true
         scope.launch {
-            val result = runCatching { store.importServers(text) }
+            val result = runCatching {
+                store.importServers(text)
+                onReloadSessions()
+            }
             importing = false
             result.fold(
                 onSuccess = {
-                    onReloadSessions()
                     onCommitted()
                     onDismiss()
                 },

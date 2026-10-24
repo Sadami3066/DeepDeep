@@ -625,8 +625,8 @@ internal fun DeepDeepApp(
                     probe = graph.mcpServerProbe,
                     oauth = graph.mcpOAuthService,
                     onBack = ::back,
-                    onReloadSessions = { scope.launch { graph.host.reloadMcp() } },
-                    onReconnect = { server -> scope.launch { graph.host.reconnectMcp(server) } },
+                    onReloadSessions = { graph.host.reloadMcp() },
+                    onReconnect = { server -> graph.host.reconnectMcp(server) },
                 )
 
                 AppDestination.Plugins -> PluginsScreen(

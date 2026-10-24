@@ -67,8 +67,8 @@ internal fun McpEditorSheet(
     probe: McpServerProbe,
     oauth: McpOAuthService,
     onDismiss: () -> Unit,
-    onReloadSessions: () -> Unit,
-    onReconnect: (String) -> Unit,
+    onReloadSessions: suspend () -> Unit,
+    onReconnect: suspend (String) -> Unit,
     onCommitted: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -97,11 +97,13 @@ internal fun McpEditorSheet(
         error = null
         saving = true
         scope.launch {
-            val result = runCatching { store.updateFromJson(target.name, body) }
+            val result = runCatching {
+                store.updateFromJson(target.name, body)
+                onReloadSessions()
+            }
             saving = false
             result.fold(
                 onSuccess = {
-                    onReloadSessions()
                     onCommitted()
                     onDismiss()
                 },
@@ -129,10 +131,12 @@ internal fun McpEditorSheet(
         if (saving) return
         saving = true
         scope.launch {
-            val result = runCatching { store.remove(target.name) }
+            val result = runCatching {
+                store.remove(target.name)
+                onReloadSessions()
+            }
             saving = false
             if (result.isSuccess) {
-                onReloadSessions()
                 onCommitted()
                 onDismiss()
             } else {
@@ -191,8 +195,10 @@ internal fun McpEditorSheet(
                             config = http,
                             oauth = oauth,
                             onAuthenticated = {
-                                onReconnect(target.name)
-                                onCommitted()
+                                scope.launch {
+                                    onReconnect(target.name)
+                                    onCommitted()
+                                }
                             },
                         )
                     }
