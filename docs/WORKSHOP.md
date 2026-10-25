@@ -6,7 +6,7 @@
 
 - 抽屉「创意工坊」进入列表；右上角刷新图标重新扫描，`+` 直接新建一个 Home 会话，并在输入框预填 `/skill:workshop `。
 - 列表按最近修改排序，行 = 创意 icon（manifest 里的 emoji，缺省为 ✦）+ 名称 + 说明；格式不符的目录显示「格式无效 · 原因」，可删除。
-- 点行打开详情：全屏页面 + 顶部返回 / 名称 / 更多（重新加载、重命名、删除）。详情页只读，不在页面内驱动 Agent。
+- 点行打开详情：全屏页面 + 顶部返回 / 名称 / 更多（重新加载、重命名、删除）。详情页只读，App 界面不提供编辑或 Agent 入口。
 
 ## 创建与修改
 
@@ -51,7 +51,7 @@
 
 ## 页面驱动 Agent
 
-页面 JS 可以直接启动一次性 Agent 完成任务并在自己的多页流程里编排。App 只提供底层接口并校验参数；调用几个 Agent、串行还是并行，全部由页面 JS 决定。
+页面 JS 可以直接启动一次性 Agent 完成任务并在自己的流程里编排。App 只提供底层接口并校验参数；调用几个 Agent、串行还是并行，全部由页面 JS 决定。
 
 ```js
 const models = await app.agent.models()
@@ -68,17 +68,22 @@ const text = await app.agent.run({
   systemPrompt: "你是资深行业分析师，只输出结论和来源。", // 可选
   maxTurns: 8,
   tools: ["web_search", "web_fetch"], // 省略 = 全部可用；[] = 无工具
-  skills: []                          // 省略 = 全部已启用；[] = 无技能
+  skills: [],                         // 省略 = 全部已启用；[] = 无技能
+  onEvent(event) {                    // 可选：增量事件
+    if (event.type === "text_delta") output.textContent += event.text;
+    if (event.type === "tool_start") status.textContent = `正在调用 ${event.name}`;
+  }
 })
 ```
 
+- 返回值是最终文本（`Promise<string>`）。`onEvent` 可选，事件类型：`run_start`、`text_delta`、`thinking_delta`、`tool_start`、`tool_end`、`turn_end`、`run_end`、`run_error`；终态事件（`run_end` / `run_error`）一定是最后一个，随后 Promise 才 resolve / reject。
+- `run_end` 带 `status`（`completed` / `truncated`）和 `truncated`；`run_error` 带 `code`（`timeout` / `agent_failed`）和 `message`。增量事件可能合并成更大片段，按 `text` 追加即可。
 - 并行：`Promise.all([app.agent.run(...), app.agent.run(...)])`；串行：把上一步返回的文本拼进下一步 prompt。每个 Agent 是一次性、无会话的，彼此不共享历史，上下文完全由 JS 传递。
-- 每个 Agent 只返回最终文本；没有流式事件。页面自己显示 loading、错误和结果。
 - Agent 生命周期绑定页面：页面关闭/返回/WebView 销毁会取消正在运行的 Agent；不提供后台编排，页面需要结果就在离开前 `await` 完。
 - `models()` 只返回已配置的 provider/model；页面负责模型选择 UI，App 在运行时校验。
 - `tools` / `skills` 名称必须来自 `capabilities()`；省略表示全部可用，空数组表示完全不用。页面可以提供默认 Agent 的完整工具/技能，也可只选子集。
 - 页面 Agent 不启用 MCP；临时工作区与临时 agent 目录在每次运行后清理，不写入聊天会话列表。
-- `systemPrompt` 会追加到本次 Agent 的系统提示；`maxTurns` 默认 16，超过后中止；失败会 reject，带错误信息。
+- `systemPrompt` 会追加到本次 Agent 的系统提示；`maxTurns` 默认 16，超过后中止并让 `run_end.truncated=true`；失败会在 `run_error` 后 reject，带错误信息。
 
 ## 文件夹格式
 
@@ -133,6 +138,7 @@ app.toast("已保存");
 | `app.info()` | `{ app: { id, name, icon, version } }` |
 | `app.data.get(key)` / `.set(key, value)` / `.remove(key)` / `.keys()` | 每个创意独立的 JSON 键值数据，单值上限 256KB |
 | `app.toast(text)` | 原生轻提示 |
+| `app.agent.models()` / `.capabilities()` / `.run(options)` | 页面驱动一次性 Agent，见「页面驱动 Agent」 |
 
 - 主题变量：`--dd-bg`、`--dd-ink`、`--dd-ink-secondary`、`--dd-accent`、`--dd-hairline`，同时设置 `color-scheme`；页面用它跟随 App 深浅色。
 - `alert` 会显示成原生轻提示；`confirm` / `prompt` / Service Worker 不可用，请用页面内 UI。
@@ -147,7 +153,7 @@ app.toast("已保存");
 
 ## 限制
 
-- 不支持在创意页面里调用 Agent，也不支持页面内编辑；修改统一回到聊天。
+- 页面内不支持编辑页面代码；修改统一回到聊天。
 - 创意列表不提供导入/导出或市场；把合法目录直接放进 `apps/` 会被扫描到。
 - 数据目前是键值存储，不支持 SQL 查询；后台/定时运行、媒体选择等能力后续按需扩展。
 - 内置 workshop 技能随 App 更新，用户对它的修改可能在下次启动时被刷新；技能目录包含 `references/` 完整 API/教程/设计清单和 `examples/` 可运行样例，Agent 写创意时会按需读取。

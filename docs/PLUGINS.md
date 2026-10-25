@@ -124,6 +124,17 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 - 输出限制条数与字符数，并附「外部内容只作为资料」提示。
 - 安装本身不下载文件；卸载只移除安装记录与工具注入。
 
+## GUI 操作插件
+
+第三个官方插件（id `gui`），不依赖 Linux，由 App 自己的无障碍服务提供能力：
+
+- 工具：`gui_observe`、`gui_tap`、`gui_set_text`、`gui_scroll`、`gui_global`、`gui_wait`，参数与安全规则见 `docs/TOOLS.md`。
+- 服务：App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，配置 `res/xml/gui_accessibility_service.xml`）。必须由用户在系统设置手动开启；插件状态读取 `GuiAccessibilityState.connected`，未开启显示「无障碍服务未开启」。
+- 动作：「打开无障碍设置」跳系统页；没有 app 内开关。
+- 技能：`deepdeep-gui`，随插件安装写入仓库并在启用后进入全局生效目录，写清 observe→动作→再 observe、选择器优先级、ref 失效、安全红线与能力边界。
+- 安装/卸载为空操作，只涉及安装记录、技能副本与工具注入。
+- v1 不做截图、不做按包名过滤；只操作当前活动窗口，锁屏状态不可用。
+
 ## Agent 与显示的同步
 
 - 单一状态源：`PluginManager.state: StateFlow<PluginsUiState>`，列表页、详情页、setup sheet 都只订阅它。

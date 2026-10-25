@@ -13,7 +13,9 @@
 
 - `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor、run 状态；会话之间互不关闭。
 - 运行事件统一包装为 `SessionRuntimeEvent(sessionId, event)`；活动状态是类型化的 `RuntimeActivity`（思考/重试/压缩/运行工具），由 ChatViewModel 结合 `ChatUiStrings`（字符串资源）本地化后进入 UI，runtime 层不承载用户可见文案；ChatViewModel 用 `conversationCache` 保存每个会话的消息/流式状态，活跃会话直接更新 UI，后台会话事件写入缓存，切回时立即恢复并继续接收。
-- 发送/停止按 sessionId 定向；`busySessionIds` StateFlow 供 UI 展示后台运行状态；新建会话/切换项目不打断正在运行的任务。模型与思考档位是全局配置，变更会同步到所有已打开会话。
+- 发送/停止按 sessionId 定向；`busySessionIds` StateFlow 供 UI 展示后台运行状态；新建会话/切换项目不打断正在运行的任务。
+- 模型与思考档位是**会话级配置**：SDK 把 `model_change`/`thinking_level_change` 写进会话 JSONL，打开会话时从文件恢复；在某个会话里切换只改该会话，同时写入 `ModelConfigStore` 作为新会话默认值。设置页的厂商详情只做配置（API Key/OAuth），不提供模型切换或“设为当前”。
+- 运行态以 `AgentRuntime.activeRuns: StateFlow<Map<sessionId, ActiveRunSnapshot>>` 为准：`beginRun`/`finally`/`stop`/`detach` 同步维护。事件仍是 UI 快速通道，但结构事件（RunStarted/终态/后台轮）在事件缓冲溢出时会用挂起 emit 兜底；`ChatViewModel` 在“busy 消失但仍在 sending”、回到前台、无活动 run 的 stop、打开会话快照落地后二次确认这几个点做对账：用 history + sessionModel 重建消息并清掉 streaming/sending，避免后台唤醒、锁屏断网重试后 UI 停在运行中。
 
 ## 模块
 
@@ -81,7 +83,7 @@ Compose ChatScreen
 - 基础系统提示词由 SDK 的 `SYSTEM.md` 覆盖机制替换：`PiSessionEngine` 在创建会话前确保 `files/agent/SYSTEM.md` 存在（已存在则保留用户编辑），SDK 读到后不再使用自带的 "You are an expert coding assistant operating inside pi" 前言。工作区里放 `.pi/SYSTEM.md` 可覆盖全局这一份。
 - 自定义前言会让 SDK 跳过它自己的 `<tools>`/`<rules>` section。`<tools>` 不需要重建：模型真正拿到的工具定义来自 system 消息的 `toolsAdded` 字段，provider 层据此组装请求的 `tools`。runtime 只重建 `<rules>`（各工具 `promptGuidelines` + 简洁/路径规则）作为静态 section。
 - `PersonalizationStore`（DataStore `personalization`）保存称呼、交互模式、提示词预设、用户指令；`PiSessionEngine` 通过 `CodingHooks.extraSystemPromptSections` 每轮注入两个动态 section：
-  - `environment`：当前日期（不含时分秒）、模型、工作区、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。日期只按天变化，避免每轮对话都触发 system patch。
+  - `environment`：当前日期（不含时分秒）、当前会话实际模型、工作区、Linux 技能挂载（`/skills`、`/skill-repo` 可直接 bash 读写）、称呼、交互风格与对应规则；手动包 `<environment>…</environment>`。日期只按天变化、技能说明固定，避免每轮对话都触发 system patch；会话 JSONL 里的 `model_change` 会让模型标签按需更新。
   - `instruction`：用户长期偏好；仅非空时注入，手动包 `<instruction>…</instruction>`，内容做 XML 转义。
 - hook extra 不会自动包 section 标签，包装在 runtime 内完成。
 - 提示词随每轮 `syncSystemPromptIfNeeded()` diff 生效（只追加变化的 section）；修改个性化不需要重启会话。Skills 的 `<skills>`、AGENTS 的 `<project_context>` section 由 SDK 注入。
@@ -90,6 +92,8 @@ Compose ChatScreen
 
 - 技能仓库 `files/skills/<id>` 不被 SDK 扫描；全局开启复制到 `files/agent/skills/<id>`，项目开启复制到 `<cwd>/.pi/skills/<id>`。插件技能同样写入仓库，并由插件启用状态控制生效副本；因此技能页能看到插件技能。
 - 项目技能页展示全部仓库技能；全局技能固定开启、不可关闭；全局开启会移除对应项目副本，避免关闭全局后项目副本继续生效。
+- 自动入库：打开技能页（以及页面回前台）和每轮 RunFinished 后，`SkillRepository.syncActiveSkills()` 扫描 `files/agent/skills`、home 与各工作区的 `.pi/skills`；合法技能（安全 id、能解析出 name/description、非 `.deepdeep-plugin` 标记）复制进仓库 `files/skills`，幂等且不覆盖已有 id。因此 Agent 自写的技能会出现在技能页，位于全局生效目录的技能自动显示为已启用。
+- Linux 内固定挂载 `/skills`→`files/agent/skills`、`/skill-repo`→`files/skills`（PRoot `extraBinds`，rootfs 目标目录自动创建）；Agent 可直接用 bash 写这两个目录。写入 `/skills` 对新会话生效，已有会话仍可用 `/skill:<name>`（每次重读正文）或点「重新加载」。
 - 聊天右上角「重新加载」调用 `AgentRuntime.reloadSession`：关闭并重新打开当前 session 文件，重新读取 skills/AGENTS.md；运行中的会话拒绝重载。
 - 使用复制而非软链接：PRoot 只绑定当前 cwd 到 `/workspace`，仓库在 cwd 外，软链接内的脚本在 `bash` 中无法解析。
 - AGENTS.md 由 SDK 原生读取：先 `agentDir`，再 cwd 祖先；每个目录按 `AGENTS.override.md`、`AGENTS.md`、`AGENTS.MD`、`CLAUDE.md`、`CLAUDE.MD` 取第一个。App 编辑工作区根目录的有效文件，保存后新会话生效。
@@ -104,6 +108,9 @@ Compose ChatScreen
 - 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。
 - `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。默认不限轮次，显式传 `max_goal_rounds` 才有上限；加载后目标为未激活（显示暂停），需用户继续。
 - `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。
+- `present` 交付 v2：`items`（1–4 项）显式指定 `file|image|html|creative`；文件/图片/网页按 cwd 解析并校验存在性，创意经注入的 `WorkshopStore` 查询清单后返回 id/name/icon/version。聊天里图片内联预览、HTML 用内联 WebView 渲染并可全屏、文件为行卡、创意为入口卡；旧 `files` 输出与旧工坊入口卡保持兼容。
+- `read_sms`：只读查询 `content://sms`（inbox/sent/all，limit/address/since，正文截断 2000 字），需要设置里开启「读取短信」并授予 `READ_SMS`；工具在 execute 内二次校验开关与权限。该工具只注册进聊天会话的 `AppToolContext`，工坊页面 Agent 不可见。
+- GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/tap/set_text/scroll/global/wait`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。
 - `/` 命令是 UI 层能力：`ChatCommand` 定义命令表，`parseChatCommand` 解析，`DeepDeepApp` 分发；命令不写入会话 JSONL，压缩等提示类结果以 `NoticeEvent` 进入消息流。
 - 上下文用量：宿主 `usage()` 用 `SessionManager.getSessionStats()` + `estimateContextTokens(buildSessionContext())` 计算，`UsageChanged` 推给 UI；`/compact` 调用 `AgentSession.compact()`。
 - 工具分类与契约见 `docs/TOOLS.md`，调度语义见 `docs/SCHEDULING.md`，命令见 `docs/COMMANDS.md`。
@@ -116,6 +123,7 @@ Compose ChatScreen
 - `TurnInjected` 是宿主主动注入的用户消息（定时提醒），UI 追加用户气泡；空闲时同时补一个流式 assistant 占位。
 - `NoticeEvent` 是本地提示（压缩结果、目标轮次、目标完成/阻塞），UI 在消息流里渲染为一条灰字，不写入会话。
 - `BackgroundTurnStarted` 表示目标续跑或后台任务唤醒开启了新的一轮：目标轮带 `TurnNotice.GoalRound`，UI 追加提示与流式 assistant；后台任务唤醒带 `TurnNotice.JobFinished`，UI 追加一行极简任务标记与流式 assistant。`UsageChanged` 携带会话的上下文与累计用量。
+- 事件是快速通道而非唯一真相：宿主用 `activeRuns` StateFlow 记录每个会话的活动 run，UI 在 busy→idle、回前台、打开会话、无 run 的 stop 时用 `history`+`sessionModel` 对账；reducer 在终态 runId 对不上但仍在 sending 时把最后一条 streaming 消息终结，避免“回答已结束但界面还在转圈”。
 - UI 只订阅事件与状态流，不轮询；`ScheduleService.schedules` 是任务页的数据源。
 
 ## 创意工坊
@@ -123,12 +131,13 @@ Compose ChatScreen
 - 每个创意是 `files/workshop/apps/<id>/` 下的自包含静态站点（`manifest.json` + entry + 静态资源），形态完全由 Agent 按需求决定，没有分类/模板。App 用 WebView 渲染，每个创意运行在独立的虚拟域名 `https://<id>.workshop.local/` 下。
 - 资源由 `WebViewAssetLoader` + 自定义 PathHandler 从创意目录提供（MIME、`Cache-Control: no-store`、`Range` 206）；`WebViewCompat.addDocumentStartJavaScript` 在页面脚本前注入 bridge SDK（`window.deepdeep` / `window.app`）与主题 CSS 变量；`WebViewCompat.addWebMessageListener` 只接受该 origin 的主框架消息。
 - Bridge 暴露页面数据与轻提示：`info`、`data.get/set/remove/keys`、`ui.toast`，以及页面驱动的 `agent.models/capabilities/run`（一次性任务 Agent，见下）；页面不能调用其他 App 内部函数、不能读写其他创意或 App 数据。详情页只读，修改页面统一回到聊天。
+- 页面 Agent 是事件流：最终 Promise 仍返回完整文本，同时可选 `onEvent` 收到 `{id,event}` 增量包（`run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error`）。native 侧按 40ms 合批、`webView.post` 保序并在终态前 flush；超时/失败会发 `run_error` 并 reject（不再让页面 Promise 永久 pending），maxTurns 中止时 `run_end.truncated=true`。页面 Agent 的工具目录过滤掉 `read_sms` 与 `gui_*`。
 - 代码与数据分离：页面数据保存在 `files/workshop/userdata/<id>.db`（SQLite KV）；页面经 bridge 读写，Agent 经 `workshop_data_get/set/delete/keys` 工具读写同一数据层（不暴露原始 SQLite），重写页面不影响数据；删除创意同时删除目录与 DB。
-- 创建流程由普通会话完成：`workshop_create` 在 `files/workshop/build/` 建草稿（只写 manifest.json）→ Agent 用绝对路径写页面 → `workshop_load` 校验入口/清单/大小并原子移动到 `apps/<id>/`，聊天里出现入口卡片；工坊页进入时扫描 `apps/` 作为导入兜底，草稿目录不展示。
+- 创建流程由普通会话完成：`workshop_create` 在 `files/workshop/build/` 建草稿（只写 manifest.json）→ Agent 用绝对路径写页面 → `workshop_load` 校验入口/清单/大小并原子移动到 `apps/<id>/`；`workshop_load` 结果带 `delivery:"present"` 标记，Agent 需显式调用 `present`（`type=creative, id=…`）交付，聊天里出现入口卡。旧历史里没有该标记的 `workshop_load` 输出仍按旧逻辑显示入口卡；工坊页进入时扫描 `apps/` 作为导入兜底，草稿目录不展示。
 - 内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）由 `BuiltinSkills` 在 AppGraph 初始化时写入技能仓库与全局生效目录，教普通 Agent 格式、工具、页面规范与数据 bridge。`SkillCatalog` 读取已启用技能；`/skill:<name>` 在发送前把技能文件内容渲染成 `<skill>` 块作为用户消息（同 pi 的 skill command 语义），命令可出现在消息任意位置、单条可加载多个技能；UI 隐藏该块、只显示用户文字。
 - 工坊页 `+` 会新建 Home 会话并预填 `/skill:workshop `；列表图标/说明来自 manifest，缺失 icon 使用 ✦。
 
-- 页面驱动 Agent：`WorkshopBridgeRouter` 增加 `agent.models/capabilities/run`，`WorkshopAgentService` 实现 `WorkshopAgentGateway`。每次 run 在 App 进程内用一次性的 `PiSessionEngine` 执行：临时 workspace/agentDir、限定工具（`toolsFilter`）、按请求复制的 skills、页面 systemPrompt 写入临时 `APPEND_SYSTEM.md`、关闭 MCP；返回最后一条 assistant 文本。没有 JSONL 会话、没有后台任务、没有 run 持久化；调用协程属于 WebView 生命周期，页面关闭即取消。
+- 页面驱动 Agent：`WorkshopBridgeRouter` 增加 `agent.models/capabilities/run`，`WorkshopAgentService` 实现 `WorkshopAgentGateway`。每次 run 在 App 进程内用一次性的 `PiSessionEngine` 执行：临时 workspace/agentDir、限定工具（`toolsFilter`）、按请求复制的 skills、页面 systemPrompt 写入临时 `APPEND_SYSTEM.md`、关闭 MCP；最终返回最后一条 assistant 文本，同时把文本/工具/轮次事件经 `onEvent` 旁路发给页面。没有 JSONL 会话、没有后台任务、没有 run 持久化；调用协程属于 WebView 生命周期，页面关闭即取消。
 - `WorkshopAgentService.models()` 从已配置 provider 读取模型；`capabilities()` 暴露默认编码工具 + App 工具 + 已启用全局 skills；页面通过 `app.agent.run` 指定 provider/model/thinking/systemPrompt/maxTurns/tools/skills。`PiSessionEngine.createSession` 新增 toolsFilter/mcpEnabled/extraSystemPromptSections 参数，默认行为不变。
 
 ## 通知
@@ -206,21 +215,33 @@ filesDir/
   linux/rootfs/     Alpine rootfs（插件二进制在 guest /usr/local/bin）
 ```
 
-API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
+- `cacheDir/share-incoming/<token>/`：外部 App 分享进来的文件先落到这里，防止 URI 授权过期；插入会话附件后由后续启动自动清理。
+- DataStore：`secrets`（API Key/OAuth）、`model_config`（新会话默认模型/思考）、`personalization`、`session_meta`、`linux_settings`、`app_preferences`、`voice`（自动朗读/识别后直发）、`capability_preferences`（读取短信开关）。
+- API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
+
+## Android 能力
+
+- GUI 操作：官方插件 `gui` + App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，`res/xml/gui_accessibility_service.xml`）。服务由用户在系统设置手动开启；`GuiAccessibilityState` 用 StateFlow 暴露连接状态，插件据此显示就绪/未就绪。工具为 `gui_observe/tap/set_text/scroll/global/wait`，只操作当前活动窗口，节点 ref 只在下一次 observe 前有效。
+- 语音助手：系统 `SpeechRecognizer` 做语音输入（`RECORD_AUDIO` + `RecognitionService` queries），`TextSpeaker` 用系统 TTS 朗读回答；`AssistantRole` 通过 `RoleManager.ROLE_ASSISTANT` 申请系统助手角色，`MainActivity` 接收 `ACTION_ASSIST` 后打开语音面板。composer 麦克风按钮与设置里「语音助手」行共用同一面板；后台常听/唤醒词不做。
+- 接收分享：Manifest 声明 `ACTION_SEND`/`ACTION_SEND_MULTIPLE`，MainActivity 解析 stream/clip/text，`ShareStaging` 先复制到 cache，`DeepDeepApp` 在会话就绪且不在发送/切换时经现有 `ChatViewModel.attach` 插入附件，纯文本预填输入框；App 自身分享时 chooser 排除自己。
+- 读取短信：设置页「读取短信」开关（`READ_SMS` 运行时权限）+ `read_sms` 工具；工具只读、截断正文、execute 内校验开关与权限。仅侧载使用，README/隐私页说明正文会进入会话历史。
+- 闹钟/日历/待办等系统能力的接口调研与结论见 `docs/ANDROID_CAPABILITIES.md`，当前不注册对应工具。
 
 ## 设计中的系统
 
 - 定时任务：`docs/SCHEDULING.md`（提醒投递、任务页编辑、手动执行已实现）。
-- Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停已实现；插件技能单独说明）。
-- 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、安装/连接、UI 与 Agent 同步）。
-- 创意工坊：`docs/WORKSHOP.md`（文件夹格式、bridge SDK、能力权限、创建与修改流程）。
+- Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停、自动入库、bash 挂载已实现；插件技能单独说明）。
+- 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、网络搜索、GUI 操作、安装/连接/UI 与 Agent 同步）。
+- 创意工坊：`docs/WORKSHOP.md`（文件夹格式、bridge SDK 事件流、创建与修改流程）。
+- Android 能力：`docs/ANDROID_CAPABILITIES.md`（GUI/语音/分享/短信与系统闹钟日历接口调研）。
 - 工具分类：`docs/TOOLS.md`。
 
 ## 工具
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
-- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`
-- 不注册 `device_info`、`open_app` 等 Android 能力工具
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`、`read_sms`
+- 插件贡献：`web_search`/`web_fetch`（网络搜索插件）、`gui_*`（GUI 操作插件）；工坊页面 Agent 不注入 `read_sms` 与 `gui_*`
+- 不注册 `device_info`、`open_app`、联系人等未评审的 Android 能力工具；新增系统能力先评估权限与商店政策
 
 ## 功能接线
 
@@ -233,6 +254,8 @@ API Key、模型配置、会话元数据、个性化在 DataStore；字体选择
 5. UI：`app/ui/<feature>` 用 `collectAsStateWithLifecycle` 读状态、动作回调回服务，界面不直接持有 store。
 6. 测试：store/service/reducer/纯函数单测 + `docs/DEVICE_TESTING.md` 验收条目 + `artifacts/validation/` 证据。
 7. 文档：`docs/TOOLS.md`、`docs/UI.md`、本文件、`docs/STATUS.md` 同步；用户可见文案中英双语。
+
+Android 能力类功能额外接线：Manifest 权限/组件（service、intent-filter、queries、uses-feature）→ `AppGraph` 装配（插件/工具/StateFlow）→ 设置页入口与运行时权限申请 → 工具 execute 内二次校验 → `docs/ANDROID_CAPABILITIES.md` 记录权限与平台限制 → 真机验收（部分能力需手动开启系统开关）。
 
 ## root 扩展
 

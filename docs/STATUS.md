@@ -1,5 +1,40 @@
 # Status
 
+## Done: 运行状态对账、每会话模型、交付/工坊升级与 Android 能力
+
+**会话与模型**
+
+- 修复“后台唤醒/锁屏断网重试结束后 UI 仍显示运行中、需要手动停止”：runtime 新增 `activeRuns` StateFlow 作为运行态真相；事件缓冲溢出时结构事件用挂起 emit 兜底；ChatViewModel 在 busy→idle、回前台、无活动 run 的 stop、打开会话快照落地后二次对账（history + sessionModel 重建并清 streaming/sending）；reducer 在终态 runId 不匹配时终结最后一条 streaming 消息
+- 模型/思考改为会话级：打开会话从 JSONL 的 `model_change`/`thinking_level_change` 恢复，切换只影响当前会话并同时成为新会话默认值；设置页厂商详情删除模型列表与“设为当前”，只保留 API Key/OAuth 配置
+- 思考计时改为本地化 h/m/s（`1h 2m 3s` / `1 小时 2 分 3 秒`，省略高位零单位）
+
+**交付与工坊**
+
+- `present` v2：显式 `items` 支持 `file`/`image`/`html`/`creative`；聊天里图片内联预览并全屏、HTML 内联 WebView 渲染并全屏、文件行卡、创意入口卡；`creative` 从工坊清单查询；旧 `files` 输出兼容，坏项逐条丢弃
+- 工坊入口卡不再由 `workshop_load` 自动贴出：新输出带 `delivery:"present"` 标记，模型需显式 `present` 创意；旧历史卡片保留
+- 页面 Agent 改为事件流：最终 `Promise<string>` 不变，新增可选 `onEvent`（run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error）；native 40ms 合批、终态前 flush；180s 超时/失败会发 `run_error` 并 reject，不再永久 pending；maxTurns 中止 `truncated`；工坊页面 Agent 工具目录过滤 `read_sms`/`gui_*`
+- workshop 技能文档补齐事件流用法，删除“单文件/单页优先”“只返回最终文本”等旧建议，不新增文件数建议
+
+**技能**
+
+- 打开技能页/回前台/每轮 RunFinished 后自动把 `files/agent/skills`、home 与各工作区 `.pi/skills` 中合法且仓库缺失的技能复制进仓库；插件标记跳过、幂等；技能页监听 `changes` 自动刷新
+- PRoot 固定挂载 `/skills`→`files/agent/skills`、`/skill-repo`→`files/skills`，Agent 可直接 bash 读写；系统提示的 `environment` 写明路径与生效时机
+
+**Android 能力**
+
+- GUI 操作官方插件（id `gui`）：App 内 `AccessibilityService` + `gui_observe/tap/set_text/scroll/global/wait` + `deepdeep-gui` 技能；服务需用户手动开启，插件状态与工具错误提示明确
+- 语音助手：composer 麦克风 + `ACTION_ASSIST` 入口；系统 `SpeechRecognizer` 转写（权限/错误完整映射）、系统 TTS 朗读回答、可申请 `ROLE_ASSISTANT`；设置页语音开关与状态；自动朗读只在语音面板内生效
+- 接收分享：`ACTION_SEND`/`ACTION_SEND_MULTIPLE` 冷/热启动插入当前（冷启动最近）会话附件或预填文本；先复制到 cache 防授权过期；生成中排队；自身分享 chooser 排除自己
+- 读取短信：设置「读取短信」开关 + `READ_SMS` 运行时权限 + 只读 `read_sms` 工具（limit/box/address/since，正文截断 2000 字）；只注册给聊天会话，工坊页面不可见；隐私页补充说明
+- 新增 `docs/ANDROID_CAPABILITIES.md`：已实现能力的权限/边界 + 闹钟/日历/待办/提醒接口调研与落地建议
+
+**验证**
+
+- 687 unit tests green（runtime 286 / app 380 / shell 21），lint 0 errors，模块边界与 debug 构建通过
+- 真机（Redmi / Android 13）验证：技能自动入库、Android 能力设置组、短信权限与 `read_sms` 工具、分享冷/热启动、GUI 插件连接与 observe/global、ASSIST 语音面板、present 图片/HTML/文件/创意、思考计时 1m 级、长任务锁屏返回无残留运行态
+- 已知平台限制：MIUI 对非默认短信应用只暴露部分短信记录；无障碍服务需手动开启；部分 OEM 的助手角色/识别服务可能不可用
+- 证据：`artifacts/validation/round32/`
+
 ## Done: 会话 system prompt 去重与内联技能
 
 - 修掉每轮对话都往 JSONL 追加 system 消息的 bug：根因是 `environment` section 带微秒级当前时间，每次 diff 都变化；现改为日期 + 时区（同一天内稳定），并把环境/偏好/插件/共享目录等动态 section 作为 `initialSystemPromptSections` 写进会话首条 system 快照，不再每轮补一次

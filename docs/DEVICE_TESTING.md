@@ -152,5 +152,19 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 105. 页面 Agent 模型选择：页面用 `models()` 渲染 provider/model 选择（如 deepseek/deepseek-flash 与 opencode-go/deepseek-v4.1-flash），选择后 run 生效；provider/model 不合法时返回错误，不会使用其他模型。
 106. 回归：聊天流式/停止、技能页、MCP 启停热更新、导航转场与返回不受影响；`adb logcat -s DeepDeepWorkshop DeepDeepRuntime` 无 `NetworkOnMainThreadException`、无重复 WebView 销毁异常、无 agent 取消导致的崩溃。
 107. 技能包安装：`files/skills/workshop/` 与 `files/agent/skills/workshop/` 下同时存在 `SKILL.md`、`references/`（api-reference/tutorial/design-checklist）、`examples/`（4 个 html）；技能页 workshop 可见；普通会话加载 `/skill:workshop` 后 Agent 能 read `references/tutorial.md` 和 `examples/02-agent-workbench.html`。
+108. 运行状态收敛：发送长任务后锁屏/切后台，恢复网络或等到后台任务唤醒结束，回到 App；模型已有最终回答时 UI 必须同步结束（无 working 指示、无转圈），不需要点停止。再测断网重试失败：失败轮/错误文案出现后 working 立即结束；回前台/切回会话自动对账。连续 3 次通过；`adb logcat -s DeepDeepRuntime` 无异常。
+109. 会话独立模型：会话 A 选模型 X 发送一轮；切到会话 B 选模型 Y；回到 A，composer 显示 X 且下一轮请求实际用 X（厂商/模型正确）；B 显示 Y；重启 App 后各自保持。设置 → 厂商详情只剩 API Key/OAuth/配置状态，没有模型列表与「设为当前」；设置首页账号行只显示“新会话默认模型”。
+110. 思考计时：长任务运行中状态行显示 `1h 2m 3s` 风格（中文为“1 小时 2 分 3 秒”），满分钟/满小时后高位正确；后台返回、切换会话后继续累计，不重置为 0 或倒退。
+111. 交付 v2：模型调用 `present` 交付图片 → 聊天内出现缩略图，点开全屏可看；交付 html → 卡片内 WebView 直接渲染（可交互），点开放大全屏，外链走浏览器；交付文件 → 文件卡可打开/分享；交付创意 → 出现入口卡，点击进入工坊；旧会话里只有 `{"files":[...]}` 的历史仍正常显示；`workshop_load` 新运行不再自动贴入口卡（需显式 present）。
+112. 页面 Agent 事件流：创意页调用 `app.agent.run({prompt, onEvent})`，页面能实时显示文本增量/工具开始结束，最终 `await` 仍得到完整文本；超时（180s）或取消时收到 `run_error`/Promise reject，不永久 loading；技能文档不再出现“单文件优先/单页优先”建议，事件流写法已更新。
+113. 技能自发现：在 bash 里 `mkdir -p /skills/foo && cat > /skills/foo/SKILL.md`（带 name/description），或在会话里用 write 写 `files/agent/skills/foo/SKILL.md`；打开技能页能看到 foo（已全局启用），可启停/删除；新会话的系统提示/`/` 面板能看到 foo；写入 `/skill-repo` 的技能也能在技能页看到但默认不启用。
+114. 无障碍 GUI：安装并启用「GUI 操作」插件（插件页状态未连接→打开无障碍设置→手动开启 DeepDeep 服务→回 App 变已连接；Android 13 受限设置需先允许）；让 Agent「先观察当前屏幕，点网络，返回」：工具返回精简节点树、tap/global 生效；scroll/set_text/wait 正常；关闭服务后工具返回明确错误；Agent 不点系统权限弹窗。
+115. 语音助手：设置里申请系统助手角色成功；锁屏/桌面长按助手手势或 `adb shell am start -a android.intent.action.ASSIST` 打开语音 sheet；中文/英文各说一句，partial 更新、定稿后按设置填入或直发；回答完成后按设置自动朗读，可停止；首次麦克风权限允许/拒绝/永久拒绝均有正确提示；无识别服务/飞行模式有本地化错误。
+116. 接收分享：从文件管理器与微信分别分享一张图片、一个文件、一段文本到 DeepDeep；冷启动（先杀进程）与热启动都进入聊天，图片/文件出现在附件 chips、文本预填输入框；生成中分享会等待而不是静默丢弃；超过 20 个/25MB 有提示；从 DeepDeep 自己分享时 chooser 不出现 DeepDeep。
+117. 读取短信：设置 → Android 能力 → 读取短信：首次点击请求 READ_SMS，允许后开关开启；让 Agent 读取最近 5 条收件箱短信，返回地址/时间/正文（截断）且不写入/发送；关闭开关或撤销权限后工具报“未开启/无权限”；隐私页能看到短信说明。
+118. 原功能回归：聊天流式/停止/重试/自动重试/压缩/目标/后台任务、技能安装与 `/skill:`、MCP 启停热更新、官方插件安装启停、创意工坊创建/数据工具/页面 Agent、定时任务投递、分享文件打开均正常；无崩溃、无 ANR。
+119. 稳定性与外观：中英切换、深浅色、字体切换下新增界面正常；快速切会话/前后台切换 10 次无卡死；`adb logcat` 无 `NetworkOnMainThreadException`、无未捕获异常。
 
 证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7），`v5_*.txt`（页面 Agent models/capabilities/PONG/并行/systemPrompt/校验错误）；技能包文件清单见 `v6_skill_package.txt`。
+
+本轮证据（`artifacts/validation/round32/`）：`d2_skills.png`/`d3_skills_sync.png`（仓库副本删除后由全局技能目录自动回填）、`d4_settings.png`/`d5_settings_capabilities.png`（设置账号行与新 Android 能力组）、`d6_sms_permission.png`/`d7_sms_tool.png`（短信权限与 `read_sms` 工具执行）、`d8_share_cold.png`/`d9_share_text.png`（冷启动图片分享插入附件、热启动文本预填）、`d10_plugins.png`/`d11_gui_plugin.png`/`d12_gui_detail.png`/`d13_gui_home.png`（GUI 插件安装、无障碍已连接、observe/global 执行）、`d14_voice_sheet.png`（ASSIST 打开语音面板）、`d15_present.png`/`d16_present_file_creative.png`（present HTML/图片内联、文件卡与创意卡）、`d17_timer_5s.png`/`d21_timer_68s.png`/`d20_runstate_after.png`（计时 5s/1m 2s，长任务锁屏返回后无残留运行态、终态 DONE 保留）、`d22_model_switch.png`/`d24_one_session.png`（会话级模型切换与切回保持）、`d25_stream_page.png`~`d29_stream_events_done.png`（页面 Agent 事件流：run_start/thinking_delta/text_delta/turn_end/run_end，最终文本正常）、`android-capability-survey.md`（系统闹钟/日历/待办调研底稿）。
