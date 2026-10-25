@@ -318,21 +318,30 @@ private fun AssistantTurn(
     }
     val answer = message.text.trim().ifBlank { streamingAnswer.trim() }
     val excludedStepId = if (message.text.isBlank() && streamingAnswer.isNotBlank()) trailingText?.id else null
-    val liveQuestions = pendingQuestions.associateBy { it.toolCallId }
-    val liveAsk = message.steps.filterIsInstance<AssistantStep.Tool>()
-        .map { it.trace }
-        .filter { it.name == "ask_user_question" }
-        .mapNotNull { trace -> liveQuestions[trace.toolCallId] }
-        .firstOrNull()
-    val presentedItems = message.steps.filterIsInstance<AssistantStep.Tool>()
-        .map { it.trace }
-        .filter { it.name == "present" }
-        .flatMap { trace -> parsePresentedItems(trace).orEmpty() }
-        .distinctBy { "${it.type}:${it.path ?: it.id}" }
-    val workshopApps = message.steps.filterIsInstance<AssistantStep.Tool>()
-        .map { it.trace }
-        .mapNotNull { trace -> parseRegisteredWorkshop(trace) }
-        .distinctBy { it.id }
+    val toolSteps = message.steps.filterIsInstance<AssistantStep.Tool>()
+    val liveAsk = remember(toolSteps, pendingQuestions) {
+        val liveQuestions = pendingQuestions.associateBy { it.toolCallId }
+        toolSteps.asSequence()
+            .map { it.trace }
+            .filter { it.name == "ask_user_question" }
+            .mapNotNull { trace -> liveQuestions[trace.toolCallId] }
+            .firstOrNull()
+    }
+    val presentedItems = remember(toolSteps) {
+        toolSteps.asSequence()
+            .map { it.trace }
+            .filter { it.name == "present" }
+            .flatMap { trace -> parsePresentedItems(trace).orEmpty().asSequence() }
+            .distinctBy { "${it.type}:${it.path ?: it.id}" }
+            .toList()
+    }
+    val workshopApps = remember(toolSteps) {
+        toolSteps.asSequence()
+            .map { it.trace }
+            .mapNotNull { trace -> parseRegisteredWorkshop(trace) }
+            .distinctBy { it.id }
+            .toList()
+    }
     Column(Modifier.fillMaxWidth()) {
         val hasVisibleProcess = message.steps.any { it.id != excludedStepId }
         if (hasVisibleProcess) {

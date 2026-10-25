@@ -201,6 +201,8 @@ fun ChatScreen(
     var composerHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
+    val messages = state.messages
+    val stablePendingQuestions = remember(pendingQuestions) { pendingQuestions }
     val thinkingLevels = remember(state.models, state.modelId) {
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
     }
@@ -299,7 +301,7 @@ fun ChatScreen(
                         strokeWidth = 2.dp,
                     )
                 }
-            } else if (state.messages.isEmpty()) {
+            } else if (messages.isEmpty()) {
                 EmptyState(
                     loaded = state.historyLoaded,
                     nickname = nickname,
@@ -312,7 +314,7 @@ fun ChatScreen(
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    items(state.messages, key = { it.id }) { message ->
+                    items(messages, key = { it.id }) { message ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                             Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
                                 ChatTurn(
@@ -325,7 +327,7 @@ fun ChatScreen(
                                     onRetry = onRetry,
                                     attachmentRoot = attachmentRoot,
                                     autoCollapseProcess = autoCollapseProcess,
-                                    pendingQuestions = pendingQuestions,
+                                    pendingQuestions = stablePendingQuestions,
                                     onAnswerQuestion = onAnswerQuestion,
                                     onOpenPresentFile = onOpenPresentFile,
                                     onSharePresentFile = onSharePresentFile,
@@ -334,9 +336,9 @@ fun ChatScreen(
                             }
                         }
                     }
-                    pendingQuestions
+                    stablePendingQuestions
                         .firstOrNull { pending ->
-                            state.messages.none { message ->
+                            messages.none { message ->
                                 message.steps.any { step ->
                                     step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
                                 }

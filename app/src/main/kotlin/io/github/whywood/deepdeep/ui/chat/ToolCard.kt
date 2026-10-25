@@ -22,12 +22,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -55,7 +54,7 @@ internal fun ToolCard(
     titleOverride: String? = null,
 ) {
     val colors = deepDeepColors()
-    val rotation by animateFloatAsState(
+    val rotation = animateFloatAsState(
         targetValue = if (tool.expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "tool-chevron",
@@ -134,7 +133,7 @@ internal fun ToolCard(
             Spacer(Modifier.width(4.dp))
             DdIcon(
                 icon = DdIcons.ChevronDown,
-                modifier = Modifier.rotate(rotation),
+                modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 12.dp,
             )

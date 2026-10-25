@@ -352,9 +352,10 @@ fun DeepDeepTheme(
     val colors = if (dark) Dark else Light
     DdFonts.apply(fontStyle)
     val typography = remember(fontStyle) { deepDeepTypography() }
+    val colorScheme = remember(dark) { colors.materialScheme() }
     CompositionLocalProvider(LocalDeepDeepColors provides colors) {
         MaterialTheme(
-            colorScheme = colors.materialScheme(),
+            colorScheme = colorScheme,
             typography = typography,
             shapes = DeepDeepShapes,
             content = content,

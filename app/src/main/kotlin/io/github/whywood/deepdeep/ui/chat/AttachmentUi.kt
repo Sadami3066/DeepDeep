@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.chat
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -523,7 +524,29 @@ private fun isMarkdownAttachment(attachment: AttachmentRef): Boolean {
 
 private fun decodePreviewBitmap(file: File): Bitmap? = decodeBitmap(file, PreviewBitmapLimit)
 
-private fun decodeThumbnailBitmap(file: File): Bitmap? = decodeBitmap(file, ThumbnailBitmapLimit)
+private fun decodeThumbnailBitmap(file: File): Bitmap? {
+    AttachmentThumbnails.get(file)?.let { return it }
+    val bitmap = decodeBitmap(file, ThumbnailBitmapLimit) ?: return null
+    AttachmentThumbnails.put(file, bitmap)
+    return bitmap
+}
+
+private const val ThumbnailCacheBytes = 8 * 1024 * 1024
+
+private object AttachmentThumbnails {
+    private val memory = object : LruCache<String, Bitmap>(ThumbnailCacheBytes) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
+
+    fun get(file: File): Bitmap? = memory.get(key(file))
+
+    fun put(file: File, bitmap: Bitmap) {
+        memory.put(key(file), bitmap)
+    }
+
+    private fun key(file: File): String =
+        "${file.absolutePath}:${file.length()}:${file.lastModified()}"
+}
 
 private fun decodeBitmap(file: File, limit: Int): Bitmap? {
     if (!file.isFile) return null

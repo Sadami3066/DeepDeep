@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -27,7 +26,7 @@ fun DdSpinner(
     strokeWidth: Dp = 1.5.dp,
 ) {
     val transition = rememberInfiniteTransition(label = "dd-spinner")
-    val angle by transition.animateFloat(
+    val angle = transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
@@ -42,7 +41,7 @@ fun DdSpinner(
         val arcSize = Size(this.size.width - stroke.width, this.size.height - stroke.width)
         drawArc(
             color = color,
-            startAngle = angle - 90f,
+            startAngle = angle.value - 90f,
             sweepAngle = 260f,
             useCenter = false,
             topLeft = Offset(inset, inset),

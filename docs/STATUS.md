@@ -14,6 +14,12 @@
 - 设置页移除「语音助手」「GUI 控制」入口；GUI 无障碍设置从「GUI 操作」插件进入，语音从 composer 麦克风或系统助手进入。
 - Composer 语音按钮移到发送按钮左侧。
 
+**性能**
+- 聊天过程/工具/推理卡片的展开箭头改为 `graphicsLayer` 内读动画状态，减少每帧重组；spinner 同理。
+- `present`/`workshop_register`/`ask_user_question` 的解析结果按 tool trace 缓存，避免每次重组重新解析。
+- 附件缩略图增加 8MB LruCache（按路径+大小+修改时间），主题 colorScheme 按深浅色 remember。
+- 以上改动保持布局/动画/交互不变；全量单测、构建与设备测试通过。
+
 **验证**
 - 804 unit tests green（app 497 / runtime 286 / shell 21，0 failures）；androidTest 1/1（日历 Provider CRUD）。
 - lint 0 errors / 152 warnings / 5 hints；`:app:assembleDebug`、模块边界检查通过。

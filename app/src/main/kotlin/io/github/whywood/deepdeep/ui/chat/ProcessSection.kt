@@ -24,12 +24,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -69,7 +70,7 @@ internal fun ProcessSection(
         autoCollapseProcess -> message.streaming && !answerStarted
         else -> true
     }
-    val rotation by animateFloatAsState(
+    val rotation = animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "process-chevron",
@@ -125,7 +126,7 @@ internal fun ProcessSection(
                 Spacer(Modifier.size(2.dp))
                 DdIcon(
                     icon = DdIcons.ChevronDown,
-                    modifier = Modifier.rotate(rotation),
+                    modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                     tint = colors.inkTertiary.copy(alpha = 0.7f),
                     size = 13.dp,
                 )
@@ -158,29 +159,30 @@ internal fun ProcessSection(
                             )
 
                             is AssistantStep.Tool -> {
-                                val deliveredCount = if (step.trace.name == "present") {
-                                    parsePresentedItems(step.trace)?.size
+                                val trace = step.trace
+                                val deliveredCount = if (trace.name == "present") {
+                                    remember(trace) { parsePresentedItems(trace)?.size }
                                 } else {
                                     null
                                 }
                                 ToolCard(
-                                    tool = step.trace,
-                                    onToggle = { onToggleStep(step.trace.id) },
+                                    tool = trace,
+                                    onToggle = { onToggleStep(trace.id) },
                                     onCopyOutput = onCopyOutput,
                                     titleOverride = deliveredCount?.let { count ->
                                         stringResource(R.string.present_tool_delivered, count)
                                     },
                                 )
-                                val record = if (step.trace.status == ToolActivityStatus.DONE) {
-                                    parseQuestionRecord(step.trace)
+                                val record = if (trace.status == ToolActivityStatus.DONE) {
+                                    remember(trace) { parseQuestionRecord(trace) }
                                 } else {
                                     null
                                 }
                                 if (record != null) {
-                                    key(step.trace.toolCallId) {
+                                    key(trace.toolCallId) {
                                         AnsweredAskCard(
                                             record = record,
-                                            toolCallId = step.trace.toolCallId,
+                                            toolCallId = trace.toolCallId,
                                         )
                                     }
                                 }

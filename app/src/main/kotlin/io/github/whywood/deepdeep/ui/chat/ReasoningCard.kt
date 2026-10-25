@@ -19,11 +19,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -48,7 +47,7 @@ internal fun ReasoningCard(
 ) {
     val colors = deepDeepColors()
     val expanded = step.expanded
-    val rotation by animateFloatAsState(
+    val rotation = animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "reasoning-chevron",
@@ -92,7 +91,7 @@ internal fun ReasoningCard(
             Spacer(Modifier.size(2.dp))
             DdIcon(
                 icon = DdIcons.ChevronDown,
-                modifier = Modifier.rotate(rotation),
+                modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 12.dp,
             )
