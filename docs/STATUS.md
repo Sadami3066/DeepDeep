@@ -18,7 +18,7 @@
 - 聊天过程/工具/推理卡片的展开箭头改为 `graphicsLayer` 内读动画状态，减少每帧重组；spinner 同理。
 - `present`/`workshop_register`/`ask_user_question` 的解析结果按 tool trace 缓存，避免每次重组重新解析。
 - 附件缩略图增加 8MB LruCache（按路径+大小+修改时间），主题 colorScheme 按深浅色 remember。
-- 以上改动保持布局/动画/交互不变；全量单测、构建与设备测试通过。
+- 以上改动保持布局/动画/交互不变；真机 8 次按键 `Compose:recompose` 段 22–24 → 8（每键约 3 次 → 1 次）；全量单测、构建与设备 smoke 通过。
 
 **验证**
 - 804 unit tests green（app 497 / runtime 286 / shell 21，0 failures）；androidTest 1/1（日历 Provider CRUD）。

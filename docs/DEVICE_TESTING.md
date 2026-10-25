@@ -187,6 +187,7 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 132. 设置页：不再显示「语音助手」「GUI 控制」；GUI 权限从「GUI 操作」插件详情页进入，语音从 composer 麦克风/系统助手进入。
 133. Composer：语音圆形按钮位于发送按钮左侧，附件与模型 chip 在左侧；运行中停止按钮仍为红色圆点；发送/停止、键盘、附件不受影响。
 134. 回归：插件列表/详情、安排日历工具、小米云开关、设置页滚动、聊天输入与发送均正常；无崩溃。
+135. GUI 性能 smoke：会话内输入/删除文字、键盘 inset 动画、展开 Process/ToolCard（箭头旋转 180°）、缩略图滚出再滚回；画面/行为与优化前一致，`adb logcat` 无 FATAL EXCEPTION。
 
 本轮证据（`artifacts/validation/round35/`）：`01-composer-voice-left-of-send.png`（语音按钮在发送左侧）、`02-settings-no-voice-gui.png`（设置页无语音助手/GUI 控制）、`03-arrange-detail.png`（安排仅状态/版本/大小，无打开入口、无介绍行）、`04-micloud-switches.png`（7 项开关、笔记/待办各一个、默认 0/7）。androidTest：`:app:assembleDebugAndroidTest` 后 `adb shell am instrument -w io.github.whywood.deepdeep.test/androidx.test.runner.AndroidJUnitRunner`，1 test OK（日历 Provider CRUD）。
 
