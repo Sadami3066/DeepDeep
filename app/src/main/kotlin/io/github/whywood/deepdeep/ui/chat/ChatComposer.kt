@@ -105,6 +105,7 @@ internal fun ChatComposer(
     onRemoveAttachment: (String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenSettings: () -> Unit,
+    onVoiceClick: (() -> Unit)? = null,
     modelsOpen: Boolean = false,
     onModelsOpenChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -264,6 +265,19 @@ internal fun ChatComposer(
                         enabled = !sending,
                     )
                     Spacer(Modifier.width(2.dp))
+                    val voiceClick = onVoiceClick
+                    if (voiceClick != null && !sending) {
+                        DdIconButton(
+                            icon = DdIcons.Mic,
+                            onClick = voiceClick,
+                            contentDescription = stringResource(R.string.voice_open),
+                            modifier = Modifier.testTag("assistant_voice"),
+                            size = 38.dp,
+                            iconSize = 18.dp,
+                            tint = colors.inkTertiary,
+                        )
+                        Spacer(Modifier.width(2.dp))
+                    }
                     ComposerChip(
                         text = label,
                         onClick = {

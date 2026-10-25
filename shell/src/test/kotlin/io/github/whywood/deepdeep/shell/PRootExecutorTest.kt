@@ -54,6 +54,29 @@ class PRootExecutorTest {
     }
 
     @Test
+    fun extraBindsAddMountArgumentsAndTargetDirectories() = runBlocking {
+        val skillsHost = File(temp.root, "agent-skills")
+        val repoHost = File(temp.root, "skill-repo")
+        val fixture = fixture(
+            extraBinds = listOf(
+                skillsHost to "/skills",
+                repoHost to "/skill-repo",
+            ),
+        )
+
+        val command = fixture.executor.buildCommand("echo hi")
+
+        assertTrue(command.contains("${skillsHost.absolutePath}:/skills"))
+        assertTrue(command.contains("${repoHost.absolutePath}:/skill-repo"))
+        val result = fixture.executor.execute("echo hi")
+        assertEquals(0, result.exitCode)
+        assertTrue(File(fixture.rootfs, "skills").isDirectory)
+        assertTrue(File(fixture.rootfs, "skill-repo").isDirectory)
+        assertTrue(skillsHost.isDirectory)
+        assertTrue(repoHost.isDirectory)
+    }
+
+    @Test
     fun executeReturnsExitCodeAndMergedOutput() = runBlocking {
         val result = fixture().executor.execute("printf hi; printf err >&2; exit 7")
 
@@ -120,6 +143,7 @@ class PRootExecutorTest {
         maxOutputBytes: Int = 1024,
         pidReader: ((File) -> Long)? = null,
         sharedStorageEnabled: () -> Boolean = { false },
+        extraBinds: List<Pair<File, String>> = emptyList(),
     ): Fixture {
         val rootfs = temp.newFolder("rootfs")
         val workspace = temp.newFolder("workspace")
@@ -142,6 +166,7 @@ class PRootExecutorTest {
                 workspaceDir = workspace,
                 tempDir = tempDir,
                 sharedStorageEnabled = sharedStorageEnabled,
+                extraBinds = extraBinds,
                 maxOutputBytes = maxOutputBytes,
             )
         } else {
@@ -152,6 +177,7 @@ class PRootExecutorTest {
                 workspaceDir = workspace,
                 tempDir = tempDir,
                 sharedStorageEnabled = sharedStorageEnabled,
+                extraBinds = extraBinds,
                 maxOutputBytes = maxOutputBytes,
                 pidReader = pidReader,
             )

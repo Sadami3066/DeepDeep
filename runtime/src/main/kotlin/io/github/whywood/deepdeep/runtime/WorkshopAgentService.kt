@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentEvent
+import dev.pi.ai.TextDeltaEvent
+import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.ai.auth.CredentialStore
 import dev.pi.coding.prompt.Skill
 import dev.pi.coding.prompt.loadSkills
@@ -10,9 +12,14 @@ import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.ShellExecutor
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okio.FileSystem
 import okio.Path.Companion.toPath
 
@@ -22,11 +29,14 @@ private const val DEFAULT_MAX_TURNS = 16
 private const val MAX_TURNS_LIMIT = 64
 private const val MAX_SELECTION_ENTRIES = 100
 private const val RUN_TIMEOUT_MS = 180_000L
+private const val SETTLE_TIMEOUT_MS = 2_000L
 private const val SKILL_FILE = "SKILL.md"
 private const val SKILLS_DIR = "skills"
 private const val WORKSPACE_DIR = "workspace"
 private const val AGENT_DIR = "agent"
 private const val APPEND_SYSTEM_PROMPT_FILE = "APPEND_SYSTEM.md"
+private const val HIDDEN_TOOL_READ_SMS = "read_sms"
+private const val HIDDEN_TOOL_GUI_PREFIX = "gui_"
 
 class WorkshopAgentService(
     private val providers: ProviderCatalog,
@@ -64,7 +74,10 @@ class WorkshopAgentService(
         }
     }
 
-    override suspend fun run(request: WorkshopAgentRequest): String {
+    override suspend fun run(
+        request: WorkshopAgentRequest,
+        onEvent: suspend (WorkshopAgentEvent) -> Unit,
+    ): String {
         validateWorkshopAgentRequest(request)
         val config = resolveWorkshopAgentConfig(
             request = request,
@@ -76,11 +89,27 @@ class WorkshopAgentService(
         val root = createRunDirectory()
         var session: AgentSession? = null
         var unsubscribe: (() -> Unit)? = null
+        val settled = CompletableDeferred<Unit>()
+        val terminal = AtomicBoolean(false)
+        val truncated = AtomicBoolean(false)
+        val sessionError = AtomicReference<String?>(null)
+
+        suspend fun emit(event: WorkshopAgentEvent) {
+            if (event.type == WorkshopAgentEventType.RUN_END || event.type == WorkshopAgentEventType.RUN_ERROR) {
+                if (!terminal.compareAndSet(false, true)) return
+            }
+            onEvent(event)
+        }
+
+        suspend fun awaitSettled() {
+            withTimeoutOrNull(SETTLE_TIMEOUT_MS) { settled.await() }
+        }
+
         try {
             val workspace = File(root, WORKSPACE_DIR).apply { mkdirs() }
             val tempAgentDir = File(root, AGENT_DIR).apply { mkdirs() }
             val engine = createEngine(workspace, tempAgentDir, shellExecutorFor(workspace))
-            val tools = engine.availableTools()
+            val tools = visibleWorkshopAgentTools(engine.availableTools())
             val skills = discoverSkills(workspace)
             val selectedTools = selectWorkshopAgentNames("tool", request.tools, tools.map { it.name })
             val selectedSkills = selectWorkshopAgentNames("skill", request.skills, skills.map { it.name })
@@ -90,8 +119,8 @@ class WorkshopAgentService(
                 targetSkillsRoot = File(tempAgentDir, SKILLS_DIR),
             )
             writeAppendSystemPrompt(tempAgentDir, request.systemPrompt)
-            val toolsFilter: ((CodingTool) -> Boolean)? = selectedTools?.let { names ->
-                { tool: CodingTool -> tool.name in names }
+            val toolsFilter: (CodingTool) -> Boolean = { tool ->
+                workshopAgentToolVisible(tool.name) && (selectedTools == null || tool.name in selectedTools)
             }
             val created = engine.createSession(
                 file = null,
@@ -102,21 +131,64 @@ class WorkshopAgentService(
             )
             session = created
             val turns = AtomicInteger(0)
-            unsubscribe = created.subscribe { event ->
-                val agentEvent = (event as? SessionEvent.AgentEventReceived)?.event
-                if (agentEvent is AgentEvent.TurnEnd && turns.incrementAndGet() >= maxTurns) {
-                    created.abort()
+            unsubscribe = created.subscribe { sessionEvent ->
+                when (sessionEvent) {
+                    is SessionEvent.AgentEventReceived -> {
+                        val agentEvent = sessionEvent.event
+                        if (agentEvent is AgentEvent.TurnEnd && turns.incrementAndGet() >= maxTurns) {
+                            truncated.set(true)
+                            created.abort()
+                        }
+                    }
+
+                    is SessionEvent.SessionError -> sessionError.set(sessionEvent.message)
+                    is SessionEvent.Settled -> settled.complete(Unit)
+                    else -> {}
                 }
+                workshopAgentEventOf(sessionEvent)?.let { event -> emit(event) }
             }
+            emit(WorkshopAgentEvent(type = WorkshopAgentEventType.RUN_START))
             withTimeout(RUN_TIMEOUT_MS) { created.prompt(request.prompt) }
-            return created.getLastAssistantText() ?: throw IllegalStateException("agent returned no text")
+            awaitSettled()
+            sessionError.get()?.let { message -> throw IllegalStateException(message) }
+            val text = created.getLastAssistantText() ?: throw IllegalStateException("agent returned no text")
+            emit(
+                WorkshopAgentEvent(
+                    type = WorkshopAgentEventType.RUN_END,
+                    status = if (truncated.get()) {
+                        WorkshopAgentRunStatus.TRUNCATED
+                    } else {
+                        WorkshopAgentRunStatus.COMPLETED
+                    },
+                    truncated = truncated.get(),
+                ),
+            )
+            return text
+        } catch (error: TimeoutCancellationException) {
+            runCatching { session?.abort() }
+            if (unsubscribe != null) awaitSettled()
+            emit(
+                WorkshopAgentEvent(
+                    type = WorkshopAgentEventType.RUN_ERROR,
+                    code = WorkshopAgentErrorCode.TIMEOUT,
+                    message = "workshop agent timed out after ${RUN_TIMEOUT_MS / 1000} seconds",
+                ),
+            )
+            throw IllegalStateException("workshop agent timed out", error)
         } catch (error: CancellationException) {
             throw error
         } catch (error: IllegalArgumentException) {
             throw error
-        } catch (error: IllegalStateException) {
-            throw error
         } catch (error: Exception) {
+            if (unsubscribe != null) awaitSettled()
+            emit(
+                WorkshopAgentEvent(
+                    type = WorkshopAgentEventType.RUN_ERROR,
+                    code = WorkshopAgentErrorCode.AGENT_FAILED,
+                    message = error.message ?: "workshop agent run failed",
+                ),
+            )
+            if (error is IllegalStateException) throw error
             throw IllegalStateException(error.message ?: "workshop agent run failed", error)
         } finally {
             runCatching { unsubscribe?.invoke() }
@@ -179,7 +251,46 @@ internal fun buildWorkshopAgentModels(
     .sortedWith(compareBy({ it.providerId }, { it.modelId }))
 
 internal fun buildWorkshopAgentTools(tools: List<CodingTool>): List<WorkshopAgentTool> =
-    tools.map { WorkshopAgentTool(it.name, it.description) }.sortedBy { it.name }
+    visibleWorkshopAgentTools(tools).map { WorkshopAgentTool(it.name, it.description) }.sortedBy { it.name }
+
+internal fun visibleWorkshopAgentTools(tools: List<CodingTool>): List<CodingTool> =
+    tools.filter { workshopAgentToolVisible(it.name) }
+
+internal fun workshopAgentToolVisible(name: String): Boolean =
+    name != HIDDEN_TOOL_READ_SMS && !name.startsWith(HIDDEN_TOOL_GUI_PREFIX)
+
+internal fun workshopAgentEventOf(sessionEvent: SessionEvent): WorkshopAgentEvent? = when (sessionEvent) {
+    is SessionEvent.AgentEventReceived -> workshopAgentEventOf(sessionEvent.event)
+    is SessionEvent.SessionError -> WorkshopAgentEvent(
+        type = WorkshopAgentEventType.RUN_ERROR,
+        code = WorkshopAgentErrorCode.AGENT_FAILED,
+        message = sessionEvent.message,
+    )
+    else -> null
+}
+
+internal fun workshopAgentEventOf(event: AgentEvent): WorkshopAgentEvent? = when (event) {
+    is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
+        is TextDeltaEvent -> WorkshopAgentEvent(WorkshopAgentEventType.TEXT_DELTA, text = update.delta)
+        is ThinkingDeltaEvent -> WorkshopAgentEvent(WorkshopAgentEventType.THINKING_DELTA, text = update.delta)
+        else -> null
+    }
+
+    is AgentEvent.ToolExecutionStart -> WorkshopAgentEvent(
+        type = WorkshopAgentEventType.TOOL_START,
+        name = event.toolName,
+    )
+
+    is AgentEvent.ToolExecutionEnd -> WorkshopAgentEvent(
+        type = WorkshopAgentEventType.TOOL_END,
+        name = event.toolName,
+        isError = event.isError,
+        durationMs = event.durationMs,
+    )
+
+    is AgentEvent.TurnEnd -> WorkshopAgentEvent(type = WorkshopAgentEventType.TURN_END)
+    else -> null
+}
 
 internal fun validateWorkshopAgentRequest(request: WorkshopAgentRequest) {
     if (request.prompt.isBlank()) {

@@ -51,6 +51,20 @@ class SkillRepositoryTest {
 
     private fun workspaceProjectFile(): File = File(workspaceDir, ".pi/skills/alpha/SKILL.md")
 
+    private fun agentSkillsDir(): File = File(agentDir, "skills")
+
+    private fun homeSkillsDir(): File = File(homeDir, ".pi/skills")
+
+    private fun workspaceSkillsDir(): File = File(workspaceDir, ".pi/skills")
+
+    private fun writeActiveSkill(root: File, id: String, description: String = "Active skill"): File {
+        val directory = File(root, id)
+        directory.mkdirs()
+        File(directory, "SKILL.md")
+            .writeBytes(SkillTestFixtures.skillMarkdown(name = id, description = description))
+        return directory
+    }
+
     @Test
     fun installWritesRepositoryAndListsSkill() = runTest {
         val result = repository.install(skillZip(), "alpha.zip")
@@ -126,6 +140,97 @@ class SkillRepositoryTest {
         assertFalse(workspaceProjectFile().exists())
         assertTrue(repository.list().isEmpty())
         assertNull(repository.readContent("alpha"))
+    }
+
+    @Test
+    fun syncImportsActiveSkillsFromAgentHomeAndWorkspaces() = runTest {
+        writeActiveSkill(agentSkillsDir(), "agent-skill", "From agent")
+        writeActiveSkill(homeSkillsDir(), "home-skill", "From home")
+        writeActiveSkill(workspaceSkillsDir(), "workspace-skill", "From workspace")
+
+        assertEquals(3, repository.syncActiveSkills())
+
+        val skills = repository.list().associateBy { it.id }
+        assertEquals(setOf("agent-skill", "home-skill", "workspace-skill"), skills.keys)
+        assertTrue(File(repoDir, "agent-skill/SKILL.md").isFile)
+        assertTrue(File(repoDir, "home-skill/SKILL.md").isFile)
+        assertTrue(File(repoDir, "workspace-skill/SKILL.md").isFile)
+        assertTrue(skills.getValue("agent-skill").globalEnabled)
+        assertFalse(skills.getValue("home-skill").globalEnabled)
+        assertEquals(1L, repository.changes.value)
+    }
+
+    @Test
+    fun syncMergesDuplicateIdsAndKeepsFirstSource() = runTest {
+        writeActiveSkill(agentSkillsDir(), "shared", "Agent copy")
+        writeActiveSkill(workspaceSkillsDir(), "shared", "Workspace copy")
+
+        assertEquals(1, repository.syncActiveSkills())
+        assertTrue(File(repoDir, "shared/SKILL.md").readText().contains("Agent copy"))
+        assertEquals("Agent copy", repository.list().single().description)
+        assertEquals(0, repository.syncActiveSkills())
+        assertEquals(1L, repository.changes.value)
+    }
+
+    @Test
+    fun syncSkipsPluginMarkedActiveCopies() = runTest {
+        val pluginSkill = writeActiveSkill(agentSkillsDir(), "deepdeep-feishu", "Plugin skill")
+        File(pluginSkill, ".deepdeep-plugin").writeText("feishu")
+
+        assertEquals(0, repository.syncActiveSkills())
+        assertFalse(File(repoDir, "deepdeep-feishu").exists())
+        assertTrue(repository.list().isEmpty())
+        assertEquals(0L, repository.changes.value)
+    }
+
+    @Test
+    fun syncSkipsInvalidActiveSkills() = runTest {
+        writeActiveSkill(agentSkillsDir(), "valid", "Valid skill")
+        val missingDescription = File(agentSkillsDir(), "missing-description").apply { mkdirs() }
+        File(missingDescription, "SKILL.md").writeBytes(
+            SkillTestFixtures.skillMarkdown(name = "missing-description", description = null),
+        )
+        File(agentSkillsDir(), "missing-skill-md").mkdirs()
+        writeActiveSkill(agentSkillsDir(), "unsafe name", "Unsafe id")
+        writeActiveSkill(agentSkillsDir(), ".hidden", "Hidden")
+
+        assertEquals(1, repository.syncActiveSkills())
+        assertEquals(listOf("valid"), repository.list().map { it.id })
+    }
+
+    @Test
+    fun syncIfChangedImportsOnlyWhenSourcesChange() = runTest {
+        writeActiveSkill(agentSkillsDir(), "first", "First")
+
+        assertEquals(1, repository.syncIfChanged())
+        assertEquals(0, repository.syncIfChanged())
+
+        writeActiveSkill(agentSkillsDir(), "second", "Second")
+
+        assertEquals(1, repository.syncIfChanged())
+        assertEquals(0, repository.syncIfChanged())
+        assertEquals(listOf("first", "second"), repository.list().map { it.id })
+        assertEquals(2L, repository.changes.value)
+    }
+
+    @Test
+    fun changesFlowTracksRepositoryMutations() = runTest {
+        assertEquals(0L, repository.changes.value)
+
+        assertTrue(repository.install(skillZip(), "alpha.zip") is SkillArchiveResult.Success)
+        assertEquals(1L, repository.changes.value)
+
+        assertTrue(repository.setGlobalEnabled("alpha", true))
+        assertEquals(2L, repository.changes.value)
+
+        assertTrue(repository.applyProjectSkills(workspaceDir.absolutePath, setOf("alpha")))
+        assertEquals(3L, repository.changes.value)
+
+        assertFalse(repository.setGlobalEnabled("missing", true))
+        assertEquals(3L, repository.changes.value)
+
+        assertTrue(repository.delete("alpha"))
+        assertEquals(4L, repository.changes.value)
     }
 
     @Test

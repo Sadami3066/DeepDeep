@@ -36,6 +36,10 @@ fun ChatSettingsScreen(
     preferences: UiPreferences,
     onBack: () -> Unit,
     onToggle: (UiToggle, Boolean) -> Unit,
+    voiceAutoSpeak: Boolean = false,
+    onVoiceAutoSpeakChange: (Boolean) -> Unit = {},
+    voiceSendAfterRecognition: Boolean = false,
+    onVoiceSendAfterRecognitionChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -90,6 +94,20 @@ fun ChatSettingsScreen(
                     title = R.string.settings_background_job_wake,
                     checked = preferences.backgroundJobWake,
                     onCheckedChange = { onToggle(UiToggle.BACKGROUND_JOB_WAKE, it) },
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Mic,
+                    title = R.string.voice_setting_send_after_recognition,
+                    checked = voiceSendAfterRecognition,
+                    onCheckedChange = onVoiceSendAfterRecognitionChange,
+                )
+                DdHairline()
+                SwitchRow(
+                    icon = DdIcons.Volume,
+                    title = R.string.voice_setting_auto_speak,
+                    checked = voiceAutoSpeak,
+                    onCheckedChange = onVoiceAutoSpeakChange,
                 )
             }
             Spacer(Modifier.height(40.dp))

@@ -44,7 +44,6 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 fun ProviderListScreen(
     providers: List<ProviderSummary>,
     configuredProviderIds: Set<String>,
-    activeProviderId: String?,
     onBack: () -> Unit,
     onProviderClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -125,7 +124,6 @@ fun ProviderListScreen(
                         ProviderRow(
                             provider = provider,
                             configured = provider.id in configuredProviderIds,
-                            active = provider.id == activeProviderId,
                             onClick = { onProviderClick(provider.id) },
                         )
                         if (index != filtered.lastIndex) DdHairline()
@@ -141,7 +139,6 @@ fun ProviderListScreen(
 private fun ProviderRow(
     provider: ProviderSummary,
     configured: Boolean,
-    active: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -176,7 +173,6 @@ private fun ProviderRow(
                 )
             }
             when {
-                active -> StatusPill(stringResource(R.string.settings_provider_current), active = true)
                 configured -> StatusPill(stringResource(R.string.settings_status_configured), active = false)
             }
             Spacer(Modifier.width(6.dp))

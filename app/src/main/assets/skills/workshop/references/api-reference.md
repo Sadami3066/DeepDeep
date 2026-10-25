@@ -108,7 +108,8 @@ const text = await app.agent.run({
   systemPrompt: "…",            // 可选；本次任务约束
   maxTurns: 8,                  // 可选；1–64，默认 16
   tools: ["web_search"],        // 可选；省略=全部，[]=无工具
-  skills: []                    // 可选；省略=全部，[]=无技能
+  skills: [],                   // 可选；省略=全部，[]=无技能
+  onEvent(event) { … }          // 可选；接收增量事件
 });
 ```
 
@@ -124,7 +125,43 @@ const text = await app.agent.run({
 | `tools` | string[] | 可选；省略=全部可用，空数组=完全不用；名称必须在 `capabilities().tools` 里，≤100 个 |
 | `skills` | string[] | 可选；同上，空数组=不加载技能 |
 
-返回：**最终文本字符串**（`Promise<string>`）。没有流式事件、没有工具调用回调、没有会话历史。
+返回：**最终文本字符串**（`Promise<string>`）。`onEvent` 可选，用于接收增量事件；没有会话历史。
+
+### onEvent 事件
+
+`onEvent(event)` 在运行过程中按发生顺序收到事件，终态事件（`run_end` / `run_error`）一定是最后一个，随后 Promise 才 resolve / reject。
+
+| `event.type` | 额外字段 | 说明 |
+|---|---|---|
+| `run_start` | — | 运行开始 |
+| `text_delta` | `text` | 可见文本增量 |
+| `thinking_delta` | `text` | 思考增量（模型开启 thinking 时） |
+| `tool_start` | `name` | 开始调用工具 |
+| `tool_end` | `name`、`isError`、`durationMs` | 工具调用结束 |
+| `turn_end` | — | 完成一轮 |
+| `run_end` | `status`、`truncated` | 正常结束；`status` 为 `completed` 或 `truncated`（达到 `maxTurns` 被中止） |
+| `run_error` | `code`、`message` | 运行失败；`code` 为 `timeout`（180 秒超时）或 `agent_failed` |
+
+- 增量事件可能被合并成更大的片段，按 `text` 追加，不要假设粒度；`thinking_delta` 只用于可选的过程展示。
+- `run_end` 之后 Promise resolve 为最终文本；`run_error` 之后 Promise reject（`agent_failed`）。
+- 参数错误（`invalid_params`）不会产生事件，直接 reject。
+
+```js
+const output = document.querySelector("#output");
+const status = document.querySelector("#status");
+const text = await app.agent.run({
+  prompt: "调查 2026 年 AI 手机市场，返回 5 条带来源的要点",
+  tools: ["web_search", "web_fetch"],
+  skills: [],
+  onEvent(event) {
+    if (event.type === "run_start") status.textContent = "开始运行…";
+    if (event.type === "text_delta") output.textContent += event.text;
+    if (event.type === "tool_start") status.textContent = `正在调用 ${event.name}…`;
+    if (event.type === "run_end") status.textContent = event.truncated ? "已中止" : "完成";
+  }
+});
+```
+
 
 错误：
 
@@ -139,7 +176,7 @@ const text = await app.agent.run({
 - 每次 `run` 都是独立的一次性 Agent；多个 `run` 之间没有上下文，结果由 JS 传递。
 - 并行：`Promise.all([...])`；串行：`await` 每一步。
 - 页面关闭/返回/WebView 销毁会取消正在运行的所有 Agent；没有后台队列。
-- 每次运行超时 180 秒。
+- 每次运行超时 180 秒；超时前会收到 `run_error`（`code=timeout`），随后 Promise reject。
 - 页面 Agent 当前不启用 MCP。
 - 页面 Agent 可以使用你显式请求的工具/技能；是否请求 App 工具、联网工具由页面作者决定。不要把不必要的用户隐私放进 prompt。
 

@@ -153,6 +153,7 @@ fun ChatScreen(
     onSharePresentFile: (String) -> Unit = {},
     onOpenWorkshop: (String) -> Unit = {},
     onOpenFiles: () -> Unit = {},
+    onVoiceClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -501,6 +502,13 @@ fun ChatScreen(
             onRemoveAttachment = onRemoveAttachment,
             onOpenAttachment = onOpenAttachment,
             onOpenSettings = onOpenSettings,
+            onVoiceClick = onVoiceClick?.let { openVoice ->
+                {
+                    keyboard?.hide()
+                    focusManager.clearFocus()
+                    openVoice()
+                }
+            },
             modelsOpen = modelsOpen,
             onModelsOpenChange = onModelsOpenChange,
             modifier = Modifier

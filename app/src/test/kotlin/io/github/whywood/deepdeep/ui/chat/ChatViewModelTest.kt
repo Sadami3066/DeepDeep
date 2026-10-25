@@ -5,6 +5,7 @@ import android.net.Uri
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
@@ -20,6 +21,7 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -61,10 +64,11 @@ class ChatViewModelTest {
         runtime: FakeRuntime,
         autoRetry: Boolean = false,
         skillExpander: SkillExpander? = null,
+        settings: FakeSettings = FakeSettings(),
     ) = ChatViewModel(
         runtime,
         FakeProviders(),
-        FakeSettings(),
+        settings,
         FakeAttachmentStore(),
         prepareRuntime = {},
         autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
@@ -432,6 +436,120 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun eachConversationKeepsItsOwnModel() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
+            sessionModels = mutableMapOf(
+                "session-a" to SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF),
+                "session-b" to SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF),
+            )
+        }
+        val settings = FakeSettings()
+        val viewModel = viewModel(runtime, settings = settings)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals("model", viewModel.state.value.modelId)
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        assertEquals("model", viewModel.state.value.modelId)
+
+        viewModel.setModel("model-2")
+        advanceUntilIdle()
+        assertEquals("model-2", viewModel.state.value.modelId)
+        assertEquals("model-2", runtime.sessionModels["session-b"]?.modelId)
+        assertEquals("model", runtime.sessionModels["session-a"]?.modelId)
+        assertEquals(ModelConfig("deepseek", "model-2", ThinkingLevel.OFF), settings.saved.last())
+
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals("model", viewModel.state.value.modelId)
+    }
+
+    @Test
+    fun lostTerminalReconcilesAfterBusyDisappears() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.sending)
+
+        runtime.setBusy(setOf(sessionId))
+        advanceUntilIdle()
+        runtime.histories = mapOf(
+            sessionId to listOf(
+                AssistantMessage(1, AssistantRole.USER, "hello"),
+                AssistantMessage(2, AssistantRole.ASSISTANT, "final from history"),
+            ),
+        )
+        runtime.setBusy(emptySet())
+        advanceTimeBy(600L)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.sending)
+        assertEquals("final from history", viewModel.state.value.messages.last().text)
+        assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
+    }
+
+    @Test
+    fun foregroundReconcilesStuckSending() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.sending)
+
+        runtime.histories = mapOf(
+            sessionId to listOf(
+                AssistantMessage(1, AssistantRole.USER, "hello"),
+                AssistantMessage(2, AssistantRole.ASSISTANT, "finished elsewhere"),
+            ),
+        )
+        viewModel.onAppForeground()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.sending)
+        assertEquals("finished elsewhere", viewModel.state.value.messages.last().text)
+    }
+
+    @Test
+    fun stopWithoutActiveRunReconcilesInsteadOfHanging() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.histories = mapOf(
+            sessionId to listOf(AssistantMessage(1, AssistantRole.USER, "hello")),
+        )
+        viewModel.stop()
+        advanceTimeBy(600L)
+        advanceUntilIdle()
+
+        assertEquals(listOf(sessionId), runtime.stopped)
+        assertFalse(viewModel.state.value.sending)
+        assertEquals(1, viewModel.state.value.messages.size)
+    }
+
+    @Test
     fun runErrorMapsInsufficientBalance() {
         val strings = ChatUiStrings.fallback()
         assertEquals(strings.withCode(strings.insufficientBalance, "402"), strings.runError("402 Insufficient Balance"))
@@ -615,15 +733,21 @@ class ChatViewModelTest {
         val runId = "run-1"
         override val events: SharedFlow<SessionRuntimeEvent> = flow
         override val busySessionIds: StateFlow<Set<String>> = busy
+        override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
         var sessions: List<ConversationSummary> = emptyList()
         var histories: Map<String, List<AssistantMessage>> = emptyMap()
-        var activeRuns: Map<String, String> = emptyMap()
+        var sessionModels: MutableMap<String, SessionModelSnapshot> = mutableMapOf()
         val historyCalls = mutableMapOf<String, Int>()
         val openCalls = mutableListOf<String>()
         val sent = mutableListOf<String>()
         val delivered = mutableListOf<Triple<String, String, String?>>()
+        val stopped = mutableListOf<String>()
         private var createdCount = 0
         private val extraProjects = mutableListOf<RuntimeWorkspace>()
+
+        fun setBusy(ids: Set<String>) {
+            busy.value = ids
+        }
 
         override suspend fun start() = Unit
         override suspend fun ensureStarted() = Unit
@@ -672,7 +796,9 @@ class ChatViewModelTest {
             retried += 1
         }
 
-        override fun stop(sessionId: String) = Unit
+        override fun stop(sessionId: String) {
+            stopped += sessionId
+        }
 
         override suspend fun history(sessionId: String): List<AssistantMessage> {
             historyCalls[sessionId] = (historyCalls[sessionId] ?: 0) + 1
@@ -683,7 +809,7 @@ class ChatViewModelTest {
             delivered += Triple(sessionId, text, reminder)
         }
 
-        override suspend fun activeRunId(sessionId: String): String? = activeRuns[sessionId]
+        override suspend fun activeRunId(sessionId: String): String? = activeRuns.value[sessionId]?.runId
 
         override suspend fun sessionTitle(sessionId: String): String? =
             sessions.firstOrNull { it.id == sessionId }?.title
@@ -698,22 +824,58 @@ class ChatViewModelTest {
         override suspend fun setSessionPinned(id: String, pinned: Boolean) = Unit
         override suspend fun setSessionArchived(id: String, archived: Boolean) = Unit
         override suspend fun deleteSession(id: String) = Unit
-        override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) = Unit
-        override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) = Unit
+
+        override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = sessionModels[sessionId]
+
+        override suspend fun setSessionModel(
+            sessionId: String,
+            providerId: String,
+            modelId: String,
+            thinkingLevel: ThinkingLevel,
+        ) {
+            sessionModels[sessionId] = SessionModelSnapshot(providerId, modelId, thinkingLevel)
+        }
+
+        override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) {
+            sessionModels[sessionId]?.let { sessionModels[sessionId] = it.copy(thinkingLevel = thinkingLevel) }
+        }
+
         override suspend fun currentConfig(): ModelConfig = ModelConfig()
 
         suspend fun emitFor(sessionId: String, event: RuntimeEvent) =
             flow.emit(SessionRuntimeEvent(sessionId, event))
     }
 
-    private class FakeProviders : ProviderDirectory {
-        private val option = ModelOption("deepseek", "model", "DeepSeek", listOf(ThinkingLevel.OFF))
-        override val summaries: List<ProviderSummary> = listOf(
-            ProviderSummary("deepseek", "DeepSeek", 1, null, false, true),
-        )
+    private class FakeProviders(
+        private val options: List<ModelOption> = listOf(
+            ModelOption("deepseek", "model", "DeepSeek", listOf(ThinkingLevel.OFF, ThinkingLevel.HIGH)),
+            ModelOption("deepseek", "model-2", "DeepSeek 2", listOf(ThinkingLevel.OFF, ThinkingLevel.HIGH)),
+        ),
+    ) : ProviderDirectory {
+        override val summaries: List<ProviderSummary> = options
+            .map { it.providerId }
+            .distinct()
+            .map { providerId ->
+                ProviderSummary(
+                    id = providerId,
+                    name = providerId,
+                    modelCount = options.count { it.providerId == providerId },
+                    baseUrl = null,
+                    hasOAuth = false,
+                    supportsApiKey = true,
+                )
+            }
+
         override fun summary(providerId: String): ProviderSummary? = summaries.firstOrNull { it.id == providerId }
-        override fun models(providerId: String): List<ModelOption> = listOf(option)
-        override fun resolveConfig(config: ModelConfig): ModelConfig = config.copy(modelId = option.id)
+        override fun models(providerId: String): List<ModelOption> = options.filter { it.providerId == providerId }
+
+        override fun resolveConfig(config: ModelConfig): ModelConfig {
+            val models = models(config.providerId).ifEmpty { options }
+            val model = models.firstOrNull { it.id == config.modelId } ?: models.first()
+            val thinking = config.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
+            return ModelConfig(model.providerId, model.id, thinking)
+        }
+
         override fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model? = null
         override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
     }
@@ -729,9 +891,15 @@ class ChatViewModelTest {
     }
 
     private class FakeSettings : ModelSettings {
-        override val config: Flow<ModelConfig> = MutableStateFlow(ModelConfig())
-        override suspend fun read(): ModelConfig = ModelConfig()
-        override suspend fun save(config: ModelConfig) = Unit
+        private val state = MutableStateFlow(ModelConfig())
+        val saved = mutableListOf<ModelConfig>()
+        override val config: Flow<ModelConfig> = state
+        override suspend fun read(): ModelConfig = state.value
+
+        override suspend fun save(config: ModelConfig) {
+            saved += config
+            state.value = config
+        }
     }
 
     private companion object {

@@ -19,6 +19,8 @@
     <string name="assistant_duration_minutes">%1$dm %2$ds</string>
     <string name="assistant_duration_seconds">%1$ss</string>
     <string name="assistant_elapsed_seconds">%1$ds</string>
+    <string name="assistant_elapsed_minutes_seconds">%1$dm %2$ds</string>
+    <string name="assistant_elapsed_hours_minutes_seconds">%1$dh %2$dm %3$ds</string>
     <string name="assistant_failed">Generation failed</string>
     <string name="assistant_greeting_afternoon">Good afternoon</string>
     <string name="assistant_greeting_evening">Good evening</string>

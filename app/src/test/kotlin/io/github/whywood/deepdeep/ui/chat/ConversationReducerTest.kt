@@ -170,6 +170,108 @@ class ConversationReducerTest {
     }
 
     @Test
+    fun runStartedCreatesPlaceholderWhileSending() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.USER, "hi")),
+            sending = true,
+            activity = strings.thinking,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunStarted("run-9", 4200L), strings)
+        assertEquals(2, reduced.messages.size)
+        val placeholder = reduced.messages.last()
+        assertEquals(AssistantRole.ASSISTANT, placeholder.role)
+        assertEquals("run-9", placeholder.runId)
+        assertTrue(placeholder.streaming)
+        assertEquals(MessageStatus.RUNNING, placeholder.status)
+        assertEquals(4200L, reduced.activityStartedAt)
+        assertTrue(reduced.sending)
+    }
+
+    @Test
+    fun terminalWithDifferentRunIdSettlesStreamingAssistant() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(1, AssistantRole.USER, "hi"),
+                AssistantMessage(
+                    id = 2,
+                    role = AssistantRole.ASSISTANT,
+                    text = "partial",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-known",
+                ),
+            ),
+            sending = true,
+            activity = strings.thinking,
+            activityStartedAt = 1000L,
+        )
+        val reduced = reduce(
+            state,
+            RuntimeEvent.RunFinished("run-other", "final text", RunStatus.DONE, 3000L),
+            strings,
+        )
+        val message = reduced.messages.last()
+        assertEquals("final text", message.text)
+        assertEquals(MessageStatus.DONE, message.status)
+        assertFalse(message.streaming)
+        assertFalse(reduced.sending)
+        assertNull(reduced.activity)
+        assertNull(reduced.activityStartedAt)
+    }
+
+    @Test
+    fun failedTerminalWithDifferentRunIdSettlesStreamingAssistant() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "partial",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-known",
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFailed("run-other", "429 too many"), strings, now = 8000L)
+        val message = reduced.messages.single()
+        assertEquals(MessageStatus.FAILED, message.status)
+        assertFalse(message.streaming)
+        assertEquals(strings.withCode(strings.rateLimited, "429"), message.error)
+        assertFalse(reduced.sending)
+    }
+
+    @Test
+    fun terminalClearsEveryStreamingMessage() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "stale",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-a",
+                ),
+                AssistantMessage(
+                    id = 2,
+                    role = AssistantRole.ASSISTANT,
+                    text = "current",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-b",
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-b", "done", RunStatus.DONE, 1000L), strings)
+        assertTrue(reduced.messages.none { it.streaming })
+        assertEquals(MessageStatus.DONE, reduced.messages[1].status)
+        assertFalse(reduced.sending)
+    }
+
+    @Test
     fun consumeFinalTextDropsTrailingStreamStep() {
         val steps = listOf(AssistantStep.Text(id = 0, text = "hello"))
         assertTrue(consumeFinalText(steps, "hello").isEmpty())

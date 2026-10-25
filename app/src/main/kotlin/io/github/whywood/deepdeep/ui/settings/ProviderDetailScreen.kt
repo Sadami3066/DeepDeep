@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -30,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,31 +37,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdPrimaryButton
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderAuthKind
 import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.ProviderSummary
-import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.launch
 
 @Composable
 fun ProviderDetailScreen(
     provider: ProviderSummary,
-    models: List<ModelOption>,
     configured: Boolean,
-    active: Boolean,
-    activeModelId: String?,
     savedApiKey: String? = null,
     authKind: ProviderAuthKind? = null,
     oauthService: ProviderOAuthService? = null,
@@ -71,7 +60,6 @@ fun ProviderDetailScreen(
     onBack: () -> Unit,
     onSaveApiKey: (String) -> Unit,
     onClearApiKey: () -> Unit,
-    onActivate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -79,15 +67,7 @@ fun ProviderDetailScreen(
     val context = LocalContext.current
     val oauthLoginFailed = stringResource(R.string.settings_oauth_login_failed)
     val oauthSignedIn = authKind == ProviderAuthKind.OAUTH
-    var showModelSheet by remember { mutableStateOf(false) }
     var oauthSession by remember(provider.id) { mutableStateOf<OAuthLoginSession?>(null) }
-    var selectedModelId by remember(provider.id, models) {
-        mutableStateOf(
-            activeModelId?.takeIf { id -> models.any { it.id == id } } ?: models.firstOrNull()?.id,
-        )
-    }
-    val selectedModel = models.firstOrNull { it.id == selectedModelId }
-    val alreadyActive = active && selectedModelId != null && selectedModelId == activeModelId
 
     fun beginOAuthLogin() {
         val service = oauthService ?: return
@@ -156,7 +136,7 @@ fun ProviderDetailScreen(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(20.dp))
-            ProviderOverview(provider = provider, configured = configured, active = active)
+            ProviderOverview(provider = provider, configured = configured)
             Spacer(Modifier.height(28.dp))
             SettingsGroup {
                 val showOAuth = provider.hasOAuth && oauthService != null
@@ -185,45 +165,8 @@ fun ProviderDetailScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(28.dp))
-            SettingsGroup {
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.settings_provider_model),
-                    value = selectedModel?.displayName
-                        ?: stringResource(R.string.settings_provider_no_models),
-                    onClick = if (models.isNotEmpty()) {
-                        { showModelSheet = true }
-                    } else {
-                        null
-                    },
-                    showChevron = models.isNotEmpty(),
-                    modifier = Modifier.testTag("provider_model"),
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            DdPrimaryButton(
-                text = stringResource(
-                    if (alreadyActive) R.string.settings_provider_in_use else R.string.settings_provider_activate,
-                ),
-                onClick = { selectedModelId?.let(onActivate) },
-                modifier = Modifier.fillMaxWidth().testTag("provider_activate"),
-                enabled = selectedModel != null && !alreadyActive,
-            )
             Spacer(Modifier.height(48.dp))
         }
-    }
-
-    if (showModelSheet) {
-        ModelSheet(
-            models = models,
-            selectedModelId = selectedModelId,
-            onSelect = {
-                selectedModelId = it
-                showModelSheet = false
-            },
-            onClose = { showModelSheet = false },
-        )
     }
 
     oauthSession?.let { session ->
@@ -271,7 +214,6 @@ private fun OAuthSection(
 private fun ProviderOverview(
     provider: ProviderSummary,
     configured: Boolean,
-    active: Boolean,
 ) {
     val colors = deepDeepColors()
     Column(
@@ -303,7 +245,6 @@ private fun ProviderOverview(
                 )
             }
             when {
-                active -> StatusPill(stringResource(R.string.settings_provider_current), active = true)
                 configured -> StatusPill(stringResource(R.string.settings_status_configured), active = false)
                 else -> StatusPill(stringResource(R.string.settings_status_unconfigured), active = false)
             }
@@ -405,50 +346,6 @@ private fun ApiKeySection(
                     color = colors.inkTertiary,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ModelSheet(
-    models: List<ModelOption>,
-    selectedModelId: String?,
-    onSelect: (String) -> Unit,
-    onClose: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdSheet(onDismiss = onClose) {
-        DdSheetHeader(stringResource(R.string.settings_provider_models_title), onClose)
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(max = 480.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-        ) {
-            Spacer(Modifier.height(8.dp))
-            models.forEachIndexed { index, model ->
-                val reasoning = model.thinkingLevels.any { it != ThinkingLevel.OFF }
-                DdListRow(
-                    title = model.displayName,
-                    subtitle = model.id,
-                    onClick = { onSelect(model.id) },
-                    trailing = {
-                        if (reasoning) {
-                            StatusPill(
-                                text = stringResource(R.string.settings_provider_reasoning),
-                                active = false,
-                            )
-                        }
-                        if (model.id == selectedModelId) {
-                            Spacer(Modifier.width(8.dp))
-                            DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 20.dp)
-                        }
-                    },
-                )
-                if (index != models.lastIndex) DdHairline()
-            }
-            Spacer(Modifier.height(28.dp))
         }
     }
 }

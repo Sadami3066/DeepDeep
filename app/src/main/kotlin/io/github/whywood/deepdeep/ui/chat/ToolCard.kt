@@ -52,6 +52,7 @@ internal fun ToolCard(
     tool: ToolTrace,
     onToggle: () -> Unit,
     onCopyOutput: (String) -> Unit,
+    titleOverride: String? = null,
 ) {
     val colors = deepDeepColors()
     val rotation by animateFloatAsState(
@@ -62,7 +63,9 @@ internal fun ToolCard(
     val state = stringResource(
         if (tool.expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val preview = remember(tool.arguments) { toolArgsPreview(tool.arguments) }
+    val preview = remember(tool.arguments, titleOverride) {
+        if (titleOverride == null) toolArgsPreview(tool.arguments) else ""
+    }
     val output = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() }
     val duration = tool.durationMs?.takeIf { it > 0L }
     val statusText = when (tool.status) {
@@ -85,9 +88,9 @@ internal fun ToolCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = displayToolName(tool.name),
+                text = titleOverride ?: displayToolName(tool.name),
                 style = DdType.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = if (titleOverride == null) FontFamily.Monospace else FontFamily.Default,
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
                 ),

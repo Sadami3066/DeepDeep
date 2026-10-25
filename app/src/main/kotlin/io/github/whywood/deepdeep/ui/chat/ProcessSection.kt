@@ -158,10 +158,18 @@ internal fun ProcessSection(
                             )
 
                             is AssistantStep.Tool -> {
+                                val deliveredCount = if (step.trace.name == "present") {
+                                    parsePresentedItems(step.trace)?.size
+                                } else {
+                                    null
+                                }
                                 ToolCard(
                                     tool = step.trace,
                                     onToggle = { onToggleStep(step.trace.id) },
                                     onCopyOutput = onCopyOutput,
+                                    titleOverride = deliveredCount?.let { count ->
+                                        stringResource(R.string.present_tool_delivered, count)
+                                    },
                                 )
                                 val record = if (step.trace.status == ToolActivityStatus.DONE) {
                                     parseQuestionRecord(step.trace)

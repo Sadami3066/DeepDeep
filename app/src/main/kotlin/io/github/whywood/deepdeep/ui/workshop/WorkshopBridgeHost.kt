@@ -9,11 +9,30 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import org.json.JSONObject
 
 private const val TAG = "DeepDeepWorkshop"
 const val WORKSHOP_JS_OBJECT = "DeepDeepNative"
 private const val BRIDGE_DISPATCH = "window.__deepdeepBridge.dispatch"
+private const val BRIDGE_DISPATCH_EVENT = "window.__deepdeepBridge.dispatchEvent"
+private const val EVENT_TEXT_DELTA = "text_delta"
+private const val EVENT_THINKING_DELTA = "thinking_delta"
+private const val EVENT_BATCH_MS = 40L
+
+private sealed interface PendingPush {
+    class Event(val payload: String) : PendingPush
+
+    class Delta(val id: Long, val type: String) : PendingPush {
+        val text = StringBuilder()
+    }
+}
 
 class WorkshopBridgeHost(
     private val webView: WebView,
@@ -21,7 +40,16 @@ class WorkshopBridgeHost(
     private val router: WorkshopBridgeRouter,
     private val origin: String,
 ) {
+    @Volatile
     private var attached = false
+
+    private val queueLock = Any()
+    private val pendingPushes = mutableListOf<PendingPush>()
+    private var flushScheduled = false
+
+    private val flushRunnable = Runnable {
+        if (canInject()) flushPending()
+    }
 
     private val listener = WebViewCompat.WebMessageListener { _, message, sourceOrigin, isMainFrame, _ ->
         if (!isMainFrame) return@WebMessageListener
@@ -46,6 +74,10 @@ class WorkshopBridgeHost(
     fun detach() {
         if (!attached) return
         attached = false
+        synchronized(queueLock) {
+            pendingPushes.clear()
+            flushScheduled = false
+        }
         runCatching { WebViewCompat.removeWebMessageListener(webView, WORKSHOP_JS_OBJECT) }
     }
 
@@ -57,15 +89,103 @@ class WorkshopBridgeHost(
     }
 
     private suspend fun handleMessage(raw: String) {
-        val response = try {
-            router.handle(raw) { }
+        try {
+            val response = router.handle(raw) { envelope -> emitEvent(envelope) }
+            dispatchJson(response)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             Log.e(TAG, "Workshop bridge request failed", error)
-            errorEnvelope(requestId(raw), error.message ?: error.javaClass.simpleName)
+            dispatchJson(errorEnvelope(requestId(raw), error.message ?: error.javaClass.simpleName))
         }
-        dispatchJson(response)
+    }
+
+    private fun emitEvent(envelope: JsonObject) {
+        if (!attached) return
+        val id = (envelope["id"] as? JsonPrimitive)?.longOrNull ?: return
+        val event = envelope["event"] as? JsonObject ?: return
+        val type = (event["type"] as? JsonPrimitive)?.contentOrNull ?: return
+        val text = (event["text"] as? JsonPrimitive)?.contentOrNull
+        val isDelta = (type == EVENT_TEXT_DELTA || type == EVENT_THINKING_DELTA) && text != null
+        val scheduled = synchronized(queueLock) {
+            if (isDelta) {
+                val last = pendingPushes.lastOrNull()
+                if (last is PendingPush.Delta && last.id == id && last.type == type) {
+                    last.text.append(text)
+                } else {
+                    pendingPushes.add(PendingPush.Delta(id, type).apply { this.text.append(text) })
+                }
+            } else {
+                pendingPushes.add(PendingPush.Event(envelope.toString()))
+            }
+            if (flushScheduled) {
+                false
+            } else {
+                flushScheduled = true
+                true
+            }
+        }
+        if (scheduled && !webView.postDelayed(flushRunnable, EVENT_BATCH_MS)) {
+            synchronized(queueLock) { flushScheduled = false }
+        }
+    }
+
+    private fun flushPending() {
+        val pushes: List<PendingPush>
+        synchronized(queueLock) {
+            if (pendingPushes.isEmpty()) {
+                flushScheduled = false
+                return
+            }
+            pushes = pendingPushes.toList()
+            pendingPushes.clear()
+            flushScheduled = false
+        }
+        inject(buildPushScript(pushes))
+    }
+
+    private fun dispatchJson(payload: String) {
+        postToPage {
+            flushPending()
+            inject(BRIDGE_DISPATCH + "(" + JSONObject.quote(payload) + ")")
+        }
+    }
+
+    private fun postToPage(block: () -> Unit) {
+        if (!attached) return
+        webView.post {
+            if (!canInject()) return@post
+            runCatching(block).onFailure { error -> Log.e(TAG, "Cannot inject workshop event", error) }
+        }
+    }
+
+    private fun canInject(): Boolean = attached
+
+    private fun inject(script: String) {
+        if (!canInject()) return
+        runCatching { webView.evaluateJavascript(script, null) }
+            .onFailure { error -> Log.e(TAG, "Cannot inject workshop script", error) }
+    }
+
+    private fun buildPushScript(pushes: List<PendingPush>): String = buildString {
+        pushes.forEachIndexed { index, push ->
+            if (index > 0) append(';')
+            val payload = when (push) {
+                is PendingPush.Delta -> buildJsonObject {
+                    put("id", push.id)
+                    putJsonObject("event") {
+                        put("type", push.type)
+                        put("text", push.text.toString())
+                    }
+                }.toString()
+
+                is PendingPush.Event -> push.payload
+            }
+            append(BRIDGE_DISPATCH_EVENT)
+            append('(')
+            append(JSONObject.quote(payload))
+            append(')')
+        }
     }
 
     private fun requestId(raw: String): Long? = runCatching {
@@ -81,10 +201,4 @@ class WorkshopBridgeHost(
             put("message", message)
         })
     }.toString()
-
-    private fun dispatchJson(payload: String) {
-        webView.post {
-            webView.evaluateJavascript(BRIDGE_DISPATCH + "(" + JSONObject.quote(payload) + ")", null)
-        }
-    }
 }

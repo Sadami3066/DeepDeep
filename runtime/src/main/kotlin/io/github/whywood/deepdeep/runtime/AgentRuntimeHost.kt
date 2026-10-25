@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -48,6 +49,7 @@ class AgentRuntimeHost(
     ) {
         var unsubscribe: (() -> Unit)? = null
         var runId: String? = null
+        var runStartedAt: Long = 0
         var stopRequested = false
         var terminalEmitted = false
         var busy = false
@@ -62,6 +64,9 @@ class AgentRuntimeHost(
 
     private val busyState = MutableStateFlow<Set<String>>(emptySet())
     override val busySessionIds: StateFlow<Set<String>> = busyState.asStateFlow()
+
+    private val activeRunState = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
+    override val activeRuns: StateFlow<Map<String, ActiveRunSnapshot>> = activeRunState.asStateFlow()
 
     private val mutex = Mutex()
     private val mcpMutex = Mutex()
@@ -239,6 +244,7 @@ class AgentRuntimeHost(
             handle.busy = false
             if (handle.runId == runId) handle.runId = null
             publishBusy()
+            publishActiveRun(handle)
             emit(handle, RuntimeEvent.ActivityChanged(runId, null))
         }
     }
@@ -275,18 +281,18 @@ class AgentRuntimeHost(
         backgroundScope.launch { runTurn(handle, runId, prompt, setTitle = false) }
     }
 
-    override suspend fun activeRunId(sessionId: String): String? = mutex.withLock {
-        handles[sessionId]?.runId
-    }
+    override suspend fun activeRunId(sessionId: String): String? = activeRunState.value[sessionId]?.runId
 
     private suspend fun beginRun(handle: Handle, source: TurnSource = TurnSource.USER): String {
         val runId = UUID.randomUUID().toString()
         handle.turnSource = source
         handle.runId = runId
+        handle.runStartedAt = System.currentTimeMillis()
         handle.stopRequested = false
         handle.terminalEmitted = false
         handle.busy = true
         publishBusy()
+        publishActiveRun(handle)
         goalDriver?.noteTurn(handle.session.sessionId, source)
         return runId
     }
@@ -324,6 +330,7 @@ class AgentRuntimeHost(
             handle.busy = false
             if (handle.runId == runId) handle.runId = null
             publishBusy()
+            publishActiveRun(handle)
             emit(handle, RuntimeEvent.ActivityChanged(runId, null))
         }
     }
@@ -335,7 +342,7 @@ class AgentRuntimeHost(
         handle.stopRequested = true
         if (!handle.terminalEmitted) {
             handle.terminalEmitted = true
-            emitNow(
+            emit(
                 handle,
                 RuntimeEvent.RunFinished(
                     runId = runId,
@@ -399,26 +406,34 @@ class AgentRuntimeHost(
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) {
-        val config = providers.resolveConfig(ModelConfig(providerId, modelId, thinkingLevel))
-        modelConfigStore.save(config)
-        val model = providers.sdkModel(config.providerId, config.modelId) ?: return
-        val snapshot = mutex.withLock { handles.values.toList() }
-        snapshot.forEach { handle ->
-            if (runCatching { handle.session.setModel(model, config.thinkingLevel.runtimeValue()) }.isSuccess) {
-                emitUsage(handle)
-            }
-        }
+    override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = mutex.withLock {
+        val handle = handles[sessionId] ?: return@withLock null
+        runCatching {
+            SessionModelSnapshot(
+                providerId = handle.session.model.provider,
+                modelId = handle.session.model.id,
+                thinkingLevel = thinkingLevelOf(handle.session.thinkingLevel),
+            )
+        }.getOrNull()
     }
 
-    override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) {
-        val config = modelConfigStore.read()
-        val updated = providers.resolveConfig(config.copy(thinkingLevel = thinkingLevel))
-        modelConfigStore.save(updated)
-        val snapshot = mutex.withLock { handles.values.toList() }
-        snapshot.forEach { handle ->
-            runCatching { handle.session.setThinkingLevel(updated.thinkingLevel.runtimeValue()) }
-        }
+    override suspend fun setSessionModel(
+        sessionId: String,
+        providerId: String,
+        modelId: String,
+        thinkingLevel: ThinkingLevel,
+    ) {
+        val handle = mutex.withLock { handles[sessionId] } ?: return
+        val config = providers.resolveConfig(ModelConfig(providerId, modelId, thinkingLevel))
+        val model = providers.sdkModel(config.providerId, config.modelId)
+            ?: error("Model not found: ${config.providerId}/${config.modelId}")
+        handle.session.setModel(model, config.thinkingLevel.runtimeValue())
+        emitUsage(handle)
+    }
+
+    override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) {
+        val handle = mutex.withLock { handles[sessionId] } ?: return
+        handle.session.setThinkingLevel(thinkingLevel.runtimeValue())
     }
 
     override suspend fun currentConfig(): ModelConfig = modelConfigStore.read()
@@ -513,10 +528,12 @@ class AgentRuntimeHost(
     private suspend fun detach(sessionId: String) {
         val handle = handles.remove(sessionId) ?: return
         handle.busy = false
+        handle.runId = null
         handle.unsubscribe?.invoke()
         handle.unsubscribe = null
         handle.session.close()
         publishBusy()
+        publishActiveRun(handle)
     }
 
     private fun publishBusy() {
@@ -530,11 +547,26 @@ class AgentRuntimeHost(
     }
 
     private fun emit(handle: Handle, event: RuntimeEvent) {
-        emitNow(handle, event)
+        val scoped = SessionRuntimeEvent(handle.session.sessionId, event)
+        if (eventsBuffer.tryEmit(scoped)) return
+        if (event is RuntimeEvent.TextDelta || event is RuntimeEvent.ReasoningDelta) {
+            Log.w(TAG, "drop delta: event buffer full session=${scoped.sessionId} run=${event.runId}")
+            return
+        }
+        Log.w(TAG, "event buffer full, deferring ${event::class.simpleName} session=${scoped.sessionId}")
+        backgroundScope.launch { eventsBuffer.emit(scoped) }
     }
 
-    private fun emitNow(handle: Handle, event: RuntimeEvent) {
-        eventsBuffer.tryEmit(SessionRuntimeEvent(handle.session.sessionId, event))
+    private fun publishActiveRun(handle: Handle) {
+        val sessionId = handle.session.sessionId
+        val runId = handle.runId
+        activeRunState.update { current ->
+            if (runId == null) {
+                current - sessionId
+            } else {
+                current + (sessionId to ActiveRunSnapshot(runId, handle.runStartedAt))
+            }
+        }
     }
 
     private suspend fun finishRun(handle: Handle, runId: String): RunStatus {

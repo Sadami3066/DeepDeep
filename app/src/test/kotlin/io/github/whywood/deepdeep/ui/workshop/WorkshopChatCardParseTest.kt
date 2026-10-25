@@ -34,6 +34,43 @@ class WorkshopChatCardParseTest {
     }
 
     @Test
+    fun deliveryMarkerSuppressesAutoCard() {
+        assertNull(
+            parseRegisteredWorkshop(
+                trace(
+                    output = """
+                        {"ok":true,"delivery":"present","app":{"id":"a","name":"A","icon":"📦","version":"1.0.0"}}
+                    """.trimIndent(),
+                ),
+            ),
+        )
+        assertNull(
+            parseRegisteredWorkshop(
+                trace(
+                    output = """
+                        {"ok":true,"delivery":"present","app":{"id":"a","name":"A"},"next":"deliver with present"}
+                    """.trimIndent(),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun legacyHistoryWithoutDeliveryMarkerStillRenders() {
+        val app = requireNotNull(
+            parseRegisteredWorkshop(
+                trace(
+                    output = """
+                        {"ok":true,"app":{"id":"legacy-board","name":"旧看板","icon":"🗂️","version":"0.9.0"},"path":"/workshop/apps/legacy-board"}
+                    """.trimIndent(),
+                ),
+            ),
+        )
+        assertEquals("legacy-board", app.id)
+        assertEquals("旧看板", app.name)
+    }
+
+    @Test
     fun ignoresOtherToolNames() {
         assertNull(parseRegisteredWorkshop(trace(name = "workshop_list")))
         assertNull(parseRegisteredWorkshop(trace(name = "present")))

@@ -223,7 +223,16 @@
         systemPrompt: "你是资深内容编辑。事实必须可核实；不要编造数据。",
         maxTurns: 12,
         tools: tools,
-        skills: []
+        skills: [],
+        onEvent(event) {
+          if (event.type === "tool_start") {
+            el("status").textContent = "正在使用 " + event.name + "…";
+          } else if (event.type === "text_delta") {
+            el("result").textContent += event.text;
+          } else if (event.type === "run_end") {
+            el("status").textContent = event.truncated ? "已达轮次上限，正在整理…" : "正在整理结果…";
+          }
+        }
       });
       state.draft = text;
       await save();

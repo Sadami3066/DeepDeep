@@ -57,7 +57,7 @@ class WorkshopBridgeRouter(
         }
         val params = paramsElement as? JsonObject ?: JsonObject(emptyMap())
         return try {
-            successResponse(id, dispatch(method, params))
+            successResponse(id, dispatch(method, params, id, emit))
         } catch (error: BridgeException) {
             errorResponse(id, error.code, error.message ?: error.code)
         } catch (error: CancellationException) {
@@ -67,7 +67,12 @@ class WorkshopBridgeRouter(
         }
     }
 
-    private suspend fun dispatch(method: String, params: JsonObject): JsonElement = when (method) {
+    private suspend fun dispatch(
+        method: String,
+        params: JsonObject,
+        id: Long,
+        emit: suspend (JsonObject) -> Unit,
+    ): JsonElement = when (method) {
         "info" -> info()
         "data.get" -> dataGet(params)
         "data.set" -> dataSet(params)
@@ -76,7 +81,7 @@ class WorkshopBridgeRouter(
         "ui.toast" -> showToast(params)
         "agent.models" -> agentModels()
         "agent.capabilities" -> agentCapabilities()
-        "agent.run" -> agentRun(params)
+        "agent.run" -> agentRun(id, params, emit)
         else -> throw BridgeException(WorkshopBridgeErrors.UNKNOWN_METHOD, "Unknown method: $method")
     }
 
@@ -185,7 +190,11 @@ class WorkshopBridgeRouter(
         }
     }
 
-    private suspend fun agentRun(params: JsonObject): JsonElement {
+    private suspend fun agentRun(
+        id: Long,
+        params: JsonObject,
+        emit: suspend (JsonObject) -> Unit,
+    ): JsonElement {
         val gateway = requireAgent()
         val request = WorkshopAgentRequest(
             prompt = promptOf(params),
@@ -197,8 +206,25 @@ class WorkshopBridgeRouter(
             tools = stringListOf(params, "tools"),
             skills = stringListOf(params, "skills"),
         )
-        val text = agentCall { gateway.run(request) }
+        val text = agentCall {
+            gateway.run(request) { event -> emit(eventEnvelope(id, event)) }
+        }
         return buildJsonObject { put("text", text) }
+    }
+
+    private fun eventEnvelope(id: Long, event: WorkshopAgentEvent): JsonObject = buildJsonObject {
+        put("id", id)
+        putJsonObject("event") {
+            put("type", event.type)
+            event.text?.let { put("text", it) }
+            event.name?.let { put("name", it) }
+            event.isError?.let { put("isError", it) }
+            event.durationMs?.let { put("durationMs", it) }
+            event.status?.let { put("status", it) }
+            if (event.type == WorkshopAgentEventType.RUN_END) put("truncated", event.truncated)
+            event.code?.let { put("code", it) }
+            event.message?.let { put("message", it) }
+        }
     }
 
     private fun promptOf(params: JsonObject): String {

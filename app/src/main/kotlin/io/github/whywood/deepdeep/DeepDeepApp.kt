@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,13 +41,16 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.whywood.deepdeep.assistant.AssistantRole
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.PersonalizationUi
+import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.design.DdMotion
@@ -79,6 +85,7 @@ import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
+import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
@@ -92,12 +99,16 @@ import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
 import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.voice.VoiceAssistantSheet
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
+import io.github.whywood.deepdeep.service.GuiAccessibilityState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 internal fun DeepDeepApp(
@@ -106,6 +117,10 @@ internal fun DeepDeepApp(
     fontStyle: DdFontStyle = DdFontStyle.NEWSREADER,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
+    pendingShare: SharePayload? = null,
+    onShareConsumed: () -> Unit = {},
+    openVoiceAssistant: Boolean = false,
+    onOpenVoiceAssistantConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
 ) {
@@ -189,6 +204,12 @@ internal fun DeepDeepApp(
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val configuredProviders = authKinds.keys
+    val defaultModelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = ModelConfig())
+    val defaultProvider = graph.providerCatalog.summary(defaultModelConfig.providerId)
+    val defaultModelLabel = graph.providerCatalog.models(defaultModelConfig.providerId)
+        .firstOrNull { it.id == defaultModelConfig.modelId }
+        ?.displayName
+        ?: defaultModelConfig.modelId
     val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
@@ -197,6 +218,14 @@ internal fun DeepDeepApp(
     )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
     val pluginsState by graph.pluginManager.state.collectAsStateWithLifecycle()
+    val voiceAutoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(initialValue = false)
+    val voiceSendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
+        initialValue = false,
+    )
+    val smsReadEnabled by graph.capabilityPreferences.readSmsEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val guiConnected by GuiAccessibilityState.connected.collectAsStateWithLifecycle()
+    var voiceRoleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
+    var voiceSheetOpen by rememberSaveable { mutableStateOf(false) }
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val presentOpenFailed = stringResource(R.string.present_open_failed)
@@ -260,9 +289,36 @@ internal fun DeepDeepApp(
         animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
         label = "drawer-progress",
     )
-    val activeProvider = graph.providerCatalog.summary(state.providerId)
     val appResources = LocalResources.current
-
+    LifecycleResumeEffect(Unit) {
+        chatViewModel.onAppForeground()
+        GuiAccessibilityState.refresh(context)
+        voiceRoleHeld = AssistantRole.isHeld(context)
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(openVoiceAssistant) {
+        if (!openVoiceAssistant) return@LaunchedEffect
+        voiceSheetOpen = true
+        onOpenVoiceAssistantConsumed()
+    }
+    LaunchedEffect(pendingShare, state.ready, state.historyLoaded, state.sending, state.switchingConversation, state.conversationCwd) {
+        val payload = pendingShare ?: return@LaunchedEffect
+        if (!state.ready || !state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
+        if (state.conversationId == null || state.conversationCwd.isBlank()) return@LaunchedEffect
+        val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
+        staged.files.forEach { stagedFile ->
+            graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
+        }
+        if (payload.text.isNotBlank()) chatViewModel.onInputChange(payload.text)
+        staged.failures.forEach { failure ->
+            Toast.makeText(context, graph.shareStaging.messageFor(failure), Toast.LENGTH_SHORT).show()
+        }
+        if (payload.streams.isEmpty() && payload.text.isBlank()) {
+            Toast.makeText(context, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
+        }
+        navigator.reset(AppDestination.Chat)
+        onShareConsumed()
+    }
     LaunchedEffect(state.ready, state.conversationId, state.conversationCwd) {
         if (state.ready) chatViewModel.refreshAvailableSkills()
     }
@@ -487,6 +543,7 @@ internal fun DeepDeepApp(
                     },
                     onOpenFile = openWorkspaceFile,
                     onOpenFiles = { filesSheetOpen = true },
+                    onVoiceClick = { voiceSheetOpen = true },
                     onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                     onOpenPresentFile = { raw ->
                         val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
@@ -518,7 +575,7 @@ internal fun DeepDeepApp(
                         } else {
                             val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
                             if (intent != null) {
-                                context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+                                context.startActivity(shareChooser(context, intent, shareChooserTitle))
                             } else {
                                 Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
                             }
@@ -532,9 +589,9 @@ internal fun DeepDeepApp(
 
                 AppDestination.Settings -> SettingsScreen(
                     nickname = nickname,
-                    providerName = activeProvider?.name,
-                    modelName = state.modelLabel.takeIf { it.isNotBlank() },
-                    configured = state.providerId in configuredProviders,
+                    providerName = defaultProvider?.name,
+                    modelName = defaultModelLabel,
+                    configured = defaultModelConfig.providerId in configuredProviders,
                     themeMode = theme,
                     linuxState = linuxState,
                     versionName = BuildConfig.VERSION_NAME,
@@ -549,12 +606,29 @@ internal fun DeepDeepApp(
                     onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
                     archivedCount = state.archivedCount,
                     onOpenArchived = { navigator.push(AppDestination.Archived) },
+                    smsReadEnabled = smsReadEnabled,
+                    onSmsReadEnabledChange = { enabled ->
+                        scope.launch { graph.capabilityPreferences.setReadSmsEnabled(enabled) }
+                    },
+                    voiceRoleHeld = voiceRoleHeld,
+                    onRequestVoiceRole = {
+                        val intent = AssistantRole.requestIntent(context) ?: AssistantRole.settingsIntent(context)
+                        runCatching { context.startActivity(intent) }
+                    },
+                    guiConnected = guiConnected,
+                    onOpenGuiSettings = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    },
                 )
 
                 AppDestination.Providers -> ProviderListScreen(
                     providers = graph.providerCatalog.summaries,
                     configuredProviderIds = configuredProviders,
-                    activeProviderId = state.providerId,
                     onBack = ::back,
                     onProviderClick = { id -> navigator.push(AppDestination.ProviderDetail(id)) },
                 )
@@ -610,6 +684,14 @@ internal fun DeepDeepApp(
                     onToggle = { toggle, enabled ->
                         scope.launch { graph.appPreferences.set(toggle, enabled) }
                     },
+                    voiceAutoSpeak = voiceAutoSpeak,
+                    onVoiceAutoSpeakChange = { enabled ->
+                        scope.launch { graph.voicePreferences.setAutoSpeak(enabled) }
+                    },
+                    voiceSendAfterRecognition = voiceSendAfterRecognition,
+                    onVoiceSendAfterRecognitionChange = { enabled ->
+                        scope.launch { graph.voicePreferences.setSendAfterRecognition(enabled) }
+                    },
                 )
 
                 is AppDestination.ProviderDetail -> {
@@ -625,10 +707,7 @@ internal fun DeepDeepApp(
                         }
                         ProviderDetailScreen(
                             provider = provider,
-                            models = graph.providerCatalog.models(provider.id),
                             configured = provider.id in configuredProviders,
-                            active = provider.id == state.providerId,
-                            activeModelId = state.modelId.takeIf { provider.id == state.providerId },
                             savedApiKey = savedApiKey,
                             authKind = authKind,
                             oauthService = graph.providerOAuthService,
@@ -642,12 +721,6 @@ internal fun DeepDeepApp(
                             onClearApiKey = {
                                 scope.launch {
                                     graph.credentials.delete(provider.id)
-                                }
-                            },
-                            onActivate = { modelId ->
-                                scope.launch {
-                                    graph.host.setModel(provider.id, modelId, state.thinkingLevel)
-                                    openChat()
                                 }
                             },
                         )
@@ -893,7 +966,7 @@ internal fun DeepDeepApp(
                 onShare = {
                     val intent = graph.attachmentStore.shareIntent(attachment, root)
                     if (intent != null) {
-                        context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+                        context.startActivity(shareChooser(context, intent, shareChooserTitle))
                     }
                 },
             )
@@ -955,8 +1028,33 @@ internal fun DeepDeepApp(
                 interaction = interaction,
             )
         }
+        if (voiceSheetOpen) {
+            VoiceAssistantSheet(
+                answer = state.messages
+                    .lastOrNull { it.role == io.github.whywood.deepdeep.runtime.AssistantRole.ASSISTANT }
+                    ?.text
+                    .orEmpty(),
+                answerStreaming = state.sending,
+                autoSpeak = voiceAutoSpeak,
+                sendAfterRecognition = voiceSendAfterRecognition,
+                onFill = chatViewModel::onInputChange,
+                onSend = { text ->
+                    chatViewModel.onInputChange(text)
+                    chatViewModel.send()
+                },
+                onDismiss = { voiceSheetOpen = false },
+            )
+        }
     }
     }
 }
+
+private fun shareChooser(context: Context, intent: Intent, title: String): Intent =
+    Intent.createChooser(intent, title).apply {
+        putExtra(
+            Intent.EXTRA_EXCLUDE_COMPONENTS,
+            arrayOf(ComponentName(context.packageName, MainActivity::class.java.name)),
+        )
+    }
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "

@@ -18,7 +18,9 @@
     <string name="assistant_copied">已复制</string>
     <string name="assistant_duration_minutes">%1$dm %2$ds</string>
     <string name="assistant_duration_seconds">%1$ss</string>
-    <string name="assistant_elapsed_seconds">%1$ds</string>
+    <string name="assistant_elapsed_seconds">%1$d 秒</string>
+    <string name="assistant_elapsed_minutes_seconds">%1$d 分 %2$d 秒</string>
+    <string name="assistant_elapsed_hours_minutes_seconds">%1$d 小时 %2$d 分 %3$d 秒</string>
     <string name="assistant_failed">生成失败</string>
     <string name="assistant_greeting_afternoon">下午好</string>
     <string name="assistant_greeting_evening">晚上好</string>

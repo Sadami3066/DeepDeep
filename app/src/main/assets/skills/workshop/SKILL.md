@@ -10,7 +10,7 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 工坊同时提供三层能力：
 
 1. **页面数据**：页面通过 `app.data` 读写自己的 JSON KV；Agent 也可用 `workshop_data_*` 直接更新数据，不用改页面。
-2. **页面驱动 Agent**：页面 JS 用 `app.agent.models/capabilities/run` 编排一次性 Agent（可并行、可串行），只拿最终文本。
+2. **页面驱动 Agent**：页面 JS 用 `app.agent.models/capabilities/run` 编排一次性 Agent（可并行、可串行），拿最终文本，也可用 `onEvent` 接收增量事件。
 3. **页面 UI**：HTML/CSS/JS 全部由你写，移动端优先、深浅色适配、无构建步骤。
 
 ## 什么时候使用
@@ -47,7 +47,7 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 
 - `id` 工具生成，不要改；`name`、`icon`、`description` 可改；`entry` 默认 `index.html`。
 - 目录内只放静态资源；不要放构建产物、node_modules、密钥或用户数据。
-- 单页优先；多页流程用 JS 切换页面 section，不需要真实多 HTML 文件，但入口文件必须存在。
+- 入口文件必须存在（`entry` 默认 `index.html`）；页面结构、文件数量由需求决定。
 
 ## 页面基础能力
 
@@ -89,19 +89,28 @@ const text = await app.agent.run({
   systemPrompt: "你是资深行业分析师，只输出结论和来源。",
   maxTurns: 8,
   tools: ["web_search", "web_fetch"],
-  skills: []
+  skills: [],
+  onEvent(event) {
+    if (event.type === "text_delta") output.textContent += event.text;
+    if (event.type === "tool_start") status.textContent = `正在调用 ${event.name}`;
+  }
 });
 ```
 
-- 每个 Agent 无会话、无历史，只返回最终文本；上下文由 JS 自己传递。
+- `onEvent` 可选：不传时行为不变，只是 `await` 最终文本（`Promise<string>`）。
+- 事件类型：`run_start`、`text_delta`、`thinking_delta`、`tool_start`、`tool_end`、`turn_end`、`run_end`、`run_error`；终态事件一定是最后一个。
+- `run_end` 带 `status`（`completed` / `truncated`）和 `truncated`；`run_error` 带 `code`（`timeout` / `agent_failed`）和 `message`，之后 Promise reject。
+- 增量事件可能合并成更大的片段，按 `text` 追加，不要假设粒度。
+
+- 每个 Agent 无会话、无历史；上下文由 JS 自己传递。
 - 并行用 `Promise.all([...])`；串行用 `await` 后把结果拼进下一步 prompt。
 - `providerId/modelId/thinkingLevel` 来自 `models()`；省略则用当前默认模型。
 - `tools`/`skills` 名称来自 `capabilities()`；**省略 = 全部可用，`[]` = 不用**。
-- `systemPrompt` 是本次任务约束；`maxTurns` 默认 16，范围 1–64，超限会中止。
+- `systemPrompt` 是本次任务约束；`maxTurns` 默认 16，范围 1–64，超限会中止并让 `run_end.truncated=true`。
 - 生命周期绑定页面：页面关闭/返回会取消正在运行的 Agent；没有后台运行。需要结果就在页面里 await 完。
-- 没有流式事件；页面自己显示 loading、错误和最终结果。
+- 进度交给 `onEvent`（文本增量、工具调用）；其他界面状态由页面自己维护。
 - 页面 Agent 当前不启用 MCP。
-- 失败会 reject；用 `try/catch` 展示错误，不要吞掉。
+- 失败会 reject，并在 reject 前收到 `run_error`；用 `try/catch` 展示错误，不要吞掉。
 
 完整 API、限制与错误码：`references/api-reference.md`。
 
@@ -132,7 +141,7 @@ const text = await app.agent.run({
 ## 页面要求
 
 - 移动端优先：`<meta name="viewport" content="width=device-width, initial-scale=1">`，flex/grid，响应式，不做固定桌面宽度。
-- 单文件优先，无构建、相对路径、无外部登录依赖；外部 fetch 必须有失败兜底。
+- 无构建步骤、资源用相对路径、不依赖外部登录；外部 fetch 必须有失败兜底。
 - 深浅色可读：颜色优先用主题变量；必要时 `prefers-color-scheme` 兜底。
 - 交互真实：按钮反馈、空态、错误提示、输入可用；持久化数据走 `app.data`，不要只依赖 localStorage。
 - 控制体积：不引入大库/大字体；图标用 emoji 或内联 SVG。
@@ -157,6 +166,6 @@ const text = await app.agent.run({
 
 - `workshop_load` 成功，入口能打开。
 - 核心交互、空态、错误态可用；深浅色可读；小屏不溢出。
-- 页面 Agent 的模型列表、loading、错误、结果都正常。
+- 页面 Agent 的模型列表、loading、错误、结果都正常；需要时增量事件能驱动进度显示。
 - 页面重开数据还在；不依赖 localStorage 作为唯一数据源。
 - 没有在页面加载时自动调用 Agent。

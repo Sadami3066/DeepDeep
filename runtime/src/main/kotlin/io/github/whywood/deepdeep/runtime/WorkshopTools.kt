@@ -68,6 +68,7 @@ private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
         "The workshop skill in the current context defines the folder format; read it before writing any app file.",
         "Write app files with absolute paths under the returned draft folder using read/write/edit; the workshop folder is outside the bash workspace, so never use bash for it.",
         "Call workshop_load with the draft path when the app is ready, then fix every error it reports.",
+        "After workshop_load succeeds, deliver the app with present using type=creative and the returned app id.",
         "Use workshop_list to locate an existing app when the user wants changes, then edit that app path in place; no reload or register step is needed.",
     ),
     execute = { _, args, signal, _ ->
@@ -102,6 +103,7 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
     promptGuidelines = listOf(
         "Call workshop_load with the exact absolute draft path returned by workshop_create.",
         "Fix the reported error and retry until loading succeeds; the app is not visible to the user before that.",
+        "After workshop_load succeeds, deliver the app with present using type=creative and the app id in the response.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
@@ -109,6 +111,7 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
             val creation = store.loadDraft(args.requiredWorkshopString("path"))
             val result = buildJsonObject {
                 put("ok", true)
+                put("delivery", "present")
                 putJsonObject("app") {
                     put("id", creation.manifest.id)
                     put("name", creation.manifest.name)
@@ -116,6 +119,10 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
                     put("version", creation.manifest.version)
                 }
                 put("path", creation.directory.absolutePath)
+                put(
+                    "next",
+                    "Deliver this app with present: {items:[{type:creative, id:${creation.manifest.id}}]}. Do not restate the app details in your reply.",
+                )
             }
             textResult(result.toString())
         }

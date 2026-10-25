@@ -351,6 +351,108 @@ class WorkshopBridgeTest {
         assertTrue(bridge.emitted.isEmpty())
     }
 
+    @Test
+    fun agentRunStreamsEventsWithRequestId() = runTest {
+        val gateway = FakeGateway().apply {
+            events += listOf(
+                WorkshopAgentEvent(WorkshopAgentEventType.RUN_START),
+                WorkshopAgentEvent(WorkshopAgentEventType.TEXT_DELTA, text = "hel"),
+                WorkshopAgentEvent(WorkshopAgentEventType.THINKING_DELTA, text = "plan"),
+                WorkshopAgentEvent(WorkshopAgentEventType.TOOL_START, name = "web_search"),
+                WorkshopAgentEvent(
+                    WorkshopAgentEventType.TOOL_END,
+                    name = "web_search",
+                    isError = false,
+                    durationMs = 12,
+                ),
+                WorkshopAgentEvent(WorkshopAgentEventType.TURN_END),
+                WorkshopAgentEvent(
+                    WorkshopAgentEventType.RUN_END,
+                    status = WorkshopAgentRunStatus.COMPLETED,
+                    truncated = false,
+                ),
+            )
+        }
+        val bridge = Bridge(gateway)
+        val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hi") })
+
+        assertTrue(response.bool("ok"))
+        assertEquals("final text", response.getValue("result").jsonObject.text("text"))
+        assertEquals(
+            listOf(
+                "run_start",
+                "text_delta",
+                "thinking_delta",
+                "tool_start",
+                "tool_end",
+                "turn_end",
+                "run_end",
+            ),
+            bridge.emitted.map { it.event().text("type") },
+        )
+        assertTrue(bridge.emitted.all { it.number("id") == 1L })
+        assertEquals(setOf("id", "event"), bridge.emitted.first().keys)
+    }
+
+    @Test
+    fun agentRunEventsCarryTheirPayloadFields() = runTest {
+        val gateway = FakeGateway().apply {
+            events += listOf(
+                WorkshopAgentEvent(WorkshopAgentEventType.TEXT_DELTA, text = "hi"),
+                WorkshopAgentEvent(WorkshopAgentEventType.TOOL_END, name = "bash", isError = true, durationMs = 9),
+                WorkshopAgentEvent(
+                    WorkshopAgentEventType.RUN_END,
+                    status = WorkshopAgentRunStatus.TRUNCATED,
+                    truncated = true,
+                ),
+            )
+        }
+        val bridge = Bridge(gateway)
+        bridge.call("agent.run", buildJsonObject { put("prompt", "hi") }, id = 7)
+
+        assertTrue(bridge.emitted.all { it.number("id") == 7L })
+        val delta = bridge.emitted[0].event()
+        assertEquals(setOf("type", "text"), delta.keys)
+        assertEquals("hi", delta.text("text"))
+        val toolEnd = bridge.emitted[1].event()
+        assertEquals("bash", toolEnd.text("name"))
+        assertTrue(toolEnd.getValue("isError").jsonPrimitive.boolean)
+        assertEquals(9L, toolEnd.getValue("durationMs").jsonPrimitive.content.toLong())
+        val runEnd = bridge.emitted[2].event()
+        assertEquals(WorkshopAgentRunStatus.TRUNCATED, runEnd.text("status"))
+        assertTrue(runEnd.getValue("truncated").jsonPrimitive.boolean)
+    }
+
+    @Test
+    fun agentRunForwardsTerminalErrorThenRejects() = runTest {
+        val gateway = FakeGateway().apply {
+            events += WorkshopAgentEvent(
+                WorkshopAgentEventType.RUN_ERROR,
+                code = WorkshopAgentErrorCode.TIMEOUT,
+                message = "workshop agent timed out",
+            )
+            failure = IllegalStateException("workshop agent timed out")
+        }
+        val bridge = Bridge(gateway)
+        val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hi") })
+
+        assertEquals("agent_failed", response.errorCode())
+        val event = bridge.emitted.single().event()
+        assertEquals("run_error", event.text("type"))
+        assertEquals(WorkshopAgentErrorCode.TIMEOUT, event.text("code"))
+        assertEquals("workshop agent timed out", event.text("message"))
+    }
+
+    @Test
+    fun agentRunFailureWithoutTerminalEventStillRejects() = runTest {
+        val gateway = FakeGateway().apply { failure = IllegalStateException("model missing") }
+        val bridge = Bridge(gateway)
+        val response = bridge.call("agent.run", buildJsonObject { put("prompt", "hi") })
+
+        assertEquals("agent_failed", response.errorCode())
+        assertTrue(bridge.emitted.isEmpty())
+    }
+
     private class Bridge(gateway: WorkshopAgentGateway? = null) {
         val data = FakeData()
         val toastMessages = mutableListOf<String>()
@@ -362,9 +464,9 @@ class WorkshopBridgeTest {
             gateway,
         )
 
-        suspend fun call(method: String, params: JsonObject? = null): JsonObject {
+        suspend fun call(method: String, params: JsonObject? = null, id: Long = 1): JsonObject {
             val request = buildJsonObject {
-                put("id", 1)
+                put("id", id)
                 put("method", method)
                 if (params != null) put("params", params)
             }
@@ -380,6 +482,7 @@ class WorkshopBridgeTest {
         var failure: Exception? = null
         var response: String = "final text"
         val requests = mutableListOf<WorkshopAgentRequest>()
+        val events = mutableListOf<WorkshopAgentEvent>()
 
         override suspend fun models(): List<WorkshopAgentModel> {
             failure?.let { throw it }
@@ -401,9 +504,13 @@ class WorkshopBridgeTest {
             )
         }
 
-        override suspend fun run(request: WorkshopAgentRequest): String {
-            failure?.let { throw it }
+        override suspend fun run(
+            request: WorkshopAgentRequest,
+            onEvent: suspend (WorkshopAgentEvent) -> Unit,
+        ): String {
             requests.add(request)
+            events.forEach { onEvent(it) }
+            failure?.let { throw it }
             return response
         }
     }
@@ -439,6 +546,10 @@ class WorkshopBridgeTest {
 private fun JsonObject.bool(field: String): Boolean = getValue(field).jsonPrimitive.boolean
 
 private fun JsonObject.text(field: String): String = getValue(field).jsonPrimitive.content
+
+private fun JsonObject.number(field: String): Long = getValue(field).jsonPrimitive.content.toLong()
+
+private fun JsonObject.event(): JsonObject = getValue("event").jsonObject
 
 private fun JsonObject.errorCode(): String =
     getValue("error").jsonObject.getValue("code").jsonPrimitive.content

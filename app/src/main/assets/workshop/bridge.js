@@ -14,7 +14,7 @@
   var sequence = 0;
   var pending = {};
 
-  function call(method, params) {
+  function call(method, params, onEvent) {
     return new Promise(function (resolve, reject) {
       var native = window.DeepDeepNative;
       if (!native || typeof native.postMessage !== 'function') {
@@ -22,7 +22,11 @@
         return;
       }
       var id = ++sequence;
-      pending[id] = { resolve: resolve, reject: reject };
+      pending[id] = {
+        resolve: resolve,
+        reject: reject,
+        onEvent: typeof onEvent === 'function' ? onEvent : null
+      };
       try {
         native.postMessage(JSON.stringify({ id: id, method: method, params: params || {} }));
       } catch (error) {
@@ -32,16 +36,18 @@
     });
   }
 
+  function parsePayload(payload) {
+    if (typeof payload !== 'string') return payload;
+    try {
+      return JSON.parse(payload);
+    } catch (error) {
+      return null;
+    }
+  }
+
   window.__deepdeepBridge = {
     dispatch: function (payload) {
-      var message = payload;
-      if (typeof payload === 'string') {
-        try {
-          message = JSON.parse(payload);
-        } catch (error) {
-          return;
-        }
-      }
+      var message = parsePayload(payload);
       if (!message || typeof message !== 'object') return;
       if (typeof message.id !== 'number') return;
       var entry = pending[message.id];
@@ -52,6 +58,19 @@
       } else {
         var detail = message.error || {};
         entry.reject(bridgeError(detail.message || detail.code || 'Bridge request failed', detail.code || 'invalid_request'));
+      }
+    },
+    dispatchEvent: function (payload) {
+      var message = parsePayload(payload);
+      if (!message || typeof message !== 'object') return;
+      if (typeof message.id !== 'number') return;
+      var entry = pending[message.id];
+      if (!entry || typeof entry.onEvent !== 'function') return;
+      if (!message.event || typeof message.event !== 'object') return;
+      try {
+        entry.onEvent(message.event);
+      } catch (error) {
+        console.error(error);
       }
     }
   };
@@ -151,7 +170,13 @@
         });
       },
       run: function (options) {
-        return call('agent.run', options || {}).then(function (result) {
+        var source = options || {};
+        var onEvent = typeof source.onEvent === 'function' ? source.onEvent : null;
+        var params = {};
+        Object.keys(source).forEach(function (key) {
+          if (key !== 'onEvent') params[key] = source[key];
+        });
+        return call('agent.run', params, onEvent).then(function (result) {
           return result && typeof result.text === 'string' ? result.text : '';
         });
       }

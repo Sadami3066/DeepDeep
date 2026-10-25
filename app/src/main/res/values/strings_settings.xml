@@ -163,4 +163,11 @@
     <string name="dev_bundle_dev_body">Git、GitHub CLI、GCC、Make 与 CMake</string>
     <string name="settings_background_job_wake">后台任务完成时唤醒</string>
     <string name="settings_oauth_manual_hint">浏览器没有自动返回？也可以手动粘贴授权码或回调链接。</string>
+    <string name="settings_new_chat_model">新会话默认模型</string>
+    <string name="settings_voice_assistant">语音助手</string>
+    <string name="settings_voice_assistant_on">已设为系统助手</string>
+    <string name="settings_voice_assistant_off">未设为系统助手，点击设置</string>
+    <string name="settings_gui_control">GUI 控制</string>
+    <string name="settings_gui_control_on">无障碍服务已开启</string>
+    <string name="settings_gui_control_off">无障碍服务未开启，点击前往设置</string>
 </resources>

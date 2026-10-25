@@ -86,6 +86,13 @@ fun PrivacyScreen(
                 )
                 DdHairline()
                 DdListRow(
+                    icon = DdIcons.Message,
+                    title = stringResource(R.string.privacy_sms_title),
+                    subtitle = stringResource(R.string.privacy_sms_body),
+                    subtitleMaxLines = 5,
+                )
+                DdHairline()
+                DdListRow(
                     icon = DdIcons.Info,
                     title = stringResource(R.string.privacy_uninstall_title),
                     subtitle = stringResource(R.string.privacy_uninstall_body),

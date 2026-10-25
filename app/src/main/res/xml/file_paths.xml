@@ -3,4 +3,5 @@
     <files-path name="home" path="home/" />
     <files-path name="workspace" path="workspace/" />
     <files-path name="workspaces" path="workspaces/" />
+    <cache-path name="share_incoming" path="share-incoming/" />
 </paths>

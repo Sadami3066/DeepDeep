@@ -5,18 +5,22 @@ import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.CapabilityPreferences
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
+import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
+import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
+import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
@@ -45,6 +49,7 @@ import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.goalTools
 import io.github.whywood.deepdeep.runtime.jobTools
 import io.github.whywood.deepdeep.runtime.presentTool
+import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
 import io.github.whywood.deepdeep.runtime.workshopDataTools
 import io.github.whywood.deepdeep.runtime.workshopTools
 import io.github.whywood.deepdeep.runtime.AppToolContext
@@ -66,6 +71,10 @@ import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
+import io.github.whywood.deepdeep.tool.AndroidSmsReader
+import io.github.whywood.deepdeep.tool.hasReadSmsPermission
+import io.github.whywood.deepdeep.tool.readSmsTool
+import io.github.whywood.deepdeep.tool.smsToolErrors
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +111,21 @@ class AppGraph(context: Context) {
     val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
     val appPreferences = AppPreferences(appContext)
+    val voicePreferences = VoicePreferences(appContext)
+    val capabilityPreferences = CapabilityPreferences(appContext)
+    val shareStaging = ShareStaging(appContext)
+    private val smsReadEnabled = MutableStateFlow(false)
+
+    fun skillBinds(): List<Pair<File, String>> = listOf(
+        File(agentDir, "skills") to "/skills",
+        File(appContext.filesDir, "skills") to "/skill-repo",
+    )
+
+    init {
+        scope.launch {
+            capabilityPreferences.readSmsEnabled.collect { enabled -> smsReadEnabled.value = enabled }
+        }
+    }
 
     init {
         scope.launch {
@@ -121,6 +145,7 @@ class AppGraph(context: Context) {
         appContext,
         homeDir,
         sharedStorageEnabled = { sharedStorage.value },
+        extraBinds = skillBinds(),
     )
     private val httpTransport = okHttpTransport()
     val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
@@ -179,6 +204,7 @@ class AppGraph(context: Context) {
                         }
                     },
                 ),
+                GuiPlugin(context = appContext),
             ),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
             skillStore = PluginSkillStore(
@@ -215,7 +241,23 @@ class AppGraph(context: Context) {
                 { _ -> workshopTools(workshopStore) + workshopDataTools(workshopStore) },
                 { binding -> goalTools(binding, goalService) },
                 { binding -> jobTools(binding, jobRegistry) },
-                { binding -> listOf(presentTool { binding.current() }) },
+                { binding -> listOf(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() }) },
+            ),
+        )
+    }
+    private val chatToolContext: AppToolContext by lazy {
+        appToolContext.copy(
+            extraToolFactories = appToolContext.extraToolFactories + listOf(
+                { _ ->
+                    listOf(
+                        readSmsTool(
+                            reader = AndroidSmsReader(appContext.contentResolver),
+                            enabled = { smsReadEnabled.value },
+                            permissionCheck = { hasReadSmsPermission(appContext) },
+                            errors = smsToolErrors(appContext),
+                        ),
+                    )
+                },
             ),
         )
     }
@@ -229,6 +271,7 @@ class AppGraph(context: Context) {
                     appContext,
                     directory,
                     sharedStorageEnabled = { sharedStorage.value },
+                    extraBinds = skillBinds(),
                 )
             }
         }
@@ -268,7 +311,7 @@ class AppGraph(context: Context) {
             personalization = { personalizationStore.read().toRuntime() },
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { pluginManager.promptBody() },
-            toolContext = appToolContext,
+            toolContext = chatToolContext,
         )
     }
 
@@ -299,7 +342,10 @@ class AppGraph(context: Context) {
         scope.launch {
             host.events.collect { event ->
                 when (event.event) {
-                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> pluginManager.refreshIfStale()
+                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
+                        pluginManager.refreshIfStale()
+                        runCatching { skillRepository.syncIfChanged() }
+                    }
                     else -> Unit
                 }
             }

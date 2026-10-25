@@ -1,10 +1,10 @@
 # 教程：从零搭一个多步骤 Agent 工作台
 
-本教程以「公众号工作台」为例：页面 1 填主题/受众，页面 2 选模型，页面 3 看运行结果，页面 4 对结果再处理。所有流程都在一个 `index.html` 里用 section 切换，不依赖后端。
+本教程以「公众号工作台」为例：页面 1 填主题/受众，页面 2 选模型，页面 3 看运行结果，页面 4 对结果再处理。示例用 section 切换，不依赖后端；实际形态按需求决定。
 
 ## 0. 设计页面结构
 
-一个文件、四个 section：
+四个 section：
 
 ```html
 <div class="app">
@@ -18,7 +18,7 @@
 </div>
 ```
 
-用 JS 的 `showStep(n)` 控制 `hidden`；不要做真实多页路由。
+用 JS 的 `showStep(n)` 控制 `hidden`。
 
 ## 1. 先写视觉和表单
 
@@ -137,8 +137,33 @@ async function runDraft() {
 
 - 调查类需要显式请求 `web_search` / `web_fetch`；名称来自 `capabilities()`。
 - 不要用 `tools: "all"` 之类字符串；数组。
-- 结果只有最终文本；没有流式输出，loading 由页面自己画。
+- 需要过程反馈就传 `onEvent`，按事件类型更新状态；不传则只等最终文本。
 - 失败时保留用户输入，不要清空页面。
+
+### 用 onEvent 显示进度
+
+```js
+const text = await app.agent.run({
+  prompt: `主题：${state.topic}\n受众：${state.audience}\n先调查再写 800 字初稿。`,
+  tools: ["web_search", "web_fetch"],
+  skills: [],
+  maxTurns: 12,
+  onEvent(event) {
+    if (event.type === "tool_start") {
+      document.querySelector("#status").textContent = `正在使用 ${event.name}…`;
+    }
+    if (event.type === "text_delta") {
+      document.querySelector("#preview").textContent += event.text;
+    }
+    if (event.type === "run_end") {
+      document.querySelector("#status").textContent = event.truncated ? "已中止" : "正在整理…";
+    }
+  }
+});
+```
+
+- 增量可能被合并成更大的片段，只需追加 `event.text`。
+- 终态事件 `run_end` / `run_error` 一定是最后一个；最终文本仍以 `await` 的结果为准。
 
 ## 5. 页面 4：对结果再处理
 
@@ -224,7 +249,7 @@ const title = await app.agent.run({ prompt: `给这篇稿起 5 个标题：\n${d
 |---|---|---|
 | `agent.models()` 为空 | 没有配置 provider/API Key | 提示用户先配置模型 |
 | `invalid_params: unknown tool` | tools 名字不在 capabilities 里 | 用 `capabilities()` 返回的名称 |
-| 结果不是流式 | 页面 Agent 只返回最终文本 | 用 loading + await，不接事件 |
+| 进度不更新 | 没传 `onEvent` 或没处理对应事件 | 在 `onEvent` 里按 `type` 更新界面 |
 | 关页面后结果没了 | 生命周期绑定 WebView | 运行完再离开，或写 `app.data` |
 | Agent 没网感 | 没请求 web_search/web_fetch | tools 显式加入；系统提示要求来源 |
 | 重复点击开多个 Agent | 按钮没禁用 | 运行时 disable，finally 恢复 |

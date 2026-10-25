@@ -16,6 +16,7 @@ class PRootExecutor(
     private val workspaceDir: File,
     private val tempDir: File,
     private val sharedStorageEnabled: () -> Boolean = { false },
+    private val extraBinds: List<Pair<File, String>> = emptyList(),
     private val maxOutputBytes: Int = 64 * 1024,
     private val pidReader: (File) -> Long = ::readPidFile,
 ) : LinuxExecutor {
@@ -80,6 +81,10 @@ class PRootExecutor(
             add("-b")
             add("/storage/emulated/0:/sdcard")
         }
+        extraBinds.forEach { (host, guest) ->
+            add("-b")
+            add("${host.absolutePath}:$guest")
+        }
         add("-b")
         add("${workspaceDir.absolutePath}:/workspace")
         add("-w")
@@ -102,6 +107,7 @@ class PRootExecutor(
         require(rootfsDir.isDirectory) { "rootfs not installed: $rootfsDir" }
         workspaceDir.mkdirs()
         tempDir.mkdirs()
+        prepareBindDirectories(rootfsDir, extraBinds)
         if (sharedStorageEnabled()) {
             File(rootfsDir, "storage/emulated/0").mkdirs()
             File(rootfsDir, "sdcard").mkdirs()
@@ -285,4 +291,18 @@ private fun readPidFile(pidFile: File): Long {
         Thread.sleep(10)
     }
     return 0
+}
+
+internal fun prepareBindDirectories(rootfsDir: File, binds: List<Pair<File, String>>) {
+    binds.forEach { (host, guest) ->
+        host.mkdirs()
+        guestRelativePath(guest)?.let { relative -> File(rootfsDir, relative).mkdirs() }
+    }
+}
+
+private fun guestRelativePath(guest: String): String? {
+    val relative = guest.trim().trim('/')
+    if (relative.isEmpty()) return null
+    if (relative.split('/').any { it.isEmpty() || it == "." || it == ".." }) return null
+    return relative
 }

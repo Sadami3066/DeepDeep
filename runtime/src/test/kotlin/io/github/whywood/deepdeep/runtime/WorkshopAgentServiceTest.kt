@@ -1,5 +1,13 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.AgentEvent
+import dev.pi.agent.AgentMessage
+import dev.pi.agent.AgentToolResult
+import dev.pi.ai.AssistantMessage
+import dev.pi.ai.StopReason
+import dev.pi.ai.TextDeltaEvent
+import dev.pi.ai.ThinkingDeltaEvent
+import dev.pi.ai.Usage
 import dev.pi.ai.auth.Credential
 import dev.pi.ai.auth.CredentialInfo
 import dev.pi.ai.auth.CredentialStore
@@ -7,6 +15,7 @@ import dev.pi.ai.http.HttpRequest
 import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.prompt.Skill
+import dev.pi.coding.session.SessionEvent
 import dev.pi.coding.tools.CodingTool
 import java.io.File
 import java.nio.file.Files
@@ -319,6 +328,94 @@ class WorkshopAgentServiceTest {
 
         writeAppendSystemPrompt(agentDir, "  Be brief.  ")
         assertEquals("Be brief.", File(agentDir, "APPEND_SYSTEM.md").readText())
+    }
+
+    @Test
+    fun hiddenToolsAreFilteredFromWorkshopCatalog() {
+        val tools = listOf(
+            tool("web_search", "Search the web"),
+            tool("read_sms", "Read SMS"),
+            tool("gui_tap", "Tap"),
+            tool("gui_swipe", "Swipe"),
+        )
+
+        assertEquals(listOf("web_search"), visibleWorkshopAgentTools(tools).map { it.name })
+        assertEquals(listOf("web_search"), buildWorkshopAgentTools(tools).map { it.name })
+        assertFalse(workshopAgentToolVisible("read_sms"))
+        assertFalse(workshopAgentToolVisible("gui_tap"))
+        assertFalse(workshopAgentToolVisible("gui_"))
+        assertTrue(workshopAgentToolVisible("web_search"))
+        assertTrue(workshopAgentToolVisible("read"))
+    }
+
+    @Test
+    fun mapsAgentEventsToWorkshopEvents() {
+        val message = assistantMessage()
+        val agentMessage = agentMessage()
+
+        assertEquals(
+            WorkshopAgentEvent(WorkshopAgentEventType.TEXT_DELTA, text = "hi"),
+            workshopAgentEventOf(AgentEvent.MessageUpdate(agentMessage, TextDeltaEvent(0, "hi", message))),
+        )
+        assertEquals(
+            WorkshopAgentEvent(WorkshopAgentEventType.THINKING_DELTA, text = "think"),
+            workshopAgentEventOf(AgentEvent.MessageUpdate(agentMessage, ThinkingDeltaEvent(0, "think", message))),
+        )
+        assertEquals(
+            WorkshopAgentEvent(WorkshopAgentEventType.TOOL_START, name = "web_search"),
+            workshopAgentEventOf(AgentEvent.ToolExecutionStart("call", "web_search", JsonObject(emptyMap()))),
+        )
+        assertEquals(
+            WorkshopAgentEvent(
+                WorkshopAgentEventType.TOOL_END,
+                name = "web_search",
+                isError = true,
+                durationMs = 12,
+            ),
+            workshopAgentEventOf(AgentEvent.ToolExecutionEnd("call", "web_search", AgentToolResult(), true, 12)),
+        )
+        assertEquals(
+            WorkshopAgentEvent(WorkshopAgentEventType.TURN_END),
+            workshopAgentEventOf(AgentEvent.TurnEnd(agentMessage, emptyList())),
+        )
+        assertNull(workshopAgentEventOf(AgentEvent.AgentStart))
+        assertNull(workshopAgentEventOf(AgentEvent.AgentEnd(emptyList())))
+    }
+
+    @Test
+    fun mapsSessionEventsToWorkshopEvents() {
+        assertEquals(
+            WorkshopAgentEvent(WorkshopAgentEventType.TEXT_DELTA, text = "hi"),
+            workshopAgentEventOf(
+                SessionEvent.AgentEventReceived(
+                    AgentEvent.MessageUpdate(agentMessage(), TextDeltaEvent(0, "hi", assistantMessage())),
+                ),
+            ),
+        )
+        assertEquals(
+            WorkshopAgentEvent(
+                type = WorkshopAgentEventType.RUN_ERROR,
+                code = WorkshopAgentErrorCode.AGENT_FAILED,
+                message = "boom",
+            ),
+            workshopAgentEventOf(SessionEvent.SessionError("boom")),
+        )
+        assertNull(workshopAgentEventOf(SessionEvent.Settled))
+    }
+
+    private fun assistantMessage(): AssistantMessage = AssistantMessage(
+        content = mutableListOf(),
+        api = "test",
+        provider = "test",
+        model = "test",
+        usage = Usage.empty(),
+        stopReason = StopReason.Stop,
+        timestamp = 0,
+    )
+
+    private fun agentMessage(): AgentMessage = object : AgentMessage {
+        override val role: String = "assistant"
+        override val timestamp: Long = 0
     }
 
     private val sampleModels = listOf(

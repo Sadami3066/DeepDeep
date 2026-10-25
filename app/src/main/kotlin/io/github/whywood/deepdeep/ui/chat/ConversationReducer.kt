@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.NoticeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
@@ -22,6 +23,7 @@ internal data class ConversationState(
     val activityStartedAt: Long? = null,
     val loaded: Boolean = false,
     val usage: SessionUsage? = null,
+    val sessionModel: SessionModelSnapshot? = null,
 )
 
 internal fun reduce(
@@ -33,7 +35,24 @@ internal fun reduce(
     is RuntimeEvent.RunStarted -> {
         val target = state.messages.lastOrNull { it.role == AssistantRole.ASSISTANT && it.streaming }
         if (target == null) {
-            state
+            if (state.sending) {
+                state.copy(
+                    messages = state.messages + AssistantMessage(
+                        id = nextMessageId(state.messages),
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        streaming = true,
+                        status = MessageStatus.RUNNING,
+                        startedAt = event.startedAt,
+                        runId = event.runId,
+                    ),
+                    sending = true,
+                    activity = strings.thinking,
+                    activityStartedAt = event.startedAt,
+                )
+            } else {
+                state
+            }
         } else {
             state.copy(
                 messages = state.messages.map {
@@ -131,7 +150,7 @@ internal fun ConversationState.finishWithStatus(
     status: RunStatus,
     finishedAt: Long,
 ): ConversationState {
-    val index = messages.indexOfLast { it.runId == runId }
+    val index = finishTargetIndex(runId)
     if (index == -1) return copy(sending = false, activity = null, activityStartedAt = null)
     val message = messages[index]
     val finalText = text.ifBlank { message.text }
@@ -149,7 +168,7 @@ internal fun ConversationState.finishWithStatus(
         steps = consumeFinalText(failRunningTools(message.steps), finalText),
     )
     return copy(
-        messages = messages.toMutableList().also { it[index] = finalized },
+        messages = replaceAndSettle(index, finalized),
         sending = false,
         activity = null,
         activityStartedAt = null,
@@ -162,11 +181,7 @@ internal fun ConversationState.finishWithError(
     strings: ChatUiStrings,
     now: Long = System.currentTimeMillis(),
 ): ConversationState {
-    val index = if (runId.isBlank()) {
-        messages.indexOfLast { it.role == AssistantRole.ASSISTANT && it.streaming }
-    } else {
-        messages.indexOfLast { it.runId == runId }
-    }
+    val index = finishTargetIndex(runId)
     if (index == -1) return copy(sending = false, activity = null, activityStartedAt = null)
     val current = messages[index]
     val failed = current.copy(
@@ -179,11 +194,43 @@ internal fun ConversationState.finishWithError(
         steps = failRunningTools(current.steps),
     )
     return copy(
-        messages = messages.toMutableList().also { it[index] = failed },
+        messages = replaceAndSettle(index, failed),
         sending = false,
         activity = null,
         activityStartedAt = null,
     )
+}
+
+private fun ConversationState.finishTargetIndex(runId: String): Int {
+    if (runId.isNotBlank()) {
+        val matched = messages.indexOfLast { it.runId == runId }
+        if (matched >= 0) return matched
+    }
+    if (!sending) {
+        return if (runId.isBlank()) {
+            messages.indexOfLast { it.role == AssistantRole.ASSISTANT && it.streaming }
+        } else {
+            -1
+        }
+    }
+    return messages.indexOfLast {
+        it.role == AssistantRole.ASSISTANT && (it.streaming || it.status == MessageStatus.RUNNING)
+    }
+}
+
+private fun ConversationState.replaceAndSettle(
+    index: Int,
+    finalized: AssistantMessage,
+): List<AssistantMessage> = messages.toMutableList().also { list ->
+    for (position in list.indices) {
+        list[position] = when {
+            position == index -> finalized
+            list[position].streaming || list[position].retrying ->
+                list[position].copy(streaming = false, retrying = false)
+
+            else -> list[position]
+        }
+    }
 }
 
 internal fun ConversationState.updateAssistant(

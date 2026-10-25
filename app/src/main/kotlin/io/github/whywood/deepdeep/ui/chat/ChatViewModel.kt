@@ -20,6 +20,7 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
+import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillSummary
@@ -40,6 +41,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val STREAM_DELTA_BATCH_MS = 16L
+private const val BUSY_RECONCILE_DELAY_MS = 500L
+private const val STOP_RECONCILE_DELAY_MS = 500L
 
 class ChatViewModel(
     private val runtime: AgentRuntime,
@@ -59,6 +62,7 @@ class ChatViewModel(
 
     private val conversationCache = mutableMapOf<String, ConversationState>()
     private val sessionOpenJobs = mutableMapOf<String, Job>()
+    private val reconcileJobs = mutableMapOf<String, Job>()
     private val pendingDeltas = mutableListOf<RuntimeEvent>()
     private var pendingDeltaJob: Job? = null
     private var pendingDeltaRunId: String? = null
@@ -69,12 +73,22 @@ class ChatViewModel(
     init {
         viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
         viewModelScope.launch {
+            var previousBusy = runtime.busySessionIds.value
             runtime.busySessionIds.collect { ids ->
                 mutableState.update { it.copy(busySessionIds = ids) }
+                val current = mutableState.value
+                val sessionId = current.conversationId
+                if (
+                    sessionId != null &&
+                    sessionId in previousBusy &&
+                    sessionId !in ids &&
+                    current.sending &&
+                    autoRetryJobs[sessionId]?.isActive != true
+                ) {
+                    scheduleReconcile(sessionId, BUSY_RECONCILE_DELAY_MS)
+                }
+                previousBusy = ids
             }
-        }
-        viewModelScope.launch {
-            modelConfigStore.config.collect { applyConfig(it) }
         }
         viewModelScope.launch {
             autoRetry.collect { autoRetryEnabled = it }
@@ -85,7 +99,7 @@ class ChatViewModel(
                 withContext(ioDispatcher) { runtime.ensureStarted() }
                 val config = providers.resolveConfig(modelConfigStore.read())
                 modelConfigStore.save(config)
-                applyConfig(config)
+                if (mutableState.value.providerId.isBlank()) applySessionModel(config.toSnapshot())
                 restoreInitialSession()
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -397,7 +411,88 @@ class ChatViewModel(
 
     fun stop() {
         flushPendingDeltas()
-        mutableState.value.conversationId?.let(runtime::stop)
+        val sessionId = mutableState.value.conversationId ?: return
+        runtime.stop(sessionId)
+        if (runtime.activeRuns.value[sessionId] == null) {
+            scheduleReconcile(sessionId, STOP_RECONCILE_DELAY_MS)
+        }
+    }
+
+    fun onAppForeground() {
+        val current = mutableState.value
+        if (!current.sending) return
+        val sessionId = current.conversationId ?: return
+        scheduleReconcile(sessionId, 0L)
+    }
+
+    private fun scheduleReconcile(sessionId: String, delayMs: Long) {
+        if (reconcileJobs[sessionId]?.isActive == true) return
+        reconcileJobs[sessionId] = viewModelScope.launch {
+            try {
+                if (delayMs > 0) delay(delayMs)
+                reconcile(sessionId)
+            } finally {
+                reconcileJobs.remove(sessionId)
+            }
+        }
+    }
+
+    private suspend fun reconcile(sessionId: String) {
+        runtime.activeRuns.value[sessionId]?.let { active ->
+            val current = mutableState.value
+            if (current.conversationId != sessionId || !current.sending) return
+            val conversation = current.conversationState()
+            if (conversation.messages.any { it.runId == active.runId }) return
+            val adopted = conversation.adoptActiveRun(active.runId, uiStrings.thinking, active.startedAt)
+            mutableState.update { it.applyConversation(adopted) }
+            cacheCurrentSession()
+            return
+        }
+        val current = mutableState.value
+        val isCurrent = current.conversationId == sessionId
+        if (isCurrent && !current.sending) return
+        if (autoRetryJobs[sessionId]?.isActive == true) return
+        val history = withContext(ioDispatcher) { runtime.history(sessionId) }
+        val sessionModel = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
+        val settled = history
+            .map { message ->
+                message.error?.let { raw -> message.copy(error = uiStrings.runError(raw)) } ?: message
+            }
+            .map { message ->
+                if (!message.streaming && !message.retrying) {
+                    message
+                } else {
+                    message.copy(
+                        streaming = false,
+                        retrying = false,
+                        status = if (message.status == MessageStatus.RUNNING) MessageStatus.DONE else message.status,
+                    )
+                }
+            }
+        if (isCurrent) {
+            mutableState.update {
+                it.copy(
+                    messages = settled,
+                    sending = false,
+                    activity = null,
+                    activityStartedAt = null,
+                    historyLoaded = true,
+                    conversationTitle = it.conversationTitle.ifBlank { titleFrom(settled) },
+                )
+            }
+            applySessionModel(sessionModel)
+            cacheCurrentSession()
+        } else {
+            val cached = conversationCache[sessionId] ?: return
+            conversationCache[sessionId] = cached.copy(
+                messages = settled,
+                sending = false,
+                activity = null,
+                activityStartedAt = null,
+                loaded = true,
+                sessionModel = sessionModel ?: cached.sessionModel,
+            )
+        }
     }
 
     fun compactContext() {
@@ -583,51 +678,54 @@ class ChatViewModel(
     }
 
     fun setModel(modelId: String) {
-        if (mutableState.value.sending) return
         val current = mutableState.value
+        if (current.sending || current.switchingConversation) return
         val option = current.models.firstOrNull { it.id == modelId } ?: return
+        val providerId = current.providerId.ifBlank { option.providerId }
         val thinking = current.thinkingLevel.takeIf { it in option.thinkingLevels } ?: ThinkingLevel.OFF
-        viewModelScope.launch {
-            try {
-                runtime.setModel(current.providerId, option.id, thinking)
-                applyConfig(ModelConfig(current.providerId, option.id, thinking))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchModelFailed)) }
-            }
-        }
+        changeSessionModel(SessionModelSnapshot(providerId, option.id, thinking), thinkingOnly = false)
     }
 
     fun setProvider(providerId: String) {
-        if (mutableState.value.sending) return
         val current = mutableState.value
+        if (current.sending || current.switchingConversation) return
         if (providerId == current.providerId) return
         val options = providers.models(providerId)
         val model = options.firstOrNull { it.id == current.modelId } ?: options.firstOrNull() ?: return
         val thinking = current.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
-        viewModelScope.launch {
-            try {
-                runtime.setModel(providerId, model.id, thinking)
-                applyConfig(ModelConfig(providerId, model.id, thinking))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchModelFailed)) }
-            }
-        }
+        changeSessionModel(SessionModelSnapshot(providerId, model.id, thinking), thinkingOnly = false)
     }
 
     fun setThinkingLevel(level: ThinkingLevel) {
-        if (mutableState.value.sending) return
+        val current = mutableState.value
+        if (current.sending || current.switchingConversation) return
+        val model = current.sessionModel() ?: return
+        if (model.thinkingLevel == level) return
+        changeSessionModel(model.copy(thinkingLevel = level), thinkingOnly = true)
+    }
+
+    private fun changeSessionModel(model: SessionModelSnapshot, thinkingOnly: Boolean) {
+        val sessionId = mutableState.value.conversationId ?: return
+        applySessionModel(model)
+        cacheCurrentSession()
         viewModelScope.launch {
             try {
-                runtime.setThinkingLevel(level)
-                mutableState.update { it.copy(thinkingLevel = level) }
+                if (thinkingOnly) {
+                    runtime.setSessionThinkingLevel(sessionId, model.thinkingLevel)
+                } else {
+                    runtime.setSessionModel(sessionId, model.providerId, model.modelId, model.thinkingLevel)
+                }
+                modelConfigStore.save(ModelConfig(model.providerId, model.modelId, model.thinkingLevel))
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                mutableState.update { it.copy(error = userFacingError(error.message ?: uiStrings.switchThinkingFailed)) }
+                val fallback = if (thinkingOnly) uiStrings.switchThinkingFailed else uiStrings.switchModelFailed
+                mutableState.update { it.copy(error = userFacingError(error.message ?: fallback)) }
+            }
+            val truth = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
+            if (truth != null && mutableState.value.conversationId == sessionId) {
+                applySessionModel(truth)
+                cacheCurrentSession()
             }
         }
     }
@@ -756,6 +854,7 @@ class ChatViewModel(
                 error = null,
             )
         }
+        applySessionModel(cached?.sessionModel)
         openSession(summary)
     }
 
@@ -764,18 +863,32 @@ class ChatViewModel(
         val job = viewModelScope.launch {
             try {
                 withContext(ioDispatcher) { runtime.openSession(summary.filePath, summary.cwd) }
-                val history = withContext(ioDispatcher) { runtime.history(summary.id) }
-                val activeRunId = withContext(ioDispatcher) { runtime.activeRunId(summary.id) }
+                var history = withContext(ioDispatcher) { runtime.history(summary.id) }
+                var sessionModel = withContext(ioDispatcher) { runtime.sessionModel(summary.id) }
                 val usage = withContext(ioDispatcher) { runtime.usage(summary.id) }
+                var activeRun = runtime.activeRuns.value[summary.id]
+                if (activeRun != null) {
+                    activeRun = runtime.activeRuns.value[summary.id]
+                    if (activeRun == null) {
+                        history = withContext(ioDispatcher) { runtime.history(summary.id) }
+                        sessionModel = withContext(ioDispatcher) { runtime.sessionModel(summary.id) }
+                    }
+                }
                 val localized = history.map { message ->
                     message.error?.let { raw -> message.copy(error = uiStrings.runError(raw)) } ?: message
                 }
                 val title = summary.title.ifBlank { titleFrom(localized) }
-                val snapshot = if (activeRunId == null) {
-                    ConversationState(messages = localized, title = title, loaded = true, usage = usage)
+                val base = ConversationState(
+                    messages = localized,
+                    title = title,
+                    loaded = true,
+                    usage = usage,
+                    sessionModel = sessionModel,
+                )
+                val snapshot = if (activeRun == null) {
+                    base
                 } else {
-                    ConversationState(messages = localized, title = title, loaded = true, usage = usage)
-                        .adoptActiveRun(activeRunId, uiStrings.thinking, System.currentTimeMillis())
+                    base.adoptActiveRun(activeRun.runId, uiStrings.thinking, activeRun.startedAt)
                 }
                 conversationCache[summary.id] = snapshot
                 if (mutableState.value.conversationId == summary.id) {
@@ -791,6 +904,7 @@ class ChatViewModel(
                             switchingConversation = false,
                         )
                     }
+                    applySessionModel(snapshot.sessionModel)
                 }
                 refreshSessions()
             } catch (cancelled: CancellationException) {
@@ -813,7 +927,8 @@ class ChatViewModel(
             try {
                 val opened = withContext(ioDispatcher) { runtime.newSession(workspaceId) }
                 val projectCwd = opened.cwd
-                conversationCache[opened.sessionId] = ConversationState()
+                val sessionModel = withContext(ioDispatcher) { runtime.sessionModel(opened.sessionId) }
+                conversationCache[opened.sessionId] = ConversationState(sessionModel = sessionModel)
                 mutableState.update {
                     it.copy(
                         conversationId = opened.sessionId,
@@ -835,6 +950,7 @@ class ChatViewModel(
                         error = null,
                     )
                 }
+                applySessionModel(sessionModel)
                 refreshSessions()
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -858,6 +974,7 @@ class ChatViewModel(
             activityStartedAt = current.activityStartedAt,
             loaded = loaded,
             usage = current.usage,
+            sessionModel = current.sessionModel(),
         )
     }
 
@@ -991,6 +1108,7 @@ class ChatViewModel(
         activity = activity,
         activityStartedAt = activityStartedAt,
         usage = usage,
+        sessionModel = sessionModel(),
     )
 
     private fun ChatUiState.applyConversation(state: ConversationState): ChatUiState = copy(
@@ -1068,19 +1186,27 @@ class ChatViewModel(
         append(body)
     }
 
-    private fun applyConfig(config: ModelConfig) {
-        val options = providers.models(config.providerId)
-        val model = options.firstOrNull { it.id == config.modelId } ?: options.firstOrNull()
+    private fun applySessionModel(model: SessionModelSnapshot?) {
+        if (model == null) return
+        val options = providers.models(model.providerId)
+        val option = options.firstOrNull { it.id == model.modelId }
         mutableState.update {
             it.copy(
-                providerId = config.providerId,
-                modelId = model?.id ?: config.modelId,
-                modelLabel = model?.displayName ?: config.modelId,
-                thinkingLevel = config.thinkingLevel,
+                providerId = model.providerId,
+                modelId = model.modelId,
+                modelLabel = option?.displayName ?: model.modelId,
+                thinkingLevel = model.thinkingLevel,
                 models = options,
             )
         }
     }
+
+    private fun ChatUiState.sessionModel(): SessionModelSnapshot? =
+        providerId.takeIf { it.isNotBlank() }
+            ?.let { provider -> SessionModelSnapshot(provider, modelId, thinkingLevel) }
+
+    private fun ModelConfig.toSnapshot(): SessionModelSnapshot =
+        SessionModelSnapshot(providerId, modelId, thinkingLevel)
 
     private fun consumeFinalText(steps: List<AssistantStep>, finalText: String): List<AssistantStep> {
         val final = finalText.trim()

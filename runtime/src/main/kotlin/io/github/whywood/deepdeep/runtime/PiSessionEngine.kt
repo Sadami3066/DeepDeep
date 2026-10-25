@@ -43,57 +43,60 @@ class PiSessionEngine(
 
     suspend fun createSession(
         file: Path?,
-        config: ModelConfig,
+        config: ModelConfig?,
         shellEnabled: Boolean = true,
         toolsFilter: ((CodingTool) -> Boolean)? = null,
         mcpEnabled: Boolean = true,
         extraSystemPromptSections: Map<String, String> = emptyMap(),
     ): AgentSession {
         ensureSystemPromptFile(agentDirectory.toFile())
-        val resolved = providers.resolveConfig(config)
-        val modelId = resolved.modelId
+        val fallback = providers.resolveConfig(config ?: ModelConfig())
+        val restored = if (file == null) {
+            null
+        } else {
+            runCatching { SessionManager.open(file, fs).buildSessionContext() }.getOrNull()
+        }
+        val restoredProviderId = restored?.provider?.takeIf { it.isNotBlank() }
+        val restoredModelId = restored?.modelId?.takeIf { it.isNotBlank() }
+        val restoredModel = restoredProviderId != null &&
+            restoredModelId != null &&
+            providers.sdkModel(restoredProviderId, restoredModelId) != null
+        val explicitModel = if (restoredModel) null else fallback
+        val providerId = if (restoredModel) restoredProviderId!! else fallback.providerId
+        val modelId = if (restoredModel) restoredModelId!! else fallback.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
         val binding = SessionBinding()
         val allTools = buildTools(activeShell, binding)
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
-        val initialSections = buildSessionSystemPromptSections(
-            personalization = runCatching { personalization() }.getOrDefault(Personalization()),
-            providerId = resolved.providerId,
-            modelId = modelId,
-            cwd = cwd.toString(),
-            now = OffsetDateTime.now(),
-            sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
-            pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-            extra = extraSystemPromptSections,
-        )
+        var created: AgentSession? = null
+        val currentSections: suspend () -> Map<String, String> = {
+            val session = created
+            buildSessionSystemPromptSections(
+                personalization = runCatching { personalization() }.getOrDefault(Personalization()),
+                providerId = session?.model?.provider ?: providerId,
+                modelId = session?.model?.id ?: modelId,
+                cwd = cwd.toString(),
+                now = OffsetDateTime.now(),
+                sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
+                pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
+                extra = extraSystemPromptSections,
+            )
+        }
         val session = createAgentSession(
             AgentSessionOptions(
                 cwd = cwd,
                 agentDir = agentDirectory,
                 transport = transport,
                 fs = fs,
-                model = providers.modelReference(resolved.providerId, modelId),
-                thinkingLevel = resolved.thinkingLevel.runtimeValue(),
+                model = explicitModel?.let { providers.modelReference(it.providerId, it.modelId) },
+                thinkingLevel = explicitModel?.thinkingLevel?.runtimeValue(),
                 sessionFile = file,
                 tools = tools,
                 shellExecutor = activeShell,
-                hooks = CodingHooks(
-                    extraSystemPromptSections = {
-                        buildSessionSystemPromptSections(
-                            personalization = runCatching { personalization() }.getOrDefault(Personalization()),
-                            providerId = resolved.providerId,
-                            modelId = modelId,
-                            cwd = cwd.toString(),
-                            now = OffsetDateTime.now(),
-                            sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
-                            pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                            extra = extraSystemPromptSections,
-                        )
-                    },
-                ),
+                hooks = CodingHooks(extraSystemPromptSections = { currentSections() }),
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
-                initialSystemPromptSections = initialSections,
+                initialSystemPromptSections = currentSections(),
                 projectTrusted = true,
                 mcp = McpOptions(
                     enabled = mcpEnabled,
@@ -104,6 +107,7 @@ class PiSessionEngine(
                 ),
             ),
         )
+        created = session
         binding.attach(session)
         return session
     }
@@ -164,6 +168,14 @@ fun ThinkingLevel.runtimeValue(): String = when (this) {
     ThinkingLevel.MEDIUM -> "medium"
     ThinkingLevel.HIGH -> "high"
     ThinkingLevel.MAX -> "max"
+}
+
+internal fun thinkingLevelOf(value: String?): ThinkingLevel = when (value?.trim()?.lowercase()) {
+    "minimal", "low" -> ThinkingLevel.LOW
+    "medium" -> ThinkingLevel.MEDIUM
+    "high", "xhigh" -> ThinkingLevel.HIGH
+    "max" -> ThinkingLevel.MAX
+    else -> ThinkingLevel.OFF
 }
 
 fun ThinkingLevel.displayName(): String = when (this) {

@@ -88,6 +88,12 @@ fun SettingsScreen(
     onOpenPrivacy: () -> Unit,
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
+    smsReadEnabled: Boolean = false,
+    onSmsReadEnabledChange: (Boolean) -> Unit = {},
+    voiceRoleHeld: Boolean = false,
+    onRequestVoiceRole: () -> Unit = {},
+    guiConnected: Boolean = false,
+    onOpenGuiSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -235,6 +241,36 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
+                SmsSettingsSection(
+                    readSmsEnabled = smsReadEnabled,
+                    onReadSmsEnabledChange = onSmsReadEnabledChange,
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Mic,
+                    title = stringResource(R.string.settings_voice_assistant),
+                    subtitle = stringResource(
+                        if (voiceRoleHeld) R.string.settings_voice_assistant_on else R.string.settings_voice_assistant_off,
+                    ),
+                    onClick = onRequestVoiceRole,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_voice_assistant"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Monitor,
+                    title = stringResource(R.string.settings_gui_control),
+                    subtitle = stringResource(
+                        if (guiConnected) R.string.settings_gui_control_on else R.string.settings_gui_control_off,
+                    ),
+                    onClick = onOpenGuiSettings,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_gui_control"),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Shield,
                     title = stringResource(R.string.settings_privacy),
@@ -281,6 +317,12 @@ private fun AccountCard(
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
+    val noModel = stringResource(R.string.settings_account_no_model)
+    val modelLabel = if (activeModel.isBlank() || activeModel == noModel) {
+        noModel
+    } else {
+        "${stringResource(R.string.settings_new_chat_model)} · $activeModel"
+    }
     SettingsGroup {
         DdPressable(
             onClick = onClick,
@@ -302,7 +344,7 @@ private fun AccountCard(
                         maxLines = 1,
                     )
                     Text(
-                        text = activeModel,
+                        text = modelLabel,
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
                         maxLines = 1,

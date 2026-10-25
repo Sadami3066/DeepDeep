@@ -1,0 +1,15 @@
+<resources>
+    <string name="plugin_gui_name">Screen control</string>
+    <string name="plugin_gui_summary">Observe and control the current screen through accessibility</string>
+    <string name="plugin_gui_size">Built-in</string>
+    <string name="plugin_gui_service_description">Lets DeepDeep read the current screen and perform taps, text input and scrolling</string>
+
+    <string name="plugin_gui_status_connected">Accessibility service connected</string>
+    <string name="plugin_gui_status_disabled">Accessibility service is off</string>
+
+    <string name="plugin_gui_action_settings">Open accessibility settings</string>
+
+    <string name="plugin_gui_detail_service">Accessibility service</string>
+    <string name="plugin_gui_detail_enabled">On</string>
+    <string name="plugin_gui_detail_disabled">Off</string>
+</resources>

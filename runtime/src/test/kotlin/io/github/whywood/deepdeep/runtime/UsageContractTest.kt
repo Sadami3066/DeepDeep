@@ -18,6 +18,7 @@ class UsageContractTest {
     private class MinimalAgentRuntime : AgentRuntime {
         override val events = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 16)
         override val busySessionIds = MutableStateFlow<Set<String>>(emptySet())
+        override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
 
         override suspend fun start() = Unit
 
@@ -69,9 +70,16 @@ class UsageContractTest {
 
         override suspend fun deleteSession(id: String) = Unit
 
-        override suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel) = Unit
+        override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = null
 
-        override suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel) = Unit
+        override suspend fun setSessionModel(
+            sessionId: String,
+            providerId: String,
+            modelId: String,
+            thinkingLevel: ThinkingLevel,
+        ) = Unit
+
+        override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) = Unit
 
         override suspend fun currentConfig(): ModelConfig = ModelConfig()
     }

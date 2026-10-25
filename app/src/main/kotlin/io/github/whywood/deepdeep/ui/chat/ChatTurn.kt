@@ -98,6 +98,7 @@ internal fun ChatTurn(
             onQuote = onQuote,
             onOpenFile = onOpenFile,
             onRetry = onRetry,
+            attachmentRoot = attachmentRoot,
             autoCollapseProcess = autoCollapseProcess,
             pendingQuestions = pendingQuestions,
             onAnswerQuestion = onAnswerQuestion,
@@ -299,6 +300,7 @@ private fun AssistantTurn(
     onQuote: (Long, String) -> Unit,
     onOpenFile: (String) -> Unit,
     onRetry: (Long) -> Unit,
+    attachmentRoot: File,
     autoCollapseProcess: Boolean,
     pendingQuestions: List<PendingQuestion>,
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
@@ -322,11 +324,11 @@ private fun AssistantTurn(
         .filter { it.name == "ask_user_question" }
         .mapNotNull { trace -> liveQuestions[trace.toolCallId] }
         .firstOrNull()
-    val presentedFiles = message.steps.filterIsInstance<AssistantStep.Tool>()
+    val presentedItems = message.steps.filterIsInstance<AssistantStep.Tool>()
         .map { it.trace }
         .filter { it.name == "present" }
-        .flatMap { trace -> parsePresentedFiles(trace).orEmpty() }
-        .distinctBy { it.path }
+        .flatMap { trace -> parsePresentedItems(trace).orEmpty() }
+        .distinctBy { "${it.type}:${it.path ?: it.id}" }
     val workshopApps = message.steps.filterIsInstance<AssistantStep.Tool>()
         .map { it.trace }
         .mapNotNull { trace -> parseRegisteredWorkshop(trace) }
@@ -367,12 +369,14 @@ private fun AssistantTurn(
                 ChatMarkdown(answer, onFileClick = onOpenFile)
             }
         }
-        if (presentedFiles.isNotEmpty()) {
+        if (presentedItems.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             PresentCard(
-                files = presentedFiles,
-                onOpen = onOpenPresentFile,
-                onShare = onSharePresentFile,
+                items = presentedItems,
+                attachmentRoot = attachmentRoot,
+                onOpenFile = onOpenPresentFile,
+                onShareFile = onSharePresentFile,
+                onOpenWorkshop = onOpenWorkshop,
             )
         }
         if (workshopApps.isNotEmpty()) {

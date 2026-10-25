@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.InstalledSkill
 import io.github.whywood.deepdeep.data.SkillArchiveError
@@ -101,8 +102,23 @@ fun SkillsScreen(
 
     LaunchedEffect(refreshKey) {
         loading = true
+        repository.syncActiveSkills()
         skills = repository.list()
         loading = false
+    }
+
+    LaunchedEffect(Unit) {
+        repository.changes.collect {
+            skills = repository.list()
+        }
+    }
+
+    LifecycleResumeEffect(Unit) {
+        scope.launch {
+            repository.syncIfChanged()
+            skills = repository.list()
+        }
+        onPauseOrDispose { }
     }
 
     fun toggle(skill: InstalledSkill, enabled: Boolean) {

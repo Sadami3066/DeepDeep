@@ -1,0 +1,15 @@
+<resources>
+    <string name="plugin_gui_name">界面操作</string>
+    <string name="plugin_gui_summary">通过无障碍服务查看并操作当前界面</string>
+    <string name="plugin_gui_size">内置</string>
+    <string name="plugin_gui_service_description">允许 DeepDeep 读取当前界面并执行点击、输入与滚动操作</string>
+
+    <string name="plugin_gui_status_connected">无障碍服务已连接</string>
+    <string name="plugin_gui_status_disabled">无障碍服务未开启</string>
+
+    <string name="plugin_gui_action_settings">打开无障碍设置</string>
+
+    <string name="plugin_gui_detail_service">无障碍服务</string>
+    <string name="plugin_gui_detail_enabled">已开启</string>
+    <string name="plugin_gui_detail_disabled">未开启</string>
+</resources>

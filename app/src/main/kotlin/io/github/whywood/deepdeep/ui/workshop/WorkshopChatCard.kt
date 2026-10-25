@@ -41,6 +41,7 @@ data class WorkshopCardApp(
 )
 
 private const val ICON_FALLBACK = "✦"
+private const val DELIVERY_PRESENT = "present"
 
 fun parseRegisteredWorkshop(trace: ToolTrace): WorkshopCardApp? {
     if (trace.name != "workshop_load" && trace.name != "workshop_register") return null
@@ -48,6 +49,7 @@ fun parseRegisteredWorkshop(trace: ToolTrace): WorkshopCardApp? {
     return try {
         val root = Json.parseToJsonElement(raw).jsonObject
         if ((root["ok"] as? JsonPrimitive)?.booleanOrNull != true) return null
+        if (root.stringOrNull("delivery")?.trim() == DELIVERY_PRESENT) return null
         val app = root["app"] as? JsonObject ?: return null
         val id = app.stringOrNull("id")?.trim().orEmpty()
         val name = app.stringOrNull("name")?.trim().orEmpty()
@@ -68,6 +70,7 @@ fun WorkshopChatCard(
     app: WorkshopCardApp,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(12.dp)
@@ -97,7 +100,7 @@ fun WorkshopChatCard(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = stringResource(R.string.workshop_chat_card_created),
+                    text = subtitle ?: stringResource(R.string.workshop_chat_card_created),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 1,

@@ -55,6 +55,17 @@ data class SessionRuntimeEvent(
     val event: RuntimeEvent,
 )
 
+data class ActiveRunSnapshot(
+    val runId: String,
+    val startedAt: Long,
+)
+
+data class SessionModelSnapshot(
+    val providerId: String,
+    val modelId: String,
+    val thinkingLevel: ThinkingLevel,
+)
+
 enum class AssistantRole {
     USER,
     ASSISTANT,
@@ -242,6 +253,7 @@ interface ModelSettings {
 interface AgentRuntime {
     val events: SharedFlow<SessionRuntimeEvent>
     val busySessionIds: kotlinx.coroutines.flow.StateFlow<Set<String>>
+    val activeRuns: kotlinx.coroutines.flow.StateFlow<Map<String, ActiveRunSnapshot>>
 
     suspend fun start()
 
@@ -293,9 +305,11 @@ interface AgentRuntime {
 
     suspend fun deleteSession(id: String)
 
-    suspend fun setModel(providerId: String, modelId: String, thinkingLevel: ThinkingLevel)
+    suspend fun sessionModel(sessionId: String): SessionModelSnapshot?
 
-    suspend fun setThinkingLevel(thinkingLevel: ThinkingLevel)
+    suspend fun setSessionModel(sessionId: String, providerId: String, modelId: String, thinkingLevel: ThinkingLevel)
+
+    suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel)
 
     suspend fun currentConfig(): ModelConfig
 

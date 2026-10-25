@@ -132,11 +132,16 @@ class WorkshopToolsTest {
         assertEquals("1.0.0", app.getValue("version").jsonPrimitive.content)
         val appDirectory = File(store.appsDir, "flow-app")
         assertEquals(appDirectory.absolutePath, json.getValue("path").jsonPrimitive.content)
+        assertEquals("present", json.getValue("delivery").jsonPrimitive.content)
+        assertEquals(
+            "Deliver this app with present: {items:[{type:creative, id:flow-app}]}. Do not restate the app details in your reply.",
+            json.getValue("next").jsonPrimitive.content,
+        )
         assertTrue(File(appDirectory, "index.html").isFile)
         assertTrue(File(appDirectory, "app.js").isFile)
         assertTrue(store.load("flow-app") is WorkshopEntry.Valid)
         assertTrue(store.drafts().isEmpty())
-        val expected = "{\"ok\":true,\"app\":{\"id\":\"flow-app\",\"name\":\"Flow App\",\"icon\":\"\",\"version\":\"1.0.0\"},\"path\":\"${appDirectory.absolutePath}\"}"
+        val expected = "{\"ok\":true,\"delivery\":\"present\",\"app\":{\"id\":\"flow-app\",\"name\":\"Flow App\",\"icon\":\"\",\"version\":\"1.0.0\"},\"path\":\"${appDirectory.absolutePath}\",\"next\":\"Deliver this app with present: {items:[{type:creative, id:flow-app}]}. Do not restate the app details in your reply.\"}"
         assertEquals(expected, resultText(result))
     }
 

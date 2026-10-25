@@ -21,7 +21,25 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdTypingDots
 import io.github.whywood.deepdeep.design.deepDeepColors
+import java.util.Locale
 import kotlinx.coroutines.delay
+
+internal fun formatElapsed(
+    totalSeconds: Long,
+    hoursMinutesSeconds: String,
+    minutesSeconds: String,
+    secondsOnly: String,
+): String {
+    val clamped = totalSeconds.coerceAtLeast(0L)
+    val hours = clamped / 3600
+    val minutes = (clamped % 3600) / 60
+    val seconds = clamped % 60
+    return when {
+        hours > 0 -> String.format(Locale.ROOT, hoursMinutesSeconds, hours, minutes, seconds)
+        minutes > 0 -> String.format(Locale.ROOT, minutesSeconds, minutes, seconds)
+        else -> String.format(Locale.ROOT, secondsOnly, seconds)
+    }
+}
 
 @Composable
 internal fun WorkingIndicator(
@@ -38,7 +56,7 @@ internal fun WorkingIndicator(
             delay(1000)
         }
     }
-    val elapsedSeconds = startedAt?.let { ((now - it).coerceAtLeast(0L) / 1000L).toInt() }
+    val elapsedSeconds = startedAt?.let { ((now - it).coerceAtLeast(0L) / 1000L) }
     Row(
         modifier = modifier.heightIn(min = 28.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -60,7 +78,12 @@ internal fun WorkingIndicator(
                 color = colors.inkTertiary,
             )
             Text(
-                text = stringResource(R.string.assistant_elapsed_seconds, elapsedSeconds),
+                text = formatElapsed(
+                    elapsedSeconds,
+                    stringResource(R.string.assistant_elapsed_hours_minutes_seconds),
+                    stringResource(R.string.assistant_elapsed_minutes_seconds),
+                    stringResource(R.string.assistant_elapsed_seconds),
+                ),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 color = colors.inkTertiary,
             )
