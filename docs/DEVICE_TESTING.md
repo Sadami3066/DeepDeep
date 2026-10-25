@@ -180,3 +180,13 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 128. 待补：小米云 WebView 登录空白修复；企业微信扫码授权；小米云 9 项数据读写真机验证；GUI find/wait/写文字校验真机验证。
 
 本轮证据（`artifacts/validation/round33/`）：`r33_01_home.png`（composer 无 thinking chip、圆形语音）、`r33_02_model_sheet.png`（模型 sheet 内 Thinking level）、`r33_03_sending.png`（红色停止圆）、`r33_05_plugins.png`/`r33_06_plugins_installed.png`（新插件列表与安装）、`r33_09_micloud_detail.png`/`r33_10_micloud_actions.png`（小米云开关与登录入口）、`r33_11_micloud_login.png`（WebView 空白问题证据）、`r33_13_settings.png`/`r33_14_settings_capabilities.png`（设置无短信项）、`r33_15_arrange.png`/`r33_16_alarms.png`/`r33_17_calendar.png`（安排插件与系统闹钟/日历）、`r33_19_wecom.png`/`r33_20_wecom_installed.png`/`r33_21_wecom_detail.png`/`r33_22_wecom_qr.png`（企微安装、状态、二维码 setup）、`r33_23_gui_tool.png`/`r33_24_gui_done.png`（GUI 截图工具与 present 内联图）。
+
+129. 安排·闹钟：会话里让 Agent 创建 `arrange_alarm`，返回 JSON；再 `list` 能看到；`update` 改时间/标签/重复日；`delete` 后 list 消失。到点前把 App 切后台/锁屏，闹钟响铃（系统 alarm 铃声 + 振动 + 通知），通知「停止」可结束；重启设备后重复闹钟仍在。
+130. 安排·计时器：`arrange_alarm action=timer` 创建 1 分钟计时器，到点响铃；`list` 显示 kind=timer；`delete` 取消后不再响。
+131. 安排·日历：`arrange_calendar action=calendars` 列出可写日历；`create` 写一条带 reminders 的事件；系统日历 App 中可见；`get`/`list` 按范围读取；`update` 改标题/时间/提醒；`delete` 后系统日历消失。权限未授予时工具给出错误，插件页「授予日历权限」后恢复。
+132. 安排·系统闹钟边界：`list.systemNext` 能显示系统时钟里已有闹钟的下次时间，但 label 为空/只读；`show` 只打开系统时钟，不修改系统闹钟；不要声称能删除系统时钟里的闹钟。
+133. 小米云登录页：插件页点登录，i.mi.com 首页完整可见；点「使用小米账号登录」后 account.xiaomi.com 登录页完整可见、输入框可聚焦、键盘弹出不遮挡；返回后页面正常。
+134. 小米云真实登录（需账号）：在登录页完成账号/密码/二次验证；插件状态从未登录变为已登录（昵称）；重启 App 后仍为已登录；退出登录清除 cookie。
+135. 小米云数据读写（登录后）：逐项打开开关，验证账号/笔记/待办/短信与通话/联系人/相册/录音读取；笔记/待办创建、更新、删除；录音下载到 `/micloud/recordings/`。
+
+本轮证据（`artifacts/validation/round34/`）：`01-imi-home.png`/`02-account-login.png`（修复后 i.mi.com 与 account.xiaomi.com 登录页）、`03-imi-home-after-back.png`/`04-account-input-focus.png`/`05-imi-home-cold.png`/`06-account-login-cold.png`（返回/键盘/冷启动）、`07-lead-manual-cdp-fix.png`（手工 CDP 注入验证）、`cdp-evidence.txt`（innerHeight/100vh 探针/rootHeight 数据）、`08-arrange-detail.png`（安排插件详情/权限状态）、`09-alarm-notification.png`（到点响铃通知与停止 action）、`alarm-audio-evidence.txt`（USAGE_ALARM 播放器与 specialUse 前台服务状态）、`androidtest-result.txt`（4 项通过）。安排 androidTest：`:app:assembleDebugAndroidTest` 后 `adb shell am instrument -w io.github.whywood.deepdeep.test/androidx.test.runner.AndroidJUnitRunner`，4 tests OK（日历 CRUD、闹钟 CRUD、精确调度、响铃通知）。

@@ -1,17 +1,30 @@
 <resources>
     <string name="plugin_arrange_name">安排</string>
-    <string name="plugin_arrange_summary">用系统时钟与日历设置闹钟、计时器和日程</string>
+    <string name="plugin_arrange_summary">创建、修改、查看、删除闹钟、计时器与日历日程</string>
     <string name="plugin_arrange_size">内置</string>
 
-    <string name="plugin_arrange_status_ready">系统闹钟与日历可用</string>
+    <string name="plugin_arrange_status_ready">闹钟、计时器与日历可用</string>
+    <string name="plugin_arrange_status_calendar_permission">日历权限未授予</string>
 
     <string name="plugin_arrange_action_alarm">打开闹钟</string>
     <string name="plugin_arrange_action_calendar">打开日历</string>
+    <string name="plugin_arrange_action_permission">授予日历权限</string>
+    <string name="plugin_arrange_action_exact_alarm">允许精确闹钟</string>
 
-    <string name="plugin_arrange_detail_saved">已保存项</string>
-    <string name="plugin_arrange_detail_saved_value">无法读取、修改或删除，请在系统时钟或日历中操作</string>
-    <string name="plugin_arrange_detail_confirm">新建</string>
-    <string name="plugin_arrange_detail_confirm_value">只打开系统新建页或提交请求，需要用户在系统应用中确认</string>
+    <string name="plugin_arrange_detail_alarms">闹钟与计时器</string>
+    <string name="plugin_arrange_detail_alarms_value">由 App 管理，可创建、修改、读取、删除</string>
+    <string name="plugin_arrange_detail_calendar">日历</string>
+    <string name="plugin_arrange_detail_calendar_granted">可读写系统日历事件与提醒</string>
+    <string name="plugin_arrange_detail_calendar_missing">需要日历权限，点上方「授予日历权限」</string>
+    <string name="plugin_arrange_detail_system">系统时钟</string>
+    <string name="plugin_arrange_detail_system_value">只读下次闹钟；系统时钟里已有的闹钟无法读取、修改或删除</string>
+    <string name="plugin_arrange_detail_exact">精确闹钟</string>
+    <string name="plugin_arrange_detail_exact_granted">已允许</string>
+    <string name="plugin_arrange_detail_exact_missing">未允许，点上方「允许精确闹钟」</string>
 
     <string name="plugin_arrange_error_launch">没有找到可用的系统闹钟或日历应用</string>
+    <string name="plugin_arrange_error_calendar_permission">日历权限未授予：请打开「安排」插件并授予日历权限</string>
+    <string name="plugin_arrange_error_exact_alarm">需要允许精确闹钟：请打开「安排」插件或在系统设置中允许闹钟和提醒</string>
+    <string name="plugin_arrange_permission_title">日历权限</string>
+    <string name="plugin_arrange_permission_message">读取和写入日程需要日历权限</string>
 </resources>

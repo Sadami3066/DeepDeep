@@ -13,7 +13,7 @@
 
 - **外部浏览器**：Chrome/系统浏览器的 cookie 与 App 的 `CookieManager` 隔离，App 读不到登录态；小米 OAuth 需要在小米开放平台注册应用与 redirect URI，本项目没有该 client。因此纯浏览器登录无法让插件读取云数据。
 - **系统账号接口**：设备存在 `com.xiaomi.account` 的 `com.xiaomi` 账号与 Authenticator，但 auth token 受 `com.xiaomi.permission.AUTH_SERVICE` 等签名级权限保护；没有公开的 MiCloud SDK/本地接口。第三方 App 无法直接取 token。
-- **WebView**：仍是唯一能拿到 i.mi.com cookie 的路径；当前保留为 fallback。真机（Android 13 / MIUI 14）上页面 DOM 已加载，但 WebView 以零高度完成首次布局，页面 CSS 百分比高度为 0，登录内容不可见；登录功能尚未完成验证。修复方向是等 WebView 有非零高度后再加载，或加载后注入最小高度修正，而不是改用浏览器。
+- **WebView**：仍是唯一能拿到 i.mi.com cookie 的路径，作为登录入口。真机（Android 13 / MIUI 14）上出现过页面 DOM 已加载但 CSS 视口高度为 0、内容不可见的问题：WebView 在 Compose 中于 0×0 时首次加载，CSS 的 `100vh`/初始包含块高度被固定为 0。现在改为等 WebView 有非零尺寸后再加载，并在页面完成后探测 `100vh`，仅在探测到 0 时注入 `min-height` 修正；正常内核不受影响。i.mi.com 与 account.xiaomi.com 均已真机截图验证可见、可输入。
 
 ## 功能开关
 

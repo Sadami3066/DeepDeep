@@ -137,19 +137,20 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 ## 安排插件
 
-官方插件（id `arrange`），不依赖 Linux、不申请危险权限，只把闹钟/日历请求委托给系统应用：
+官方插件（id `arrange`），不依赖 Linux。闹钟/计时器由 App 的 `AlarmManager` 引擎管理，日历直接读写系统 `CalendarContract` Provider：
 
-- 工具：`arrange_alarm`（设闹钟、计时器、打开闹钟）、`arrange_calendar`（打开日历新建页并预填、打开日历到指定时间）。
+- 工具：`arrange_alarm`（list/set/update/delete/timer/show）与 `arrange_calendar`（calendars/list/get/create/update/delete/open），参数见 `docs/TOOLS.md`。
+- 闹钟：`AlarmManager.setAlarmClock` 精确调度，`AlarmManager` 公共接口；到点由前台服务响铃并显示停止通知。需要允许精确闹钟（`USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`）；不支持读取、修改或删除系统时钟应用里已有的闹钟，只能 `show` 打开。
+- 日历：`READ_CALENDAR`/`WRITE_CALENDAR` 运行时权限；可写系统日历事件、读取、修改、删除与提醒，重复事件按 `Instances` 展开读取。
 - 没有本地待办；待办由「小米云服务」插件承担。
-- 系统保存结果无法确认，也无法读取/删除已保存的闹钟或日程；`skipUi` 只是请求。
-- 动作：「打开闹钟」「打开日历」；技能 `deepdeep-arrange`。
+- 动作：「打开闹钟」「打开日历」「授予日历权限」「允许精确闹钟」；技能 `deepdeep-arrange`。
 
 ## 小米云服务插件
 
 官方插件（id `micloud`），不依赖 Linux；通过 App 内 WebView 登录 i.mi.com，读取与写入小米云个人数据：
 
 - 登录：WebView 登录后加密保存 cookie；未登录、失效、网络错误都有状态；动作支持登录/重新登录/退出登录。
-- 登录方式：浏览器 cookie 与 App 隔离、系统账号 token 受签名权限保护，均无法读取云数据；WebView 是唯一可行路径，但真机上页面 CSS 高度为 0、登录内容暂不可见，登录功能尚未完成验证。详见 `docs/MICLOUD.md`。
+- 登录方式：浏览器 cookie 与 App 隔离、系统账号 token 受签名权限保护，均无法读取云数据；WebView 是唯一可行路径。登录页曾因 WebView 视口高度为 0 而空白，现在等待非零布局后加载并注入最小高度修正；i.mi.com 与 account.xiaomi.com 已真机验证可见可输入。详见 `docs/MICLOUD.md`。
 - 功能开关：账号、笔记、待办、短信与通话、联系人、相册、录音分别有读开关，笔记/待办另有写开关；默认全部关闭，只有开启的能力才会注入对应 `mi_cloud_*` 工具。
 - 工具：`mi_cloud_account`、`mi_cloud_notes`、`mi_cloud_todo`、`mi_cloud_sms`、`mi_cloud_contacts`、`mi_cloud_gallery`、`mi_cloud_recordings`，见 `docs/TOOLS.md`。
 - 写：只能通过隐藏 WebView 同源 fetch，所有 POST 带 `serviceToken`；笔记/待办写入前需用户确认。

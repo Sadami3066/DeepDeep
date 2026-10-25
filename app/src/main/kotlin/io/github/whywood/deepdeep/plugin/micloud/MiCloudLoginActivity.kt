@@ -3,7 +3,9 @@ package io.github.whywood.deepdeep.plugin.micloud
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -198,10 +200,7 @@ class MiCloudLoginActivity : ComponentActivity() {
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 AndroidView(
                     factory = { viewContext ->
-                        createWebView(viewContext).also { created ->
-                            webView = created
-                            created.post { created.loadUrl(ORIGIN) }
-                        }
+                        createWebView(viewContext).also { created -> webView = created }
                     },
                     modifier = Modifier.fillMaxSize().testTag("micloud_login_webview"),
                     onRelease = { released ->
@@ -281,11 +280,37 @@ class MiCloudLoginActivity : ComponentActivity() {
             setAcceptThirdPartyCookies(view, true)
         }
         view.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+                val host = runCatching { Uri.parse(url).host }.getOrNull().orEmpty()
+                if (!host.endsWith("mi.com") && !host.endsWith("xiaomi.com")) return
+                view.evaluateJavascript(VIEWPORT_FIX_SCRIPT, null)
+            }
+
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (!request.isForMainFrame) return
                 state.value = LoginUiState.Error(getString(R.string.plugin_micloud_login_page_error))
             }
         }
+        view.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+            private var started = false
+
+            override fun onLayoutChange(
+                v: View,
+                left: Int,
+                top: Int,
+                right: Int,
+                bottom: Int,
+                oldLeft: Int,
+                oldTop: Int,
+                oldRight: Int,
+                oldBottom: Int,
+            ) {
+                if (started || v.width <= 0 || v.height <= 0) return
+                started = true
+                view.removeOnLayoutChangeListener(this)
+                view.loadUrl(ORIGIN)
+            }
+        })
         return view
     }
 
@@ -300,6 +325,26 @@ class MiCloudLoginActivity : ComponentActivity() {
     private companion object {
         const val ORIGIN = "https://i.mi.com"
         const val POLL_INTERVAL_MS = 1_000L
+
+        val VIEWPORT_FIX_SCRIPT = """
+            (function () {
+              var probe = document.createElement('div');
+              probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:100vh;visibility:hidden;';
+              (document.body || document.documentElement).appendChild(probe);
+              var viewportHeight = probe.getBoundingClientRect().height;
+              if (probe.parentNode) probe.parentNode.removeChild(probe);
+              if (viewportHeight !== 0 || window.innerHeight <= 0) return;
+              var style = document.getElementById('deepdeep-viewport-fix');
+              if (!style) {
+                style = document.createElement('style');
+                style.id = 'deepdeep-viewport-fix';
+                (document.head || document.documentElement).appendChild(style);
+              }
+              var height = window.innerHeight;
+              style.textContent = 'html,body,#root,#app,.micloud-app{height:auto!important;min-height:' +
+                height + 'px!important}body{overflow:auto!important}';
+            })();
+        """.trimIndent()
     }
 }
 

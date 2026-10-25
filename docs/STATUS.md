@@ -1,5 +1,22 @@
 # Status
 
+## Done: 安排完整 CRUD、小米云登录页修复
+
+**安排插件**
+- `arrange_alarm`：Agent 可创建、列出、修改、删除 App 管理的闹钟与计时器；`AlarmManager.setAlarmClock` 精确调度，`specialUse` 前台服务响铃（系统 alarm ringtone + 振动 + 停止通知），重启/时间/时区变化自动重排；`list.systemNext` 只读展示系统时钟的下次闹钟。
+- `arrange_calendar`：通过 `CalendarContract` Provider 直接创建/读取/修改/删除系统日历事件与提醒，支持 Calendars/Instances/Reminders；重复事件按实例展开读取，list 返回的 id 可直接用于 update/delete。
+- 权限：`READ_CALENDAR`/`WRITE_CALENDAR`、`USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM` 等；插件页有「授予日历权限」「允许精确闹钟」入口。系统时钟应用里已有的闹钟受签名级 `miui.permission.ACCESS_ALARM_PROVIDER` 保护，公开 API 只能打开，不能读写。
+- 真机证据：androidTest 4 项（日历 CRUD、闹钟 CRUD、精确调度、响铃通知）通过；App 内闹钟响铃通知与前台服务在 MIUI 上验证。
+
+**小米云服务**
+- 修复 WebView 登录页空白：等非零布局后加载 + 探测 `100vh==0` 时注入最小高度修正；i.mi.com 与 account.xiaomi.com 真机截图完整可见、可输入。
+- 登录后的 cookie 保存/profile 校验仍需真实账号完成。
+
+**验证**
+- 837 unit tests green（app 530 / runtime 286 / shell 21，0 failures）。
+- `:app:assembleDebug`、`verifyModuleBoundaries` 通过；lint 0 errors / 156 warnings / 5 hints。
+- 证据：`artifacts/validation/round34/`。
+
 ## Done: 小米云服务/安排/企微插件、GUI 增强与聊天框整理
 
 **插件**

@@ -2,17 +2,14 @@ package io.github.whywood.deepdeep.plugin.arrange
 
 import android.content.Intent
 import android.provider.AlarmClock
-import android.provider.CalendarContract
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.ArrayList
 import java.util.Locale
 
-internal const val CALENDAR_EVENTS_URI = "content://com.android.calendar/events"
 internal const val CALENDAR_TIME_URI = "content://com.android.calendar/time"
 internal const val DEFAULT_CALENDAR_DURATION_MILLIS = 60L * 60L * 1_000L
 internal const val MAX_LABEL_LENGTH = 200
@@ -51,13 +48,6 @@ internal fun normalizeIsoDays(days: List<Int>): List<Int> {
     return days.distinct().sorted()
 }
 
-internal fun isoToAlarmClockDay(isoDay: Int): Int {
-    if (isoDay !in 1..7) throw IllegalArgumentException("days 使用 ISO 星期：1=周一，7=周日")
-    return isoDay % 7 + 1
-}
-
-internal fun alarmClockDays(days: List<Int>): List<Int> = normalizeIsoDays(days).map(::isoToAlarmClockDay)
-
 internal fun formatIsoDays(days: List<Int>): String {
     val normalized = normalizeIsoDays(days)
     return when {
@@ -72,32 +62,6 @@ internal fun boundedOptionalText(raw: String?, maxLength: Int, field: String): S
     if (text.isEmpty()) return null
     if (text.length > maxLength) throw IllegalArgumentException("$field 不能超过 $maxLength 个字符")
     return text
-}
-
-internal fun alarmSetRequest(
-    time: ClockTime,
-    label: String?,
-    days: List<Int>,
-    skipUi: Boolean,
-): ArrangeIntentSpec {
-    val extras = linkedMapOf<String, Any>(
-        AlarmClock.EXTRA_HOUR to time.hour,
-        AlarmClock.EXTRA_MINUTES to time.minute,
-    )
-    boundedOptionalText(label, MAX_LABEL_LENGTH, "label")?.let { extras[AlarmClock.EXTRA_MESSAGE] = it }
-    val clockDays = alarmClockDays(days)
-    if (clockDays.isNotEmpty()) extras[AlarmClock.EXTRA_DAYS] = ArrayList(clockDays)
-    if (skipUi) extras[AlarmClock.EXTRA_SKIP_UI] = true
-    return ArrangeIntentSpec(action = AlarmClock.ACTION_SET_ALARM, extras = extras)
-}
-
-internal fun alarmTimerRequest(durationSeconds: Int, label: String?): ArrangeIntentSpec {
-    if (durationSeconds !in MIN_TIMER_SECONDS..MAX_TIMER_SECONDS) {
-        throw IllegalArgumentException("durationSeconds 需要在 $MIN_TIMER_SECONDS..$MAX_TIMER_SECONDS 之间")
-    }
-    val extras = linkedMapOf<String, Any>(AlarmClock.EXTRA_LENGTH to durationSeconds)
-    boundedOptionalText(label, MAX_LABEL_LENGTH, "label")?.let { extras[AlarmClock.EXTRA_MESSAGE] = it }
-    return ArrangeIntentSpec(action = AlarmClock.ACTION_SET_TIMER, extras = extras)
 }
 
 internal fun alarmShowRequest(): ArrangeIntentSpec = ArrangeIntentSpec(action = AlarmClock.ACTION_SHOW_ALARMS)
@@ -115,31 +79,6 @@ internal fun parseCalendarMillis(raw: String, zone: ZoneId = ZoneId.systemDefaul
         return it.atStartOfDay(zone).toInstant().toEpochMilli()
     }
     throw IllegalArgumentException("无法解析时间「$raw」：支持 yyyy-MM-dd HH:mm、yyyy-MM-dd、ISO 8601 或毫秒时间戳")
-}
-
-internal fun calendarCreateRequest(
-    title: String?,
-    startMillis: Long,
-    endMillis: Long?,
-    allDay: Boolean,
-    location: String?,
-    description: String?,
-): ArrangeIntentSpec {
-    val cleanTitle = boundedOptionalText(title, MAX_LABEL_LENGTH, "title")
-        ?: throw IllegalArgumentException("缺少参数 title")
-    val resolvedEnd = endMillis ?: if (allDay) null else startMillis + DEFAULT_CALENDAR_DURATION_MILLIS
-    if (resolvedEnd != null && resolvedEnd <= startMillis) throw IllegalArgumentException("end 必须晚于 start")
-    val extras = linkedMapOf<String, Any>(
-        CalendarContract.EXTRA_EVENT_BEGIN_TIME to startMillis,
-        CalendarContract.Events.TITLE to cleanTitle,
-    )
-    resolvedEnd?.let { extras[CalendarContract.EXTRA_EVENT_END_TIME] = it }
-    if (allDay) extras[CalendarContract.EXTRA_EVENT_ALL_DAY] = true
-    boundedOptionalText(location, MAX_TEXT_LENGTH, "location")
-        ?.let { extras[CalendarContract.Events.EVENT_LOCATION] = it }
-    boundedOptionalText(description, MAX_TEXT_LENGTH, "description")
-        ?.let { extras[CalendarContract.Events.DESCRIPTION] = it }
-    return ArrangeIntentSpec(action = Intent.ACTION_INSERT, data = CALENDAR_EVENTS_URI, extras = extras)
 }
 
 internal fun calendarOpenRequest(startMillis: Long?): ArrangeIntentSpec = if (startMillis == null) {
@@ -175,4 +114,10 @@ internal fun formatCalendarRange(
     if (allDay) return start
     val end = endMillis?.let { formatCalendarTime(it, allDay = false, zone = zone) }
     return if (end == null) start else "$start–$end"
+}
+
+internal fun calendarRangeForDay(startMillis: Long, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
+    val date = Instant.ofEpochMilli(startMillis).atZone(zone).toLocalDate()
+    val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
+    return start to start + 24L * 60L * 60L * 1_000L
 }

@@ -125,17 +125,18 @@ defaultCodingTools(...)
 - 工具结果是紧凑 JSON `{"items":[{type,path,name,mime,title?,id?,icon?,version?}]}`；UI 从会话历史里的工具结果解析卡片，重开会话后仍能渲染；坏项逐条丢弃，不影响其余项。
 - 报告、幻灯片、视频等已落盘文件用 `file`；需要直接看效果的图表/截图用 `image`；单页页面用 `html`；工坊小应用用 `creative`。纯文本结论仍走普通回复。
 
-## 安排（闹钟/日历）
+## 安排（闹钟/计时器/日历）
 
-由官方插件 `arrange` 贡献，只在插件已启用时出现；只委托系统应用，不申请危险权限。
+由官方插件 `arrange` 贡献，只在插件已启用时出现。闹钟/计时器由 App 自己的 `AlarmManager` 引擎管理；日历直接读写系统 `CalendarContract` Provider。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
-| `arrange_alarm` | `action=set|timer|show`；set: `time`(HH:mm) 或 `hour`+`minute`、`label?`、`days?`(ISO 1–7)、`skipUi?`；timer: `durationSeconds`、`label?` | 打开系统时钟的闹钟/计时器新建页，或用 `show` 打开闹钟列表 |
-| `arrange_calendar` | `action=create|open`；create: `title`、`start`、`end?`、`allDay?`、`location?`、`description?`；open: `time?` | 打开系统日历新建页并预填，或打开日历到指定时间 |
+| `arrange_alarm` | `action=list/set/update/delete/timer/show`；`id?`；`time?`(HH:mm) 或 `hour`+`minute`；`label?`；`days?`(ISO 1–7，空=一次性)；`enabled?`；`durationSeconds?`（1–86400） | `list` 列出 App 管理的闹钟/计时器与只读的下次系统闹钟；`set` 创建；`update`/`delete` 按 id 修改/删除；`timer` 创建倒计时；`show` 打开系统时钟 |
+| `arrange_calendar` | `action=calendars/list/get/create/update/delete/open`；`id?`；`calendarId?`；`title?`；`start?`；`end?`；`allDay?`；`location?`；`description?`；`reminders?`(提前分钟数组)；`query?`；`limit?`(1–200)；`time?` | `calendars` 列出可写日历；`list` 按范围查询（含重复事件展开）；`get` 读取；`create`/`update`/`delete` 直接落库；`open` 打开系统日历 |
 
-- 闹钟/日程最终由系统应用保存；工具只返回“已打开”，不能确认用户是否保存，也不能读取或删除已保存项。
-- `skipUi` 只是请求，OEM 时钟应用可能仍显示确认页。
+- 闹钟到点由 App 前台服务响铃，需要允许精确闹钟；系统时钟里已有的闹钟只能通过 `show` 打开，无法读取、修改或删除；`list.systemNext` 只读。
+- 日历读写需要 `READ_CALENDAR`/`WRITE_CALENDAR`；未授权时工具返回错误，提示在「安排」插件页授权。`location`/`description` 传空字符串可清除，`reminders` 传空数组清空提醒。
+- 修改/删除前先用 `list`/`get` 取 id；结果以工具返回 JSON 为准。
 
 ## 小米云服务
 

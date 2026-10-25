@@ -25,10 +25,12 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 - 冷启动恢复最近会话，热启动插入当前会话；生成中分享会排队等待。内容先复制到 App 私有缓存，避免 URI 授权过期；超过 25MB/20 个或读取失败按文件粒度提示。
 - App 自身分享时选择器排除自己，避免分享回环。
 
-### 安排（闹钟/日历，插件）
+### 安排（闹钟/计时器/日历，插件）
 
-- 插件 `arrange` 通过 `AlarmClock.ACTION_SET_ALARM/SET_TIMER/SHOW_ALARMS` 与 `ACTION_INSERT` 委托系统时钟/日历，零危险权限；Manifest 声明普通权限 `com.android.alarm.permission.SET_ALARM`（MIUI 实测缺少时会拒绝启动）。
-- `skipUi` 只是请求，OEM 应用可能仍显示确认页；系统保存后无法确认结果，也无法读取或删除已保存的闹钟/日程。
+- 闹钟/计时器：使用 `AlarmManager.setAlarmClock()` 精确调度，`BroadcastReceiver` 触发 `specialUse` 前台服务响铃（系统闹钟铃声 + 振动 + 停止通知）；Manifest 声明 `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`、`WAKE_LOCK`、`VIBRATE`、`RECEIVE_BOOT_COMPLETED`、`FOREGROUND_SERVICE_SPECIAL_USE`、`USE_FULL_SCREEN_INTENT`。重启、时间/时区变化后自动重排；`getNextAlarmClock()` 只读展示下次系统闹钟。
+- 系统时钟应用里已有的闹钟：公开 `AlarmClock` intents 只能创建/显示/关闭正在响的闹钟，没有查询、修改、删除接口；MIUI 的 `com.android.deskclock/.AlarmProvider` 受签名级 `miui.permission.ACCESS_ALARM_PROVIDER` 保护（实测 `content query` 被拒），第三方 App 无法直接 CRUD。因此 `list.systemNext` 只读，系统时钟里的闹钟只能 `show` 打开。
+- 日历：直接读写 `CalendarContract` Provider，需要 `READ_CALENDAR`/`WRITE_CALENDAR` 运行时权限；支持 Calendars/Events/Instances/Reminders，重复事件按 Instances 展开读取，写入依赖可写日历（本机 Xiaomi 账户日历可写）。
+- 权限入口：插件详情页「授予日历权限」「允许精确闹钟」，未授权时工具返回明确错误。
 - 不提供本地待办；小米待办由「小米云服务」插件读写，见 `docs/MICLOUD.md`。
 
 ### 小米云服务（插件，网页接口）
@@ -40,9 +42,7 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 ## 未实现 / 不在当前范围
 
 - **本地待办与系统待办 provider**：Android 没有公开 To-Do provider；DeepDeep 不提供本地待办。
-- **应用内精确提醒**：`AlarmManager` 精确闹钟 + `SCHEDULE_EXACT_ALARM` + 通知权限、重启/时区重排；当前没有本地提醒功能，现有 `schedule_*` 仍是进程内定时。
-- **日历直写 Provider**：需要 `READ_CALENDAR`/`WRITE_CALENDAR`，且依赖可写日历；当前只做委托新建。
-- **全屏提醒**：Android 14+ 受限，未接入。
+- **系统时钟闹钟 CRUD**：需要系统签名/特权权限或 root 直接改时钟应用数据；当前不实现，只管理 App 自己的闹钟。
 - **系统级助手替换与悬浮层**：见 `docs/ANDROID_ASSISTANT.md`（研究，不实现）。
 - **root 工具**：见 `docs/ROOT.md`（研究，不实现）。
 

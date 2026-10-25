@@ -338,7 +338,11 @@ class AppGraph(context: Context) {
 
     init {
         ensureBuiltinSkills()
-        scope.launch { pluginManager.start() }
+        scope.launch {
+            pluginManager.start()
+            host.busySessionIds.first { it.isEmpty() }
+            host.reconfigure()
+        }
         scope.launch {
             host.events.collect { event ->
                 when (event.event) {

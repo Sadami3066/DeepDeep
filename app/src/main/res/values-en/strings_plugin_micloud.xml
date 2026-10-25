@@ -14,7 +14,7 @@
     <string name="plugin_micloud_action_logout">Sign out</string>
 
     <string name="plugin_micloud_stage_login">Waiting for sign-in</string>
-    <string name="plugin_micloud_hint_login">Complete the Xiaomi account sign-in in the page that just opened</string>
+    <string name="plugin_micloud_hint_login">Complete the Xiaomi account sign-in on the page that just opened</string>
     <string name="plugin_micloud_stage_verifying">Verifying sign-in</string>
     <string name="plugin_micloud_stage_signed_in">Signed in</string>
     <string name="plugin_micloud_stage_logging_out">Signing out</string>
