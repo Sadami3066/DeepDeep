@@ -21,4 +21,6 @@
     <string name="notification_download_title">Developer tools</string>
     <string name="notification_download_done">%1$s installed</string>
     <string name="notification_download_failed">Install failed: %1$s</string>
+    <string name="notification_accessibility_lost_title">Accessibility service disconnected</string>
+    <string name="notification_accessibility_lost_text">The system interrupted a background task. Turn DeepDeep off and on again in Accessibility settings, or reboot the phone.</string>
 </resources>

@@ -205,7 +205,7 @@ class GuiAccessibilityActions(
 
     private fun requireService(): GuiAccessibilityService =
         serviceProvider() ?: throw GuiUnavailableException(
-            "无障碍服务未开启：请在插件页打开无障碍设置并启用 DeepDeep 无障碍服务",
+            "无障碍服务未连接：请到系统设置的无障碍中启用 DeepDeep；如果开关已打开，请关闭再重新打开（服务被系统结束后不会自动重连，也可重启手机）",
         )
 
     private fun requireNode(selector: GuiSelector): GuiSnapshotNode {

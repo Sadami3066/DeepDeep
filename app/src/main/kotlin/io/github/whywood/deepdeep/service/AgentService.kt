@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class AgentService : Service() {
@@ -33,8 +34,18 @@ class AgentService : Service() {
         graph.notificationCenter.onForegroundStarted()
         registerClockReceiver()
         scope.launch {
+            ProcessExitLog.record(this@AgentService)
             graph.host.ensureStarted()
             graph.scheduleService.start()
+        }
+        scope.launch {
+            delay(ACCESSIBILITY_CHECK_DELAY_MS)
+            if (!AppVisibility.foreground &&
+                GuiAccessibilityState.isEnabled(this@AgentService) &&
+                GuiAccessibilityState.service == null
+            ) {
+                graph.notificationCenter.notifyAccessibilityLost()
+            }
         }
     }
 
@@ -75,5 +86,6 @@ class AgentService : Service() {
         const val ACTION_STOP = "io.github.whywood.deepdeep.action.STOP"
         const val ACTION_STOP_SESSION = "io.github.whywood.deepdeep.action.STOP_SESSION"
         private const val NOTIFICATION_ID = 1
+        private const val ACCESSIBILITY_CHECK_DELAY_MS = 4_000L
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,9 +63,11 @@ fun PluginDetailScreen(
     val busy = state.busy || state.interaction != null
     var deleteOpen by remember { mutableStateOf(false) }
     var detailRows by remember(pluginId) { mutableStateOf<List<PluginDetailRow>>(emptyList()) }
+    var detailRefresh by remember(pluginId) { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { manager.refresh() }
     LifecycleResumeEffect(Unit) {
+        detailRefresh += 1
         manager.refreshIfStale(minIntervalMillis = 0)
         onPauseOrDispose { }
     }
@@ -74,7 +77,7 @@ fun PluginDetailScreen(
             onBack()
         }
     }
-    LaunchedEffect(snapshot?.status, snapshot?.installedVersion) {
+    LaunchedEffect(snapshot?.status, snapshot?.installedVersion, detailRefresh) {
         val current = snapshot ?: return@LaunchedEffect
         val status = current.status ?: return@LaunchedEffect
         detailRows = runCatching { current.plugin.detailRows(status) }.getOrDefault(emptyList())

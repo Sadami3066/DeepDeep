@@ -26,7 +26,7 @@ const val GUI_DEFAULT_LINUX_SCREENSHOT_DIR = "/gui/screenshots"
 private const val DEFAULT_FIND_LIMIT = 20
 private const val MAX_FIND_LIMIT = 50
 private const val DISCONNECTED_MESSAGE =
-    "无障碍服务未开启：请在插件页打开无障碍设置并启用 DeepDeep 无障碍服务"
+    "无障碍服务未连接：请到系统设置的无障碍中启用 DeepDeep；如果开关已打开，请关闭再重新打开（服务被系统结束后不会自动重连，也可重启手机）"
 
 private val OBSERVE_GUIDELINES = listOf(
     "Call gui_observe before acting and again after every action that changes the screen; refs from an older observe are invalid.",

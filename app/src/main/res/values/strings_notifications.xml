@@ -21,4 +21,6 @@
     <string name="notification_download_title">开发工具</string>
     <string name="notification_download_done">%1$s 安装完成</string>
     <string name="notification_download_failed">安装失败：%1$s</string>
+    <string name="notification_accessibility_lost_title">无障碍服务已断开</string>
+    <string name="notification_accessibility_lost_text">后台任务被系统中断。请在无障碍设置里把 DeepDeep 关闭再重新打开，或重启手机。</string>
 </resources>

@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -133,6 +134,30 @@ class NotificationCenter(
     fun clearInstallNotification() {
         manager.cancel(INSTALL_ID)
         manager.cancel(INSTALL_RESULT_ID)
+    }
+
+    fun notifyAccessibilityLost() {
+        val text = context.getString(R.string.notification_accessibility_lost_text)
+        val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.notification_accessibility_lost_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(accessibilitySettingsIntent())
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        post(ACCESSIBILITY_ID, builder.build())
+    }
+
+    private fun accessibilitySettingsIntent(): PendingIntent {
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            context,
+            1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private suspend fun onEvent(event: SessionRuntimeEvent) {
@@ -321,6 +346,7 @@ class NotificationCenter(
         private const val FOREGROUND_ID = 1
         private const val INSTALL_ID = 200
         private const val INSTALL_RESULT_ID = 201
+        private const val ACCESSIBILITY_ID = 300
         private const val GROUP_SESSIONS = "deepdeep_sessions"
 
         fun areNotificationsEnabled(context: Context): Boolean =

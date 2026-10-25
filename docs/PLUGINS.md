@@ -129,8 +129,9 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 第三个官方插件（id `gui`），不依赖 Linux，由 App 自己的无障碍服务提供能力：
 
 - 工具：`gui_observe`、`gui_find`、`gui_tap`、`gui_set_text`、`gui_scroll`、`gui_global`、`gui_wait`、`gui_screenshot`，参数与安全规则见 `docs/TOOLS.md`。
-- 服务：App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，配置 `res/xml/gui_accessibility_service.xml`）。必须由用户在系统设置手动开启；插件状态读取 `GuiAccessibilityState.connected`，未开启显示「无障碍服务未开启」。
-- 动作：「打开无障碍设置」跳系统页；没有 app 内开关。
+- 服务：App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，配置 `res/xml/gui_accessibility_service.xml`）。必须由用户在系统设置手动开启；插件状态读取 `GuiAccessibilityState.connected`，未开启或系统断开时在详情页显示对应状态。
+- 动作：「打开无障碍设置」跳系统页；「允许后台运行」申请电池优化豁免（仅在未豁免时显示）；「自启动设置」与「省电策略」跳小米对应页面（后者仅在系统限制时显示）。没有 app 内开关。
+- 后台保活：详情页显示无障碍连接、电池优化豁免、后台限制与最近任务锁定的状态。后台任务依赖前台服务保活；若系统结束进程，无障碍服务会被系统置为断开且不会自动重连，详情页显示「无障碍服务已断开」，需要在系统无障碍设置里关闭再打开，或重启手机。
 - 技能：`deepdeep-gui`，随插件安装写入仓库并在启用后进入全局生效目录，写清 observe/find→动作→再 observe、选择器优先级、ref 失效、截图边界、安全红线与能力边界。
 - 安装/卸载为空操作，只涉及安装记录、技能副本与工具注入。
 - 截图保存到 `files/gui/screenshots/`（Linux `/gui/screenshots/`），Android 11+、非锁屏、非 `FLAG_SECURE` 页面可用；只操作当前活动窗口。

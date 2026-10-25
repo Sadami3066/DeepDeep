@@ -1,5 +1,22 @@
 # Status
 
+## Done: 后台保活（GUI 长任务防系统杀进程）
+
+**问题与结论**
+- 真机日志确认：App 的前台服务在后台保持 `adj=200`，本次观察期间进程未被系统结束；但 MIUI 的 `MiuiMemoryService` 会在内存清理时结束后台进程（系统 `am_kill` 可见，官方原因还包括 OneKeyClean、SwipeUpClean、LockScreenClean、AutoPowerKill 等），`specialUse` 前台服务不能完全避免。
+- 进程一旦结束，无障碍服务进入系统 crashed 状态，系统不会自动重绑；用户必须在无障碍设置里关掉再打开，或重启手机。
+
+**修复**
+- 「GUI 操作」插件页新增后台保活状态：无障碍连接、电池优化豁免、后台限制、最近任务锁定提示；返回页面时自动刷新。
+- 新增动作「允许后台运行」（未豁免时显示，跳系统/小米省电策略页）、「自启动设置」（小米自启动管理页）、「省电策略」（系统限制时显示）。
+- 进程重启后检测无障碍服务：已开启但未连接时发通知，点击直达无障碍设置；工具报错也会说明需要关闭再打开或重启。
+- 记录上次进程退出原因到 `files/diagnostics/process-exits.log`（`ApplicationExitInfo`），用于确认系统 kill 的具体原因。
+- 文档补充后台运行要求与小米设置路径。
+
+**验证**
+- 真机：插件页状态/动作、MIUI 省电策略与自启动跳转、电池优化豁免开关往返、后台前台服务保活、进程退出原因落盘均验证；`artifacts/validation/round36/`。
+- 804 unit tests green（app 497 / runtime 286 / shell 21，0 failures）；lint 0 errors / 152 warnings / 5 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、模块边界检查通过。
+
 ## Done: 安排精简为日历、云服务合并开关、设置/聊天框整理
 
 **安排**

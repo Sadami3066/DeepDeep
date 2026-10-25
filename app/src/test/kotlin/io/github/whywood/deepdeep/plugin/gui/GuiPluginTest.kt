@@ -69,22 +69,30 @@ class GuiPluginTest {
     }
 
     @Test
-    fun actionsOpenAccessibilitySettings() {
+    fun actionsOpenAccessibilitySettingsAndOfferBatteryExemption() {
         val actions = plugin().actions(PluginStatus.NotReady("x"))
-        assertEquals(1, actions.size)
-        assertEquals("accessibility_settings", actions.single().id)
-        assertEquals(R.string.plugin_gui_action_settings, actions.single().labelRes)
+        assertEquals(
+            listOf("accessibility_settings", "battery_exemption"),
+            actions.map { it.id },
+        )
+        assertEquals(R.string.plugin_gui_action_settings, actions.first().labelRes)
+        assertEquals(R.string.plugin_gui_action_battery, actions.last().labelRes)
     }
 
     @Test
-    fun detailRowsReportServiceState() = runTest {
+    fun detailRowsReportServiceAndKeepAliveState() = runTest {
         val connected = plugin().detailRows(PluginStatus.Ready("x"))
-        assertEquals(1, connected.size)
-        assertEquals(R.string.plugin_gui_detail_service, connected.single().labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected.single().value)
+        assertEquals(4, connected.size)
+        assertEquals(R.string.plugin_gui_detail_service, connected[0].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected[0].value)
+        assertEquals(R.string.plugin_gui_detail_battery, connected[1].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[1].value)
+        assertEquals(R.string.plugin_gui_detail_background, connected[2].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[2].value)
+        assertEquals(R.string.plugin_gui_detail_recent, connected[3].labelRes)
 
         val disabled = plugin(FakeActions(disconnected = true)).detailRows(PluginStatus.NotReady("x"))
-        assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled.single().value)
+        assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled[0].value)
     }
 
     @Test
@@ -172,6 +180,9 @@ class GuiPluginTest {
         private val fakeResources = FakeResources()
 
         override fun getResources(): Resources = fakeResources
+
+        override fun getSystemService(name: String): Any? = null
+
     }
 
     @Suppress("DEPRECATION")
