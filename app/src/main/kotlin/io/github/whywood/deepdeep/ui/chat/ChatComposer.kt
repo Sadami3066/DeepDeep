@@ -263,7 +263,17 @@ internal fun ChatComposer(
                         tint = colors.inkTertiary,
                         enabled = !sending,
                     )
-                    Spacer(Modifier.width(2.dp))
+                    ComposerChip(
+                        text = label,
+                        onClick = {
+                            if (configured) onModelsOpenChange(true) else onOpenSettings()
+                        },
+                        enabled = !sending,
+                        contentDescription = stringResource(R.string.assistant_model_chip, label),
+                        testTag = "assistant_model",
+                        maxWidth = 150.dp,
+                    )
+                    Spacer(Modifier.weight(1f))
                     val voiceClick = onVoiceClick
                     if (voiceClick != null && !sending) {
                         DdPressable(
@@ -277,19 +287,8 @@ internal fun ChatComposer(
                         ) {
                             DdIcon(icon = DdIcons.Mic, tint = colors.inkSecondary, size = 18.dp)
                         }
-                        Spacer(Modifier.width(2.dp))
+                        Spacer(Modifier.width(6.dp))
                     }
-                    ComposerChip(
-                        text = label,
-                        onClick = {
-                            if (configured) onModelsOpenChange(true) else onOpenSettings()
-                        },
-                        enabled = !sending,
-                        contentDescription = stringResource(R.string.assistant_model_chip, label),
-                        testTag = "assistant_model",
-                        maxWidth = 150.dp,
-                    )
-                    Spacer(Modifier.weight(1f))
                     DdPressable(
                         onClick = { if (sending) onStop() else onSend() },
                         modifier = Modifier

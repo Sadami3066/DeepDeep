@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,7 +45,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.whywood.deepdeep.assistant.AssistantRole
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.PersonalizationUi
@@ -222,8 +220,6 @@ internal fun DeepDeepApp(
     val voiceSendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
         initialValue = false,
     )
-    val guiConnected by GuiAccessibilityState.connected.collectAsStateWithLifecycle()
-    var voiceRoleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
     var voiceSheetOpen by rememberSaveable { mutableStateOf(false) }
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
@@ -292,7 +288,6 @@ internal fun DeepDeepApp(
     LifecycleResumeEffect(Unit) {
         chatViewModel.onAppForeground()
         GuiAccessibilityState.refresh(context)
-        voiceRoleHeld = AssistantRole.isHeld(context)
         onPauseOrDispose { }
     }
     LaunchedEffect(openVoiceAssistant) {
@@ -605,20 +600,6 @@ internal fun DeepDeepApp(
                     onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
                     archivedCount = state.archivedCount,
                     onOpenArchived = { navigator.push(AppDestination.Archived) },
-                    voiceRoleHeld = voiceRoleHeld,
-                    onRequestVoiceRole = {
-                        val intent = AssistantRole.requestIntent(context) ?: AssistantRole.settingsIntent(context)
-                        runCatching { context.startActivity(intent) }
-                    },
-                    guiConnected = guiConnected,
-                    onOpenGuiSettings = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }
-                    },
                 )
 
                 AppDestination.Providers -> ProviderListScreen(

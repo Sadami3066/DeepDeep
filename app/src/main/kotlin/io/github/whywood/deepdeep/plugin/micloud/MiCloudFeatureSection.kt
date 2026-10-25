@@ -52,90 +52,70 @@ fun MiCloudFeatureSection(
                 DdHairline()
             }
             FeatureRow(
-                titleRes = R.string.micloud_feature_notes_read,
-                checked = capabilities.notesRead,
+                titleRes = R.string.micloud_feature_notes,
+                checked = capabilities.notesRead && capabilities.notesWrite,
                 enabled = enabled,
-                testTag = "micloud_feature_notes_read",
+                testTag = "micloud_feature_notes",
                 onCheckedChange = { value ->
-                    scope.launch { preferences.setRead(MiCloudFeature.NOTES, value) }
+                    scope.launch { preferences.setFeature(MiCloudFeature.NOTES, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_notes_write,
-                checked = capabilities.notesWrite,
+                titleRes = R.string.micloud_feature_todos,
+                checked = capabilities.todosRead && capabilities.todosWrite,
                 enabled = enabled,
-                testTag = "micloud_feature_notes_write",
+                testTag = "micloud_feature_todos",
                 onCheckedChange = { value ->
-                    scope.launch { preferences.setWrite(MiCloudFeature.NOTES, value) }
+                    scope.launch { preferences.setFeature(MiCloudFeature.TODOS, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_todos_read,
-                checked = capabilities.todosRead,
-                enabled = enabled,
-                testTag = "micloud_feature_todos_read",
-                onCheckedChange = { value ->
-                    scope.launch { preferences.setRead(MiCloudFeature.TODOS, value) }
-                },
-            )
-            DdHairline()
-            FeatureRow(
-                titleRes = R.string.micloud_feature_todos_write,
-                checked = capabilities.todosWrite,
-                enabled = enabled,
-                testTag = "micloud_feature_todos_write",
-                onCheckedChange = { value ->
-                    scope.launch { preferences.setWrite(MiCloudFeature.TODOS, value) }
-                },
-            )
-            DdHairline()
-            FeatureRow(
-                titleRes = R.string.micloud_feature_sms_read,
+                titleRes = R.string.micloud_feature_sms,
                 checked = capabilities.smsRead,
                 enabled = enabled,
-                testTag = "micloud_feature_sms_read",
+                testTag = "micloud_feature_sms",
                 onCheckedChange = { value ->
                     scope.launch { preferences.setRead(MiCloudFeature.SMS, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_contacts_read,
+                titleRes = R.string.micloud_feature_contacts,
                 checked = capabilities.contactsRead,
                 enabled = enabled,
-                testTag = "micloud_feature_contacts_read",
+                testTag = "micloud_feature_contacts",
                 onCheckedChange = { value ->
                     scope.launch { preferences.setRead(MiCloudFeature.CONTACTS, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_gallery_read,
+                titleRes = R.string.micloud_feature_gallery,
                 checked = capabilities.galleryRead,
                 enabled = enabled,
-                testTag = "micloud_feature_gallery_read",
+                testTag = "micloud_feature_gallery",
                 onCheckedChange = { value ->
                     scope.launch { preferences.setRead(MiCloudFeature.GALLERY, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_recordings_read,
+                titleRes = R.string.micloud_feature_recordings,
                 checked = capabilities.recordingsRead,
                 enabled = enabled,
-                testTag = "micloud_feature_recordings_read",
+                testTag = "micloud_feature_recordings",
                 onCheckedChange = { value ->
                     scope.launch { preferences.setRead(MiCloudFeature.RECORDINGS, value) }
                 },
             )
             DdHairline()
             FeatureRow(
-                titleRes = R.string.micloud_feature_account_read,
+                titleRes = R.string.micloud_feature_account,
                 checked = capabilities.accountRead,
                 enabled = enabled,
-                testTag = "micloud_feature_account_read",
+                testTag = "micloud_feature_account",
                 onCheckedChange = { value ->
                     scope.launch { preferences.setRead(MiCloudFeature.ACCOUNT, value) }
                 },

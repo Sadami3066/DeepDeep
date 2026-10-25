@@ -222,9 +222,9 @@ filesDir/
 ## Android 能力
 
 - GUI 操作：官方插件 `gui` + App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，`res/xml/gui_accessibility_service.xml`）。服务由用户在系统设置手动开启；`GuiAccessibilityState` 用 StateFlow 暴露连接状态，插件据此显示就绪/未就绪。工具为 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`，只操作当前活动窗口，节点 ref 只在下一次 observe/find 前有效。截图走 `AccessibilityService.takeScreenshot`（API 30+），文件在 `/gui/screenshots/`。
-- 语音助手：系统 `SpeechRecognizer` 做语音输入（`RECORD_AUDIO` + `RecognitionService` queries），`TextSpeaker` 用系统 TTS 朗读回答；`AssistantRole` 通过 `RoleManager.ROLE_ASSISTANT` 申请系统助手角色，`MainActivity` 接收 `ACTION_ASSIST` 后打开语音面板。composer 麦克风按钮与设置里「语音助手」行共用同一面板；后台常听/唤醒词不做。
+- 语音助手：系统 `SpeechRecognizer` 做语音输入（`RECORD_AUDIO` + `RecognitionService` queries），`TextSpeaker` 用系统 TTS 朗读回答；`AssistantRole` 通过 `RoleManager.ROLE_ASSISTANT` 申请系统助手角色，`MainActivity` 接收 `ACTION_ASSIST` 后打开语音面板。composer 麦克风按钮与系统助手入口共用同一面板；设置页不再单独提供语音助手行；后台常听/唤醒词不做。
 - 接收分享：Manifest 声明 `ACTION_SEND`/`ACTION_SEND_MULTIPLE`，MainActivity 解析 stream/clip/text，`ShareStaging` 先复制到 cache，`DeepDeepApp` 在会话就绪且不在发送/切换时经现有 `ChatViewModel.attach` 插入附件，纯文本预填输入框；App 自身分享时 chooser 排除自己。
-- 安排：官方插件 `arrange` 用 `AlarmManager.setAlarmClock` 管理 App 闹钟/计时器，用 `CalendarContract` Provider 直接增删改查系统日历；日历权限与精确闹钟权限分开授权，系统时钟里已有的闹钟只能打开、不能读写。
+- 安排：官方插件 `arrange` 用 `CalendarContract` Provider 直接增删改查系统日历；只保留日历，不管理闹钟，也不需要精确闹钟权限。
 - 小米云服务：官方插件 `micloud`，WebView 登录 i.mi.com；读走 HTTP，写走同源 WebView；功能开关与覆盖范围见 `docs/MICLOUD.md`。录音下载到 `files/micloud/recordings/`，PRoot 固定挂载为 `/micloud`。
 - 系统助手/悬浮 UI 与 root 只做调研：`docs/ANDROID_ASSISTANT.md`、`docs/ROOT.md`，不注册工具。
 

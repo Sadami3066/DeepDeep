@@ -1,5 +1,23 @@
 # Status
 
+## Done: 安排精简为日历、云服务合并开关、设置/聊天框整理
+
+**安排**
+- 删除闹钟/计时器相关功能与全部系统时钟入口（系统公开 API 无法 CRUD 已保存闹钟）；插件只保留日历。
+- `arrange_calendar`：`calendars`/`list`/`get`/`create`/`update`/`delete`，直接读写 `CalendarContract`；需要 `READ_CALENDAR`/`WRITE_CALENDAR`。
+- 插件页只保留状态与「授予日历权限」（未授权时）；不再显示打开闹钟/日历入口和自定义说明行。
+
+**小米云服务**
+- 功能开关精简为 7 项：笔记、待办、短信与通话、联系人、相册、录音、账号；笔记/待办的读写合并为同一个开关，其余只读。默认全部关闭。
+
+**设置与聊天框**
+- 设置页移除「语音助手」「GUI 控制」入口；GUI 无障碍设置从「GUI 操作」插件进入，语音从 composer 麦克风或系统助手进入。
+- Composer 语音按钮移到发送按钮左侧。
+
+**验证**
+- 804 unit tests green（app 497 / runtime 286 / shell 21，0 failures）；androidTest 1/1（日历 Provider CRUD）。
+- lint 0 errors / 152 warnings / 5 hints；`:app:assembleDebug`、模块边界检查通过。
+
 ## Done: 安排完整 CRUD、小米云登录页修复
 
 **安排插件**

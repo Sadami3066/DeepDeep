@@ -159,10 +159,4 @@
     <string name="settings_background_job_wake">Wake when a background job finishes</string>
     <string name="settings_oauth_manual_hint">Browser did not return automatically? Paste the authorization code or redirect URL below.</string>
     <string name="settings_new_chat_model">Default model for new chats</string>
-    <string name="settings_voice_assistant">Voice assistant</string>
-    <string name="settings_voice_assistant_on">Set as system assistant</string>
-    <string name="settings_voice_assistant_off">Not the system assistant, tap to set</string>
-    <string name="settings_gui_control">GUI control</string>
-    <string name="settings_gui_control_on">Accessibility service is on</string>
-    <string name="settings_gui_control_off">Accessibility service is off, tap to enable</string>
 </resources>

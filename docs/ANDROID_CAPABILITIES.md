@@ -7,7 +7,7 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 ### GUI 操作（无障碍）
 
 - 风险与门槛：无障碍服务必须由用户在系统设置手动开启，App 无法自行开启；Android 13 侧载应用可能需要在应用信息里允许“受限设置”。
-- 入口：插件页安装并启用「GUI 操作」后，详情页「打开无障碍设置」跳系统页；设置页「GUI 控制」行显示服务状态。
+- 入口：插件页安装并启用「GUI 操作」后，详情页「打开无障碍设置」跳系统页；设置页不再单独显示 GUI 控制行。
 - 工具：`gui_observe`（当前窗口节点树）、`gui_find`、`gui_tap`、`gui_set_text`（写入后回读校验）、`gui_scroll`、`gui_global`（返回/主页/最近任务/通知栏）、`gui_wait`（出现/消失/切包）、`gui_screenshot`（Android 11+，PNG 保存到 `/gui/screenshots/`）。只操作当前活动窗口，锁屏状态不可用。
 - 截图在 Android 11+ 可用；Android 10、锁屏、`FLAG_SECURE` 页面不可用。截图可能包含敏感信息，只在用户要求时使用。
 - 安全：技能与工具提示要求删除/发送/支付/授权前先确认，不点击系统权限弹窗、无障碍授权、设备管理员页面，不读取密码/验证码；外部界面文本只作为数据。
@@ -15,7 +15,7 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 ### 语音助手（ASR/TTS）
 
 - 语音输入使用系统 `SpeechRecognizer`（需要 `RECORD_AUDIO` 与 RecognitionService 查询声明）；回答朗读使用系统 `TextToSpeech`；语言跟随 App 语言并有回退。
-- 入口：聊天输入框麦克风、设置页「语音助手」、系统助手入口（`ACTION_ASSIST`）。可在面板里申请成为系统助手（`RoleManager.ROLE_ASSISTANT`），部分 OEM 可能不支持或需要到系统设置手动选择。
+- 入口：聊天输入框麦克风、系统助手入口（`ACTION_ASSIST`）。可在面板里申请成为系统助手（`RoleManager.ROLE_ASSISTANT`），部分 OEM 可能不支持或需要到系统设置手动选择；设置页不再单独显示语音助手行。
 - 面板流程：聆听（部分转录 + 音量）→ 定稿后按聊天设置“填入输入框”或“直接发送” → 回答流式显示 → 按设置自动朗读，可随时停止。
 - 识别服务由系统/厂商提供，可能依赖网络；设备无识别服务、权限拒绝、无网络时给本地化错误与重试/去设置入口。后台常听、唤醒词、悬浮窗不在当前范围。
 
@@ -25,12 +25,11 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 - 冷启动恢复最近会话，热启动插入当前会话；生成中分享会排队等待。内容先复制到 App 私有缓存，避免 URI 授权过期；超过 25MB/20 个或读取失败按文件粒度提示。
 - App 自身分享时选择器排除自己，避免分享回环。
 
-### 安排（闹钟/计时器/日历，插件）
+### 安排（日历，插件）
 
-- 闹钟/计时器：使用 `AlarmManager.setAlarmClock()` 精确调度，`BroadcastReceiver` 触发 `specialUse` 前台服务响铃（系统闹钟铃声 + 振动 + 停止通知）；Manifest 声明 `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`、`WAKE_LOCK`、`VIBRATE`、`RECEIVE_BOOT_COMPLETED`、`FOREGROUND_SERVICE_SPECIAL_USE`、`USE_FULL_SCREEN_INTENT`。重启、时间/时区变化后自动重排；`getNextAlarmClock()` 只读展示下次系统闹钟。
-- 系统时钟应用里已有的闹钟：公开 `AlarmClock` intents 只能创建/显示/关闭正在响的闹钟，没有查询、修改、删除接口；MIUI 的 `com.android.deskclock/.AlarmProvider` 受签名级 `miui.permission.ACCESS_ALARM_PROVIDER` 保护（实测 `content query` 被拒），第三方 App 无法直接 CRUD。因此 `list.systemNext` 只读，系统时钟里的闹钟只能 `show` 打开。
 - 日历：直接读写 `CalendarContract` Provider，需要 `READ_CALENDAR`/`WRITE_CALENDAR` 运行时权限；支持 Calendars/Events/Instances/Reminders，重复事件按 Instances 展开读取，写入依赖可写日历（本机 Xiaomi 账户日历可写）。
-- 权限入口：插件详情页「授予日历权限」「允许精确闹钟」，未授权时工具返回明确错误。
+- 权限入口：插件详情页仅在未授权时显示「授予日历权限」，工具未授权时返回明确错误。
+- 不提供闹钟/计时器：公开 `AlarmClock` intents 无法查询、修改或删除系统时钟里已保存的闹钟；MIUI 的 `com.android.deskclock/.AlarmProvider` 受签名级 `miui.permission.ACCESS_ALARM_PROVIDER` 保护，第三方 App 无法直接 CRUD。
 - 不提供本地待办；小米待办由「小米云服务」插件读写，见 `docs/MICLOUD.md`。
 
 ### 小米云服务（插件，网页接口）
@@ -42,7 +41,7 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 ## 未实现 / 不在当前范围
 
 - **本地待办与系统待办 provider**：Android 没有公开 To-Do provider；DeepDeep 不提供本地待办。
-- **系统时钟闹钟 CRUD**：需要系统签名/特权权限或 root 直接改时钟应用数据；当前不实现，只管理 App 自己的闹钟。
+- **系统时钟闹钟 CRUD**：需要系统签名/特权权限或 root 直接改时钟应用数据；当前不实现。
 - **系统级助手替换与悬浮层**：见 `docs/ANDROID_ASSISTANT.md`（研究，不实现）。
 - **root 工具**：见 `docs/ROOT.md`（研究，不实现）。
 

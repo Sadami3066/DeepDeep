@@ -25,8 +25,8 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 - MCP：抽屉「MCP」管理 Streamable HTTP 服务器，支持 OAuth 登录与连接检测；工具经 `tool_search` 在对话中按需加载
 - 插件：抽屉「插件」管理 DeepDeep 官方内置插件（飞书 CLI、网络搜索、GUI 操作、安排、小米云服务、企业微信），按需下载、启用/关闭、连接、更新、卸载；Agent 可通过 `plugin_setup` 走同一流程，插件贡献的技能与工具随启用状态注入
 - GUI 操作插件：通过 App 自己的无障碍服务 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot` 观察并操作当前界面，附带 `deepdeep-gui` 技能；需用户在系统设置开启无障碍服务
-- 安排插件：`arrange_alarm` 管理 App 闹钟/计时器（创建、列出、修改、删除、到点响铃），`arrange_calendar` 直接读写系统日历事件与提醒；需要日历与精确闹钟权限；系统时钟里已有的闹钟只读；不提供本地待办
-- 小米云服务插件：WebView 登录 i.mi.com，按功能开关读取账号、笔记、待办、短信与通话、联系人、相册、录音，笔记/待办可写；写操作走同源 WebView
+- 安排插件：`arrange_calendar` 直接读写系统日历事件与提醒（创建、读取、修改、删除）；需要日历权限；不提供闹钟与本地待办
+- 小米云服务插件：WebView 登录 i.mi.com，按功能开关读取账号、笔记、待办、短信与通话、联系人、相册、录音；笔记/待办开关同时可写，写操作走同源 WebView
 - 企业微信插件：安装官方 `wecom-cli`，扫码授权后由 Agent 通过 CLI 操作消息、文档、日程、待办等
 - 语音助手：composer 麦克风或系统助手入口，系统 ASR 转写、系统 TTS 朗读回答，可申请 Android 系统助手角色；后台常听/悬浮窗不做
 - 接收分享：支持从其他 App 分享图片/文件/文本，自动插入当前会话附件或预填输入框（冷/热启动均可用）

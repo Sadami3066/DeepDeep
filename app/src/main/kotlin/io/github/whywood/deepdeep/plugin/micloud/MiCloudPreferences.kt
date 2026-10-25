@@ -102,6 +102,11 @@ interface MiCloudSettings {
 
     suspend fun setWrite(feature: MiCloudFeature, enabled: Boolean)
 
+    suspend fun setFeature(feature: MiCloudFeature, enabled: Boolean) {
+        setRead(feature, enabled)
+        if (enabled && feature.writable) setWrite(feature, true)
+    }
+
     suspend fun clear()
 }
 
@@ -151,6 +156,17 @@ class MiCloudPreferences(
         update { current -> current.withWrite(feature, enabled) }
     }
 
+    override suspend fun setFeature(feature: MiCloudFeature, enabled: Boolean) {
+        update { current ->
+            if (feature.writable) {
+                if (enabled) current.withRead(feature, true).withWrite(feature, true)
+                else current.withRead(feature, false)
+            } else {
+                current.withRead(feature, enabled)
+            }
+        }
+    }
+
     override suspend fun clear() {
         loaded.await()
         mutex.withLock {
@@ -177,17 +193,21 @@ class MiCloudPreferences(
     }
 }
 
-private fun decode(values: Preferences): MiCloudCapabilities = MiCloudCapabilities(
-    notesRead = values[NOTES_READ] ?: false,
-    notesWrite = values[NOTES_WRITE] ?: false,
-    todosRead = values[TODOS_READ] ?: false,
-    todosWrite = values[TODOS_WRITE] ?: false,
-    smsRead = values[SMS_READ] ?: false,
-    contactsRead = values[CONTACTS_READ] ?: false,
-    galleryRead = values[GALLERY_READ] ?: false,
-    recordingsRead = values[RECORDINGS_READ] ?: false,
-    accountRead = values[ACCOUNT_READ] ?: false,
-)
+private fun decode(values: Preferences): MiCloudCapabilities {
+    val notes = (values[NOTES_READ] ?: false) || (values[NOTES_WRITE] ?: false)
+    val todos = (values[TODOS_READ] ?: false) || (values[TODOS_WRITE] ?: false)
+    return MiCloudCapabilities(
+        notesRead = notes,
+        notesWrite = notes,
+        todosRead = todos,
+        todosWrite = todos,
+        smsRead = values[SMS_READ] ?: false,
+        contactsRead = values[CONTACTS_READ] ?: false,
+        galleryRead = values[GALLERY_READ] ?: false,
+        recordingsRead = values[RECORDINGS_READ] ?: false,
+        accountRead = values[ACCOUNT_READ] ?: false,
+    )
+}
 
 private fun write(values: MutablePreferences, capabilities: MiCloudCapabilities) {
     values[NOTES_READ] = capabilities.notesRead

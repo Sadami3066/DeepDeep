@@ -1,30 +1,14 @@
 <resources>
     <string name="plugin_arrange_name">Arrange</string>
-    <string name="plugin_arrange_summary">Create, change, view and delete alarms, timers and calendar events</string>
+    <string name="plugin_arrange_summary">Create, read, change and delete system calendar events and reminders</string>
     <string name="plugin_arrange_size">Built-in</string>
 
-    <string name="plugin_arrange_status_ready">Alarms, timers and calendar ready</string>
+    <string name="plugin_arrange_status_ready">Calendar ready</string>
     <string name="plugin_arrange_status_calendar_permission">Calendar permission not granted</string>
 
-    <string name="plugin_arrange_action_alarm">Open alarms</string>
-    <string name="plugin_arrange_action_calendar">Open calendar</string>
     <string name="plugin_arrange_action_permission">Grant calendar permission</string>
-    <string name="plugin_arrange_action_exact_alarm">Allow exact alarms</string>
 
-    <string name="plugin_arrange_detail_alarms">Alarms and timers</string>
-    <string name="plugin_arrange_detail_alarms_value">Managed by the app; create, change, view and delete</string>
-    <string name="plugin_arrange_detail_calendar">Calendar</string>
-    <string name="plugin_arrange_detail_calendar_granted">Read and write system calendar events and reminders</string>
-    <string name="plugin_arrange_detail_calendar_missing">Calendar permission required; tap “Grant calendar permission” above</string>
-    <string name="plugin_arrange_detail_system">System clock</string>
-    <string name="plugin_arrange_detail_system_value">Next alarm is read-only; alarms already in the system clock cannot be read, changed or deleted</string>
-    <string name="plugin_arrange_detail_exact">Exact alarms</string>
-    <string name="plugin_arrange_detail_exact_granted">Allowed</string>
-    <string name="plugin_arrange_detail_exact_missing">Not allowed; tap “Allow exact alarms” above</string>
-
-    <string name="plugin_arrange_error_launch">No system alarm or calendar app is available</string>
     <string name="plugin_arrange_error_calendar_permission">Calendar permission is not granted: open the Arrange plugin and grant it</string>
-    <string name="plugin_arrange_error_exact_alarm">Exact alarms are not allowed: open the Arrange plugin or allow alarms and reminders in system settings</string>
     <string name="plugin_arrange_permission_title">Calendar permission</string>
     <string name="plugin_arrange_permission_message">Calendar access is required to read and write events</string>
 </resources>

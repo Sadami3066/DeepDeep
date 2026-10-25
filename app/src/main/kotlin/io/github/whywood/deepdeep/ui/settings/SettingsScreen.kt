@@ -88,10 +88,6 @@ fun SettingsScreen(
     onOpenPrivacy: () -> Unit,
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
-    voiceRoleHeld: Boolean = false,
-    onRequestVoiceRole: () -> Unit = {},
-    guiConnected: Boolean = false,
-    onOpenGuiSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -235,31 +231,6 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
                 NotificationRow()
-            }
-
-            Spacer(Modifier.height(16.dp))
-            SettingsGroup {
-                DdListRow(
-                    icon = DdIcons.Mic,
-                    title = stringResource(R.string.settings_voice_assistant),
-                    subtitle = stringResource(
-                        if (voiceRoleHeld) R.string.settings_voice_assistant_on else R.string.settings_voice_assistant_off,
-                    ),
-                    onClick = onRequestVoiceRole,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_voice_assistant"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Monitor,
-                    title = stringResource(R.string.settings_gui_control),
-                    subtitle = stringResource(
-                        if (guiConnected) R.string.settings_gui_control_on else R.string.settings_gui_control_off,
-                    ),
-                    onClick = onOpenGuiSettings,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_gui_control"),
-                )
             }
 
             Spacer(Modifier.height(16.dp))

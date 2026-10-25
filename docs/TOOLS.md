@@ -10,7 +10,7 @@
 | App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list` |
 | 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch`、`gui_*`、`arrange_*`、`mi_cloud_*` |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
-| Android 能力 | app 进程 | GUI 操作（无障碍插件）、安排（闹钟/日历委托）；不注册设备短信等未评审能力 |
+| Android 能力 | app 进程 | GUI 操作（无障碍插件）、安排（系统日历读写）；不注册设备短信等未评审能力 |
 | Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
 
 新增工具的顺序：先用 `bash` 能否表达；不能再用 App/Android 工具。不要为同一能力同时提供 `bash` 与专用工具。
@@ -125,27 +125,25 @@ defaultCodingTools(...)
 - 工具结果是紧凑 JSON `{"items":[{type,path,name,mime,title?,id?,icon?,version?}]}`；UI 从会话历史里的工具结果解析卡片，重开会话后仍能渲染；坏项逐条丢弃，不影响其余项。
 - 报告、幻灯片、视频等已落盘文件用 `file`；需要直接看效果的图表/截图用 `image`；单页页面用 `html`；工坊小应用用 `creative`。纯文本结论仍走普通回复。
 
-## 安排（闹钟/计时器/日历）
+## 安排（日历）
 
-由官方插件 `arrange` 贡献，只在插件已启用时出现。闹钟/计时器由 App 自己的 `AlarmManager` 引擎管理；日历直接读写系统 `CalendarContract` Provider。
+由官方插件 `arrange` 贡献，只在插件已启用时出现；直接读写系统 `CalendarContract` Provider。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
-| `arrange_alarm` | `action=list/set/update/delete/timer/show`；`id?`；`time?`(HH:mm) 或 `hour`+`minute`；`label?`；`days?`(ISO 1–7，空=一次性)；`enabled?`；`durationSeconds?`（1–86400） | `list` 列出 App 管理的闹钟/计时器与只读的下次系统闹钟；`set` 创建；`update`/`delete` 按 id 修改/删除；`timer` 创建倒计时；`show` 打开系统时钟 |
-| `arrange_calendar` | `action=calendars/list/get/create/update/delete/open`；`id?`；`calendarId?`；`title?`；`start?`；`end?`；`allDay?`；`location?`；`description?`；`reminders?`(提前分钟数组)；`query?`；`limit?`(1–200)；`time?` | `calendars` 列出可写日历；`list` 按范围查询（含重复事件展开）；`get` 读取；`create`/`update`/`delete` 直接落库；`open` 打开系统日历 |
+| `arrange_calendar` | `action=calendars/list/get/create/update/delete`；`id?`；`calendarId?`；`title?`；`start?`；`end?`；`allDay?`；`location?`；`description?`；`reminders?`(提前分钟数组)；`query?`；`limit?`(1–200) | `calendars` 列出可写日历；`list` 按范围查询（含重复事件展开）；`get` 读取；`create`/`update`/`delete` 直接落库；`reminders` 为提前提醒分钟 |
 
-- 闹钟到点由 App 前台服务响铃，需要允许精确闹钟；系统时钟里已有的闹钟只能通过 `show` 打开，无法读取、修改或删除；`list.systemNext` 只读。
 - 日历读写需要 `READ_CALENDAR`/`WRITE_CALENDAR`；未授权时工具返回错误，提示在「安排」插件页授权。`location`/`description` 传空字符串可清除，`reminders` 传空数组清空提醒。
-- 修改/删除前先用 `list`/`get` 取 id；结果以工具返回 JSON 为准。
+- 修改/删除前先用 `list`/`get` 取 id；结果以工具返回 JSON 为准。不提供闹钟/计时器。
 
 ## 小米云服务
 
-由官方插件 `micloud` 贡献；只有对应读开关开启时才注入。完整说明见 `docs/MICLOUD.md`。
+由官方插件 `micloud` 贡献；只有对应功能开关开启时才注入。笔记/待办开关同时包含读取与写入。完整说明见 `docs/MICLOUD.md`。
 
 | 工具 | 动作 | 语义 |
 |---|---|---|
 | `mi_cloud_account` | `profile`、`quota` | 账号昵称、空间配额 |
-| `mi_cloud_notes` | `list`、`read`、`create`、`update`、`delete` | 小米便签；写入需写开关并向用户确认 |
+| `mi_cloud_notes` | `list`、`read`、`create`、`update`、`delete` | 小米便签；开关开启后读写都可用，写入前向用户确认 |
 | `mi_cloud_todo` | `list`、`create`、`update`、`delete` | 小米待办；可改标题/完成状态/提醒时间，写入需确认 |
 | `mi_cloud_sms` | `list` | 云短信会话（可含通话记录），只读 |
 | `mi_cloud_contacts` | `list`、`search` | 联系人，只读 |

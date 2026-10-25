@@ -2,13 +2,11 @@
     <string name="micloud_features_title">云数据开关</string>
     <string name="micloud_features_login_required">登录小米账号后可开启这些功能</string>
 
-    <string name="micloud_feature_notes_read">读取笔记</string>
-    <string name="micloud_feature_notes_write">写入笔记</string>
-    <string name="micloud_feature_todos_read">读取待办</string>
-    <string name="micloud_feature_todos_write">写入待办</string>
-    <string name="micloud_feature_sms_read">读取短信与通话</string>
-    <string name="micloud_feature_contacts_read">读取联系人</string>
-    <string name="micloud_feature_gallery_read">读取相册</string>
-    <string name="micloud_feature_recordings_read">读取录音</string>
-    <string name="micloud_feature_account_read">读取账号信息</string>
+    <string name="micloud_feature_notes">笔记</string>
+    <string name="micloud_feature_todos">待办</string>
+    <string name="micloud_feature_sms">短信与通话</string>
+    <string name="micloud_feature_contacts">联系人</string>
+    <string name="micloud_feature_gallery">相册</string>
+    <string name="micloud_feature_recordings">录音</string>
+    <string name="micloud_feature_account">账号信息</string>
 </resources>
