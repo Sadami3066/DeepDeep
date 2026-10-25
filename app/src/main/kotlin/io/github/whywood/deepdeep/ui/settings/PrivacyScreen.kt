@@ -86,9 +86,9 @@ fun PrivacyScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Message,
-                    title = stringResource(R.string.privacy_sms_title),
-                    subtitle = stringResource(R.string.privacy_sms_body),
+                    icon = DdIcons.Globe,
+                    title = stringResource(R.string.privacy_micloud_title),
+                    subtitle = stringResource(R.string.privacy_micloud_body),
                     subtitleMaxLines = 5,
                 )
                 DdHairline()

@@ -488,7 +488,13 @@ class PluginManager(
     private inner class ManagerUi(
         private val plugin: OfficialPlugin,
     ) : PluginUi {
-        override fun stage(titleRes: Int, messageRes: Int?, url: String?, progress: Int?) {
+        override fun stage(
+            titleRes: Int,
+            messageRes: Int?,
+            url: String?,
+            progress: Int?,
+            imagePath: String?,
+        ) {
             if (cancelRequested) return
             _state.update { state ->
                 val base = state.interaction?.takeIf { it.pluginId == plugin.id }
@@ -502,6 +508,7 @@ class PluginManager(
                         stageTitle = strings.get(titleRes),
                         stageMessage = messageRes?.let { strings.get(it) },
                         url = url,
+                        imagePath = imagePath,
                         progress = progress,
                         confirmInstall = false,
                     ),

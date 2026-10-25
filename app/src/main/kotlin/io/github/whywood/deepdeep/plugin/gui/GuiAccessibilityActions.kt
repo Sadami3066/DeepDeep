@@ -2,13 +2,23 @@ package io.github.whywood.deepdeep.plugin.gui
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.app.KeyguardManager
+import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
+import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.annotation.RequiresApi
 import io.github.whywood.deepdeep.service.GuiAccessibilityService
 import io.github.whywood.deepdeep.service.GuiAccessibilityState
+import java.io.ByteArrayOutputStream
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 class GuiAccessibilityActions(
     private val serviceProvider: () -> GuiAccessibilityService? = { GuiAccessibilityState.service },
@@ -54,7 +64,7 @@ class GuiAccessibilityActions(
         }
     }
 
-    override suspend fun setText(selector: GuiSelector, text: String) {
+    override suspend fun setText(selector: GuiSelector, text: String): GuiTextResult {
         requireService()
         if (selector is GuiSelector.Point) {
             throw IllegalArgumentException("输入文本需要 ref 或 text 选择器，不能使用坐标")
@@ -70,6 +80,9 @@ class GuiAccessibilityActions(
         if (!info.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)) {
             throw IllegalStateException("写入文本失败：输入框可能不接受程序输入")
         }
+        if (!info.refresh()) throw IllegalStateException("写入后无法回读输入框，请重新 gui_observe 确认")
+        val actual = info.text?.toString().orEmpty()
+        return GuiTextResult(actual, actual == text)
     }
 
     override suspend fun scroll(direction: GuiScrollDirection, amount: Int, target: GuiSelector?) {
@@ -104,7 +117,7 @@ class GuiAccessibilityActions(
         }
     }
 
-    override suspend fun waitFor(packageName: String?, text: String?, timeoutMs: Long): Boolean {
+    override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean {
         val service = requireService()
         val deadline = System.currentTimeMillis() + timeoutMs
         while (true) {
@@ -113,10 +126,81 @@ class GuiAccessibilityActions(
                 ?: service.currentPackageName
             val packageMatches = packageName == null || currentPackage == packageName
             val textMatches = text == null || (root != null && containsText(root, text, 0))
-            if (packageMatches && textMatches) return true
+            val textGoneMatches = textGone == null || root == null || !containsText(root, textGone, 0)
+            if (packageMatches && textMatches && textGoneMatches) return true
             if (System.currentTimeMillis() >= deadline) return false
             delay(WAIT_POLL_MILLIS)
         }
+    }
+
+    override suspend fun screenshot(): GuiScreenshot {
+        val service = requireService()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            throw IllegalStateException("截图需要 Android 11（API 30）及以上系统")
+        }
+        if (isKeyguardLocked(service)) {
+            throw IllegalStateException("锁屏状态下无法截图，请先解锁后重试")
+        }
+        return encodeScreenshot(awaitScreenshot(service))
+    }
+
+    private fun isKeyguardLocked(service: AccessibilityService): Boolean =
+        (service.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.isKeyguardLocked == true
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private suspend fun awaitScreenshot(service: GuiAccessibilityService): AccessibilityService.ScreenshotResult =
+        suspendCancellableCoroutine { continuation ->
+            val callback = object : AccessibilityService.TakeScreenshotCallback {
+                override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                    if (continuation.isActive) continuation.resume(screenshot)
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(IllegalStateException(screenshotErrorMessage(errorCode)))
+                    }
+                }
+            }
+            runCatching { service.takeScreenshot(Display.DEFAULT_DISPLAY, service.mainExecutor, callback) }
+                .onFailure { error ->
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(
+                            IllegalStateException("截图请求提交失败：${error.message ?: "无障碍服务可能已断开"}"),
+                        )
+                    }
+                }
+        }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun encodeScreenshot(result: AccessibilityService.ScreenshotResult): GuiScreenshot {
+        val buffer = requireNotNull(result.hardwareBuffer) { "截图数据为空，请稍后重试" }
+        try {
+            val bitmap = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
+                ?: throw IllegalStateException("无法解析截图数据")
+            val output = ByteArrayOutputStream()
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                throw IllegalStateException("截图编码失败")
+            }
+            return GuiScreenshot(png = output.toByteArray(), width = bitmap.width, height = bitmap.height)
+        } finally {
+            buffer.close()
+        }
+    }
+
+    private fun screenshotErrorMessage(errorCode: Int): String = when (errorCode) {
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW ->
+            "当前界面禁止截图（安全窗口或 FLAG_SECURE），请用户自行查看"
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS ->
+            "无障碍服务已断开，请重新开启后再截图"
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT ->
+            "截图过于频繁，请稍后再试"
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY ->
+            "无法识别当前屏幕，请稍后重试"
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_WINDOW ->
+            "当前窗口无法截图，请重新 gui_observe 后重试"
+        AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERNAL_ERROR ->
+            "系统截图失败，请稍后重试"
+        else -> "截图失败（系统错误码 $errorCode）"
     }
 
     private fun requireService(): GuiAccessibilityService =

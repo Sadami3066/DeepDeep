@@ -76,6 +76,7 @@ interface PluginUi {
         @StringRes messageRes: Int? = null,
         url: String? = null,
         progress: Int? = null,
+        imagePath: String? = null,
     )
 
     fun progress(percent: Int?, @StringRes labelRes: Int)

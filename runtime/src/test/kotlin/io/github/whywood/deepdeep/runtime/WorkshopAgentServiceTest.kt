@@ -334,14 +334,16 @@ class WorkshopAgentServiceTest {
     fun hiddenToolsAreFilteredFromWorkshopCatalog() {
         val tools = listOf(
             tool("web_search", "Search the web"),
-            tool("read_sms", "Read SMS"),
+            tool("arrange_alarm", "Set an alarm"),
+            tool("mi_cloud_notes", "Read notes"),
             tool("gui_tap", "Tap"),
             tool("gui_swipe", "Swipe"),
         )
 
         assertEquals(listOf("web_search"), visibleWorkshopAgentTools(tools).map { it.name })
         assertEquals(listOf("web_search"), buildWorkshopAgentTools(tools).map { it.name })
-        assertFalse(workshopAgentToolVisible("read_sms"))
+        assertFalse(workshopAgentToolVisible("arrange_alarm"))
+        assertFalse(workshopAgentToolVisible("mi_cloud_notes"))
         assertFalse(workshopAgentToolVisible("gui_tap"))
         assertFalse(workshopAgentToolVisible("gui_"))
         assertTrue(workshopAgentToolVisible("web_search"))

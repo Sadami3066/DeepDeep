@@ -1,0 +1,17 @@
+<resources>
+    <string name="plugin_arrange_name">安排</string>
+    <string name="plugin_arrange_summary">用系统时钟与日历设置闹钟、计时器和日程</string>
+    <string name="plugin_arrange_size">内置</string>
+
+    <string name="plugin_arrange_status_ready">系统闹钟与日历可用</string>
+
+    <string name="plugin_arrange_action_alarm">打开闹钟</string>
+    <string name="plugin_arrange_action_calendar">打开日历</string>
+
+    <string name="plugin_arrange_detail_saved">已保存项</string>
+    <string name="plugin_arrange_detail_saved_value">无法读取、修改或删除，请在系统时钟或日历中操作</string>
+    <string name="plugin_arrange_detail_confirm">新建</string>
+    <string name="plugin_arrange_detail_confirm_value">只打开系统新建页或提交请求，需要用户在系统应用中确认</string>
+
+    <string name="plugin_arrange_error_launch">没有找到可用的系统闹钟或日历应用</string>
+</resources>

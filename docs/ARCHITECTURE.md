@@ -109,8 +109,8 @@ Compose ChatScreen
 - `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。默认不限轮次，显式传 `max_goal_rounds` 才有上限；加载后目标为未激活（显示暂停），需用户继续。
 - `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。
 - `present` 交付 v2：`items`（1–4 项）显式指定 `file|image|html|creative`；文件/图片/网页按 cwd 解析并校验存在性，创意经注入的 `WorkshopStore` 查询清单后返回 id/name/icon/version。聊天里图片内联预览、HTML 用内联 WebView 渲染并可全屏、文件为行卡、创意为入口卡；旧 `files` 输出与旧工坊入口卡保持兼容。
-- `read_sms`：只读查询 `content://sms`（inbox/sent/all，limit/address/since，正文截断 2000 字），需要设置里开启「读取短信」并授予 `READ_SMS`；工具在 execute 内二次校验开关与权限。该工具只注册进聊天会话的 `AppToolContext`，工坊页面 Agent 不可见。
-- GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/tap/set_text/scroll/global/wait`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。
+- 设备短信工具已移除；短信与通话改由「小米云服务」插件读取（`mi_cloud_sms`），不申请 `READ_SMS`。
+- GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。截图保存到 `files/gui/screenshots/`，PRoot 固定挂载为 `/gui`。
 - `/` 命令是 UI 层能力：`ChatCommand` 定义命令表，`parseChatCommand` 解析，`DeepDeepApp` 分发；命令不写入会话 JSONL，压缩等提示类结果以 `NoticeEvent` 进入消息流。
 - 上下文用量：宿主 `usage()` 用 `SessionManager.getSessionStats()` + `estimateContextTokens(buildSessionContext())` 计算，`UsageChanged` 推给 UI；`/compact` 调用 `AgentSession.compact()`。
 - 工具分类与契约见 `docs/TOOLS.md`，调度语义见 `docs/SCHEDULING.md`，命令见 `docs/COMMANDS.md`。
@@ -131,7 +131,7 @@ Compose ChatScreen
 - 每个创意是 `files/workshop/apps/<id>/` 下的自包含静态站点（`manifest.json` + entry + 静态资源），形态完全由 Agent 按需求决定，没有分类/模板。App 用 WebView 渲染，每个创意运行在独立的虚拟域名 `https://<id>.workshop.local/` 下。
 - 资源由 `WebViewAssetLoader` + 自定义 PathHandler 从创意目录提供（MIME、`Cache-Control: no-store`、`Range` 206）；`WebViewCompat.addDocumentStartJavaScript` 在页面脚本前注入 bridge SDK（`window.deepdeep` / `window.app`）与主题 CSS 变量；`WebViewCompat.addWebMessageListener` 只接受该 origin 的主框架消息。
 - Bridge 暴露页面数据与轻提示：`info`、`data.get/set/remove/keys`、`ui.toast`，以及页面驱动的 `agent.models/capabilities/run`（一次性任务 Agent，见下）；页面不能调用其他 App 内部函数、不能读写其他创意或 App 数据。详情页只读，修改页面统一回到聊天。
-- 页面 Agent 是事件流：最终 Promise 仍返回完整文本，同时可选 `onEvent` 收到 `{id,event}` 增量包（`run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error`）。native 侧按 40ms 合批、`webView.post` 保序并在终态前 flush；超时/失败会发 `run_error` 并 reject（不再让页面 Promise 永久 pending），maxTurns 中止时 `run_end.truncated=true`。页面 Agent 的工具目录过滤掉 `read_sms` 与 `gui_*`。
+- 页面 Agent 是事件流：最终 Promise 仍返回完整文本，同时可选 `onEvent` 收到 `{id,event}` 增量包（`run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error`）。native 侧按 40ms 合批、`webView.post` 保序并在终态前 flush；超时/失败会发 `run_error` 并 reject（不再让页面 Promise 永久 pending），maxTurns 中止时 `run_end.truncated=true`。页面 Agent 的工具目录过滤掉 `gui_*`、`arrange_*`、`mi_cloud_*`。
 - 代码与数据分离：页面数据保存在 `files/workshop/userdata/<id>.db`（SQLite KV）；页面经 bridge 读写，Agent 经 `workshop_data_get/set/delete/keys` 工具读写同一数据层（不暴露原始 SQLite），重写页面不影响数据；删除创意同时删除目录与 DB。
 - 创建流程由普通会话完成：`workshop_create` 在 `files/workshop/build/` 建草稿（只写 manifest.json）→ Agent 用绝对路径写页面 → `workshop_load` 校验入口/清单/大小并原子移动到 `apps/<id>/`；`workshop_load` 结果带 `delivery:"present"` 标记，Agent 需显式调用 `present`（`type=creative, id=…`）交付，聊天里出现入口卡。旧历史里没有该标记的 `workshop_load` 输出仍按旧逻辑显示入口卡；工坊页进入时扫描 `apps/` 作为导入兜底，草稿目录不展示。
 - 内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）由 `BuiltinSkills` 在 AppGraph 初始化时写入技能仓库与全局生效目录，教普通 Agent 格式、工具、页面规范与数据 bridge。`SkillCatalog` 读取已启用技能；`/skill:<name>` 在发送前把技能文件内容渲染成 `<skill>` 块作为用户消息（同 pi 的 skill command 语义），命令可出现在消息任意位置、单条可加载多个技能；UI 隐藏该块、只显示用户文字。
@@ -216,32 +216,36 @@ filesDir/
 ```
 
 - `cacheDir/share-incoming/<token>/`：外部 App 分享进来的文件先落到这里，防止 URI 授权过期；插入会话附件后由后续启动自动清理。
-- DataStore：`secrets`（API Key/OAuth）、`model_config`（新会话默认模型/思考）、`personalization`、`session_meta`、`linux_settings`、`app_preferences`、`voice`（自动朗读/识别后直发）、`capability_preferences`（读取短信开关）。
+- DataStore：`secrets`（API Key/OAuth/小米云 cookie）、`model_config`（新会话默认模型/思考）、`personalization`、`session_meta`、`linux_settings`、`app_preferences`、`voice`（自动朗读/识别后直发）、`micloud_capabilities`（小米云功能开关）。
 - API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
 
 ## Android 能力
 
-- GUI 操作：官方插件 `gui` + App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，`res/xml/gui_accessibility_service.xml`）。服务由用户在系统设置手动开启；`GuiAccessibilityState` 用 StateFlow 暴露连接状态，插件据此显示就绪/未就绪。工具为 `gui_observe/tap/set_text/scroll/global/wait`，只操作当前活动窗口，节点 ref 只在下一次 observe 前有效。
+- GUI 操作：官方插件 `gui` + App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，`res/xml/gui_accessibility_service.xml`）。服务由用户在系统设置手动开启；`GuiAccessibilityState` 用 StateFlow 暴露连接状态，插件据此显示就绪/未就绪。工具为 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`，只操作当前活动窗口，节点 ref 只在下一次 observe/find 前有效。截图走 `AccessibilityService.takeScreenshot`（API 30+），文件在 `/gui/screenshots/`。
 - 语音助手：系统 `SpeechRecognizer` 做语音输入（`RECORD_AUDIO` + `RecognitionService` queries），`TextSpeaker` 用系统 TTS 朗读回答；`AssistantRole` 通过 `RoleManager.ROLE_ASSISTANT` 申请系统助手角色，`MainActivity` 接收 `ACTION_ASSIST` 后打开语音面板。composer 麦克风按钮与设置里「语音助手」行共用同一面板；后台常听/唤醒词不做。
 - 接收分享：Manifest 声明 `ACTION_SEND`/`ACTION_SEND_MULTIPLE`，MainActivity 解析 stream/clip/text，`ShareStaging` 先复制到 cache，`DeepDeepApp` 在会话就绪且不在发送/切换时经现有 `ChatViewModel.attach` 插入附件，纯文本预填输入框；App 自身分享时 chooser 排除自己。
-- 读取短信：设置页「读取短信」开关（`READ_SMS` 运行时权限）+ `read_sms` 工具；工具只读、截断正文、execute 内校验开关与权限。仅侧载使用，README/隐私页说明正文会进入会话历史。
-- 闹钟/日历/待办等系统能力的接口调研与结论见 `docs/ANDROID_CAPABILITIES.md`，当前不注册对应工具。
+- 安排：官方插件 `arrange` 用 `AlarmClock` 与 `CalendarContract.ACTION_INSERT` 委托系统应用，零危险权限；系统保存结果无法确认，也不能读取/删除已保存项。
+- 小米云服务：官方插件 `micloud`，WebView 登录 i.mi.com；读走 HTTP，写走同源 WebView；功能开关与覆盖范围见 `docs/MICLOUD.md`。录音下载到 `files/micloud/recordings/`，PRoot 固定挂载为 `/micloud`。
+- 系统助手/悬浮 UI 与 root 只做调研：`docs/ANDROID_ASSISTANT.md`、`docs/ROOT.md`，不注册工具。
 
 ## 设计中的系统
 
 - 定时任务：`docs/SCHEDULING.md`（提醒投递、任务页编辑、手动执行已实现）。
 - Skills：`docs/SKILLS.md`（仓库、zip 安装、全局/项目启停、自动入库、bash 挂载已实现；插件技能单独说明）。
-- 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、网络搜索、GUI 操作、安装/连接/UI 与 Agent 同步）。
+- 插件：`docs/PLUGINS.md`（框架契约、飞书 CLI、网络搜索、GUI 操作、安排、小米云服务、企业微信、安装/连接/UI 与 Agent 同步）。
 - 创意工坊：`docs/WORKSHOP.md`（文件夹格式、bridge SDK 事件流、创建与修改流程）。
-- Android 能力：`docs/ANDROID_CAPABILITIES.md`（GUI/语音/分享/短信与系统闹钟日历接口调研）。
+- Android 能力：`docs/ANDROID_CAPABILITIES.md`（GUI/语音/分享/安排与系统能力边界）。
+- 小米云服务：`docs/MICLOUD.md`（登录、功能开关、工具、读写机制、覆盖范围与风险）。
+- 系统助手：`docs/ANDROID_ASSISTANT.md`（研究，不实现）。
+- Root：`docs/ROOT.md`（研究，不实现）。
 - 工具分类：`docs/TOOLS.md`。
 
 ## 工具
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
-- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`、`read_sms`
-- 插件贡献：`web_search`/`web_fetch`（网络搜索插件）、`gui_*`（GUI 操作插件）；工坊页面 Agent 不注入 `read_sms` 与 `gui_*`
-- 不注册 `device_info`、`open_app`、联系人等未评审的 Android 能力工具；新增系统能力先评估权限与商店政策
+- App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`
+- 插件贡献：`web_search`/`web_fetch`（网络搜索）、`gui_*`（GUI 操作）、`arrange_*`（安排）、`mi_cloud_*`（小米云服务）；工坊页面 Agent 不注入 `gui_*`、`arrange_*`、`mi_cloud_*`
+- 不注册 `device_info`、`open_app`、设备短信、联系人等未评审的 Android 能力工具；新增系统能力先评估权限与商店政策
 
 ## 功能接线
 

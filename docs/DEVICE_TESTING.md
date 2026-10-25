@@ -168,3 +168,15 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 证据：`artifacts/validation/round30/v2_*.png`（v2 工坊基础）、`v3_*.png`（斜杠补全/目标）、`v4_*.png`（统一 `/skill:workshop` 面板、+ 预填、Agent 只改数据后页面显示 7），`v5_*.txt`（页面 Agent models/capabilities/PONG/并行/systemPrompt/校验错误）；技能包文件清单见 `v6_skill_package.txt`。
 
 本轮证据（`artifacts/validation/round32/`）：`d2_skills.png`/`d3_skills_sync.png`（仓库副本删除后由全局技能目录自动回填）、`d4_settings.png`/`d5_settings_capabilities.png`（设置账号行与新 Android 能力组）、`d6_sms_permission.png`/`d7_sms_tool.png`（短信权限与 `read_sms` 工具执行）、`d8_share_cold.png`/`d9_share_text.png`（冷启动图片分享插入附件、热启动文本预填）、`d10_plugins.png`/`d11_gui_plugin.png`/`d12_gui_detail.png`/`d13_gui_home.png`（GUI 插件安装、无障碍已连接、observe/global 执行）、`d14_voice_sheet.png`（ASSIST 打开语音面板）、`d15_present.png`/`d16_present_file_creative.png`（present HTML/图片内联、文件卡与创意卡）、`d17_timer_5s.png`/`d21_timer_68s.png`/`d20_runstate_after.png`（计时 5s/1m 2s，长任务锁屏返回后无残留运行态、终态 DONE 保留）、`d22_model_switch.png`/`d24_one_session.png`（会话级模型切换与切回保持）、`d25_stream_page.png`~`d29_stream_events_done.png`（页面 Agent 事件流：run_start/thinking_delta/text_delta/turn_end/run_end，最终文本正常）、`android-capability-survey.md`（系统闹钟/日历/待办调研底稿）。
+
+120. 小米云插件安装与开关：插件页出现「Xiaomi Cloud」；安装后详情显示未登录、版本 1.0.0、9 项功能开关（笔记/待办读写，短信/联系人/相册/录音/账号读）；未登录时开关 disabled 并提示先登录；登录入口可见。
+121. 小米云登录方式评估：浏览器打开 i.mi.com 正常，但 Chrome cookie 与 App CookieManager 隔离，插件读不到；系统 `com.xiaomi` 账号存在，但 auth token 需要签名级 `AUTH_SERVICE` 权限；WebView 仍保留为 fallback。真机 WebView 页面 DOM 已加载（CDP 可读到「使用小米账号登录」），但 CSS 高度为 0、登录内容不可见；登录未完成验证。
+122. 安排插件：详情状态「系统闹钟与日历可用」，两个操作行可用；点「打开闹钟」进入系统时钟列表，点「打开日历」进入系统日历；新增 `SET_ALARM` 普通权限后不再报「系统拒绝了启动请求」。
+123. 企业微信插件：下载约 9.1 MB 官方 CLI，安装后详情显示版本 1.3.4、CLI 版本 1.3.4、未连接；点「连接企业微信」打开 setup sheet，显示二维码、浏览器链接与等待提示；未完成扫码授权。
+124. GUI 截图：无障碍服务已连接后，让 Agent 调用 `gui_screenshot`；工具返回 `/data/user/0/io.github.whywood.deepdeep/files/gui/screenshots/gui-…png`、约 449 KB、1080×2400；文件真实存在；`present` 在聊天里内联显示截图。
+125. 聊天框：模型 sheet 内出现 Thinking level（Off/Low/High/Max），composer 无思考 chip；语音按钮为圆形；运行中停止按钮为红色圆点。
+126. 设置/隐私：Android 能力组只有 Voice assistant / GUI control，无「读取短信」；隐私页显示小米云服务说明（加密 cookie、按开关读取、写入确认）。
+127. 回归：插件页安装/启用/详情、安排打开系统应用、GUI 截图/present、composer 三态按钮、设置页滚动均正常；无崩溃。
+128. 待补：小米云 WebView 登录空白修复；企业微信扫码授权；小米云 9 项数据读写真机验证；GUI find/wait/写文字校验真机验证。
+
+本轮证据（`artifacts/validation/round33/`）：`r33_01_home.png`（composer 无 thinking chip、圆形语音）、`r33_02_model_sheet.png`（模型 sheet 内 Thinking level）、`r33_03_sending.png`（红色停止圆）、`r33_05_plugins.png`/`r33_06_plugins_installed.png`（新插件列表与安装）、`r33_09_micloud_detail.png`/`r33_10_micloud_actions.png`（小米云开关与登录入口）、`r33_11_micloud_login.png`（WebView 空白问题证据）、`r33_13_settings.png`/`r33_14_settings_capabilities.png`（设置无短信项）、`r33_15_arrange.png`/`r33_16_alarms.png`/`r33_17_calendar.png`（安排插件与系统闹钟/日历）、`r33_19_wecom.png`/`r33_20_wecom_installed.png`/`r33_21_wecom_detail.png`/`r33_22_wecom_qr.png`（企微安装、状态、二维码 setup）、`r33_23_gui_tool.png`/`r33_24_gui_done.png`（GUI 截图工具与 present 内联图）。

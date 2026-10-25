@@ -19,6 +19,8 @@ Linux 内固定挂载两个目录，Agent 可以直接用 bash 读写：
 
 技能是目录型 `<id>/SKILL.md`（可带 `scripts/`、`references/`、`assets/`）；`.deepdeep-plugin` 标记留给插件，Agent 写入时不要使用。宿主目录（含 `files/skills`）在执行前自动创建，rootfs 内的 `/skills`、`/skill-repo` 在安装与执行前自动创建。
 
+`/home/.pi/skills` 不是 DeepDeep 的全局技能目录，也没有被挂载；全局技能用 `/skills`。`files/home/.pi/skills` 只是 home 工作区的项目技能，会被自动入库扫描；项目技能始终是当前工作区的 `<cwd>/.pi/skills`（Linux 内通常是 `/workspace/.pi/skills`）。
+
 仓库是唯一安装入口；安装后不会立即被模型看到。打开开关后复制到启用路径，新会话生效。官方插件也会把自己声明的技能写入仓库 `files/skills/`，并在插件启用时复制到 `files/agent/skills/`（两处都带 `.deepdeep-plugin` 标记）；因此插件技能会出现在技能页，关闭插件时只移除生效副本，仓库副本保留。
 
 ## 自动入库

@@ -52,7 +52,6 @@
     <string name="assistant_step_expanded">Expanded</string>
     <string name="assistant_stop">Stop</string>
     <string name="assistant_stopped">Stopped</string>
-    <string name="assistant_thinking_chip">Thinking · %1$s</string>
     <string name="assistant_thinking_max">Max</string>
     <string name="assistant_thinking_high">High</string>
     <string name="assistant_thinking_low">Low</string>

@@ -5,7 +5,6 @@ import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
-import io.github.whywood.deepdeep.data.CapabilityPreferences
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
@@ -19,8 +18,11 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
+import io.github.whywood.deepdeep.plugin.arrange.ArrangePlugin
 import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
 import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
+import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
+import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
@@ -71,10 +73,6 @@ import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
-import io.github.whywood.deepdeep.tool.AndroidSmsReader
-import io.github.whywood.deepdeep.tool.hasReadSmsPermission
-import io.github.whywood.deepdeep.tool.readSmsTool
-import io.github.whywood.deepdeep.tool.smsToolErrors
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,20 +110,17 @@ class AppGraph(context: Context) {
     val themePreferences = ThemePreferences(appContext)
     val appPreferences = AppPreferences(appContext)
     val voicePreferences = VoicePreferences(appContext)
-    val capabilityPreferences = CapabilityPreferences(appContext)
     val shareStaging = ShareStaging(appContext)
-    private val smsReadEnabled = MutableStateFlow(false)
 
     fun skillBinds(): List<Pair<File, String>> = listOf(
         File(agentDir, "skills") to "/skills",
         File(appContext.filesDir, "skills") to "/skill-repo",
     )
 
-    init {
-        scope.launch {
-            capabilityPreferences.readSmsEnabled.collect { enabled -> smsReadEnabled.value = enabled }
-        }
-    }
+    fun linuxBinds(): List<Pair<File, String>> = skillBinds() + listOf(
+        File(appContext.filesDir, "gui") to "/gui",
+        File(appContext.filesDir, "micloud") to "/micloud",
+    )
 
     init {
         scope.launch {
@@ -145,7 +140,7 @@ class AppGraph(context: Context) {
         appContext,
         homeDir,
         sharedStorageEnabled = { sharedStorage.value },
-        extraBinds = skillBinds(),
+        extraBinds = linuxBinds(),
     )
     private val httpTransport = okHttpTransport()
     val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
@@ -204,7 +199,28 @@ class AppGraph(context: Context) {
                         }
                     },
                 ),
-                GuiPlugin(context = appContext),
+                GuiPlugin(
+                    context = appContext,
+                    screenshotDir = File(appContext.filesDir, "gui/screenshots"),
+                    linuxScreenshotDir = "/gui/screenshots",
+                ),
+                ArrangePlugin(context = appContext),
+                MiCloudPlugin(
+                    context = appContext,
+                    onCapabilitiesChanged = {
+                        scope.launch {
+                            host.busySessionIds.first { it.isEmpty() }
+                            host.reconfigure()
+                        }
+                    },
+                ),
+                WecomPlugin(
+                    context = appContext,
+                    linux = linuxEnvironment,
+                    linuxSettings = linuxSettings,
+                    downloader = PluginDownloader(),
+                    workspaceDir = homeDir,
+                ),
             ),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
             skillStore = PluginSkillStore(
@@ -245,22 +261,6 @@ class AppGraph(context: Context) {
             ),
         )
     }
-    private val chatToolContext: AppToolContext by lazy {
-        appToolContext.copy(
-            extraToolFactories = appToolContext.extraToolFactories + listOf(
-                { _ ->
-                    listOf(
-                        readSmsTool(
-                            reader = AndroidSmsReader(appContext.contentResolver),
-                            enabled = { smsReadEnabled.value },
-                            permissionCheck = { hasReadSmsPermission(appContext) },
-                            errors = smsToolErrors(appContext),
-                        ),
-                    )
-                },
-            ),
-        )
-    }
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
 
     private fun linuxEnvironmentFor(cwd: String?): LinuxEnvironment {
@@ -271,7 +271,7 @@ class AppGraph(context: Context) {
                     appContext,
                     directory,
                     sharedStorageEnabled = { sharedStorage.value },
-                    extraBinds = skillBinds(),
+                    extraBinds = linuxBinds(),
                 )
             }
         }
@@ -311,7 +311,7 @@ class AppGraph(context: Context) {
             personalization = { personalizationStore.read().toRuntime() },
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { pluginManager.promptBody() },
-            toolContext = chatToolContext,
+            toolContext = appToolContext,
         )
     }
 

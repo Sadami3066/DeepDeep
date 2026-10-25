@@ -4,6 +4,7 @@ import dev.pi.agent.AgentToolResult
 import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -21,12 +22,16 @@ private const val MAX_SCROLL_AMOUNT = 10
 private const val DEFAULT_WAIT_MILLIS = 5_000
 private const val MIN_WAIT_MILLIS = 100
 private const val MAX_WAIT_MILLIS = 60_000
+const val GUI_DEFAULT_LINUX_SCREENSHOT_DIR = "/gui/screenshots"
+private const val DEFAULT_FIND_LIMIT = 20
+private const val MAX_FIND_LIMIT = 50
 private const val DISCONNECTED_MESSAGE =
     "无障碍服务未开启：请在插件页打开无障碍设置并启用 DeepDeep 无障碍服务"
 
 private val OBSERVE_GUIDELINES = listOf(
     "Call gui_observe before acting and again after every action that changes the screen; refs from an older observe are invalid.",
     "Prefer the ref from the latest gui_observe; fall back to text, desc, resourceId or class, and use x/y only when no node matches.",
+    "Use gui_find when the target text, desc, resourceId or class is known and the full tree is large.",
     "Never tap system permission dialogs, accessibility authorization prompts or device admin screens.",
     "Never read passwords or verification codes from the screen; ask the user instead.",
     "Ask the user to confirm before destructive actions such as delete, send, pay or authorize; stop and ask when the screen looks unexpected.",
@@ -57,12 +62,40 @@ private val observeParameters: JsonObject = buildJsonObject {
     }
 }
 
+private val findParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("text") {
+            put("type", "string")
+            put("description", "Visible text to match case-insensitively as a substring.")
+        }
+        putJsonObject("desc") {
+            put("type", "string")
+            put("description", "Content description to match case-insensitively as a substring.")
+        }
+        putJsonObject("resourceId") {
+            put("type", "string")
+            put("description", "View resource id, either full form (com.app:id/ok) or short form (ok).")
+        }
+        putJsonObject("class") {
+            put("type", "string")
+            put("description", "View class name, either full form (android.widget.Button) or simple form (Button).")
+        }
+        putJsonObject("limit") {
+            put("type", "integer")
+            put("description", "Maximum matches to return, 1-$MAX_FIND_LIMIT. Defaults to $DEFAULT_FIND_LIMIT.")
+            put("minimum", 1)
+            put("maximum", MAX_FIND_LIMIT)
+        }
+    }
+}
+
 private val tapParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("ref") {
             put("type", "string")
-            put("description", "Node ref from the latest gui_observe.")
+            put("description", "Node ref from the latest gui_observe or gui_find.")
         }
         putJsonObject("text") {
             put("type", "string")
@@ -175,6 +208,10 @@ private val waitParameters: JsonObject = buildJsonObject {
             put("type", "string")
             put("description", "Wait until this text or content description appears on screen.")
         }
+        putJsonObject("forTextGone") {
+            put("type", "string")
+            put("description", "Wait until this text or content description disappears from the screen.")
+        }
         putJsonObject("timeoutMs") {
             put("type", "integer")
             put(
@@ -187,13 +224,23 @@ private val waitParameters: JsonObject = buildJsonObject {
     }
 }
 
-fun guiTools(actions: GuiActions): List<CodingTool> = listOf(
+private val screenshotParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+}
+
+fun guiTools(
+    actions: GuiActions,
+    screenshotDir: File,
+    linuxScreenshotDir: String = GUI_DEFAULT_LINUX_SCREENSHOT_DIR,
+): List<CodingTool> = listOf(
     guiObserveTool(actions),
+    guiFindTool(actions),
     guiTapTool(actions),
     guiSetTextTool(actions),
     guiScrollTool(actions),
     guiGlobalTool(actions),
     guiWaitTool(actions),
+    guiScreenshotTool(actions, screenshotDir, linuxScreenshotDir),
 )
 
 private fun guiObserveTool(actions: GuiActions): CodingTool = CodingTool(
@@ -227,6 +274,43 @@ private fun guiObserveTool(actions: GuiActions): CodingTool = CodingTool(
     },
 )
 
+private fun guiFindTool(actions: GuiActions): CodingTool = CodingTool(
+    name = "gui_find",
+    description = "Find nodes on the current screen by text, desc, resourceId and/or class, and return their refs for later actions.",
+    parameters = findParameters,
+    label = "gui_find",
+    promptSnippet = "Find screen nodes by text, desc, resourceId or class",
+    promptGuidelines = listOf(
+        "Use gui_find when the target text, desc, resourceId or class is known; the returned refs stay valid until the next observe.",
+    ),
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        guiToolResult {
+            requireConnected(actions)
+            val selectors = args.findSelectors()
+            val limit = args.intOrNull("limit") ?: DEFAULT_FIND_LIMIT
+            if (limit !in 1..MAX_FIND_LIMIT) {
+                throw IllegalArgumentException("limit 需要在 1..$MAX_FIND_LIMIT 之间")
+            }
+            val snapshot = actions.observe(GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
+            val allMatches = GuiNodeTree.findAll(snapshot, selectors, Int.MAX_VALUE)
+            val matches = allMatches.take(limit)
+            textResult(
+                buildJsonObject {
+                    put("count", matches.size)
+                    put("total", allMatches.size)
+                    put("hasMore", allMatches.size > matches.size)
+                    put("truncated", snapshot.truncated)
+                    put(
+                        "nodes",
+                        buildJsonArray { matches.forEach { node -> add(GuiNodeTree.nodeJson(node)) } },
+                    )
+                }.toString(),
+            )
+        }
+    },
+)
+
 private fun guiTapTool(actions: GuiActions): CodingTool = CodingTool(
     name = "gui_tap",
     description = "Tap or long-press a node on the current screen by ref, text, desc, resourceId, class or screen coordinates.",
@@ -253,12 +337,13 @@ private fun guiTapTool(actions: GuiActions): CodingTool = CodingTool(
 
 private fun guiSetTextTool(actions: GuiActions): CodingTool = CodingTool(
     name = "gui_set_text",
-    description = "Focus an editable field on the current screen and replace its text.",
+    description = "Focus an editable field on the current screen, replace its text and read the text back to verify the write.",
     parameters = setTextParameters,
     label = "gui_set_text",
-    promptSnippet = "Type into a screen input field",
+    promptSnippet = "Type into a screen input field and verify the result",
     promptGuidelines = listOf(
         "Never type passwords or verification codes; ask the user to enter sensitive input themselves.",
+        "Check verified in the result; when it is false, re-observe the field or ask the user instead of retrying blindly.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
@@ -270,8 +355,17 @@ private fun guiSetTextTool(actions: GuiActions): CodingTool = CodingTool(
             }
             val text = args.stringOrNull("setText")
                 ?: throw IllegalArgumentException("缺少参数 setText")
-            actions.setText(selector, text)
-            textResult("已向 ${selector.describe()} 输入文本；操作后请再次 gui_observe 确认结果。")
+            val outcome = actions.setText(selector, text)
+            textResult(
+                buildJsonObject {
+                    put("ok", true)
+                    put("verified", outcome.verified)
+                    put("text", outcome.text)
+                    if (!outcome.verified) {
+                        put("hint", "回读文本与写入不一致：界面可能格式化输入或拦截了写入，请重新 gui_observe 确认")
+                    }
+                }.toString(),
+            )
         }
     },
 )
@@ -335,11 +429,12 @@ private fun guiGlobalTool(actions: GuiActions): CodingTool = CodingTool(
 
 private fun guiWaitTool(actions: GuiActions): CodingTool = CodingTool(
     name = "gui_wait",
-    description = "Wait until the current screen shows a package or specific text.",
+    description = "Wait until the current screen shows a package or text, or until a text disappears. Conditions combine.",
     parameters = waitParameters,
     label = "gui_wait",
-    promptSnippet = "Wait for a screen or text to appear",
+    promptSnippet = "Wait for a screen, text to appear or text to disappear",
     promptGuidelines = listOf(
+        "Combine forPackage, forText and forTextGone to confirm screen transitions.",
         "A gui_wait result with ok:false is not an error; re-observe the screen instead of retrying the same action blindly.",
     ),
     execute = { _, args, signal, _ ->
@@ -348,15 +443,16 @@ private fun guiWaitTool(actions: GuiActions): CodingTool = CodingTool(
             requireConnected(actions)
             val packageName = args.stringOrNull("forPackage")?.trim()?.takeIf { it.isNotEmpty() }
             val text = args.stringOrNull("forText")?.trim()?.takeIf { it.isNotEmpty() }
-            if (packageName == null && text == null) {
-                throw IllegalArgumentException("需要提供 forPackage 或 forText 之一")
+            val textGone = args.stringOrNull("forTextGone")?.trim()?.takeIf { it.isNotEmpty() }
+            if (packageName == null && text == null && textGone == null) {
+                throw IllegalArgumentException("需要提供 forPackage、forText 或 forTextGone 至少一个条件")
             }
             val timeoutMs = args.intOrNull("timeoutMs") ?: DEFAULT_WAIT_MILLIS
             if (timeoutMs !in MIN_WAIT_MILLIS..MAX_WAIT_MILLIS) {
                 throw IllegalArgumentException("timeoutMs 需要在 $MIN_WAIT_MILLIS..$MAX_WAIT_MILLIS 之间")
             }
             val startedAt = System.currentTimeMillis()
-            val matched = actions.waitFor(packageName, text, timeoutMs.toLong())
+            val matched = actions.waitFor(packageName, text, textGone, timeoutMs.toLong())
             val elapsedMs = (System.currentTimeMillis() - startedAt).toInt()
             if (matched) {
                 textResult(
@@ -372,10 +468,50 @@ private fun guiWaitTool(actions: GuiActions): CodingTool = CodingTool(
                         put("reason", "timeout")
                         put("elapsedMs", elapsedMs)
                         put("timeoutMs", timeoutMs)
-                        put("hint", "等待超时：界面没有出现预期内容，请重新 gui_observe 判断当前状态")
+                        put("hint", "等待超时：界面没有出现预期变化，请重新 gui_observe 判断当前状态")
                     }.toString(),
                 )
             }
+        }
+    },
+)
+
+private fun guiScreenshotTool(
+    actions: GuiActions,
+    screenshotDir: File,
+    linuxScreenshotDir: String,
+): CodingTool = CodingTool(
+    name = "gui_screenshot",
+    description = "Capture the current screen as a PNG file and return its host path, /gui path, width and height. Android 11+ only.",
+    parameters = screenshotParameters,
+    label = "gui_screenshot",
+    promptSnippet = "Capture the current screen as a PNG",
+    promptGuidelines = listOf(
+        "Use gui_screenshot only when the visual layout matters; screenshots can contain sensitive data, so never share them or read secrets from them.",
+        "Screens are not captured on Android 10, while locked, or when an app sets FLAG_SECURE; ask the user instead of retrying in a loop.",
+    ),
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        guiToolResult {
+            requireConnected(actions)
+            val shot = actions.screenshot()
+            if (shot.png.isEmpty()) throw IllegalStateException("截图内容为空，请稍后重试")
+            if (!screenshotDir.isDirectory && !screenshotDir.mkdirs()) {
+                throw IllegalStateException("截图目录不可写：${screenshotDir.absolutePath}")
+            }
+            val fileName = "gui-${System.currentTimeMillis()}.png"
+            val file = File(screenshotDir, fileName)
+            file.writeBytes(shot.png)
+            val base = linuxScreenshotDir.trimEnd('/').ifEmpty { GUI_DEFAULT_LINUX_SCREENSHOT_DIR }
+            textResult(
+                buildJsonObject {
+                    put("path", "$base/$fileName")
+                    put("hostPath", file.absolutePath)
+                    put("width", shot.width)
+                    put("height", shot.height)
+                    put("sizeBytes", shot.png.size)
+                }.toString(),
+            )
         }
     },
 )
@@ -392,6 +528,19 @@ private suspend fun guiToolResult(block: suspend () -> AgentToolResult): AgentTo
 
 private fun requireConnected(actions: GuiActions) {
     if (!actions.connected) throw GuiUnavailableException(DISCONNECTED_MESSAGE)
+}
+
+private fun JsonObject.findSelectors(): List<GuiSelector> {
+    val selectors = buildList {
+        stringOrNull("text")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.Text(it)) }
+        stringOrNull("desc")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.Desc(it)) }
+        stringOrNull("resourceId")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.ResourceId(it)) }
+        stringOrNull("class")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.ClassName(it)) }
+    }
+    if (selectors.isEmpty()) {
+        throw IllegalArgumentException("需要提供 text、desc、resourceId、class 至少一个条件")
+    }
+    return selectors
 }
 
 private fun JsonObject.parseSelector(): GuiSelector {

@@ -178,6 +178,65 @@ class GuiNodeTreeTest {
         assertFalse(GuiNodeTree.render(snapshot).contains("java.lang.Object"))
     }
 
+    @Test
+    fun matchesAllRequiresEverySelector() {
+        val target = snapshotNode(
+            className = "android.widget.Button",
+            text = "确定",
+            resourceId = "com.example:id/ok",
+        )
+        assertTrue(
+            GuiNodeTree.matchesAll(
+                target,
+                listOf(
+                    GuiSelector.Text("确定"),
+                    GuiSelector.ClassName("Button"),
+                    GuiSelector.ResourceId("ok"),
+                ),
+            ),
+        )
+        assertFalse(
+            GuiNodeTree.matchesAll(
+                target,
+                listOf(GuiSelector.Text("确定"), GuiSelector.ClassName("EditText")),
+            ),
+        )
+        assertFalse(GuiNodeTree.matchesAll(target, emptyList()))
+    }
+
+    @Test
+    fun findAllFiltersAndHonorsLimit() {
+        val tree = node(
+            className = "root",
+            children = listOf(
+                node(className = "android.widget.Button", text = "OK"),
+                node(className = "android.widget.Button", text = "OK"),
+                node(className = "android.widget.Button", text = "Cancel"),
+            ),
+        )
+        val snapshot = snapshotOf(tree)
+        val matches = GuiNodeTree.findAll(snapshot, listOf(GuiSelector.Text("ok")), limit = 10)
+        assertEquals(listOf("1", "2"), matches.map { it.ref })
+        assertEquals(1, GuiNodeTree.findAll(snapshot, listOf(GuiSelector.Text("ok")), limit = 1).size)
+        assertTrue(GuiNodeTree.findAll(snapshot, listOf(GuiSelector.Text("missing")), limit = 10).isEmpty())
+    }
+
+    @Test
+    fun nodeJsonRendersSingleNode() {
+        val node = snapshotNode(
+            className = "android.widget.Button",
+            text = "OK",
+            resourceId = "com.example:id/ok",
+            bounds = GuiBounds(10, 20, 110, 220),
+        )
+        val json = GuiNodeTree.nodeJson(node).toString()
+        assertTrue(json.contains("\"ref\":\"0\""))
+        assertTrue(json.contains("\"class\":\"android.widget.Button\""))
+        assertTrue(json.contains("\"text\":\"OK\""))
+        assertTrue(json.contains("\"resourceId\":\"com.example:id/ok\""))
+        assertTrue(json.contains("\"bounds\":\"[10,20][110,220]\""))
+    }
+
     private fun node(
         className: String = "android.view.View",
         text: String? = null,

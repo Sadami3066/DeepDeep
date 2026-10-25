@@ -35,7 +35,8 @@ private const val SKILLS_DIR = "skills"
 private const val WORKSPACE_DIR = "workspace"
 private const val AGENT_DIR = "agent"
 private const val APPEND_SYSTEM_PROMPT_FILE = "APPEND_SYSTEM.md"
-private const val HIDDEN_TOOL_READ_SMS = "read_sms"
+private const val HIDDEN_TOOL_ARRANGE_PREFIX = "arrange_"
+private const val HIDDEN_TOOL_MICLOUD_PREFIX = "mi_cloud_"
 private const val HIDDEN_TOOL_GUI_PREFIX = "gui_"
 
 class WorkshopAgentService(
@@ -257,7 +258,9 @@ internal fun visibleWorkshopAgentTools(tools: List<CodingTool>): List<CodingTool
     tools.filter { workshopAgentToolVisible(it.name) }
 
 internal fun workshopAgentToolVisible(name: String): Boolean =
-    name != HIDDEN_TOOL_READ_SMS && !name.startsWith(HIDDEN_TOOL_GUI_PREFIX)
+    !name.startsWith(HIDDEN_TOOL_ARRANGE_PREFIX) &&
+        !name.startsWith(HIDDEN_TOOL_MICLOUD_PREFIX) &&
+        !name.startsWith(HIDDEN_TOOL_GUI_PREFIX)
 
 internal fun workshopAgentEventOf(sessionEvent: SessionEvent): WorkshopAgentEvent? = when (sessionEvent) {
     is SessionEvent.AgentEventReceived -> workshopAgentEventOf(sessionEvent.event)

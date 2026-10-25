@@ -68,6 +68,7 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -112,9 +113,7 @@ internal fun ChatComposer(
 ) {
     val colors = deepDeepColors()
     var showProviders by remember { mutableStateOf(false) }
-    var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !sending
-    val sendActive = sending || canSend
     val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
     val placeholder = when {
@@ -267,15 +266,17 @@ internal fun ChatComposer(
                     Spacer(Modifier.width(2.dp))
                     val voiceClick = onVoiceClick
                     if (voiceClick != null && !sending) {
-                        DdIconButton(
-                            icon = DdIcons.Mic,
+                        DdPressable(
                             onClick = voiceClick,
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("assistant_voice"),
+                            shape = CircleShape,
+                            background = colors.wash,
                             contentDescription = stringResource(R.string.voice_open),
-                            modifier = Modifier.testTag("assistant_voice"),
-                            size = 38.dp,
-                            iconSize = 18.dp,
-                            tint = colors.inkTertiary,
-                        )
+                        ) {
+                            DdIcon(icon = DdIcons.Mic, tint = colors.inkSecondary, size = 18.dp)
+                        }
                         Spacer(Modifier.width(2.dp))
                     }
                     ComposerChip(
@@ -288,39 +289,33 @@ internal fun ChatComposer(
                         testTag = "assistant_model",
                         maxWidth = 150.dp,
                     )
-                    if (thinkingLevels.isNotEmpty()) {
-                        Spacer(Modifier.width(2.dp))
-                        ComposerChip(
-                            text = stringResource(
-                                R.string.assistant_thinking_chip,
-                                thinkingLabel(thinkingLevel),
-                            ),
-                            onClick = { showThinking = true },
-                            enabled = !sending,
-                            contentDescription = stringResource(
-                                R.string.assistant_thinking_chip,
-                                thinkingLabel(thinkingLevel),
-                            ),
-                            testTag = "assistant_thinking",
-                            maxWidth = 100.dp,
-                        )
-                    }
                     Spacer(Modifier.weight(1f))
                     DdPressable(
                         onClick = { if (sending) onStop() else onSend() },
-                        modifier = Modifier.size(38.dp).testTag(if (sending) "assistant_stop" else "assistant_send"),
+                        modifier = Modifier
+                            .size(38.dp)
+                            .testTag(if (sending) "assistant_stop" else "assistant_send"),
                         shape = CircleShape,
-                        background = if (sendActive) colors.accent else colors.wash,
-                        enabled = sendActive,
+                        background = if (canSend) colors.accent else colors.wash,
+                        enabled = sending || canSend,
                         contentDescription = stringResource(
                             if (sending) R.string.assistant_stop else R.string.assistant_send,
                         ),
                     ) {
-                        DdIcon(
-                            icon = if (sending) DdIcons.Stop else DdIcons.ArrowUp,
-                            tint = if (sendActive) colors.onAccent else colors.inkTertiary,
-                            size = 18.dp,
-                        )
+                        if (sending) {
+                            Box(
+                                Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.danger),
+                            )
+                        } else {
+                            DdIcon(
+                                icon = DdIcons.ArrowUp,
+                                tint = if (canSend) colors.onAccent else colors.inkTertiary,
+                                size = 18.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -441,33 +436,25 @@ internal fun ChatComposer(
                         if (index != models.lastIndex) DdHairline()
                     }
                 }
-                Spacer(Modifier.height(28.dp))
-            }
-        }
-    }
-
-    if (showThinking) {
-        DdSheet(onDismiss = { showThinking = false }) {
-            DdSheetHeader(
-                title = stringResource(R.string.assistant_thinking_sheet),
-                onClose = { showThinking = false },
-            )
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-                Spacer(Modifier.height(8.dp))
-                thinkingLevels.forEachIndexed { index, level ->
-                    DdListRow(
-                        title = thinkingLabel(level),
-                        onClick = {
-                            showThinking = false
-                            onThinkingLevelChange(level)
-                        },
-                        trailing = {
-                            if (level == thinkingLevel) {
-                                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 20.dp)
-                            }
-                        },
-                    )
-                    if (index != thinkingLevels.lastIndex) DdHairline()
+                if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
+                    Spacer(Modifier.height(20.dp))
+                    DdSectionLabel(stringResource(R.string.assistant_thinking_sheet))
+                    Spacer(Modifier.height(4.dp))
+                    thinkingLevels.forEachIndexed { index, level ->
+                        DdListRow(
+                            title = thinkingLabel(level),
+                            onClick = {
+                                onModelsOpenChange(false)
+                                onThinkingLevelChange(level)
+                            },
+                            trailing = {
+                                if (level == thinkingLevel) {
+                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 20.dp)
+                                }
+                            },
+                        )
+                        if (index != thinkingLevels.lastIndex) DdHairline()
+                    }
                 }
                 Spacer(Modifier.height(28.dp))
             }

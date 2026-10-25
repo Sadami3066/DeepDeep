@@ -1,5 +1,29 @@
 # Status
 
+## Done: 小米云服务/安排/企微插件、GUI 增强与聊天框整理
+
+**插件**
+- 新增「小米云服务」插件（`micloud`）：WebView 登录 i.mi.com，加密保存 cookie；账号、笔记、待办、短信与通话、联系人、相册、录音分别有读开关，笔记/待办另有写开关，默认全关；读取走 HTTP，写入走隐藏 WebView 同源 fetch（POST 带 `serviceToken`）；工具 `mi_cloud_*`，录音下载到 `/micloud/recordings`。未覆盖云备份、日历/云盘等无接口能力，见 `docs/MICLOUD.md`。
+- 新增「安排」插件（`arrange`）：`arrange_alarm` 与 `arrange_calendar` 委托系统时钟/日历，零危险权限；不提供本地待办。
+- 新增「企业微信」插件（`wecom`）：安装官方 `wecom-cli` 1.3.4（Linux arm64），扫码授权；setup sheet 同时显示二维码与浏览器链接；技能 `deepdeep-wecom`。
+- GUI 插件升级：新增 `gui_screenshot`（API 30+，保存 `/gui/screenshots/`）、`gui_find`、`gui_wait forTextGone`、`gui_set_text` 写入回读校验；GUI 版本 2.0.0。
+- 删除设备短信能力：移除 `read_sms`、`READ_SMS`、设置开关、`CapabilityPreferences`；设置页 Android 能力组只剩语音助手/GUI 控制。待办改由小米云服务承担。
+- PRoot 新增固定 bind `/gui`、`/micloud`；页面 Agent 过滤 `gui_*`/`arrange_*`/`mi_cloud_*`。
+
+**聊天框**
+- thinking 档位从 composer chip 移入模型选择 sheet；语音按钮改 38dp 圆形；运行中停止按钮改为红色实心圆。
+
+**调研**
+- `docs/ANDROID_ASSISTANT.md`：系统助手/悬浮 UI 研究，结论是公开 API 只能到默认助手角色，长按电源 0.5s 为 MIUI 私有触发；悬浮层需 `SYSTEM_ALERT_WINDOW` + FGS。
+- `docs/ROOT.md`：root 获取与工具改造研究；本机实际是 APatch（非 Magisk），`ro.boot.flash.locked` 为伪装值；`su` 可获 uid 0；只做调研不实现。
+
+**验证**
+- 804 unit tests green（app 497 / runtime 286 / shell 21，0 failures）。
+- lint 0 errors / 153 warnings / 5 hints；模块边界与 debug APK 构建通过。
+- 真机（Redmi / Android 13）：composer 模型 sheet 内 thinking、圆形语音、红色停止圆；插件页新插件；小米云详情 9 项开关与登录入口；安排打开系统闹钟/日历；企业微信 CLI 1.3.4 安装、状态、二维码 setup；GUI 无障碍连接、`gui_screenshot` 落盘并由 `present` 内联显示；设置页无短信项。
+- **未完成/已知问题**：小米云 WebView 登录页在真机渲染空白（DOM 已加载、CSS 高度为 0），登录尚未验证；浏览器/系统账号接口均不可行（详见 `docs/MICLOUD.md`）。企业微信扫码授权未完成；小米云各云数据读写、GUI 截图以外的 GUI 新能力未做完整真机验证。
+- 证据：`artifacts/validation/round33/`。
+
 ## Done: 运行状态对账、每会话模型、交付/工坊升级与 Android 能力
 
 **会话与模型**

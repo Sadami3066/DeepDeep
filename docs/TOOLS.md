@@ -1,16 +1,16 @@
 # 工具设计
 
-状态：App 层工具与 Android 能力工具（GUI、短信）已接入；通知、联系人等未评审能力不注册。
+状态：App 层工具与插件贡献工具（GUI、安排、小米云服务、企业微信）已接入；未评审的 Android 能力不注册。
 
 ## 工具分层
 
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
 | SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
-| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`、`read_sms` |
-| 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch`、`gui_*` |
+| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list` |
+| 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch`、`gui_*`、`arrange_*`、`mi_cloud_*` |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
-| Android 能力 | app 进程 | GUI 操作（无障碍插件）、读取短信（设置开关 + 运行时权限）；通知、联系人等未评审能力不注册 |
+| Android 能力 | app 进程 | GUI 操作（无障碍插件）、安排（闹钟/日历委托）；不注册设备短信等未评审能力 |
 | Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
 
 新增工具的顺序：先用 `bash` 能否表达；不能再用 App/Android 工具。不要为同一能力同时提供 `bash` 与专用工具。
@@ -62,7 +62,7 @@ defaultCodingTools(...)
 
 | 参数 | 语义 |
 |---|---|
-| `plugin` | 官方插件 id，当前为 `feishu`（网络搜索不需要 setup） |
+| `plugin` | 官方插件 id（如 `feishu`、`wecom`、`micloud`；网络搜索、GUI 操作、安排不需要 setup） |
 
 - 打开插件的准备流程（安装确认、浏览器链接、等待完成）；步骤由插件自己定义，App 只渲染通用 sheet。
 - 仅在 App 前台可用；后台运行调用会返回错误。
@@ -125,15 +125,34 @@ defaultCodingTools(...)
 - 工具结果是紧凑 JSON `{"items":[{type,path,name,mime,title?,id?,icon?,version?}]}`；UI 从会话历史里的工具结果解析卡片，重开会话后仍能渲染；坏项逐条丢弃，不影响其余项。
 - 报告、幻灯片、视频等已落盘文件用 `file`；需要直接看效果的图表/截图用 `image`；单页页面用 `html`；工坊小应用用 `creative`。纯文本结论仍走普通回复。
 
-## 读取短信
+## 安排（闹钟/日历）
+
+由官方插件 `arrange` 贡献，只在插件已启用时出现；只委托系统应用，不申请危险权限。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
-| `read_sms` | `limit` 1–50（默认 10）、`box`=inbox/sent/all、`address?`、`since?` | 只读查询系统短信，返回 `[{address,date,read,body}]`（正文截断 2000 字） |
+| `arrange_alarm` | `action=set|timer|show`；set: `time`(HH:mm) 或 `hour`+`minute`、`label?`、`days?`(ISO 1–7)、`skipUi?`；timer: `durationSeconds`、`label?` | 打开系统时钟的闹钟/计时器新建页，或用 `show` 打开闹钟列表 |
+| `arrange_calendar` | `action=create|open`；create: `title`、`start`、`end?`、`allDay?`、`location?`、`description?`；open: `time?` | 打开系统日历新建页并预填，或打开日历到指定时间 |
 
-- 需要设置里开启「读取短信」并授予 `READ_SMS`；工具 execute 内再次校验开关与权限，未开启时返回错误并提示去设置。
-- 只读，不发送、不修改、不删除；正文会进入会话历史（隐私页已说明）。
-- 该工具只注册给聊天会话，创意工坊页面 Agent 不可见。
+- 闹钟/日程最终由系统应用保存；工具只返回“已打开”，不能确认用户是否保存，也不能读取或删除已保存项。
+- `skipUi` 只是请求，OEM 时钟应用可能仍显示确认页。
+
+## 小米云服务
+
+由官方插件 `micloud` 贡献；只有对应读开关开启时才注入。完整说明见 `docs/MICLOUD.md`。
+
+| 工具 | 动作 | 语义 |
+|---|---|---|
+| `mi_cloud_account` | `profile`、`quota` | 账号昵称、空间配额 |
+| `mi_cloud_notes` | `list`、`read`、`create`、`update`、`delete` | 小米便签；写入需写开关并向用户确认 |
+| `mi_cloud_todo` | `list`、`create`、`update`、`delete` | 小米待办；可改标题/完成状态/提醒时间，写入需确认 |
+| `mi_cloud_sms` | `list` | 云短信会话（可含通话记录），只读 |
+| `mi_cloud_contacts` | `list`、`search` | 联系人，只读 |
+| `mi_cloud_gallery` | `list`、`albums` | 相册/媒体与相册分组，只读 |
+| `mi_cloud_recordings` | `list`、`download` | 录音列表；下载到 `/micloud/recordings/` |
+
+- 读接口直接 HTTP；写接口必须走 WebView 同源 fetch（脚本直连会 401），所有 POST 带 `serviceToken`。
+- 默认全部关闭；开关、登录和未覆盖能力见 `docs/MICLOUD.md`。
 
 ## 创意工坊
 
@@ -152,7 +171,7 @@ defaultCodingTools(...)
 - 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入。
 - 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要重新 load；工坊页进入时重新扫描。
 - 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。
-- 页面 Agent API：`app.agent.models()` / `app.agent.capabilities()` / `app.agent.run()`，一次性无会话、返回最终文本，生命周期绑定 WebView；`run({onEvent})` 可接收 `run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error` 增量事件，最终仍 resolve 完整文本；180s 超时或失败会收到 `run_error` 并 reject。页面 Agent 的工具目录不包含 `read_sms`/`gui_*`。详见 `docs/WORKSHOP.md`。
+- 页面 Agent API：`app.agent.models()` / `app.agent.capabilities()` / `app.agent.run()`，一次性无会话、返回最终文本，生命周期绑定 WebView；`run({onEvent})` 可接收 `run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error` 增量事件，最终仍 resolve 完整文本；180s 超时或失败会收到 `run_error` 并 reject。页面 Agent 的工具目录不包含 `gui_*`、`arrange_*`、`mi_cloud_*`。详见 `docs/WORKSHOP.md`。
 
 ## GUI 操作
 
@@ -161,11 +180,13 @@ defaultCodingTools(...)
 | 工具 | 参数 | 语义 |
 |---|---|---|
 | `gui_observe` | `maxDepth?`（1–20，默认 8）、`maxNodes?`（1–400，默认 120）、`packageName?` | 读取当前活动窗口的 package/title 与精简节点树（ref、class、text、desc、resourceId、bounds、可点击/滚动/编辑/启用） |
+| `gui_find` | `text` / `desc` / `resourceId` / `class` 至少一个，`limit?`（1–50） | 在当前界面查找节点，返回 ref 与位置；结果带 `count/total/hasMore/truncated` |
 | `gui_tap` | `ref` / `text` / `desc` / `resourceId` / `class` / `x,y`；`durationMs?` | 点击或长按目标（优先 ACTION_CLICK，失败回退手势） |
-| `gui_set_text` | `ref` 或 `text` 定位，`setText` | 给可编辑节点设置文字 |
+| `gui_set_text` | `ref` 或 `text` 定位，`setText` | 给可编辑节点设置文字；写入后回读，结果带 `verified` 与实际文本 |
 | `gui_scroll` | `direction`（up/down/left/right）、`ref?`、`amount?` | 滚动可滚动节点或当前窗口 |
 | `gui_global` | `action`=back/home/recents/notifications | 系统级操作 |
-| `gui_wait` | `forPackage?` / `forText?` / `timeoutMs?` | 等待界面变化；超时返回 `ok:false`（不是错误） |
+| `gui_wait` | `forPackage?` / `forText?` / `forTextGone?` / `timeoutMs?` | 等待界面出现/消失/切包；超时返回 `ok:false`（不是错误） |
+| `gui_screenshot` | 无 | 截取当前屏幕 PNG，返回 Linux 路径 `/gui/screenshots/...`、hostPath、宽高；Android 11+，锁屏或 `FLAG_SECURE` 不可用 |
 
-- 先 observe 再动作，动作后重新 observe；ref 只对最近一次 observe 有效。
+- 先 observe/find 再动作，动作后重新 observe；ref 只对最近一次 observe/find 有效；截图文件在 bash 内可直接读 `/gui/screenshots/`。
 - 安全规则写在工具的 promptGuidelines 与 `deepdeep-gui` 技能里：删除/发送/支付/授权先确认，永不点系统权限弹窗、无障碍授权、设备管理员，永不读密码/验证码；界面异常时停下。

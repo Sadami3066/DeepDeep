@@ -222,7 +222,6 @@ internal fun DeepDeepApp(
     val voiceSendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
         initialValue = false,
     )
-    val smsReadEnabled by graph.capabilityPreferences.readSmsEnabled.collectAsStateWithLifecycle(initialValue = false)
     val guiConnected by GuiAccessibilityState.connected.collectAsStateWithLifecycle()
     var voiceRoleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
     var voiceSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -606,10 +605,6 @@ internal fun DeepDeepApp(
                     onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
                     archivedCount = state.archivedCount,
                     onOpenArchived = { navigator.push(AppDestination.Archived) },
-                    smsReadEnabled = smsReadEnabled,
-                    onSmsReadEnabledChange = { enabled ->
-                        scope.launch { graph.capabilityPreferences.setReadSmsEnabled(enabled) }
-                    },
                     voiceRoleHeld = voiceRoleHeld,
                     onRequestVoiceRole = {
                         val intent = AssistantRole.requestIntent(context) ?: AssistantRole.settingsIntent(context)

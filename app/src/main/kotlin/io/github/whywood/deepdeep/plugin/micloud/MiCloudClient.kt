@@ -1,0 +1,108 @@
+package io.github.whywood.deepdeep.plugin.micloud
+
+import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+
+class MiCloudAuthException(message: String) : Exception(message)
+
+class MiCloudClient(
+    private val cookieProvider: suspend () -> String?,
+    private val baseUrl: String = DEFAULT_BASE_URL,
+) {
+    constructor(cookieStore: MiCloudCookieStore) : this({ cookieStore.read() })
+
+    suspend fun hasSession(): Boolean = !cookieProvider().isNullOrBlank()
+
+    suspend fun userId(): String? = cookieProvider()?.let { parseCookie(it)[USER_ID] }
+
+    suspend fun getJson(pathWithQuery: String): JsonElement = withContext(Dispatchers.IO) {
+        val cookie = requireCookie()
+        val connection = open(pathWithQuery)
+        try {
+            connection.setRequestProperty("Cookie", cookie)
+            val status = connection.responseCode
+            if (status == HttpURLConnection.HTTP_UNAUTHORIZED || status == HttpURLConnection.HTTP_FORBIDDEN) {
+                throw MiCloudAuthException(AUTH_EXPIRED)
+            }
+            if (status !in 200..299) throw IOException("HTTP $status")
+            if (connection.url.host != baseHost()) throw MiCloudAuthException(AUTH_EXPIRED)
+            val body = connection.inputStream.use { it.readBytes().decodeToString() }
+            val json = runCatching { Json.parseToJsonElement(body) }.getOrNull()
+                ?: throw IOException("小米云返回了非 JSON 内容")
+            if (isMiCloudAuthFailure(json)) throw MiCloudAuthException(AUTH_EXPIRED)
+            json
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun download(pathWithQuery: String, dest: File): File = withContext(Dispatchers.IO) {
+        val cookie = requireCookie()
+        val connection = open(pathWithQuery, accept = "*/*")
+        try {
+            connection.setRequestProperty("Cookie", cookie)
+            val status = connection.responseCode
+            if (status == HttpURLConnection.HTTP_UNAUTHORIZED || status == HttpURLConnection.HTTP_FORBIDDEN) {
+                throw MiCloudAuthException(AUTH_EXPIRED)
+            }
+            if (status !in 200..299) throw IOException("HTTP $status")
+            if (connection.url.host != baseHost()) throw MiCloudAuthException(AUTH_EXPIRED)
+            val target = dest.absoluteFile
+            target.parentFile?.mkdirs()
+            val temp = File(target.parentFile, "${target.name}.part")
+            try {
+                connection.inputStream.use { input ->
+                    temp.outputStream().use { output -> input.copyTo(output) }
+                }
+                if (!temp.renameTo(target)) temp.copyTo(target, overwrite = true)
+            } finally {
+                temp.delete()
+            }
+            target
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun profile(): MiCloudProfile {
+        val json = getJson("/status/lite/profile?ts=${System.currentTimeMillis()}")
+        return parseProfile(json) ?: throw IOException("小米云账号信息响应格式异常")
+    }
+
+    private suspend fun requireCookie(): String = cookieProvider()?.takeIf { it.isNotBlank() }
+        ?: throw MiCloudAuthException("小米云未登录")
+
+    private fun baseHost(): String = runCatching { URL(baseUrl).host }.getOrDefault("i.mi.com")
+
+    private fun open(pathWithQuery: String, accept: String = "application/json, text/plain, */*"): HttpURLConnection {
+        val path = if (pathWithQuery.startsWith("/")) pathWithQuery else "/$pathWithQuery"
+        val url = URL(baseUrl + path)
+        return (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", USER_AGENT)
+            setRequestProperty("Accept", accept)
+            setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+            setRequestProperty("Referer", "$baseUrl/")
+        }
+    }
+
+    private companion object {
+        const val DEFAULT_BASE_URL = "https://i.mi.com"
+        const val USER_ID = "userId"
+        const val AUTH_EXPIRED = "小米云登录已失效，请重新登录"
+        const val CONNECT_TIMEOUT_MS = 15_000
+        const val READ_TIMEOUT_MS = 30_000
+        const val USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/126.0.0.0 Mobile Safari/537.36"
+    }
+}

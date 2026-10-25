@@ -1,0 +1,14 @@
+<resources>
+    <string name="micloud_features_title">Cloud data</string>
+    <string name="micloud_features_login_required">Sign in to your Xiaomi account to enable these features</string>
+
+    <string name="micloud_feature_notes_read">Read notes</string>
+    <string name="micloud_feature_notes_write">Write notes</string>
+    <string name="micloud_feature_todos_read">Read to-dos</string>
+    <string name="micloud_feature_todos_write">Write to-dos</string>
+    <string name="micloud_feature_sms_read">Read SMS and calls</string>
+    <string name="micloud_feature_contacts_read">Read contacts</string>
+    <string name="micloud_feature_gallery_read">Read gallery</string>
+    <string name="micloud_feature_recordings_read">Read recordings</string>
+    <string name="micloud_feature_account_read">Read account info</string>
+</resources>

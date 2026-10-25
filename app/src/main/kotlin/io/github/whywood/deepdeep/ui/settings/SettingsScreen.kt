@@ -88,8 +88,6 @@ fun SettingsScreen(
     onOpenPrivacy: () -> Unit,
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
-    smsReadEnabled: Boolean = false,
-    onSmsReadEnabledChange: (Boolean) -> Unit = {},
     voiceRoleHeld: Boolean = false,
     onRequestVoiceRole: () -> Unit = {},
     guiConnected: Boolean = false,
@@ -241,11 +239,6 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                SmsSettingsSection(
-                    readSmsEnabled = smsReadEnabled,
-                    onReadSmsEnabledChange = onSmsReadEnabledChange,
-                )
-                DdHairline()
                 DdListRow(
                     icon = DdIcons.Mic,
                     title = stringResource(R.string.settings_voice_assistant),

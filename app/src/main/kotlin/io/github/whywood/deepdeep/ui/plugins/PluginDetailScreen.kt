@@ -42,6 +42,9 @@ import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.plugin.PluginSnapshot
+import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.micloud.MiCloudFeatureSection
+import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
 import kotlinx.coroutines.delay
 
@@ -180,6 +183,15 @@ fun PluginDetailScreen(
                         ),
                     )
                 }
+            }
+
+            val micloud = plugin as? MiCloudPlugin
+            if (micloud != null && snapshot.installed && snapshot.enabled) {
+                Spacer(Modifier.height(16.dp))
+                MiCloudFeatureSection(
+                    preferences = micloud.preferences,
+                    enabled = snapshot.status is PluginStatus.Ready,
+                )
             }
 
             val availability = snapshot.availability

@@ -26,6 +26,7 @@ data class PluginInteraction(
     val stageTitle: String,
     val stageMessage: String? = null,
     val url: String? = null,
+    val imagePath: String? = null,
     val progress: Int? = null,
     val confirmInstall: Boolean = false,
     val cancellable: Boolean = true,

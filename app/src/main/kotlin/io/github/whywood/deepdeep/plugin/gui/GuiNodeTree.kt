@@ -125,8 +125,22 @@ object GuiNodeTree {
         snapshot.windowTitle?.let { put("title", it) }
         put("count", snapshot.nodes.size)
         put("truncated", snapshot.truncated)
-        put("nodes", buildJsonArray { snapshot.nodes.forEach { node -> add(renderNode(node)) } })
+        put("nodes", buildJsonArray { snapshot.nodes.forEach { node -> add(nodeJson(node)) } })
     }.toString()
+
+    fun nodeJson(node: GuiSnapshotNode): JsonObject = buildJsonObject {
+        put("ref", node.ref)
+        put("class", node.className)
+        node.text?.let { put("text", it) }
+        node.desc?.let { put("desc", it) }
+        node.resourceId?.let { put("resourceId", it) }
+        put("bounds", node.bounds.format())
+        if (node.clickable) put("clickable", true)
+        if (node.scrollable) put("scrollable", true)
+        if (node.editable) put("editable", true)
+        if (!node.enabled) put("enabled", false)
+        put("depth", node.depth)
+    }
 
     fun parseRef(ref: String): Int? {
         val index = ref.trim().removePrefix("#").toIntOrNull() ?: return null
@@ -153,19 +167,11 @@ object GuiNodeTree {
         is GuiSelector.Point -> node.bounds.contains(selector.x, selector.y)
     }
 
-    private fun renderNode(node: GuiSnapshotNode): JsonObject = buildJsonObject {
-        put("ref", node.ref)
-        put("class", node.className)
-        node.text?.let { put("text", it) }
-        node.desc?.let { put("desc", it) }
-        node.resourceId?.let { put("resourceId", it) }
-        put("bounds", node.bounds.format())
-        if (node.clickable) put("clickable", true)
-        if (node.scrollable) put("scrollable", true)
-        if (node.editable) put("editable", true)
-        if (!node.enabled) put("enabled", false)
-        put("depth", node.depth)
-    }
+    fun matchesAll(node: GuiSnapshotNode, selectors: List<GuiSelector>): Boolean =
+        selectors.isNotEmpty() && selectors.all { selector -> matches(node, selector) }
+
+    fun findAll(snapshot: GuiSnapshot, selectors: List<GuiSelector>, limit: Int): List<GuiSnapshotNode> =
+        snapshot.nodes.filter { node -> matchesAll(node, selectors) }.take(limit)
 
     private fun matchesResourceId(resourceId: String?, id: String): Boolean {
         if (resourceId.isNullOrEmpty() || id.isEmpty()) return false

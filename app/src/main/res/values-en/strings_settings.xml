@@ -124,6 +124,8 @@
     <string name="privacy_provider_body">Only the model provider you choose receives conversation content; DeepDeep keeps no copy on a server.</string>
     <string name="privacy_tracking_title">No analytics or ads</string>
     <string name="privacy_tracking_body">No analytics, advertising, or third-party tracking SDK is included.</string>
+    <string name="privacy_micloud_title">Xiaomi Cloud</string>
+    <string name="privacy_micloud_body">Your login credential is encrypted locally and only used for i.mi.com. Notes, to-do, SMS/calls, contacts, gallery, and recordings are read only when their switch is on; writes happen only with the write switch on and after confirmation. Read content enters chat history and may be sent to the model provider with the conversation.</string>
     <string name="privacy_uninstall_title">Deleted on uninstall</string>
     <string name="privacy_uninstall_body">Uninstalling removes local private data; system backup is disabled.</string>
 

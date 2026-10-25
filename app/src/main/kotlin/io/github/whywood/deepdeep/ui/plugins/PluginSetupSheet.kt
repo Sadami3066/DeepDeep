@@ -1,18 +1,33 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -27,6 +42,8 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.PluginInteraction
 import io.github.whywood.deepdeep.plugin.PluginManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PluginSetupSheet(
@@ -68,6 +85,10 @@ fun PluginSetupSheet(
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
                     )
+                }
+                interaction.imagePath?.let { path ->
+                    Spacer(Modifier.height(14.dp))
+                    PluginQrCode(path = path, description = interaction.stageTitle)
                 }
                 if (interaction.confirmInstall) {
                     Spacer(Modifier.height(20.dp))
@@ -132,5 +153,34 @@ fun PluginSetupSheet(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun PluginQrCode(path: String, description: String) {
+    val colors = deepDeepColors()
+    val shape = RoundedCornerShape(12.dp)
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = path) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull()
+        }
+    }
+    val image = bitmap ?: return
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(240.dp)
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, colors.hairline.copy(alpha = 0.6f), shape)
+            .testTag("plugin_setup_qr"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            bitmap = image,
+            contentDescription = description,
+            modifier = Modifier.fillMaxSize().padding(14.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }

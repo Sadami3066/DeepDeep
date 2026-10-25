@@ -1,6 +1,6 @@
 # 插件
 
-状态：官方插件框架、飞书 CLI 插件与网络搜索插件已实现；飞书授权需要用户在浏览器登录飞书账号。
+状态：官方插件框架与飞书 CLI、网络搜索、GUI 操作、安排、小米云服务、企业微信插件已实现；飞书与企业微信授权需要用户登录对应账号。
 
 ## 模型
 
@@ -128,12 +128,42 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 第三个官方插件（id `gui`），不依赖 Linux，由 App 自己的无障碍服务提供能力：
 
-- 工具：`gui_observe`、`gui_tap`、`gui_set_text`、`gui_scroll`、`gui_global`、`gui_wait`，参数与安全规则见 `docs/TOOLS.md`。
+- 工具：`gui_observe`、`gui_find`、`gui_tap`、`gui_set_text`、`gui_scroll`、`gui_global`、`gui_wait`、`gui_screenshot`，参数与安全规则见 `docs/TOOLS.md`。
 - 服务：App 内 `GuiAccessibilityService`（`BIND_ACCESSIBILITY_SERVICE`，配置 `res/xml/gui_accessibility_service.xml`）。必须由用户在系统设置手动开启；插件状态读取 `GuiAccessibilityState.connected`，未开启显示「无障碍服务未开启」。
 - 动作：「打开无障碍设置」跳系统页；没有 app 内开关。
-- 技能：`deepdeep-gui`，随插件安装写入仓库并在启用后进入全局生效目录，写清 observe→动作→再 observe、选择器优先级、ref 失效、安全红线与能力边界。
+- 技能：`deepdeep-gui`，随插件安装写入仓库并在启用后进入全局生效目录，写清 observe/find→动作→再 observe、选择器优先级、ref 失效、截图边界、安全红线与能力边界。
 - 安装/卸载为空操作，只涉及安装记录、技能副本与工具注入。
-- v1 不做截图、不做按包名过滤；只操作当前活动窗口，锁屏状态不可用。
+- 截图保存到 `files/gui/screenshots/`（Linux `/gui/screenshots/`），Android 11+、非锁屏、非 `FLAG_SECURE` 页面可用；只操作当前活动窗口。
+
+## 安排插件
+
+官方插件（id `arrange`），不依赖 Linux、不申请危险权限，只把闹钟/日历请求委托给系统应用：
+
+- 工具：`arrange_alarm`（设闹钟、计时器、打开闹钟）、`arrange_calendar`（打开日历新建页并预填、打开日历到指定时间）。
+- 没有本地待办；待办由「小米云服务」插件承担。
+- 系统保存结果无法确认，也无法读取/删除已保存的闹钟或日程；`skipUi` 只是请求。
+- 动作：「打开闹钟」「打开日历」；技能 `deepdeep-arrange`。
+
+## 小米云服务插件
+
+官方插件（id `micloud`），不依赖 Linux；通过 App 内 WebView 登录 i.mi.com，读取与写入小米云个人数据：
+
+- 登录：WebView 登录后加密保存 cookie；未登录、失效、网络错误都有状态；动作支持登录/重新登录/退出登录。
+- 登录方式：浏览器 cookie 与 App 隔离、系统账号 token 受签名权限保护，均无法读取云数据；WebView 是唯一可行路径，但真机上页面 CSS 高度为 0、登录内容暂不可见，登录功能尚未完成验证。详见 `docs/MICLOUD.md`。
+- 功能开关：账号、笔记、待办、短信与通话、联系人、相册、录音分别有读开关，笔记/待办另有写开关；默认全部关闭，只有开启的能力才会注入对应 `mi_cloud_*` 工具。
+- 工具：`mi_cloud_account`、`mi_cloud_notes`、`mi_cloud_todo`、`mi_cloud_sms`、`mi_cloud_contacts`、`mi_cloud_gallery`、`mi_cloud_recordings`，见 `docs/TOOLS.md`。
+- 写：只能通过隐藏 WebView 同源 fetch，所有 POST 带 `serviceToken`；笔记/待办写入前需用户确认。
+- 覆盖范围、未覆盖接口、风控与隐私见 `docs/MICLOUD.md`。
+
+## 企业微信插件
+
+官方插件（id `wecom`），安装企业微信官方 CLI（`wecom-cli` 1.3.4，Linux arm64），模式与飞书插件一致：
+
+- 安装：下载官方 Linux arm64 包并校验 SHA-256，安装到 `/usr/local/bin/wecom-cli`；要求 Linux 已安装并启用。
+- 授权：`wecom-cli auth init --noninteractive --no-browser --output-qrcode /workspace/.wecom-qr.png`；sheet 同时显示二维码与本机浏览器链接，完成后 `auth show --status` 确认。
+- 状态：未连接/已连接（Bot ID）；动作支持连接、重新授权、退出登录。
+- 技能 `deepdeep-wecom`：`--help`/`--doc`/`--schema` 发现命令、`--json`、`--dry-run`、分页、下载、写前确认，不自行运行 `auth init`。
+- 限制：官方 CLI 的 `--manual` 需要 TTY，PRoot 不提供；v1 使用官方扫码，需要另一台设备扫码或在电脑浏览器打开链接。
 
 ## Agent 与显示的同步
 
