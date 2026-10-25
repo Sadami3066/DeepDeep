@@ -69,6 +69,7 @@ class ArrangeAlarmService : Service() {
     override fun onDestroy() {
         handler.removeCallbacks(autoStop)
         cleanup()
+        getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
         super.onDestroy()
     }
 
