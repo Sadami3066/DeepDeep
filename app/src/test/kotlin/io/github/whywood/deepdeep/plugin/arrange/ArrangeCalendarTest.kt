@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.plugin.arrange
 
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -8,6 +11,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ArrangeCalendarTest {
+    private val allDayZones = listOf("Asia/Shanghai", "America/New_York", "UTC", "America/Santiago")
+
+    private fun utcMidnight(date: LocalDate): Long =
+        date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
     @Test
     fun timedRangeDefaultsToOneHour() {
         val start = 10 * ARRANGE_HOUR_MILLIS
@@ -33,42 +41,53 @@ class ArrangeCalendarTest {
     }
 
     @Test
-    fun allDayRangeSnapsToUtcMidnight() {
-        val start = 2 * ARRANGE_DAY_MILLIS + 5 * ARRANGE_HOUR_MILLIS
-        assertEquals(
-            2 * ARRANGE_DAY_MILLIS to 3 * ARRANGE_DAY_MILLIS,
-            resolveEventRange(start, null, allDay = true),
-        )
+    fun allDayRangeEncodesRequestedDateAtUtcMidnight() {
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val date = LocalDate.of(2026, 10, 30)
+            val start = parseCalendarMillis("2026-10-30", zone)
+            val range = resolveEventRange(start, null, allDay = true, zone = zone)
+            assertEquals(zoneId, utcMidnight(date), range.first)
+            assertEquals(zoneId, utcMidnight(date.plusDays(1)), range.second)
+            assertEquals(zoneId, "2026-10-30", formatCalendarTime(range.first, allDay = true, zone = zone))
+            assertEquals(zoneId, "2026-10-31", formatCalendarTime(range.second, allDay = true, zone = zone))
+        }
     }
 
     @Test
-    fun allDayRangeUsesDayAfterExplicitEndDate() {
-        val start = 2 * ARRANGE_DAY_MILLIS + 5 * ARRANGE_HOUR_MILLIS
-        val end = 4 * ARRANGE_DAY_MILLIS + 9 * ARRANGE_HOUR_MILLIS
-        assertEquals(
-            2 * ARRANGE_DAY_MILLIS to 5 * ARRANGE_DAY_MILLIS,
-            resolveEventRange(start, end, allDay = true),
-        )
+    fun allDayRangeCoversInclusiveEndDate() {
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val start = parseCalendarMillis("2026-10-30", zone)
+            val end = parseCalendarMillis("2026-11-01", zone)
+            val range = resolveEventRange(start, end, allDay = true, zone = zone)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 30)), range.first)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 11, 2)), range.second)
+        }
     }
 
     @Test
     fun allDayRangeExplicitSameDayEndBecomesNextMidnight() {
-        val start = 2 * ARRANGE_DAY_MILLIS + ARRANGE_HOUR_MILLIS
-        val end = 2 * ARRANGE_DAY_MILLIS + 20 * ARRANGE_HOUR_MILLIS
-        assertEquals(
-            2 * ARRANGE_DAY_MILLIS to 3 * ARRANGE_DAY_MILLIS,
-            resolveEventRange(start, end, allDay = true),
-        )
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val start = parseCalendarMillis("2026-10-30", zone)
+            val end = parseCalendarMillis("2026-10-30", zone)
+            val range = resolveEventRange(start, end, allDay = true, zone = zone)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 30)), range.first)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 31)), range.second)
+        }
     }
 
     @Test
     fun allDayRangeNeverEndsBeforeStart() {
-        val start = 3 * ARRANGE_DAY_MILLIS
-        val end = 2 * ARRANGE_DAY_MILLIS
-        assertEquals(
-            3 * ARRANGE_DAY_MILLIS to 4 * ARRANGE_DAY_MILLIS,
-            resolveEventRange(start, end, allDay = true),
-        )
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val start = parseCalendarMillis("2026-10-30", zone)
+            val end = parseCalendarMillis("2026-10-28", zone)
+            val range = resolveEventRange(start, end, allDay = true, zone = zone)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 30)), range.first)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 31)), range.second)
+        }
     }
 
     @Test
@@ -161,16 +180,39 @@ class ArrangeCalendarTest {
     }
 
     @Test
-    fun mergeAllDaySnapsRangeToUtcMidnight() {
-        val current = timedEvent(
-            startMillis = 2 * ARRANGE_DAY_MILLIS + 5 * ARRANGE_HOUR_MILLIS,
-            endMillis = 2 * ARRANGE_DAY_MILLIS + 6 * ARRANGE_HOUR_MILLIS,
-        )
-        val update = mergeEventPatch(current, ArrangeEventPatch(allDay = true))
-        assertTrue(update.allDay)
-        assertTrue(update.timesChanged)
-        assertEquals(2 * ARRANGE_DAY_MILLIS, update.startMillis)
-        assertEquals(3 * ARRANGE_DAY_MILLIS, update.endMillis)
+    fun mergeAllDayEncodesLocalDatesAtUtcMidnight() {
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val current = timedEvent(
+                startMillis = parseCalendarMillis("2026-10-26 10:00", zone),
+                endMillis = parseCalendarMillis("2026-10-26 11:00", zone),
+            )
+            val update = mergeEventPatch(current, ArrangeEventPatch(allDay = true), zone = zone)
+            assertTrue(update.allDay)
+            assertTrue(update.timesChanged)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 26)), update.startMillis)
+            assertEquals(zoneId, utcMidnight(LocalDate.of(2026, 10, 27)), update.endMillis)
+        }
+    }
+
+    @Test
+    fun mergeAllDayKeepsExistingDatesAcrossZones() {
+        allDayZones.forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val start = utcMidnight(LocalDate.of(2026, 10, 30))
+            val end = utcMidnight(LocalDate.of(2026, 10, 31))
+            val current = ArrangeCalendarEvent(
+                id = 1,
+                calendarId = 1,
+                title = "全天",
+                startMillis = start,
+                endMillis = end,
+                allDay = true,
+            )
+            val update = mergeEventPatch(current, ArrangeEventPatch(allDay = true), zone = zone)
+            assertEquals(zoneId, start, update.startMillis)
+            assertEquals(zoneId, end, update.endMillis)
+        }
     }
 
     @Test

@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.ui.chat.AuditChatTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:04:14.072Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.563">
+  <properties />
+  <testcase name="markdownAndReducerScaling" classname="io.github.whywood.deepdeep.ui.chat.AuditChatTest" time="0.563" />
+  <system-out>AUDIT_PERF markdown chars=1240 median_ms=0.228222 p95_ms=0.320698
+AUDIT_PERF markdown chars=12400 median_ms=1.745083 p95_ms=1.95384
+AUDIT_PERF markdown chars=124000 median_ms=7.270611 p95_ms=10.45345
+AUDIT_PERF reducer history=100 deltas=100 median_ms=0.308157 p95_ms=0.618641
+AUDIT_PERF reducer history=1000 deltas=100 median_ms=1.057911 p95_ms=1.58393
+AUDIT_PERF reducer history=10000 deltas=100 median_ms=9.531421 p95_ms=11.715739
+</system-out>
+  <system-err />
+</testsuite>

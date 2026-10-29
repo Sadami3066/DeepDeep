@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.plugin.arrange
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -41,6 +42,20 @@ class ArrangeRequestsTest {
     fun formatsCalendarTime() {
         val start = parseCalendarMillis("2026-10-26 10:00", zone)
         assertEquals("2026-10-26 10:00", formatCalendarTime(start, allDay = false, zone = zone))
-        assertEquals("2026-10-26", formatCalendarTime(start, allDay = true, zone = zone))
+    }
+
+    @Test
+    fun formatsAllDayDatesInUtcAcrossZones() {
+        listOf("Asia/Shanghai", "America/New_York", "UTC", "America/Santiago").forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val utcMidnight = LocalDate.of(2026, 10, 30)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli()
+            assertEquals(zoneId, "2026-10-30", formatCalendarTime(utcMidnight, allDay = true, zone = zone))
+            val parsed = parseCalendarMillis("2026-10-30", zone)
+            val start = resolveEventRange(parsed, null, allDay = true, zone = zone).first
+            assertEquals(zoneId, "2026-10-30", formatCalendarTime(start, allDay = true, zone = zone))
+        }
     }
 }

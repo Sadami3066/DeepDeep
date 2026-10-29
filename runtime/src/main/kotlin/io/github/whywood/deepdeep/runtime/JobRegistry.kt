@@ -49,6 +49,7 @@ class JobRegistry(
                 runner = activeRunner,
             )
             records[created.id] = created
+            pruneSettledLocked()
             created
         }
         publish()
@@ -182,7 +183,11 @@ class JobRegistry(
             record.change.trySend(Unit)
         }
         record.coroutine = null
-        val registered = synchronized(lock) { records[record.id] === record }
+        val registered = synchronized(lock) {
+            val present = records[record.id] === record
+            if (present) pruneSettledLocked()
+            present
+        }
         if (!registered) return
         publish()
         if (notify) {
@@ -198,6 +203,14 @@ class JobRegistry(
             } catch (_: Exception) {
             }
         }
+    }
+
+    private fun pruneSettledLocked() {
+        val settled = records.values.filter { !it.isRunning() }
+        if (settled.size <= MAX_SETTLED_RECORDS) return
+        settled.sortedBy { it.sequence }
+            .take(settled.size - MAX_SETTLED_RECORDS)
+            .forEach { record -> records.remove(record.id) }
     }
 
     private fun publish() {
@@ -376,6 +389,7 @@ class JobRegistry(
 }
 
 private const val MAX_RUNNING_PER_SESSION = 10
+private const val MAX_SETTLED_RECORDS = 50
 private const val LIVE_LIMIT = 256 * 1024
 private const val SETTLED_LIMIT = 16 * 1024
 private const val MIN_WAIT_MS = 1L

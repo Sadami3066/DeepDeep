@@ -342,8 +342,11 @@ class PluginManager(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            runCatching { plugin.uninstall() }
-            runCatching { skillStore.remove(plugin.id, previousSkills) }
+            runCatching { plugin.recover() }
+            if (previous == null) {
+                runCatching { plugin.uninstall() }
+                runCatching { skillStore.remove(plugin.id, previousSkills) }
+            }
             notifyInstallFinished(name, false, errorMessage(error))
             throw error
         } finally {

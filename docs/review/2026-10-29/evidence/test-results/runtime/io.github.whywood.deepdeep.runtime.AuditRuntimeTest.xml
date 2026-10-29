@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:03:53.870Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.984">
+  <properties />
+  <testcase name="workshopReadEscapesTemporaryWorkspace" classname="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" time="0.02" />
+  <testcase name="clockRecomputeDropsOverdueOnceReminder" classname="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" time="0.021" />
+  <testcase name="sessionListScaling" classname="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" time="0.913" />
+  <testcase name="incompleteTailLosesFirstNewEntry" classname="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" time="0.025" />
+  <testcase name="credentialWritesCanFinishOutOfOrder" classname="io.github.whywood.deepdeep.runtime.AuditRuntimeTest" time="0.004" />
+  <system-out>AUDIT workshop read can access parent directory
+AUDIT clock recompute disabled an undelivered overdue reminder
+AUDIT_PERF session_list files=10 bytes=220781 median_ms=3.642947 max_ms=5.907879
+AUDIT_PERF session_list files=100 bytes=2207892 median_ms=14.419039 max_ms=21.302846
+AUDIT_PERF session_list files=1000 bytes=22079893 median_ms=63.905737 max_ms=70.382674
+AUDIT tail reopened-name=before
+AUDIT credentials memory=new persisted=old
+</system-out>
+  <system-err />
+</testsuite>

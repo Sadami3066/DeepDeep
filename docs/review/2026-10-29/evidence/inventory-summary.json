@@ -1,0 +1,197 @@
+{
+  "head": "bdbaa07c17c7ac075b81804794e88252a00fbb61",
+  "modules": {
+    "app": {
+      "files": 160,
+      "lines": 34047,
+      "android_imports": 240,
+      "sdk_imports": 38
+    },
+    "runtime": {
+      "files": 51,
+      "lines": 8843,
+      "android_imports": 10,
+      "sdk_imports": 129
+    },
+    "shell": {
+      "files": 7,
+      "lines": 847,
+      "android_imports": 3,
+      "sdk_imports": 5
+    },
+    "design": {
+      "files": 12,
+      "lines": 1702,
+      "android_imports": 1,
+      "sdk_imports": 0
+    }
+  },
+  "main_kotlin_files": 230,
+  "main_kotlin_lines": 45439,
+  "tests_kotlin_files": 79,
+  "android_test_files": 1,
+  "largest": [
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatViewModel.kt",
+      "lines": 1254
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/DeepDeepApp.kt",
+      "lines": 1036
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudTools.kt",
+      "lines": 1008
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/MarkdownParser.kt",
+      "lines": 922
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/AgentRuntimeHost.kt",
+      "lines": 726
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/DeepDeepDrawer.kt",
+      "lines": 694
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatMarkdown.kt",
+      "lines": 691
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatScreen.kt",
+      "lines": 643
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/skills/SkillsScreen.kt",
+      "lines": 606
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/gui/GuiTools.kt",
+      "lines": 592
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/AttachmentUi.kt",
+      "lines": 579
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/questions/AskQuestionCard.kt",
+      "lines": 556
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/SettingsScreen.kt",
+      "lines": 556
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/PluginManager.kt",
+      "lines": 548
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatComposer.kt",
+      "lines": 522
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/arrange/ArrangeCalendar.kt",
+      "lines": 481
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatTurn.kt",
+      "lines": 474
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/PresentCard.kt",
+      "lines": 472
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/mcp/McpEditor.kt",
+      "lines": 458
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ConversationReducer.kt",
+      "lines": 450
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/feishu/FeishuPlugin.kt",
+      "lines": 441
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/WorkshopTools.kt",
+      "lines": 427
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/WorkshopStore.kt",
+      "lines": 421
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/WorkshopAgentService.kt",
+      "lines": 407
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/JobRegistry.kt",
+      "lines": 400
+    }
+  ],
+  "most_imported": [
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DeepDeepTheme.kt",
+      "dependents": 65
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdComponents.kt",
+      "dependents": 55
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdIcons.kt",
+      "dependents": 49
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/RuntimeTypes.kt",
+      "dependents": 25
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdSpinner.kt",
+      "dependents": 19
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdMotion.kt",
+      "dependents": 17
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdDialog.kt",
+      "dependents": 10
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdTextField.kt",
+      "dependents": 10
+    },
+    {
+      "path": "design/src/main/kotlin/io/github/whywood/deepdeep/design/DdControls.kt",
+      "dependents": 9
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/data/Attachment.kt",
+      "dependents": 8
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/plugin/PluginApi.kt",
+      "dependents": 8
+    },
+    {
+      "path": "shell/src/main/kotlin/io/github/whywood/deepdeep/shell/LinuxInstallState.kt",
+      "dependents": 7
+    },
+    {
+      "path": "app/src/main/kotlin/io/github/whywood/deepdeep/data/LanguagePreferences.kt",
+      "dependents": 6
+    },
+    {
+      "path": "runtime/src/main/kotlin/io/github/whywood/deepdeep/runtime/WorkshopModels.kt",
+      "dependents": 6
+    },
+    {
+      "path": "shell/src/main/kotlin/io/github/whywood/deepdeep/shell/LinuxEnvironment.kt",
+      "dependents": 6
+    }
+  ]
+}

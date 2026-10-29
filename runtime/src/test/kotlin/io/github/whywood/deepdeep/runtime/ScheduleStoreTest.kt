@@ -56,7 +56,7 @@ class ScheduleStoreTest {
         directory.deleteRecursively()
     }
 
-    private fun store(): ScheduleStore = ScheduleStore(directory, clock)
+    private fun store(): ScheduleStore = ScheduleStore(directory, clock) { zone }
 
     private fun newSchedule(
         name: String = "Morning brief",
@@ -102,7 +102,7 @@ class ScheduleStoreTest {
         assertFalse(file.readText().contains("workspaceId"))
         assertFalse(File(directory, "schedules.json.tmp").exists())
 
-        val reopened = ScheduleStore(directory, clock).list()
+        val reopened = ScheduleStore(directory, clock) { zone }.list()
         assertEquals(listOf(created), reopened)
     }
 
@@ -248,7 +248,7 @@ class ScheduleStoreTest {
                 trigger = ScheduleTrigger.Weekly(setOf(DayOfWeek.SUNDAY), LocalTime.of(21, 0)),
             ),
         )
-        val reopened = ScheduleStore(directory, clock).list()
+        val reopened = ScheduleStore(directory, clock) { zone }.list()
         assertEquals(listOf(once, weekly), reopened)
         assertNotNull(reopened[0].nextRunAt)
         assertNotNull(reopened[1].nextRunAt)
@@ -363,8 +363,45 @@ class ScheduleStoreTest {
         assertNull(updatedDisabled.nextRunAt)
         assertFalse(updatedDisabled.enabled)
         val updatedOnce = updated.first { it.id == missedOnce.id }
-        assertFalse(updatedOnce.enabled)
-        assertNull(updatedOnce.nextRunAt)
+        assertTrue(updatedOnce.enabled)
+        assertEquals(epoch(2026, 10, 24, 9, 0), updatedOnce.nextRunAt)
+        assertNull(updatedOnce.lastDeliveredAt)
+    }
+
+    @Test
+    fun recomputeDoesNotReviveDeliveredOnce() = runTest {
+        val store = store()
+        val created = store.create(
+            newSchedule(trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0))),
+        )
+        val deliveredAt = epoch(2026, 10, 24, 9, 0)
+        store.markDelivered(created.id, deliveredAt)
+        clock.advance(Duration.ofDays(5))
+
+        store.recomputeTargets()
+
+        val updated = store.list().single()
+        assertFalse(updated.enabled)
+        assertNull(updated.nextRunAt)
+        assertEquals(deliveredAt, updated.lastDeliveredAt)
+    }
+
+    @Test
+    fun recomputeUsesZoneProviderForFutureTargets() = runTest {
+        var currentZone = zone
+        val store = ScheduleStore(directory, clock) { currentZone }
+        val created = store.create(newSchedule())
+        assertEquals(epoch(2026, 10, 24, 8, 0), created.nextRunAt)
+
+        currentZone = ZoneId.of("America/New_York")
+        store.recomputeTargets()
+
+        val updated = store.list().single()
+        assertEquals(
+            ZonedDateTime.of(2026, 10, 23, 8, 0, 0, 0, currentZone).toInstant().toEpochMilli(),
+            updated.nextRunAt,
+        )
+        assertTrue(updated.enabled)
     }
 
     @Test

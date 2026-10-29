@@ -1,0 +1,161 @@
+> Task :design:preBuild UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :design:preDebugBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :design:processDebugNavigationResources UP-TO-DATE
+> Task :runtime:preBuild UP-TO-DATE
+> Task :runtime:preDebugBuild UP-TO-DATE
+> Task :runtime:processDebugNavigationResources UP-TO-DATE
+> Task :shell:preBuild UP-TO-DATE
+> Task :shell:preDebugBuild UP-TO-DATE
+> Task :shell:processDebugNavigationResources UP-TO-DATE
+> Task :design:generateDebugResources UP-TO-DATE
+> Task :design:packageDebugResources UP-TO-DATE
+> Task :design:parseDebugLocalResources UP-TO-DATE
+> Task :design:generateDebugRFile UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :design:compileDebugKotlin UP-TO-DATE
+> Task :design:javaPreCompileDebug UP-TO-DATE
+> Task :design:compileDebugJavaWithJavac NO-SOURCE
+> Task :design:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :runtime:generateDebugResources UP-TO-DATE
+> Task :runtime:packageDebugResources UP-TO-DATE
+> Task :runtime:parseDebugLocalResources UP-TO-DATE
+> Task :runtime:generateDebugRFile UP-TO-DATE
+> Task :runtime:compileDebugKotlin UP-TO-DATE
+> Task :runtime:javaPreCompileDebug UP-TO-DATE
+> Task :runtime:compileDebugJavaWithJavac NO-SOURCE
+> Task :runtime:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shell:generateDebugResources UP-TO-DATE
+> Task :shell:packageDebugResources UP-TO-DATE
+> Task :shell:parseDebugLocalResources UP-TO-DATE
+> Task :shell:generateDebugRFile UP-TO-DATE
+> Task :shell:compileDebugKotlin UP-TO-DATE
+> Task :app:processDebugNavigationResources FROM-CACHE
+> Task :shell:javaPreCompileDebug UP-TO-DATE
+> Task :shell:compileDebugJavaWithJavac NO-SOURCE
+> Task :shell:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :design:writeDebugAarMetadata UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :runtime:writeDebugAarMetadata UP-TO-DATE
+> Task :shell:writeDebugAarMetadata UP-TO-DATE
+> Task :design:extractDeepLinksDebug UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :design:processDebugManifest UP-TO-DATE
+> Task :runtime:extractDeepLinksDebug UP-TO-DATE
+> Task :runtime:processDebugManifest UP-TO-DATE
+> Task :shell:extractDeepLinksDebug UP-TO-DATE
+> Task :shell:processDebugManifest UP-TO-DATE
+> Task :design:mapDebugSourceSetPaths UP-TO-DATE
+> Task :design:compileDebugLibraryResources UP-TO-DATE
+> Task :runtime:mapDebugSourceSetPaths UP-TO-DATE
+> Task :runtime:compileDebugLibraryResources UP-TO-DATE
+> Task :shell:mapDebugSourceSetPaths UP-TO-DATE
+> Task :shell:compileDebugLibraryResources UP-TO-DATE
+> Task :design:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :design:processDebugJavaRes UP-TO-DATE
+> Task :runtime:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :runtime:processDebugJavaRes UP-TO-DATE
+> Task :shell:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shell:processDebugJavaRes UP-TO-DATE
+> Task :runtime:preDebugUnitTestBuild UP-TO-DATE
+> Task :runtime:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :runtime:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :runtime:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :runtime:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :runtime:processDebugUnitTestJavaRes UP-TO-DATE
+
+> Task :runtime:testDebugUnitTest
+
+AuditRuntimeTest > workshopReadEscapesTemporaryWorkspace STANDARD_OUT
+    AUDIT workshop read can access parent directory
+
+AuditRuntimeTest > clockRecomputeDropsOverdueOnceReminder STANDARD_OUT
+    AUDIT clock recompute disabled an undelivered overdue reminder
+
+AuditRuntimeTest > sessionListScaling STANDARD_OUT
+    AUDIT_PERF session_list files=10 bytes=220781 median_ms=3.642947 max_ms=5.907879
+    AUDIT_PERF session_list files=100 bytes=2207892 median_ms=14.419039 max_ms=21.302846
+    AUDIT_PERF session_list files=1000 bytes=22079893 median_ms=63.905737 max_ms=70.382674
+
+AuditRuntimeTest > incompleteTailLosesFirstNewEntry STANDARD_OUT
+    AUDIT tail reopened-name=before
+
+AuditRuntimeTest > credentialWritesCanFinishOutOfOrder STANDARD_OUT
+    AUDIT credentials memory=new persisted=old
+
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:processDebugResources
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :shell:preDebugUnitTestBuild UP-TO-DATE
+> Task :shell:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :shell:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :shell:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :shell:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :shell:processDebugUnitTestJavaRes UP-TO-DATE
+
+> Task :shell:testDebugUnitTest
+
+AuditShellTest > noNewlineOutputExceedsOutputCapInStreamingCallback STANDARD_OUT
+    AUDIT no-newline retained_output=65536 callback_chunk=8388608 duration_ms=219
+
+AuditShellTest > installedStateCostScalesWithRootfsFileCount STANDARD_OUT
+    AUDIT_PERF rootfs_state files=100 median_ms=0.934879 max_ms=2.468205
+    AUDIT_PERF rootfs_state files=1000 median_ms=3.91276 max_ms=6.858581
+    AUDIT_PERF rootfs_state files=10000 median_ms=27.208128 max_ms=44.263859
+
+> Task :app:compileDebugKotlin
+w: file:///home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/service/KeepAlive.kt:44:78 Unnecessary safe call on a non-null receiver of type 'CharSequence'.
+w: file:///home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatUiStrings.kt:114:49 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
+w: file:///home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/voice/SpeechRecognizerController.kt:78:17 This is a delicate API and its use requires care. Make sure you fully read and understand documentation of the declaration that is marked as a delicate API.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+
+> Task :app:testDebugUnitTest
+
+AuditPluginTest > failedUpdateUninstallsPreviouslyWorkingPluginButKeepsItsRecord STANDARD_OUT
+    AUDIT failed update removed working plugin; installed record remains
+
+AuditCalendarTest > shanghaiDateOnlyAllDayEventMovesToPreviousDay STANDARD_OUT
+    AUDIT calendar requested=2026-10-30 actual=2026-10-29 zone=Asia/Shanghai
+
+AuditChatTest > markdownAndReducerScaling STANDARD_OUT
+    AUDIT_PERF markdown chars=1240 median_ms=0.228222 p95_ms=0.320698
+    AUDIT_PERF markdown chars=12400 median_ms=1.745083 p95_ms=1.95384
+    AUDIT_PERF markdown chars=124000 median_ms=7.270611 p95_ms=10.45345
+    AUDIT_PERF reducer history=100 deltas=100 median_ms=0.308157 p95_ms=0.618641
+    AUDIT_PERF reducer history=1000 deltas=100 median_ms=1.057911 p95_ms=1.58393
+    AUDIT_PERF reducer history=10000 deltas=100 median_ms=9.531421 p95_ms=11.715739
+
+AuditRetryTest > stopDuringRetryDelayStillRetries STANDARD_OUT
+    AUDIT stop during retry delay still caused runtime retry count=1
+
+[Incubating] Problems report is available at: file:///home/whywood/project/DeepDeep/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 22s
+81 actionable tasks: 15 executed, 2 from cache, 64 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.8.2/userguide/configuration_cache_enabling.html

@@ -151,16 +151,19 @@ class GoalService(
                 return@withLock null
             }
             if (goal.maxRounds > 0 && goal.roundsStarted >= goal.maxRounds) {
-                armedSessions -= sessionId
-                persistGoal(
-                    sessionId,
-                    goal.copy(
-                        phase = GoalPhase.BLOCKED,
-                        blockedReason = ROUND_LIMIT_REASON,
-                        revision = goal.revision + 1,
-                        updatedAt = System.currentTimeMillis(),
-                    ),
-                )
+                blockOnRoundLimit(sessionId, goal)
+                return@withLock null
+            }
+            proposal(goal)
+        }
+
+    override suspend fun commitRound(sessionId: String, goalId: String, revision: Long): GoalRound? =
+        mutex.withLock {
+            val goal = persisted[sessionId] ?: return@withLock null
+            if (goal.id != goalId || goal.revision.toLong() != revision) return@withLock null
+            if (goal.phase != GoalPhase.ACTIVE) return@withLock null
+            if (goal.maxRounds > 0 && goal.roundsStarted >= goal.maxRounds) {
+                blockOnRoundLimit(sessionId, goal)
                 return@withLock null
             }
             val round = goal.roundsStarted + 1
@@ -175,8 +178,35 @@ class GoalService(
                 maxRounds = updated.maxRounds,
                 prompt = roundPrompt(updated.objective, round, updated.maxRounds),
                 objective = updated.objective,
+                goalId = updated.id,
+                revision = updated.revision.toLong(),
             )
         }
+
+    private fun proposal(goal: Goal): GoalRound {
+        val round = goal.roundsStarted + 1
+        return GoalRound(
+            round = round,
+            maxRounds = goal.maxRounds,
+            prompt = roundPrompt(goal.objective, round, goal.maxRounds),
+            objective = goal.objective,
+            goalId = goal.id,
+            revision = goal.revision.toLong(),
+        )
+    }
+
+    private fun blockOnRoundLimit(sessionId: String, goal: Goal) {
+        armedSessions -= sessionId
+        persistGoal(
+            sessionId,
+            goal.copy(
+                phase = GoalPhase.BLOCKED,
+                blockedReason = ROUND_LIMIT_REASON,
+                revision = goal.revision + 1,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
 
     override suspend fun pauseOnStop(sessionId: String) {
         mutex.withLock {

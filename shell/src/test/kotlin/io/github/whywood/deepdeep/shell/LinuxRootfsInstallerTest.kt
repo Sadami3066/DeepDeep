@@ -5,6 +5,7 @@ import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -25,10 +26,47 @@ class LinuxRootfsInstallerTest {
 
         assertTrue(state is LinuxInstallState.Installed)
         assertEquals("3.24.2", (state as LinuxInstallState.Installed).version)
-        assertTrue(state.sizeBytes > 0)
+        assertNull(state.sizeBytes)
         assertEquals("3.24.2\n", File(rootfs, "etc/alpine-release").readText())
         assertTrue(File(rootfs, LinuxRootfsInstaller.MARKER_FILE).isFile)
         assertTrue(File(rootfs, "workspace").isDirectory)
+
+        val refreshed = installer.refreshState()
+        assertTrue((refreshed as LinuxInstallState.Installed).sizeBytes!! > 0)
+    }
+
+    @Test
+    fun quickStateDoesNotScanRootfsFiles() = runBlocking {
+        val rootfs = File(temp.root, "rootfs")
+        var scans = 0
+        val installer = LinuxRootfsInstaller(
+            rootfsDir = rootfs,
+            assetOpener = { ByteArrayInputStream(archive()) },
+            sizeProvider = { scans++; 42L },
+        )
+
+        assertEquals(LinuxInstallState.NotInstalled, installer.quickState())
+        assertEquals(0, scans)
+
+        installer.install()
+        val quick = installer.currentState()
+        assertTrue(quick is LinuxInstallState.Installed)
+        assertEquals("3.24.2", (quick as LinuxInstallState.Installed).version)
+        assertNull(quick.sizeBytes)
+        assertEquals(0, scans)
+
+        repeat(2000) { index -> File(rootfs, "bulk-$index.txt").writeText("x") }
+        assertEquals(0, scans)
+        assertNull((installer.quickState() as LinuxInstallState.Installed).sizeBytes)
+
+        val refreshed = installer.refreshState() as LinuxInstallState.Installed
+        assertEquals(42L, refreshed.sizeBytes)
+        assertEquals(1, scans)
+        assertEquals(42L, (installer.currentState() as LinuxInstallState.Installed).sizeBytes)
+
+        installer.reset()
+        assertEquals(LinuxInstallState.NotInstalled, installer.currentState())
+        assertEquals(1, scans)
     }
 
     @Test
@@ -68,7 +106,7 @@ class LinuxRootfsInstallerTest {
             runBlocking { installer.install() }
         }
         assertFalse(rootfs.exists())
-        assertTrue(File(temp.root, "rootfs").parentFile.listFiles().orEmpty().none {
+        assertTrue(temp.root.listFiles().orEmpty().none {
             it.name.startsWith("rootfs.tmp-")
         })
 

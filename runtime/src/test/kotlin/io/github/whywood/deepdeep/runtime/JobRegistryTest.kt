@@ -172,6 +172,47 @@ class JobRegistryTest {
         assertTrue(registry.jobs.value.single().status == JobStatus.RUNNING)
     }
 
+    @Test
+    fun keepsOnlyRecentSettledRecords() = runTest {
+        val runner = FakeRunner()
+        val registry = JobRegistry(backgroundScope, runner, notifier = { _, _, _ -> })
+        val ids = (0 until 55).map { index ->
+            val id = registry.start("session-$index", "cmd-$index", "job-$index").id!!
+            runCurrent()
+            runner.calls.last().exit.complete(0)
+            runCurrent()
+            id
+        }
+
+        val remaining = registry.jobs.value.map { it.id }
+        assertEquals(50, remaining.size)
+        assertEquals(ids.takeLast(50), remaining)
+        assertTrue(registry.read(ids.last()).status == JobStatus.DONE)
+        val error = runCatching { registry.read(ids.first()) }.exceptionOrNull()
+        assertTrue(error is IllegalArgumentException)
+    }
+
+    @Test
+    fun prunesSettledRecordsWithoutTouchingRunningJobs() = runTest {
+        val runner = FakeRunner()
+        val registry = JobRegistry(backgroundScope, runner, notifier = { _, _, _ -> })
+        val running = registry.start("session-running", "sleep 30", "sleep").id!!
+        runCurrent()
+        val settledIds = (0 until 55).map { index ->
+            val id = registry.start("session-$index", "cmd-$index", "job-$index").id!!
+            runCurrent()
+            runner.calls.last { it.command == "cmd-$index" }.exit.complete(0)
+            runCurrent()
+            id
+        }
+
+        val remaining = registry.jobs.value
+        assertEquals(51, remaining.size)
+        assertEquals(JobStatus.RUNNING, remaining.first { it.id == running }.status)
+        assertEquals(settledIds.takeLast(50), remaining.filter { it.id != running }.map { it.id })
+        assertTrue(runner.calls.size == 56)
+    }
+
     private class FakeRunner : BackgroundCommandRunner {
         val calls = mutableListOf<Call>()
 

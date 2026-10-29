@@ -9,7 +9,6 @@ import dev.pi.coding.prompt.loadSkills
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.SessionEvent
 import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.ShellExecutor
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -35,9 +34,9 @@ private const val SKILLS_DIR = "skills"
 private const val WORKSPACE_DIR = "workspace"
 private const val AGENT_DIR = "agent"
 private const val APPEND_SYSTEM_PROMPT_FILE = "APPEND_SYSTEM.md"
-private const val HIDDEN_TOOL_ARRANGE_PREFIX = "arrange_"
-private const val HIDDEN_TOOL_MICLOUD_PREFIX = "mi_cloud_"
-private const val HIDDEN_TOOL_GUI_PREFIX = "gui_"
+
+internal val WORKSHOP_AGENT_TOOL_NAMES =
+    setOf("read", "ls", "grep", "find", "write", "edit", "web_search", "web_fetch")
 
 class WorkshopAgentService(
     private val providers: ProviderCatalog,
@@ -49,7 +48,6 @@ class WorkshopAgentService(
     private val configuredProviders: () -> Set<String>,
     private val personalization: suspend () -> Personalization,
     private val pluginPromptBody: suspend () -> String?,
-    private val shellExecutorFor: suspend (File) -> ShellExecutor?,
     private val sharedStorage: suspend () -> Boolean,
 ) : WorkshopAgentGateway {
     override suspend fun models(): List<WorkshopAgentModel> =
@@ -60,7 +58,7 @@ class WorkshopAgentService(
         try {
             val workspace = File(root, WORKSPACE_DIR).apply { mkdirs() }
             val tempAgentDir = File(root, AGENT_DIR).apply { mkdirs() }
-            val engine = createEngine(workspace, tempAgentDir, null)
+            val engine = createEngine(workspace, tempAgentDir)
             val tools = buildWorkshopAgentTools(engine.availableTools())
             val skills = discoverSkills(workspace)
                 .map { WorkshopAgentSkill(it.name, it.description) }
@@ -109,7 +107,7 @@ class WorkshopAgentService(
         try {
             val workspace = File(root, WORKSPACE_DIR).apply { mkdirs() }
             val tempAgentDir = File(root, AGENT_DIR).apply { mkdirs() }
-            val engine = createEngine(workspace, tempAgentDir, shellExecutorFor(workspace))
+            val engine = createEngine(workspace, tempAgentDir)
             val tools = visibleWorkshopAgentTools(engine.availableTools())
             val skills = discoverSkills(workspace)
             val selectedTools = selectWorkshopAgentNames("tool", request.tools, tools.map { it.name })
@@ -126,7 +124,7 @@ class WorkshopAgentService(
             val created = engine.createSession(
                 file = null,
                 config = config,
-                shellEnabled = true,
+                shellEnabled = false,
                 toolsFilter = toolsFilter,
                 mcpEnabled = false,
             )
@@ -201,17 +199,18 @@ class WorkshopAgentService(
     private fun createEngine(
         workspace: File,
         tempAgentDir: File,
-        shellExecutor: ShellExecutor?,
     ): PiSessionEngine = PiSessionEngine(
         workspace = workspace,
         agentDir = tempAgentDir,
         credentials = credentials,
-        shellExecutor = shellExecutor,
+        shellExecutor = null,
         providers = providers,
         personalization = personalization,
         sharedStorage = sharedStorage,
         pluginPromptBody = pluginPromptBody,
         toolContext = appToolContext,
+        fs = FileSystem.SYSTEM,
+        toolFs = ScopedFileSystem(FileSystem.SYSTEM, listOf(workspace.absolutePath.toPath())),
     )
 
     private suspend fun discoverSkills(cwd: File): List<Skill> = runCatching {
@@ -257,10 +256,7 @@ internal fun buildWorkshopAgentTools(tools: List<CodingTool>): List<WorkshopAgen
 internal fun visibleWorkshopAgentTools(tools: List<CodingTool>): List<CodingTool> =
     tools.filter { workshopAgentToolVisible(it.name) }
 
-internal fun workshopAgentToolVisible(name: String): Boolean =
-    !name.startsWith(HIDDEN_TOOL_ARRANGE_PREFIX) &&
-        !name.startsWith(HIDDEN_TOOL_MICLOUD_PREFIX) &&
-        !name.startsWith(HIDDEN_TOOL_GUI_PREFIX)
+internal fun workshopAgentToolVisible(name: String): Boolean = name in WORKSHOP_AGENT_TOOL_NAMES
 
 internal fun workshopAgentEventOf(sessionEvent: SessionEvent): WorkshopAgentEvent? = when (sessionEvent) {
     is SessionEvent.AgentEventReceived -> workshopAgentEventOf(sessionEvent.event)

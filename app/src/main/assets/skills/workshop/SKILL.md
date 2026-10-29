@@ -24,7 +24,7 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 
 1. 理解需求；不确定的交互先一句话问清。
 2. 调 `workshop_create`：`name`（1–40 字）、可选 `description`、可选 `icon`（emoji）。返回草稿绝对路径 `<draft>`。
-3. 用 `read`/`write`/`edit` 的绝对路径在 `<draft>` 下写 `index.html`（入口）及 CSS/JS/资源。创意目录在 bash 工作区外，不要用 bash 写。
+3. 用 `read`/`write`/`edit` 的绝对路径在 `<draft>` 下写 `index.html`（入口）及 CSS/JS/资源。工坊 Agent 只能读写本次运行目录里的文件，不能执行命令。
 4. 调 `workshop_load`（`path=<draft>`）。按报错修到成功；成功后聊天出现入口卡片。
 5. 打开检查布局与交互，再告诉用户去「创意工坊」使用。
 
@@ -110,6 +110,7 @@ const text = await app.agent.run({
 - 生命周期绑定页面：页面关闭/返回会取消正在运行的 Agent；没有后台运行。需要结果就在页面里 await 完。
 - 进度交给 `onEvent`（文本增量、工具调用）；其他界面状态由页面自己维护。
 - 页面 Agent 当前不启用 MCP。
+- `read`/`write`/`edit` 等文件工具只能读写本次运行目录，不能执行命令；联网查询用 `web_search`/`web_fetch`。
 - 失败会 reject，并在 reject 前收到 `run_error`；用 `try/catch` 展示错误，不要吞掉。
 
 完整 API、限制与错误码：`references/api-reference.md`。

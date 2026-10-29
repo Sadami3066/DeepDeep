@@ -249,12 +249,12 @@ class WorkshopAgentServiceTest {
     fun toolCatalogIsSortedWithDescriptions() {
         val tools = buildWorkshopAgentTools(
             listOf(
-                tool("zeta", "Last tool"),
-                tool("alpha", "First tool"),
+                tool("write", "Last tool"),
+                tool("read", "First tool"),
             ),
         )
 
-        assertEquals(listOf("alpha", "zeta"), tools.map { it.name })
+        assertEquals(listOf("read", "write"), tools.map { it.name })
         assertEquals(listOf("First tool", "Last tool"), tools.map { it.description })
     }
 
@@ -331,23 +331,61 @@ class WorkshopAgentServiceTest {
     }
 
     @Test
-    fun hiddenToolsAreFilteredFromWorkshopCatalog() {
+    fun workshopToolsUseWhitelistWithoutShellOrGui() {
         val tools = listOf(
+            tool("read", "Read a file"),
+            tool("ls", "List files"),
+            tool("grep", "Search files"),
+            tool("find", "Find files"),
+            tool("write", "Write a file"),
+            tool("edit", "Edit a file"),
             tool("web_search", "Search the web"),
+            tool("web_fetch", "Fetch a page"),
+            tool("bash", "Run a command"),
             tool("arrange_alarm", "Set an alarm"),
             tool("mi_cloud_notes", "Read notes"),
             tool("gui_tap", "Tap"),
-            tool("gui_swipe", "Swipe"),
         )
 
-        assertEquals(listOf("web_search"), visibleWorkshopAgentTools(tools).map { it.name })
-        assertEquals(listOf("web_search"), buildWorkshopAgentTools(tools).map { it.name })
-        assertFalse(workshopAgentToolVisible("arrange_alarm"))
-        assertFalse(workshopAgentToolVisible("mi_cloud_notes"))
-        assertFalse(workshopAgentToolVisible("gui_tap"))
-        assertFalse(workshopAgentToolVisible("gui_"))
+        assertEquals(
+            listOf("edit", "find", "grep", "ls", "read", "web_fetch", "web_search", "write"),
+            visibleWorkshopAgentTools(tools).map { it.name }.sorted(),
+        )
+        assertEquals(
+            listOf("edit", "find", "grep", "ls", "read", "web_fetch", "web_search", "write"),
+            buildWorkshopAgentTools(tools).map { it.name },
+        )
+        assertEquals(
+            WORKSHOP_AGENT_TOOL_NAMES,
+            setOf("read", "ls", "grep", "find", "write", "edit", "web_search", "web_fetch"),
+        )
         assertTrue(workshopAgentToolVisible("web_search"))
-        assertTrue(workshopAgentToolVisible("read"))
+        assertTrue(workshopAgentToolVisible("web_fetch"))
+        assertFalse(workshopAgentToolVisible("bash"))
+        assertFalse(workshopAgentToolVisible("arrange_alarm"))
+        assertFalse(workshopAgentToolVisible("gui_tap"))
+        assertFalse(workshopAgentToolVisible("mi_cloud_notes"))
+    }
+
+    @Test
+    fun webToolsCanBeSelectedWhileShellAndGuiStayRejected() {
+        val available = visibleWorkshopAgentTools(
+            listOf(
+                tool("read", "Read a file"),
+                tool("web_search", "Search the web"),
+                tool("web_fetch", "Fetch a page"),
+                tool("bash", "Run a command"),
+                tool("gui_click", "Click"),
+            ),
+        ).map { it.name }
+
+        assertEquals(
+            setOf("web_search", "web_fetch"),
+            selectWorkshopAgentNames("tool", listOf("web_search", "web_fetch"), available),
+        )
+        assertRejected { selectWorkshopAgentNames("tool", listOf("bash"), available) }
+        assertRejected { selectWorkshopAgentNames("tool", listOf("gui_click"), available) }
+        assertNull(selectWorkshopAgentNames("tool", null, available))
     }
 
     @Test

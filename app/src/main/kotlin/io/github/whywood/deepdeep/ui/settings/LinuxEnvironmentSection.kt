@@ -136,12 +136,14 @@ internal fun LinuxEnvironmentSection(
         )
         if (installedState != null) {
             DdHairline()
+            val sizeBytes = installedState.sizeBytes
             DdListRow(
                 title = stringResource(R.string.settings_linux_size_label),
-                value = stringResource(
-                    R.string.settings_linux_size_value,
-                    (installedState.sizeBytes / (1024 * 1024)).toInt(),
-                ),
+                value = if (sizeBytes == null) {
+                    stringResource(R.string.settings_linux_size_computing)
+                } else {
+                    stringResource(R.string.settings_linux_size_value, (sizeBytes / (1024 * 1024)).toInt())
+                },
             )
             DdHairline()
             DdListRow(

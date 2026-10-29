@@ -82,6 +82,44 @@ class PluginManagerTest {
     }
 
     @Test
+    fun failedFirstInstallUninstallsPartialPlugin() = runTest {
+        val plugin = FakePlugin()
+        plugin.installError = IllegalStateException("download failed")
+        val manager = newManager(this, plugin)
+        manager.install(plugin.id)
+        advanceUntilIdle()
+
+        assertFalse(plugin.installed)
+        assertEquals(1, plugin.uninstallCalls)
+        assertNull(PluginRecordStore(recordsFile()).load().records[plugin.id])
+    }
+
+    @Test
+    fun failedUpgradeKeepsPreviousInstall() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "1.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+        val skillFile = File(temporaryFolder.root, "skills/fake-skill/SKILL.md")
+        val skillBefore = skillFile.readText()
+
+        plugin.installError = IllegalStateException("download failed")
+        manager.update(plugin.id)
+        advanceUntilIdle()
+
+        val record = PluginRecordStore(recordsFile()).load().records.getValue(plugin.id)
+        assertEquals("1.0", record.version)
+        assertEquals(listOf("fake-skill"), record.skillIds)
+        assertTrue(plugin.installed)
+        assertEquals(0, plugin.uninstallCalls)
+        assertEquals(skillBefore, skillFile.readText())
+    }
+
+    @Test
     fun installNotifiesContributionsAfterToolsBecomeVisible() = runTest {
         val plugin = FakePlugin()
         var toolsAtNotification: List<String> = emptyList()
@@ -366,16 +404,20 @@ class PluginManagerTest {
         var installed: Boolean = false
         var statusValue: PluginStatus = PluginStatus.NotReady("未连接")
         var statusCalls: Int = 0
+        var installError: Exception? = null
+        var uninstallCalls: Int = 0
         var setupHook: (suspend (PluginUi) -> Unit)? = null
         var actionHook: (suspend (PluginUi) -> Unit)? = null
 
         override suspend fun availability(): PluginAvailability = availability
 
         override suspend fun install(progress: PluginProgress) {
+            installError?.let { throw it }
             installed = true
         }
 
         override suspend fun uninstall() {
+            uninstallCalls++
             installed = false
         }
 

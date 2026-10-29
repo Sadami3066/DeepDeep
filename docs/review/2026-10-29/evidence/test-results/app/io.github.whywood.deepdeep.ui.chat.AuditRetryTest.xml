@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.ui.chat.AuditRetryTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:04:14.636Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.016">
+  <properties />
+  <testcase name="stopDuringRetryDelayStillRetries" classname="io.github.whywood.deepdeep.ui.chat.AuditRetryTest" time="0.016" />
+  <system-out>AUDIT stop during retry delay still caused runtime retry count=1
+</system-out>
+  <system-err />
+</testsuite>

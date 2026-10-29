@@ -57,6 +57,7 @@
     <string name="settings_linux_unsupported">Linux is not supported on this device (arm64-v8a only).</string>
     <string name="settings_linux_size_label">Space used</string>
     <string name="settings_linux_size_value">%1$d MB</string>
+    <string name="settings_linux_size_computing">Calculating…</string>
     <string name="settings_linux_shared_storage">Shared storage</string>
     <string name="settings_linux_shared_storage_grant">Grant All files access in system settings</string>
     <string name="settings_provider_title">Providers</string>

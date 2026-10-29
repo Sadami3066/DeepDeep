@@ -1,5 +1,39 @@
 # Status
 
+## Done: 全局整合（按 2026-10-29 代码审阅报告收敛运行秩序）
+
+**背景与结论**
+- 10-29 审阅报告指出：模块边界清楚，但会话运行、停止、重试、重配、持久化、能力范围由多处各自决定，出现“多个功能各自正确、组合起来不可靠”。本轮按报告修复 P1/P2 缺陷并把运行状态收回到单一所有者，不重写架构、不换执行语言。
+
+**会话运行秩序**
+- 新增 `SessionCommandPlane`：每会话一把锁 + 单调 epoch，send/retry/deliverReminder/deliverBackgroundTurn/stop 的状态迁移全部在锁内完成；busy 只由持有该 runId 的路径清除，停止后旧的延时重试/目标续跑作废。后台入口在忙时注入当前轮（`QueueBehavior.FollowUp`），空闲才新起 run。
+- 插件能力变化与 MCP 配置更新改走 `reconfigure()` 的安全点重配：忙碌会话排到本轮结束，空闲会话立即重建；不再用“等待全部空闲”当锁，也不会关闭正在运行的会话。
+- 目标续跑改为“提案 + 0.4s 后复核 epoch/revision + `commitRound` 才启动”，轮次在真正开始时递增；暂停/清除/编辑/停止都会让旧提案失效。
+- 会话列表改由 `SessionIndex`（`files/session-index.json`，按 size+mtime 缓存）支撑，updatedAt 取 header 时间与文件 mtime 的较大值；继续老会话会排到最近，列表不再每次解析全部 JSONL。
+
+**数据可靠性与能力边界**
+- 停止会先取消该会话尚未到点的自动重试倒计时，倒计时结束前再复核任务身份，避免“点了停止又自己跑起来”。
+- 凭据按 Provider 串行落盘（修订号 + 写入任务链，只有最新意图落盘），新增 `awaitCommit`；旧刷新 token 不会覆盖之后的登出/换 Key。
+- 一次提醒若已错过且未投递，重算时保留并补投，不再静默禁用；时区计算每次读取当前系统时区。
+- JSONL 尾部损坏不再吞掉下一条记录（SDK 0.2.3）：打开时把坏尾备份到 `<file>.jsonl.corrupt` 并截断到最后一个合法记录，追加前保证文件以 LF 结尾。
+- 插件升级失败不再卸载旧版本、不删记录与技能，只清理暂存；首次安装失败才清理半成品。
+- 工坊页面 Agent 改为显式白名单（`read`/`write`/`edit`/`ls`/`grep`/`find` + `web_search`/`web_fetch`），文件工具绑定只能落在本次运行临时目录的 `ScopedFileSystem`，无 bash；`../`、绝对路径、外指 symlink 被拒。
+- 全天日历事件按用户时区日期编码为 UTC 日期边界，修掉上海等正时区写前一天的问题，负时区读回也不再退一天。
+- 附件导入边拷边限额 25MB（元数据 size 未知也受限），导入完成时复核会话，切换会话后不再把附件塞进新会话。
+- 性能与资源：Linux 命令前安装检查改为 O(1) 标记检查，磁盘占用只在设置页统计一次；PRoot 行输出按 8KiB 上限切分，无换行长输出不再无界累积；read 工具文本路径改为单遍流式，不再整文件读入；job 只保留最近 50 条已结束记录，聊天会话缓存限 8 个。
+
+**SDK 0.2.3**
+- pi2kotlin 发布 0.2.3（Maven Local）：JSONL 尾部修复 + read 流式读取；DeepDeep 升级依赖。SDK 侧 jvmTest 537 tests 全绿（含 11 个新增尾部/流式用例）。
+
+**验证**
+- 865 unit tests 全绿（app 508 / runtime 331 / shell 26，0 failures），比上一轮 804 增加 61 个回归用例；lint 0 errors / 161 warnings / 5 hints，与审阅基线持平；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13 / MIUI 14）：安装启动、会话恢复与排序（老会话发消息后抽屉立即 `Just now` 并排最前，`files/session-index.json` 生成）、运行环境页（`Space used 691 MB` 来自进入页面时一次统计）、创意工坊页面渲染、页面 Agent 白名单（`capabilities()` 只列 8 个工具，`tools:["bash"]`/`["gui_tap"]` 被拒）、全天日历 Provider 提权创建并读回日期一致、JSONL 坏尾修复（47 字节坏尾被备份到 `.corrupt`，会话恢复原大小后可继续追加）均通过；`adb logcat` 无 `FATAL EXCEPTION`；`ArrangeDeviceTest` 2 tests OK。
+
+**未在本轮处理**
+- 持久任务/outbox/未知结果模型（R08）：需要独立的任务表与恢复语义，留待下一轮单独立项。
+- Host 空闲 handle 淘汰：提醒/目标/待答问题仍可能引用会话，需先做引用检查。
+- Markdown 增量解析与真机帧率基线：需先有 profile trace。
+
 ## Done: 后台保活（GUI 长任务防系统杀进程）
 
 **问题与结论**

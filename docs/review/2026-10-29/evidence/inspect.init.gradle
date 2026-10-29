@@ -1,0 +1,6 @@
+gradle.afterProject { p ->
+ if (p.path == ':runtime') {
+  println('AUDIT_KOTLIN_SETS=' + p.kotlin.sourceSets.names)
+  println('AUDIT_TEST_KOTLIN=' + p.android.sourceSets.getByName('test').kotlin.srcDirs)
+ }
+}

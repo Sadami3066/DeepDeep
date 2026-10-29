@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.plugin.AuditPluginTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:04:13.689Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.026">
+  <properties />
+  <testcase name="failedUpdateUninstallsPreviouslyWorkingPluginButKeepsItsRecord" classname="io.github.whywood.deepdeep.plugin.AuditPluginTest" time="0.026" />
+  <system-out>AUDIT failed update removed working plugin; installed record remains
+</system-out>
+  <system-err />
+</testsuite>

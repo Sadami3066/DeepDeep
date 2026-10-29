@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +46,7 @@ data class SchedulePatch(
 class ScheduleStore(
     private val directory: File,
     internal val clock: Clock = Clock.systemDefaultZone(),
+    private val zoneProvider: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
     private val mutex = Mutex()
     private val file = File(directory, FILE_NAME)
@@ -56,8 +58,8 @@ class ScheduleStore(
     suspend fun create(newSchedule: NewSchedule): Schedule = mutex.withLock {
         val current = load()
         val now = clock.millis()
-        val nowZoned = ZonedDateTime.now(clock)
-        newSchedule.trigger.validationError(nowZoned)?.let { error ->
+        val nowZonedTime = nowZoned()
+        newSchedule.trigger.validationError(nowZonedTime)?.let { error ->
             if (newSchedule.enabled || newSchedule.trigger !is ScheduleTrigger.Once) {
                 throw IllegalArgumentException(error)
             }
@@ -97,7 +99,7 @@ class ScheduleStore(
             existing.nextRunAt
         }
         if (recompute) {
-            trigger.validationError(ZonedDateTime.now(clock))?.let { error ->
+            trigger.validationError(nowZoned())?.let { error ->
                 if (enabled || trigger !is ScheduleTrigger.Once) {
                     throw IllegalArgumentException(error)
                 }
@@ -199,32 +201,45 @@ class ScheduleStore(
     suspend fun recomputeTargets(): Unit = mutex.withLock {
         val current = load()
         val nowMillis = clock.millis()
-        val now = ZonedDateTime.now(clock)
+        val zone = zoneProvider()
+        val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zone)
         val updated = current.map { schedule ->
             if (!schedule.enabled) {
                 if (schedule.nextRunAt == null) schedule else schedule.copy(nextRunAt = null, updatedAt = nowMillis)
             } else {
                 val next = schedule.trigger.nextRun(now)?.toInstant()?.toEpochMilli()
                 val missedOnce = next == null && schedule.trigger is ScheduleTrigger.Once
-                if (next == schedule.nextRunAt && !missedOnce) {
+                if (missedOnce) {
+                    if (schedule.lastDeliveredAt != null) {
+                        schedule
+                    } else {
+                        val original = scheduledOnceAt(schedule.trigger, zone)
+                        if (schedule.nextRunAt == original) {
+                            schedule
+                        } else {
+                            schedule.copy(nextRunAt = original, updatedAt = nowMillis)
+                        }
+                    }
+                } else if (next == schedule.nextRunAt) {
                     schedule
                 } else {
-                    schedule.copy(
-                        enabled = if (missedOnce) false else schedule.enabled,
-                        nextRunAt = next,
-                        updatedAt = nowMillis,
-                    )
+                    schedule.copy(nextRunAt = next, updatedAt = nowMillis)
                 }
             }
         }
         if (updated != current) persist(updated)
     }
 
-    private fun computeNextRunAt(trigger: ScheduleTrigger, now: ZonedDateTime = ZonedDateTime.now(clock)): Long? =
+    private fun nowZoned(): ZonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(clock.millis()), zoneProvider())
+
+    private fun scheduledOnceAt(trigger: ScheduleTrigger.Once, zone: ZoneId): Long =
+        ZonedDateTime.of(trigger.date, trigger.time, zone).toInstant().toEpochMilli()
+
+    private fun computeNextRunAt(trigger: ScheduleTrigger, now: ZonedDateTime = nowZoned()): Long? =
         trigger.nextRun(now)?.toInstant()?.toEpochMilli()
 
     private fun nextRunAtAfter(trigger: ScheduleTrigger, at: Long): Long? =
-        trigger.nextRun(ZonedDateTime.ofInstant(Instant.ofEpochMilli(at), clock.zone))
+        trigger.nextRun(ZonedDateTime.ofInstant(Instant.ofEpochMilli(at), zoneProvider()))
             ?.toInstant()
             ?.toEpochMilli()
 

@@ -29,6 +29,7 @@ DeepDeep 使用系统公开 API 提供以下能力；所有需要用户授权的
 ### 安排（日历，插件）
 
 - 日历：直接读写 `CalendarContract` Provider，需要 `READ_CALENDAR`/`WRITE_CALENDAR` 运行时权限；支持 Calendars/Events/Instances/Reminders，重复事件按 Instances 展开读取，写入依赖可写日历（本机 Xiaomi 账户日历可写）。
+- 全天事件按用户所在时区的日期原样编码为 UTC 日期边界（`ALL_DAY=1`，结束日独占），读回显示与创建日期一致，不因时区偏移到前一天。
 - 权限入口：插件详情页仅在未授权时显示「授予日历权限」，工具未授权时返回明确错误。
 - 不提供闹钟/计时器：公开 `AlarmClock` intents 无法查询、修改或删除系统时钟里已保存的闹钟；MIUI 的 `com.android.deskclock/.AlarmProvider` 受签名级 `miui.permission.ACCESS_ALARM_PROVIDER` 保护，第三方 App 无法直接 CRUD。
 - 不提供本地待办；小米待办由「小米云服务」插件读写，见 `docs/MICLOUD.md`。

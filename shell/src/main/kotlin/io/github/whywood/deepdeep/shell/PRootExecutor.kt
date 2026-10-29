@@ -133,7 +133,7 @@ class PRootExecutor(
         watchdog.start()
 
         val output = ByteArrayOutputStream()
-        val pendingLine = ByteArrayOutputStream()
+        val lineBuffer = onOutputLine?.let { LineChunkBuffer() }
         var truncated = false
         try {
             process.inputStream.use { input ->
@@ -150,23 +150,9 @@ class PRootExecutor(
                         output.write(buffer, 0, minOf(read, remaining))
                     }
                     if (read > remaining) truncated = true
-                    if (onOutputLine != null) {
-                        for (index in 0 until read) {
-                            val byte = buffer[index]
-                            if (byte == '\n'.code.toByte()) {
-                                val line = pendingLine.toByteArray().toString(Charsets.UTF_8).trimEnd('\r')
-                                pendingLine.reset()
-                                runCatching { onOutputLine(line) }
-                            } else {
-                                pendingLine.write(byte.toInt())
-                            }
-                        }
-                    }
+                    if (lineBuffer != null) lineBuffer.accept(buffer, read, onOutputLine)
                 }
-                if (onOutputLine != null && pendingLine.size() > 0) {
-                    val line = pendingLine.toByteArray().toString(Charsets.UTF_8).trimEnd('\r')
-                    runCatching { onOutputLine(line) }
-                }
+                if (lineBuffer != null) lineBuffer.finish(onOutputLine)
             }
             process.waitFor()
         } finally {
@@ -283,6 +269,78 @@ class PRootExecutor(
         val pid: Long,
     )
 }
+
+internal class LineChunkBuffer(private val limit: Int = LINE_CHUNK_LIMIT) {
+    private val pending = ByteArrayOutputStream()
+    private var lineCut = false
+
+    fun accept(bytes: ByteArray, count: Int, onChunk: (String) -> Unit) {
+        for (index in 0 until count) {
+            val byte = bytes[index]
+            if (byte == '\n'.code.toByte()) {
+                if (lineCut && pending.size() == 0) {
+                    lineCut = false
+                } else {
+                    emit(pending.toByteArray().toString(Charsets.UTF_8).trimEnd('\r'), onChunk)
+                    pending.reset()
+                    lineCut = false
+                }
+            } else {
+                pending.write(byte.toInt())
+                if (pending.size() >= limit) {
+                    emit(flushBounded(), onChunk)
+                    lineCut = true
+                }
+            }
+        }
+    }
+
+    fun finish(onChunk: (String) -> Unit) {
+        if (lineCut && pending.size() == 0) {
+            lineCut = false
+            return
+        }
+        if (pending.size() == 0) return
+        emit(pending.toByteArray().toString(Charsets.UTF_8).trimEnd('\r'), onChunk)
+        pending.reset()
+        lineCut = false
+    }
+
+    private fun flushBounded(): String {
+        val bytes = pending.toByteArray()
+        val cut = utf8Cut(bytes)
+        pending.reset()
+        if (cut < bytes.size) pending.write(bytes, cut, bytes.size - cut)
+        return bytes.copyOf(cut).toString(Charsets.UTF_8)
+    }
+
+    private fun emit(chunk: String, onChunk: (String) -> Unit) {
+        runCatching { onChunk(chunk) }
+    }
+}
+
+private fun utf8Cut(bytes: ByteArray): Int {
+    val cut = bytes.size
+    if (cut == 0) return 0
+    var index = cut - 1
+    var backtrack = 0
+    while (index >= 0 && (bytes[index].toInt() and 0xC0) == 0x80 && backtrack < 3) {
+        index--
+        backtrack++
+    }
+    if (index < 0) return cut
+    val lead = bytes[index].toInt() and 0xFF
+    val length = when {
+        lead and 0x80 == 0 -> 1
+        lead and 0xE0 == 0xC0 -> 2
+        lead and 0xF0 == 0xE0 -> 3
+        lead and 0xF8 == 0xF0 -> 4
+        else -> 1
+    }
+    return if (index + length <= cut) cut else index
+}
+
+private const val LINE_CHUNK_LIMIT = 8 * 1024
 
 private fun readPidFile(pidFile: File): Long {
     repeat(50) {

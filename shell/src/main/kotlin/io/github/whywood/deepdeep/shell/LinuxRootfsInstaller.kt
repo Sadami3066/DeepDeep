@@ -21,14 +21,18 @@ class LinuxRootfsInstaller(
     private val assetOpener: () -> InputStream,
     private val expectedSha256: String? = null,
     private val extractor: RootfsExtractor = RootfsExtractor(),
+    private val sizeProvider: (File) -> Long = ::directorySizeBytes,
 ) {
     private val mutex = Mutex()
-    private val _state = MutableStateFlow(readState())
+    private val _state = MutableStateFlow(quickState())
     val state: StateFlow<LinuxInstallState> = _state.asStateFlow()
+
+    @Volatile
+    private var cachedSize: Long? = null
 
     suspend fun install(): LinuxInstallState = mutex.withLock {
         withContext(Dispatchers.IO) {
-            val current = readState()
+            val current = quickState()
             if (current is LinuxInstallState.Installed) {
                 _state.value = current
                 return@withContext current
@@ -69,7 +73,8 @@ class LinuxRootfsInstaller(
 
                 if (rootfsDir.exists()) rootfsDir.deleteRecursively()
                 require(temp.renameTo(rootfsDir)) { "cannot activate rootfs: $rootfsDir" }
-                val installed = readState()
+                cachedSize = null
+                val installed = quickState()
                 _state.value = installed
                 installed
             } catch (error: Exception) {
@@ -87,6 +92,7 @@ class LinuxRootfsInstaller(
                 _state.value = failed
                 throw IllegalStateException(failed.message)
             }
+            cachedSize = null
             _state.value = LinuxInstallState.NotInstalled
             LinuxInstallState.NotInstalled
         }
@@ -94,13 +100,23 @@ class LinuxRootfsInstaller(
 
     suspend fun refreshState(): LinuxInstallState = mutex.withLock {
         withContext(Dispatchers.IO) {
-            readState().also { _state.value = it }
+            val quick = quickState()
+            val state = if (quick is LinuxInstallState.Installed) {
+                val size = sizeProvider(rootfsDir)
+                cachedSize = size
+                quick.copy(sizeBytes = size)
+            } else {
+                cachedSize = null
+                quick
+            }
+            _state.value = state
+            state
         }
     }
 
-    fun currentState(): LinuxInstallState = readState()
+    fun currentState(): LinuxInstallState = quickState()
 
-    private fun readState(): LinuxInstallState {
+    fun quickState(): LinuxInstallState {
         if (!rootfsDir.isDirectory) return LinuxInstallState.NotInstalled
         val marker = File(rootfsDir, MARKER_FILE)
         if (!marker.isFile) return LinuxInstallState.NotInstalled
@@ -111,16 +127,8 @@ class LinuxRootfsInstaller(
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
             ?: VERSION
-        return LinuxInstallState.Installed(version, directorySize(rootfsDir.toPath()))
+        return LinuxInstallState.Installed(version, cachedSize)
     }
-
-    private fun directorySize(root: java.nio.file.Path): Long = runCatching {
-        Files.walk(root).use { paths ->
-            paths.filter { Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS) }
-                .mapToLong { path -> runCatching { Files.size(path) }.getOrDefault(0L) }
-                .sum()
-        }
-    }.getOrDefault(0L)
 
     private fun removeStaleTemps(parent: File) {
         parent.listFiles { file -> file.name.startsWith("${rootfsDir.name}.tmp-") }
@@ -135,3 +143,11 @@ class LinuxRootfsInstaller(
         const val WORKSPACE_DIR = "workspace"
     }
 }
+
+internal fun directorySizeBytes(root: File): Long = runCatching {
+    Files.walk(root.toPath()).use { paths ->
+        paths.filter { Files.isRegularFile(it, LinkOption.NOFOLLOW_LINKS) }
+            .mapToLong { path -> runCatching { Files.size(path) }.getOrDefault(0L) }
+            .sum()
+    }
+}.getOrDefault(0L)

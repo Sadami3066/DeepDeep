@@ -2,16 +2,20 @@ package io.github.whywood.deepdeep.runtime
 
 import dev.pi.ai.auth.ApiKeyCredential
 import dev.pi.ai.auth.OAuthCredential
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,12 +24,30 @@ import org.junit.Test
 class SdkCredentialStoreTest {
     private class FakeApiKeyStore : ApiKeyRecordStore {
         val records = mutableMapOf<String, String>()
+        var saveCount = 0
 
         override suspend fun readRecord(providerId: String): String? = records[providerId]
 
         override suspend fun readAllRecords(): Map<String, String> = records.toMap()
 
         override suspend fun saveRecord(providerId: String, key: String?) {
+            saveCount++
+            if (key == null) records.remove(providerId) else records[providerId] = key
+        }
+    }
+
+    private class GatedApiKeyStore : ApiKeyRecordStore {
+        val records = mutableMapOf<String, String>()
+        val gates = mutableListOf<CompletableDeferred<Unit>>()
+
+        override suspend fun readRecord(providerId: String): String? = records[providerId]
+
+        override suspend fun readAllRecords(): Map<String, String> = records.toMap()
+
+        override suspend fun saveRecord(providerId: String, key: String?) {
+            val gate = CompletableDeferred<Unit>()
+            gates += gate
+            gate.await()
             if (key == null) records.remove(providerId) else records[providerId] = key
         }
     }
@@ -154,5 +176,63 @@ class SdkCredentialStoreTest {
         assertTrue(result is OAuthCredential)
         assertEquals(ProviderAuthKind.OAUTH, store.kindOf("openrouter"))
         assertTrue(store.read("openrouter") is OAuthCredential)
+    }
+
+    @Test
+    fun onlyLatestPendingRevisionReachesDisk() = runTest {
+        val apiKeys = FakeApiKeyStore()
+        val store = SdkCredentialStore(apiKeys, FakeOAuthStore(), this, StandardTestDispatcher(testScheduler))
+
+        store.writeApiKey("deepseek", "sk-old", null)
+        store.writeApiKey("deepseek", "sk-new", null)
+        advanceUntilIdle()
+
+        assertEquals(1, apiKeys.saveCount)
+        assertEquals("sk-new", apiKeys.records["deepseek"])
+        assertEquals("sk-new", store.readApiKey("deepseek"))
+    }
+
+    @Test
+    fun awaitCommitReturnsAfterNewestWriteReachedDisk() = runTest {
+        val apiKeys = GatedApiKeyStore()
+        val store = SdkCredentialStore(apiKeys, FakeOAuthStore(), this, StandardTestDispatcher(testScheduler))
+        store.writeApiKey("deepseek", "sk-old", null)
+        store.writeApiKey("deepseek", "sk-new", null)
+
+        val committed = async { store.awaitCommit("deepseek") }
+        runCurrent()
+        assertEquals(1, apiKeys.gates.size)
+        assertFalse(committed.isCompleted)
+
+        apiKeys.gates[0].complete(Unit)
+        runCurrent()
+        committed.await()
+
+        assertEquals("sk-new", apiKeys.readRecord("deepseek"))
+        assertEquals("sk-new", store.readApiKey("deepseek"))
+    }
+
+    @Test
+    fun logoutWaitsForInFlightRefreshAndStillWins() = runTest {
+        val apiKeys = GatedApiKeyStore()
+        val oauth = FakeOAuthStore()
+        val store = SdkCredentialStore(apiKeys, oauth, this, UnconfinedTestDispatcher(testScheduler))
+
+        store.writeRawCredential("openai", oauthJson("stale"))
+        assertEquals(1, apiKeys.gates.size)
+        store.delete("openai")
+        assertNull(store.kindOf("openai"))
+
+        var released = 0
+        while (released < apiKeys.gates.size) {
+            apiKeys.gates[released].complete(Unit)
+            released++
+            runCurrent()
+        }
+        store.awaitCommit("openai")
+
+        assertTrue(apiKeys.records.isEmpty())
+        assertTrue(oauth.records.isEmpty())
+        assertNull(store.kindOf("openai"))
     }
 }

@@ -9,6 +9,10 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.TimeZone
 
 internal const val ARRANGE_EVENT_LIMIT_MAX = 200
@@ -96,12 +100,17 @@ internal fun limitedSortOrder(sortOrder: String, limit: Int): String {
     return "$sortOrder LIMIT $limit"
 }
 
-internal fun resolveEventRange(startMillis: Long, endMillis: Long?, allDay: Boolean): Pair<Long, Long> {
+internal fun resolveEventRange(
+    startMillis: Long,
+    endMillis: Long?,
+    allDay: Boolean,
+    zone: ZoneId = ZoneId.systemDefault(),
+): Pair<Long, Long> {
     if (allDay) {
-        val start = floorToUtcDay(startMillis)
-        val endDate = floorToUtcDay(endMillis ?: startMillis)
-        val end = maxOf(endDate, start) + ARRANGE_DAY_MILLIS
-        return start to end
+        val startDate = localDateOf(startMillis, zone)
+        val endDate = endMillis?.let { localDateOf(it, zone) } ?: startDate
+        val lastDate = if (endDate.isBefore(startDate)) startDate else endDate
+        return utcMidnight(startDate) to utcMidnight(lastDate.plusDays(1))
     }
     val end = endMillis ?: (startMillis + ARRANGE_HOUR_MILLIS)
     require(end > startMillis) { "结束时间必须晚于开始时间" }
@@ -126,13 +135,17 @@ internal data class ArrangeEventUpdate(
     val reminderMinutes: List<Int>?,
 )
 
-internal fun mergeEventPatch(current: ArrangeCalendarEvent, patch: ArrangeEventPatch): ArrangeEventUpdate {
+internal fun mergeEventPatch(
+    current: ArrangeCalendarEvent,
+    patch: ArrangeEventPatch,
+    zone: ZoneId = ZoneId.systemDefault(),
+): ArrangeEventUpdate {
     val timesChanged = patch.startMillis != null || patch.endMillis != null || patch.allDay != null
     val allDay = patch.allDay ?: current.allDay
-    val range = if (timesChanged) {
-        resolveEventRange(patch.startMillis ?: current.startMillis, patch.endMillis, allDay)
-    } else {
-        current.startMillis to current.endMillis
+    val range = when {
+        !timesChanged -> current.startMillis to current.endMillis
+        allDay -> mergeAllDayRange(current, patch, zone)
+        else -> resolveEventRange(patch.startMillis ?: current.startMillis, patch.endMillis, false, zone)
     }
     return ArrangeEventUpdate(
         title = patch.title,
@@ -147,7 +160,32 @@ internal fun mergeEventPatch(current: ArrangeCalendarEvent, patch: ArrangeEventP
     )
 }
 
-private fun floorToUtcDay(millis: Long): Long = Math.floorDiv(millis, ARRANGE_DAY_MILLIS) * ARRANGE_DAY_MILLIS
+private fun mergeAllDayRange(
+    current: ArrangeCalendarEvent,
+    patch: ArrangeEventPatch,
+    zone: ZoneId,
+): Pair<Long, Long> {
+    val startDate = patch.startMillis?.let { localDateOf(it, zone) }
+        ?: if (current.allDay) {
+            localDateOf(current.startMillis, ZoneOffset.UTC)
+        } else {
+            localDateOf(current.startMillis, zone)
+        }
+    val endDate = patch.endMillis?.let { localDateOf(it, zone) }
+        ?: if (current.allDay && patch.startMillis == null) {
+            localDateOf(current.endMillis, ZoneOffset.UTC).minusDays(1)
+        } else {
+            startDate
+        }
+    val lastDate = if (endDate.isBefore(startDate)) startDate else endDate
+    return utcMidnight(startDate) to utcMidnight(lastDate.plusDays(1))
+}
+
+private fun localDateOf(millis: Long, zone: ZoneId): LocalDate =
+    Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
+
+private fun utcMidnight(date: LocalDate): Long =
+    date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
 internal fun arrangeEventForInstance(
     eventId: Long,

@@ -33,12 +33,13 @@ class PiSessionEngine(
     private val sharedStorage: suspend () -> Boolean = { false },
     private val pluginPromptBody: suspend () -> String? = { null },
     private val toolContext: AppToolContext? = null,
+    private val toolFs: FileSystem = FileSystem.SYSTEM,
+    private val fs: FileSystem = toolFs,
 ) {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
 
-    private val fs = FileSystem.SYSTEM
     private val transport = okHttpTransport()
 
     suspend fun createSession(
@@ -118,7 +119,7 @@ class PiSessionEngine(
         addAll(
             defaultCodingTools(
                 cwd = cwd,
-                fs = fs,
+                fs = toolFs,
                 mutationQueue = FileMutationQueue(),
                 shellExecutor = activeShell,
             ),

@@ -610,6 +610,7 @@ internal fun DeepDeepApp(
                 )
 
                 AppDestination.RuntimeSettings -> {
+                    LaunchedEffect(Unit) { graph.linuxEnvironment.refreshState() }
                     LaunchedEffect(linuxState) { graph.devPackageManager.refresh() }
                     RuntimeSettingsScreen(
                         linuxState = linuxState,

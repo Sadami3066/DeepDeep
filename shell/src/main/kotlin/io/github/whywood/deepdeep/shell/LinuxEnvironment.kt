@@ -60,7 +60,7 @@ class LinuxEnvironment(
         timeoutMillis: Long,
     ): LinuxResult {
         requireSupported()
-        require(installer.currentState() is LinuxInstallState.Installed) {
+        require(installer.quickState() is LinuxInstallState.Installed) {
             "Linux environment is not installed"
         }
         return executor.execute(command, timeoutMillis)
@@ -72,7 +72,7 @@ class LinuxEnvironment(
         onOutputLine: (String) -> Unit,
     ): LinuxResult {
         requireSupported()
-        require(installer.currentState() is LinuxInstallState.Installed) {
+        require(installer.quickState() is LinuxInstallState.Installed) {
             "Linux environment is not installed"
         }
         return executor.executeStreaming(command, timeoutMillis, onOutputLine)

@@ -7,7 +7,7 @@ sealed interface LinuxInstallState {
 
     data class Installed(
         val version: String,
-        val sizeBytes: Long,
+        val sizeBytes: Long?,
     ) : LinuxInstallState
 
     data class Failed(

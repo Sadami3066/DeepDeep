@@ -1,10 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.paths.AgentPaths
-import dev.pi.coding.session.SessionInfo
-import dev.pi.coding.session.SessionManager
 import java.io.File
-import java.time.OffsetDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.FileSystem
@@ -15,27 +11,20 @@ class SessionCatalog(
     private val metaStore: SessionMetaStore,
 ) {
     private val fs = FileSystem.SYSTEM
+    private val index = SessionIndex(agentDir)
 
     suspend fun list(cwd: String): List<ConversationSummary> = withContext(Dispatchers.IO) {
         val metas = metaStore.read()
-        val paths = AgentPaths(cwd.toPath(), agentDir.absolutePath.toPath())
-        SessionManager.list(paths, fs)
-            .map { info -> info.toSummary(metas[info.sessionId]) }
-            .sortedWith(compareByDescending<ConversationSummary> { it.pinned }.thenByDescending { it.updatedAt })
+        index.list(cwd)
+            .map { session -> session.toSummary(metas[session.sessionId]) }
+            .sortedWith(SUMMARY_ORDER)
     }
 
     suspend fun listAll(cwds: List<String>): List<ConversationSummary> = withContext(Dispatchers.IO) {
         val metas = metaStore.read()
-        val seen = mutableSetOf<String>()
-        val result = mutableListOf<ConversationSummary>()
-        for (cwd in cwds) {
-            val paths = AgentPaths(cwd.toPath(), agentDir.absolutePath.toPath())
-            for (info in SessionManager.list(paths, fs)) {
-                if (!seen.add(info.sessionId)) continue
-                result.add(info.toSummary(metas[info.sessionId]))
-            }
-        }
-        result.sortedWith(compareByDescending<ConversationSummary> { it.pinned }.thenByDescending { it.updatedAt })
+        index.listAll(cwds)
+            .map { session -> session.toSummary(metas[session.sessionId]) }
+            .sortedWith(SUMMARY_ORDER)
     }
 
     suspend fun find(cwds: List<String>, sessionId: String): ConversationSummary? =
@@ -56,17 +45,18 @@ class SessionCatalog(
 
     suspend fun removeMeta(id: String) = metaStore.remove(id)
 
-    private fun SessionInfo.toSummary(meta: SessionMeta?): ConversationSummary = ConversationSummary(
+    private fun IndexedSession.toSummary(meta: SessionMeta?): ConversationSummary = ConversationSummary(
         id = sessionId,
         title = meta?.titleOverride?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() } ?: "新对话",
-        updatedAt = parseTimestamp(timestamp),
-        filePath = sessionFile.toString(),
+        updatedAt = updatedAt,
+        filePath = filePath,
         cwd = cwd,
         pinned = meta?.pinned ?: false,
         archived = meta?.archived ?: false,
     )
 
-    private fun parseTimestamp(value: String): Long = runCatching {
-        OffsetDateTime.parse(value).toInstant().toEpochMilli()
-    }.getOrDefault(0L)
+    private companion object {
+        val SUMMARY_ORDER = compareByDescending<ConversationSummary> { it.pinned }
+            .thenByDescending { it.updatedAt }
+    }
 }

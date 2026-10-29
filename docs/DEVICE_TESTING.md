@@ -192,3 +192,15 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 本轮证据（`artifacts/validation/round35/`）：`01-composer-voice-left-of-send.png`（语音按钮在发送左侧）、`02-settings-no-voice-gui.png`（设置页无语音助手/GUI 控制）、`03-arrange-detail.png`（安排仅状态/版本/大小，无打开入口、无介绍行）、`04-micloud-switches.png`（7 项开关、笔记/待办各一个、默认 0/7）。androidTest：`:app:assembleDebugAndroidTest` 后 `adb shell am instrument -w io.github.whywood.deepdeep.test/androidx.test.runner.AndroidJUnitRunner`，1 test OK（日历 Provider CRUD）。
 
 历史证据（`artifacts/validation/round34/`）：小米云登录页修复截图与 CDP 数据（`01-imi-home.png`~`06-account-login-cold.png`、`cdp-evidence.txt`）。
+
+## round37（全局整合）验收
+
+136. 停止与自动重试：断网发送进入「自动重试 n/5」倒计时，点停止 → 倒计时消失、之后不再自动重试、UI 回到可输入；再次发送正常。
+137. 会话列表排序：打开一个较老会话发一条消息 → 抽屉里它排到所属工作区最前；杀进程重开仍按最近活动排序，`files/session-index.json` 存在且可重建。
+138. 全天日历：让 Agent 创建 `2026-10-30` 全天事件 → 系统日历显示 30 号，`arrange_calendar list` 读回也是 30 号；跨日/多日事件结束日独占正确。
+139. 插件升级失败保留旧版：已安装飞书后断网触发「更新」→ 失败提示；插件仍显示已安装/已连接、`lark-cli --version` 仍是旧版本、技能页技能仍在。
+140. 工坊页面 Agent 边界：`app.agent.capabilities()` 只列 8 个白名单工具；`run({tools:["bash"]})` 被拒；让 Agent 读 `../` 或 `/etc/passwd` → 工具报 path outside workshop workspace；页面数据与事件流不受影响。
+141. 运行中插件变更：会话跑长任务时切换插件开关或改 MCP 配置 → 会话不中断，本轮结束后下一轮生效，不被关闭重开。
+142. 会话 JSONL 坏尾：`run-as` 在会话文件末尾追加半条 JSON → 重开 App 继续对话 → 新消息在历史里可见，同目录出现 `<file>.jsonl.corrupt`。
+143. 附件大小：分享/选择超过 25MB 或未知长度的文件 → 提示过大，`files/home/attachments/` 无残留；导入中切到其他会话 → 附件不出现在新会话。
+144. 回归：发消息/停止/重试/压缩/目标/提醒/后台任务/插件/工坊/日历读写/分享均正常；`adb logcat` 无 FATAL EXCEPTION。

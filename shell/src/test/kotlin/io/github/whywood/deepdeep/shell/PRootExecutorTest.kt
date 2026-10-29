@@ -97,6 +97,69 @@ class PRootExecutorTest {
     }
 
     @Test
+    fun capsUnterminatedOutputChunks() = runBlocking {
+        val fixture = fixture(maxOutputBytes = 64 * 1024)
+        val chunks = mutableListOf<String>()
+
+        val result = fixture.executor.executeStreaming(
+            "head -c 8388608 /dev/zero | tr '\\0' x",
+            60_000,
+            { line -> chunks += line },
+        )
+
+        assertTrue(result.truncated)
+        assertTrue(result.output.toByteArray(Charsets.UTF_8).size <= 64 * 1024)
+        assertTrue(chunks.isNotEmpty())
+        assertTrue(chunks.all { it.toByteArray(Charsets.UTF_8).size <= 8 * 1024 })
+        assertEquals(8 * 1024 * 1024, chunks.sumOf { it.toByteArray(Charsets.UTF_8).size })
+    }
+
+    @Test
+    fun streamsCompleteLinesSeparately() = runBlocking {
+        val fixture = fixture()
+        val lines = mutableListOf<String>()
+
+        val result = fixture.executor.executeStreaming("printf 'one\\ntwo\\nthree'", 60_000, { line -> lines += line })
+
+        assertEquals(0, result.exitCode)
+        assertEquals(listOf("one", "two", "three"), lines)
+    }
+
+    @Test
+    fun longLineFlushDoesNotEmitEmptyLine() = runBlocking {
+        val fixture = fixture()
+        val chunks = mutableListOf<String>()
+
+        val result = fixture.executor.executeStreaming(
+            "head -c 8192 /dev/zero | tr '\\0' x; printf '\\ntail\\n'",
+            60_000,
+            { line -> chunks += line },
+        )
+
+        assertEquals(0, result.exitCode)
+        assertEquals(2, chunks.size)
+        assertEquals(8192, chunks[0].length)
+        assertEquals("tail", chunks[1])
+    }
+
+    @Test
+    fun splitsUnterminatedMultibyteOutputOnCharacterBoundaries() = runBlocking {
+        val fixture = fixture(maxOutputBytes = 64 * 1024)
+        val chunks = mutableListOf<String>()
+
+        val result = fixture.executor.executeStreaming(
+            "i=0; while [ \$i -lt 3000 ]; do printf '\\344\\270\\255'; i=\$((i+1)); done",
+            60_000,
+            { line -> chunks += line },
+        )
+
+        assertEquals(0, result.exitCode)
+        assertTrue(chunks.all { it.toByteArray(Charsets.UTF_8).size <= 8 * 1024 })
+        assertTrue(chunks.none { it.contains('\uFFFD') })
+        assertEquals("中".repeat(3000), chunks.joinToString(""))
+    }
+
+    @Test
     fun timeoutKillsCommand() = runBlocking {
         val result = fixture().executor.execute("sleep 5", timeoutMillis = 300)
 

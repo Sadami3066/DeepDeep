@@ -9,9 +9,12 @@ import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.coding.compaction.estimateContextTokens
 import dev.pi.coding.session.AgentSession
+import dev.pi.coding.session.QueueBehavior
 import dev.pi.coding.session.SessionEvent
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -46,14 +49,9 @@ class AgentRuntimeHost(
         val engine: PiSessionEngine,
         val session: AgentSession,
         val cwd: String,
+        val state: SessionCommandPlane.SessionState,
     ) {
         var unsubscribe: (() -> Unit)? = null
-        var runId: String? = null
-        var runStartedAt: Long = 0
-        var stopRequested = false
-        var terminalEmitted = false
-        var busy = false
-        var turnSource: TurnSource = TurnSource.USER
     }
 
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
@@ -70,7 +68,8 @@ class AgentRuntimeHost(
 
     private val mutex = Mutex()
     private val mcpMutex = Mutex()
-    private val handles = mutableMapOf<String, Handle>()
+    private val commands = SessionCommandPlane()
+    private val handles = ConcurrentHashMap<String, Handle>()
     private var started = false
 
     override suspend fun start() = mutex.withLock {
@@ -101,7 +100,7 @@ class AgentRuntimeHost(
             createdAt = System.currentTimeMillis(),
         )
         workspaceStore.add(workspace)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
         workspace
     }
 
@@ -111,7 +110,7 @@ class AgentRuntimeHost(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         workspaceStore.add(workspace.copy(name = trimmed))
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun deleteWorkspace(id: String) {
@@ -120,7 +119,7 @@ class AgentRuntimeHost(
         val sessions = catalog.list(workspace.cwd)
         sessions.forEach { session ->
             runCatching { stop(session.id) }
-            mutex.withLock { detach(session.id) }
+            mutex.withLock { detach(session.id, forget = true) }
             sessionCleaner?.invoke(session.id)
         }
         sessions.forEach { session ->
@@ -130,7 +129,7 @@ class AgentRuntimeHost(
         }
         runCatching { File(workspace.cwd).deleteRecursively() }
         workspaceStore.remove(id)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun allSessions(): List<ConversationSummary> =
@@ -142,7 +141,7 @@ class AgentRuntimeHost(
     override suspend fun newSession(workspaceId: String): OpenedSession = mutex.withLock {
         val workspace = workspaceFor(workspaceId)
         val handle = attach(workspace.cwd, null)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
         OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), workspace.cwd)
     }
 
@@ -161,12 +160,12 @@ class AgentRuntimeHost(
 
     override suspend fun reloadSession(sessionId: String): String = mutex.withLock {
         val handle = handles[sessionId] ?: error("Agent session is not ready")
-        check(!handle.busy) { "Agent session is busy" }
+        check(!handle.state.busy) { "Agent session is busy" }
         val file = handle.session.sessionFile?.toString() ?: error("Agent session has no file")
         val cwd = handle.cwd
         detach(sessionId)
         val reopened = attach(cwd, file)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
         reopened.session.sessionId
     }
 
@@ -209,31 +208,34 @@ class AgentRuntimeHost(
     }
 
     override suspend fun send(sessionId: String, text: String) {
-        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
-        runTurn(handle, beginRun(handle, TurnSource.USER), text)
+        val handle = handleFor(sessionId)
+        val start = begin(handle, TurnSource.USER) ?: error("Agent session is busy")
+        runTurn(handle, start.runId, text)
     }
 
     override suspend fun retryLastTurn(sessionId: String) {
-        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
-        check(!handle.busy) { "Agent session is busy" }
-        if (!handle.session.canRetryLastAssistant()) error("Nothing to retry")
-        val runId = beginRun(handle, TurnSource.RETRY)
+        val handle = handleFor(sessionId)
+        val start = begin(handle, TurnSource.RETRY) ?: error("Agent session is busy")
+        if (!handle.session.canRetryLastAssistant()) {
+            release(handle, start.runId)
+            error("Nothing to retry")
+        }
         try {
-            emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
-            emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
-            Log.i(TAG, "retry session=${handle.session.sessionId} run=$runId")
+            emit(handle, RuntimeEvent.RunStarted(start.runId, System.currentTimeMillis()))
+            emit(handle, RuntimeEvent.ActivityChanged(start.runId, RuntimeActivity.Thinking))
+            Log.i(TAG, "retry session=${handle.session.sessionId} run=${start.runId}")
             handle.session.retryLastAssistant()
-            if (!handle.stopRequested) {
-                val status = if (handle.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
+            if (!handle.state.stopRequested) {
+                val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, start.runId)
                 maybeContinueGoal(handle, status)
             }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            if (!handle.stopRequested) {
+            if (!handle.state.stopRequested) {
                 emitTerminal(
                     handle = handle,
-                    runId = runId,
+                    runId = start.runId,
                     text = handle.session.getLastAssistantText().orEmpty(),
                     status = RunStatus.FAILED,
                     message = error.message,
@@ -241,27 +243,29 @@ class AgentRuntimeHost(
                 maybeContinueGoal(handle, RunStatus.FAILED)
             }
         } finally {
-            handle.busy = false
-            if (handle.runId == runId) handle.runId = null
-            publishBusy()
-            publishActiveRun(handle)
-            emit(handle, RuntimeEvent.ActivityChanged(runId, null))
+            release(handle, start.runId)
         }
     }
 
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
-        val handle = mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
-        if (handle.busy || handle.session.isStreaming) {
-            val runId = handle.runId.orEmpty()
-            emit(handle, RuntimeEvent.TurnInjected(runId, text, reminder))
-            handle.session.followUp(text)
-            eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
-            return
+        val handle = handleFor(sessionId)
+        when (val delivery = commands.deliver(sessionId, TurnSource.REMINDER) { handle.session.isBusy }) {
+            is SessionCommandPlane.Delivery.Started -> {
+                val start = delivery.start
+                afterBegin(handle, TurnSource.REMINDER)
+                emit(handle, RuntimeEvent.TurnInjected(start.runId, text, reminder))
+                emitListChanged()
+                backgroundScope.launch { runTurn(handle, start.runId, text) }
+            }
+
+            is SessionCommandPlane.Delivery.Injected -> {
+                emit(handle, RuntimeEvent.TurnInjected(delivery.runId, text, reminder))
+                handle.session.prompt(text, behavior = QueueBehavior.FollowUp)
+                emitListChanged()
+            }
+
+            null -> error("Agent session is busy")
         }
-        val runId = beginRun(handle, TurnSource.REMINDER)
-        emit(handle, RuntimeEvent.TurnInjected(runId, text, reminder))
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
-        backgroundScope.launch { runTurn(handle, runId, text) }
     }
 
     suspend fun deliverBackgroundTurn(
@@ -271,30 +275,54 @@ class AgentRuntimeHost(
         source: TurnSource,
     ) {
         val handle = mutex.withLock { handles[sessionId] } ?: return
-        if (handle.busy || handle.session.isStreaming) {
-            if (notice != null) emit(handle, NoticeEvent(handle.runId.orEmpty(), notice))
-            handle.session.followUp(prompt)
-            return
+        when (val delivery = commands.deliver(sessionId, source) { handle.session.isBusy }) {
+            is SessionCommandPlane.Delivery.Started -> {
+                val start = delivery.start
+                afterBegin(handle, source)
+                emit(handle, BackgroundTurnStarted(start.runId, notice))
+                backgroundScope.launch { runTurn(handle, start.runId, prompt, setTitle = false) }
+            }
+
+            is SessionCommandPlane.Delivery.Injected -> {
+                if (notice != null) emit(handle, NoticeEvent(delivery.runId, notice))
+                handle.session.prompt(prompt, behavior = QueueBehavior.FollowUp)
+            }
+
+            null -> Unit
         }
-        val runId = beginRun(handle, source)
-        emit(handle, BackgroundTurnStarted(runId, notice))
-        backgroundScope.launch { runTurn(handle, runId, prompt, setTitle = false) }
     }
 
     override suspend fun activeRunId(sessionId: String): String? = activeRunState.value[sessionId]?.runId
 
-    private suspend fun beginRun(handle: Handle, source: TurnSource = TurnSource.USER): String {
-        val runId = UUID.randomUUID().toString()
-        handle.turnSource = source
-        handle.runId = runId
-        handle.runStartedAt = System.currentTimeMillis()
-        handle.stopRequested = false
-        handle.terminalEmitted = false
-        handle.busy = true
+    private suspend fun handleFor(sessionId: String): Handle =
+        mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
+
+    private suspend fun begin(handle: Handle, source: TurnSource): SessionCommandPlane.Start? {
+        val start = commands.begin(handle.session.sessionId, source) ?: return null
+        afterBegin(handle, source)
+        return start
+    }
+
+    private suspend fun afterBegin(handle: Handle, source: TurnSource) {
         publishBusy()
         publishActiveRun(handle)
         goalDriver?.noteTurn(handle.session.sessionId, source)
-        return runId
+    }
+
+    private fun release(handle: Handle, runId: String) {
+        val finish = commands.finish(handle.session.sessionId, runId)
+        if (!finish.released) return
+        publishBusy()
+        publishActiveRun(handle)
+        emit(handle, RuntimeEvent.ActivityChanged(runId, null))
+        emit(handle, RuntimeEvent.SessionListChanged())
+        if (finish.reconfigure) {
+            val sessionId = handle.session.sessionId
+            backgroundScope.launch {
+                runCatching { reconfigureSession(sessionId) }
+                    .onFailure { Log.e(TAG, "deferred reconfigure failed session=$sessionId", it) }
+            }
+        }
     }
 
     private suspend fun runTurn(
@@ -309,14 +337,14 @@ class AgentRuntimeHost(
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text)
-            if (!handle.stopRequested) {
-                val status = if (handle.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
+            if (!handle.state.stopRequested) {
+                val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
                 maybeContinueGoal(handle, status)
             }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            if (!handle.stopRequested) {
+            if (!handle.state.stopRequested) {
                 emitTerminal(
                     handle = handle,
                     runId = runId,
@@ -327,31 +355,24 @@ class AgentRuntimeHost(
                 maybeContinueGoal(handle, RunStatus.FAILED)
             }
         } finally {
-            handle.busy = false
-            if (handle.runId == runId) handle.runId = null
-            publishBusy()
-            publishActiveRun(handle)
-            emit(handle, RuntimeEvent.ActivityChanged(runId, null))
+            release(handle, runId)
         }
     }
 
     override fun stop(sessionId: String) {
         val handle = handles[sessionId] ?: return
-        val runId = handle.runId ?: return
-        if (handle.stopRequested) return
-        handle.stopRequested = true
-        if (!handle.terminalEmitted) {
-            handle.terminalEmitted = true
+        val stopped = commands.stop(sessionId) { stop ->
+            val text = runCatching { handle.session.getLastAssistantText().orEmpty() }.getOrDefault("")
             emit(
                 handle,
                 RuntimeEvent.RunFinished(
-                    runId = runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
+                    runId = stop.runId,
+                    text = text,
                     status = RunStatus.STOPPED,
                     finishedAt = System.currentTimeMillis(),
                 ),
             )
-        }
+        } ?: return
         handle.session.abort()
         goalDriver?.let { driver -> backgroundScope.launch { driver.pauseOnStop(sessionId) } }
     }
@@ -379,31 +400,31 @@ class AgentRuntimeHost(
 
     override suspend fun renameSession(id: String, title: String) {
         catalog.rename(id, title)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun setSessionPinned(id: String, pinned: Boolean) {
         catalog.setPinned(id, pinned)
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun setSessionArchived(id: String, archived: Boolean) {
         catalog.setArchived(id, archived)
         if (archived) sessionArchived?.invoke(id)
         eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionArchived(archived = archived)))
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun deleteSession(id: String) {
         val summary = catalog.find(visibleCwds(), id)
-        mutex.withLock { detach(id) }
+        mutex.withLock { detach(id, forget = true) }
         sessionCleaner?.invoke(id)
         if (summary != null) {
             catalog.delete(summary.filePath)
             catalog.removeMeta(id)
         }
         eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionRemoved()))
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = mutex.withLock {
@@ -459,7 +480,7 @@ class AgentRuntimeHost(
 
     override suspend fun compact(sessionId: String): CompactionOutcome {
         val handle = mutex.withLock { handles[sessionId] } ?: return CompactionOutcome.Unavailable
-        if (handle.busy || handle.session.isStreaming) {
+        if (handle.state.busy || handle.session.isStreaming) {
             emitUsage(handle)
             return CompactionOutcome.Busy
         }
@@ -470,7 +491,7 @@ class AgentRuntimeHost(
             } else {
                 CompactionOutcome.Done(result.tokensBefore, result.estimatedTokensAfter)
             }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
             CompactionOutcome.Failed(error.message)
@@ -479,22 +500,39 @@ class AgentRuntimeHost(
         return outcome
     }
 
-    internal suspend fun emitUsage(handle: Handle, runId: String = handle.runId.orEmpty()) {
+    internal suspend fun emitUsage(handle: Handle, runId: String = handle.state.runId.orEmpty()) {
         val current = usage(handle.session.sessionId) ?: return
         emit(handle, UsageChanged(runId, current))
     }
 
     suspend fun reconfigure() = withContext(Dispatchers.IO) {
-        val snapshot = mutex.withLock {
-            handles.values.map { handle ->
-                Triple(handle.session.sessionId, handle.cwd, handle.session.sessionFile?.toString())
+        val sessionIds = mutex.withLock { handles.keys.toList() }
+        for (sessionId in sessionIds) {
+            runCatching { reconfigureSession(sessionId) }
+                .onFailure { Log.e(TAG, "reconfigure failed session=$sessionId", it) }
+        }
+        emitListChanged()
+    }
+
+    private suspend fun reconfigureSession(sessionId: String) {
+        while (true) {
+            val token = commands.claimReconfigure(sessionId)
+            if (token == 0L) return
+            var again = false
+            try {
+                mutex.withLock {
+                    if (!commands.ownsReconfigure(sessionId, token)) return@withLock
+                    val handle = handles[sessionId] ?: return@withLock
+                    val cwd = handle.cwd
+                    val file = handle.session.sessionFile?.toString()
+                    detach(sessionId, keepReconfigure = true)
+                    attach(cwd, file)
+                }
+            } finally {
+                again = commands.releaseReconfigure(sessionId, token)
             }
+            if (!again) return
         }
-        mutex.withLock {
-            snapshot.forEach { (sessionId, _, _) -> detach(sessionId) }
-            snapshot.forEach { (_, cwd, file) -> attach(cwd, file) }
-        }
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
     private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
@@ -518,32 +556,42 @@ class AgentRuntimeHost(
         val engine = engineFactory(File(cwd))
         val config = modelConfigStore.read()
         val session = engine.createSession(file?.toPath(), config)
-        val handle = Handle(engine = engine, session = session, cwd = cwd)
+        val handle = Handle(
+            engine = engine,
+            session = session,
+            cwd = cwd,
+            state = commands.attach(session.sessionId),
+        )
         handles[session.sessionId] = handle
         handle.unsubscribe = session.subscribe { event -> onSessionEvent(handle, event) }
         logMcpState(handle, "attach")
         return handle
     }
 
-    private suspend fun detach(sessionId: String) {
-        val handle = handles.remove(sessionId) ?: return
-        handle.busy = false
-        handle.runId = null
+    private suspend fun detach(
+        sessionId: String,
+        forget: Boolean = false,
+        keepReconfigure: Boolean = false,
+    ) {
+        val handle = handles.remove(sessionId)
+        commands.detach(sessionId, keepReconfigure)
+        if (forget) commands.forget(sessionId)
+        if (handle == null) return
         handle.unsubscribe?.invoke()
         handle.unsubscribe = null
         handle.session.close()
         publishBusy()
-        publishActiveRun(handle)
+        activeRunState.update { it - sessionId }
     }
 
     private fun publishBusy() {
-        busyState.value = handles.values.filter { it.busy }.mapTo(mutableSetOf()) { it.session.sessionId }
+        busyState.value = commands.busySessionIds()
     }
 
     private suspend fun ensureTitle(handle: Handle, text: String) {
         if (handle.session.sessionManager.getSessionName() != null) return
         handle.session.sessionManager.appendSessionInfo(handle.engine.titleFor(text))
-        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+        emitListChanged()
     }
 
     private fun emit(handle: Handle, event: RuntimeEvent) {
@@ -557,14 +605,19 @@ class AgentRuntimeHost(
         backgroundScope.launch { eventsBuffer.emit(scoped) }
     }
 
+    private suspend fun emitListChanged() {
+        eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+    }
+
     private fun publishActiveRun(handle: Handle) {
         val sessionId = handle.session.sessionId
-        val runId = handle.runId
+        val snapshot = commands.snapshot(sessionId)
         activeRunState.update { current ->
+            val runId = snapshot?.runId
             if (runId == null) {
                 current - sessionId
             } else {
-                current + (sessionId to ActiveRunSnapshot(runId, handle.runStartedAt))
+                current + (sessionId to ActiveRunSnapshot(runId, snapshot.runStartedAt))
             }
         }
     }
@@ -587,20 +640,36 @@ class AgentRuntimeHost(
     }
 
     private suspend fun maybeContinueGoal(handle: Handle, status: RunStatus) {
-        if (handle.stopRequested) return
+        if (handle.state.stopRequested) return
         val driver = goalDriver ?: return
         val sessionId = handle.session.sessionId
-        val round = driver.nextRound(sessionId, handle.turnSource, status == RunStatus.DONE) ?: return
+        val epoch = commands.snapshot(sessionId)?.epoch ?: return
+        val source = handle.state.turnSource
+        val round = driver.nextRound(sessionId, source, status == RunStatus.DONE) ?: return
         backgroundScope.launch {
-            delay(400)
-            if (!handle.busy) {
-                deliverBackgroundTurn(
-                    sessionId = sessionId,
-                    notice = TurnNotice.GoalRound(round.round, round.maxRounds, round.objective),
-                    prompt = round.prompt,
-                    source = TurnSource.GOAL,
-                )
+            delay(GOAL_CONTINUE_DELAY_MS)
+            val start = commands.beginIfEpoch(sessionId, TurnSource.GOAL, epoch) ?: return@launch
+            afterBegin(handle, TurnSource.GOAL)
+            val committed = try {
+                driver.commitRound(sessionId, round.goalId, round.revision)
+            } catch (cancelled: CancellationException) {
+                release(handle, start.runId)
+                throw cancelled
+            } catch (_: Exception) {
+                null
             }
+            if (committed == null || handle.state.stopRequested) {
+                release(handle, start.runId)
+                return@launch
+            }
+            emit(
+                handle,
+                BackgroundTurnStarted(
+                    start.runId,
+                    TurnNotice.GoalRound(committed.round, committed.maxRounds, committed.objective),
+                ),
+            )
+            runTurn(handle, start.runId, committed.prompt, setTitle = false)
         }
     }
 
@@ -611,8 +680,7 @@ class AgentRuntimeHost(
         status: RunStatus,
         message: String? = null,
     ) {
-        if (handle.terminalEmitted) return
-        handle.terminalEmitted = true
+        if (!commands.claimTerminal(handle.session.sessionId, runId)) return
         if (status == RunStatus.FAILED) {
             emit(handle, RuntimeEvent.RunFailed(runId, message.orEmpty()))
         } else {
@@ -622,7 +690,7 @@ class AgentRuntimeHost(
     }
 
     private suspend fun onSessionEvent(handle: Handle, event: SessionEvent) {
-        val runId = handle.runId.orEmpty()
+        val runId = handle.state.runId.orEmpty()
         val active = runId.isNotEmpty()
         when (event) {
             is SessionEvent.AgentEventReceived -> if (active) onAgentEvent(handle, runId, event.event)
@@ -720,6 +788,8 @@ class AgentRuntimeHost(
     companion object {
         const val HOME_ID = "home"
         const val HOME_NAME = "Home"
+
+        private const val GOAL_CONTINUE_DELAY_MS = 400L
     }
 }
 

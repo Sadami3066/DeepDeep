@@ -31,6 +31,8 @@ data class GoalRound(
     val maxRounds: Int,
     val prompt: String,
     val objective: String = "",
+    val goalId: String = "",
+    val revision: Long = 0,
 )
 
 interface GoalController {
@@ -53,6 +55,8 @@ interface GoalDriver {
     suspend fun noteTurn(sessionId: String, source: TurnSource)
 
     suspend fun nextRound(sessionId: String, source: TurnSource, succeeded: Boolean): GoalRound?
+
+    suspend fun commitRound(sessionId: String, goalId: String, revision: Long): GoalRound?
 
     suspend fun pauseOnStop(sessionId: String)
 

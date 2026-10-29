@@ -63,6 +63,7 @@
     <string name="settings_linux_unsupported">此设备不支持 Linux（仅 arm64-v8a）。</string>
     <string name="settings_linux_size_label">占用空间</string>
     <string name="settings_linux_size_value">%1$d MB</string>
+    <string name="settings_linux_size_computing">计算中…</string>
     <string name="settings_linux_shared_storage">共享目录</string>
     <string name="settings_linux_shared_storage_grant">需要在系统设置中授予「所有文件访问权限」</string>
 

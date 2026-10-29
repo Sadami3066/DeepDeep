@@ -1,0 +1,2672 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.1">
+
+    <issue
+        id="OldTargetApi"
+        severity="Warning"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        category="Correctness"
+        priority="6"
+        summary="Target SDK attribute is not targeting latest version"
+        explanation="When your application or sdk runs on a version of Android that is more recent than your `targetSdk` specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the `targetSdk` is less than 14, your app may get an option button in the UI.&#xA;&#xA;To fix this issue, set the `targetSdk` to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:&#xA;https://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+        url="https://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+        urls="https://developer.android.com/distribute/best-practices/develop/target-sdk.html,https://developer.android.com/reference/android/os/Build.VERSION_CODES.html"
+        errorLine1="        targetSdk = 36"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/build.gradle.kts"
+            line="13"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="RequiresFeature"
+        severity="Warning"
+        message="`removeWebMessageListener` should only be called if the feature `WEB_MESSAGE_LISTENER` is present; to check call `androidx.webkit.WebViewFeature#isFeatureSupported`"
+        category="Correctness"
+        priority="6"
+        summary="Requires Feature"
+        explanation="Some APIs require optional features to be present. This check makes sure that calls to these APIs are surrounded by a check which enforces this."
+        errorLine1="        runCatching { WebViewCompat.removeWebMessageListener(webView, WORKSHOP_JS_OBJECT) }"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/workshop/WorkshopBridgeHost.kt"
+            line="81"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        severity="Warning"
+        message="Attribute `canTakeScreenshot` is only used in API level 30 and higher (current min is 29)"
+        category="Correctness"
+        priority="6"
+        summary="Attribute unused on older versions"
+        explanation="This check finds attributes set in XML files that were introduced in a version newer than the oldest version targeted by your application (with the `minSdkVersion` attribute).&#xA;&#xA;This is not an error; the application will simply ignore the attribute. However, if the attribute is important to the appearance or functionality of your application, you should consider finding an alternative way to achieve the same result with only available attributes, and then you can optionally create a copy of the layout in a layout-vNN folder which will be used on API NN or higher where you can take advantage of the newer attribute.&#xA;&#xA;Note: This check does not only apply to attributes. For example, some tags can be unused too, such as the new `&lt;tag>` element in layouts introduced in API 21."
+        errorLine1="    android:canTakeScreenshot=&quot;true&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/xml/gui_accessibility_service.xml"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="AppBundleLocaleChanges"
+        severity="Warning"
+        message="Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the `bundle` configuration"
+        category="Correctness"
+        priority="5"
+        summary="App Bundle handling of runtime locale changes"
+        explanation="When changing locales at runtime (e.g. to provide an in-app language switcher), the Android App Bundle must be configured to not split by locale or the Play Core library must be used to download additional locales at runtime."
+        url="https://developer.android.com/guide/app-bundle/configure-base#handling_language_changes"
+        urls="https://developer.android.com/guide/app-bundle/configure-base#handling_language_changes"
+        errorLine1="            configuration.setLocale(locale)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/data/LanguagePreferences.kt"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="        view.webViewClient = object : WebViewClient() {"
+        errorLine2="                             ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudLoginActivity.kt"
+            line="282"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="        view.webViewClient = object : WebViewClient() {"
+        errorLine2="                             ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudLoginActivity.kt"
+            line="282"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="        view.webViewClient = object : WebViewClient() {"
+        errorLine2="                             ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudWebWriter.kt"
+            line="166"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="        view.webViewClient = object : WebViewClient() {"
+        errorLine2="                             ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudWebWriter.kt"
+            line="166"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="    webViewClient = object : WebViewClient() {"
+        errorLine2="                    ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/PresentCard.kt"
+            line="428"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="MissingOnRenderProcessGone"
+        severity="Warning"
+        message="WebViewClient should implement `onRenderProcessGone` to handle render process crashes or out-of-memory errors. Otherwise, the app will crash when the render process is shut down."
+        category="Correctness"
+        priority="5"
+        summary="WebViewClient does not implement onRenderProcessGone"
+        explanation="If a WebView&apos;s render process is shut down, the app will crash unless the WebViewClient implements `onRenderProcessGone` and returns `true`. It is highly recommended to handle this callback."
+        url="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        urls="https://developer.android.com/develop/ui/views/layout/webapps/handle-termination"
+        errorLine1="    webViewClient = object : WebViewClient() {"
+        errorLine2="                    ~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/PresentCard.kt"
+            line="428"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        severity="Warning"
+        message="A newer version of com.android.application than 9.4.1 is available: 9.5.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Android Gradle Plugin Version"
+        explanation="This detector looks for usage of the Android Gradle Plugin where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="agp = &quot;9.4.1&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        severity="Warning"
+        message="A newer version of com.android.library than 9.4.1 is available: 9.5.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Android Gradle Plugin Version"
+        explanation="This detector looks for usage of the Android Gradle Plugin where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="agp = &quot;9.4.1&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of `compileSdk` than 36 is available: 37"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="    compileSdk = 36"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/build.gradle.kts"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.compose:compose-bom than 2026.03.00 is available: 2026.09.00"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="compose-bom = &quot;2026.03.00&quot;"
+        errorLine2="              ~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="4"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.activity:activity-compose than 1.12.4 is available: 1.13.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="activity = &quot;1.12.4&quot;"
+        errorLine2="           ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="5"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.core:core-ktx than 1.17.0 is available: 1.19.1"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="core = &quot;1.17.0&quot;"
+        errorLine2="       ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.10.0 is available: 2.11.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="lifecycle = &quot;2.10.0&quot;"
+        errorLine2="            ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.10.0 is available: 2.11.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="lifecycle = &quot;2.10.0&quot;"
+        errorLine2="            ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.10.0 is available: 2.11.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="lifecycle = &quot;2.10.0&quot;"
+        errorLine2="            ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        severity="Warning"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.2.0 is available: 1.3.0"
+        category="Correctness"
+        priority="4"
+        summary="Obsolete Gradle Dependency"
+        explanation="This detector looks for usages of libraries where the version you are using is not the current stable release. Using older versions is fine, and there are cases where you deliberately want to stick with an older version. However, you may simply not be aware that a more recent version is available, and that is what this lint check helps find."
+        errorLine1="datastore = &quot;1.2.0&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/gradle/libs.versions.toml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        severity="Warning"
+        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        category="Correctness"
+        priority="3"
+        summary="Using Configuration.screenWidthDp/screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        explanation="Configuration.screenWidthDp and Configuration.screenHeightDp have different insets behaviour depending on target SDK version, and are rounded to the nearest Dp. This means that using these values in composition to size a layout can result in issues, as these values do not accurately represent the actual available window size. Instead it is recommended to use WindowInfo.containerSize which accurately represents the window size."
+        errorLine1="    val maxBodyHeight = (LocalConfiguration.current.screenHeightDp * 0.66f).dp"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/skills/SkillsScreen.kt"
+            line="438"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatComposer.kt"
+            line="112"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatScreen.kt"
+            line="157"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/ChatSettingsScreen.kt"
+            line="43"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatTopBar.kt"
+            line="35"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/ProviderDetailScreen.kt"
+            line="63"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/SettingsScreen.kt"
+            line="91"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/workshop/WorkshopViewerScreen.kt"
+            line="62"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        severity="Warning"
+        message="Modifier parameter should be the first optional parameter"
+        category="Correctness"
+        priority="3"
+        summary="Guidelines for Modifier parameters in a Composable function"
+        explanation="The first (or only) Modifier parameter in a Composable function should follow the following rules:&#xA;- Be named `modifier`&#xA;- Have a type of `Modifier`&#xA;- Either have no default value, or have a default value of `Modifier`&#xA;- If optional, be the first optional parameter in the parameter list"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/workshop/WorkshopWebView.kt"
+            line="86"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;thoughts&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;assistant_process_reasoning&quot;>%1$d thoughts&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_chat.xml"
+            line="40"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;tools&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;assistant_process_tools&quot;>%1$d tools&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_chat.xml"
+            line="41"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;conversations&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;workspace_delete_message&quot;>“%1$s” and its %2$d conversations will be deleted. This cannot be undone.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_drawer.xml"
+            line="43"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;background&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;jobs_meter_description&quot;>%1$d background jobs running&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_jobs.xml"
+            line="16"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;tools&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;mcp_status_ok&quot;>Connected · %1$d tools&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_mcp.xml"
+            line="12"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;sessions&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;notification_sessions_running&quot;>%1$d sessions running&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_notifications.xml"
+            line="10"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;permissions&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;plugin_feishu_status_partial&quot;>Connected · %1$s · %2$d permissions missing&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_plugin_feishu.xml"
+            line="27"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;questions&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;ask_card_answered_count&quot;>Answered · %1$d questions&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_questions.xml"
+            line="18"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;hours&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;schedules_cron_every_hours&quot;>Every %1$d hours at minute %2$d&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_schedule.xml"
+            line="63"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;models&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;settings_provider_models_count&quot;>%1$d models&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_settings.xml"
+            line="66"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;chars&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;personalization_instruction_counter&quot;>%1$d chars&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_settings.xml"
+            line="116"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        severity="Warning"
+        message="Formatting %d followed by words (&quot;chars&quot;): This should probably be a plural rather than a string"
+        category="Correctness:Messages"
+        priority="5"
+        summary="Potential Plurals"
+        explanation="This lint check looks for potential errors in internationalization where you have translated a message which involves a quantity and it looks like other parts of the string may need grammatical changes.&#xA;&#xA;For example, rather than something like this:&#xA;```xml&#xA;  &lt;string name=&quot;try_again&quot;>Try again in %d seconds.&lt;/string>&#xA;```&#xA;you should be using a plural:&#xA;```xml&#xA;   &lt;plurals name=&quot;try_again&quot;>&#xA;        &lt;item quantity=&quot;one&quot;>Try again in %d second&lt;/item>&#xA;        &lt;item quantity=&quot;other&quot;>Try again in %d seconds&lt;/item>&#xA;    &lt;/plurals>&#xA;```&#xA;This will ensure that in other languages the right set of translations are provided for the different quantity classes.&#xA;&#xA;(This check depends on some heuristics, so it may not accurately determine whether a string really should be a quantity. You can use tools:ignore to filter out false positives."
+        url="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        urls="https://developer.android.com/guide/topics/resources/string-resource.html#Plurals"
+        errorLine1="    &lt;string name=&quot;agents_doc_counter&quot;>%1$d chars&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_workspace_settings.xml"
+            line="24"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        severity="Warning"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 29. Merge all the resources in this folder into `mipmap-anydpi`."
+        category="Performance"
+        priority="6"
+        summary="Obsolete SDK_INT Version Check"
+        explanation="This check flags version checks that are not necessary, because the `minSdkVersion` (or surrounding known API level) is already at least as high as the version checked for.&#xA;&#xA;Similarly, it also looks for resources in `-vNN` folders, such as `values-v14` where the version qualifier is less than or equal to the `minSdkVersion`, where the contents should be merged into the best folder.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        severity="Hint"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        category="Performance"
+        priority="3"
+        summary="`State&lt;T>` will autobox values assigned to this state. Use a specialized state type instead."
+        explanation="Calling `mutableStateOf&lt;T>()` when `T` is either backed by a primitive type on the JVM or is a value class results in a state implementation that requires all state values to be boxed. This usually causes an additional allocation for each state write, and adds some additional work to auto-unbox values when reading the value of the state. Instead, prefer to use a specialized primitive state implementation for `Int`, `Long`, `Float`, and `Double` when the state does not need to track null values and does not override the default `SnapshotMutationPolicy`. See `mutableIntStateOf()`, `mutableLongStateOf()`, `mutableFloatStateOf()`, and `mutableDoubleStateOf()` for more information."
+        errorLine1="    var sheetEpoch by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/workspaces/AgentsDocSheet.kt"
+            line="60"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        severity="Hint"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        category="Performance"
+        priority="3"
+        summary="`State&lt;T>` will autobox values assigned to this state. Use a specialized state type instead."
+        explanation="Calling `mutableStateOf&lt;T>()` when `T` is either backed by a primitive type on the JVM or is a value class results in a state implementation that requires all state values to be boxed. This usually causes an additional allocation for each state write, and adds some additional work to auto-unbox values when reading the value of the state. Instead, prefer to use a specialized primitive state implementation for `Int`, `Long`, `Float`, and `Double` when the state does not need to track null values and does not override the default `SnapshotMutationPolicy`. See `mutableIntStateOf()`, `mutableLongStateOf()`, `mutableFloatStateOf()`, and `mutableDoubleStateOf()` for more information."
+        errorLine1="    var now by remember { mutableStateOf(System.currentTimeMillis()) }"
+        errorLine2="                          ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/jobs/JobsSheet.kt"
+            line="65"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        severity="Hint"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        category="Performance"
+        priority="3"
+        summary="`State&lt;T>` will autobox values assigned to this state. Use a specialized state type instead."
+        explanation="Calling `mutableStateOf&lt;T>()` when `T` is either backed by a primitive type on the JVM or is a value class results in a state implementation that requires all state values to be boxed. This usually causes an additional allocation for each state write, and adds some additional work to auto-unbox values when reading the value of the state. Instead, prefer to use a specialized primitive state implementation for `Int`, `Long`, `Float`, and `Double` when the state does not need to track null values and does not override the default `SnapshotMutationPolicy`. See `mutableIntStateOf()`, `mutableLongStateOf()`, `mutableFloatStateOf()`, and `mutableDoubleStateOf()` for more information."
+        errorLine1="    var hour by remember { mutableStateOf(selected.hour) }"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/schedules/ScheduleTimePicker.kt"
+            line="55"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        severity="Hint"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        category="Performance"
+        priority="3"
+        summary="`State&lt;T>` will autobox values assigned to this state. Use a specialized state type instead."
+        explanation="Calling `mutableStateOf&lt;T>()` when `T` is either backed by a primitive type on the JVM or is a value class results in a state implementation that requires all state values to be boxed. This usually causes an additional allocation for each state write, and adds some additional work to auto-unbox values when reading the value of the state. Instead, prefer to use a specialized primitive state implementation for `Int`, `Long`, `Float`, and `Double` when the state does not need to track null values and does not override the default `SnapshotMutationPolicy`. See `mutableIntStateOf()`, `mutableLongStateOf()`, `mutableFloatStateOf()`, and `mutableDoubleStateOf()` for more information."
+        errorLine1="    var minute by remember { mutableStateOf(selected.minute) }"
+        errorLine2="                             ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/schedules/ScheduleTimePicker.kt"
+            line="56"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        severity="Hint"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        category="Performance"
+        priority="3"
+        summary="`State&lt;T>` will autobox values assigned to this state. Use a specialized state type instead."
+        explanation="Calling `mutableStateOf&lt;T>()` when `T` is either backed by a primitive type on the JVM or is a value class results in a state implementation that requires all state values to be boxed. This usually causes an additional allocation for each state write, and adds some additional work to auto-unbox values when reading the value of the state. Instead, prefer to use a specialized primitive state implementation for `Int`, `Long`, `Float`, and `Double` when the state does not need to track null values and does not override the default `SnapshotMutationPolicy`. See `mutableIntStateOf()`, `mutableLongStateOf()`, `mutableFloatStateOf()`, and `mutableDoubleStateOf()` for more information."
+        errorLine1="    var reloadKey by remember(workspace.id) { mutableStateOf(0) }"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/workspaces/WorkspaceSettingsScreen.kt"
+            line="53"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_attach_failed` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_attach_failed&quot;>无法读取该文件&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_attach_limit` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_attach_limit&quot;>最多添加 15 个附件&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_attach_remove` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_attach_remove&quot;>移除附件&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_attach_too_large` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_attach_too_large&quot;>文件超过 25MB，无法添加&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_settings` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_settings&quot;>设置&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.assistant_retrying` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;assistant_retrying&quot;>重试中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="100"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.chat_question_waiting` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;chat_question_waiting&quot;>Agent 正在等待你的回答&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_chat.xml"
+            line="121"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.drawer_archived_count` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;drawer_archived_count&quot;>%1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_drawer.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.drawer_search_placeholder` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;drawer_search_placeholder&quot;>搜索对话&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_drawer.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_new_title` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_new_title&quot;>添加 MCP 服务器&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="20"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_name_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_name_label&quot;>名称&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_name_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_name_hint&quot;>例如：github&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_url_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_url_label&quot;>地址&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_url_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_url_hint&quot;>https://example.com/mcp&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_description_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_description_label&quot;>说明&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_description_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_description_hint&quot;>可选&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_headers_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_headers_label&quot;>请求头&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_headers_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_headers_hint&quot;>可选，每行 Key: Value&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_enabled_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_enabled_label&quot;>启用&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_stdio_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_stdio_hint&quot;>本地 STDIO 服务器在 Android 上不可用，可以删除或停用。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="31"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_name_empty` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_name_empty&quot;>请输入名称&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="56"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_name_invalid` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_name_invalid&quot;>名称只能包含字母、数字、下划线和连字符&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_name_duplicate` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_name_duplicate&quot;>已有同名服务器&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_url_invalid` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_url_invalid&quot;>地址需以 http:// 或 https:// 开头&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="59"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_headers_invalid` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_headers_invalid&quot;>请求头格式应为 Key: Value&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="60"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_save_failed` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_save_failed&quot;>保存失败&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.mcp_error_delete_failed` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;mcp_error_delete_failed&quot;>删除失败&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_error_title` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_error_title&quot;>操作失败&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_close` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_close&quot;>关闭&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_retry` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_retry&quot;>重试&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_status_unavailable` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_status_unavailable&quot;>不可用&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_detail_no_skills` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_detail_no_skills&quot;>无&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_detail_actions` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_detail_actions&quot;>操作&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_update_available` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_update_available&quot;>可更新到 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="42"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.plugins_installing_stage` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;plugins_installing_stage&quot;>%1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_plugins.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.present_image` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;present_image&quot;>图片&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_present.xml"
+            line="4"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.present_html` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;present_html&quot;>网页&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_present.xml"
+            line="5"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_title` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_title&quot;>需要你的回答&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="2"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_custom_label` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_custom_label&quot;>其他&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="4"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_custom_placeholder` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_custom_placeholder&quot;>输入自定义回答…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="5"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_validation` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_validation&quot;>请选择或填写回答&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_cancel` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_cancel&quot;>取消&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_card_waiting` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_card_waiting&quot;>Agent 正在等待回答&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_card_expand` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_card_expand&quot;>展开&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_card_collapse` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_card_collapse&quot;>收起&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_card_answered` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_card_answered&quot;>已回答&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.ask_card_multi_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;ask_card_multi_hint&quot;>可多选&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_questions.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_empty_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_empty_hint&quot;>和助手约定时间，到点自动发送。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="6"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_delivered` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_delivered&quot;>已送达&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_next_delivery` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_next_delivery&quot;>下次送达&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="10"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_last_delivery` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_last_delivery&quot;>上次送达&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger_once` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger_once&quot;>%1$s %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger_daily` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger_daily&quot;>每天 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger_weekdays` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger_weekdays&quot;>工作日 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger_weekends` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger_weekends&quot;>周末 %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="56"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger_weekly` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger_weekly&quot;>每周 %1$s · %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_note` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_note&quot;>服务存活时按计划运行；错过的任务会在下次打开 App 时补跑一次。&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_trigger` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_trigger&quot;>触发&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="73"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_workspace` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_workspace&quot;>工作区&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_next` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_next&quot;>下次运行&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="75"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_last` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_last&quot;>上次运行&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_status` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_status&quot;>状态&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="77"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_prompt` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_prompt&quot;>任务提示词&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="78"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_open_session` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_open_session&quot;>打开运行会话&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="79"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_arrangements` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_arrangements&quot;>安排记录&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="80"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_arrangement_hint` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_arrangement_hint&quot;>继续与助手沟通&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_status_running` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_status_running&quot;>运行中&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_status_done` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_status_done&quot;>完成&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="83"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_status_stopped` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_status_stopped&quot;>已停止&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.schedules_status_failed` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;schedules_status_failed&quot;>失败&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_schedule.xml"
+            line="85"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_current` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_current&quot;>当前&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_api_key_saved` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_api_key_saved&quot;>已保存，输入新 Key 可替换&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_model` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_model&quot;>当前模型&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_models_title` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_models_title&quot;>选择模型&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_no_models` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_no_models&quot;>暂无可用模型&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_reasoning` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_reasoning&quot;>推理&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="102"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_activate` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_activate&quot;>设为当前厂商&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.settings_provider_in_use` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;settings_provider_in_use&quot;>当前正在使用&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_settings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        severity="Warning"
+        message="The resource `R.string.voice_settings_title` appears to be unused"
+        category="Performance"
+        priority="3"
+        summary="Unused resources"
+        explanation="Unused resources make applications larger and slow down builds.&#xA;&#xA;&#xA;The unused resource check can ignore tests. If you want to include resources that are only referenced from tests, consider packaging them in a test source set instead.&#xA;&#xA;You can include test sources in the unused resource check by setting the system property `lint.unused-resources.include-tests=true`, and to exclude them (usually for performance reasons), use `lint.unused-resources.exclude-tests=true`.&#xA;"
+        errorLine1="    &lt;string name=&quot;voice_settings_title&quot;>语音&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_voice.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        severity="Warning"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        category="Usability:Typography"
+        priority="5"
+        summary="Ellipsis string can be replaced with ellipsis character"
+        explanation="You can replace the string &quot;...&quot; with a dedicated ellipsis character, ellipsis character (\u2026, &amp;#8230;). This can help make the text more readable."
+        url="https://en.wikipedia.org/wiki/Ellipsis"
+        urls="https://en.wikipedia.org/wiki/Ellipsis"
+        errorLine1="    &lt;string name=&quot;mcp_import_template&quot; formatted=&quot;false&quot;>{\&quot;mcpServers\&quot;:{\&quot;name\&quot;:{\&quot;type\&quot;:\&quot;streamablehttp\&quot;,\&quot;url\&quot;:\&quot;https://...\&quot;,\&quot;headers\&quot;:{\&quot;Authorization\&quot;:\&quot;Bearer ...\&quot;}}}}&lt;/string>"
+        errorLine2="                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values-en/strings_mcp.xml"
+            line="7"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        severity="Warning"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        category="Usability:Typography"
+        priority="5"
+        summary="Ellipsis string can be replaced with ellipsis character"
+        explanation="You can replace the string &quot;...&quot; with a dedicated ellipsis character, ellipsis character (\u2026, &amp;#8230;). This can help make the text more readable."
+        url="https://en.wikipedia.org/wiki/Ellipsis"
+        urls="https://en.wikipedia.org/wiki/Ellipsis"
+        errorLine1="    &lt;string name=&quot;mcp_import_template&quot; formatted=&quot;false&quot;>{\&quot;mcpServers\&quot;:{\&quot;name\&quot;:{\&quot;type\&quot;:\&quot;streamablehttp\&quot;,\&quot;url\&quot;:\&quot;https://...\&quot;,\&quot;headers\&quot;:{\&quot;Authorization\&quot;:\&quot;Bearer ...\&quot;}}}}&lt;/string>"
+        errorLine2="                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/values/strings_mcp.xml"
+            line="7"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_amazon_bedrock.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_amazon_bedrock.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_amazon_bedrock.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_ant_ling.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_ant_ling.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_ant_ling.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_azure.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_azure.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_azure.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_deepseek.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_deepseek.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_deepseek.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_fireworks.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_fireworks.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_fireworks.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_google.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_google.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_google.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_google_vertex.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_google_vertex.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_google_vertex.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_huggingface.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_huggingface.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_huggingface.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_meta.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_meta.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_meta.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_mistral.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_mistral.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_mistral.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_nvidia.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_nvidia.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_nvidia.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_radius.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_radius.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_radius.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicatesConfig"
+        severity="Warning"
+        message="The `provider_together.png` icon has identical contents in the following configuration folders: drawable-night-nodpi, drawable-nodpi"
+        category="Usability:Icons"
+        priority="5"
+        summary="Identical bitmaps across various configurations"
+        explanation="If an icon is provided under different configuration parameters such as `drawable-hdpi` or `-v11`, they should typically be different. This detector catches cases where the same icon is provided in different configuration folder which is usually not intentional.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_together.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_together.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_cloudflare_ai_gateway.png, provider_cloudflare_workers_ai.png, provider_cloudflare_ai_gateway.png, provider_cloudflare_workers_ai.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_cloudflare_workers_ai.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_cloudflare_ai_gateway.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_cloudflare_workers_ai.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_cloudflare_ai_gateway.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_minimax.png, provider_minimax_cn.png, provider_minimax.png, provider_minimax_cn.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_minimax_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_minimax.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_minimax_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_minimax.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_moonshotai.png, provider_moonshotai_cn.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_moonshotai_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_moonshotai.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_moonshotai.png, provider_moonshotai_cn.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_moonshotai_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_moonshotai.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_openai.png, provider_openai_codex.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_openai_codex.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_openai.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_openai.png, provider_openai_codex.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_openai_codex.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_openai.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_opencode.png, provider_opencode_go.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_opencode_go.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_opencode.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_opencode.png, provider_opencode_go.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_opencode_go.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_opencode.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_qwen_token_plan.png, provider_qwen_token_plan_cn.png, provider_qwen_token_plan_individual.png, provider_qwen_token_plan.png, provider_qwen_token_plan_cn.png, provider_qwen_token_plan_individual.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_qwen_token_plan_individual.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_qwen_token_plan_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_qwen_token_plan.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_qwen_token_plan_individual.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_qwen_token_plan_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_qwen_token_plan.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_xiaomi.png, provider_xiaomi_token_plan_ams.png, provider_xiaomi_token_plan_cn.png, provider_xiaomi_token_plan_sgp.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_xiaomi_token_plan_sgp.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_xiaomi_token_plan_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_xiaomi_token_plan_ams.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_xiaomi.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_xiaomi.png, provider_xiaomi_token_plan_ams.png, provider_xiaomi_token_plan_cn.png, provider_xiaomi_token_plan_sgp.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_xiaomi_token_plan_sgp.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_xiaomi_token_plan_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_xiaomi_token_plan_ams.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_xiaomi.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_zai.png, provider_zai_coding_cn.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_zai_coding_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-night-nodpi/provider_zai.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        severity="Warning"
+        message="The following unrelated icon files have identical contents: provider_zai.png, provider_zai_coding_cn.png"
+        category="Usability:Icons"
+        priority="3"
+        summary="Duplicated icons under different names"
+        explanation="If an icon is repeated under different names, you can consolidate and just use one of the icons and delete the others to make your application smaller. However, duplicated icons usually are not intentional and can sometimes point to icons that were accidentally overwritten or accidentally not updated.">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_zai_coding_cn.png"/>
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/res/drawable-nodpi/provider_zai.png"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="            runCatching { Uri.parse(trimmed).path }.getOrNull()"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/data/AttachmentStore.kt"
+            line="67"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(&quot;$APP_CONSOLE_URL/$appId/auth&quot;))"
+        errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/feishu/FeishuPlugin.kt"
+            line="320"
+            column="49"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="        preferences.edit().putString(KEY_FONT_STYLE, style.id).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/data/FontPreferences.kt"
+            line="12"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="        preferences.edit().putString(KEY_LANGUAGE, language.tag).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/data/LanguagePreferences.kt"
+            line="30"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="                    val path = Uri.parse(source).path ?: return MarkdownImageState.Failed"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/MarkdownImage.kt"
+            line="241"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="        { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }"
+        errorLine2="                                                                                ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/mcp/McpEditor.kt"
+            line="305"
+            column="81"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="                val host = runCatching { Uri.parse(url).host }.getOrNull().orEmpty()"
+        errorLine2="                                         ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudLoginActivity.kt"
+            line="284"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="                val host = runCatching { Uri.parse(url).host }.getOrNull().orEmpty()"
+        errorLine2="                                         ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/plugin/micloud/MiCloudLoginActivity.kt"
+            line="284"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))"
+        errorLine2="                                                             ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/OAuthLoginSheet.kt"
+            line="54"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))"
+        errorLine2="                                                             ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/plugins/PluginSetupSheet.kt"
+            line="58"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))"
+        errorLine2="                                                                     ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/ui/settings/ProviderDetailScreen.kt"
+            line="79"
+            column="70"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        severity="Warning"
+        message="Use the KTX extension function `String.toUri` instead?"
+        category="Productivity"
+        priority="6"
+        summary="Use KTX extension function"
+        explanation="The Android KTX libraries decorates the Android platform SDK as well as various libraries with more convenient extension functions available from Kotlin, allowing you to use default parameters, named parameters, and more."
+        errorLine1="            val uri = runCatching { Uri.parse(raw) }.getOrNull()"
+        errorLine2="                                    ~~~~~~~~~~~~~~">
+        <location
+            file="/home/whywood/project/DeepDeep/app/src/main/kotlin/io/github/whywood/deepdeep/data/ShareStaging.kt"
+            line="48"
+            column="37"/>
+    </issue>
+
+</issues>

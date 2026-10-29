@@ -7,6 +7,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,16 +38,14 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
         val relativePath = "$ATTACHMENTS_DIRECTORY/${id}_$name"
         val target = File(root, relativePath)
-        target.parentFile?.mkdirs()
         val copied = runCatching {
-            resolver.openInputStream(uri)?.use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
-            } ?: return@withContext AttachmentImport.Failed
-        }.isSuccess
-        if (!copied) {
+            val input = resolver.openInputStream(uri) ?: return@withContext AttachmentImport.Failed
+            input.use { writeAttachment(it, target, MAX_BYTES) }
+        }.getOrElse {
             runCatching { target.delete() }
             return@withContext AttachmentImport.Failed
         }
+        if (!copied) return@withContext AttachmentImport.TooLarge
         AttachmentImport.Imported(
             AttachmentRef(
                 id = id,
@@ -159,4 +159,23 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         const val MAX_BYTES = 25L * 1024 * 1024
         private const val ATTACHMENTS_DIRECTORY = "attachments"
     }
+}
+
+internal fun copyWithLimit(input: InputStream, output: OutputStream, limit: Long): Boolean {
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var total = 0L
+    while (true) {
+        val read = input.read(buffer)
+        if (read < 0) return true
+        total += read
+        if (total > limit) return false
+        output.write(buffer, 0, read)
+    }
+}
+
+internal fun writeAttachment(input: InputStream, target: File, limit: Long): Boolean {
+    target.parentFile?.mkdirs()
+    val copied = target.outputStream().use { output -> copyWithLimit(input, output, limit) }
+    if (!copied) runCatching { target.delete() }
+    return copied
 }

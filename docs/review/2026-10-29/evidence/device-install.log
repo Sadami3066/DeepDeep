@@ -1,0 +1,2 @@
+adb: failed to install docs/review/2026-10-29/evidence/device-build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]
+Performing Streamed Install

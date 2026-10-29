@@ -68,6 +68,7 @@ class ChatViewModel(
     private var pendingDeltaRunId: String? = null
     private var autoRetryEnabled = false
     private val autoRetryAttempts = mutableMapOf<String, Int>()
+    private val autoRetryTokens = mutableMapOf<String, Any>()
     private val autoRetryJobs = mutableMapOf<String, Job>()
 
     init {
@@ -142,6 +143,7 @@ class ChatViewModel(
     fun attach(uri: Uri) {
         val current = mutableState.value
         if (current.sending || current.switchingConversation) return
+        val sessionId = current.conversationId ?: return
         val root = current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
         if (root == null) {
             mutableState.update { it.copy(error = uiStrings.preparingSession) }
@@ -151,8 +153,23 @@ class ChatViewModel(
             mutableState.update { it.copy(error = uiStrings.maxAttachments) }
             return
         }
+        launchAttachmentImport(sessionId, root) { attachmentStore.import(uri, root) }
+    }
+
+    internal fun launchAttachmentImport(
+        sessionId: String,
+        root: File,
+        load: suspend () -> AttachmentImport,
+    ) {
         viewModelScope.launch {
-            when (val result = withContext(ioDispatcher) { attachmentStore.import(uri, root) }) {
+            val result = withContext(ioDispatcher) { load() }
+            if (mutableState.value.conversationId != sessionId) {
+                if (result is AttachmentImport.Imported) {
+                    runCatching { attachmentStore.file(result.ref, root).delete() }
+                }
+                return@launch
+            }
+            when (result) {
                 is AttachmentImport.Imported -> mutableState.update {
                     if (it.attachments.size >= MAX_ATTACHMENTS) {
                         it.copy(error = uiStrings.maxAttachments)
@@ -240,6 +257,7 @@ class ChatViewModel(
             )
         }
         autoRetryJobs.remove(sessionId)
+        autoRetryTokens.remove(sessionId)
         viewModelScope.launch {
             try {
                 sessionOpenJobs[sessionId]?.join()
@@ -285,6 +303,8 @@ class ChatViewModel(
         }
         autoRetryAttempts[sessionId] = attempt
         autoRetryJobs.remove(sessionId)?.cancel()
+        val token = Any()
+        autoRetryTokens[sessionId] = token
         autoRetryJobs[sessionId] = viewModelScope.launch {
             val label = uiStrings.autoRetrying(attempt, MAX_AUTO_RETRIES)
             if (mutableState.value.conversationId == sessionId) {
@@ -301,6 +321,7 @@ class ChatViewModel(
                 }
             }
             delay(AUTO_RETRY_DELAY_MS)
+            if (autoRetryTokens[sessionId] !== token) return@launch
             if (runtime.busySessionIds.value.contains(sessionId)) return@launch
             beginRetry(sessionId)
         }
@@ -308,6 +329,7 @@ class ChatViewModel(
 
     private fun clearAutoRetry(sessionId: String) {
         autoRetryAttempts.remove(sessionId)
+        autoRetryTokens.remove(sessionId)
         autoRetryJobs.remove(sessionId)?.cancel()
     }
 
@@ -412,6 +434,7 @@ class ChatViewModel(
     fun stop() {
         flushPendingDeltas()
         val sessionId = mutableState.value.conversationId ?: return
+        clearAutoRetry(sessionId)
         runtime.stop(sessionId)
         if (runtime.activeRuns.value[sessionId] == null) {
             scheduleReconcile(sessionId, STOP_RECONCILE_DELAY_MS)

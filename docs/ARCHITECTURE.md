@@ -5,17 +5,20 @@
 - 工作目录从 `workspace` 更名 `home`；数据迁移在 AppGraph 初始化前执行：`files/workspace`→`files/home`，旧 session 目录按 cwd 编码重命名并重写 JSONL 头的 cwd。迁移只匹配完整路径段，不能把 `files/workspaces/...` 误写成 `files/homes/...`；旧版本写坏的 `/files/homes` 会话会修复回 `/files/workspaces`。
 - Home 是默认工作区；用户在抽屉「工作区」里可新建/重命名/删除 workspace，目录为 `files/workspaces/<id>`，WorkspaceStore(DataStore) 只存 id/name/cwd/createdAt；旧 `files/projects`、旧 `projects` DataStore 与旧 session 目录/cwd 均做幂等迁移。
 - 每条 session 绑定创建时的 cwd（home 或某个 workspace）；session 文件仍由 pi SDK 按 `AgentPaths.sessionsForCwd()` 存放在 `agent/sessions/<encoded-cwd>/`，列表由 `SessionCatalog` 按已知 cwd 聚合后叠加 SessionMetaStore（置顶/归档/标题覆盖）。
+- 会话列表由 `SessionIndex` 支撑：`files/session-index.json` 以会话文件路径为 key 缓存 `size+mtime → sessionId/cwd/createdAt/name/messageCount`，列表只对新增或变化的文件解析 header 与 `session_info` 行，其余直接复用；`updatedAt` 取 header 时间与文件 mtime 的较大值，因此继续一个老会话会让它排到最近，排序仍是置顶优先再按 `updatedAt`。索引损坏或 schema 不符时自动重建，JSONL 仍是消息权威。
 - 抽屉按工作区分组展示全部未归档会话（`ChatViewModel.refreshSessions()` 读取 `runtime.allSessions()`，用 session.cwd 匹配工作区）；工作区置顶是 UI 偏好，存 `AppPreferences`（`pinned_workspace_ids`），会话置顶仍由 SessionMetaStore 持久化。
 - 新建会话入口只在抽屉：工作区行展开后的 + 与工作区长按菜单走 `ChatViewModel.newSession(workspaceId)`（Home 同样），顶栏不提供新建；顶栏 + 已移除。
 - 附件导入/预览/文件引用解析都以当前会话 cwd 为 root（`AttachmentStore.import/file/shareIntent/resolve(raw, root)`），project 会话的附件落在 project 目录。
 
 ## 多会话并发
 
-- `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor、run 状态；会话之间互不关闭。
+- `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor；会话之间互不关闭。
+- `SessionCommandPlane` 是每个会话运行状态的唯一所有者：每会话一把锁、一个单调递增的 epoch；send/retryLastTurn/deliverReminder/deliverBackgroundTurn/stop 的状态迁移都在锁内完成，`busy` 只由持有该 `runId` 的路径清除。停止时 epoch 递增，旧的延时重试/目标续跑作废；后台入口在忙时把内容注入当前轮（`QueueBehavior.FollowUp`），空闲才新起 run，不再用“先读 busy 再决定”的竞态判断。
 - 运行事件统一包装为 `SessionRuntimeEvent(sessionId, event)`；活动状态是类型化的 `RuntimeActivity`（思考/重试/压缩/运行工具），由 ChatViewModel 结合 `ChatUiStrings`（字符串资源）本地化后进入 UI，runtime 层不承载用户可见文案；ChatViewModel 用 `conversationCache` 保存每个会话的消息/流式状态，活跃会话直接更新 UI，后台会话事件写入缓存，切回时立即恢复并继续接收。
 - 发送/停止按 sessionId 定向；`busySessionIds` StateFlow 供 UI 展示后台运行状态；新建会话/切换项目不打断正在运行的任务。
 - 模型与思考档位是**会话级配置**：SDK 把 `model_change`/`thinking_level_change` 写进会话 JSONL，打开会话时从文件恢复；在某个会话里切换只改该会话，同时写入 `ModelConfigStore` 作为新会话默认值。设置页的厂商详情只做配置（API Key/OAuth），不提供模型切换或“设为当前”。
-- 运行态以 `AgentRuntime.activeRuns: StateFlow<Map<sessionId, ActiveRunSnapshot>>` 为准：`beginRun`/`finally`/`stop`/`detach` 同步维护。事件仍是 UI 快速通道，但结构事件（RunStarted/终态/后台轮）在事件缓冲溢出时会用挂起 emit 兜底；`ChatViewModel` 在“busy 消失但仍在 sending”、回到前台、无活动 run 的 stop、打开会话快照落地后二次确认这几个点做对账：用 history + sessionModel 重建消息并清掉 streaming/sending，避免后台唤醒、锁屏断网重试后 UI 停在运行中。
+- 运行态以 `AgentRuntime.activeRuns: StateFlow<Map<sessionId, ActiveRunSnapshot>>` 为准：由 `SessionCommandPlane` 的 begin/finish/stop/detach 同步维护。事件仍是 UI 快速通道，但结构事件（RunStarted/终态/后台轮）在事件缓冲溢出时会用挂起 emit 兜底；`ChatViewModel` 在“busy 消失但仍在 sending”、回到前台、无活动 run 的 stop、打开会话快照落地后二次确认这几个点做对账：用 history + sessionModel 重建消息并清掉 streaming/sending，避免后台唤醒、锁屏断网重试后 UI 停在运行中。
+- 插件能力变化（启停、安装、MCP 配置更新）只调用 `AgentRuntimeHost.reconfigure()`：空闲会话立即重建，忙碌会话登记 `pendingReconfigure`，在该会话本轮结束的安全点再重建；重配期间该会话的新发送会得到 busy 错误，不会出现“等待全部空闲后重建”时被新 run 插队、或正在运行的会话被关闭。
 
 ## 模块
 
@@ -48,13 +51,14 @@ Compose ChatScreen
 - 每次发送生成 `runId`；流式事件带 runId，UI 丢弃旧 run 的迟到事件。
 - `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
 - 重试：`AgentRuntime.retryLastTurn` 走 SDK 的 `retryLastAssistant()`——先按 context edit 移除末尾失败的 assistant 回合，再从原用户消息继续运行并复用重试循环，所以不会追加新的用户消息；`AgentSession.canRetryLastAssistant()` 用来判断是否可重试。
-- 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。
-- 模型切换：`ChatViewModel.setProvider` 用 `ProviderDirectory.models()` 选该厂商当前或首个模型，经 `runtime.setModel` 持久化并同步到所有已打开会话；composer 的模型 sheet 顶部提供已配置厂商下拉。
+- 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。停止会同时取消该会话尚未到点的重试倒计时，倒计时结束前还会复核自己是否仍是当前重试任务，避免“点了停止又自己跑起来”。
+- 模型切换：`ChatViewModel.setProvider` 用 `ProviderDirectory.models()` 选该厂商当前或首个模型，经 `runtime.setSessionModel` 只改当前会话，并写入 `ModelConfigStore` 作为新会话默认值；composer 的模型 sheet 顶部提供已配置厂商下拉。
+- 目标续跑：宿主成功结束后向 `GoalDriver.nextRound` 取“下一轮提案”（含 goalId/revision），400ms 后在同一会话的命令面复核 epoch、用 `commitRound` 复核 revision/ACTIVE/轮次上限，通过才真正启动并递增轮次；期间暂停/清除/编辑目标或停止会话都会让旧提案失效。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
 - ProviderCatalog 从 pi2kotlin `builtinProviders` 读取 42 家 Provider、模型数和 OAuth 标记；`ProviderOAuthService` 用 SDK 的 `bundledOAuthFlows()` 提供登录/退出，浏览器回调由 App 设置 `OAuthRuntime.callbackServerFactory` 后走本机 loopback。
 - OpenCode（Zen / Go）的网关要求每个请求带 `x-opencode-session`，否则返回 400 `MissingSessionID`；SDK 0.1.2 起由 `Models` 层用 `StreamOptions.sessionId` 自动注入，coding agent 把会话 id 传进 `AgentOptions`。
 - ModelConfigStore 保存 provider/model/thinking；聊天 composer 切换模型和思考。
-- 凭据：`EncryptedSecretStore`（Android Keystore AES-GCM + DataStore `secrets`）支撑 `ApiKeyStore`（`api_key_` 前缀）与 `OAuthCredentialStore`（`oauth_` 前缀，存 OAuth 原始 JSON）；`SdkCredentialStore` 合并两者、维护内存 cache 与 `authKinds` StateFlow，并按 provider 保证 API Key / OAuth 只存在一种（写一种会清另一种）。provider OAuth token 的自动刷新由 SDK resolver 完成。
+- 凭据：`EncryptedSecretStore`（Android Keystore AES-GCM + DataStore `secrets`）支撑 `ApiKeyStore`（`api_key_` 前缀）与 `OAuthCredentialStore`（`oauth_` 前缀，存 OAuth 原始 JSON）；`SdkCredentialStore` 合并两者、维护内存 cache 与 `authKinds` StateFlow，并按 provider 保证 API Key / OAuth 只存在一种（写一种会清另一种）。落盘按 provider 串行（修订号 + 写入任务链，只有最新意图落盘），`awaitCommit(providerId)` 可等提交完成；旧 token 刷新不会覆盖之后的登出/换 Key。provider OAuth token 的自动刷新由 SDK resolver 完成。
 - SessionMetaStore/SessionRepository 在 SDK JSONL 之上维护标题覆盖、置顶、归档和删除。
 - 会话文件读取/写入在 IO dispatcher；Chat 层注入 `ioDispatcher` 以便测试。
 - ChatViewModel 为每个已加载过的会话保留消息快照缓存；再次打开时先渲染缓存，再在后台 `open` SDK session（单 mutex 串行，epoch 丢弃过期打开），发送会等待打开完成。
@@ -63,7 +67,7 @@ Compose ChatScreen
 
 - Provider OAuth 使用 pi-ai 的 9 个内置 flow；`OAuthRuntime.callbackServerFactory` 在 `AppGraph` 初始化时设为 Android 的 loopback 服务器工厂。登录交互（浏览器、选择、输入）由 App 的 `OAuthLoginSession` / `OAuthLoginSheet` 承载；成功后写 OAuth 凭据并清掉该 provider 的 API Key。App 自定义 `DeepDeepOAuthCallbackServerFactory` 替代 SDK 默认实现：授权回调页返回后自动跳到 `deepdeep://oauth/callback`（MainActivity 已注册 VIEW intent filter），因此浏览器授权完成会直接回到 App。
 - OpenAI ChatGPT OAuth 要求每次安装的稳定 UUID（`ext_agent_host_id`）与 agent 名称：`InstallationIdStore` 在 `files/agent/install-id` 持久化一个 UUID，登录时以 `OAuthLoginOptions(deviceId=…, agentName="DeepDeep")` 传给 SDK。
-- MCP 使用 pi2kotlin 0.2.2 的 `McpManager`：配置存 `files/agent/mcp.json`（`mcpServers` 格式，原子写），OAuth token 存 `files/agent/mcp-auth.json`；App 只管理 Streamable HTTP 服务器（Android 无 stdio 子进程）。
+- MCP 使用 pi2kotlin 0.2.3 的 `McpManager`：配置存 `files/agent/mcp.json`（`mcpServers` 格式，原子写），OAuth token 存 `files/agent/mcp-auth.json`；App 只管理 Streamable HTTP 服务器（Android 无 stdio 子进程）。
 - `PiSessionEngine` 以 `McpOptions(loadConfig=true, samplingEnabled=false, rootsEnabled=true, autoEnableToolSearch=true)` 创建会话：deferred 工具由 `tool_search` 加载，resources 工具自动注册；工具名为 `mcp__<server>__<tool>`。
 - `McpConfigStore` 负责读写配置并保留未知/stdio 字段；`McpServerProbe` 独立探测连接与工具数（供 MCP 页状态展示），`McpOAuthService` 负责 MCP OAuth 登录/退出。保存配置后 `AgentRuntimeHost.reloadMcp()` 对已打开会话热更新，登录后 `reconnectMcp()` 重连；两者都在 IO 线程执行并串行化，失败写日志。
 - `McpOAuthSession` 用本机 loopback 回调（`startOAuthCallbackServerOrNull`）接收浏览器授权结果，失败时回退到粘贴回调链接。
@@ -72,7 +76,7 @@ Compose ChatScreen
 
 - 插件在 `app/.../plugin/`：`OfficialPlugin` 契约描述生命周期与贡献，不包含 Linux/CLI/登录概念；具体实现放在 `plugin/<name>/`（飞书 `plugin/feishu/`，网络搜索 `plugin/websearch/`）。
 - `PluginManager` 负责安装记录与启用状态（`files/plugins/plugins.json`，schemaVersion 2，原子写）、全局互斥、安装/卸载/更新/启停、状态刷新、技能同步（仓库 `files/skills` + 生效 `files/agent/skills`，`.deepdeep-plugin` 标记）、工具收集、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
-- 插件贡献分三类：`promptBody`（每轮系统提示）、`skills`（技能文件）、`tools`（`CodingTool`）。只有已安装且已启用的插件参与；启停后在没有忙碌会话时调用 `host.reconfigure()`，让新会话应用最新 tools/skills。
+- 插件贡献分三类：`promptBody`（每轮系统提示）、`skills`（技能文件）、`tools`（`CodingTool`）。只有已安装且已启用的插件参与；启停、安装、MCP 配置变化后调用 `host.reconfigure()`，由宿主的会话命令面在安全点更新能力快照（忙碌会话排到本轮结束，不会被提前关闭）。安装是事务：失败只清理暂存，不清除已安装的旧版本、记录与技能。
 - 安装/登录态的判定属于插件个体：飞书插件自己执行 `lark-cli auth status --json` 并映射为 `Ready`/`NotReady`/`Failed`；框架只显示它返回的文案。
 - Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会重新探测；App 回前台时若 setup 已就绪会完成等待并关闭 sheet。
 - `PiSessionEngine` 增加 `pluginPromptBody` 参数，在 hooks 中每轮注入 `official_plugins` section；`AppToolContext.pluginTools` 在会话创建时收集插件工具。
@@ -101,7 +105,7 @@ Compose ChatScreen
 
 ## App 工具
 
-- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、`extraToolFactories`（goal、job 工具）与 `pluginTools`（已启用插件贡献的 `CodingTool`）。SDK 固定 pi2kotlin 0.2.2，不修改。
+- `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、`extraToolFactories`（goal、job 工具）与 `pluginTools`（已启用插件贡献的 `CodingTool`）。SDK 依赖 pi2kotlin 0.2.3（Maven Local 发布，含 JSONL 尾部修复与 read 流式读取）。
 - `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
 - `SessionBinding` 在会话创建后绑定 `AgentSession`，schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
@@ -131,14 +135,14 @@ Compose ChatScreen
 - 每个创意是 `files/workshop/apps/<id>/` 下的自包含静态站点（`manifest.json` + entry + 静态资源），形态完全由 Agent 按需求决定，没有分类/模板。App 用 WebView 渲染，每个创意运行在独立的虚拟域名 `https://<id>.workshop.local/` 下。
 - 资源由 `WebViewAssetLoader` + 自定义 PathHandler 从创意目录提供（MIME、`Cache-Control: no-store`、`Range` 206）；`WebViewCompat.addDocumentStartJavaScript` 在页面脚本前注入 bridge SDK（`window.deepdeep` / `window.app`）与主题 CSS 变量；`WebViewCompat.addWebMessageListener` 只接受该 origin 的主框架消息。
 - Bridge 暴露页面数据与轻提示：`info`、`data.get/set/remove/keys`、`ui.toast`，以及页面驱动的 `agent.models/capabilities/run`（一次性任务 Agent，见下）；页面不能调用其他 App 内部函数、不能读写其他创意或 App 数据。详情页只读，修改页面统一回到聊天。
-- 页面 Agent 是事件流：最终 Promise 仍返回完整文本，同时可选 `onEvent` 收到 `{id,event}` 增量包（`run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error`）。native 侧按 40ms 合批、`webView.post` 保序并在终态前 flush；超时/失败会发 `run_error` 并 reject（不再让页面 Promise 永久 pending），maxTurns 中止时 `run_end.truncated=true`。页面 Agent 的工具目录过滤掉 `gui_*`、`arrange_*`、`mi_cloud_*`。
+- 页面 Agent 是事件流：最终 Promise 仍返回完整文本，同时可选 `onEvent` 收到 `{id,event}` 增量包（`run_start/text_delta/thinking_delta/tool_start/tool_end/turn_end/run_end/run_error`）。native 侧按 40ms 合批、`webView.post` 保序并在终态前 flush；超时/失败会发 `run_error` 并 reject（不再让页面 Promise 永久 pending），maxTurns 中止时 `run_end.truncated=true`。页面 Agent 的能力是显式白名单：`read`/`write`/`edit`/`ls`/`grep`/`find` + 联网的 `web_search`/`web_fetch`；没有 `bash`，也没有 `gui_*`、`arrange_*`、`mi_cloud_*`、`job_*`、`goal`、`present`。文件工具绑定一个只能落在本次 run 临时 workspace 内的 `ScopedFileSystem`（canonicalize 后校验祖先，`../`、绝对路径、外指 symlink 都被拒）。
 - 代码与数据分离：页面数据保存在 `files/workshop/userdata/<id>.db`（SQLite KV）；页面经 bridge 读写，Agent 经 `workshop_data_get/set/delete/keys` 工具读写同一数据层（不暴露原始 SQLite），重写页面不影响数据；删除创意同时删除目录与 DB。
 - 创建流程由普通会话完成：`workshop_create` 在 `files/workshop/build/` 建草稿（只写 manifest.json）→ Agent 用绝对路径写页面 → `workshop_load` 校验入口/清单/大小并原子移动到 `apps/<id>/`；`workshop_load` 结果带 `delivery:"present"` 标记，Agent 需显式调用 `present`（`type=creative, id=…`）交付，聊天里出现入口卡。旧历史里没有该标记的 `workshop_load` 输出仍按旧逻辑显示入口卡；工坊页进入时扫描 `apps/` 作为导入兜底，草稿目录不展示。
 - 内置 workshop 技能（`app/src/main/assets/skills/workshop/SKILL.md`）由 `BuiltinSkills` 在 AppGraph 初始化时写入技能仓库与全局生效目录，教普通 Agent 格式、工具、页面规范与数据 bridge。`SkillCatalog` 读取已启用技能；`/skill:<name>` 在发送前把技能文件内容渲染成 `<skill>` 块作为用户消息（同 pi 的 skill command 语义），命令可出现在消息任意位置、单条可加载多个技能；UI 隐藏该块、只显示用户文字。
 - 工坊页 `+` 会新建 Home 会话并预填 `/skill:workshop `；列表图标/说明来自 manifest，缺失 icon 使用 ✦。
 
-- 页面驱动 Agent：`WorkshopBridgeRouter` 增加 `agent.models/capabilities/run`，`WorkshopAgentService` 实现 `WorkshopAgentGateway`。每次 run 在 App 进程内用一次性的 `PiSessionEngine` 执行：临时 workspace/agentDir、限定工具（`toolsFilter`）、按请求复制的 skills、页面 systemPrompt 写入临时 `APPEND_SYSTEM.md`、关闭 MCP；最终返回最后一条 assistant 文本，同时把文本/工具/轮次事件经 `onEvent` 旁路发给页面。没有 JSONL 会话、没有后台任务、没有 run 持久化；调用协程属于 WebView 生命周期，页面关闭即取消。
-- `WorkshopAgentService.models()` 从已配置 provider 读取模型；`capabilities()` 暴露默认编码工具 + App 工具 + 已启用全局 skills；页面通过 `app.agent.run` 指定 provider/model/thinking/systemPrompt/maxTurns/tools/skills。`PiSessionEngine.createSession` 新增 toolsFilter/mcpEnabled/extraSystemPromptSections 参数，默认行为不变。
+- 页面驱动 Agent：`WorkshopBridgeRouter` 增加 `agent.models/capabilities/run`，`WorkshopAgentService` 实现 `WorkshopAgentGateway`。每次 run 在 App 进程内用一次性的 `PiSessionEngine` 执行：临时 workspace/agentDir、白名单工具、按请求复制的 skills、页面 systemPrompt 写入临时 `APPEND_SYSTEM.md`、关闭 MCP；文件工具走 `ScopedFileSystem`，引擎内部落盘（session/settings/skills）仍用系统文件系统，因此 SDK 的上下文文件扫描不会被误拦。最终返回最后一条 assistant 文本，同时把文本/工具/轮次事件经 `onEvent` 旁路发给页面。没有 JSONL 会话、没有后台任务、没有 run 持久化；调用协程属于 WebView 生命周期，页面关闭即取消。
+- `WorkshopAgentService.models()` 从已配置 provider 读取模型；`capabilities()` 暴露白名单工具 + 已启用全局 skills；页面通过 `app.agent.run` 指定 provider/model/thinking/systemPrompt/maxTurns/tools/skills，`tools` 只能从 `capabilities()` 给出的名字里选，越界名字直接报错。`PiSessionEngine.createSession` 支持 toolsFilter/mcpEnabled/extraSystemPromptSections，默认行为不变。
 
 ## 通知
 
@@ -154,7 +158,8 @@ Compose ChatScreen
 - `DevPackageCatalog` 定义 3 个场景组合（环境基础 / 日常办公 / 开发编程）；`DevPackageManager` 在 proot 内执行 `apk update` + `apk add`，办公组合随后用 pip 安装 `python-docx`/`python-pptx`/`pdfplumber`。
 - `PRootExecutor` 把会话 cwd 绑定到 `/workspace`；设置里开启「共享目录」且已授予所有文件访问权限时，额外把 `/storage/emulated/0` 绑定到 guest 的同名路径与 `/sdcard`，开启状态运行期切换、下一次 bash 生效。
 - `PiSessionEngine` 在共享目录开启时给系统提示追加一节（英文），说明公共目录挂载位置与谨慎修改用户文件；会话创建时读取当前开关。
-- `LinuxEnvironment.executeStreaming` / `PRootExecutor.executeStreaming` 提供逐行输出回调；按 `(n/m) Installing` 更新进度。
+- `LinuxEnvironment.executeStreaming` / `PRootExecutor.executeStreaming` 提供逐行输出回调；按 `(n/m) Installing` 更新进度。逐行回调按 8KiB 上限切分，无换行的长输出不会让内存随输出增长。
+- 每次命令前的安装检查是 O(1)：只看 rootfs 目录与 `.deepdeep-rootfs` 标记（读版本行），不遍历文件；磁盘占用只在进入运行环境页时统计一次并缓存，安装/重置后失效，因此命令启动成本不随已安装文件数增加。
 - 安装状态不单独持久化，进入运行环境页时用 `apk info -e` 查询真实状态；Linux 重置后自动清空。
 - 一次只允许一个安装；失败保留最后输出片段；安装任务由 app scope 持有，离开页面不取消。
 
@@ -204,6 +209,7 @@ filesDir/
   home/             cwd，同时是 Alpine /workspace
   workspaces/<id>/  自建工作区 cwd
   agent/            agentDir，SDK sessions/skills
+  session-index.json  会话列表索引（按文件 size+mtime 缓存，可重建）
   agent/skills/     全局技能；插件技能也在这里（插件启用时），带 .deepdeep-plugin 标记
   plugins/          plugins.json（官方插件安装记录与启用状态）
   skills/<id>/      技能仓库（SDK 不扫描；插件技能仓库副本也在这里）
@@ -216,6 +222,7 @@ filesDir/
 ```
 
 - `cacheDir/share-incoming/<token>/`：外部 App 分享进来的文件先落到这里，防止 URI 授权过期；插入会话附件后由后续启动自动清理。
+- 会话 JSONL 由 SDK 追加写入并保证以 LF 结尾；打开时若发现半条损坏尾行，会先把坏尾备份到 `<file>.jsonl.corrupt` 再截断到最后一个合法记录，新记录不会再被拼到坏行后面丢掉。`.corrupt` 文件不参与会话列表。
 - DataStore：`secrets`（API Key/OAuth/小米云 cookie）、`model_config`（新会话默认模型/思考）、`personalization`、`session_meta`、`linux_settings`、`app_preferences`、`voice`（自动朗读/识别后直发）、`micloud_capabilities`（小米云功能开关）。
 - API Key、模型配置、会话元数据、个性化在 DataStore；字体选择在 SharedPreferences `font_settings`；会话正文由 pi2kotlin 写入 JSONL。
 
@@ -244,7 +251,7 @@ filesDir/
 
 - pi 原生：`read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（PRoot 前台阻塞，参数 `command`、`timeout`）
 - App 层：`ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list`
-- 插件贡献：`web_search`/`web_fetch`（网络搜索）、`gui_*`（GUI 操作）、`arrange_*`（安排）、`mi_cloud_*`（小米云服务）；工坊页面 Agent 不注入 `gui_*`、`arrange_*`、`mi_cloud_*`
+- 插件贡献：`web_search`/`web_fetch`（网络搜索）、`gui_*`（GUI 操作）、`arrange_*`（安排）、`mi_cloud_*`（小米云服务）；工坊页面 Agent 只开放 `read`/`write`/`edit`/`ls`/`grep`/`find` 与 `web_search`/`web_fetch`
 - 不注册 `device_info`、`open_app`、设备短信、联系人等未评审的 Android 能力工具；新增系统能力先评估权限与商店政策
 
 ## 功能接线

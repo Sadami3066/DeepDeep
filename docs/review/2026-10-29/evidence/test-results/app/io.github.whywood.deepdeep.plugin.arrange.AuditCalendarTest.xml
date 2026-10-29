@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.plugin.arrange.AuditCalendarTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:04:13.819Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.0">
+  <properties />
+  <testcase name="shanghaiDateOnlyAllDayEventMovesToPreviousDay" classname="io.github.whywood.deepdeep.plugin.arrange.AuditCalendarTest" time="0.0" />
+  <system-out>AUDIT calendar requested=2026-10-30 actual=2026-10-29 zone=Asia/Shanghai
+</system-out>
+  <system-err />
+</testsuite>

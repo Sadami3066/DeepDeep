@@ -11,7 +11,10 @@ import dev.pi.ai.auth.oauth.oauthCredentialFromJson
 import dev.pi.ai.auth.oauth.toJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,15 +35,19 @@ class SdkCredentialStore(
 ) : CredentialStore {
     private val apiKeyCache = ConcurrentHashMap<String, String>()
     private val oauthCache = ConcurrentHashMap<String, JsonElement>()
-    private val pendingWrites = ConcurrentHashMap.newKeySet<String>()
     private val authKindsState = MutableStateFlow<Map<String, ProviderAuthKind>>(emptyMap())
     val authKinds: StateFlow<Map<String, ProviderAuthKind>> = authKindsState.asStateFlow()
     private val revisionState = MutableStateFlow(0L)
     val revision: StateFlow<Long> = revisionState.asStateFlow()
 
+    private val writeLock = Any()
+    private val writeRevisions = HashMap<String, Long>()
+    private val writeCounts = HashMap<String, Int>()
+    private val writeTails = HashMap<String, Job>()
+
     suspend fun preload(vararg providerIds: String) {
         for (providerId in providerIds) {
-            if (providerId in pendingWrites) continue
+            if (isWritePending(providerId)) continue
             val key = apiKeys.readRecord(providerId)
             if (key.isNullOrBlank()) apiKeyCache.remove(providerId) else apiKeyCache[providerId] = key
             val raw = oauth.readRawRecords()[providerId]
@@ -50,7 +57,7 @@ class SdkCredentialStore(
     }
 
     suspend fun preloadAll() {
-        val pendingKeys = pendingWrites.toSet()
+        val pendingKeys = synchronized(writeLock) { writeCounts.keys.toSet() }
         val pendingApiKeys = pendingKeys.associateWith { apiKeyCache[it] }
         val pendingOauth = pendingKeys.associateWith { oauthCache[it] }
         apiKeyCache.clear()
@@ -62,6 +69,21 @@ class SdkCredentialStore(
             pendingOauth[providerId]?.let { oauthCache[providerId] = it } ?: oauthCache.remove(providerId)
         }
         publishKinds()
+    }
+
+    suspend fun awaitCommit(providerId: String) {
+        while (true) {
+            val tail = synchronized(writeLock) { writeTails[providerId] } ?: return
+            tail.join()
+        }
+    }
+
+    suspend fun awaitAll() {
+        while (true) {
+            val tails = synchronized(writeLock) { writeTails.values.toList() }
+            if (tails.isEmpty()) return
+            tails.joinAll()
+        }
     }
 
     fun cachedApiKey(providerId: String): String? = apiKeyCache[providerId]?.takeIf { it.isNotBlank() }
@@ -123,14 +145,9 @@ class SdkCredentialStore(
         apiKeyCache[providerId] = trimmed
         oauthCache.remove(providerId)
         publishKinds()
-        pendingWrites.add(providerId)
-        scope.launch(ioDispatcher) {
-            try {
-                oauth.deleteRecord(providerId)
-                apiKeys.saveRecord(providerId, trimmed)
-            } finally {
-                pendingWrites.remove(providerId)
-            }
+        enqueueWrite(providerId) {
+            oauth.deleteRecord(providerId)
+            apiKeys.saveRecord(providerId, trimmed)
         }
     }
 
@@ -153,14 +170,9 @@ class SdkCredentialStore(
         oauthCache[providerId] = credential
         apiKeyCache.remove(providerId)
         publishKinds()
-        pendingWrites.add(providerId)
-        scope.launch(ioDispatcher) {
-            try {
-                apiKeys.saveRecord(providerId, null)
-                oauth.saveRawRecord(providerId, credential)
-            } finally {
-                pendingWrites.remove(providerId)
-            }
+        enqueueWrite(providerId) {
+            apiKeys.saveRecord(providerId, null)
+            oauth.saveRawRecord(providerId, credential)
         }
     }
 
@@ -168,18 +180,53 @@ class SdkCredentialStore(
         apiKeyCache.remove(providerId)
         oauthCache.remove(providerId)
         publishKinds()
-        pendingWrites.add(providerId)
-        scope.launch(ioDispatcher) {
-            try {
-                apiKeys.saveRecord(providerId, null)
-                oauth.deleteRecord(providerId)
-            } finally {
-                pendingWrites.remove(providerId)
-            }
+        enqueueWrite(providerId) {
+            apiKeys.saveRecord(providerId, null)
+            oauth.deleteRecord(providerId)
         }
     }
 
     override fun readRaw(): Map<String, JsonElement> = oauthCache.toMap()
+
+    private fun enqueueWrite(providerId: String, write: suspend () -> Unit) {
+        val job: Job
+        synchronized(writeLock) {
+            val revision = (writeRevisions[providerId] ?: 0L) + 1L
+            writeRevisions[providerId] = revision
+            writeCounts[providerId] = (writeCounts[providerId] ?: 0) + 1
+            val previous = writeTails[providerId]
+            job = scope.launch(ioDispatcher, start = CoroutineStart.LAZY) {
+                try {
+                    previous?.join()
+                    if (isLatestRevision(providerId, revision)) write()
+                } finally {
+                    finishWrite(providerId)
+                }
+            }
+            writeTails[providerId] = job
+        }
+        job.start()
+    }
+
+    private fun isLatestRevision(providerId: String, revision: Long): Boolean = synchronized(writeLock) {
+        writeRevisions[providerId] == revision
+    }
+
+    private fun isWritePending(providerId: String): Boolean = synchronized(writeLock) {
+        (writeCounts[providerId] ?: 0) > 0
+    }
+
+    private fun finishWrite(providerId: String) {
+        synchronized(writeLock) {
+            val remaining = (writeCounts[providerId] ?: 1) - 1
+            if (remaining > 0) {
+                writeCounts[providerId] = remaining
+            } else {
+                writeCounts.remove(providerId)
+                writeTails.remove(providerId)
+            }
+        }
+    }
 
     private fun publishKinds() {
         val kinds = LinkedHashMap<String, ProviderAuthKind>()

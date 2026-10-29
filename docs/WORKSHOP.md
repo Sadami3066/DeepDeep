@@ -82,6 +82,7 @@ const text = await app.agent.run({
 - Agent 生命周期绑定页面：页面关闭/返回/WebView 销毁会取消正在运行的 Agent；不提供后台编排，页面需要结果就在离开前 `await` 完。
 - `models()` 只返回已配置的 provider/model；页面负责模型选择 UI，App 在运行时校验。
 - `tools` / `skills` 名称必须来自 `capabilities()`；省略表示全部可用，空数组表示完全不用。页面可以提供默认 Agent 的完整工具/技能，也可只选子集。
+- 页面 Agent 的能力是显式白名单：文件工具 `read`、`write`、`edit`、`ls`、`grep`、`find`，联网查询 `web_search`、`web_fetch`（装了网络搜索插件时）；没有 bash，也没有 GUI、日历、小米云、job、goal 等 App 工具。文件工具只能读写本次运行的临时目录，`../`、绝对路径和指向目录外的符号链接都会被拒绝；构造这类路径属于错误用法，页面应把数据通过 prompt 传进去。
 - 页面 Agent 不启用 MCP；临时工作区与临时 agent 目录在每次运行后清理，不写入聊天会话列表。
 - `systemPrompt` 会追加到本次 Agent 的系统提示；`maxTurns` 默认 16，超过后中止并让 `run_end.truncated=true`；失败会在 `run_error` 后 reject，带错误信息。
 

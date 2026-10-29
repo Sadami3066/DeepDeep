@@ -2,7 +2,9 @@ package io.github.whywood.deepdeep.plugin.arrange
 
 import dev.pi.agent.AgentToolResult
 import dev.pi.ai.TextContent
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -73,6 +75,52 @@ class ArrangeToolsTest {
         val event = result.json()["event"]!!.jsonObject
         assertEquals("团队会议", event["title"]!!.jsonPrimitive.content)
         assertEquals(1L, event["calendarId"]!!.jsonPrimitive.content.toLong())
+    }
+
+    @Test
+    fun allDayCreateAndReadBackKeepRequestedDate() = runTest {
+        listOf("Asia/Shanghai", "America/New_York", "UTC", "America/Santiago").forEach { zoneId ->
+            val zone = ZoneId.of(zoneId)
+            val calendar = FakeCalendarGateway(zone)
+            val tool = arrangeTools(calendar, zone).single()
+            val expectedStart = LocalDate.of(2026, 10, 30)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli()
+            val created = tool.execute(
+                "test-call",
+                buildJsonObject {
+                    put("action", "create")
+                    put("title", "全天")
+                    put("start", "2026-10-30")
+                    put("allDay", true)
+                },
+                null,
+                null,
+            )
+
+            assertNull(created.isError)
+            assertEquals(zoneId, parseCalendarMillis("2026-10-30", zone), calendar.lastDraft!!.startMillis)
+            val event = created.json()["event"]!!.jsonObject
+            assertEquals(zoneId, expectedStart, event["start"]!!.jsonPrimitive.content.toLong())
+            assertEquals(zoneId, "2026-10-30", event["startText"]!!.jsonPrimitive.content)
+            val id = event["id"]!!.jsonPrimitive.content.toLong()
+
+            val fetched = tool.execute(
+                "test-call",
+                buildJsonObject {
+                    put("action", "get")
+                    put("id", id)
+                },
+                null,
+                null,
+            )
+
+            assertNull(fetched.isError)
+            val readBack = fetched.json()["event"]!!.jsonObject
+            assertEquals(zoneId, expectedStart, readBack["start"]!!.jsonPrimitive.content.toLong())
+            assertEquals(zoneId, "2026-10-30", readBack["startText"]!!.jsonPrimitive.content)
+        }
     }
 
     @Test
@@ -173,7 +221,7 @@ class ArrangeToolsTest {
     private fun AgentToolResult.json(): JsonObject =
         kotlinx.serialization.json.Json.parseToJsonElement(text()).jsonObject
 
-    private class FakeCalendarGateway : ArrangeCalendarGateway {
+    private class FakeCalendarGateway(private val zone: ZoneId = ZoneId.systemDefault()) : ArrangeCalendarGateway {
         private val events = mutableMapOf<Long, ArrangeCalendarEvent>()
         private var nextId = 10L
         var readAllowed = true
@@ -218,12 +266,13 @@ class ArrangeToolsTest {
         override fun create(draft: ArrangeEventDraft): ArrangeCalendarEvent {
             checkWrite()
             lastDraft = draft
+            val range = resolveEventRange(draft.startMillis, draft.endMillis, draft.allDay, zone)
             val event = ArrangeCalendarEvent(
                 id = nextId++,
                 calendarId = draft.calendarId ?: 1,
                 title = draft.title,
-                startMillis = draft.startMillis,
-                endMillis = draft.endMillis ?: (draft.startMillis + 60_000L),
+                startMillis = range.first,
+                endMillis = range.second,
                 allDay = draft.allDay,
                 location = draft.location,
                 description = draft.description,
@@ -238,13 +287,14 @@ class ArrangeToolsTest {
             checkWrite()
             lastPatch = patch
             val current = events[id] ?: return null
+            val update = mergeEventPatch(current, patch, zone)
             val updated = current.copy(
-                title = patch.title ?: current.title,
-                startMillis = patch.startMillis ?: current.startMillis,
-                endMillis = patch.endMillis ?: current.endMillis,
-                allDay = patch.allDay ?: current.allDay,
-                location = patch.location ?: current.location,
-                description = patch.description ?: current.description,
+                title = update.title ?: current.title,
+                startMillis = update.startMillis,
+                endMillis = update.endMillis,
+                allDay = update.allDay,
+                location = update.location ?: current.location,
+                description = update.description ?: current.description,
             )
             events[id] = updated
             return updated

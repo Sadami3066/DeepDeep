@@ -133,13 +133,79 @@ class GoalServiceTest {
     }
 
     @Test
+    fun nextRoundProposesWithoutCountingUntilCommitted() = runTest {
+        val service = GoalService(store, backgroundScope)
+        val created = service.create("session-1", "Keep going")!!.goal
+        service.noteTurn("session-1", TurnSource.GOAL)
+
+        val first = service.nextRound("session-1", TurnSource.GOAL, true)!!
+        assertEquals(1, first.round)
+        assertEquals(created.id, first.goalId)
+        assertEquals(created.revision.toLong(), first.revision)
+        assertEquals(0, service.goals.value.getValue("session-1").goal.roundsStarted)
+        assertEquals(created.revision, service.goals.value.getValue("session-1").goal.revision)
+
+        val duplicate = service.nextRound("session-1", TurnSource.GOAL, true)!!
+        assertEquals(first, duplicate)
+        assertEquals(0, service.goals.value.getValue("session-1").goal.roundsStarted)
+
+        val committed = service.commitRound("session-1", first.goalId, first.revision)!!
+        assertEquals(1, committed.round)
+        assertEquals(2L, committed.revision)
+        assertEquals(1, service.goals.value.getValue("session-1").goal.roundsStarted)
+        assertEquals(2, service.goals.value.getValue("session-1").goal.revision)
+
+        assertNull(service.commitRound("session-1", first.goalId, first.revision))
+        assertEquals(1, service.goals.value.getValue("session-1").goal.roundsStarted)
+    }
+
+    @Test
+    fun commitRoundRejectsStaleGoalIdOrRevision() = runTest {
+        val service = GoalService(store, backgroundScope)
+        service.create("session-1", "Keep going")
+        val proposal = service.nextRound("session-1", TurnSource.USER, true)!!
+
+        assertNull(service.commitRound("session-1", "missing-goal", proposal.revision))
+        assertNull(service.commitRound("session-1", proposal.goalId, proposal.revision + 1))
+        assertNull(service.commitRound("missing", proposal.goalId, proposal.revision))
+        assertEquals(0, service.goals.value.getValue("session-1").goal.roundsStarted)
+    }
+
+    @Test
+    fun pauseClearAndEditInvalidateProposals() = runTest {
+        val service = GoalService(store, backgroundScope)
+
+        service.create("paused", "Pause me")
+        val pausedProposal = service.nextRound("paused", TurnSource.USER, true)!!
+        service.pause("paused")
+        assertNull(service.commitRound("paused", pausedProposal.goalId, pausedProposal.revision))
+        assertEquals(0, service.goals.value.getValue("paused").goal.roundsStarted)
+
+        service.create("edited", "Edit me")
+        val editedProposal = service.nextRound("edited", TurnSource.USER, true)!!
+        service.edit("edited", "Edited objective")
+        assertNull(service.commitRound("edited", editedProposal.goalId, editedProposal.revision))
+        assertEquals(0, service.goals.value.getValue("edited").goal.roundsStarted)
+
+        service.create("cleared", "Clear me")
+        val clearedProposal = service.nextRound("cleared", TurnSource.USER, true)!!
+        service.clear("cleared")
+        assertNull(service.commitRound("cleared", clearedProposal.goalId, clearedProposal.revision))
+        assertNull(service.goals.value["cleared"])
+    }
+
+    @Test
     fun roundLimitBlocksGoal() = runTest {
         val service = GoalService(store, backgroundScope)
         service.create("session-1", "Finish the task", 2)
 
-        val first = service.nextRound("session-1", TurnSource.USER, true)!!
+        val firstProposal = service.nextRound("session-1", TurnSource.USER, true)!!
+        assertEquals(1, firstProposal.round)
+        assertEquals(2, firstProposal.maxRounds)
+        assertEquals(1L, firstProposal.revision)
+        assertEquals(0, service.goals.value.getValue("session-1").goal.roundsStarted)
+        val first = service.commitRound("session-1", firstProposal.goalId, firstProposal.revision)!!
         assertEquals(1, first.round)
-        assertEquals(2, first.maxRounds)
         assertEquals(
             "<goal_round>\nObjective: Finish the task\nRound: 1/2\n" +
                 "Continue working toward the objective. Call update_goal with action complete when it is achieved, or blocked with a concrete reason when the same blocker persisted for at least 3 rounds.\n" +
@@ -147,7 +213,9 @@ class GoalServiceTest {
             first.prompt,
         )
 
-        val second = service.nextRound("session-1", TurnSource.USER, true)!!
+        val secondProposal = service.nextRound("session-1", TurnSource.USER, true)!!
+        assertEquals(2L, secondProposal.revision)
+        val second = service.commitRound("session-1", secondProposal.goalId, secondProposal.revision)!!
         assertEquals(2, second.round)
         assertNull(service.nextRound("session-1", TurnSource.USER, true))
 
@@ -167,7 +235,8 @@ class GoalServiceTest {
         val service = GoalService(store, backgroundScope)
         service.create("session-1", "Keep improving")
         service.noteTurn("session-1", TurnSource.GOAL)
-        assertNotNull(service.nextRound("session-1", TurnSource.GOAL, true))
+        val proposal = service.nextRound("session-1", TurnSource.GOAL, true)!!
+        assertNotNull(service.commitRound("session-1", proposal.goalId, proposal.revision))
 
         assertNull(service.nextRound("session-1", TurnSource.GOAL, false))
 
@@ -180,7 +249,8 @@ class GoalServiceTest {
         val resumed = service.resume("session-1")!!
         assertEquals(GoalPhase.ACTIVE, resumed.goal.phase)
         assertTrue(resumed.armed)
-        assertNotNull(service.nextRound("session-1", TurnSource.USER, true))
+        val next = service.nextRound("session-1", TurnSource.USER, true)!!
+        assertNotNull(service.commitRound("session-1", next.goalId, next.revision))
     }
 
     @Test
@@ -192,12 +262,12 @@ class GoalServiceTest {
         assertNull(service.block("session-1", "stuck"))
         assertEquals(GoalPhase.ACTIVE, service.goals.value.getValue("session-1").goal.phase)
 
-        assertNotNull(service.nextRound("session-1", TurnSource.GOAL, true))
-        assertNotNull(service.nextRound("session-1", TurnSource.GOAL, true))
+        assertNotNull(service.commit(service.nextRound("session-1", TurnSource.GOAL, true)!!))
+        assertNotNull(service.commit(service.nextRound("session-1", TurnSource.GOAL, true)!!))
         assertNull(service.block("session-1", "stuck"))
         assertEquals(GoalPhase.ACTIVE, service.goals.value.getValue("session-1").goal.phase)
 
-        assertNotNull(service.nextRound("session-1", TurnSource.GOAL, true))
+        assertNotNull(service.commit(service.nextRound("session-1", TurnSource.GOAL, true)!!))
         val blocked = service.block("session-1", "  The dependency is permanently unavailable  ")!!
 
         assertEquals(GoalPhase.BLOCKED, blocked.goal.phase)
@@ -243,9 +313,29 @@ class GoalServiceTest {
         assertTrue(resumed.armed)
         assertEquals(2, resumed.goal.revision)
 
-        val round = reopened.nextRound("session-1", TurnSource.USER, true)!!
+        val proposal = reopened.nextRound("session-1", TurnSource.USER, true)!!
+        val round = reopened.commitRound("session-1", proposal.goalId, proposal.revision)!!
         assertEquals(1, round.round)
         assertEquals(1, reopened.goals.value.getValue("session-1").goal.roundsStarted)
         assertEquals(3, reopened.goals.value.getValue("session-1").goal.revision)
     }
+
+    @Test
+    fun revisionsStayUniqueAcrossCommits() = runTest {
+        val service = GoalService(store, backgroundScope)
+        service.create("session-1", "Track revisions")
+
+        val firstProposal = service.nextRound("session-1", TurnSource.USER, true)!!
+        val first = service.commitRound("session-1", firstProposal.goalId, firstProposal.revision)!!
+        assertEquals(firstProposal.revision + 1, first.revision)
+
+        val secondProposal = service.nextRound("session-1", TurnSource.USER, true)!!
+        assertEquals(first.revision, secondProposal.revision)
+        val second = service.commitRound("session-1", secondProposal.goalId, secondProposal.revision)!!
+        assertEquals(first.revision + 1, second.revision)
+        assertEquals(2, service.goals.value.getValue("session-1").goal.roundsStarted)
+    }
+
+    private suspend fun GoalService.commit(proposal: GoalRound): GoalRound? =
+        commitRound("session-1", proposal.goalId, proposal.revision)
 }

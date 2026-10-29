@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="io.github.whywood.deepdeep.shell.AuditShellTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:03:56.781Z" hostname="whywood-Legion-Y7000P-IRX9" time="0.991">
+  <properties />
+  <testcase name="noNewlineOutputExceedsOutputCapInStreamingCallback" classname="io.github.whywood.deepdeep.shell.AuditShellTest" time="0.287" />
+  <testcase name="installedStateCostScalesWithRootfsFileCount" classname="io.github.whywood.deepdeep.shell.AuditShellTest" time="0.701" />
+  <system-out>AUDIT no-newline retained_output=65536 callback_chunk=8388608 duration_ms=219
+AUDIT_PERF rootfs_state files=100 median_ms=0.934879 max_ms=2.468205
+AUDIT_PERF rootfs_state files=1000 median_ms=3.91276 max_ms=6.858581
+AUDIT_PERF rootfs_state files=10000 median_ms=27.208128 max_ms=44.263859
+</system-out>
+  <system-err />
+</testsuite>

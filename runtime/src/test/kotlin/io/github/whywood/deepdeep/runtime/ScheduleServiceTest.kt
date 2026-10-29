@@ -394,7 +394,7 @@ class ScheduleServiceTest {
         val clock = MutableTestClock(Instant.parse("2026-10-23T04:00:00Z"), zone)
         val directory: File = Files.createTempDirectory("deepdeep-schedule-service").toFile()
         val runtime = FakeAgentRuntime()
-        val store = ScheduleStore(directory, clock)
+        val store = ScheduleStore(directory, clock) { zone }
         val service = ScheduleService(runtime, store, scope, clock)
 
         fun fileFor(name: String): String =

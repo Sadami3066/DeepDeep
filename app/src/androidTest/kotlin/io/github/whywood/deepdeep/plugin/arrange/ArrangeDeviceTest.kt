@@ -87,4 +87,35 @@ class ArrangeDeviceTest {
         createdEventIds.remove(created.id)
         assertNull(calendar.get(created.id))
     }
+
+    @Test
+    fun allDayEventKeepsRequestedLocalDate() {
+        val calendar = AndroidArrangeCalendarGateway(context)
+        assumeTrue(calendar.hasReadPermission() && calendar.hasWritePermission())
+        val calendars = calendar.calendars()
+        assumeTrue(calendars.any { it.writable })
+        val calendarId = calendars.first { it.writable }.id
+        val zone = java.time.ZoneId.systemDefault()
+        val requestedDate = java.time.LocalDate.now(zone).plusDays(3)
+        val requested = requestedDate.toString()
+        val start = parseCalendarMillis(requested, zone)
+        val (rangeStart, rangeEnd) = resolveEventRange(start, null, allDay = true, zone = zone)
+        val title = "DeepDeep AllDay Test ${System.currentTimeMillis()}"
+
+        val created = calendar.create(
+            ArrangeEventDraft(
+                title = title,
+                startMillis = rangeStart,
+                endMillis = rangeEnd,
+                allDay = true,
+                calendarId = calendarId,
+            ),
+        )
+        createdEventIds += created.id
+
+        val read = calendar.get(created.id)
+        assertNotNull(read)
+        assertEquals(requested, formatCalendarTime(read!!.startMillis, allDay = true, zone = zone))
+        assertTrue(read.startMillis % 86_400_000L == 0L)
+    }
 }

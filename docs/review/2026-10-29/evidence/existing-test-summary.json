@@ -1,0 +1,23 @@
+{
+  "app": {
+    "tests": 497.0,
+    "failures": 0.0,
+    "errors": 0.0,
+    "skipped": 0.0,
+    "time": 0.844
+  },
+  "runtime": {
+    "tests": 286.0,
+    "failures": 0.0,
+    "errors": 0.0,
+    "skipped": 0.0,
+    "time": 0.611
+  },
+  "shell": {
+    "tests": 21.0,
+    "failures": 0.0,
+    "errors": 0.0,
+    "skipped": 0.0,
+    "time": 1.0939999999999999
+  }
+}

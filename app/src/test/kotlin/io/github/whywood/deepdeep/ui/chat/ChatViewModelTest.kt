@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -65,11 +66,12 @@ class ChatViewModelTest {
         autoRetry: Boolean = false,
         skillExpander: SkillExpander? = null,
         settings: FakeSettings = FakeSettings(),
+        attachmentStore: FakeAttachmentStore = FakeAttachmentStore(),
     ) = ChatViewModel(
         runtime,
         FakeProviders(),
         settings,
-        FakeAttachmentStore(),
+        attachmentStore,
         prepareRuntime = {},
         autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
         skillExpander = skillExpander,
@@ -228,6 +230,46 @@ class ChatViewModelTest {
         assertEquals("partial more", finished.messages.last().text)
         assertEquals(MessageStatus.DONE, finished.messages.last().status)
         assertFalse(finished.sending)
+    }
+
+    @Test
+    fun attachmentImportedAfterSwitchingSessionIsDiscarded() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
+        }
+        val store = FakeAttachmentStore()
+        val viewModel = viewModel(runtime, attachmentStore = store)
+        advanceUntilIdle()
+        val sessionA = viewModel.state.value.conversationId!!
+        val root = java.nio.file.Files.createTempDirectory("deepdeep-attachment").toFile()
+        val ref = AttachmentRef(
+            id = "att-1",
+            name = "notes.txt",
+            mime = "text/plain",
+            size = 3L,
+            path = "attachments/att-1_notes.txt",
+            kind = io.github.whywood.deepdeep.data.AttachmentKind.TEXT,
+        )
+        val file = store.file(ref, root)
+        file.parentFile?.mkdirs()
+        file.writeText("abc")
+        val ready = CompletableDeferred<AttachmentImport>()
+        store.ready = ready
+
+        viewModel.launchAttachmentImport(sessionA, root) { ready.await() }
+        advanceTimeBy(1L)
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        ready.complete(AttachmentImport.Imported(ref))
+        advanceUntilIdle()
+
+        assertEquals("session-b", viewModel.state.value.conversationId)
+        assertTrue(viewModel.state.value.attachments.isEmpty())
+        assertFalse(file.exists())
+        root.deleteRecursively()
     }
 
     @Test
@@ -416,6 +458,30 @@ class ChatViewModelTest {
         assertTrue(messages.last().retrying)
         assertEquals(MessageStatus.FAILED, messages.last().status)
         assertTrue(viewModel.state.value.sending)
+    }
+
+    @Test
+    fun stopCancelsPendingAutoRetry() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        advanceTimeBy(1L)
+
+        assertTrue(viewModel.state.value.sending)
+        assertEquals(0, runtime.retried)
+
+        viewModel.stop()
+        advanceTimeBy(2_500L)
+        advanceUntilIdle()
+
+        assertEquals(0, runtime.retried)
+        assertFalse(viewModel.state.value.sending)
+        assertEquals(listOf(sessionId), runtime.stopped)
     }
 
     @Test
@@ -881,7 +947,10 @@ class ChatViewModelTest {
     }
 
     private class FakeAttachmentStore : AttachmentStore {
-        override suspend fun import(uri: Uri, root: java.io.File): AttachmentImport = AttachmentImport.Failed
+        var ready: CompletableDeferred<AttachmentImport>? = null
+
+        override suspend fun import(uri: Uri, root: java.io.File): AttachmentImport =
+            ready?.await() ?: AttachmentImport.Failed
 
         override fun file(ref: AttachmentRef, root: java.io.File): java.io.File = java.io.File(root, ref.path)
 

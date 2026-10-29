@@ -79,7 +79,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class AppGraph(context: Context) {
@@ -208,10 +207,7 @@ class AppGraph(context: Context) {
                 MiCloudPlugin(
                     context = appContext,
                     onCapabilitiesChanged = {
-                        scope.launch {
-                            host.busySessionIds.first { it.isEmpty() }
-                            host.reconfigure()
-                        }
+                        scope.launch { host.reconfigure() }
                     },
                 ),
                 WecomPlugin(
@@ -237,10 +233,7 @@ class AppGraph(context: Context) {
                 notificationCenter.notifyInstallFinished(label, success, error)
             },
             onContributionsChanged = {
-                scope.launch {
-                    host.busySessionIds.first { it.isEmpty() }
-                    host.reconfigure()
-                }
+                scope.launch { host.reconfigure() }
             },
             onSetupReady = { _ ->
                 if (!AppVisibility.foreground) scope.launch { AppVisibility.bringToFront(appContext) }
@@ -296,7 +289,6 @@ class AppGraph(context: Context) {
             configuredProviders = { credentials.authKinds.value.keys },
             personalization = { personalizationStore.read().toRuntime() },
             pluginPromptBody = { pluginManager.promptBody() },
-            shellExecutorFor = shellExecutorFor,
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
         )
     }
@@ -340,7 +332,6 @@ class AppGraph(context: Context) {
         ensureBuiltinSkills()
         scope.launch {
             pluginManager.start()
-            host.busySessionIds.first { it.isEmpty() }
             host.reconfigure()
         }
         scope.launch {

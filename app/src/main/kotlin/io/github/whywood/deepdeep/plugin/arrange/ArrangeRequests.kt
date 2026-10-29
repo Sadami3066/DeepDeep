@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -37,6 +38,6 @@ internal fun parseCalendarMillis(raw: String, zone: ZoneId = ZoneId.systemDefaul
 }
 
 internal fun formatCalendarTime(millis: Long, allDay: Boolean, zone: ZoneId = ZoneId.systemDefault()): String {
-    val dateTime = Instant.ofEpochMilli(millis).atZone(zone)
-    return if (allDay) DATE_FORMATTER.format(dateTime) else DATE_TIME_FORMATTER.format(dateTime)
+    if (allDay) return DATE_FORMATTER.format(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC))
+    return DATE_TIME_FORMATTER.format(Instant.ofEpochMilli(millis).atZone(zone))
 }
