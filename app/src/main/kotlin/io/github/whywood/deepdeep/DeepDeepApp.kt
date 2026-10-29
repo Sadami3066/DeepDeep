@@ -183,6 +183,12 @@ internal fun DeepDeepApp(
                     autoRetry = graph.appPreferences.preferences.map { preferences -> preferences.autoRetry },
                     uiStrings = chatUiStrings,
                     skillExpander = graph.skillCatalog,
+                    interruptedQuestions = { sessionId ->
+                        graph.questionCenter.interrupted.value.filter { it.sessionId == sessionId }
+                    },
+                    dismissInterruptedQuestions = { sessionId ->
+                        graph.questionCenter.dismissInterrupted(sessionId)
+                    },
                 )
             }
         },

@@ -204,3 +204,12 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 142. 会话 JSONL 坏尾：`run-as` 在会话文件末尾追加半条 JSON → 重开 App 继续对话 → 新消息在历史里可见，同目录出现 `<file>.jsonl.corrupt`。
 143. 附件大小：分享/选择超过 25MB 或未知长度的文件 → 提示过大，`files/home/attachments/` 无残留；导入中切到其他会话 → 附件不出现在新会话。
 144. 回归：发消息/停止/重试/压缩/目标/提醒/后台任务/插件/工坊/日历读写/分享均正常；`adb logcat` 无 FATAL EXCEPTION。
+
+## round38（可靠性收尾）验收
+
+145. 提醒投递补投：创建一条 1 分钟内提醒后立即杀进程，重开 App → 到点只补投一次（不丢不重复）；`files/schedules/delivery-intents.json` 不残留已投递 intent。
+146. Job 中断可见：让 Agent `job_start` 一个长任务（如 `sleep 90`）→ `files/jobs/jobs.json` 出现 RUNNING 记录 → 杀进程重开 → `job_list` 显示该 job 为 `interrupted`（结果未知），`job_output` 能读到中断说明；新任务可正常继续。
+147. 待答问题中断：`ask_user_question` 等待时杀进程重开 → `files/questions/pending.json` 清空，打开该会话出现「上次提问已中断」灰字提示，通知栏出现汇总通知；发一条消息后提示清除。
+148. 自动重试状态行：断网发送 → 状态行出现 `自动重试 n/5`（英文 `Retrying n/5`）并且 5 次内可持续看到；停止后消失且不再重试。
+149. 插件升级失败（真机断网）：已安装飞书后断网点「重新安装」→ 失败提示，`lark-cli` 文件仍在且 md5 不变、详情页仍已连接、`lark-cli --version` 仍旧版本；技能与安装记录完好。
+150. Markdown 流式：长回答流式过程中标题/列表/表格/代码块渲染与优化前一致，滚动不跳、无重复块；`adb logcat` 无异常。

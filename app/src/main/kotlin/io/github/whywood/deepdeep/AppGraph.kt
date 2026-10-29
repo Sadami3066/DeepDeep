@@ -45,6 +45,7 @@ import okio.Path.Companion.toPath
 import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.GoalStore
+import io.github.whywood.deepdeep.runtime.JobPersistence
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.TurnSource
@@ -58,6 +59,7 @@ import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
+import io.github.whywood.deepdeep.runtime.QuestionPersistence
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
@@ -86,6 +88,7 @@ class AppGraph(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
+    private var questionRecoveryLoaded = false
 
     private companion object {
         const val WORKSHOP_SKILL_ID = "workshop"
@@ -176,9 +179,13 @@ class AppGraph(context: Context) {
             },
             wakeEnabled = { jobWake.value },
             runnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
+            persistence = JobPersistence(File(appContext.filesDir, "jobs")),
         )
     }
-    val questionCenter = QuestionCenter(isForeground = { AppVisibility.foreground })
+    val questionCenter = QuestionCenter(
+        isForeground = { AppVisibility.foreground },
+        persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
+    )
     val pluginManager: PluginManager by lazy {
         PluginManager(
             plugins = listOf(
@@ -325,7 +332,14 @@ class AppGraph(context: Context) {
     )
 
     val notificationCenter by lazy { NotificationCenter(appContext, host) }
-    val scheduleService by lazy { ScheduleService(host, scheduleStore, scope) }
+    val scheduleService by lazy {
+        ScheduleService(
+            host,
+            scheduleStore,
+            scope,
+            intentsFile = File(appContext.filesDir, "schedules/delivery-intents.json"),
+        )
+    }
     val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     init {
@@ -348,6 +362,11 @@ class AppGraph(context: Context) {
     }
 
     suspend fun prepare() {
+        if (!questionRecoveryLoaded) {
+            questionRecoveryLoaded = true
+            questionCenter.loadPersisted()
+            notificationCenter.notifyInterruptedQuestions(questionCenter.interrupted.value)
+        }
         LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
         importDebugKey()
         credentials.preloadAll()

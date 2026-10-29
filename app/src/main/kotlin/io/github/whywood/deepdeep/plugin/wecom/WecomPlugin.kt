@@ -79,6 +79,7 @@ class WecomPlugin internal constructor(
 
     override suspend fun install(progress: PluginProgress) {
         requireAvailable()
+        val hadBinary = hasExistingBinary()
         val staging = File(context.cacheDir, "plugin-staging/$id")
         staging.deleteRecursively()
         staging.mkdirs()
@@ -106,7 +107,7 @@ class WecomPlugin internal constructor(
             }
             lastVersion = installedVersion
         } catch (error: Exception) {
-            runCatching { runtime.execute(WecomCli.restoreCommand(), CLEANUP_TIMEOUT_MS) }
+            runCatching { runtime.execute(WecomCli.restoreCommand(hadBinary), CLEANUP_TIMEOUT_MS) }
             throw error
         } finally {
             staging.deleteRecursively()
@@ -270,6 +271,13 @@ class WecomPlugin internal constructor(
             delay(QR_POLL_INTERVAL_MS)
         }
     }
+
+    private suspend fun hasExistingBinary(): Boolean = runCatching {
+        runtime.execute(
+            "if [ -x ${WecomCli.INSTALL_PATH} ]; then echo yes; else echo no; fi",
+            VERSION_TIMEOUT_MS,
+        ).output.contains("yes")
+    }.getOrDefault(false)
 
     private suspend fun requireAvailable() {
         val availability = availability()

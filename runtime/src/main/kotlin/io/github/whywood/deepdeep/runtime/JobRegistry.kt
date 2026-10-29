@@ -18,13 +18,27 @@ class JobRegistry(
     private val notifier: suspend (sessionId: String, notice: TurnNotice, prompt: String) -> Unit,
     private val wakeEnabled: () -> Boolean = { true },
     private val runnerFactory: ((String?) -> BackgroundCommandRunner)? = null,
+    private val persistence: JobPersistence? = null,
 ) : JobController {
     private val lock = Any()
     private val records = LinkedHashMap<String, Record>()
     private val jobsState = MutableStateFlow<List<JobSnapshot>>(emptyList())
+    private val persistRequests = Channel<Unit>(Channel.CONFLATED)
     private var sequence = 0L
+    private var lastPersistAt = 0L
 
     override val jobs: StateFlow<List<JobSnapshot>> = jobsState.asStateFlow()
+
+    init {
+        if (persistence != null) {
+            restorePersisted(persistence)
+            scope.launch {
+                for (ignored in persistRequests) {
+                    runCatching { persistence.save(persistedJobs()) }
+                }
+            }
+        }
+    }
 
     override fun start(sessionId: String, command: String, label: String): JobStart =
         start(sessionId, command, label, null)
@@ -53,6 +67,7 @@ class JobRegistry(
             created
         }
         publish()
+        requestPersist(force = true)
         val coroutine = scope.launch(start = CoroutineStart.LAZY) { execute(record) }
         record.coroutine = coroutine
         coroutine.start()
@@ -68,6 +83,7 @@ class JobRegistry(
             records.remove(jobId)
         }
         publish()
+        requestPersist(force = true)
     }
 
     suspend fun awaitRead(jobId: String, wait: Boolean, timeoutMs: Long = DEFAULT_WAIT_MS): JobRead {
@@ -111,6 +127,7 @@ class JobRegistry(
             records.values.removeAll { !it.isRunning() }
         }
         publish()
+        requestPersist(force = true)
     }
 
     override fun clearSession(sessionId: String) {
@@ -128,7 +145,51 @@ class JobRegistry(
             record.change.trySend(Unit)
         }
         publish()
+        requestPersist(force = true)
     }
+
+    private fun requestPersist(force: Boolean = false) {
+        if (persistence == null) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastPersistAt < PERSIST_INTERVAL_MS) return
+        lastPersistAt = now
+        persistRequests.trySend(Unit)
+    }
+
+    private fun persistedJobs(): List<PersistedJob> = synchronized(lock) {
+        records.values.map { record -> record.persisted() }
+    }
+
+    private fun restorePersisted(persistence: JobPersistence) {
+        val loaded = runCatching { persistence.load() }.getOrNull().orEmpty()
+        if (loaded.isEmpty()) return
+        synchronized(lock) {
+            loaded.forEach { item ->
+                val interrupted = item.status == JobStatus.RUNNING
+                val record = Record(
+                    id = item.id,
+                    sequence = ++sequence,
+                    sessionId = item.sessionId,
+                    label = item.label,
+                    command = item.command,
+                    startedAt = item.startedAt,
+                    runner = null,
+                )
+                record.status = if (interrupted) JobStatus.INTERRUPTED else item.status
+                record.finishedAt = if (interrupted) null else item.finishedAt
+                record.exitCode = item.exitCode
+                record.ring.append(if (interrupted) interruptedOutput(item.output) else item.output)
+                record.ring.seal(SETTLED_LIMIT)
+                if (item.dropped) record.ring.markDropped()
+                records[record.id] = record
+            }
+        }
+        publish()
+    }
+
+    private fun interruptedOutput(output: String): String =
+        if (output.isBlank()) INTERRUPTED_OUTPUT_NOTE
+        else output.trimEnd('\n') + "\n" + INTERRUPTED_OUTPUT_NOTE
 
     private fun runnerFor(cwd: String?): BackgroundCommandRunner =
         runnerFactory?.invoke(cwd)
@@ -147,10 +208,12 @@ class JobRegistry(
     }
 
     private suspend fun execute(record: Record) {
+        val runner = record.runner ?: return
         try {
-            val exitCode = record.runner.run(record.command) { chunk ->
+            val exitCode = runner.run(record.command) { chunk ->
                 record.append(chunk)
                 publish()
+                requestPersist()
             }
             settle(record, exitCode, null, false)
         } catch (cancelled: CancellationException) {
@@ -188,8 +251,12 @@ class JobRegistry(
             if (present) pruneSettledLocked()
             present
         }
-        if (!registered) return
+        if (!registered) {
+            requestPersist(force = true)
+            return
+        }
         publish()
+        requestPersist(force = true)
         if (notify) {
             val finished = snapshot ?: return
             try {
@@ -228,7 +295,7 @@ class JobRegistry(
         val label: String,
         val command: String,
         val startedAt: Long,
-        val runner: BackgroundCommandRunner,
+        val runner: BackgroundCommandRunner?,
     ) {
         val lock = Any()
         val ring = OutputRing()
@@ -274,6 +341,22 @@ class JobRegistry(
             synchronized(lock) {
                 if (awaiters > 0) awaiters -= 1
             }
+        }
+
+        fun persisted(): PersistedJob = synchronized(lock) {
+            val (output, dropped) = ring.snapshot()
+            PersistedJob(
+                id = id,
+                sessionId = sessionId,
+                label = label,
+                command = command,
+                status = status,
+                startedAt = startedAt,
+                finishedAt = finishedAt,
+                exitCode = exitCode,
+                output = output,
+                dropped = dropped,
+            )
         }
 
         fun snapshot(): JobSnapshot = synchronized(lock) {
@@ -359,6 +442,12 @@ class JobRegistry(
             readAt(startOffset, size) to dropped
         }
 
+        fun markDropped() {
+            synchronized(lock) {
+                dropped = true
+            }
+        }
+
         fun totalBytes(): Long = synchronized(lock) { endOffset }
 
         private fun write(bytes: ByteArray, offset: Int, count: Int) {
@@ -395,12 +484,15 @@ private const val SETTLED_LIMIT = 16 * 1024
 private const val MIN_WAIT_MS = 1L
 private const val DEFAULT_WAIT_MS = 30_000L
 private const val MAX_WAIT_MS = 600_000L
+private const val INTERRUPTED_OUTPUT_NOTE = "[上次运行被中断，结果未知]"
+private const val PERSIST_INTERVAL_MS = 1_000L
 
 internal fun jobStatusText(status: JobStatus, exitCode: Int?): String = when (status) {
     JobStatus.RUNNING -> "running"
     JobStatus.DONE -> "done exit=${exitCode ?: 0}"
     JobStatus.FAILED -> exitCode?.let { "failed exit=$it" } ?: "failed"
     JobStatus.KILLED -> "killed"
+    JobStatus.INTERRUPTED -> "interrupted unknown"
 }
 
 private fun finishPrompt(snapshot: JobSnapshot): String =

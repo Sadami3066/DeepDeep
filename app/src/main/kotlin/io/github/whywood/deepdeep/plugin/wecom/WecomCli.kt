@@ -65,11 +65,18 @@ object WecomCli {
         rm -f $INSTALL_BACKUP_PATH
     """.trimIndent()
 
-    fun restoreCommand(): String = """
-        if [ -f $INSTALL_BACKUP_PATH ]; then mv -f $INSTALL_BACKUP_PATH $INSTALL_PATH; else rm -f $INSTALL_PATH; fi
-        rm -f $INSTALL_TEMP_PATH
-        true
-    """.trimIndent()
+    fun restoreCommand(hadBinary: Boolean): String = buildString {
+        appendLine("if [ -f $INSTALL_BACKUP_PATH ]; then")
+        appendLine("mv -f $INSTALL_BACKUP_PATH $INSTALL_PATH")
+        appendLine("chmod 755 $INSTALL_PATH")
+        if (!hadBinary) {
+            appendLine("else")
+            appendLine("rm -f $INSTALL_PATH")
+        }
+        appendLine("fi")
+        appendLine("rm -f $INSTALL_TEMP_PATH")
+        append("true")
+    }
 
     fun parseVersion(output: String): String? = VERSION_PATTERN.find(cleanOutput(output))
         ?.groupValues?.get(1)

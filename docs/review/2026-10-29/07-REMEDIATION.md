@@ -28,7 +28,7 @@
 | R05 read 整文件读入 | 修复（保留输出文案） | pi2kotlin 0.2.3 `ReadTool.kt`：文本单遍流式、目标窗口外只计数；图片先嗅探且 ≤8MB 才整读 | SDK `ReadToolStreamingTest` 5（含 23MB 文件）；原 `ReadToolTest` 14 未改断言 | 未做 |
 | R06 最近活动排序退化 | 修复 | 新增 `SessionIndex.kt`（`files/session-index.json`，size+mtime 缓存）；`SessionCatalog.kt` 改走索引，`updatedAt=max(header,mtime)` | `SessionIndexTest` 10 | 真机：老会话发一条消息后抽屉立即显示 `Just now` 并排到 Home 第一；索引文件已生成（4321 字节） |
 | R07 资源无淘汰策略 | 部分修复 | `ChatViewModel` 会话缓存限 8（LRU，当前会话保留）；`JobRegistry` 只留最近 50 条已结束记录 | `JobRegistryTest` 10 | 未做 |
-| R08 持久性与成功语义 | 本轮不做 | 需要持久任务/outbox/unknown-outcome 模型（报告 05 §4/§7 C 阶段），与提醒补投（B07）分开立项 | — | — |
+| R08 持久性与成功语义 | round38 已补最小闭环 | 提醒投递 outbox（`delivery-intents.json` + `recoverPending()` 补投一次）、job 记录持久化（`jobs.json`，重启后 RUNNING→`interrupted`，结果未知但可读）、待答问题持久化（`pending.json`，重启后 `interrupted` 并在会话内提示 + 汇总通知） | `ScheduleServiceTest` 18、`JobRegistryTest` 13、`QuestionCenterTest` 12、`ChatViewModelTest`（中断提示/自动重试标签）、`NotificationCenterTest` | 真机见 `08-DEVICE-QA.md`（round38）；持久任务表/TaskRepository 仍未做，见文末 |
 
 ## 说明与偏差
 
@@ -44,3 +44,12 @@
 - SDK：`pi-coding-agent:jvmTest` 537 tests / 0 failures（新增 11）。
 - DeepDeep：865 unit tests 全绿（app 508 / runtime 331 / shell 26，0 failures）；lint 0 errors / 161 warnings / 5 hints（与审阅基线一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
 - 真机（Redmi 22101316UCP / Android 13 / MIUI 14）：安装启动、会话恢复与排序、运行环境页、创意工坊页面渲染、页面 Agent 白名单拒绝、全天日历 Provider 写入/读回、JSONL 坏尾修复与修复后追加均通过；`adb logcat` 无 `FATAL EXCEPTION`。
+
+## round38 追加（R08 最小闭环 + 真机缺陷）
+
+- R08-1 提醒投递 outbox：`files/schedules/delivery-intents.json`，投递前写 intent（`scheduleId@nextRunAt` 去重键），成功标记后删除；启动 `recoverPending()` 只补投未完成 intent，已投递/不存在/已归档的删除，不重复投递。
+- R08-2 job 持久化：`files/jobs/jobs.json`（≤50 条、输出尾部 ≤16KB）；重启后上次运行中的 job 变 `interrupted`，`job_output` 可读中断说明，不再静默消失。
+- R08-3 待答问题持久化：`files/questions/pending.json`；进程在等待提问时被杀，重启后转 `interrupted`，打开会话插本地灰字提示、发下一条消息时清除，并汇总一条通知。
+- D1（真机发现）：自动重试倒计时标签被宿主终态 `ActivityChanged(failedRunId, null)` 覆盖，状态行一直显示 Thinking。修复：倒计时期间忽略该 runId 的终态活动事件，`beginRetry`/清理时解除。
+- D2（真机发现，P1）：插件安装失败回滚在“无备份”时删除已安装 CLI（飞书/企微同构问题）。修复：安装前记录是否已有二进制，回滚时有备份恢复、之前已有则保留、首次安装才清理半成品；回滚命令用真实 bash 临时目录测试。
+- 真机复测与性能前后对比见 [`08-DEVICE-QA.md`](08-DEVICE-QA.md)。

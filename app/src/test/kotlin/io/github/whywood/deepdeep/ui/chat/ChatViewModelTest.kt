@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -27,6 +28,8 @@ import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.runtime.UserQuestion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -67,6 +70,8 @@ class ChatViewModelTest {
         skillExpander: SkillExpander? = null,
         settings: FakeSettings = FakeSettings(),
         attachmentStore: FakeAttachmentStore = FakeAttachmentStore(),
+        interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
+        dismissInterruptedQuestions: suspend (String) -> Unit = {},
     ) = ChatViewModel(
         runtime,
         FakeProviders(),
@@ -76,6 +81,16 @@ class ChatViewModelTest {
         autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
         skillExpander = skillExpander,
         ioDispatcher = dispatcher,
+        interruptedQuestions = interruptedQuestions,
+        dismissInterruptedQuestions = dismissInterruptedQuestions,
+    )
+
+    private fun interruptedQuestion(sessionId: String) = InterruptedQuestion(
+        requestId = "req-$sessionId",
+        sessionId = sessionId,
+        toolCallId = "call-$sessionId",
+        questions = listOf(UserQuestion(id = "q1", question = "Continue?")),
+        createdAt = 1L,
     )
 
     @Test
@@ -191,6 +206,84 @@ class ChatViewModelTest {
         advanceUntilIdle()
         assertEquals("session-a", viewModel.state.value.conversationId)
         assertEquals("a.jsonl", runtime.openCalls.last())
+    }
+
+    @Test
+    fun insertsInterruptedQuestionNoticeAfterOpeningSession() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val queries = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedQuestions = { sessionId ->
+                queries += sessionId
+                if (sessionId == "session-a") listOf(interruptedQuestion(sessionId)) else emptyList()
+            },
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf("session-a"), queries)
+        val message = viewModel.state.value.messages.last()
+        assertEquals(TurnNotice.InterruptedQuestions(1), message.notice)
+        assertEquals(2, viewModel.state.value.messages.size)
+    }
+
+    @Test
+    fun keepsInterruptedQuestionNoticeAcrossConversationSwitches() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
+                "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
+            )
+        }
+        val queries = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedQuestions = { sessionId ->
+                queries += sessionId
+                if (sessionId == "session-a") listOf(interruptedQuestion(sessionId)) else emptyList()
+            },
+        )
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+
+        assertEquals(1, queries.count { it == "session-a" })
+        assertEquals(1, viewModel.state.value.messages.count { message ->
+            message.notice is TurnNotice.InterruptedQuestions
+        })
+    }
+
+    @Test
+    fun dismissesInterruptedQuestionsOnNextMessage() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val dismissed = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedQuestions = { sessionId -> listOf(interruptedQuestion(sessionId)) },
+            dismissInterruptedQuestions = { sessionId -> dismissed += sessionId },
+        )
+        advanceUntilIdle()
+
+        viewModel.onInputChange("continue please")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(listOf("session-a"), dismissed)
+        assertEquals("continue please", runtime.sent.single())
     }
 
     @Test
@@ -458,6 +551,33 @@ class ChatViewModelTest {
         assertTrue(messages.last().retrying)
         assertEquals(MessageStatus.FAILED, messages.last().status)
         assertTrue(viewModel.state.value.sending)
+    }
+
+    @Test
+    fun autoRetryLabelSurvivesHostTerminalActivityClear() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        advanceTimeBy(1L)
+
+        runtime.emitFor(sessionId, RuntimeEvent.ActivityChanged(runtime.runId, null))
+        advanceTimeBy(1L)
+
+        val retrying = viewModel.state.value
+        assertTrue(retrying.sending)
+        assertEquals(ChatUiStrings.fallback().autoRetrying(1, 5), retrying.activity)
+        assertEquals(0, runtime.retried)
+
+        advanceTimeBy(2_500L)
+        advanceUntilIdle()
+
+        assertEquals(1, runtime.retried)
+        assertEquals(ChatUiStrings.fallback().thinking, viewModel.state.value.activity)
     }
 
     @Test

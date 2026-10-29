@@ -1,5 +1,24 @@
 # Status
 
+## Done: 可靠性收尾（R08 最小闭环）与真机缺陷修复
+
+**R08 持久性与恢复**
+- 提醒投递 outbox：`files/schedules/delivery-intents.json`。投递前写 intent（`scheduleId@nextRunAt` 去重键），成功标记已投递后再删除；进程在投递中死亡，下次启动 `recoverPending()` 补投一次，已投递的不重投，连续启动幂等，文件损坏重建。
+- Job 持久化：`files/jobs/jobs.json`（最多 50 条、输出尾部 16KB、原子写）。重启后上次仍在运行的 job 显示为 `interrupted`（结果未知）并保留输出，不再静默消失；损坏隔离重建。
+- 待答问题持久化：`files/questions/pending.json`。正常问答/取消即删除；进程在等待提问时被杀，重启后转成“中断问题”，在打开该会话时插一条本地提示、发下一条消息时清除，并在启动时发一条汇总通知（点击打开最早会话）。
+
+**真机缺陷修复**
+- 自动重试状态行：倒计时标签被宿主的终态“活动清空”事件覆盖，状态行一直显示“思考中”。现在倒计时期间忽略失败 runId 的终态活动事件，停止/开始重试/成功/耗尽时清理。
+- 插件安装回滚：飞书/企微在“无备份”时失败会删除已安装 CLI。现在安装前记录是否已有二进制，失败时有备份就恢复、之前已有则保留、只清理本次半成品；回滚命令用真实 shell 在临时目录验证。
+
+**聊天流 Markdown**
+- 流式文本按稳定块缓存解析：`planMarkdownStream` 做定义提取与结构扫描，`parseMarkdownChunk` 只解析单块，`ChatMarkdown` 按块文本缓存；文本增长时只重解析末尾未闭合块。等价性用 48 篇输入 + 富文档逐字符前缀与整段解析对比。
+- 单元层解析 67ms → 41ms（约 1.6x，540 批 12970 字符）。真机流式 gfxinfo 未观察到可归因的改善（两次结果 11.1%/14.1%，基线 8.5%，但提示词、采集窗口与帧率不同，不具可比性），因此不记为性能提升；下一步需固定输入的 Macrobenchmark/Perfetto trace 再判断卡顿来源。
+
+**验证**
+- 890 unit tests 全绿（app 524 / runtime 340 / shell 26，0 failures；round37 为 865）；lint 0 errors / 161 warnings / 5 hints（与基线一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13 / MIUI 14）：D1 断网自动重试时状态行显示 `Retrying n/5`；D2 断网 Reinstall 失败后 `lark-cli` md5/大小不变、插件仍已连接、记录与技能完好；强制杀进程后 `job_list` 显示 `interrupted`、待答问题重启后提示+通知；R02 运行中插件变更不中断本轮；抽屉排序、`.corrupt` 无新增、无 `FATAL EXCEPTION`。证据 `artifacts/validation/round38/`，报告 `docs/review/2026-10-29/08-DEVICE-QA.md`。
+
 ## Done: 全局整合（按 2026-10-29 代码审阅报告收敛运行秩序）
 
 **背景与结论**

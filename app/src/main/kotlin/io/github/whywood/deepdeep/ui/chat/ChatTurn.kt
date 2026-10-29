@@ -129,6 +129,10 @@ private fun NoticeRow(notice: TurnNotice) {
                 if (notice.completed) R.string.chat_notice_goal_completed else R.string.chat_notice_goal_blocked,
             ),
         )
+
+        is TurnNotice.InterruptedQuestions -> NoticeText(
+            stringResource(R.string.chat_notice_interrupted_questions, notice.count),
+        )
     }
 }
 

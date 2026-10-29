@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
@@ -25,6 +26,7 @@ import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.runtime.TurnNotice
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,6 +56,8 @@ class ChatViewModel(
     private val uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
     private val skillExpander: SkillExpander? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
+    private val dismissInterruptedQuestions: suspend (String) -> Unit = {},
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
@@ -70,6 +74,8 @@ class ChatViewModel(
     private val autoRetryAttempts = mutableMapOf<String, Int>()
     private val autoRetryTokens = mutableMapOf<String, Any>()
     private val autoRetryJobs = mutableMapOf<String, Job>()
+    private val autoRetryRetiredRunIds = mutableMapOf<String, String>()
+    private val interruptedNoticeSessions = mutableSetOf<String>()
 
     init {
         viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
@@ -258,6 +264,7 @@ class ChatViewModel(
         }
         autoRetryJobs.remove(sessionId)
         autoRetryTokens.remove(sessionId)
+        autoRetryRetiredRunIds.remove(sessionId)
         viewModelScope.launch {
             try {
                 sessionOpenJobs[sessionId]?.join()
@@ -302,6 +309,7 @@ class ChatViewModel(
             return
         }
         autoRetryAttempts[sessionId] = attempt
+        autoRetryRetiredRunIds[sessionId] = failure.runId
         autoRetryJobs.remove(sessionId)?.cancel()
         val token = Any()
         autoRetryTokens[sessionId] = token
@@ -327,9 +335,22 @@ class ChatViewModel(
         }
     }
 
+    private fun dismissInterruptedNotice(sessionId: String) {
+        viewModelScope.launch {
+            try {
+                dismissInterruptedQuestions(sessionId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Unit
+            }
+        }
+    }
+
     private fun clearAutoRetry(sessionId: String) {
         autoRetryAttempts.remove(sessionId)
         autoRetryTokens.remove(sessionId)
+        autoRetryRetiredRunIds.remove(sessionId)
         autoRetryJobs.remove(sessionId)?.cancel()
     }
 
@@ -337,6 +358,7 @@ class ChatViewModel(
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
         clearAutoRetry(sessionId)
+        dismissInterruptedNotice(sessionId)
         val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
         val assistantId = nextId + 1
         val now = System.currentTimeMillis()
@@ -881,6 +903,39 @@ class ChatViewModel(
         openSession(summary)
     }
 
+    private fun ConversationState.withCachedInterruptedNotice(sessionId: String): ConversationState {
+        if (sessionId !in interruptedNoticeSessions) return this
+        val cached = conversationCache[sessionId]?.messages
+            ?.lastOrNull { message -> message.notice is TurnNotice.InterruptedQuestions }
+            ?: return this
+        return copy(messages = messages + cached.copy(id = nextMessageId(messages)))
+    }
+
+    private suspend fun ConversationState.withInterruptedNotice(sessionId: String): ConversationState {
+        if (sessionId in interruptedNoticeSessions) return this
+        val interrupted = try {
+            interruptedQuestions(sessionId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            emptyList()
+        }
+        if (interrupted.isEmpty()) return this
+        interruptedNoticeSessions += sessionId
+        val now = System.currentTimeMillis()
+        return copy(
+            messages = messages + AssistantMessage(
+                id = nextMessageId(messages),
+                role = AssistantRole.ASSISTANT,
+                text = "",
+                status = MessageStatus.DONE,
+                startedAt = now,
+                finishedAt = now,
+                notice = TurnNotice.InterruptedQuestions(interrupted.size),
+            ),
+        )
+    }
+
     private fun openSession(summary: ConversationSummary) {
         if (sessionOpenJobs.containsKey(summary.id)) return
         val job = viewModelScope.launch {
@@ -913,21 +968,22 @@ class ChatViewModel(
                 } else {
                     base.adoptActiveRun(activeRun.runId, uiStrings.thinking, activeRun.startedAt)
                 }
-                conversationCache[summary.id] = snapshot
+                val resolved = snapshot.withCachedInterruptedNotice(summary.id).withInterruptedNotice(summary.id)
+                conversationCache[summary.id] = resolved
                 if (mutableState.value.conversationId == summary.id) {
                     mutableState.update {
                         it.copy(
-                            messages = snapshot.messages,
-                            conversationTitle = snapshot.title,
-                            sending = snapshot.sending,
-                            activity = snapshot.activity,
-                            activityStartedAt = snapshot.activityStartedAt,
-                            usage = snapshot.usage,
+                            messages = resolved.messages,
+                            conversationTitle = resolved.title,
+                            sending = resolved.sending,
+                            activity = resolved.activity,
+                            activityStartedAt = resolved.activityStartedAt,
+                            usage = resolved.usage,
                             historyLoaded = true,
                             switchingConversation = false,
                         )
                     }
-                    applySessionModel(snapshot.sessionModel)
+                    applySessionModel(resolved.sessionModel)
                 }
                 refreshSessions()
             } catch (cancelled: CancellationException) {
@@ -1056,6 +1112,9 @@ class ChatViewModel(
             }
 
             else -> Unit
+        }
+        if (event is RuntimeEvent.ActivityChanged && autoRetryRetiredRunIds[scoped.sessionId] == event.runId) {
+            return
         }
         val activeId = mutableState.value.conversationId
         if (scoped.sessionId == activeId) {

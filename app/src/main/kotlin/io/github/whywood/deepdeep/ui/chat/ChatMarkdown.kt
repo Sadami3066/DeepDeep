@@ -70,21 +70,31 @@ internal fun ChatMarkdown(
     onFileClick: ((String) -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
-    val document = remember(text) {
+    val plan = remember(text) {
         Trace.beginSection("deepdeep.markdown.parse")
         try {
-            parseMarkdownDocument(text)
+            planMarkdownStream(text)
         } finally {
             Trace.endSection()
         }
     }
+    val document = remember(plan.links, plan.footnoteNumbers, plan.footnotes) {
+        MarkdownDocument(emptyList(), plan.links, plan.footnoteNumbers, plan.footnotes)
+    }
+    val blocks = ArrayList<MarkdownBlock>(plan.chunks.size)
+    plan.chunks.forEach { chunk -> blocks += rememberChunkBlocks(chunk) }
     val fileClick = rememberFileClickHandler(onFileClick)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MarkdownBlocks(document.blocks, document, colors, fileClick)
+        MarkdownBlocks(blocks, document, colors, fileClick)
         if (document.footnotes.isNotEmpty()) {
             FootnoteList(document.footnotes, document, colors, fileClick)
         }
     }
+}
+
+@Composable
+private fun rememberChunkBlocks(chunk: MarkdownChunk): List<MarkdownBlock> = remember(chunk) {
+    parseMarkdownChunk(chunk.text)
 }
 
 @Composable

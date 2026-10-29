@@ -16,6 +16,8 @@ sealed interface TurnNotice {
     data class GoalFinished(val completed: Boolean) : TurnNotice
 
     data class JobFinished(val label: String, val failed: Boolean) : TurnNotice
+
+    data class InterruptedQuestions(val count: Int) : TurnNotice
 }
 
 data class NoticeEvent(

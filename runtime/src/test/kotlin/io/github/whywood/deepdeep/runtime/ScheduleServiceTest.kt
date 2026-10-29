@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -389,13 +395,151 @@ class ScheduleServiceTest {
         }
     }
 
-    private class Fixture(scope: CoroutineScope) {
+    @Test
+    fun recoversInterruptedDeliveryExactlyOnce() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val created = fixture.schedule(
+                name = "Recover",
+                prompt = "resume",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.clock.advance(Duration.ofDays(1))
+            fixture.writeIntent(created, fixture.clock.millis())
+
+            val restarted = fixture.restarted()
+            try {
+                restarted.start()
+                runCurrent()
+            } finally {
+                restarted.stop()
+            }
+
+            assertEquals(1, fixture.runtime.deliveries.size)
+            assertEquals("Recover", fixture.runtime.deliveries.single().reminder)
+            assertEquals(fixture.clock.millis(), fixture.store.list().single().lastDeliveredAt)
+            assertEquals(0, fixture.pendingIntentCount())
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun alreadyDeliveredIntentIsNotDeliveredAgain() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val created = fixture.schedule(
+                name = "No duplicate",
+                prompt = "once",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.clock.advance(Duration.ofDays(1))
+            fixture.service.deliverDue()
+            assertEquals(1, fixture.runtime.deliveries.size)
+            val deliveredAt = fixture.store.list().single().lastDeliveredAt!!
+            fixture.writeIntent(created, deliveredAt)
+
+            val restarted = fixture.restarted()
+            try {
+                restarted.start()
+                runCurrent()
+            } finally {
+                restarted.stop()
+            }
+
+            assertEquals(1, fixture.runtime.deliveries.size)
+            assertEquals(0, fixture.pendingIntentCount())
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun consecutiveStartsDeliverPendingIntentOnlyOnce() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val created = fixture.schedule(
+                name = "Idempotent",
+                prompt = "once",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.clock.advance(Duration.ofDays(1))
+            fixture.writeIntent(created, fixture.clock.millis())
+
+            fixture.service.start()
+            runCurrent()
+            fixture.service.stop()
+            fixture.service.start()
+            runCurrent()
+            fixture.service.stop()
+
+            assertEquals(1, fixture.runtime.deliveries.size)
+            assertEquals(0, fixture.pendingIntentCount())
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun corruptIntentFileIsRebuilt() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            fixture.schedule(
+                name = "Corrupt",
+                prompt = "x",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.intentsFile.writeText("{not json")
+
+            fixture.service.start()
+            runCurrent()
+            fixture.service.stop()
+
+            assertTrue(fixture.runtime.deliveries.isEmpty())
+            assertEquals(0, fixture.pendingIntentCount())
+            val root = Json.parseToJsonElement(fixture.intentsFile.readText()) as JsonObject
+            assertEquals("1", root["schemaVersion"].toString())
+            assertEquals(JsonArray(emptyList()), root["intents"])
+        } finally {
+            fixture.close()
+        }
+    }
+
+    private class Fixture(private val scope: CoroutineScope) {
         val zone: ZoneId = ZoneId.of("Asia/Shanghai")
         val clock = MutableTestClock(Instant.parse("2026-10-23T04:00:00Z"), zone)
         val directory: File = Files.createTempDirectory("deepdeep-schedule-service").toFile()
+        val intentsFile = File(directory, "delivery-intents.json")
         val runtime = FakeAgentRuntime()
         val store = ScheduleStore(directory, clock) { zone }
-        val service = ScheduleService(runtime, store, scope, clock)
+        val service = ScheduleService(runtime, store, scope, clock, intentsFile)
+
+        fun restarted(): ScheduleService = ScheduleService(runtime, store, scope, clock, intentsFile)
+
+        fun writeIntent(schedule: Schedule, createdAt: Long) {
+            val root = buildJsonObject {
+                put("schemaVersion", 1)
+                putJsonArray("intents") {
+                    add(buildJsonObject {
+                        put("dedupeKey", "${schedule.id}@${schedule.nextRunAt ?: "run-now-$createdAt"}")
+                        put("scheduleId", schedule.id)
+                        put("sessionId", schedule.sessionId)
+                        put("createdAt", createdAt)
+                    })
+                }
+            }
+            intentsFile.writeText(root.toString())
+        }
+
+        fun pendingIntentCount(): Int {
+            if (!intentsFile.isFile) return 0
+            val root = Json.parseToJsonElement(intentsFile.readText()) as? JsonObject ?: return 0
+            return (root["intents"] as? JsonArray)?.size ?: 0
+        }
 
         fun fileFor(name: String): String =
             File(directory, "$name.jsonl").apply { writeText("{}") }.absolutePath

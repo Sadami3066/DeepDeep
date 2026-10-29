@@ -105,8 +105,148 @@ internal fun parseMarkdownDocument(source: String): MarkdownDocument {
     )
 }
 
-private fun parseBlocks(source: String, context: InlineContext): List<MarkdownBlock> {
-    val lines = extractDefinitions(source.replace("\r\n", "\n").split('\n'), context)
+internal data class MarkdownChunk(val text: String)
+
+internal class MarkdownStreamPlan(
+    val chunks: List<MarkdownChunk>,
+    val links: Map<String, String>,
+    val footnoteNumbers: Map<String, Int>,
+    val footnotes: List<MarkdownFootnote>,
+)
+
+internal fun planMarkdownStream(source: String): MarkdownStreamPlan {
+    val context = InlineContext()
+    val lines = source.replace("\r\n", "\n").split('\n')
+    val clean = extractDefinitions(lines, context)
+    val quotes = mutableListOf<List<String>>()
+    val chunks = splitMarkdownChunks(clean, quotes)
+    quotes.forEach { quote -> collectQuoteDefinitions(quote, context) }
+    return MarkdownStreamPlan(
+        chunks = chunks.map(::MarkdownChunk),
+        links = context.links,
+        footnoteNumbers = context.footnoteNumbers,
+        footnotes = context.footnotes,
+    )
+}
+
+internal fun parseMarkdownChunk(text: String): List<MarkdownBlock> =
+    parseBlockLines(text.split('\n'), InlineContext())
+
+internal fun parseMarkdownChunked(source: String): MarkdownDocument {
+    val plan = planMarkdownStream(source)
+    return MarkdownDocument(
+        blocks = plan.chunks.flatMap { parseMarkdownChunk(it.text) },
+        links = plan.links,
+        footnoteNumbers = plan.footnoteNumbers,
+        footnotes = plan.footnotes,
+    )
+}
+
+private fun collectQuoteDefinitions(lines: List<String>, context: InlineContext) {
+    val clean = extractDefinitions(lines, context)
+    val quotes = mutableListOf<List<String>>()
+    scanStructure(clean, onQuote = { quote -> quotes += quote })
+    quotes.forEach { quote -> collectQuoteDefinitions(quote, context) }
+}
+
+private fun scanStructure(
+    lines: List<String>,
+    onBlank: ((Int) -> Unit)? = null,
+    onQuote: ((List<String>) -> Unit)? = null,
+) {
+    var index = 0
+    var inFence = false
+    var inMath = false
+    while (index < lines.size) {
+        val trimmed = lines[index].trim()
+        when {
+            inFence -> {
+                if (trimmed.startsWith("```")) inFence = false
+                index++
+            }
+
+            inMath -> {
+                if (trimmed.endsWith("$$")) inMath = false
+                index++
+            }
+
+            trimmed.startsWith("```") -> {
+                inFence = true
+                index++
+            }
+
+            trimmed.startsWith("$$") -> {
+                if (!isSingleLineMath(trimmed)) inMath = true
+                index++
+            }
+
+            isTableStart(lines, index) -> {
+                index += 2
+                while (index < lines.size && lines[index].contains('|') && lines[index].isNotBlank()) index++
+            }
+
+            trimmed.startsWith(">") -> {
+                val quote = mutableListOf<String>()
+                while (index < lines.size) {
+                    val current = lines[index].trim()
+                    if (!current.startsWith(">")) break
+                    quote += current.removePrefix(">").removePrefix(" ")
+                    index++
+                }
+                onQuote?.invoke(quote)
+            }
+
+            trimmed.isEmpty() -> {
+                onBlank?.invoke(index)
+                index++
+            }
+
+            else -> index++
+        }
+    }
+}
+
+private fun isSingleLineMath(trimmed: String): Boolean {
+    val rest = trimmed.removePrefix("$$")
+    return rest.endsWith("$$") && rest.length >= 2
+}
+
+private fun splitMarkdownChunks(lines: List<String>, quotes: MutableList<List<String>>): List<String> {
+    if (lines.isEmpty()) return emptyList()
+    val chunks = mutableListOf<String>()
+    var start = 0
+    scanStructure(
+        lines,
+        onBlank = { index ->
+            if (isChunkBoundary(lines, index)) {
+                addChunk(chunks, lines, start, index)
+                start = index + 1
+            }
+        },
+        onQuote = { quote -> quotes += quote },
+    )
+    addChunk(chunks, lines, start, lines.size)
+    return chunks
+}
+
+private fun isChunkBoundary(lines: List<String>, index: Int): Boolean {
+    var next = index + 1
+    while (next < lines.size && lines[next].isBlank()) next++
+    if (next >= lines.size) return true
+    if (listItemPattern.matches(lines[next])) return false
+    return isBlockStart(lines, next) || indentWidth(leadingWhitespace(lines[next])) == 0
+}
+
+private fun addChunk(chunks: MutableList<String>, lines: List<String>, start: Int, end: Int) {
+    if (start >= end) return
+    val text = lines.subList(start, end).joinToString("\n")
+    if (text.isNotBlank()) chunks += text
+}
+
+private fun parseBlocks(source: String, context: InlineContext): List<MarkdownBlock> =
+    parseBlockLines(extractDefinitions(source.replace("\r\n", "\n").split('\n'), context), context)
+
+private fun parseBlockLines(lines: List<String>, context: InlineContext): List<MarkdownBlock> {
     val blocks = mutableListOf<MarkdownBlock>()
     var index = 0
     while (index < lines.size) {
@@ -231,6 +371,7 @@ private fun parseBlocks(source: String, context: InlineContext): List<MarkdownBl
 }
 
 private fun extractDefinitions(lines: List<String>, context: InlineContext): List<String> {
+    if (lines.none { line -> line.trimStart().startsWith("[") }) return lines
     val result = ArrayList<String>(lines.size)
     var inFence = false
     for (line in lines) {
@@ -240,7 +381,7 @@ private fun extractDefinitions(lines: List<String>, context: InlineContext): Lis
             result += line
             continue
         }
-        if (inFence) {
+        if (inFence || !trimmed.startsWith("[")) {
             result += line
             continue
         }
@@ -406,8 +547,9 @@ private fun isTableStart(lines: List<String>, index: Int): Boolean {
 private fun splitRow(line: String): List<String> =
     line.trim().trim('|').split('|').map { it.trim() }
 
-internal fun markdownToPlainText(text: String): String {
-    val document = parseMarkdownDocument(text)
+internal fun markdownToPlainText(text: String): String = markdownToPlainText(parseMarkdownDocument(text))
+
+internal fun markdownToPlainText(document: MarkdownDocument): String {
     val parts = document.blocks.map { blockPlainText(it, document) }.filter { it.isNotBlank() }.toMutableList()
     if (document.footnotes.isNotEmpty()) {
         parts += document.footnotes.joinToString("\n") {

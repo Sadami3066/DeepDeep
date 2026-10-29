@@ -173,7 +173,7 @@ private fun JobRow(
     val statusColor = when (job.status) {
         JobStatus.RUNNING -> colors.accent
         JobStatus.FAILED -> colors.danger
-        JobStatus.DONE, JobStatus.KILLED -> colors.inkTertiary
+        JobStatus.DONE, JobStatus.KILLED, JobStatus.INTERRUPTED -> colors.inkTertiary
     }
     val end = if (running) now else (job.finishedAt ?: now)
     val elapsed = (end - job.startedAt).coerceAtLeast(0L)
@@ -291,6 +291,7 @@ private fun jobStatusLabel(status: JobStatus): String = stringResource(
         JobStatus.DONE -> R.string.jobs_status_done
         JobStatus.FAILED -> R.string.jobs_status_failed
         JobStatus.KILLED -> R.string.jobs_status_killed
+        JobStatus.INTERRUPTED -> R.string.jobs_status_interrupted
     },
 )
 

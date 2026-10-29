@@ -6,6 +6,7 @@
     <string name="jobs_status_done">Done</string>
     <string name="jobs_status_failed">Failed</string>
     <string name="jobs_status_killed">Stopped</string>
+    <string name="jobs_status_interrupted">Interrupted</string>
     <string name="jobs_output">Output</string>
     <string name="jobs_output_loading">Loading…</string>
     <string name="jobs_output_empty">No output</string>

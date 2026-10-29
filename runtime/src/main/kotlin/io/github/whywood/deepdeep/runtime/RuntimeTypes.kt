@@ -66,6 +66,14 @@ data class SessionModelSnapshot(
     val thinkingLevel: ThinkingLevel,
 )
 
+data class InterruptedQuestion(
+    val requestId: String,
+    val sessionId: String,
+    val toolCallId: String,
+    val questions: List<UserQuestion>,
+    val createdAt: Long,
+)
+
 enum class AssistantRole {
     USER,
     ASSISTANT,

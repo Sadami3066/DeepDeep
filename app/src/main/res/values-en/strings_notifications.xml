@@ -17,6 +17,8 @@
     <string name="notification_result_done">Reply ready</string>
     <string name="notification_result_stopped">Stopped</string>
     <string name="notification_result_failed">Failed: %1$s</string>
+    <string name="notification_interrupted_title">Unfinished questions</string>
+    <string name="notification_interrupted_text">Questions interrupted and no longer answerable: %1$d. Tap to open the conversation.</string>
 
     <string name="notification_download_title">Developer tools</string>
     <string name="notification_download_done">%1$s installed</string>

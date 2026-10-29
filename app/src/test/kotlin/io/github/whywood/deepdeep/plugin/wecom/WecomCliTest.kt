@@ -26,7 +26,60 @@ class WecomCliTest {
         assertTrue(WecomCli.uninstallCommand().contains(WecomCli.CONFIG_DIR))
         assertTrue(WecomCli.extractCommand().contains(WecomCli.PACKAGE_BINARY))
         assertTrue(WecomCli.installCommand().contains(WecomCli.INSTALL_PATH))
-        assertTrue(WecomCli.restoreCommand().contains(WecomCli.INSTALL_BACKUP_PATH))
+        assertTrue(WecomCli.restoreCommand(hadBinary = false).contains(WecomCli.INSTALL_BACKUP_PATH))
+    }
+
+    @Test
+    fun restoreCommandKeepsExistingBinaryOnRollback() {
+        val kept = WecomCli.restoreCommand(hadBinary = true)
+        assertTrue(kept.contains(WecomCli.INSTALL_BACKUP_PATH))
+        assertTrue(kept.contains(WecomCli.INSTALL_TEMP_PATH))
+        assertFalse(kept.contains("rm -f ${WecomCli.INSTALL_PATH}"))
+
+        val fresh = WecomCli.restoreCommand(hadBinary = false)
+        assertTrue(fresh.contains(WecomCli.INSTALL_BACKUP_PATH))
+        assertTrue(fresh.contains("rm -f ${WecomCli.INSTALL_PATH}"))
+    }
+
+    @Test
+    fun restoreCommandKeepsBinaryFileAndExecutableBit() {
+        val binary = File(folder.root, "wecom-cli").apply {
+            writeText("old-binary")
+            setExecutable(true)
+        }
+        val backup = File(folder.root, ".wecom-cli.old").apply {
+            writeText("old-binary")
+            setExecutable(true)
+        }
+        val fresh = File(folder.root, ".wecom-cli.new").apply { writeText("new-binary") }
+        binary.writeText("new-binary")
+
+        runRestore(WecomCli.restoreCommand(hadBinary = true))
+
+        assertTrue(binary.isFile)
+        assertTrue(binary.canExecute())
+        assertEquals("old-binary", binary.readText())
+        assertFalse(backup.exists())
+        assertFalse(fresh.exists())
+    }
+
+    @Test
+    fun restoreCommandRemovesFirstInstallRemnantsOnly() {
+        val binary = File(folder.root, "wecom-cli").apply { writeText("half-installed") }
+        runRestore(WecomCli.restoreCommand(hadBinary = false))
+        assertFalse(binary.exists())
+
+        val existing = File(folder.root, "wecom-cli").apply { writeText("old-binary") }
+        runRestore(WecomCli.restoreCommand(hadBinary = true))
+        assertTrue(existing.isFile)
+        assertEquals("old-binary", existing.readText())
+    }
+
+    private fun runRestore(command: String) {
+        val rooted = command.replace("/usr/local/bin", folder.root.absolutePath)
+        val process = ProcessBuilder("bash", "-c", rooted).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().use { it.readText() }
+        assertEquals(output, 0, process.waitFor())
     }
 
     @Test

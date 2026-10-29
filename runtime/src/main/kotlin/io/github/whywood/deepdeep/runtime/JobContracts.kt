@@ -7,6 +7,7 @@ enum class JobStatus {
     DONE,
     FAILED,
     KILLED,
+    INTERRUPTED,
 }
 
 data class JobSnapshot(

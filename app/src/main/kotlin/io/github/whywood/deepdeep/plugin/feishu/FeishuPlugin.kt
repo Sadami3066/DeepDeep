@@ -57,6 +57,7 @@ class FeishuPlugin(
 
     override suspend fun install(progress: PluginProgress) {
         requireAvailable()
+        val hadBinary = hasExistingBinary()
         val staging = File(cacheDir, "plugin-staging/$id")
         staging.deleteRecursively()
         staging.mkdirs()
@@ -89,12 +90,12 @@ class FeishuPlugin(
                 command = """
                     set -e
                     mkdir -p /usr/local/bin
-                    if [ -f /usr/local/bin/lark-cli ]; then cp -f /usr/local/bin/lark-cli /usr/local/bin/.lark-cli.old; fi
-                    cp -f extract/lark-cli /usr/local/bin/.lark-cli.new
-                    chmod 755 /usr/local/bin/.lark-cli.new
-                    mv -f /usr/local/bin/.lark-cli.new /usr/local/bin/lark-cli
-                    /usr/local/bin/lark-cli --version
-                    rm -f /usr/local/bin/.lark-cli.old
+                    if [ -f ${FeishuCli.INSTALL_PATH} ]; then cp -f ${FeishuCli.INSTALL_PATH} $LARK_CLI_BACKUP_PATH; fi
+                    cp -f extract/lark-cli $LARK_CLI_TEMP_PATH
+                    chmod 755 $LARK_CLI_TEMP_PATH
+                    mv -f $LARK_CLI_TEMP_PATH ${FeishuCli.INSTALL_PATH}
+                    ${FeishuCli.INSTALL_PATH} --version
+                    rm -f $LARK_CLI_BACKUP_PATH
                 """.trimIndent(),
                 timeoutMillis = INSTALL_TIMEOUT_MS,
             ) { }
@@ -106,7 +107,7 @@ class FeishuPlugin(
             }
             lastVersion = installedVersion
         } catch (error: Exception) {
-            runCatching { restoreOrRemoveBinary() }
+            runCatching { restoreOrRemoveBinary(hadBinary) }
             throw error
         } finally {
             staging.deleteRecursively()
@@ -366,17 +367,17 @@ class FeishuPlugin(
         }
     }
 
-    private suspend fun restoreOrRemoveBinary() {
-        val command = """
-            if [ -f /usr/local/bin/.lark-cli.old ]; then mv -f /usr/local/bin/.lark-cli.old /usr/local/bin/lark-cli; else rm -f /usr/local/bin/lark-cli; fi
-            rm -f /usr/local/bin/.lark-cli.new
-            true
-        """.trimIndent()
-        runCatching { linux.execute(command, CLEANUP_TIMEOUT_MS) }
+    private suspend fun hasExistingBinary(): Boolean = runCatching {
+        linux.execute(EXISTS_COMMAND, VERSION_TIMEOUT_MS).output.contains("yes")
+    }.getOrDefault(false)
+
+    private suspend fun restoreOrRemoveBinary(hadBinary: Boolean) {
+        runCatching { linux.execute(feishuRestoreCommand(hadBinary), CLEANUP_TIMEOUT_MS) }
     }
 
     private companion object {
         const val VERSION = "1.0.98"
+        const val EXISTS_COMMAND = "if [ -x ${FeishuCli.INSTALL_PATH} ]; then echo yes; else echo no; fi"
         const val ARCHIVE_NAME = "lark-cli-1.0.98-linux-arm64.tar.gz"
         const val ARCHIVE_SHA256 = "f798b26ce4b369d70411945e7f66bbe4382c411bc47d81950a662de7b69b41ed"
         const val SKILL_ID = "deepdeep-feishu"
@@ -438,4 +439,20 @@ class FeishuPlugin(
             不要自行创建定时任务或总结流程，除非用户明确要求。
         """.trimIndent()
     }
+}
+
+internal const val LARK_CLI_BACKUP_PATH = "/usr/local/bin/.lark-cli.old"
+internal const val LARK_CLI_TEMP_PATH = "/usr/local/bin/.lark-cli.new"
+
+internal fun feishuRestoreCommand(hadBinary: Boolean): String = buildString {
+    appendLine("if [ -f $LARK_CLI_BACKUP_PATH ]; then")
+    appendLine("mv -f $LARK_CLI_BACKUP_PATH ${FeishuCli.INSTALL_PATH}")
+    appendLine("chmod 755 ${FeishuCli.INSTALL_PATH}")
+    if (!hadBinary) {
+        appendLine("else")
+        appendLine("rm -f ${FeishuCli.INSTALL_PATH}")
+    }
+    appendLine("fi")
+    appendLine("rm -f $LARK_CLI_TEMP_PATH")
+    append("true")
 }

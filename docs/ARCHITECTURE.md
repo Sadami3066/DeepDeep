@@ -51,7 +51,7 @@ Compose ChatScreen
 - 每次发送生成 `runId`；流式事件带 runId，UI 丢弃旧 run 的迟到事件。
 - `RunStarted` / `ActivityChanged` / `TextDelta` / `ReasoningDelta` / `ToolStarted` / `ToolFinished` / `RunFinished` / `RunFailed` 组成 UI 投影。
 - 重试：`AgentRuntime.retryLastTurn` 走 SDK 的 `retryLastAssistant()`——先按 context edit 移除末尾失败的 assistant 回合，再从原用户消息继续运行并复用重试循环，所以不会追加新的用户消息；`AgentSession.canRetryLastAssistant()` 用来判断是否可重试。
-- 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。停止会同时取消该会话尚未到点的重试倒计时，倒计时结束前还会复核自己是否仍是当前重试任务，避免“点了停止又自己跑起来”。
+- 自动重试在 `ChatViewModel`：`RunFailed` 后按错误类别决定是否重试（超时/鉴权/余额/模型不存在不重试），最多 5 次、间隔 2 秒，状态行显示 `自动重试 n/5`；成功后清零。停止会同时取消该会话尚未到点的重试倒计时，倒计时结束前还会复核自己是否仍是当前重试任务，避免“点了停止又自己跑起来”。倒计时期间忽略失败 runId 的终态 `ActivityChanged`，否则宿主的“活动清空”事件会把倒计时标签覆盖回默认的“思考中”。
 - 模型切换：`ChatViewModel.setProvider` 用 `ProviderDirectory.models()` 选该厂商当前或首个模型，经 `runtime.setSessionModel` 只改当前会话，并写入 `ModelConfigStore` 作为新会话默认值；composer 的模型 sheet 顶部提供已配置厂商下拉。
 - 目标续跑：宿主成功结束后向 `GoalDriver.nextRound` 取“下一轮提案”（含 goalId/revision），400ms 后在同一会话的命令面复核 epoch、用 `commitRound` 复核 revision/ACTIVE/轮次上限，通过才真正启动并递增轮次；期间暂停/清除/编辑目标或停止会话都会让旧提案失效。
 - 发送前先写 session 标题并发出 `SessionListChanged`，抽屉立即出现新会话。
@@ -106,12 +106,12 @@ Compose ChatScreen
 ## App 工具
 
 - `PiSessionEngine` 用 `defaultCodingTools(...)`（含 SDK 的 `bash`）后追加 `appTools(cwd, AppToolContext, SessionBinding)`；`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、`extraToolFactories`（goal、job 工具）与 `pluginTools`（已启用插件贡献的 `CodingTool`）。SDK 依赖 pi2kotlin 0.2.3（Maven Local 发布，含 JSONL 尾部修复与 read 流式读取）。
-- `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。
+- `QuestionCenter` 维护待答队列并暴露 `StateFlow`；`PendingQuestion` 带 `sessionId`，UI 按当前会话过滤并内联渲染。App 不在前台时直接返回错误。停止会话通过 `RunSignal` 取消等待。待答问题写入 `files/questions/pending.json`：正常问答/取消会删除记录，进程在等待中被杀则启动时转成 `InterruptedQuestion`（`QuestionCenter.interrupted`），App 在打开该会话时插一条本地提示，发下一条消息时清除，并在启动时汇总发一条通知。
 - `SessionBinding` 在会话创建后绑定 `AgentSession`，schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
-- 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。
+- 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。投递前先写 `files/schedules/delivery-intents.json`（intent 含 `scheduleId@nextRunAt` 去重键），成功后标记已投递再删 intent；进程在投递中死亡则下次启动 `recoverPending()` 补投一次，已投递的不重复投。
 - `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。默认不限轮次，显式传 `max_goal_rounds` 才有上限；加载后目标为未激活（显示暂停），需用户继续。
-- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。
+- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。任务记录同时写入 `files/jobs/jobs.json`（最多 50 条、输出只留尾部 16KB）；进程重启后上次仍在运行的 job 显示为 `interrupted`（结果未知）并保留输出尾巴，不会静默消失。
 - `present` 交付 v2：`items`（1–4 项）显式指定 `file|image|html|creative`；文件/图片/网页按 cwd 解析并校验存在性，创意经注入的 `WorkshopStore` 查询清单后返回 id/name/icon/version。聊天里图片内联预览、HTML 用内联 WebView 渲染并可全屏、文件为行卡、创意为入口卡；旧 `files` 输出与旧工坊入口卡保持兼容。
 - 设备短信工具已移除；短信与通话改由「小米云服务」插件读取（`mi_cloud_sms`），不申请 `READ_SMS`。
 - GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。截图保存到 `files/gui/screenshots/`，PRoot 固定挂载为 `/gui`。
@@ -149,6 +149,7 @@ Compose ChatScreen
 - `NotificationCenter` 由 `AgentService` 启动，收集 `RuntimeEvent`，维护 active runs。
 - 前台服务通知：会话标题 + 当前 `RuntimeActivity`；多会话显示数量；动作停止最近会话。
 - 完成通知：`RunFinished/RunFailed` 且 `AppVisibility.foreground == false` 时发出，点击带 sessionId 回到对应会话。
+- 启动时的中断提示：如果上次进程在等待提问时被杀，启动后发一条汇总通知（`session_results`），点击打开最早一条受影响会话；会话内另有本地灰字提示。
 - 开发包安装：`DevPackageManager` 调用 `notifyInstall`，展示阶段/`n`/`m` 进度；完成后自动取消或发结果。
 - 频道：`agent_runtime`（LOW）、`session_results`（DEFAULT）、`downloads`（LOW）。
 - 通知权限沿用系统 `POST_NOTIFICATIONS`；设置页显示状态并可跳转系统通知设置。
@@ -189,7 +190,7 @@ Compose ChatScreen
 - ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
 - `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
-- Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。
+- Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。流式文本按块解析：`planMarkdownStream` 先做定义提取与结构扫描，再由 `parseMarkdownChunk` 只解析单个块，`ChatMarkdown` 按块文本缓存已解析结果，因此长回答流式增长时只有末尾未闭合块重新解析（等价性由 `MarkdownChunkingTest` 对整段解析逐字节对比）。
 - 会话搜索：抽屉搜索图标进入 `Search` 页面，`ChatViewModel.loadSearchSessions()` 通过 runtime `allSessions()` 跨工作区读取未归档会话，按工作区分组、只匹配会话标题；归档页搜索独立保留。
 
 文本选择由 Compose context-menu provider 接管（`SelectionActions`）：自绘文字版复制/全选/引用/朗读菜单，通过 copy action + 剪贴板读取选中文本，朗读使用系统 TTS（manifest 需要 TTS_SERVICE queries）；`SelectionCoordinator` 记录当前选区 bounds，屏幕根节点在 Initial pass 检测选区外按下并重置对应消息的选择子树，从而即使 Compose 不主动清除也能收起选择与菜单。
@@ -213,8 +214,10 @@ filesDir/
   agent/skills/     全局技能；插件技能也在这里（插件启用时），带 .deepdeep-plugin 标记
   plugins/          plugins.json（官方插件安装记录与启用状态）
   skills/<id>/      技能仓库（SDK 不扫描；插件技能仓库副本也在这里）
-  schedules/        schedules.json（提醒绑定到对话）
+  schedules/        schedules.json（提醒绑定到对话）、delivery-intents.json（投递中 intent）
   goals/            goals.json（按会话的目标与轮次）
+  jobs/             jobs.json（后台任务记录，最多 50 条，重启后显示中断/未知）
+  questions/        pending.json（等待中的提问，正常结束即删除）
   workshop/apps/<id>/   创意页面（manifest.json、entry、静态资源）
   workshop/build/       Agent 写作中的创意草稿
   workshop/userdata/<id>.db  每个创意的数据（SQLite KV）

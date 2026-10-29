@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.AgentRuntime
+import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -147,6 +148,21 @@ class NotificationCenter(
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
         post(ACCESSIBILITY_ID, builder.build())
+    }
+
+    fun notifyInterruptedQuestions(questions: List<InterruptedQuestion>) {
+        val sessionId = interruptedNotificationSessionId(questions) ?: return
+        val text = context.getString(R.string.notification_interrupted_text, questions.size)
+        val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.notification_interrupted_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(openAppIntent(sessionId))
+            .setAutoCancel(true)
+            .setGroup(GROUP_SESSIONS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        post(INTERRUPTED_QUESTIONS_ID, builder.build())
     }
 
     private fun accessibilitySettingsIntent(): PendingIntent {
@@ -347,9 +363,13 @@ class NotificationCenter(
         private const val INSTALL_ID = 200
         private const val INSTALL_RESULT_ID = 201
         private const val ACCESSIBILITY_ID = 300
+        private const val INTERRUPTED_QUESTIONS_ID = 400
         private const val GROUP_SESSIONS = "deepdeep_sessions"
 
         fun areNotificationsEnabled(context: Context): Boolean =
             NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 }
+
+internal fun interruptedNotificationSessionId(questions: List<InterruptedQuestion>): String? =
+    questions.minByOrNull { it.createdAt }?.sessionId
