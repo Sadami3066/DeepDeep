@@ -1,19 +1,20 @@
 # 工具设计
 
-状态：App 层工具与插件贡献工具（GUI、安排、小米云服务、企业微信）已接入；未评审的 Android 能力不注册。
+状态：pi 原生工具、App 核心工具、四个内部插件（目标、后台任务、定时任务、创意工坊）与外部插件贡献工具（网络搜索、GUI、安排、小米云）已接入；未评审的 Android 能力不注册。
 
 ## 工具分层
 
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
-| SDK 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
-| App 层 | app 进程 | `ask_user_question`、`schedule_create/list/update/delete`、`get_goal`/`create_goal`/`update_goal`、`job_start`/`job_output`/`job_list`/`job_kill`、`present`、`plugin_setup`、`workshop_create`/`workshop_load`/`workshop_list` |
-| 插件贡献 | app 进程 | 已安装且已启用插件通过 `OfficialPlugin.tools()` 注入；当前为 `web_search`、`web_fetch`、`gui_*`、`arrange_*`、`mi_cloud_*` |
+| pi 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
+| App 核心 | app 进程 | `ask_user_question`、`plugin_setup`、`present`；不随插件开关变化 |
+| 内部插件 | app 进程 | 目标：`get_goal`/`create_goal`/`update_goal`；后台任务：`job_start`/`job_output`/`job_list`/`job_kill`；定时任务：`schedule_create/list/update/delete`；创意工坊：`workshop_create`/`workshop_load`/`workshop_list`/`workshop_edit` |
+| 外部插件 | app 进程 | 已安装且已启用时注入：`web_search`、`web_fetch`、`gui_*`、`arrange_*`、`mi_cloud_*`；飞书、企业微信只贡献技能与提示，不贡献工具 |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
-| Android 能力 | app 进程 | GUI 操作（无障碍插件）、安排（系统日历读写）；不注册设备短信等未评审能力 |
-| Linux 能力 | PRoot | 优先用 `bash` 或脚本；只有结构化输出/宿主能力才新增工具 |
 
-新增工具的顺序：先用 `bash` 能否表达；不能再用 App/Android 工具。不要为同一能力同时提供 `bash` 与专用工具。
+内部插件默认安装并启用，在插件页「内部」分类可停用（停用后工具与技能不再注入）或调整设置；外部插件按需下载，未安装或停用时不注入。GUI 操作、安排是外部插件对 Android 能力的封装，不注册设备短信等未评审能力。
+
+新增工具的顺序：先用 `bash` 能否表达；不能再用核心工具、内部插件或外部插件提供。不要为同一能力同时提供 `bash` 与专用工具。
 
 ## 注册
 
@@ -24,7 +25,11 @@ defaultCodingTools(...)
   + appTools(cwd, AppToolContext, SessionBinding)
 ```
 
-`AppToolContext` 提供 `ScheduleService`、`QuestionCenter`、额外的工具工厂列表（goal、job）与 `pluginTools`（由 `PluginManager` 收集已启用插件的工具）；`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话。job 工具使用宿主的 `JobRegistry`，SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.2，不修改。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
+`appTools` 固定注入 `ask_user_question` 与 `plugin_setup`，并追加 App 通过 `extraToolFactories` 注册的 `present`；随后追加 `PluginManager` 收集的插件工具（只取已安装且已启用的插件），其中内部插件按会话绑定生成工具（目标、后台任务、定时任务、创意工坊），外部插件贡献静态工具。MCP 工具由 SDK 在会话内单独注入。
+
+`AppToolContext` 提供 `QuestionCenter`、插件控制器、插件工具工厂 `pluginTools(binding)` 与额外的工具工厂 `extraToolFactories`；定时、目标、任务、工坊工具由 App 构造内部插件时注入各自的服务，`appTools` 本身不再内置 `schedule_*`。`SessionBinding` 提供当前会话的 id、会话文件与 cwd，供工具把数据绑定到调用它的会话；SDK 的 `bash` 由 `defaultCodingTools(...)` 直接提供；SDK 固定 pi2kotlin 0.2.4，不修改。
+
+插件安装、启停或设置变更会触发会话重配，工具的新增/移除在下一轮或安全点生效，运行中的回合保持原工具集。工具实现 `CodingTool`，参数用 `JsonObject` 描述，执行结果用 `textResult`；错误结果 `isError = true`，不把用户可见文案放进 runtime。
 
 取消：等待型工具通过 `RunSignal` 监听；signal abort 时结束等待。
 
@@ -62,7 +67,7 @@ defaultCodingTools(...)
 
 | 参数 | 语义 |
 |---|---|
-| `plugin` | 官方插件 id（如 `feishu`、`wecom`、`micloud`；网络搜索、GUI 操作、安排不需要 setup） |
+| `plugin` | 外部插件 id（如 `feishu`、`wecom`、`micloud`；网络搜索、GUI 操作、安排不需要 setup；内部插件始终就绪，不需要 setup） |
 
 - 打开插件的准备流程（安装确认、浏览器链接、等待完成）；步骤由插件自己定义，App 只渲染通用 sheet。
 - 仅在 App 前台可用；后台运行调用会返回错误。
@@ -85,21 +90,21 @@ defaultCodingTools(...)
 
 ## goal
 
-三个工具，输出统一紧凑 JSON：`{"goal":{id,revision,objective,phase,roundsStarted,maxRounds,blockedReason?,createdAt,updatedAt}|null,"activation":{"armed":bool}}`。
+由内部插件「目标」提供，插件启用时注入（默认启用），插件详情页可设置「目标轮数上限」。三个工具，输出统一紧凑 JSON：`{"goal":{id,revision,objective,phase,roundsStarted,maxRounds,blockedReason?,createdAt,updatedAt}|null,"activation":{"armed":bool}}`。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
 | `get_goal` | 无 | 读取当前会话的目标 |
-| `create_goal` | `objective`, `max_goal_rounds?` | 仅用户直接回合可创建；不传则不限轮次，传则 1–50 |
-| `update_goal` | `goal_id`, `revision`, `action=edit/pause/resume/complete/blocked`, `objective?`, `max_goal_rounds?`, `blocked_reason?` | 编辑/暂停/继续仅用户回合；完成允许用户或目标轮；阻塞仅目标轮且已进行 ≥3 轮 |
+| `create_goal` | `objective`, `max_goal_rounds?` | 仅用户直接回合可创建；不传时用插件设置「目标轮数上限」（默认 0 表示不限），显式传入 1–50 时以参数为准 |
+| `update_goal` | `goal_id`, `revision`, `action=edit/pause/resume/complete/blocked`, `objective?`, `max_goal_rounds?`, `blocked_reason?` | 编辑/暂停/继续仅用户回合；完成允许用户或目标轮；阻塞仅目标轮且已进行 ≥3 轮；编辑不传 `max_goal_rounds` 时保持原轮数上限 |
 
 - 目标按会话持久化在 `files/goals/goals.json`；`revision` 每次变更 +1，调用必须带最新 revision。
-- 目标处于 ACTIVE 时，每轮成功结束由宿主自动投递下一轮 `<goal_round>`；默认不限轮次，显式设置上限时达到上限置 BLOCKED(`round-limit`)；目标轮失败或用户停止则暂停。
+- 目标处于 ACTIVE 时，每轮成功结束由宿主自动投递下一轮 `<goal_round>`；轮数上限为 0（不限，默认）或来自插件设置/显式参数，达到上限时置 BLOCKED(`round-limit`)；目标轮失败或用户停止则暂停。
 - 进程重启后目标保留但为暂停态，需要用户点继续。
 
 ## 后台任务
 
-创建是 App 层工具 `job_start`，控制是 `job_output` / `job_list` / `job_kill`。SDK 的 `bash` 只在前台阻塞执行（参数 `command`、`timeout`），不创建后台任务。
+由内部插件「后台任务」提供，插件启用时注入（默认启用）；插件详情页可设置「同时运行任务数」。创建是 `job_start`，控制是 `job_output` / `job_list` / `job_kill`。SDK 的 `bash` 只在前台阻塞执行（参数 `command`、`timeout`），不创建后台任务。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
@@ -110,11 +115,13 @@ defaultCodingTools(...)
 
 - 输出保存在内存环形缓冲（运行中 256KB，结束后保留 16KB），模型的增量游标与 UI 快照互不影响；任务 sheet 打开时，运行中输出每秒刷新；被淘汰的旧输出会在 `job_output` 结果里标记为 dropped。
 - 命令在会话 cwd 对应的 Linux 环境里执行（`/workspace` 绑定该工作区），需要先安装 Linux 环境；设置里开启「共享目录」并授予所有文件访问权限后，Android 公共目录同时挂载在 `/storage/emulated/0` 与 `/sdcard`，可直接读写。
-- 每个会话最多 10 个运行中任务；会话归档/删除时统一清理。
+- 每个会话同时运行的任务数取插件设置「同时运行任务数」（1–20，默认 10），在每次 `job_start` 时读取；会话归档/删除时统一清理。
 - 任务完成时按聊天设置「后台任务完成时唤醒」决定是否让模型开一轮处理结果；唤醒轮不在聊天消息流里留提示，关闭时任务只留在任务列表。
 - 任务随进程结束；需要跨进程请用定时提醒。
 
 ## 交付
+
+`present` 是 App 核心工具，始终可用，不受插件开关影响。
 
 | 工具 | 参数 | 语义 |
 |---|---|---|
@@ -155,18 +162,17 @@ defaultCodingTools(...)
 
 ## 创意工坊
 
+由内部插件「创意工坊」提供，插件启用时注入（默认启用）。插件详情页可关闭「启用创意工坊技能」（workshop 技能随之从技能仓库与生效目录移除），并可设置「工坊 Agent 最大回合」（1–32，默认 16；页面 `app.agent.run()` 未指定回合上限时使用）。
+
 | 工具 | 参数 | 语义 |
 |---|---|---|
 | `workshop_create` | `name`, `description?`, `icon?` | 在 `files/workshop/build/` 建一个草稿（只写 manifest.json），返回草稿绝对路径 |
 | `workshop_load` | `path`（草稿绝对路径） | 校验清单、入口、大小与路径后原子移动到 `files/workshop/apps/<id>/`，结果带 `delivery:"present"` 标记；Agent 随后用 `present` 交付创意入口卡，失败返回错误让 Agent 当场修 |
 | `workshop_list` | 无 | 列出已上架创意（含 id 与可编辑的绝对路径）与未完成草稿 |
-| `workshop_data_get` | `app`, `key` | 读取创意数据层的一个 JSON key，不存在返回 null |
-| `workshop_data_set` | `app`, `key`, `value` | 写入/覆盖任意 JSON 值（≤256KB） |
-| `workshop_data_delete` | `app`, `key` | 删除一个 key |
-| `workshop_data_keys` | `app` | 列出数据层 key（排序） |
+| `workshop_edit` | `action`=get/set/delete/keys；`app`；`key`（get/set/delete 必填）；`value`（set 用，任意 JSON） | 读写创意数据层：get 返回该 key 的值（不存在为 null），set 覆盖写入（单值 ≤256KB），delete 删除并返回 `deleted`，keys 返回排序后的 key 列表 |
 
-- 创意形态完全由需求决定，没有分类/模板字段；格式与页面规范由内置 workshop 技能（`/skill:workshop` 强制加载）说明。
-- 数据工具是 Agent 更新内容（日报、表单、记录）的入口，不需要重写页面；页面通过 bridge 读取同一份数据。
+- 创意形态完全由需求决定，没有分类/模板字段；格式与页面规范由创意工坊插件提供的 workshop 技能说明，聊天里可用 `/skill:workshop` 强制加载。
+- `workshop_edit` 是 Agent 更新内容（日报、表单、记录）的入口，不需要重写页面；页面通过 bridge 读取同一份数据。
 - 创意目录在 bash 工作区之外，页面文件必须用 read/write/edit 的绝对路径写，不能用 bash 写入。
 - 已上架创意可以直接改 `apps/<id>/` 下的文件，不需要重新 load；工坊页进入时重新扫描。
 - 页面数据不在代码目录：bridge 的 `data` 能力把数据存到每创意独立的 SQLite；重写页面不会丢数据。

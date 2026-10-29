@@ -1,17 +1,24 @@
 # 插件
 
-状态：官方插件框架与飞书 CLI、网络搜索、GUI 操作、安排、小米云服务、企业微信插件已实现；飞书与企业微信授权需要用户登录对应账号。
+状态：插件框架（外部/内部两类、插件设置、多文件技能与迁移）、飞书 CLI、网络搜索、GUI 操作、安排、小米云服务、企业微信插件，以及目标、后台任务、定时任务、创意工坊四个内部插件已实现；飞书与企业微信授权需要用户登录对应账号。
 
 ## 模型
 
-插件是 App 内置的官方能力包，按需下载，不默认安装。插件页只管：安装记录、启用状态、插件自己实现的生命周期、界面上的通用展示。
+插件是 App 内置的官方能力包，分两类：
+
+- **外部插件（EXTERNAL）**：需要用户下载安装，安装记录、启用状态与生命周期由插件自己实现；当前为飞书、网络搜索、GUI 操作、安排、小米云服务、企业微信。
+- **内部插件（INTERNAL）**：随 App 提供、无需安装；首次启动自动补建安装记录并默认启用，安装/卸载是空操作，不参与更新检查，详情页不显示下载/更新/删除入口；当前为目标、后台任务、定时任务、创意工坊。
+
+插件页只管：安装记录、启用状态、插件设置、插件自己实现的生命周期、界面上的通用展示。
 
 插件框架不包含 Linux、CLI、登录、鉴权等具体概念。每个插件实现 `OfficialPlugin`：
 
 ```kotlin
 interface OfficialPlugin {
     val id: String
+    val kind: PluginKind              // EXTERNAL / INTERNAL，默认 EXTERNAL
     val icon: DdIcon
+    val tintIcon: Boolean
     val nameRes: Int
     val summaryRes: Int
     val version: String
@@ -27,7 +34,10 @@ interface OfficialPlugin {
     suspend fun runAction(actionId: String, ui: PluginUi)
     suspend fun detailRows(status: PluginStatus): List<PluginDetailRow>
     fun skills(): List<PluginSkill>
-    fun tools(): List<CodingTool> = emptyList()
+    fun tools(): List<CodingTool>
+    fun tools(binding: SessionBinding): List<CodingTool>   // 默认返回 tools()
+    fun settings(): List<PluginSettingSpec>
+    suspend fun onSettingsChanged(values: Map<String, String>)
     fun promptBody(status: PluginStatus): String?
 }
 ```
@@ -36,25 +46,65 @@ interface OfficialPlugin {
 - `status()`：插件自己定义「就绪」的含义。飞书在这里执行 `lark-cli auth status --json` 并映射成 `Ready` / `NotReady` / `Failed`；框架不认识「登录」。
 - `setup(ui)`：插件自己的准备流程。飞书通过 `ui.stage(...)` 展示建应用/授权链接，框架只渲染通用 sheet。
 - `actions()` / `runAction()`：插件自己的操作行（连接、重新授权、应用权限、退出登录）。
-- `skills()` / `tools()` / `promptBody()`：插件贡献的技能、工具与系统提示内容。框架只收集已安装且已启用插件的贡献。
+- `skills()`：插件贡献的技能，可携带多个随附文件（见「技能与迁移」）。
+- `tools()` / `tools(binding)`：外部插件用 `tools()`；内部插件用 `tools(binding)` 取得会话绑定（定时任务工具需要 sessionId/sessionFile/cwd）。框架只收集已安装且已启用插件的贡献，并按工具名去重。
+- `settings()` / `onSettingsChanged(values)`：插件声明设置项并接收解析后的完整值（含默认值）；框架负责持久化与调用，插件不直接读写设置文件。
+- `promptBody()`：插件贡献的系统提示内容。
 
-框架（`PluginManager`）负责：安装记录、启用状态、互斥、安装/卸载/更新的通用流程、技能同步、工具注入、系统提示拼接、状态刷新、进度通知、`plugin_setup` 工具入口。它不引用 shell 模块，也不引用任何具体插件代码。
+框架（`PluginManager`）负责：安装记录、启用状态、插件设置持久化、互斥、安装/卸载/更新的通用流程、技能同步、工具注入、系统提示拼接、状态探测与缓存、进度通知、`plugin_setup` 工具入口。它不引用 shell 模块，也不引用任何具体插件代码。
 
-安装是事务：下载、校验、暂存安装都在插件的 `install()` 内完成，只有成功后才写安装记录并同步技能。失败时只调用插件的 `recover()` 清理暂存；已经是升级的旧安装不会被卸载，记录与技能保持原版本。首次安装失败才清理半成品并删除本次技能。
+外部插件的安装是事务：下载、校验、暂存安装都在插件的 `install()` 内完成，只有成功后才写安装记录并同步技能。失败时只调用插件的 `recover()` 清理暂存；已经是升级的旧安装不会被卸载，记录与技能保持原版本。首次安装失败才清理半成品并删除本次技能。内部插件不执行安装。
+
+### 插件设置
+
+- 设置以字符串键值持久化在 `files/plugins/settings.json`：
+
+```json
+{"schemaVersion":1,"plugins":{"goal":{"max_rounds":"0"},"jobs":{"max_running":"10"}}}
+```
+
+- 设置项由 `PluginSettingSpec` 声明，分三种：`Toggle`（key/标题/默认布尔）、`Choice`（固定选项）、`Number`（标题/min/max/默认值）。读取时缺失键取声明默认值；设置文件缺失或损坏时按全部默认值运行，下一次写入会重写为合法文件。
+- 修改设置：UI 立即更新本地状态 → 写入 store → 调用插件 `onSettingsChanged(解析后的完整值)` → 重新同步技能 → `host.reconfigure()`；忙碌会话在本轮结束的安全点重建工具。
+- 运行时直接消费的设置：目标 `max_rounds`（0 表示不限）是 `create_goal` 未传 `max_goal_rounds` 时的默认轮数上限；后台任务 `max_running`（1–20）是每会话运行中任务上限；创意工坊 `max_turns`（1–32）是工坊 Agent 未显式指定 `maxTurns` 时的回合上限；`skill_enabled` 控制工坊技能是否贡献。
+- 状态缓存：插件 `status()` 的探测结果按 60 秒 TTL 复用；进入列表页/详情页先展示缓存并后台按需探测，标题栏刷新按钮强制立即重新探测。设置变更不会触发状态重新探测。
+
+### 技能与迁移
+
+- `PluginSkill` 由技能 id、`SKILL.md` 正文（markdown）与可选 `files: List<PluginSkillFile>` 组成；随附文件用相对路径（如 `references/api.md`、`examples/01-hello.html`），与 `SKILL.md` 一起写入技能目录。路径禁止绝对路径、`..`、空段、保留名（`SKILL.md`、`.deepdeep-plugin`）与重复项。
+- 技能写入仓库 `files/skills/<id>`，插件启用时复制到生效目录 `files/agent/skills/<id>`；两个目录都用 `.deepdeep-plugin` 标记归属。
+- 同名、无标记目录按内容认领：普通插件技能要求 `SKILL.md` 内容一致才整体替换为新版（含随附文件）；不一致时保留用户版本并跳过该技能，不报错。`legacyOwned` 技能用于承接旧内置文件，遇到无标记的同名目录直接整体替换为新正文 + 随附文件 + 标记，不比较内容。
+- 创意工坊的技能是 `legacyOwned` 的多文件技能：正文来自 `app/src/main/assets/skills/workshop/SKILL.md`，`references/*.md` 与 `examples/*.html` 作为随附文件；升级设备上旧的 BuiltinSkills 目录（无标记）会被整体替换。`skill_enabled` 关闭时插件不贡献技能，仓库 `files/skills/workshop` 与生效目录 `files/agent/skills/workshop` 都被移除；重新开启时按插件声明重新生成。
 
 ### 启用与贡献注入
 
-- `plugins.json` 为每个插件保存 `enabled`；默认开启。
-- 关闭插件后：不再探测它的 `status()`，不再注入它的 `promptBody()`、skills、tools；技能从生效目录移除，仓库副本保留；重新开启时恢复。
-- tools 在会话创建时收集；安装/卸载/启用/关闭后调用 `host.reconfigure()`，忙碌会话在本轮结束的安全点拿到最新贡献，运行中的会话不会被关闭。
+- `plugins.json` 为每个插件保存 `enabled`；外部插件默认开启，内部插件补建时默认开启。
+- 关闭插件后：不再探测它的 `status()`，不再注入它的 `promptBody()`、skills 与 tools；技能从生效目录移除，仓库副本保留；重新开启时恢复。已保存的设置保留；内部插件的安装记录与页面入口不会被删除。
+- tools 在会话创建时收集：外部插件调用 `tools()`，内部插件调用 `tools(binding)`；安装/卸载/启停/设置变更后调用 `host.reconfigure()`，忙碌会话在本轮结束的安全点拿到最新贡献，运行中的会话不会被关闭。
 - 已关闭插件的 CLI 二进制仍留在 guest 内，但没有任何技能或提示引导模型使用它。
+
+## 内部插件
+
+内部插件随 App 提供，路径在 `app/.../plugin/internal/`；共用 `InternalPlugin` 基类：`kind=INTERNAL`、`availability=Available`、`install/uninstall` 空操作、`status=Ready("已启用")`、大小标签为「内置」。
+
+| id | 名称 | 工具 | 技能 | 设置（key：范围，默认） |
+|---|---|---|---|---|
+| `goal` | 目标 | `get_goal`、`create_goal`、`update_goal` | 无 | `max_rounds`：0–50，默认 0（0 不限，作为 `create_goal` 未传 `max_goal_rounds` 时的默认值） |
+| `jobs` | 后台任务 | `job_start`、`job_output`、`job_list`、`job_kill` | 无 | `max_running`：1–20，默认 10（每会话运行中任务上限，`job_start` 时校验） |
+| `schedule` | 定时任务 | `schedule_create`、`schedule_list`、`schedule_update`、`schedule_delete` | 无 | 无 |
+| `workshop` | 创意工坊 | `workshop_create`、`workshop_load`、`workshop_list`、`workshop_edit` | `workshop`（多文件） | `skill_enabled`：默认开启；`max_turns`：1–32，默认 16（工坊 Agent 未显式指定 `maxTurns` 时的回合上限） |
+
+- 工具随插件启停注入或撤出：停用内部插件后对应 `*` 工具从会话消失，重新启用后恢复；定时任务工具因此不再由 runtime 的 `appTools` 直接注入。
+- 创意工坊技能随 `skill_enabled` 注入或撤出：关闭时仓库与生效副本一并移除，重新开启时按插件声明重建；技能正文与随附文件见「技能与迁移」。
+- 内部插件没有下载/更新/删除流程，详情页只保留状态、版本、大小、技能、设置与插件自带详情行。
+- 停用状态的内部插件入口仍保留在「内部」分类下，可随时重新开启。
 
 ## 文件
 
 | 路径 | 内容 |
 |---|---|
 | `files/plugins/plugins.json` | 安装记录与启用状态，原子写；损坏时保留原文件并报错 |
-| `files/skills/<skill-id>/` | 插件技能的仓库副本；技能页可见，`.deepdeep-plugin` 标记归属 |
+| `files/plugins/settings.json` | 插件设置（schemaVersion 1）；缺失或损坏时按默认值运行，下次写入重写 |
+| `files/skills/<skill-id>/` | 插件技能的仓库副本（`SKILL.md` + 随附文件）；技能页可见，`.deepdeep-plugin` 标记归属 |
 | `files/agent/skills/<skill-id>/` | 插件技能的生效副本；仅插件启用且技能开启时存在 |
 | `cacheDir/plugin-staging/<plugin-id>/` | 下载/解压暂存；启动和安装结束时清理 |
 | `/usr/local/bin/lark-cli` | 飞书 CLI 二进制（guest 内） |
@@ -71,15 +121,14 @@ interface OfficialPlugin {
 
 ## 界面
 
-- 抽屉「插件」→ 插件列表。官方插件全部列出；每行左侧是插件图标，右侧是启用开关（未安装时显示「下载」）；已安装可点进详情。
-- 标题右侧是刷新图标；卡片内不再提供删除，删除入口在详情页。
-- 插件图标来自 `OfficialPlugin.icon`：飞书使用内置的飞书 logo（`tintIcon=false` 保留品牌色），网络搜索使用 `DdIcons.Globe`（随主题 tint）。
-- 详情页：状态、版本、大小、插件自带的详情行、插件技能；飞书详情还包含 CLI 版本、已授权权限数量、飞书应用状态、缺失权限（如果有）。
-- 操作行来自插件本身；框架另外提供下载/更新/重新安装/删除插件。
+- 抽屉「插件」→ 插件页。顶部分「外部 / 内部」两个分类并带搜索框；列表只展示当前分类，搜索匹配 id、名称与简介。
+- 每行左侧是插件图标：外部插件优先使用 `VendorPluginIcons` 品牌图标，否则用 `OfficialPlugin.icon`（`tintIcon=false` 保留品牌色、为 true 时随主题着色，例如网络搜索的 `DdIcons.Globe`）；右侧在已安装时显示启用开关；外部插件未安装时显示「下载」，内部插件从不显示下载。
+- 详情页：状态、版本、大小、插件自带的详情行、插件技能、设置分组；飞书详情还包含 CLI 版本、已授权权限数量、应用状态与缺失权限。外部插件另有下载/更新/重新安装/删除入口，内部插件不显示这些入口（状态「已启用」、大小「内置」）。
+- 设置分组按 `PluginSettingSpec` 渲染：Toggle 为开关行，Number 为「− 数值 +」步进行（到上下限禁用），Choice 为下拉选项行；修改立即生效。插件停用时设置行只读。
 - 安装或插件的准备流程进行中时，列表与详情页的操作会禁用；进度同时显示在行内与通知里。
 - 全局 setup sheet：通用确认安装、进度、授权链接、「打开浏览器」、等待提示、取消。授权完成后 sheet 自动关闭；App 会尝试回到前台。
-- 卸载会删除二进制、插件配置、CLI 凭证、仓库/生效技能与安装记录；重新安装从零开始。
-
+- 状态探测结果缓存 60 秒：进入页面先显示缓存，后台按需刷新；标题右侧刷新按钮强制立即重新探测。
+- 卸载会删除二进制、插件配置、CLI 凭证、仓库/生效技能与安装记录；重新安装从零开始。内部插件不能卸载。
 
 ## 飞书插件
 
@@ -173,9 +222,9 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 - 单一状态源：`PluginManager.state: StateFlow<PluginsUiState>`，列表页、详情页、setup sheet 都只订阅它。
 - Agent 调用 `plugin_setup` 时走同一个 `PluginManager.setup()`，sheet 是状态的视图；用户取消会取消协程并杀掉 PRoot 进程，工具返回取消结果。
-- Agent 直接用 bash 操作 CLI 是允许的；插件页进入、App 恢复、一轮运行结束会重新探测，界面与下一轮提示词随之更新。
+- Agent 直接用 bash 操作 CLI 是允许的；插件页进入、App 恢复、一轮运行结束会按 60 秒 TTL 刷新状态缓存，显式刷新立即重新探测，界面与下一轮提示词随之更新。
 - Agent 回前台时如果 setup 仍在等待而插件已就绪，会完成等待并关闭 sheet。
-- 状态不缓存到安装记录或 UI：是否连接永远来自插件自己的 `status()`。
+- 连接状态永远来自插件自己的 `status()`，不写入安装记录；UI 只在 60 秒内复用上一次探测结果。设置变更即时落盘，并重建会话的工具与提示。
 
 ## 失败处理
 
@@ -190,20 +239,24 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 | 授权成功但部分 scope 缺失 | 登录仍成功；状态与详情显示缺失权限，不重复要求授权 |
 | 用户取消 | 取消协程 → 杀 PRoot 进程，工具返回 cancelled |
 | 安装记录损坏 | 保留原文件，页面显示错误 |
+| 插件设置文件损坏 | 按各设置项默认值运行，下一次修改时重写为合法文件 |
 | 卸载清理失败 | 保留记录与错误，允许重试 |
 | 插件被关闭时调用 setup/action | 返回「插件已停用」 |
 
 ## 新增插件
 
-1. 在 `app/.../plugin/<name>/` 实现 `OfficialPlugin`，自己决定 availability / install / status / setup / actions / skills / tools / promptBody。
-2. 在 `AppGraph` 的 `plugins = listOf(...)` 里加入实例。
-3. UI 自动出现列表行、详情页和通用 setup sheet；如果插件需要自绘配置页，在 `PluginDetailScreen` 按 id 挂 composable（v1 未使用）。
+1. 在 `app/.../plugin/<name>/` 实现 `OfficialPlugin`：按需实现 availability / install / status / setup / actions / skills / tools / settings / promptBody。只贡献工具、不接受外部安装的插件可设 `kind = INTERNAL`（内部插件放 `plugin/internal/`，可复用 `InternalPlugin` 基类）。
+2. 在 `AppGraph` 的 `plugins = listOf(...)` 里加入实例；内部插件无需注册任何安装入口。
+3. 需要设置项的插件实现 `settings()` 并声明 `PluginSettingSpec`；若设置要影响 runtime 默认值，在 `AppGraph` 用 `pluginSettingsStore.cachedInt/cachedBool/cachedString` 注入对应默认参数 lambda。
+4. 技能用 `PluginSkill(id, markdown, files = ...)` 声明；随附文件用相对路径，例如 `references/api.md`、`examples/demo.html`。旧的、无标记的同名内置技能如需强制接管，设 `legacyOwned = true`。
+5. UI 自动出现分类列表行、详情页设置分组与通用 setup sheet；如果插件需要自绘配置页，在 `PluginDetailScreen` 按 id 挂 composable（v1 未使用）。
 
 不涉及 Linux 的插件可以这样实现：`availability()` 恒为可用，`install()` 为空，`status()` 返回自己的就绪状态，`tools()` 返回要注入的工具，`setup()` 用 `ui.stage(...)` 展示引导或打开 App 内页面——框架不需要改动。
 
 ## 限制
 
-- v1 只支持官方内置插件，不支持第三方插件源或远程插件市场。
+- v1 只支持官方内置插件，不支持第三方插件源或远程插件市场；内部插件随 App 版本更新，没有下载/删除入口。
+- 插件设置只覆盖预设项；数值类设置以步进方式修改，没有自由输入。
 - 飞书授权需要用户在浏览器登录飞书账号；没有登录态时只会停在登录页。Android 后台启动限制可能阻止自动回前台，返回 App 时 sheet 仍会自动关闭。
 - 飞书应用级 scope 由飞书开放平台决定；`--domain all` 只能请求，不能强制开启应用未开通的权限。直读表格/多维表格需要应用开通对应 scope；否则使用导出兜底。
 - 授权域为 `all`（CLI 支持的全部业务域）；写操作仍由提示词约束。

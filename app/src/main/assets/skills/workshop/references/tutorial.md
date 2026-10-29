@@ -241,7 +241,7 @@ const title = await app.agent.run({ prompt: `给这篇稿起 5 个标题：\n${d
 1. 把 `index.html` 和资源写到创意目录。
 2. `workshop_load` 装载。
 3. 在工坊打开：检查表单、模型列表、运行、loading、错误、结果、页面重开恢复。
-4. 需要改内容时优先用 `workshop_data_*`，不要重写整个页面。
+4. 需要改内容时优先用 `workshop_edit`，不要重写整个页面。
 
 ## 9. 常见错误
 

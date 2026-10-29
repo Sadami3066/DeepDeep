@@ -1,5 +1,39 @@
 # Status
 
+## Done: 抽屉折叠、内置中文字体、五页搜索、插件内外分类与四个能力插件化
+
+**对话与界面**
+- 抽屉每个工作区默认只显示最近 5 条会话（置顶优先），其余折叠为「更多历史 · N」，展开后末尾「收起」；展开状态按工作区记忆，收起工作区时清除。
+- 中文字体改为随包内置的思源黑体子集（Noto Sans SC，GB2312 常用字，约 3.9MB），经 `Typeface.CustomFallbackBuilder` 与 Lora/Manrope 组成复合字体族；中文在任何字体设置下都是无衬线黑体，英文仍是 Lora（默认）/ Manrope；许可面板新增 OFL 行。
+- 插件 / MCP / 技能 / 创意工坊 / 定时任务五个页面顶部新增搜索栏（即时过滤，无匹配提示）。
+
+**插件**
+- 插件分「外部 / 内部」两类（通栏两段选项卡 + 搜索）：外部 = 飞书、企业微信、小米云服务（彩色品牌图标，来自新素材包）；内部 = 网络搜索、界面操作、安排、目标、后台任务、定时任务、创意工坊，随 App 内置、无下载/更新/删除。
+- 插件契约扩展：`kind`、`tools(binding)`、`settings()`/`onSettingsChanged`；新增 `PluginSettingsStore`（`files/plugins/settings.json`）与详情页设置 UI（开关 / 下拉 / 数字步进）。目标可设 `max_rounds`（默认 0 不限）、后台任务 `max_running`（默认 10）、创意工坊 `skill_enabled`（默认开）与 `max_turns`（默认 16）；开关/设置变化会重建已打开会话的工具与技能。
+- 插件技能支持多文件（SKILL.md + references/examples + `.deepdeep-plugin` marker）；`workshop` 技能从 BuiltinSkills 迁到创意工坊插件，旧无 marker 目录按 `legacyOwned` 整体迁移。
+- 工坊数据工具四个合并为 `workshop_edit`（`action=get/set/delete/keys`，≤256KB），技能正文与文档同步。
+- 插件页状态缓存 120s，显式刷新才强制探测；进入页面不再每次跑 PRoot/网络探测。
+
+**小米云**
+- 掉登录自愈：快照失效时先用 WebView Cookie jar 静默校验回写（无需点击）；jar 也没有时后台离屏 WebView 加载 i.mi.com 等 `serviceToken`（≤12s），成功回写并刷新插件状态；5 分钟节流。用户主动「退出登录」写入持久阻断标记，重启也不会被 SSO 静默登回；登录成功解除。
+- `MiCloudWebWriter` 内部 WebView 空闲 120s 释放、按需重建；登录 Activity `onDestroy` 补 WebView 销毁。
+
+**性能**
+- 覆盖层（设置等整页）打开后聊天页吃冻结的 `ChatUiState` 快照，过场结束（320ms）跳过 base 绘制；后台流式时被覆盖的 10s 帧数由 1178 降到 10。
+- 抽屉动画进度改为在 `graphicsLayer`/`drawBehind` 的 draw 阶段读取，根节点不再逐帧重组；root 派生值（命令列表、服务商、计数、configured copy）按依赖 remember，`paletteOpen` 用 `derivedStateOf`。
+- 流式代码块暂不高亮、表格暂不测量列宽，settle 后补齐；冷启动的 StorageMigration 加版本标记并移出主线程，`AppGraph.prepare()`/`ChatViewModel.prepareRuntime()` 的磁盘工作改到 IO；全进程共享一个 OkHttp transport；插件状态缓存 120s、MCP 探测缓存 60s（配置变化失效）；页面进出 5 轮稳态 PSS 283→251MB。
+- 未达验收的部分如实记录：抽屉开合 jank 未下降（成本在首帧组合/绘制，不在根重组）；长会话首屏仍受全量 JSONL 解析 + 历史映射限制（分页已按用户要求移除）。复合字体改 Async 加载以消除首次布局的主线程构建（见验证）。
+- 新增 release 构建（复用 debug keystore 签名），可覆盖安装用于日常使用和性能对比。
+
+**其他**
+- 厂商图标素材包 `assets/vendor-logos/`（10 个品牌，含来源/许可/可复现脚本），入库 `app/src/main/res/drawable-nodpi/vendor_*.png` 与插件 id 映射。
+- 新增 `docs/TEXTS.md`：164 条模型可见/功能描述文本的位置清单（系统提示、工具说明、插件文案、技能、MCP、SDK 侧、运行期注入），纯 UI 文案单列附录。
+- 新增 `docs/DEVICE_TESTING.md` round41 验收项（158–170）；更新 README、UI/PLUGINS/ARCHITECTURE/TOOLS/SKILLS/SCHEDULING/WORKSHOP/MCP 文档。
+
+**验证**
+- 995 unit tests 全绿（app 599 / runtime 364 / shell 32，0 failures）；lint 0 errors / 160 warnings（基线 158，新增为未使用串/复数建议）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13）：抽屉折叠、中文字体、五页搜索、插件内外分类与品牌图标、内部插件设置生效、停用/启用工具与技能、`workshop_edit` 四种 action、小米云掉登录自愈与退出登录阻断、插件/MCP 缓存、覆盖层冻结、release 覆盖安装与数据保留；证据 `artifacts/validation/round41/`。
+
 ## Done: 运行中插话、原始历史、图片多模态与界面收敛
 
 **对话**

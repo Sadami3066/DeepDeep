@@ -219,12 +219,12 @@ try {
 
 | 工具 | 参数 | 行为 |
 |---|---|---|
-| `workshop_data_get` | `app`, `key` | 读取 key，不存在返回 null |
-| `workshop_data_set` | `app`, `key`, `value` | 写入/覆盖任意 JSON，≤256KB |
-| `workshop_data_delete` | `app`, `key` | 删除 key |
-| `workshop_data_keys` | `app` | 列出 key（排序） |
+| `workshop_edit` | `action=get`, `app`, `key` | 读取 key，不存在返回 null |
+| `workshop_edit` | `action=set`, `app`, `key`, `value` | 写入/覆盖任意 JSON，≤256KB |
+| `workshop_edit` | `action=delete`, `app`, `key` | 删除 key |
+| `workshop_edit` | `action=keys`, `app` | 列出 key（排序） |
 
-示例：日报页面把内容存在 `report_2026-10-24`；Agent 每天用 `workshop_data_set` 更新对应 key，页面重开读取。
+示例：日报页面把内容存在 `report_2026-10-24`；Agent 每天用 `workshop_edit`（`action=set`）更新对应 key，页面重开读取。
 
 ## 页面与 App 的边界
 

@@ -145,7 +145,7 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 98. 旧 manifest 兼容：把带 `type`/`permissions` 字段的 v1 创意留在 `files/workshop/apps/`，扫描与打开正常，列表不显示类型；无效目录删除后无残留。
 99. 斜杠技能：命令面板只把 `/compact`、`/goal` 作为 App 命令显示，workshop 与其他已启用技能一起列在下方，点选补全 `/skill:<name> ` 到输入框；`/skill:workshop 需求` 与手输相同；发送后聊天气泡只显示需求文字，没有技能标记，也不显示原始 `<skill>` XML；`/skill:nope 需求` 提示「未找到技能」并保留输入框内容。
 100. 重新打开会话后，含 `<skill>` 块的历史用户消息只显示需求文字（无技能标记）；命令面板重新打开时已启用技能列表仍与技能页一致。
-101. 数据工具：在会话里让 Agent 只改某个已上架创意的数据（如「把跳动的心 taps 改成 7，不要改页面文件」）→ 模型调用 `workshop_list` 确认 app id，再 `workshop_data_get`/`workshop_data_set`；不调用 `workshop_load`、不改 `apps/<id>/` 文件；打开该创意显示新数据（点击次数 7），页面布局/代码未变；`workshop_data_keys` 能列出 key，`workshop_data_delete` 删除后页面读不到。
+101. 数据工具：在会话里让 Agent 只改某个已上架创意的数据（如「把跳动的心 taps 改成 7，不要改页面文件」）→ 模型调用 `workshop_list` 确认 app id，再 `workshop_edit`（`action=get`/`action=set`）；不调用 `workshop_load`、不改 `apps/<id>/` 文件；打开该创意显示新数据（点击次数 7），页面布局/代码未变；`action=keys` 能列出 key，`action=delete` 删除后页面读不到。
 102. 页面 Agent 基础：打开一个创意页面，页面 JS 调用 `await app.agent.models()` 得到已配置 provider/model/thinkingLevels；调用 `await app.agent.capabilities()` 得到 tools 和 skills；`app.agent.run({prompt:"Return exactly PONG", providerId/modelId, thinkingLevel:"off", maxTurns:2, tools:[], skills:[]})` 返回 `PONG`；没有进入聊天会话列表。
 103. 页面 Agent 并行/系统提示：页面用 `Promise.all` 同时启动两个 plain Agent，分别返回 ALPHA/BETA；带 `systemPrompt:"只输出大写"` 的 Agent 返回大写结果；请求不存在的 tool/skill 时 Promise reject，错误码 `invalid_params`。
 104. 页面 Agent 生命周期：启动一个带 bash `sleep` 的 Agent 后立即返回/关闭创意页面 → App 不崩溃，正在运行的 Agent 被取消，`files/agent-runs/` 不残留运行目录；页面重新打开后不显示旧运行状态。
@@ -223,3 +223,20 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 155. Markdown 流式渲染：长回答流式过程中标题、列表、表格、代码块与优化前一致，页脚/引用链接编号正确，滚动不跳动。
 156. 凭据连写：连续快速保存两次不同 API Key，最终生效的是最后一次；重开 App 聊天可用。
 157. 超大附件：分享超过 25MB 的文件 → 提示过大，`files/home/attachments/` 无残留。
+
+
+## round41（抽屉/字体/搜索/插件化）验收
+
+158. 抽屉折叠：某个工作区有 >5 条会话时，展开后只显示最近 5 条（置顶优先）+ 一行「更多历史 · N」；点击展开全部并在末尾显示「收起」；收起工作区再展开回到 5 条；切工作区/重启 App 后展开状态按工作区记忆。
+159. 中文字体：聊天正文、设置页、表格、技能页中文均为无衬线黑体（非宋体）；切换到 Manrope 后英文变 Manrope、中文不变；emoji 正常显示；字体页仍只有 Lora / Manrope 两档；许可面板出现「思源黑体（Noto Sans SC）· OFL」。
+160. 五页搜索：插件、MCP、技能、创意工坊、定时任务顶部各有搜索框；输入中英文片段即时过滤；无结果显示「没有匹配结果」；清除按钮恢复全部；定时任务空分组隐藏。
+161. 插件分类：插件页顶部两段选项卡「外部 / 内部」；外部 3 条（飞书 / 企业微信 / 小米云服务）显示彩色品牌图标；内部 7 条（网络搜索 / 界面操作 / 安排 / 目标 / 后台任务 / 定时任务 / 创意工坊）；内部无下载/更新/删除入口；切换 tab 与搜索互不丢状态。
+162. 内部插件设置：目标详情把「目标轮数上限」从 0 调到 3 并保存 → `files/plugins/settings.json` 出现 `goal.max_rounds=3`；创建目标时未显式指定轮数会按 3 封顶，`update_goal` 只改 objective 不影响轮数；改回 0 恢复不限。后台任务改 `max_running` 后同会话超限报错符合；创意工坊关 `skill_enabled` 后 `/skill:workshop` 不可用、开启恢复，改 `max_turns` 后页面 Agent 默认轮数变化。
+163. 停用内部插件：停用「目标」后新会话（或重新进入会话）工具列表里没有 `get_goal`/`create_goal`/`update_goal`；重新启用后恢复且目标数据仍在。停用「创意工坊」后 `workshop_*` 工具与 workshop 技能消失，重新启用后 `files/agent/skills/workshop` 恢复多文件结构（SKILL.md + references + examples + marker）。
+164. workshop_edit：让 Agent 对一个已上架创意分别执行 get / set / delete / keys；set 后页面重开读到新值；get 不存在的 key 返回 null；delete 后读不到；keys 返回排序列表；不调用 `workshop_load`、不改页面文件。
+165. 小米云静默续期：正常登录小米云后 `am force-stop`，备份并删除 `files/datastore/secrets.preferences_pb`（同时会丢 API Key，测试后恢复），重启 App 打开插件页 → 数秒内自动回到「已登录」，无需手动操作；点「退出登录」后杀进程重启 → 保持「未登录」，且不会偷偷恢复；点「登录」正常打开登录页。
+166. 插件页缓存：进入插件页先显示上次状态、后台再刷新；手动刷新图标强制探测；已停用/未连接状态显示正确；连续进出插件页 5 次不重复长时间转圈。
+167. MCP 探测缓存：配置 ≥2 个启用的 HTTP MCP 时进入 MCP 页，60s 内再次进入不重复发起完整握手（标题栏 spinner 不常驻）；手动刷新强制探测；编辑/启停 server 后结果更新。
+168. 冷启动与性能：`am start -W` 冷启动 TotalTime 相比基线（967ms）下降；输入 20 字符、抽屉开合 ×5、长会话打开首屏的 gfxinfo jank 不高于基线；设置页停留 10s（后台流式）时帧数明显下降、jank 不再高于聊天页；`dumpsys meminfo` 无 WebView 泄漏，线程数随会话开关不再无界增长。
+169. release 包对比：`assembleRelease` 安装（同签名可覆盖）后，同一组场景 jank 低于 debug；App 数据（会话、插件、设置）保留。
+170. 回归：发消息/停止/插话排队、提醒投递、后台任务、压缩卡片、`plugin_setup` 授权面板、创意工坊打开与数据读写、日历工具、MCP 工具调用均正常；`adb logcat` 无 `FATAL EXCEPTION`、无 `NetworkOnMainThreadException`。

@@ -6,6 +6,7 @@
 
 - 抽屉「创意工坊」进入列表；右上角刷新图标重新扫描，`+` 直接新建一个 Home 会话，并在输入框预填 `/skill:workshop `。
 - 列表按最近修改排序，行 = 创意 icon（manifest 里的 emoji，缺省为 ✦）+ 名称 + 说明；格式不符的目录显示「格式无效 · 原因」，可删除。
+- 列表顶部搜索栏按名称、说明或创意 id 即时过滤；无匹配时显示「没有匹配结果」，清空后恢复全部。
 - 点行打开详情：全屏页面 + 顶部返回 / 名称 / 更多（重新加载、重命名、删除）。详情页只读，App 界面不提供编辑或 Agent 入口。
 
 ## 创建与修改
@@ -20,7 +21,7 @@
 修改已有创意分两种：
 
 - **改界面/交互**：从工坊退出回到聊天，直接说「把那个爱心改成点两下才跳」。Agent 会用 `workshop_list` 找到目录并编辑页面文件；用户重新打开就能看到新版本，不需要重新「安装」。
-- **只改内容/数据**：例如日报每天更新。Agent 用 `workshop_data_get/set/delete/keys` 直接读写该创意的数据，不重写页面；用户重新打开时读到新数据。详见下方「数据工具」。
+- **只改内容/数据**：例如日报每天更新。Agent 用 `workshop_edit`（`action=get/set/delete/keys`）直接读写该创意的数据，不重写页面；用户重新打开时读到新数据。详见下方「数据工具」。
 
 ## 斜杠命令
 
@@ -34,19 +35,21 @@
 
 ## 数据工具
 
-每个创意的数据层是独立 JSON KV，页面打开时通过 bridge 读取；Agent 也有一组工具可以直接读写它，不需要改页面：
+每个创意的数据层是独立 JSON KV，页面打开时通过 bridge 读取；Agent 用单个 `workshop_edit` 工具直接读写它，不需要改页面：
 
-| 工具 | 参数 | 语义 |
+| 操作 | 参数 | 语义 |
 |---|---|---|
-| `workshop_data_get` | `app`, `key` | 读取一个 key，不存在返回 null |
-| `workshop_data_set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖；单值 ≤ 256KB |
-| `workshop_data_delete` | `app`, `key` | 删除 key |
-| `workshop_data_keys` | `app` | 列出已有 key（排序） |
+| `action=get` | `app`, `key` | 读取一个 key，不存在返回 null |
+| `action=set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖；单值 ≤ 256KB |
+| `action=delete` | `app`, `key` | 删除 key |
+| `action=keys` | `app` | 列出已有 key（排序） |
 
-- `app` 是 `workshop_list` 返回的创意 id；数据与页面代码物理分离，重写页面不丢数据，改数据也不动页面文件。
+- `app` 是 `workshop_list` 返回的创意 id；`key` 为 1–64 个字符，只能用小写字母、数字、`-`、`_`，并以字母或数字开头。
+- `value` 可以是任意 JSON 值（对象、数组、字符串、数字、布尔、null）；单值超过 256KB 时拆成多个 key。
+- 数据与页面代码物理分离，重写页面不丢数据，改数据也不动页面文件。
 - 表单结构、字段、默认值都由 Agent 用任意 JSON 定义（例如把 schema 存在 `schema` key，页面按它渲染）；App 不限制逻辑结构。
-- 更新数据前可以先 `workshop_data_get`/`workshop_data_keys` 看现有结构，避免覆盖未知字段；单值超限时拆成多个 key。
-- 数据工具写入后不需要 `workshop_load`；页面正在打开时不会自动刷新，重新打开或点详情页「重新加载」即可。
+- 更新数据前先用 `action=get` / `action=keys` 看现有结构，避免覆盖未知字段。
+- 写入后不需要 `workshop_load`；页面正在打开时不会自动刷新，重新打开或点详情页「重新加载」即可。
 - 数据仍保存在每创意独立的 SQLite（`files/workshop/userdata/<id>.db`），Agent 不需要也不应该直接改数据库文件。
 
 ## 页面驱动 Agent

@@ -9,7 +9,7 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 
 工坊同时提供三层能力：
 
-1. **页面数据**：页面通过 `app.data` 读写自己的 JSON KV；Agent 也可用 `workshop_data_*` 直接更新数据，不用改页面。
+1. **页面数据**：页面通过 `app.data` 读写自己的 JSON KV；Agent 也可用 `workshop_edit` 直接更新数据，不用改页面。
 2. **页面驱动 Agent**：页面 JS 用 `app.agent.models/capabilities/run` 编排一次性 Agent（可并行、可串行），拿最终文本，也可用 `onEvent` 接收增量事件。
 3. **页面 UI**：HTML/CSS/JS 全部由你写，移动端优先、深浅色适配、无构建步骤。
 
@@ -28,7 +28,7 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 4. 调 `workshop_load`（`path=<draft>`）。按报错修到成功；成功后聊天出现入口卡片。
 5. 打开检查布局与交互，再告诉用户去「创意工坊」使用。
 
-修改已有创意：`workshop_list` 找到 id 和路径；改界面/交互就编辑 `apps/<id>/` 文件；只改内容/数据用 `workshop_data_*`。
+修改已有创意：`workshop_list` 找到 id 和路径；改界面/交互就编辑 `apps/<id>/` 文件；只改内容/数据用 `workshop_edit`。
 
 ## 文件夹格式
 
@@ -121,22 +121,22 @@ const text = await app.agent.run({
 
 需要改已有创意的内容/数据时，不要重写页面，直接改数据：
 
-| 工具 | 参数 | 说明 |
+| 操作 | 参数 | 说明 |
 |---|---|---|
-| `workshop_data_get` | `app`, `key` | 读取一个 key |
-| `workshop_data_set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖，≤256KB |
-| `workshop_data_delete` | `app`, `key` | 删除 key |
-| `workshop_data_keys` | `app` | 列出 key |
+| `action=get` | `app`, `key` | 读取一个 key，不存在返回 null |
+| `action=set` | `app`, `key`, `value`（任意 JSON） | 写入/覆盖，≤256KB |
+| `action=delete` | `app`, `key` | 删除 key |
+| `action=keys` | `app` | 列出全部 key（排序） |
 
 - 数据是任意 JSON；表单 schema、字段、默认值都可以由你定义，页面按约定读取渲染。
 - 页面正在打开时数据不会自动刷新；用户重新打开或点详情页「重新加载」。
-- 日报/播客类：页面写一次，之后用 `workshop_data_set` 更新按日期分的 key。
+- 日报/播客类：页面写一次，之后用 `workshop_edit` 的 `action=set` 更新按日期分的 key。
 
 ## 修改流程
 
 - `workshop_list` 找 id/path。
 - 改界面/交互/逻辑：编辑 `apps/<id>/` 文件，不需要重新 `workshop_load`。
-- 改内容/数据：用 `workshop_data_*`，不改页面。
+- 改内容/数据：用 `workshop_edit`，不改页面。
 - 重写页面不丢数据；不要直接改 `userdata` 下的数据库文件。
 
 ## 页面要求
