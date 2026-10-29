@@ -7,7 +7,8 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,8 +28,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -63,6 +67,7 @@ import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
+import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
@@ -203,7 +208,8 @@ internal fun DeepDeepApp(
             }
         },
     )
-    val state by chatViewModel.state.collectAsStateWithLifecycle()
+    val stateHolder = chatViewModel.state.collectAsStateWithLifecycle()
+    val state by stateHolder
     val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
     val attachmentRoot = remember(state.conversationCwd) {
         state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File) ?: graph.homeDir
@@ -218,6 +224,9 @@ internal fun DeepDeepApp(
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val configuredProviders = authKinds.keys
+    val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
+        graph.providerCatalog.summaries.filter { it.id in configuredProviders }
+    }
     val defaultModelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = ModelConfig())
     val defaultProvider = graph.providerCatalog.summary(defaultModelConfig.providerId)
     val defaultModelLabel = graph.providerCatalog.models(defaultModelConfig.providerId)
@@ -254,6 +263,16 @@ internal fun DeepDeepApp(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val currentDestination = navigator.current
+    val covered = currentDestination != AppDestination.Chat
+    var baseDrawSuspended by remember { mutableStateOf(false) }
+    LaunchedEffect(covered) {
+        if (!covered) {
+            baseDrawSuspended = false
+        } else {
+            delay(DdMotion.SCREEN.toLong())
+            baseDrawSuspended = true
+        }
+    }
     LaunchedEffect(currentDestination) {
         if (currentDestination != AppDestination.Chat) {
             focusManager.clearFocus()
@@ -271,7 +290,9 @@ internal fun DeepDeepApp(
     val goals by graph.goalService.goals.collectAsStateWithLifecycle()
     val activeGoal = state.conversationId?.let { goals[it] }?.takeIf { it.goal.phase != io.github.whywood.deepdeep.runtime.GoalPhase.COMPLETE }
     val allJobs by graph.jobRegistry.jobs.collectAsStateWithLifecycle()
-    val activeJobs = allJobs.filter { it.sessionId == state.conversationId }
+    val activeJobs = remember(allJobs, state.conversationId) {
+        allJobs.filter { it.sessionId == state.conversationId }
+    }
     var modelsOpen by remember { mutableStateOf(false) }
     var usageSheetOpen by remember { mutableStateOf(false) }
     var jobsSheetOpen by remember { mutableStateOf(false) }
@@ -295,11 +316,16 @@ internal fun DeepDeepApp(
     var workspaceRenameTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteCount by remember { mutableIntStateOf(0) }
-    val drawerProgress by animateFloatAsState(
-        targetValue = if (drawerOpen) 1f else 0f,
-        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+    val drawerTransition = updateTransition(drawerOpen, label = "drawer")
+    val drawerProgress = drawerTransition.animateFloat(
+        transitionSpec = { tween(DdMotion.BASE, easing = DdMotion.EaseOut) },
         label = "drawer-progress",
-    )
+    ) { open -> if (open) 1f else 0f }
+    var drawerMounted by remember { mutableStateOf(drawerOpen) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { drawerOpen || drawerProgress.value > 0.01f }
+            .collect { visible -> drawerMounted = visible }
+    }
     val appResources = LocalResources.current
     LifecycleResumeEffect(Unit) {
         chatViewModel.onAppForeground()
@@ -332,43 +358,58 @@ internal fun DeepDeepApp(
     LaunchedEffect(state.ready, state.conversationId, state.conversationCwd) {
         if (state.ready) chatViewModel.refreshAvailableSkills()
     }
-    val paletteOpen = commandQuery(state.input) != null
+    val paletteOpen by remember { derivedStateOf<Boolean> { commandQuery(stateHolder.value.input) != null } }
     LaunchedEffect(paletteOpen) {
         if (paletteOpen) chatViewModel.refreshAvailableSkills()
     }
 
-    val commandItems = buildList {
-        add(
-            CommandItem(
-                id = ChatCommand.COMPACT.commandName,
-                name = ChatCommand.COMPACT.commandName,
-                title = stringResource(R.string.chat_cmd_compact),
-                description = stringResource(R.string.chat_cmd_compact_desc),
-                enabled = state.conversationId != null && !state.sending && !state.compacting,
-                insertText = "/${ChatCommand.COMPACT.commandName} ",
-            ),
-        )
-        add(
-            CommandItem(
-                id = ChatCommand.GOAL.commandName,
-                name = ChatCommand.GOAL.commandName,
-                title = stringResource(R.string.chat_cmd_goal),
-                description = stringResource(R.string.chat_cmd_goal_desc),
-                enabled = state.conversationId != null,
-                insertText = "/${ChatCommand.GOAL.commandName} ",
-            ),
-        )
-        availableSkills.forEach { skill ->
+    val compactTitle = stringResource(R.string.chat_cmd_compact)
+    val compactDescription = stringResource(R.string.chat_cmd_compact_desc)
+    val goalTitle = stringResource(R.string.chat_cmd_goal)
+    val goalDescription = stringResource(R.string.chat_cmd_goal_desc)
+    val commandItems = remember(
+        state.conversationId,
+        state.sending,
+        state.compacting,
+        availableSkills,
+        compactTitle,
+        compactDescription,
+        goalTitle,
+        goalDescription,
+    ) {
+        buildList {
             add(
                 CommandItem(
-                    id = "skill:${skill.name}",
-                    name = "skill:${skill.name}",
-                    title = skill.name,
-                    description = skill.description,
-                    enabled = state.conversationId != null && !state.sending,
-                    insertText = "/skill:${skill.name} ",
+                    id = ChatCommand.COMPACT.commandName,
+                    name = ChatCommand.COMPACT.commandName,
+                    title = compactTitle,
+                    description = compactDescription,
+                    enabled = state.conversationId != null && !state.sending && !state.compacting,
+                    insertText = "/${ChatCommand.COMPACT.commandName} ",
                 ),
             )
+            add(
+                CommandItem(
+                    id = ChatCommand.GOAL.commandName,
+                    name = ChatCommand.GOAL.commandName,
+                    title = goalTitle,
+                    description = goalDescription,
+                    enabled = state.conversationId != null,
+                    insertText = "/${ChatCommand.GOAL.commandName} ",
+                ),
+            )
+            availableSkills.forEach { skill ->
+                add(
+                    CommandItem(
+                        id = "skill:${skill.name}",
+                        name = "skill:${skill.name}",
+                        title = skill.name,
+                        description = skill.description,
+                        enabled = state.conversationId != null && !state.sending,
+                        insertText = "/skill:${skill.name} ",
+                    ),
+                )
+            }
         }
     }
 
@@ -481,12 +522,22 @@ internal fun DeepDeepApp(
 
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
+        val reminderCount = remember(schedules, state.conversationId) {
+            schedules.count { it.enabled && it.sessionId == state.conversationId }
+        }
+        val runningJobCount = remember(activeJobs) {
+            activeJobs.count { it.status == JobStatus.RUNNING }
+        }
         AnimatedScreenHost(
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),
+            baseDrawingEnabled = !covered || !baseDrawSuspended,
             base = {
+                val frozenState = rememberFrozenChatState(state, covered)
                 ChatScreen(
-                    state = state.copy(configured = state.providerId in configuredProviders),
+                    state = remember(frozenState, configuredProviders) {
+                        frozenState.copy(configured = frozenState.providerId in configuredProviders)
+                    },
                     nickname = nickname,
                     onInputChange = chatViewModel::onInputChange,
                     onSend = ::submitChatInput,
@@ -503,16 +554,14 @@ internal fun DeepDeepApp(
                             ).show()
                         }
                     },
-                    providers = graph.providerCatalog.summaries.filter { summary ->
-                        summary.id in configuredProviders
-                    },
+                    providers = configuredProviderList,
                     onModelChange = chatViewModel::setModel,
                     onProviderChange = chatViewModel::setProvider,
                     onThinkingLevelChange = chatViewModel::setThinkingLevel,
                     onToggleStep = chatViewModel::toggleStep,
                     onQuoteMessage = chatViewModel::quote,
                     onClearQuote = chatViewModel::clearQuote,
-                    attachments = state.attachments,
+                    attachments = frozenState.attachments,
                     onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
                     onRemoveAttachment = chatViewModel::removeAttachment,
                     onOpenAttachment = {
@@ -521,14 +570,12 @@ internal fun DeepDeepApp(
                     },
                     attachmentRoot = attachmentRoot,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
-                    reminderCount = schedules.count { schedule ->
-                        schedule.enabled && schedule.sessionId == state.conversationId
-                    },
+                    reminderCount = reminderCount,
                     onOpenSchedules = { navigator.push(AppDestination.Schedules) },
                     onRetry = chatViewModel::retry,
-                    reloading = state.reloading,
-                    usage = state.usage,
-                    compacting = state.compacting,
+                    reloading = frozenState.reloading,
+                    usage = frozenState.usage,
+                    compacting = frozenState.compacting,
                     commandItems = commandItems,
                     onPickCommand = ::pickCommand,
                     goal = activeGoal,
@@ -538,7 +585,7 @@ internal fun DeepDeepApp(
                     onResumeGoal = {
                         state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
                     },
-                    jobCount = activeJobs.count { it.status == JobStatus.RUNNING },
+                    jobCount = runningJobCount,
                     onOpenJobs = {
                         selectedJobId = null
                         jobOutput = null
@@ -558,8 +605,8 @@ internal fun DeepDeepApp(
                     },
                     onOpenFile = openWorkspaceFile,
                     onOpenFiles = { filesSheetOpen = true },
-                    queuedInputs = state.queuedInputs,
-                    importingAttachment = state.importingAttachment,
+                    queuedInputs = frozenState.queuedInputs,
+                    importingAttachment = frozenState.importingAttachment,
                     onFollowUp = chatViewModel::followUpNow,
                     onClearQueue = chatViewModel::clearQueuedInputs,
                     onVoiceClick = { voiceSheetOpen = true },
@@ -818,12 +865,12 @@ internal fun DeepDeepApp(
             }
         }
 
-        if (drawerOpen || drawerProgress > 0.01f) {
+        if (drawerMounted) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = drawerProgress }
-                    .drawBehind { drawRect(colors.scrim.copy(alpha = 0.32f * drawerProgress)) }
+                    .graphicsLayer { alpha = drawerProgress.value }
+                    .drawBehind { drawRect(colors.scrim.copy(alpha = 0.32f * drawerProgress.value)) }
                     .then(
                         if (drawerOpen) {
                             Modifier.clickable { drawerOpen = false }
@@ -833,13 +880,13 @@ internal fun DeepDeepApp(
                     ),
             )
         }
-        if (drawerOpen || drawerProgress > 0.01f) {
+        if (drawerMounted) {
             Box(
                 Modifier
                     .fillMaxHeight()
                     .width(304.dp)
                     .align(Alignment.CenterStart)
-                    .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress) },
+                    .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress.value) },
             ) {
                 DeepDeepDrawer(
                     sessions = state.conversations,
@@ -1058,5 +1105,14 @@ private fun shareChooser(context: Context, intent: Intent, title: String): Inten
             arrayOf(ComponentName(context.packageName, MainActivity::class.java.name)),
         )
     }
+
+@Composable
+private fun rememberFrozenChatState(live: ChatUiState, covered: Boolean): ChatUiState {
+    val frozen = remember { mutableStateOf(live) }
+    if (!covered) {
+        SideEffect { frozen.value = live }
+    }
+    return if (covered) frozen.value else live
+}
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "

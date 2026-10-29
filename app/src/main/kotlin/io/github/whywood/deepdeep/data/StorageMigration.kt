@@ -8,23 +8,33 @@ object StorageMigration {
     private const val HOME = "home"
     private const val LEGACY_PROJECTS = "projects"
     private const val WORKSPACES = "workspaces"
+    private const val MARKER_FILE = ".storage-migrated"
+    private const val MIGRATION_VERSION = "1"
 
     fun migrate(filesDir: File) {
+        val marker = File(filesDir, MARKER_FILE)
+        if (runCatching { marker.readText() }.getOrNull()?.trim() == MIGRATION_VERSION) return
         val legacyWorkspace = File(filesDir, LEGACY_WORKSPACE)
         val home = File(filesDir, HOME)
-        if (!home.exists() && legacyWorkspace.exists()) {
+        if (legacyWorkspace.exists() && (!home.exists() || home.listFiles().isNullOrEmpty())) {
+            if (home.exists()) home.deleteRecursively()
             legacyWorkspace.renameTo(home)
         }
         home.mkdirs()
 
         val legacyProjects = File(filesDir, LEGACY_PROJECTS)
         val workspaces = File(filesDir, WORKSPACES)
-        if (!workspaces.exists() && legacyProjects.exists()) {
+        if (legacyProjects.exists() && (!workspaces.exists() || workspaces.listFiles().isNullOrEmpty())) {
+            if (workspaces.exists()) workspaces.deleteRecursively()
             legacyProjects.renameTo(workspaces)
         }
         workspaces.mkdirs()
 
         migrateSessions(File(filesDir, "agent/sessions"))
+        runCatching {
+            marker.parentFile?.mkdirs()
+            marker.writeText(MIGRATION_VERSION)
+        }
     }
 
     private fun migrateSessions(sessionRoot: File) {
