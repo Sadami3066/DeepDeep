@@ -14,6 +14,8 @@ class MiCloudAuthException(message: String) : Exception(message)
 class MiCloudClient(
     private val cookieProvider: suspend () -> String?,
     private val baseUrl: String = DEFAULT_BASE_URL,
+    private val connectTimeoutMs: Int = CONNECT_TIMEOUT_MS,
+    private val readTimeoutMs: Int = READ_TIMEOUT_MS,
 ) {
     constructor(cookieStore: MiCloudCookieStore) : this({ cookieStore.read() })
 
@@ -85,8 +87,8 @@ class MiCloudClient(
         val url = URL(baseUrl + path)
         return (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
             instanceFollowRedirects = true
             setRequestProperty("User-Agent", USER_AGENT)
             setRequestProperty("Accept", accept)

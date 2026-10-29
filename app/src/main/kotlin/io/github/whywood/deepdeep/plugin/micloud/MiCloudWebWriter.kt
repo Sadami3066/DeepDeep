@@ -30,6 +30,7 @@ import org.json.JSONObject
 internal const val MICLOUD_ORIGIN = "https://i.mi.com"
 private const val TIMEOUT_MS = 30_000L
 private const val LOAD_TIMEOUT_MS = 20_000L
+private const val IDLE_RELEASE_MS = 120_000L
 private const val BRIDGE_NAME = "MiCloudWriterBridge"
 
 internal fun miCloudUrl(path: String): String? {
@@ -83,27 +84,37 @@ class MiCloudWebWriter(
     private var loadReady = false
 
     suspend fun post(path: String, form: Map<String, String>): String = mutex.withLock {
-        if (destroyed) throw MiCloudAuthException("MiCloud writer is closed")
-        val url = miCloudUrl(path) ?: throw IllegalArgumentException("Only i.mi.com requests are allowed")
-        val token = currentServiceToken() ?: throw MiCloudAuthException("serviceToken is missing, sign in again")
-        val body = encodeForm(form + ("serviceToken" to token))
-        withTimeout(TIMEOUT_MS) { dispatch(url, body) }
+        mainHandler.removeCallbacks(idleRelease)
+        try {
+            if (destroyed) throw MiCloudAuthException("MiCloud writer is closed")
+            val url = miCloudUrl(path) ?: throw IllegalArgumentException("Only i.mi.com requests are allowed")
+            val token = currentServiceToken() ?: throw MiCloudAuthException("serviceToken is missing, sign in again")
+            val body = encodeForm(form + ("serviceToken" to token))
+            withTimeout(TIMEOUT_MS) { dispatch(url, body) }
+        } finally {
+            if (!destroyed) mainHandler.postDelayed(idleRelease, IDLE_RELEASE_MS)
+        }
     }
 
     fun destroy() {
         destroyed = true
+        mainHandler.removeCallbacks(idleRelease)
         pending?.second?.cancel()
         pending = null
-        mainHandler.post {
-            webView?.let { view ->
-                runCatching { view.stopLoading() }
-                runCatching { view.destroy() }
-            }
-            webView = null
-            loadGate?.cancel()
-            loadGate = null
-            loadReady = false
+        mainHandler.post(::release)
+    }
+
+    private val idleRelease = Runnable { release() }
+
+    private fun release() {
+        webView?.let { view ->
+            runCatching { view.stopLoading() }
+            runCatching { view.destroy() }
         }
+        webView = null
+        loadGate?.cancel()
+        loadGate = null
+        loadReady = false
     }
 
     private suspend fun dispatch(url: String, body: String): String = withContext(Dispatchers.Main) {

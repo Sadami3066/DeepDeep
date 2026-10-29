@@ -110,7 +110,15 @@ class MiCloudLoginActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        watchJob?.cancel()
+        watchJob = null
+        val view = webView
         webView = null
+        view?.let { released ->
+            runCatching { released.stopLoading() }
+            runCatching { released.removeAllViews() }
+            runCatching { released.destroy() }
+        }
         super.onDestroy()
     }
 
@@ -204,9 +212,11 @@ class MiCloudLoginActivity : ComponentActivity() {
                     },
                     modifier = Modifier.fillMaxSize().testTag("micloud_login_webview"),
                     onRelease = { released ->
-                        if (webView === released) webView = null
-                        released.removeAllViews()
-                        released.destroy()
+                        if (webView === released) {
+                            webView = null
+                            released.removeAllViews()
+                            released.destroy()
+                        }
                     },
                 )
                 when (uiState) {
