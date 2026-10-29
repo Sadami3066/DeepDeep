@@ -15,6 +15,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+data class ScrollAnchor(val index: Int, val offset: Int, val atBottom: Boolean = false)
+
 @Stable
 internal class ChatScrollController(private val listState: LazyListState) {
     var following by mutableStateOf(true)
@@ -60,6 +62,19 @@ internal class ChatScrollController(private val listState: LazyListState) {
         if (animate) listState.animateScrollBy(overflow) else listState.scrollBy(overflow)
     }
 
+    suspend fun restoreAnchor(index: Int, offset: Int) {
+        following = false
+        awaitSettled()
+        val count = listState.layoutInfo.totalItemsCount
+        if (count <= 0) {
+            jumpToBottom(animate = false)
+            return
+        }
+        listState.scrollToItem(index.coerceIn(0, count - 1), offset.coerceAtLeast(0))
+        awaitSettled()
+        if (!listState.canScrollForward) onBottomChanged(true)
+    }
+
     fun onUserGesture() {
         following = false
     }
@@ -85,6 +100,7 @@ internal class ChatScrollController(private val listState: LazyListState) {
 
     private suspend fun settleByOverflow() {
         repeat(2) {
+            if (!following) return
             val info = listState.layoutInfo
             val lastIndex = info.totalItemsCount - 1
             if (lastIndex < 0) return

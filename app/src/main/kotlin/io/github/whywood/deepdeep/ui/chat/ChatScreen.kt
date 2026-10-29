@@ -103,6 +103,7 @@ import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import java.time.LocalTime
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -129,6 +130,7 @@ fun ChatScreen(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
+    modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
     reminderCount: Int,
     onOpenSchedules: () -> Unit,
@@ -159,7 +161,8 @@ fun ChatScreen(
     importingAttachment: Boolean = false,
     onFollowUp: () -> Unit = {},
     onClearQueue: () -> Unit = {},
-    modifier: Modifier = Modifier,
+    scrollAnchorFor: (String) -> ScrollAnchor? = { null },
+    onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit = { _, _, _, _ -> },
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -212,6 +215,8 @@ fun ChatScreen(
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
     }
     val latestMessages by rememberUpdatedState(state.messages)
+    val latestScrollAnchorFor by rememberUpdatedState(scrollAnchorFor)
+    val latestScrollAnchorChange by rememberUpdatedState(onScrollAnchorChange)
     val selectionCoordinator = remember { SelectionCoordinator() }
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     val latestRootOrigin by rememberUpdatedState(rootOrigin)
@@ -223,21 +228,38 @@ fun ChatScreen(
         }
     }
 
+    var knownCount by remember { mutableIntStateOf(state.messages.size) }
+    var knownSessionId by remember { mutableStateOf(state.conversationId) }
+
+    LaunchedEffect(state.conversationId, state.historyLoaded) {
+        val sessionId = state.conversationId ?: return@LaunchedEffect
+        if (!state.historyLoaded) return@LaunchedEffect
+        knownCount = state.messages.size
+        knownSessionId = sessionId
+        val anchor = latestScrollAnchorFor(sessionId)
+        if (anchor == null || anchor.atBottom) {
+            controller.jumpToBottom(animate = false)
+        } else {
+            controller.restoreAnchor(anchor.index, anchor.offset)
+        }
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .distinctUntilChanged()
+            .collect { (index, offset) ->
+                latestScrollAnchorChange(sessionId, index, offset, controller.atBottom)
+            }
+    }
+
     LaunchedEffect(controller) {
         snapshotFlow { latestMessages }.collect {
             controller.followContent()
         }
     }
 
-    var knownCount by remember { mutableIntStateOf(state.messages.size) }
-    LaunchedEffect(state.messages.size) {
+    LaunchedEffect(state.conversationId, state.messages.size) {
         val size = state.messages.size
-        if (size > knownCount) controller.jumpToBottom(animate = false)
+        if (state.conversationId == knownSessionId && size > knownCount) controller.jumpToBottom(animate = false)
         knownCount = size
-    }
-
-    LaunchedEffect(state.conversationId, state.historyLoaded) {
-        if (state.historyLoaded) controller.jumpToBottom(animate = false)
+        knownSessionId = state.conversationId
     }
 
     LaunchedEffect(controller) {

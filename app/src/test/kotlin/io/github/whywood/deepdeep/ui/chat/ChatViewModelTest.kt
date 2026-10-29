@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.chat
 import android.content.Intent
 import android.net.Uri
 import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
@@ -1213,6 +1214,214 @@ class ChatViewModelTest {
         advanceUntilIdle()
         assertEquals("after steering", viewModel.state.value.messages.last().text)
         assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
+    }
+
+    private fun multiSessionRuntime(count: Int): FakeRuntime {
+        val summaries = (1..count).map { index ->
+            ConversationSummary(
+                id = "session-$index",
+                title = "S$index",
+                updatedAt = (count + 1 - index).toLong(),
+                filePath = "s$index.jsonl",
+                cwd = HOME_CWD,
+            )
+        }
+        return FakeRuntime().apply {
+            sessions = summaries
+            histories = summaries.associate { summary ->
+                summary.id to listOf(AssistantMessage(1, AssistantRole.USER, summary.id))
+            }
+        }
+    }
+
+    @Test
+    fun restoresDraftQuoteAndAttachmentsWhenSwitchingBack() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
+                "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
+            )
+        }
+        val attachment = AttachmentRef(
+            id = "att-1",
+            name = "photo.png",
+            mime = "image/png",
+            size = 12L,
+            path = "attachments/att-1_photo.png",
+            kind = AttachmentKind.IMAGE,
+        )
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        viewModel.onInputChange("draft b")
+        viewModel.quote(2L, "from b")
+        viewModel.launchAttachmentImport("session-b", java.io.File(HOME_CWD)) {
+            AttachmentImport.Imported(attachment)
+        }
+        advanceUntilIdle()
+        val quote = QuotedMessage(2L, "from b")
+        assertEquals(quote, viewModel.state.value.quote)
+        assertEquals(listOf(attachment), viewModel.state.value.attachments)
+
+        viewModel.openConversation("session-a")
+        assertEquals("", viewModel.state.value.input)
+        assertNull(viewModel.state.value.quote)
+        assertTrue(viewModel.state.value.attachments.isEmpty())
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-b")
+        assertEquals("draft b", viewModel.state.value.input)
+        assertEquals(quote, viewModel.state.value.quote)
+        assertEquals(listOf(attachment), viewModel.state.value.attachments)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun doesNotRestoreStaleQueuedInputsFromCachedSession() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
+        }
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        val sessionB = viewModel.state.value.conversationId!!
+        runtime.emitFor(
+            sessionB,
+            RuntimeEvent.QueueChanged(runtime.runId, steering = listOf("steer b"), followUp = listOf("follow b")),
+        )
+        advanceUntilIdle()
+        val queued = listOf(
+            QueuedInput(InputQueueKind.STEER, "steer b"),
+            QueuedInput(InputQueueKind.FOLLOW_UP, "follow b"),
+        )
+        assertEquals(queued, viewModel.state.value.queuedInputs)
+
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+        viewModel.openConversation("session-b")
+        assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun keepsScrollAnchorPerSession() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
+        }
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        viewModel.updateScrollAnchor("session-a", 6, 24)
+        viewModel.updateScrollAnchor("session-a", 7, 8, atBottom = true)
+        assertEquals(ScrollAnchor(7, 8, atBottom = true), viewModel.scrollAnchorFor("session-a"))
+        assertNull(viewModel.scrollAnchorFor("session-b"))
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        assertEquals(ScrollAnchor(7, 8, atBottom = true), viewModel.scrollAnchorFor("session-a"))
+        viewModel.updateScrollAnchor("session-b", 1, 0)
+
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+        assertEquals(ScrollAnchor(7, 8, atBottom = true), viewModel.scrollAnchorFor("session-a"))
+        assertEquals(ScrollAnchor(1, 0), viewModel.scrollAnchorFor("session-b"))
+    }
+
+    @Test
+    fun evictsLeastRecentlyUsedSessionBeyondLimit() = runTest(dispatcher) {
+        val runtime = multiSessionRuntime(9)
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        assertEquals("session-1", viewModel.state.value.conversationId)
+        viewModel.updateScrollAnchor("session-1", 4, 12)
+
+        for (index in 2..8) {
+            viewModel.openConversation("session-$index")
+            advanceUntilIdle()
+        }
+
+        viewModel.openConversation("session-9")
+        assertTrue(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+        assertNull(viewModel.scrollAnchorFor("session-1"))
+
+        viewModel.openConversation("session-8")
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-1")
+        assertTrue(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun keepsBusySessionWhenEvicting() = runTest(dispatcher) {
+        val runtime = multiSessionRuntime(9)
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        runtime.setBusy(setOf("session-1"))
+        advanceUntilIdle()
+
+        for (index in 2..9) {
+            viewModel.openConversation("session-$index")
+            advanceUntilIdle()
+        }
+
+        viewModel.openConversation("session-1")
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-2")
+        assertTrue(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun onTrimMemoryClearsIdleSessionsAndKeepsCurrentAndBusy() = runTest(dispatcher) {
+        val runtime = multiSessionRuntime(9)
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        runtime.setBusy(setOf("session-1"))
+        advanceUntilIdle()
+        for (index in 2..8) {
+            viewModel.openConversation("session-$index")
+            advanceUntilIdle()
+        }
+        viewModel.updateScrollAnchor("session-2", 3, 5)
+        viewModel.updateScrollAnchor("session-3", 4, 6)
+
+        viewModel.onTrimMemory(5)
+        viewModel.openConversation("session-2")
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        viewModel.onTrimMemory(10)
+        assertEquals(ScrollAnchor(3, 5), viewModel.scrollAnchorFor("session-2"))
+        assertNull(viewModel.scrollAnchorFor("session-3"))
+
+        viewModel.updateScrollAnchor("session-4", 8, 1)
+        viewModel.onTrimMemory(20)
+        assertEquals(ScrollAnchor(8, 1), viewModel.scrollAnchorFor("session-4"))
+
+        viewModel.openConversation("session-3")
+        assertTrue(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-1")
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
     }
 
     private class FakeSkillExpander(
