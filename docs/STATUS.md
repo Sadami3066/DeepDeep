@@ -1,5 +1,27 @@
 # Status
 
+## Done: 页面转场重做、页面状态持久化与生产级实践调研
+
+**页面转场**
+- `AnimatedScreenHost` 从 `AnimatedContent` + slide 重写为自研实现：每页独立 `graphicsLayer`，进度只在 draw 阶段驱动 `translationX`，跨层级整页滑入/滑出（不再有 18% 位移到结束瞬移），同层级仍淡入淡出；RTL 下方向取反。转场期间加全屏触摸屏障。
+- 聊天页常驻底层并单独成 layer；覆盖后停画但保留 layer 缓存，返回动画期间直接绘制冻结画面，动画结束后再延后 160ms 解冻实时状态。
+- 导航状态读取（`navigator.current`/`canPop`）隔离进 `NavigationChrome`/`NavigationBackHandler`，导航不再触发整个 App 外壳重组。
+- 实测（release、120Hz、长代码会话返回聊天）：动画帧数 22→41、janky 21/22（95.5%）→ 3/41（7.3%）、帧 p50 20ms→8–9ms、p90 32ms→9–10ms；返回键到首帧开始动画 3–5ms。剩余异常帧为首帧 FrameTimeline 计数与动画结束帧（退出页销毁 + 解冻，已在动画外）。
+
+**页面状态**
+- 页面宿主接入 `rememberSaveableStateHolder()` + `SaveableStateProvider(routeKey)` + 出栈延迟一帧 `removeState`；滚动位置、Tab、搜索词、展开项随页面退出保存、返回恢复，进程死亡时随 `AppNavigator` 的 routeKey 栈一起恢复。
+- 修复 `key(routeKey)` 写在页面 composable 内部导致的「进出页同帧销毁重建」——这是此前状态保存/恢复失败与转场首帧重组的根因。
+- 真机验证：设置页滚底 → 子页 → 返回滚动位置原样；插件页「内部」Tab → 详情 → 返回仍是「内部」。
+
+**调研**
+- 新增 `docs/research/NAVIGATION_MOTION.md`：转场卡顿根因（RT/display list 重录、slide 为 layout 阶段、layer 隔离数据）、方案对比、PredictiveBack/共享元素建议。
+- 新增 `docs/research/STATE_MANAGEMENT.md`：SaveableStateHolder/rememberSaveable/ViewModel/SavedStateHandle 机制对比、全页面状态审计表、20 行实现骨架、不做过度设计的边界。
+- 新增 `docs/research/ANDROID_PRACTICES.md`：生产级 Android/Compose App 16 个主题的全景实践（架构、测试、性能、发布、可观测、无障碍、安全、构建等），逐项对照 DeepDeep 现状与差距，附「现在做/以后做/不需要」清单。
+
+**验证**
+- 995 unit tests 全绿（app 599 / runtime 364 / shell 32）；lint 0 errors / 160 warnings（与 round41 一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：转场、状态持久化、插件 Tab/设置滚动、回归路径正常；设备后台负载高（load 16.7 / 可用内存 270MB）时单次采样波动明显，已在 QA-LOG 中给出多次采样与限制说明。证据 `artifacts/validation/round42/`。
+
 ## Done: 抽屉折叠、内置中文字体、五页搜索、插件内外分类与四个能力插件化
 
 **对话与界面**

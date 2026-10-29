@@ -188,7 +188,9 @@ Compose ChatScreen
 ## UI 与动效
 
 - `ui/navigation`：`AppDestination`、`AppNavigator`、`AppScreenTransition`、`AnimatedScreenHost`。
-- 设置层级使用 typed stack + `AnimatedContent`；系统返回手势 -> pop。
+- 设置层级使用 typed stack + 自研 `AnimatedScreenHost`：页面根节点各自持有 `graphicsLayer`，转场进度只在该 layer 的 draw 阶段驱动 translationX（push 新页从右滑入、pop 旧页向右滑出），不经过 `AnimatedContent`，也不再逐帧触发页面 measure/layout；聊天页常驻底层并单独成 layer。
+- 页面状态按目的地保存：`rememberSaveableStateHolder()` + `SaveableStateProvider(routeKey)` 包住每个 destination，出栈一帧后 `removeState`；`AppNavigator` 的 routeKey 栈由 `rememberSaveable` 保存，因此进程死亡也能恢复栈与栈内页面状态。`key(routeKey)` 位于页面循环体最外层，保证进出页面不被同帧销毁重建。
+- 聊天 base 在转场期间吃冻结的 `ChatUiState`，动画结束后再解冻；导航状态读取（`navigator.current`/`canPop`）隔离在 `NavigationChrome`/`NavigationBackHandler` 子 composable，避免导航时整壳重组。系统返回手势 -> pop。
 - `design/DdMotion` 统一时长/easing；`DdTypingDots` 承载思考动画。
 - 抽屉用持久 composition + `graphicsLayer` translation，避免开关时反复组合；遮罩只在可见时挂载，避免拦截触摸。
 - 抽屉工作区树由 `sessions + workspaces + pinnedWorkspaceIds + expandedWorkspaceIds` 驱动，展开状态由 `DeepDeepApp` 的 `rememberSaveable` 集合持有；工作区/会话行用 `LazyColumn` + `animateItem()` 做展开/收起和重排。

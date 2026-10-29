@@ -153,7 +153,7 @@
 
 - `app/compose-stability.conf` 把 runtime 模型、`ChatUiState`、`AttachmentRef`、`File` 标记为 stable；全量编译报告显示 ChatScreen 等热路径已无不稳定参数（剩余仅 ViewModel 内部 dispatcher）。
 - 抽屉动画用 `updateTransition`，进度只在 `graphicsLayer`/`drawBehind` 的 draw 阶段读取；开局/关闭各触发一次组合，不再逐帧重组根节点。
-- 打开设置等整页覆盖层后，聊天页改为吃冻结的 `ChatUiState` 快照（不销毁、滚动位置保留），过场动画结束（320ms）后跳过 base 绘制；后台流式期间被覆盖时不再重组/重绘聊天树（实测 10s 帧数 1178 → 10）。
+- 打开设置等整页覆盖层后，聊天页改为吃冻结的 `ChatUiState` 快照（不销毁、滚动位置保留）；转场期间 base 逐帧绘制（自身有独立 layer，位移不重录内容），覆盖动画（320ms）结束后跳过 base 绘制；后台流式期间被覆盖时不再重组/重绘聊天树（实测 10s 帧数 1178 → 10）。返回聊天时保持冻结到动画结束再延后 160ms 解冻，避免解冻重组落在动画帧上。
 - root 派生值（命令列表、服务商列表、提醒/任务计数、configured copy）按依赖 remember，`paletteOpen` 用 `derivedStateOf`；输入时不再重复构建列表。
 - 流式输出在 `ChatViewModel` 内按 16ms 合并 `TextDelta`/`ReasoningDelta`，非 delta 事件、结束、切换、缓存前强制 flush，保证文本与工具顺序及最终文本不丢。
 - 流式消息的代码块暂不语法高亮、表格暂不测量列宽（settle 后一次性补齐），避免长代码/大表格流式期间每帧重算。
@@ -198,8 +198,10 @@ Claude 式分组卡，无分组标题、无冗余说明；行只保留标题 + �
 
 ## 导航与动效
 
-- 设置层级（个性化、字体、聊天设置、隐私、厂商列表/详情、运行环境、MCP、插件、技能、定时任务）使用 `AnimatedScreenHost`：聊天页常驻底层，其它页面作为全屏覆盖层右侧 18% 滑入（跨层级只做位移、不做透明度渐变，避免两页叠加透出），返回反向；同层级切换仍用快速淡入淡出。系统返回手势触发 pop。返回聊天时直接露出已存在的聊天页，不重建消息列表。
-- 离开聊天时清除输入焦点并收起键盘；聊天页隐藏期间保持组合但不再吃实时状态：覆盖后改用冻结快照、过场动画（320ms）结束后跳过底层绘制，返回时恢复实时状态与滚动位置。
+- 设置层级（个性化、字体、聊天设置、隐私、厂商列表/详情、运行环境、MCP、插件、技能、定时任务）使用自研 `AnimatedScreenHost`：聊天页常驻底层，其它页面作为全屏覆盖层整页滑入（push：新页从右侧滑入覆盖旧页；pop：旧页向右滑出露出下层，返回聊天即露出已存在的聊天页，不重建消息列表）。位移直接写 `graphicsLayer` 的 translationX、只在 draw 阶段读进度，页面不再重布局；每个页面独立 layer，转场期间不重录内容。同层级切换用快速淡入淡出。系统返回手势触发 pop。
+- 页面状态按目的地持久化：`rememberSaveableStateHolder` + 按 `routeKey` 的 `SaveableStateProvider`，滚动位置 / Tab / 搜索词 / 展开项随页面退出保存、返回恢复，出栈延迟一帧清理；导航栈本身由 `AppNavigator` 的 `rememberSaveable` 保存，进程死亡后按 routeKey 恢复。
+- 转场期间冻结聊天状态并加全屏触摸屏障（防止动画中误触下层）；`key(routeKey)` 放在页面循环体最外层，避免进出页同帧销毁重建；RTL 下位移方向取反。
+- 离开聊天时清除输入焦点并收起键盘；导航状态读取隔离在子 composable（`NavigationChrome` / `NavigationBackHandler`），导航时不再触发整个 App 外壳重组。
 - `DdMotion` 统一时长/缓动；`DdTypingDots` 是唯一的“思考中”循环动画。
 - 页面切换无尺寸回弹；按压 140ms 灰 wash；抽屉 260ms ease-out，进度只在 draw 阶段读取，抽屉内容在关闭动画结束后才退出组合。
 - 页面切换不用于会话切换——会话切换只替换内容和短 loading。
