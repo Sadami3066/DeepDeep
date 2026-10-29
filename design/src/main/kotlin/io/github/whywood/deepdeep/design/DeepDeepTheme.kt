@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.design
 
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -13,11 +14,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,10 +122,10 @@ enum class DdFontStyle(val id: String, val displayName: String) {
     }
 }
 
-@OptIn(ExperimentalTextApi::class)
 object DdFonts {
-    private val LoraFamily = variableFamily(R.font.lora_variable)
-    private val ManropeFamily = variableFamily(R.font.manrope_variable)
+    private val latinFamilies = listOf(R.font.lora_variable, R.font.manrope_variable)
+    private val LoraFamily = compositeFamily(R.font.lora_variable)
+    private val ManropeFamily = compositeFamily(R.font.manrope_variable)
 
     var style: DdFontStyle = DdFontStyle.LORA
         private set
@@ -141,18 +139,19 @@ object DdFonts {
         DdFontStyle.MANROPE -> ManropeFamily
     }
 
+    fun preload(context: Context) {
+        DdCompositeTypefaceLoader.preload(context, latinFamilies)
+    }
+
     val Sans: FontFamily get() = familyFor(style)
 
     val Display: FontFamily get() = familyFor(style)
 
-    private fun variableFamily(resId: Int): FontFamily = FontFamily(
-        Font(resId, FontWeight.Normal, variationSettings = weightVariant(400)),
-        Font(resId, FontWeight.Medium, variationSettings = weightVariant(500)),
-        Font(resId, FontWeight.SemiBold, variationSettings = weightVariant(600)),
+    private fun compositeFamily(resId: Int): FontFamily = FontFamily(
+        DdCompositeFont(resId, FontWeight.Normal),
+        DdCompositeFont(resId, FontWeight.Medium),
+        DdCompositeFont(resId, FontWeight.SemiBold),
     )
-
-    private fun weightVariant(weight: Int): FontVariation.Settings =
-        FontVariation.Settings(FontVariation.weight(weight))
 }
 
 object DdType {
