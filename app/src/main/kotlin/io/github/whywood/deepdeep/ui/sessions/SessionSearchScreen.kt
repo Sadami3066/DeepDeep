@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -75,8 +76,8 @@ fun SessionSearchScreen(
     val focusRequester = remember { FocusRequester() }
     var loading by remember { mutableStateOf(true) }
     var sessions by remember { mutableStateOf<List<SessionSearchHit>>(emptyList()) }
-    var query by remember { mutableStateOf("") }
-    var debouncedQuery by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
+    var debouncedQuery by rememberSaveable { mutableStateOf("") }
     var revealed by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onBack)

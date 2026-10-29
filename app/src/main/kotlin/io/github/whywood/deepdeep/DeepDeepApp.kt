@@ -84,6 +84,7 @@ import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
+import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -260,25 +261,6 @@ internal fun DeepDeepApp(
         }
     }
     val navigator = rememberAppNavigator()
-    val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val currentDestination = navigator.current
-    val covered = currentDestination != AppDestination.Chat
-    var baseDrawSuspended by remember { mutableStateOf(false) }
-    LaunchedEffect(covered) {
-        if (!covered) {
-            baseDrawSuspended = false
-        } else {
-            delay(DdMotion.SCREEN.toLong())
-            baseDrawSuspended = true
-        }
-    }
-    LaunchedEffect(currentDestination) {
-        if (currentDestination != AppDestination.Chat) {
-            focusManager.clearFocus()
-            keyboard?.hide()
-        }
-    }
     val density = LocalDensity.current
     val drawerWidthPx = with(density) { 304.dp.toPx() }
 
@@ -498,9 +480,8 @@ internal fun DeepDeepApp(
         }
     }
 
-    BackHandler(enabled = drawerOpen || navigator.canPop) {
-        back()
-    }
+    NavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
+    NavigationChrome(navigator = navigator)
 
     LaunchedEffect(state.ready, state.currentWorkspaceId) {
         if (state.ready && state.currentWorkspaceId.isNotBlank()) {
@@ -531,9 +512,8 @@ internal fun DeepDeepApp(
         AnimatedScreenHost(
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),
-            baseDrawingEnabled = !covered || !baseDrawSuspended,
-            base = {
-                val frozenState = rememberFrozenChatState(state, covered)
+            base = { baseFrozen ->
+                val frozenState = rememberFrozenChatState(state, baseFrozen)
                 ChatScreen(
                     state = remember(frozenState, configuredProviders) {
                         frozenState.copy(configured = frozenState.providerId in configuredProviders)
@@ -1107,12 +1087,29 @@ private fun shareChooser(context: Context, intent: Intent, title: String): Inten
     }
 
 @Composable
-private fun rememberFrozenChatState(live: ChatUiState, covered: Boolean): ChatUiState {
-    val frozen = remember { mutableStateOf(live) }
-    if (!covered) {
-        SideEffect { frozen.value = live }
+private fun NavigationBackHandler(navigator: AppNavigator, drawerOpen: Boolean, onBack: () -> Unit) {
+    BackHandler(enabled = drawerOpen || navigator.canPop, onBack = onBack)
+}
+
+@Composable
+private fun NavigationChrome(navigator: AppNavigator) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(navigator.current) {
+        if (navigator.current != AppDestination.Chat) {
+            focusManager.clearFocus()
+            keyboard?.hide()
+        }
     }
-    return if (covered) frozen.value else live
+}
+
+@Composable
+private fun rememberFrozenChatState(live: ChatUiState, frozen: Boolean): ChatUiState {
+    val snapshot = remember { mutableStateOf(live) }
+    if (!frozen) {
+        SideEffect { snapshot.value = live }
+    }
+    return if (frozen) snapshot.value else live
 }
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
