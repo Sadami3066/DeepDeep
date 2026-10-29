@@ -198,9 +198,11 @@ Claude 式分组卡，无分组标题、无冗余说明；行只保留标题 + �
 
 ## 导航与动效
 
-- 设置层级（个性化、字体、聊天设置、隐私、厂商列表/详情、运行环境、MCP、插件、技能、定时任务）使用自研 `AnimatedScreenHost`：聊天页常驻底层，其它页面作为全屏覆盖层整页滑入（push：新页从右侧滑入覆盖旧页；pop：旧页向右滑出露出下层，返回聊天即露出已存在的聊天页，不重建消息列表）。位移直接写 `graphicsLayer` 的 translationX、只在 draw 阶段读进度，页面不再重布局；每个页面独立 layer，转场期间不重录内容。同层级切换用快速淡入淡出。系统返回手势触发 pop。
+- 设置层级（个性化、字体、聊天设置、隐私、厂商列表/详情、运行环境、MCP、插件、技能、定时任务）使用自研 `AnimatedScreenHost`：聊天页常驻底层，其它页面作为全屏覆盖层进出。动效是 Material 3 shared-axis X：新页从右侧 25% 位移 + 淡入、旧页向反方向 25% 位移 + 淡出，跨层级不再整页横扫，同层级切换只淡入淡出；位移与透明度都在 `graphicsLayer` 的 draw 阶段读取，每页独立 layer，不回到布局期位移。系统返回手势在支持的设备上走 `PredictiveBackHandler` 跟手预览（手势进度驱动同一套位移/透明度，取消回弹、完成直接落位），不支持的设备/按钮返回走常规动画。
 - 页面状态按目的地持久化：`rememberSaveableStateHolder` + 按 `routeKey` 的 `SaveableStateProvider`，滚动位置 / Tab / 搜索词 / 展开项随页面退出保存、返回恢复，出栈延迟一帧清理；导航栈本身由 `AppNavigator` 的 `rememberSaveable` 保存，进程死亡后按 routeKey 恢复。
-- 转场期间冻结聊天状态并加全屏触摸屏障（防止动画中误触下层）；`key(routeKey)` 放在页面循环体最外层，避免进出页同帧销毁重建；RTL 下位移方向取反。
+- 会话切换不丢草稿：按 sessionId 缓存输入草稿、引用、待发附件与滚动锚点（含“是否在底部”），切走保存、切回恢复；切回在底部的会话仍自动跟底，在中间的恢复原位置并显示「回到底部」。缓存是进程级 LRU（上限 8，当前会话与运行中会话不淘汰），内存紧张（`onTrimMemory` RUNNING_LOW/CRITICAL）时才释放空闲会话。
+- 转场期间冻结聊天状态并加全屏触摸屏障（防止动画中误触下层）；`key(routeKey)` 放在页面循环体最外层，避免进出页同帧销毁重建；RTL 下位移方向取反；深链接或外部 Intent 打开页面时同样走这套栈与动效。
+- 深链接：`deepdeep://chat/<sessionId>` 直接打开会话；`settings`、`plugins`、`plugins/<id>`、`mcp`、`skills`、`schedules`、`workshop`、`workshop/<id>` 打开对应页面（详情页会自动补父页，返回一次落到父页/聊天）；`deepdeep://oauth` 仍归 OAuth 回调用，不参与页面导航。
 - 离开聊天时清除输入焦点并收起键盘；导航状态读取隔离在子 composable（`NavigationChrome` / `NavigationBackHandler`），导航时不再触发整个 App 外壳重组。
 - `DdMotion` 统一时长/缓动；`DdTypingDots` 是唯一的“思考中”循环动画。
 - 页面切换无尺寸回弹；按压 140ms 灰 wash；抽屉 260ms ease-out，进度只在 draw 阶段读取，抽屉内容在关闭动画结束后才退出组合。

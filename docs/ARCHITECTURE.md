@@ -190,6 +190,9 @@ Compose ChatScreen
 - `ui/navigation`：`AppDestination`、`AppNavigator`、`AppScreenTransition`、`AnimatedScreenHost`。
 - 设置层级使用 typed stack + 自研 `AnimatedScreenHost`：页面根节点各自持有 `graphicsLayer`，转场进度只在该 layer 的 draw 阶段驱动 translationX（push 新页从右滑入、pop 旧页向右滑出），不经过 `AnimatedContent`，也不再逐帧触发页面 measure/layout；聊天页常驻底层并单独成 layer。
 - 页面状态按目的地保存：`rememberSaveableStateHolder()` + `SaveableStateProvider(routeKey)` 包住每个 destination，出栈一帧后 `removeState`；`AppNavigator` 的 routeKey 栈由 `rememberSaveable` 保存，因此进程死亡也能恢复栈与栈内页面状态。`key(routeKey)` 位于页面循环体最外层，保证进出页面不被同帧销毁重建。
+- 会话运行时缓存：`ChatViewModel` 内按 sessionId 保存输入草稿/引用/附件/滚动锚点（`ScrollAnchor` 含 `atBottom`），`conversationCache` 为 LRU（8 个，当前会话与 `runtime.busySessionIds` 不淘汰），`onTrimMemory(RUNNING_LOW/CRITICAL)` 只清空闲会话。
+- PredictiveBack：`AnimatedScreenHost` 用 `androidx.activity.compose.PredictiveBackHandler`，手势期间预组合返回目标页并用 `previewFraction` 驱动 shared-axis 位移/透明度；手势完成 `navigator.pop()` 并跳过常规动画，取消时回弹到 0；非手势返回走常规动画。manifest 已开 `enableOnBackInvokedCallback`。
+- 深链接：`deeplink/DeepLink.kt` 用 `java.net.URI` 解析 `deepdeep://...` 为 `Session(sessionId)` 或 `Page(AppDestination)`；`MainActivity` 把 Session 注入既有 `pendingSessionId`、Page 注入 `pendingDeepDestination`；`DeepDeepApp` 在 ready 后 reset 到 Chat 并按需补父页（`PluginDetail`→Plugins、`WorkshopDetail`→Workshop）再 push 目标。`oauth` host 不参与导航。
 - 聊天 base 在转场期间吃冻结的 `ChatUiState`，动画结束后再解冻；导航状态读取（`navigator.current`/`canPop`）隔离在 `NavigationChrome`/`NavigationBackHandler` 子 composable，避免导航时整壳重组。系统返回手势 -> pop。
 - `design/DdMotion` 统一时长/easing；`DdTypingDots` 承载思考动画。
 - 抽屉用持久 composition + `graphicsLayer` translation，避免开关时反复组合；遮罩只在可见时挂载，避免拦截触摸。

@@ -13,14 +13,21 @@
 - 修复 `key(routeKey)` 写在页面 composable 内部导致的「进出页同帧销毁重建」——这是此前状态保存/恢复失败与转场首帧重组的根因。
 - 真机验证：设置页滚底 → 子页 → 返回滚动位置原样；插件页「内部」Tab → 详情 → 返回仍是「内部」。
 
+**追加：会话状态缓存 / 跟手返回 / 深链接**
+- 会话切换不丢草稿：按 sessionId 缓存输入/引用/待发附件与滚动锚点（含 atBottom），切回恢复原位置；底部会话仍自动跟底。缓存改进程级 LRU（8 个，当前会话与运行中会话不淘汰），内存压力（`onTrimMemory` RUNNING_LOW/CRITICAL）才释放空闲会话。
+- 页面动效改为 Material 3 shared-axis X（25% 位移 + 淡入淡出）；`PredictiveBackHandler` 跟手返回（手势驱动、取消回弹、完成直接落位），不支持预测动画的设备/按钮返回走常规动画；manifest 开 `enableOnBackInvokedCallback`。
+- 深链接：`deepdeep://chat/<id>` 直达会话；settings/plugins/plugins/<id>/mcp/skills/schedules/workshop(/id) 直达页面（详情自动补父页，返回一次落父页/聊天）；`deepdeep://oauth` 不参与导航。用户输入/会话数据不受影响。
+- 独立审查（第二人）提出的阻断 1 项、建议 8 项已处理：锚点补 atBottom；PredictiveBack 完成加栈校验与 pop 失败清理；深链接 ready 门控；`handleIntent` 不再覆盖待消费 session；onTrimMemory 忽略 UI_HIDDEN（退后台不清草稿）；恢复时会话消息回填不再抢滚动位置。
+
 **调研**
 - 新增 `docs/research/NAVIGATION_MOTION.md`：转场卡顿根因（RT/display list 重录、slide 为 layout 阶段、layer 隔离数据）、方案对比、PredictiveBack/共享元素建议。
 - 新增 `docs/research/STATE_MANAGEMENT.md`：SaveableStateHolder/rememberSaveable/ViewModel/SavedStateHandle 机制对比、全页面状态审计表、20 行实现骨架、不做过度设计的边界。
 - 新增 `docs/research/ANDROID_PRACTICES.md`：生产级 Android/Compose App 16 个主题的全景实践（架构、测试、性能、发布、可观测、无障碍、安全、构建等），逐项对照 DeepDeep 现状与差距，附「现在做/以后做/不需要」清单。
 
 **验证**
-- 995 unit tests 全绿（app 599 / runtime 364 / shell 32）；lint 0 errors / 160 warnings（与 round41 一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
-- 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：转场、状态持久化、插件 Tab/设置滚动、回归路径正常；设备后台负载高（load 16.7 / 可用内存 270MB）时单次采样波动明显，已在 QA-LOG 中给出多次采样与限制说明。证据 `artifacts/validation/round42/`。
+- 1022 unit tests 全绿（app 626 / runtime 364 / shell 32；较 round41 新增 27：会话缓存 6、深链接 15、动效纯函数 6）；lint 0 errors / 160 warnings（与 round41 一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：转场、状态持久化、草稿/滚动恢复、深链接各路由、抽屉返回、插件 Tab、回归路径正常；设备后台负载高（load 16.7 / 可用内存 270MB）时单次采样波动明显，已在 QA-LOG 中给出多次采样与限制说明。证据 `artifacts/validation/round42/`。
+- 未验证/已知限制：本机 MIUI Android 13 不显示系统预测动画预览（已设 `enable_predictive_back=1`），跟手路径只能验证回退；自带 BackHandler 的页面（个性化未保存、搜索、归档、工坊浏览器）不跟手；杀进程后草稿不保留；深链接 session 不存在时不 consume；真机未构造后台流式增长再切回的场景（由 atBottom 单测覆盖）。
 
 ## Done: 抽屉折叠、内置中文字体、五页搜索、插件内外分类与四个能力插件化
 

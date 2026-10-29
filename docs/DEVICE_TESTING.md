@@ -249,3 +249,12 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 174. 插件 Tab 持久化：插件页切到「内部」→ 进入任一插件详情 → 返回 → 仍停在「内部」，搜索词不丢。
 175. 不误触：转场动画进行中快速点击新页/下层聊天 → 不触发任何跳转或输入；动画结束后页面可正常点击。
 176. 回归：转场后输入框焦点/键盘状态正确；RTL（系统语言切阿拉伯语或强制 RTL）下滑入方向取反；`adb logcat` 无 `FATAL EXCEPTION`。
+
+## round42 追加（会话状态 / 跟手返回 / 深链接）验收
+
+177. 草稿跨会话：会话 A 输入一段文字（可带引用/附件）不发送 → 切到会话 B → 切回 A → 输入内容仍在；B 的草稿互不影响。
+178. 滚动位置：会话 A 滚到中部 → 切到 B → 切回 A → 位置与切走前一致并出现「回到底部」；点回到底部后切走再切回 → 仍停在底部、不出现 chip。
+179. 内存压力：debug 包用 `adb shell am send-trim-memory io.github.whywood.deepdeep RUNNING_LOW`，切回最近会话仍可命中缓存、其它空闲会话按 LRU 重载；`UI_HIDDEN` 不清草稿（退后台再回来草稿仍在）。
+180. 跟手返回：支持的设备（原生 Android 13+ 且开启预测动画）从页面边缘慢拖 → 页面跟手位移/淡出、目标页在下方淡入，中途松手回弹、拖过阈值完成并直接落位；不支持的设备/按钮返回 → 常规 shared-axis 动画，不重复 pop。
+181. 深链接：`adb shell am start -a android.intent.action.VIEW -d "deepdeep://chat/<真实id>"` 直达会话；`deepdeep://settings`、`deepdeep://plugins/feishu` 直达页面且返回一次落父页/聊天；`deepdeep://oauth/callback?code=x` 只回前台不导航；冷启动与热启动各测一次。
+182. 动效回归：push/pop 为 25% 位移+淡入淡出，聊天页在下方静止；快速连点返回不叠页不崩；RTL（阿语）方向取反；`adb logcat` 无 `FATAL EXCEPTION`。
