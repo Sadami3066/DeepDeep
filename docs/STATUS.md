@@ -32,7 +32,8 @@
 
 **验证**
 - 995 unit tests 全绿（app 599 / runtime 364 / shell 32，0 failures）；lint 0 errors / 160 warnings（基线 158，新增为未使用串/复数建议）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
-- 真机（Redmi 22101316UCP / Android 13）：抽屉折叠、中文字体、五页搜索、插件内外分类与品牌图标、内部插件设置生效、停用/启用工具与技能、`workshop_edit` 四种 action、小米云掉登录自愈与退出登录阻断、插件/MCP 缓存、覆盖层冻结、release 覆盖安装与数据保留；证据 `artifacts/validation/round41/`。
+- 真机（Redmi 22101316UCP / Android 13，release 包覆盖安装）：中文字体、五页搜索、插件内外分类与品牌图标、内部插件设置步进与持久化、抽屉开关动画、覆盖层冻结、release 冷启动（预热后 637/638/674/741ms，debug 中位 934ms，基线 967ms）、数据保留，`logcat` 无 FATAL/ANR；证据 `artifacts/validation/round41/lead/QA-LOG.md`。工作区会话不足 5 条、小米云未登录，两项分别由单测与代码路径覆盖（见 QA-LOG）。
+- 闪屏排查（录屏逐帧）：修复抽屉关闭被提前移出组合导致的“瞬间消失”，以及页面切换 fade+slide 导致的新旧页面叠加透出（改为跨层级纯滑入滑出）；复测录屏与帧表在 `artifacts/validation/round41/flicker/`。
 
 ## Done: 运行中插话、原始历史、图片多模态与界面收敛
 
