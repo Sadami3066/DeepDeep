@@ -23,16 +23,19 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.MAX_SHARE_STREAMS
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.parseSharePayload
+import io.github.whywood.deepdeep.deeplink.DeepLink
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
     private val pendingSessionId = mutableStateOf<String?>(null)
+    private val pendingDeepDestination = mutableStateOf<AppDestination?>(null)
     private val pendingShare = mutableStateOf<SharePayload?>(null)
     private val openVoiceAssistant = mutableStateOf(false)
 
@@ -61,6 +64,8 @@ class MainActivity : ComponentActivity() {
                     fontStyle = fontStyle,
                     openSessionId = pendingSessionId.value,
                     onOpenSessionConsumed = { pendingSessionId.value = null },
+                    pendingDeepDestination = pendingDeepDestination.value,
+                    onDeepDestinationConsumed = { pendingDeepDestination.value = null },
                     pendingShare = pendingShare.value,
                     onShareConsumed = { pendingShare.value = null },
                     openVoiceAssistant = openVoiceAssistant.value,
@@ -106,6 +111,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        if (intent.action == Intent.ACTION_VIEW) {
+            when (val link = DeepLink.parse(intent.dataString.orEmpty())) {
+                is DeepLink.Session -> pendingSessionId.value = link.sessionId
+                is DeepLink.Page -> pendingDeepDestination.value = link.destination
+                null -> Unit
+            }
+            return
+        }
         pendingSessionId.value = intent.getStringExtra(NotificationCenter.EXTRA_SESSION_ID)
         if (intent.action == Intent.ACTION_ASSIST) {
             openVoiceAssistant.value = true

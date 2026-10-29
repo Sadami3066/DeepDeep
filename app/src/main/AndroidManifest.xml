@@ -33,6 +33,7 @@
         android:name=".DeepDeepApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -101,6 +102,19 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="deepdeep" android:host="oauth" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="deepdeep" />
+                <data android:host="chat" />
+                <data android:host="settings" />
+                <data android:host="plugins" />
+                <data android:host="mcp" />
+                <data android:host="skills" />
+                <data android:host="schedules" />
+                <data android:host="workshop" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
