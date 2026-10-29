@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import io.github.whywood.deepdeep.design.DdMotion
@@ -31,6 +32,11 @@ object AppScreenTransition {
         val fade = DdMotion.spec<Float>(DdMotion.SCREEN)
         val slide = DdMotion.spec<IntOffset>(DdMotion.SCREEN)
         val depthDelta = direction(initialState, targetState)
+        if (depthDelta == 0) {
+            val enter = fadeIn(fade)
+            val exit = fadeOut(fade)
+            return (enter togetherWith exit).using(SizeTransform(clip = false))
+        }
         val enterFraction = when (depthDelta) {
             1 -> FORWARD_ENTER_FRACTION
             -1 -> -FORWARD_EXIT_FRACTION
@@ -41,8 +47,8 @@ object AppScreenTransition {
             -1 -> FORWARD_ENTER_FRACTION
             else -> 0f
         }
-        val enter = fadeIn(fade) + slideInHorizontally(slide) { (it * enterFraction).toInt() }
-        val exit = fadeOut(fade) + slideOutHorizontally(slide) { (it * exitFraction).toInt() }
+        val enter = slideInHorizontally(slide) { (it * enterFraction).toInt() }
+        val exit = slideOutHorizontally(slide) { (it * exitFraction).toInt() }
         (enter togetherWith exit).using(SizeTransform(clip = false))
     }
 }
@@ -51,11 +57,18 @@ object AppScreenTransition {
 fun AnimatedScreenHost(
     navigator: AppNavigator,
     modifier: Modifier = Modifier,
+    baseDrawingEnabled: Boolean = true,
     base: @Composable () -> Unit,
     content: @Composable (AppDestination) -> Unit,
 ) {
     Box(modifier) {
-        base()
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawWithContent { if (baseDrawingEnabled) drawContent() },
+        ) {
+            base()
+        }
         AnimatedContent(
             targetState = navigator.current,
             modifier = Modifier.fillMaxSize(),

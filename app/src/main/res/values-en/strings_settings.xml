@@ -36,6 +36,8 @@
     <string name="settings_license_provider_icons_body">LobeHub MIT · Radius official mark</string>
     <string name="settings_license_manrope">Manrope</string>
     <string name="settings_license_lora">Lora</string>
+    <string name="settings_license_cjk">Source Han Sans SC (Noto Sans SC)</string>
+    <string name="settings_license_cjk_body">SIL Open Font License 1.1</string>
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>
     <string name="settings_license_mit">MIT License</string>
     <string name="settings_placeholder">Not available yet</string>

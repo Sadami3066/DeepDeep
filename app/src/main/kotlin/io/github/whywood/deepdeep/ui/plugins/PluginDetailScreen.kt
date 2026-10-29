@@ -26,22 +26,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.PluginAvailability
+import io.github.whywood.deepdeep.plugin.OfficialPlugin
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.plugin.PluginSettingSpec
 import io.github.whywood.deepdeep.plugin.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudFeatureSection
@@ -65,10 +73,10 @@ fun PluginDetailScreen(
     var detailRows by remember(pluginId) { mutableStateOf<List<PluginDetailRow>>(emptyList()) }
     var detailRefresh by remember(pluginId) { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) { manager.refresh() }
+    LaunchedEffect(Unit) { manager.refreshIfStale() }
     LifecycleResumeEffect(Unit) {
         detailRefresh += 1
-        manager.refreshIfStale(minIntervalMillis = 0)
+        manager.refreshIfStale()
         onPauseOrDispose { }
     }
     LaunchedEffect(pluginId, state.plugins, state.loading) {
@@ -188,6 +196,25 @@ fun PluginDetailScreen(
                 }
             }
 
+            if (snapshot.installed && plugin.settings().isNotEmpty()) {
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = stringResource(R.string.plugins_setting_section),
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(6.dp))
+                SettingsGroup {
+                    PluginSettingsRows(
+                        plugin = plugin,
+                        settings = snapshot.settings,
+                        enabled = !busy && snapshot.enabled,
+                        onSetting = { key, value -> manager.setSetting(plugin.id, key, value) },
+                    )
+                }
+            }
+
             val micloud = plugin as? MiCloudPlugin
             if (micloud != null && snapshot.installed && snapshot.enabled) {
                 Spacer(Modifier.height(16.dp))
@@ -210,6 +237,8 @@ fun PluginDetailScreen(
 
             Spacer(Modifier.height(24.dp))
             when {
+                plugin.kind == PluginKind.INTERNAL -> Unit
+
                 !snapshot.installed -> {
                     DdPrimaryButton(
                         text = stringResource(R.string.plugins_action_download),
@@ -307,4 +336,131 @@ fun PluginDetailScreen(
             },
         )
     }
+}
+
+@Composable
+private fun PluginSettingsRows(
+    plugin: OfficialPlugin,
+    settings: Map<String, String>,
+    enabled: Boolean,
+    onSetting: (String, String) -> Unit,
+) {
+    plugin.settings().forEachIndexed { index, spec ->
+        if (index > 0) DdHairline()
+        when (spec) {
+            is PluginSettingSpec.Toggle -> PluginToggleSettingRow(spec, settings, enabled, onSetting)
+            is PluginSettingSpec.Choice -> PluginChoiceSettingRow(spec, settings, enabled, onSetting)
+            is PluginSettingSpec.Number -> PluginNumberSettingRow(spec, settings, enabled, onSetting)
+        }
+    }
+}
+
+@Composable
+private fun PluginToggleSettingRow(
+    spec: PluginSettingSpec.Toggle,
+    settings: Map<String, String>,
+    enabled: Boolean,
+    onSetting: (String, String) -> Unit,
+) {
+    val checked = settings[spec.key]?.toBooleanStrictOrNull() ?: spec.defaultValue
+    DdListRow(
+        title = stringResource(spec.titleRes),
+        trailing = {
+            DdSwitch(
+                checked = checked,
+                onCheckedChange = { onSetting(spec.key, it.toString()) },
+                enabled = enabled,
+                modifier = Modifier.testTag("plugin_setting_${spec.key}"),
+            )
+        },
+    )
+}
+
+@Composable
+private fun PluginChoiceSettingRow(
+    spec: PluginSettingSpec.Choice,
+    settings: Map<String, String>,
+    enabled: Boolean,
+    onSetting: (String, String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    var expanded by remember(spec.key) { mutableStateOf(false) }
+    val stored = settings[spec.key]
+    val current = spec.options.firstOrNull { it.value == stored }?.value ?: spec.default
+    val currentLabel = spec.options.firstOrNull { it.value == current }?.labelRes?.let { stringResource(it) } ?: current
+    DdDropdown(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+        anchor = {
+            DdListRow(
+                title = stringResource(spec.titleRes),
+                value = currentLabel,
+                showChevron = true,
+                enabled = enabled,
+                onClick = if (enabled) {
+                    { expanded = true }
+                } else {
+                    null
+                },
+                modifier = Modifier.testTag("plugin_setting_${spec.key}"),
+            )
+        },
+    ) {
+        spec.options.forEach { option ->
+            DdMenuItem(
+                text = stringResource(option.labelRes),
+                onClick = {
+                    expanded = false
+                    onSetting(spec.key, option.value)
+                },
+                selected = option.value == current,
+                trailing = if (option.value == current) {
+                    {
+                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
+                    }
+                } else {
+                    null
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PluginNumberSettingRow(
+    spec: PluginSettingSpec.Number,
+    settings: Map<String, String>,
+    enabled: Boolean,
+    onSetting: (String, String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    val current = (settings[spec.key]?.toIntOrNull() ?: spec.defaultValue).coerceIn(spec.min, spec.max)
+    DdListRow(
+        title = stringResource(spec.titleRes),
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DdTextAction(
+                    text = "−",
+                    onClick = { onSetting(spec.key, (current - 1).toString()) },
+                    enabled = enabled && current > spec.min,
+                    color = colors.inkSecondary,
+                    modifier = Modifier.testTag("plugin_setting_${spec.key}_dec"),
+                )
+                Text(
+                    text = current.toString(),
+                    modifier = Modifier.width(36.dp).testTag("plugin_setting_${spec.key}_value"),
+                    style = DdType.body,
+                    color = colors.ink,
+                    textAlign = TextAlign.Center,
+                )
+                DdTextAction(
+                    text = "+",
+                    onClick = { onSetting(spec.key, (current + 1).toString()) },
+                    enabled = enabled && current < spec.max,
+                    color = colors.inkSecondary,
+                    modifier = Modifier.testTag("plugin_setting_${spec.key}_inc"),
+                )
+            }
+        },
+    )
 }

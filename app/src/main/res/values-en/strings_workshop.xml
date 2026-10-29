@@ -16,4 +16,5 @@
     <string name="workshop_reason_manifest_invalid">Manifest invalid</string>
     <string name="workshop_reason_entry_missing">Entry point missing</string>
     <string name="workshop_reason_id_mismatch">ID does not match folder</string>
+    <string name="workshop_search_placeholder">Search creations</string>
 </resources>

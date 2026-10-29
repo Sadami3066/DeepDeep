@@ -94,4 +94,5 @@
     <string name="schedule_error_save_failed">Could not save. Try again.</string>
     <string name="schedule_error_delete_failed">Could not delete. Try again.</string>
     <string name="schedule_error_run_failed">Could not run. Try again.</string>
+    <string name="schedules_search_placeholder">Search schedules</string>
 </resources>

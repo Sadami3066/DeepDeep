@@ -472,7 +472,7 @@ private fun AssistantTurn(
                 onQuote = { text -> onQuote(message.id, text) },
                 onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
             ) {
-                ChatMarkdown(answer, onFileClick = onOpenFile)
+                ChatMarkdown(answer, onFileClick = onOpenFile, live = message.streaming)
             }
         }
         if (presentedItems.isNotEmpty()) {

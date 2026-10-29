@@ -115,8 +115,10 @@ class ChatViewModel(
         }
         viewModelScope.launch {
             try {
-                prepareRuntime()
-                withContext(ioDispatcher) { runtime.ensureStarted() }
+                withContext(ioDispatcher) {
+                    prepareRuntime()
+                    runtime.ensureStarted()
+                }
                 val config = providers.resolveConfig(modelConfigStore.read())
                 modelConfigStore.save(config)
                 if (mutableState.value.providerId.isBlank()) applySessionModel(config.toSnapshot())

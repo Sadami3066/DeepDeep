@@ -94,4 +94,5 @@
     <string name="schedule_error_save_failed">保存失败，请重试</string>
     <string name="schedule_error_delete_failed">删除失败，请重试</string>
     <string name="schedule_error_run_failed">运行失败，请重试</string>
+    <string name="schedules_search_placeholder">搜索定时任务</string>
 </resources>

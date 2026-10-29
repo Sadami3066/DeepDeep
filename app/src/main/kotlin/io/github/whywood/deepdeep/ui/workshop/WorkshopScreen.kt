@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -70,6 +72,9 @@ fun WorkshopScreen(
     var loading by remember { mutableStateOf(true) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var invalidTarget by remember { mutableStateOf<WorkshopInvalid?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+
+    val filtered = remember(creations, invalid, query) { filterWorkshop(creations, invalid, query) }
 
     LaunchedEffect(refreshKey) {
         loading = true
@@ -138,6 +143,15 @@ fun WorkshopScreen(
                 iconSize = 21.dp,
             )
         }
+        DdSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = stringResource(R.string.workshop_search_placeholder),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            clearContentDescription = stringResource(R.string.search_clear),
+            fieldTestTag = "workshop_search_field",
+            clearTestTag = "workshop_search_clear",
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -158,10 +172,21 @@ fun WorkshopScreen(
 
                 creations.isEmpty() && invalid.isEmpty() -> WorkshopEmpty()
 
+                filtered.creations.isEmpty() && filtered.invalid.isEmpty() -> Box(
+                    Modifier.fillMaxWidth().padding(top = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_no_match),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+
                 else -> {
                     Spacer(Modifier.height(8.dp))
                     var first = true
-                    creations.forEach { creation ->
+                    filtered.creations.forEach { creation ->
                         if (!first) DdHairline()
                         first = false
                         WorkshopAppRow(
@@ -169,7 +194,7 @@ fun WorkshopScreen(
                             onClick = { onOpen(creation.manifest.id) },
                         )
                     }
-                    invalid.forEach { item ->
+                    filtered.invalid.forEach { item ->
                         if (!first) DdHairline()
                         first = false
                         WorkshopRow(
@@ -294,3 +319,26 @@ private fun WorkshopRow(
 @Composable
 private fun invalidSubtitle(item: WorkshopInvalid): String =
     "${stringResource(R.string.workshop_invalid)} · ${stringResource(invalidReasonLabelRes(item.reason))}"
+
+internal data class WorkshopFilterResult(
+    val creations: List<WorkshopCreation>,
+    val invalid: List<WorkshopInvalid>,
+)
+
+internal fun filterWorkshop(
+    creations: List<WorkshopCreation>,
+    invalid: List<WorkshopInvalid>,
+    query: String,
+): WorkshopFilterResult {
+    val normalized = query.trim()
+    if (normalized.isEmpty()) return WorkshopFilterResult(creations, invalid)
+    return WorkshopFilterResult(
+        creations = creations.filter { creation ->
+            val manifest = creation.manifest
+            manifest.name.contains(normalized, ignoreCase = true) ||
+                manifest.id.contains(normalized, ignoreCase = true) ||
+                manifest.description.contains(normalized, ignoreCase = true)
+        },
+        invalid = invalid.filter { it.id.contains(normalized, ignoreCase = true) },
+    )
+}

@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +39,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -81,9 +83,15 @@ fun McpScreen(
     var editor by remember { mutableStateOf<McpEditorTarget?>(null) }
     var importing by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    var forceProbe by remember { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+
+    val visibleEntries = remember(entries, query) { filterMcpServers(entries, query) }
 
     LaunchedEffect(refreshKey) {
         loading = entries.isEmpty()
+        val force = forceProbe
+        forceProbe = false
         val snapshot = runCatching { store.load() }.getOrNull()
         if (snapshot == null) {
             failureRes = R.string.mcp_error_load_failed
@@ -94,20 +102,36 @@ fun McpScreen(
         entries = snapshot.servers
             .map { McpServerEntry(it.key, it.value) }
             .sortedBy { it.name.lowercase() }
-        val targets = snapshot.servers.filter { (_, config) ->
-            config.enabled && config is McpServerConfig.Http
+        val targets = snapshot.servers
+            .filter { (_, config) -> config.enabled && config is McpServerConfig.Http }
+            .map { (name, config) -> name to config }
+        val now = System.currentTimeMillis()
+        mcpProbeCache.retain(snapshot.servers.keys)
+        probes = targets.mapNotNull { (name, config) ->
+            mcpProbeCache.lookup(name, config, now)?.let { cached -> name to cached.result }
+        }.toMap()
+        val stale = if (force) {
+            targets
+        } else {
+            targets.filter { (name, config) -> mcpProbeCache.lookup(name, config, now)?.fresh != true }
         }
-        probes = emptyMap()
-        probing = targets.isNotEmpty()
-        if (targets.isNotEmpty()) {
-            probes = coroutineScope {
-                targets.map { (name, config) ->
+        probing = stale.isNotEmpty()
+        loading = false
+        if (stale.isNotEmpty()) {
+            val refreshed = coroutineScope {
+                stale.map { (name, config) ->
                     async { name to probe.probe(name, config) }
-                }.awaitAll().toMap()
+                }.awaitAll()
             }
+            val storedAt = System.currentTimeMillis()
+            refreshed.forEach { (name, result) ->
+                targets.firstOrNull { it.first == name }?.let { (_, config) ->
+                    mcpProbeCache.store(name, config, result, storedAt)
+                }
+            }
+            probes = probes + refreshed.toMap()
         }
         probing = false
-        loading = false
     }
 
     fun toggle(entry: McpServerEntry, enabled: Boolean) {
@@ -120,6 +144,7 @@ fun McpScreen(
             }
             busyName = null
             if (result.isSuccess) {
+                mcpProbeCache.invalidate(entry.name)
                 refreshKey++
             } else {
                 failureRes = R.string.mcp_error_toggle_failed
@@ -160,7 +185,10 @@ fun McpScreen(
             } else {
                 DdIconButton(
                     icon = DdIcons.Refresh,
-                    onClick = { refreshKey++ },
+                    onClick = {
+                        forceProbe = true
+                        refreshKey++
+                    },
                     contentDescription = stringResource(R.string.mcp_refresh),
                     modifier = Modifier.testTag("mcp_probe_refresh"),
                     tint = colors.ink,
@@ -176,6 +204,15 @@ fun McpScreen(
                 iconSize = 21.dp,
             )
         }
+        DdSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = stringResource(R.string.mcp_search_placeholder),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            clearContentDescription = stringResource(R.string.search_clear),
+            fieldTestTag = "mcp_search_field",
+            clearTestTag = "mcp_search_clear",
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -202,8 +239,19 @@ fun McpScreen(
 
                 entries.isEmpty() -> EmptyMcp()
 
+                visibleEntries.isEmpty() -> Box(
+                    Modifier.fillMaxWidth().padding(top = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_no_match),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+
                 else -> {
-                    entries.forEachIndexed { index, entry ->
+                    visibleEntries.forEachIndexed { index, entry ->
                         if (index > 0) DdHairline()
                         McpServerRow(
                             entry = entry,
@@ -229,7 +277,10 @@ fun McpScreen(
             onDismiss = { editor = null },
             onReloadSessions = onReloadSessions,
             onReconnect = onReconnect,
-            onCommitted = { refreshKey++ },
+            onCommitted = {
+                mcpProbeCache.invalidate(target.name)
+                refreshKey++
+            },
         )
     }
 
@@ -238,7 +289,10 @@ fun McpScreen(
             store = store,
             onDismiss = { importing = false },
             onReloadSessions = onReloadSessions,
-            onCommitted = { refreshKey++ },
+            onCommitted = {
+                mcpProbeCache.clear()
+                refreshKey++
+            },
         )
     }
 
@@ -325,3 +379,83 @@ private fun rowSubtitle(entry: McpServerEntry, result: McpProbeResult?): String 
 }
 
 private fun urlHost(url: String): String = runCatching { URI(url).host }.getOrNull().orEmpty()
+
+internal fun filterMcpServers(entries: List<McpServerEntry>, query: String): List<McpServerEntry> {
+    val normalized = query.trim()
+    if (normalized.isEmpty()) return entries
+    return entries.filter { entry ->
+        entry.name.contains(normalized, ignoreCase = true) ||
+            entry.config.description?.contains(normalized, ignoreCase = true) == true ||
+            (entry.config as? McpServerConfig.Http)?.url?.contains(normalized, ignoreCase = true) == true
+    }
+}
+
+internal data class CachedProbe(
+    val result: McpProbeResult,
+    val fresh: Boolean,
+)
+
+internal class McpProbeCache(private val ttlMs: Long = PROBE_CACHE_TTL_MS) {
+    private data class Entry(
+        val signature: String,
+        val result: McpProbeResult,
+        val storedAt: Long,
+    )
+
+    private val entries = mutableMapOf<String, Entry>()
+
+    fun lookup(
+        name: String,
+        config: McpServerConfig,
+        now: Long = System.currentTimeMillis(),
+    ): CachedProbe? {
+        val entry = entries[name] ?: return null
+        if (entry.signature != config.probeSignature()) {
+            entries.remove(name)
+            return null
+        }
+        return CachedProbe(entry.result, now - entry.storedAt <= ttlMs)
+    }
+
+    fun store(
+        name: String,
+        config: McpServerConfig,
+        result: McpProbeResult,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        entries[name] = Entry(config.probeSignature(), result, now)
+    }
+
+    fun invalidate(name: String) {
+        entries.remove(name)
+    }
+
+    fun retain(names: Set<String>) {
+        entries.keys.retainAll(names)
+    }
+
+    fun clear() {
+        entries.clear()
+    }
+
+    internal companion object {
+        const val PROBE_CACHE_TTL_MS = 60_000L
+    }
+}
+
+internal val mcpProbeCache = McpProbeCache()
+
+internal fun McpServerConfig.probeSignature(): String = when (this) {
+    is McpServerConfig.Http -> buildString {
+        append("http|")
+        append(url)
+        append('|')
+        append(headers.entries.sortedBy { it.key }.joinToString(";") { "${it.key}=${it.value}" })
+        append('|')
+        append(authProvider.orEmpty())
+        append('|')
+        append(timeoutSeconds)
+    }
+
+    is McpServerConfig.Stdio -> "stdio|$command|${args.joinToString("\u0000")}"
+}

@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -52,6 +53,7 @@ fun ScheduleScreen(
     var saving by remember { mutableStateOf(false) }
     var errorRes by remember { mutableStateOf<Int?>(null) }
     var loaded by remember { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         runCatching { service.list() }
@@ -161,6 +163,16 @@ fun ScheduleScreen(
                 Modifier.testTag("schedules_new"), tint = colors.ink, iconSize = 21.dp,
             )
         }
+        DdSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = stringResource(R.string.schedules_search_placeholder),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            clearContentDescription = stringResource(R.string.search_clear),
+            fieldTestTag = "schedules_search_field",
+            clearTestTag = "schedules_search_clear",
+        )
+        val filteredSchedules = filterSchedules(schedules, titles, query)
         when {
             !loaded -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 DdSpinner(size = 22.dp, strokeWidth = 2.dp)
@@ -168,9 +180,13 @@ fun ScheduleScreen(
 
             schedules.isEmpty() -> EmptySchedules(Modifier.weight(1f))
 
+            filteredSchedules.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.search_no_match), style = DdType.bodySmall, color = colors.inkTertiary)
+            }
+
             else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                val active = schedules.filter { it.enabled }.sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.name }))
-                val inactive = schedules.filterNot { it.enabled }.sortedByDescending { it.updatedAt }
+                val active = filteredSchedules.filter { it.enabled }.sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.name }))
+                val inactive = filteredSchedules.filterNot { it.enabled }.sortedByDescending { it.updatedAt }
                 if (active.isNotEmpty()) {
                     ScheduleGroup(stringResource(R.string.schedules_group_active), active, titles, ::openExisting, ::toggleEnabled)
                 }
@@ -346,4 +362,18 @@ internal fun draftErrorRes(error: DraftError): Int = when (error) {
     DraftError.PAST_TIME -> R.string.schedule_error_past_time
     DraftError.INVALID_CRON -> R.string.schedule_error_invalid_cron
     DraftError.NO_CONVERSATION -> R.string.schedule_error_no_conversation
+}
+
+internal fun filterSchedules(
+    schedules: List<Schedule>,
+    titles: Map<String, String?>,
+    query: String,
+): List<Schedule> {
+    val normalized = query.trim()
+    if (normalized.isEmpty()) return schedules
+    return schedules.filter { schedule ->
+        schedule.name.contains(normalized, ignoreCase = true) ||
+            schedule.prompt.contains(normalized, ignoreCase = true) ||
+            titles[schedule.sessionId]?.contains(normalized, ignoreCase = true) == true
+    }
 }

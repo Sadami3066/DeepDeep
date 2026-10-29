@@ -30,4 +30,5 @@
     <string name="skills_detail_disabled">未启用</string>
     <string name="skills_detail_content">SKILL.md</string>
     <string name="skills_detail_empty">暂无内容</string>
+    <string name="skills_search_placeholder">搜索技能</string>
 </resources>

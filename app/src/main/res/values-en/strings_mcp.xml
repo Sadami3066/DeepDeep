@@ -62,4 +62,5 @@
     <string name="mcp_error_delete_failed">Could not delete</string>
     <string name="mcp_error_toggle_failed">Could not change enabled state</string>
     <string name="mcp_error_load_failed">Could not read MCP configuration</string>
+    <string name="mcp_search_placeholder">Search servers</string>
 </resources>

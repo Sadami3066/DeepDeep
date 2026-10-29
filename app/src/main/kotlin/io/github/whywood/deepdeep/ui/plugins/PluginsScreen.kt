@@ -22,15 +22,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
@@ -39,12 +43,15 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.PluginAvailability
+import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.plugin.PluginOperation
 import io.github.whywood.deepdeep.plugin.PluginSnapshot
@@ -60,12 +67,26 @@ fun PluginsScreen(
     val colors = deepDeepColors()
     val state by manager.state.collectAsState()
     val interactive = !state.busy && state.interaction == null
+    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var query by rememberSaveable { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { manager.refresh() }
+    LaunchedEffect(Unit) { manager.refreshIfStale() }
     LifecycleResumeEffect(Unit) {
-        manager.refreshIfStale(minIntervalMillis = 0)
+        manager.refreshIfStale()
         onPauseOrDispose { }
     }
+
+    val kind = pluginTabKind(tabIndex)
+    val items = state.plugins
+        .filter { it.plugin.kind == kind }
+        .map { snapshot ->
+            PluginListItem(
+                snapshot = snapshot,
+                name = stringResource(snapshot.plugin.nameRes),
+                summary = stringResource(snapshot.plugin.summaryRes),
+            )
+        }
+    val visible = filterPlugins(items, query)
 
     Column(
         modifier
@@ -102,6 +123,25 @@ fun PluginsScreen(
                 iconSize = 21.dp,
             )
         }
+        DdSegmented(
+            options = listOf(
+                stringResource(R.string.plugins_tab_external),
+                stringResource(R.string.plugins_tab_internal),
+            ),
+            selectedIndex = tabIndex,
+            onSelect = { tabIndex = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            testTags = listOf("plugins_tab_external", "plugins_tab_internal"),
+        )
+        DdSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = stringResource(R.string.plugins_search_placeholder),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            clearContentDescription = stringResource(R.string.search_clear),
+            fieldTestTag = "plugins_search_field",
+            clearTestTag = "plugins_search_clear",
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,17 +150,41 @@ fun PluginsScreen(
                 .padding(horizontal = 24.dp),
         ) {
             Spacer(Modifier.height(8.dp))
-            SettingsGroup {
-                state.plugins.forEachIndexed { index, snapshot ->
-                    if (index > 0) DdHairline()
-                    PluginRow(
-                        snapshot = snapshot,
-                        operation = state.operation?.takeIf { it.pluginId == snapshot.plugin.id },
-                        interactive = interactive,
-                        onOpen = { onOpenPlugin(snapshot.plugin.id) },
-                        onDownload = { manager.install(snapshot.plugin.id) },
-                        onToggle = { enabled -> manager.setEnabled(snapshot.plugin.id, enabled) },
-                    )
+            when {
+                items.isEmpty() -> Text(
+                    text = stringResource(
+                        if (kind == PluginKind.EXTERNAL) R.string.plugins_empty_external
+                        else R.string.plugins_empty_internal,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 48.dp)
+                        .testTag(if (kind == PluginKind.EXTERNAL) "plugins_empty_external" else "plugins_empty_internal"),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+
+                visible.isEmpty() -> Text(
+                    text = stringResource(R.string.search_no_match),
+                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+
+                else -> SettingsGroup {
+                    visible.forEachIndexed { index, item ->
+                        if (index > 0) DdHairline()
+                        PluginRow(
+                            snapshot = item.snapshot,
+                            name = item.name,
+                            summary = item.summary,
+                            operation = state.operation?.takeIf { it.pluginId == item.snapshot.plugin.id },
+                            interactive = interactive,
+                            onOpen = { onOpenPlugin(item.snapshot.plugin.id) },
+                            onDownload = { manager.install(item.snapshot.plugin.id) },
+                            onToggle = { enabled -> manager.setEnabled(item.snapshot.plugin.id, enabled) },
+                        )
+                    }
                 }
             }
             state.error?.let { error ->
@@ -137,9 +201,38 @@ fun PluginsScreen(
     }
 }
 
+internal data class PluginListItem(
+    val snapshot: PluginSnapshot,
+    val name: String,
+    val summary: String,
+)
+
+internal fun pluginTabKind(index: Int): PluginKind =
+    if (index == 0) PluginKind.EXTERNAL else PluginKind.INTERNAL
+
+internal fun pluginMatchesQuery(
+    query: String,
+    id: String,
+    name: String,
+    summary: String,
+): Boolean {
+    val normalized = query.trim()
+    if (normalized.isEmpty()) return true
+    return id.contains(normalized, ignoreCase = true) ||
+        name.contains(normalized, ignoreCase = true) ||
+        summary.contains(normalized, ignoreCase = true)
+}
+
+internal fun filterPlugins(items: List<PluginListItem>, query: String): List<PluginListItem> =
+    items.filter { item ->
+        pluginMatchesQuery(query, item.snapshot.plugin.id, item.name, item.summary)
+    }
+
 @Composable
 private fun PluginRow(
     snapshot: PluginSnapshot,
+    name: String,
+    summary: String,
     operation: PluginOperation?,
     interactive: Boolean,
     onOpen: () -> Unit,
@@ -148,13 +241,14 @@ private fun PluginRow(
 ) {
     val colors = deepDeepColors()
     val plugin = snapshot.plugin
-    val name = stringResource(plugin.nameRes)
     val stage = operation?.let {
         it.stage
             ?: it.progress?.let { percent -> stringResource(R.string.plugins_downloading_percent, percent) }
             ?: stringResource(R.string.plugins_stage_preparing)
     }
     val enabled = interactive && operation == null
+    val brandIcon = VendorPluginIcons[plugin.id]
+        ?.takeIf { plugin.kind == PluginKind.EXTERNAL }
     DdPressable(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth().testTag("plugin_row_${plugin.id}"),
@@ -171,10 +265,17 @@ private fun PluginRow(
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (plugin.tintIcon) {
-                DdIcon(icon = plugin.icon, tint = colors.ink, size = 24.dp)
-            } else {
-                Image(
+            when {
+                brandIcon != null -> Image(
+                    painter = painterResource(brandIcon),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit,
+                )
+
+                plugin.tintIcon -> DdIcon(icon = plugin.icon, tint = colors.ink, size = 24.dp)
+
+                else -> Image(
                     painter = painterResource(plugin.icon.res),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
@@ -192,7 +293,7 @@ private fun PluginRow(
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = stage ?: stringResource(plugin.summaryRes),
+                    text = stage ?: summary,
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 2,
@@ -213,7 +314,7 @@ private fun PluginRow(
                             .testTag("plugin_switch_${plugin.id}")
                             .semantics { contentDescription = name },
                     )
-                } else {
+                } else if (plugin.kind != PluginKind.INTERNAL) {
                     DdTextAction(
                         text = stringResource(R.string.plugins_action_download),
                         onClick = onDownload,

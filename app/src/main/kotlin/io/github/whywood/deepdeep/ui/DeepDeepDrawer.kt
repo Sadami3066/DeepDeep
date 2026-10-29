@@ -33,6 +33,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +72,7 @@ import io.github.whywood.deepdeep.ui.sessions.RenameSessionDialog
 import io.github.whywood.deepdeep.ui.sessions.SessionAction
 import io.github.whywood.deepdeep.ui.sessions.SessionActionMenu
 
-private sealed interface DrawerEntry {
+internal sealed interface DrawerEntry {
     val key: String
 
     data object WorkspacesHeader : DrawerEntry {
@@ -87,6 +89,49 @@ private sealed interface DrawerEntry {
 
     data class Session(val conversation: ConversationSummary, val workspaceId: String) : DrawerEntry {
         override val key: String = "session_${workspaceId}_${conversation.id}"
+    }
+
+    data class SessionMore(val workspaceId: String, val remaining: Int) : DrawerEntry {
+        override val key: String = "session_more_$workspaceId"
+    }
+
+    data class SessionLess(val workspaceId: String) : DrawerEntry {
+        override val key: String = "session_less_$workspaceId"
+    }
+}
+
+internal fun buildDrawerEntries(
+    workspaces: List<RuntimeWorkspace>,
+    sessionsByCwd: Map<String, List<ConversationSummary>>,
+    expandedWorkspaceIds: Set<String>,
+    expandedSessionWorkspaceIds: Set<String>,
+    collapsedCount: Int = 5,
+): List<DrawerEntry> = buildList {
+    add(DrawerEntry.WorkspacesHeader)
+    workspaces.forEachIndexed { index, workspace ->
+        add(DrawerEntry.WorkspaceEntry(workspace, index == 0))
+        if (workspace.id !in expandedWorkspaceIds) return@forEachIndexed
+        val workspaceSessions = sessionsByCwd[workspace.cwd].orEmpty()
+            .filterNot { it.archived }
+            .sortedWith(
+                compareByDescending<ConversationSummary> { it.pinned }
+                    .thenByDescending { it.updatedAt },
+            )
+        if (workspaceSessions.isEmpty()) {
+            add(DrawerEntry.WorkspaceEmpty(workspace.id))
+            return@forEachIndexed
+        }
+        if (workspaceSessions.size <= collapsedCount) {
+            workspaceSessions.forEach { add(DrawerEntry.Session(it, workspace.id)) }
+            return@forEachIndexed
+        }
+        if (workspace.id in expandedSessionWorkspaceIds) {
+            workspaceSessions.forEach { add(DrawerEntry.Session(it, workspace.id)) }
+            add(DrawerEntry.SessionLess(workspace.id))
+        } else {
+            workspaceSessions.take(collapsedCount).forEach { add(DrawerEntry.Session(it, workspace.id)) }
+            add(DrawerEntry.SessionMore(workspace.id, workspaceSessions.size - collapsedCount))
+        }
     }
 }
 
@@ -133,25 +178,26 @@ fun DeepDeepDrawer(
     val sessionsByCwd = remember(sessions) {
         sessions.filterNot { it.archived }.groupBy { it.cwd }
     }
-    val entries = remember(orderedWorkspaces, sessionsByCwd, expandedWorkspaceIds) {
-        buildList {
-            add(DrawerEntry.WorkspacesHeader)
-            orderedWorkspaces.forEachIndexed { index, workspace ->
-                add(DrawerEntry.WorkspaceEntry(workspace, index == 0))
-                if (workspace.id in expandedWorkspaceIds) {
-                    val workspaceSessions = sessionsByCwd[workspace.cwd].orEmpty()
-                        .sortedWith(
-                            compareByDescending<ConversationSummary> { it.pinned }
-                                .thenByDescending { it.updatedAt },
-                        )
-                    if (workspaceSessions.isEmpty()) {
-                        add(DrawerEntry.WorkspaceEmpty(workspace.id))
-                    } else {
-                        workspaceSessions.forEach { add(DrawerEntry.Session(it, workspace.id)) }
-                    }
-                }
-            }
-        }
+    val expandedSessionsSaver = remember {
+        Saver<Set<String>, ArrayList<String>>(
+            save = { ArrayList(it) },
+            restore = { it.toSet() },
+        )
+    }
+    var expandedSessionWorkspaceIds by rememberSaveable(stateSaver = expandedSessionsSaver) {
+        mutableStateOf(emptySet<String>())
+    }
+    val entries = remember(
+        orderedWorkspaces,
+        sessionsByCwd,
+        expandedWorkspaceIds to expandedSessionWorkspaceIds,
+    ) {
+        buildDrawerEntries(
+            workspaces = orderedWorkspaces,
+            sessionsByCwd = sessionsByCwd,
+            expandedWorkspaceIds = expandedWorkspaceIds,
+            expandedSessionWorkspaceIds = expandedSessionWorkspaceIds,
+        )
     }
     Column(
         modifier
@@ -236,7 +282,12 @@ fun DeepDeepDrawer(
                         menuExpanded = workspaceMenuTarget?.id == entry.workspace.id,
                         menuAnchor = workspaceMenuAnchor,
                         modifier = Modifier.animateItem(),
-                        onToggleExpanded = { onToggleWorkspaceExpanded(entry.workspace.id) },
+                        onToggleExpanded = {
+                            if (entry.workspace.id in expandedWorkspaceIds) {
+                                expandedSessionWorkspaceIds = expandedSessionWorkspaceIds - entry.workspace.id
+                            }
+                            onToggleWorkspaceExpanded(entry.workspace.id)
+                        },
                         onLongClick = { offset ->
                             workspaceMenuAnchor = offset
                             workspaceMenuTarget = entry.workspace
@@ -250,6 +301,28 @@ fun DeepDeepDrawer(
                     )
 
                     is DrawerEntry.WorkspaceEmpty -> DrawerWorkspaceEmptyRow(
+                        modifier = Modifier.animateItem(),
+                    )
+
+                    is DrawerEntry.SessionMore -> DrawerSessionsToggleRow(
+                        text = stringResource(R.string.drawer_sessions_more, entry.remaining),
+                        icon = DdIcons.ChevronDown,
+                        rotation = 0f,
+                        testTag = "drawer_sessions_more_${entry.workspaceId}",
+                        onClick = {
+                            expandedSessionWorkspaceIds = expandedSessionWorkspaceIds + entry.workspaceId
+                        },
+                        modifier = Modifier.animateItem(),
+                    )
+
+                    is DrawerEntry.SessionLess -> DrawerSessionsToggleRow(
+                        text = stringResource(R.string.drawer_sessions_less),
+                        icon = DdIcons.ChevronDown,
+                        rotation = 180f,
+                        testTag = "drawer_sessions_less_${entry.workspaceId}",
+                        onClick = {
+                            expandedSessionWorkspaceIds = expandedSessionWorkspaceIds - entry.workspaceId
+                        },
                         modifier = Modifier.animateItem(),
                     )
 
@@ -488,6 +561,43 @@ private fun DrawerWorkspaceRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DrawerSessionsToggleRow(
+    text: String,
+    icon: DdIcon,
+    rotation: Float,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .testTag(testTag)
+            .padding(start = 34.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DdIcon(
+            icon = icon,
+            tint = colors.inkTertiary,
+            size = 13.dp,
+            modifier = Modifier.graphicsLayer { rotationZ = rotation },
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = DdType.bodySmall.copy(fontSize = 12.5.sp, lineHeight = 18.sp),
+            color = colors.inkTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

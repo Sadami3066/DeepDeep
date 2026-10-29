@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
@@ -99,6 +101,9 @@ fun SkillsScreen(
     var selected by remember { mutableStateOf<InstalledSkill?>(null) }
     var deleteTarget by remember { mutableStateOf<InstalledSkill?>(null) }
     var error by remember { mutableStateOf<SkillError?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+
+    val visibleSkills = remember(skills, query) { filterSkills(skills, query) }
 
     LaunchedEffect(refreshKey) {
         loading = true
@@ -231,6 +236,15 @@ fun SkillsScreen(
                 )
             }
         }
+        DdSearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = stringResource(R.string.skills_search_placeholder),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            clearContentDescription = stringResource(R.string.search_clear),
+            fieldTestTag = "skills_search_field",
+            clearTestTag = "skills_search_clear",
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -248,10 +262,21 @@ fun SkillsScreen(
 
                 skills.isEmpty() -> EmptySkills(onInstall = openPicker)
 
+                visibleSkills.isEmpty() -> Box(
+                    Modifier.fillMaxWidth().padding(top = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_no_match),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+
                 else -> {
                     Spacer(Modifier.height(8.dp))
                     SkillsGroup(
-                        skills = skills,
+                        skills = visibleSkills,
                         enabled = busyId == null,
                         onOpen = { selected = it },
                         onToggle = { skill, enabled -> toggle(skill, enabled) },
@@ -603,4 +628,14 @@ private suspend fun readArchive(context: Context, uri: Uri): ArchiveRead = withC
         ?: uri.lastPathSegment?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
         ?: "skill"
     ArchiveRead.Success(bytes, name)
+}
+
+internal fun filterSkills(skills: List<InstalledSkill>, query: String): List<InstalledSkill> {
+    val normalized = query.trim()
+    if (normalized.isEmpty()) return skills
+    return skills.filter { skill ->
+        skill.name.contains(normalized, ignoreCase = true) ||
+            skill.description.contains(normalized, ignoreCase = true) ||
+            skill.id.contains(normalized, ignoreCase = true)
+    }
 }

@@ -68,6 +68,7 @@ internal fun ChatMarkdown(
     text: String,
     modifier: Modifier = Modifier,
     onFileClick: ((String) -> Unit)? = null,
+    live: Boolean = false,
 ) {
     val colors = deepDeepColors()
     val planner = remember { MarkdownStreamPlanner() }
@@ -86,7 +87,7 @@ internal fun ChatMarkdown(
     plan.chunks.forEach { chunk -> blocks += rememberChunkBlocks(chunk) }
     val fileClick = rememberFileClickHandler(onFileClick)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MarkdownBlocks(blocks, document, colors, fileClick)
+        MarkdownBlocks(blocks, document, colors, fileClick, live)
         if (document.footnotes.isNotEmpty()) {
             FootnoteList(document.footnotes, document, colors, fileClick)
         }
@@ -116,10 +117,11 @@ private fun MarkdownBlocks(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
+    live: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        blocks.forEach { block -> MarkdownBlockItem(block, document, colors, onFileClick) }
+        blocks.forEach { block -> MarkdownBlockItem(block, document, colors, onFileClick, live) }
     }
 }
 
@@ -129,6 +131,7 @@ private fun MarkdownBlockItem(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
+    live: Boolean,
 ) {
     when (block) {
         is MarkdownBlock.Heading -> InlineCodeText(
@@ -155,15 +158,15 @@ private fun MarkdownBlockItem(
             color = colors.ink,
         )
 
-        is MarkdownBlock.Code -> CodeBlock(block.language, block.code, colors)
+        is MarkdownBlock.Code -> CodeBlock(block.language, block.code, colors, live)
 
-        is MarkdownBlock.Quote -> QuoteBlock(block, document, colors, onFileClick)
+        is MarkdownBlock.Quote -> QuoteBlock(block, document, colors, onFileClick, live)
 
         is MarkdownBlock.Image -> MarkdownImage(block.alt, block.source, block.title, colors)
 
         is MarkdownBlock.ListBlock -> ListBlockBody(block.items, document, colors, onFileClick, depth = 0)
 
-        is MarkdownBlock.Table -> TableBlock(block, document, colors, onFileClick)
+        is MarkdownBlock.Table -> TableBlock(block, document, colors, onFileClick, live)
 
         is MarkdownBlock.Math -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
@@ -192,6 +195,7 @@ private fun QuoteBlock(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
+    live: Boolean,
 ) {
     val barColor = colors.hairline
     Box(
@@ -211,6 +215,7 @@ private fun QuoteBlock(
             document,
             colors,
             onFileClick,
+            live,
             Modifier.fillMaxWidth().padding(start = 14.dp),
         )
     }
@@ -250,18 +255,22 @@ private fun FootnoteList(
 }
 
 @Composable
-private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors) {
+private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, live: Boolean) {
     val context = LocalContext.current
     val copied = stringResource(R.string.assistant_copied)
-    val highlighted = remember(code, language, colors) {
-        val tokens = highlightCode(code, language)
-        if (tokens.isEmpty()) {
+    val highlighted = remember(code, language, colors, live) {
+        if (live) {
             AnnotatedString(code)
         } else {
-            buildAnnotatedString {
-                append(code)
-                tokens.forEach { token ->
-                    addStyle(SpanStyle(color = codeColor(token.type, colors)), token.start, token.end)
+            val tokens = highlightCode(code, language)
+            if (tokens.isEmpty()) {
+                AnnotatedString(code)
+            } else {
+                buildAnnotatedString {
+                    append(code)
+                    tokens.forEach { token ->
+                        addStyle(SpanStyle(color = codeColor(token.type, colors)), token.start, token.end)
+                    }
                 }
             }
         }
@@ -404,6 +413,7 @@ private fun TableBlock(
     document: MarkdownDocument,
     colors: DeepDeepColors,
     onFileClick: ((String) -> Unit)?,
+    live: Boolean,
 ) {
     val columns = maxOf(block.header.size, block.rows.maxOfOrNull { it.size } ?: 0)
     if (columns == 0) return
@@ -415,23 +425,28 @@ private fun TableBlock(
         colors,
         onFileClick,
         textMeasurer,
+        live,
     ) {
-        List(columns) { column ->
-            var widest = 0
-            fun measure(cell: String, style: TextStyle) {
-                if (cell.isEmpty()) return
-                val measured = textMeasurer.measure(
-                    text = renderInline(cell, document, colors, onFileClick).text,
-                    style = style,
-                    overflow = TextOverflow.Clip,
-                    softWrap = false,
-                    maxLines = 1,
-                )
-                if (measured.size.width > widest) widest = measured.size.width
+        if (live) {
+            List(columns) { 0 }
+        } else {
+            List(columns) { column ->
+                var widest = 0
+                fun measure(cell: String, style: TextStyle) {
+                    if (cell.isEmpty()) return
+                    val measured = textMeasurer.measure(
+                        text = renderInline(cell, document, colors, onFileClick).text,
+                        style = style,
+                        overflow = TextOverflow.Clip,
+                        softWrap = false,
+                        maxLines = 1,
+                    )
+                    if (measured.size.width > widest) widest = measured.size.width
+                }
+                measure(block.header.getOrNull(column).orEmpty(), tableHeaderStyle)
+                block.rows.forEach { row -> measure(row.getOrNull(column).orEmpty(), tableCellStyle) }
+                widest
             }
-            measure(block.header.getOrNull(column).orEmpty(), tableHeaderStyle)
-            block.rows.forEach { row -> measure(row.getOrNull(column).orEmpty(), tableCellStyle) }
-            widest
         }
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {

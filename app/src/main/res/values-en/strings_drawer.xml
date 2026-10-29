@@ -43,4 +43,6 @@
     <string name="workspace_delete_message">“%1$s” and its %2$d conversations will be deleted. This cannot be undone.</string>
     <string name="workspace_delete_message_empty">“%1$s” will be deleted. This cannot be undone.</string>
     <string name="workspace_delete_confirm">Delete</string>
+    <string name="drawer_sessions_more">More history · %1$d</string>
+    <string name="drawer_sessions_less">Show less</string>
 </resources>
