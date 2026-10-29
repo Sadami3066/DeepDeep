@@ -129,4 +129,5 @@
     <string name="chat_error_insufficient_space">存储空间不足，无法添加附件</string>
     <string name="chat_error_unsupported_image">不支持该图片格式</string>
     <string name="chat_error_image_failed">图片处理失败，已按文件发送</string>
+    <string name="chat_load_earlier">加载更早的 %1$d 条</string>
 </resources>
