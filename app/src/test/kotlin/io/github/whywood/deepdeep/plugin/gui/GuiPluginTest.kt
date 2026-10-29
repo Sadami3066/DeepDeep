@@ -30,7 +30,7 @@ class GuiPluginTest {
         val plugin = plugin()
         assertEquals("gui", plugin.id)
         assertEquals("2.0.0", plugin.version)
-        assertEquals(DdIcons.Monitor, plugin.icon)
+        assertEquals(DdIcons.HandClick, plugin.icon)
         assertEquals(R.string.plugin_gui_name, plugin.nameRes)
         assertEquals(R.string.plugin_gui_summary, plugin.summaryRes)
         assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)

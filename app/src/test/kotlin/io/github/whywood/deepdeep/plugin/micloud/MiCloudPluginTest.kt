@@ -18,7 +18,7 @@ class MiCloudPluginTest {
         val plugin = plugin()
         assertEquals("micloud", plugin.id)
         assertEquals("1.0.0", plugin.version)
-        assertEquals(DdIcons.Globe, plugin.icon)
+        assertEquals(DdIcons.Cloud, plugin.icon)
         assertEquals(R.string.plugin_micloud_name, plugin.nameRes)
         assertEquals(R.string.plugin_micloud_summary, plugin.summaryRes)
         assertEquals(R.string.plugin_micloud_size, plugin.sizeLabelRes)
