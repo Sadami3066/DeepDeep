@@ -40,7 +40,6 @@ data class ChatUiState(
     val conversationCwd: String = "",
     val busySessionIds: Set<String> = emptySet(),
     val historyLoaded: Boolean = false,
-    val visibleHistoryCount: Int = 60,
     val switchingConversation: Boolean = false,
     val reloading: Boolean = false,
     val usage: SessionUsage? = null,

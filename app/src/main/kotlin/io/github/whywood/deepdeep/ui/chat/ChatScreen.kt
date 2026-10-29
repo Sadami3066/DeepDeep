@@ -159,7 +159,6 @@ fun ChatScreen(
     importingAttachment: Boolean = false,
     onFollowUp: () -> Unit = {},
     onClearQueue: () -> Unit = {},
-    onLoadEarlier: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -208,10 +207,6 @@ fun ChatScreen(
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
-    val visibleMessages = remember(messages, state.visibleHistoryCount) {
-        if (messages.size > state.visibleHistoryCount) messages.takeLast(state.visibleHistoryCount) else messages
-    }
-    val hiddenMessageCount = messages.size - visibleMessages.size
     val stablePendingQuestions = remember(pendingQuestions) { pendingQuestions }
     val thinkingLevels = remember(state.models, state.modelId) {
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
@@ -234,14 +229,11 @@ fun ChatScreen(
         }
     }
 
-    var knownLastMessageId by remember { mutableStateOf<Long?>(null) }
-    val lastMessageId = messages.lastOrNull()?.id
-    LaunchedEffect(lastMessageId) {
-        val previous = knownLastMessageId
-        if (previous != null && lastMessageId != null && lastMessageId != previous) {
-            controller.jumpToBottom(animate = false)
-        }
-        knownLastMessageId = lastMessageId
+    var knownCount by remember { mutableIntStateOf(state.messages.size) }
+    LaunchedEffect(state.messages.size) {
+        val size = state.messages.size
+        if (size > knownCount) controller.jumpToBottom(animate = false)
+        knownCount = size
     }
 
     LaunchedEffect(state.conversationId, state.historyLoaded) {
@@ -327,12 +319,7 @@ fun ChatScreen(
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    if (hiddenMessageCount > 0) {
-                        item(key = "load-earlier") {
-                            LoadEarlierRow(count = hiddenMessageCount, onClick = onLoadEarlier)
-                        }
-                    }
-                    items(visibleMessages, key = { it.id }) { message ->
+                    items(messages, key = { it.id }) { message ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                             Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
                                 ChatTurn(
@@ -630,28 +617,6 @@ private fun ErrorRow(error: String) {
                 text = error,
                 style = DdType.bodySmall.copy(lineHeight = 20.sp),
                 color = colors.inkSecondary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LoadEarlierRow(count: Int, onClick: () -> Unit) {
-    val colors = deepDeepColors()
-    DdPressable(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().testTag("chat_load_earlier"),
-        shape = RoundedCornerShape(12.dp),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.chat_load_earlier, count),
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                color = colors.inkTertiary,
             )
         }
     }

@@ -22,7 +22,6 @@ import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
-import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
@@ -269,17 +268,6 @@ class ChatViewModel(
                 input = mergeDroppedInput(state.input, dropped),
                 queuedInputs = emptyList(),
             )
-        }
-    }
-
-    fun loadEarlierHistory() {
-        mutableState.update { state ->
-            val total = state.messages.size
-            if (state.visibleHistoryCount >= total) {
-                state
-            } else {
-                state.copy(visibleHistoryCount = (state.visibleHistoryCount + HISTORY_PAGE).coerceAtMost(total))
-            }
         }
     }
 
@@ -1033,7 +1021,6 @@ class ChatViewModel(
                 usage = cached?.usage,
                 compacting = false,
                 historyLoaded = cached?.loaded == true,
-                visibleHistoryCount = initialVisibleCount(cached?.messages.orEmpty()),
                 switchingConversation = cached == null,
                 input = "",
                 quote = null,
@@ -1142,7 +1129,6 @@ class ChatViewModel(
                             activityStartedAt = resolved.activityStartedAt,
                             usage = resolved.usage,
                             historyLoaded = true,
-                            visibleHistoryCount = initialVisibleCount(resolved.messages),
                             switchingConversation = false,
                             queuedInputs = queuedInputs,
                             importingAttachment = false,
@@ -1187,7 +1173,6 @@ class ChatViewModel(
                         usage = null,
                         compacting = false,
                         historyLoaded = true,
-                        visibleHistoryCount = HISTORY_PAGE,
                         switchingConversation = false,
                         input = initialInput,
                         quote = null,
@@ -1252,7 +1237,6 @@ class ChatViewModel(
             it.copy(
                 messages = next,
                 historyLoaded = true,
-                visibleHistoryCount = initialVisibleCount(next),
                 conversationTitle = it.conversationTitle.ifBlank { titleFrom(next) },
             )
         }
@@ -1567,15 +1551,8 @@ class ChatViewModel(
         return if (input.isBlank()) merged else input.trimEnd() + "\n\n" + merged
     }
 
-    private fun initialVisibleCount(messages: List<AssistantMessage>): Int {
-        val lastCompaction = messages.indexOfLast { it.summary?.kind == MessageSummaryKind.COMPACTION }
-        if (lastCompaction >= 0) return (messages.size - lastCompaction).coerceAtLeast(1)
-        return messages.size
-    }
-
     private companion object {
         const val MAX_ATTACHMENTS = 20
-        const val HISTORY_PAGE = 60
         const val LEGACY_NEW_TITLE = "新对话"
         const val MAX_AUTO_RETRIES = 5
         const val AUTO_RETRY_DELAY_MS = 2_000L

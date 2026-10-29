@@ -562,7 +562,6 @@ internal fun DeepDeepApp(
                     importingAttachment = state.importingAttachment,
                     onFollowUp = chatViewModel::followUpNow,
                     onClearQueue = chatViewModel::clearQueuedInputs,
-                    onLoadEarlier = chatViewModel::loadEarlierHistory,
                     onVoiceClick = { voiceSheetOpen = true },
                     onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                     onOpenPresentFile = { raw ->

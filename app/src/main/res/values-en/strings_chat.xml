@@ -129,5 +129,4 @@
     <string name="chat_error_insufficient_space">Not enough storage to add this attachment</string>
     <string name="chat_error_unsupported_image">This image format is not supported</string>
     <string name="chat_error_image_failed">Could not process the image; sending it as a file</string>
-    <string name="chat_load_earlier">Load earlier messages (%1$d)</string>
 </resources>
