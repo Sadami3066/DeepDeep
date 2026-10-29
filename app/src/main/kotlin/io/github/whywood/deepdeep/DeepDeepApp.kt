@@ -1,7 +1,9 @@
 package io.github.whywood.deepdeep
 
+import android.content.ComponentCallbacks2
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
@@ -121,6 +124,8 @@ internal fun DeepDeepApp(
     fontStyle: DdFontStyle = DdFontStyle.LORA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
+    pendingDeepDestination: AppDestination? = null,
+    onDeepDestinationConsumed: () -> Unit = {},
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
     openVoiceAssistant: Boolean = false,
@@ -217,6 +222,21 @@ internal fun DeepDeepApp(
     }
     var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
+    DisposableEffect(context, chatViewModel) {
+        val callbacks = object : ComponentCallbacks2 {
+            override fun onTrimMemory(level: Int) {
+                chatViewModel.onTrimMemory(level)
+            }
+
+            override fun onConfigurationChanged(newConfig: Configuration) = Unit
+
+            override fun onLowMemory() = Unit
+        }
+        context.applicationContext.registerComponentCallbacks(callbacks)
+        onDispose {
+            context.applicationContext.unregisterComponentCallbacks(callbacks)
+        }
+    }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach(chatViewModel::attach)
@@ -501,6 +521,27 @@ internal fun DeepDeepApp(
         onOpenSessionConsumed()
     }
 
+    LaunchedEffect(pendingDeepDestination, state.ready) {
+        val destination = pendingDeepDestination ?: return@LaunchedEffect
+        if (!state.ready) return@LaunchedEffect
+        drawerOpen = false
+        navigator.reset(AppDestination.Chat)
+        when (destination) {
+            is AppDestination.PluginDetail -> {
+                navigator.push(AppDestination.Plugins)
+                navigator.push(destination)
+            }
+
+            is AppDestination.WorkshopDetail -> {
+                navigator.push(AppDestination.Workshop)
+                navigator.push(destination)
+            }
+
+            else -> navigator.push(destination)
+        }
+        onDeepDestinationConsumed()
+    }
+
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         val reminderCount = remember(schedules, state.conversationId) {
@@ -512,6 +553,7 @@ internal fun DeepDeepApp(
         AnimatedScreenHost(
             navigator = navigator,
             modifier = Modifier.fillMaxSize(),
+            predictiveBackEnabled = !drawerOpen,
             base = { baseFrozen ->
                 val frozenState = rememberFrozenChatState(state, baseFrozen)
                 ChatScreen(
@@ -589,6 +631,8 @@ internal fun DeepDeepApp(
                     importingAttachment = frozenState.importingAttachment,
                     onFollowUp = chatViewModel::followUpNow,
                     onClearQueue = chatViewModel::clearQueuedInputs,
+                    scrollAnchorFor = chatViewModel::scrollAnchorFor,
+                    onScrollAnchorChange = chatViewModel::updateScrollAnchor,
                     onVoiceClick = { voiceSheetOpen = true },
                     onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                     onOpenPresentFile = { raw ->
