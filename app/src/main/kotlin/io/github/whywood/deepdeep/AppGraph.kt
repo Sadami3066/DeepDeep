@@ -43,10 +43,12 @@ import dev.pi.mcp.oauth.FileMcpTokenStore
 import dev.pi.mcp.oauth.defaultMcpAuthFile
 import okio.Path.Companion.toPath
 import io.github.whywood.deepdeep.runtime.ProviderOAuthService
+import io.github.whywood.deepdeep.runtime.GoalPhase
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.GoalStore
 import io.github.whywood.deepdeep.runtime.JobPersistence
 import io.github.whywood.deepdeep.runtime.JobRegistry
+import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.goalTools
@@ -60,6 +62,7 @@ import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.QuestionPersistence
+import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.ScheduleStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
@@ -329,10 +332,19 @@ class AppGraph(context: Context) {
             scope.launch { goalService.clearSession(sessionId) }
         },
         sessionArchived = { sessionId -> jobRegistry.clearSession(sessionId) },
+        runLedger = RunLedger(File(appContext.filesDir, "tasks")),
+        keepHandleAlive = { sessionId ->
+            scheduleService.schedules.value.any { schedule ->
+                schedule.sessionId == sessionId && schedule.enabled && schedule.nextRunAt != null
+            } ||
+                goalService.goals.value[sessionId]?.goal?.phase == GoalPhase.ACTIVE ||
+                jobRegistry.jobs.value.any { job -> job.sessionId == sessionId && job.status == JobStatus.RUNNING } ||
+                questionCenter.pending.value.any { question -> question.sessionId == sessionId }
+        },
     )
 
-    val notificationCenter by lazy { NotificationCenter(appContext, host) }
-    val scheduleService by lazy {
+    val notificationCenter: NotificationCenter by lazy { NotificationCenter(appContext, host) }
+    val scheduleService: ScheduleService by lazy {
         ScheduleService(
             host,
             scheduleStore,
@@ -340,7 +352,7 @@ class AppGraph(context: Context) {
             intentsFile = File(appContext.filesDir, "schedules/delivery-intents.json"),
         )
     }
-    val devPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
+    val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     init {
         ensureBuiltinSkills()
@@ -365,7 +377,8 @@ class AppGraph(context: Context) {
         if (!questionRecoveryLoaded) {
             questionRecoveryLoaded = true
             questionCenter.loadPersisted()
-            notificationCenter.notifyInterruptedQuestions(questionCenter.interrupted.value)
+            host.start()
+            notificationCenter.notifyInterruptedWork(questionCenter.interrupted.value, host.interruptedRuns.value)
         }
         LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
         importDebugKey()

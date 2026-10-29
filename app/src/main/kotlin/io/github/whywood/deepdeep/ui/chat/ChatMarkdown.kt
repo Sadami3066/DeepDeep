@@ -70,10 +70,11 @@ internal fun ChatMarkdown(
     onFileClick: ((String) -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
+    val planner = remember { MarkdownStreamPlanner() }
     val plan = remember(text) {
         Trace.beginSection("deepdeep.markdown.parse")
         try {
-            planMarkdownStream(text)
+            planner.plan(text)
         } finally {
             Trace.endSection()
         }

@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
+import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
@@ -58,6 +59,8 @@ class ChatViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
     private val dismissInterruptedQuestions: suspend (String) -> Unit = {},
+    private val interruptedRuns: suspend (String) -> List<InterruptedRun> = { emptyList() },
+    private val dismissInterruptedRun: suspend (String) -> Unit = {},
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
@@ -75,7 +78,8 @@ class ChatViewModel(
     private val autoRetryTokens = mutableMapOf<String, Any>()
     private val autoRetryJobs = mutableMapOf<String, Job>()
     private val autoRetryRetiredRunIds = mutableMapOf<String, String>()
-    private val interruptedNoticeSessions = mutableSetOf<String>()
+    private val interruptedQuestionNoticeSessions = mutableSetOf<String>()
+    private val interruptedRunNoticeSessions = mutableSetOf<String>()
 
     init {
         viewModelScope.launch { runtime.events.collect(::onSessionEvent) }
@@ -336,14 +340,31 @@ class ChatViewModel(
     }
 
     private fun dismissInterruptedNotice(sessionId: String) {
-        viewModelScope.launch {
-            try {
-                dismissInterruptedQuestions(sessionId)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Unit
+        interruptedQuestionNoticeSessions -= sessionId
+        interruptedRunNoticeSessions -= sessionId
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { state ->
+                state.copy(messages = state.messages.filterNot { message -> message.notice.isInterruptedNotice() })
             }
+        }
+        conversationCache[sessionId]?.let { cached ->
+            conversationCache[sessionId] = cached.copy(
+                messages = cached.messages.filterNot { message -> message.notice.isInterruptedNotice() },
+            )
+        }
+        viewModelScope.launch {
+            ignoreFailure { dismissInterruptedQuestions(sessionId) }
+            ignoreFailure { dismissInterruptedRun(sessionId) }
+        }
+    }
+
+    private suspend fun ignoreFailure(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Unit
         }
     }
 
@@ -903,25 +924,23 @@ class ChatViewModel(
         openSession(summary)
     }
 
-    private fun ConversationState.withCachedInterruptedNotice(sessionId: String): ConversationState {
-        if (sessionId !in interruptedNoticeSessions) return this
-        val cached = conversationCache[sessionId]?.messages
-            ?.lastOrNull { message -> message.notice is TurnNotice.InterruptedQuestions }
-            ?: return this
-        return copy(messages = messages + cached.copy(id = nextMessageId(messages)))
+    private fun ConversationState.withCachedInterruptedNotices(sessionId: String): ConversationState {
+        if (sessionId !in interruptedQuestionNoticeSessions && sessionId !in interruptedRunNoticeSessions) return this
+        val cached = conversationCache[sessionId] ?: return this
+        val notices = cached.messages.filter { message -> message.notice.isInterruptedNotice() }
+        if (notices.isEmpty()) return this
+        var id = nextMessageId(messages)
+        return copy(messages = messages + notices.map { message -> message.copy(id = id++) })
     }
 
-    private suspend fun ConversationState.withInterruptedNotice(sessionId: String): ConversationState {
-        if (sessionId in interruptedNoticeSessions) return this
-        val interrupted = try {
-            interruptedQuestions(sessionId)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            emptyList()
-        }
-        if (interrupted.isEmpty()) return this
-        interruptedNoticeSessions += sessionId
+    private suspend fun ConversationState.withInterruptedNotice(
+        sessionId: String,
+        shownSessions: MutableSet<String>,
+        resolve: suspend () -> TurnNotice?,
+    ): ConversationState {
+        if (sessionId in shownSessions) return this
+        val notice = ignoreFailureResult(resolve) ?: return this
+        shownSessions += sessionId
         val now = System.currentTimeMillis()
         return copy(
             messages = messages + AssistantMessage(
@@ -931,10 +950,21 @@ class ChatViewModel(
                 status = MessageStatus.DONE,
                 startedAt = now,
                 finishedAt = now,
-                notice = TurnNotice.InterruptedQuestions(interrupted.size),
+                notice = notice,
             ),
         )
     }
+
+    private suspend fun <T> ignoreFailureResult(block: suspend () -> T): T? = try {
+        block()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        null
+    }
+
+    private fun TurnNotice?.isInterruptedNotice(): Boolean =
+        this is TurnNotice.InterruptedQuestions || this is TurnNotice.InterruptedRun
 
     private fun openSession(summary: ConversationSummary) {
         if (sessionOpenJobs.containsKey(summary.id)) return
@@ -968,7 +998,15 @@ class ChatViewModel(
                 } else {
                     base.adoptActiveRun(activeRun.runId, uiStrings.thinking, activeRun.startedAt)
                 }
-                val resolved = snapshot.withCachedInterruptedNotice(summary.id).withInterruptedNotice(summary.id)
+                val resolved = snapshot.withCachedInterruptedNotices(summary.id)
+                    .withInterruptedNotice(summary.id, interruptedQuestionNoticeSessions) {
+                        interruptedQuestions(summary.id).size.takeIf { count -> count > 0 }
+                            ?.let { count -> TurnNotice.InterruptedQuestions(count) }
+                    }
+                    .withInterruptedNotice(summary.id, interruptedRunNoticeSessions) {
+                        interruptedRuns(summary.id).size.takeIf { count -> count > 0 }
+                            ?.let { count -> TurnNotice.InterruptedRun(count) }
+                    }
                 conversationCache[summary.id] = resolved
                 if (mutableState.value.conversationId == summary.id) {
                     mutableState.update {

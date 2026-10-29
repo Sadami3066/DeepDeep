@@ -114,20 +114,141 @@ internal class MarkdownStreamPlan(
     val footnotes: List<MarkdownFootnote>,
 )
 
-internal fun planMarkdownStream(source: String): MarkdownStreamPlan {
-    val context = InlineContext()
-    val lines = source.replace("\r\n", "\n").split('\n')
-    val clean = extractDefinitions(lines, context)
-    val quotes = mutableListOf<List<String>>()
-    val chunks = splitMarkdownChunks(clean, quotes)
-    quotes.forEach { quote -> collectQuoteDefinitions(quote, context) }
-    return MarkdownStreamPlan(
-        chunks = chunks.map(::MarkdownChunk),
-        links = context.links,
-        footnoteNumbers = context.footnoteNumbers,
-        footnotes = context.footnotes,
-    )
+private sealed interface MarkdownDefinition {
+    data class Footnote(val label: String, val text: String) : MarkdownDefinition
+
+    data class Link(val label: String, val destination: String) : MarkdownDefinition
 }
+
+private class MarkdownQuoteGroup(
+    val startLine: Int,
+    val entries: List<MarkdownDefinition>,
+)
+
+internal class MarkdownStreamPlanner {
+    private var source: String? = null
+    private var plan: MarkdownStreamPlan? = null
+    private val lines = mutableListOf<String>()
+    private val cleanLines = mutableListOf<String>()
+    private val definitions = mutableListOf<MarkdownDefinition>()
+    private val quoteGroups = mutableListOf<MarkdownQuoteGroup>()
+    private val chunks = mutableListOf<MarkdownChunk>()
+    private val chunkStarts = mutableListOf<Int>()
+    private var stableLineCount = 0
+    private var stableFence = false
+    private var stableEntryCount = 0
+
+    fun plan(newSource: String): MarkdownStreamPlan {
+        val previous = source
+        val cached = plan
+        if (previous == newSource && cached != null) return cached
+        if (previous != null && newSource.length > previous.length && newSource.startsWith(previous)) {
+            append(previous, newSource)
+        } else {
+            rebuild(newSource)
+        }
+        source = newSource
+        return buildPlan().also { built -> plan = built }
+    }
+
+    private fun rebuild(newSource: String) {
+        lines.clear()
+        lines += newSource.replace("\r\n", "\n").split('\n')
+        cleanLines.clear()
+        definitions.clear()
+        quoteGroups.clear()
+        chunks.clear()
+        chunkStarts.clear()
+        stableLineCount = 0
+        stableFence = false
+        stableEntryCount = 0
+        updateExtraction()
+        scanTail(0)
+    }
+
+    private fun append(previous: String, newSource: String) {
+        val appendedRaw = newSource.substring(previous.length)
+        val appended = appendedRaw.replace("\r\n", "\n")
+        val carryCarriageReturn = lines.isNotEmpty() && lines.last().endsWith("\r") && appendedRaw.startsWith("\n")
+        val last = if (lines.isEmpty()) "" else lines.removeAt(lines.lastIndex)
+        if (carryCarriageReturn) {
+            lines += last.dropLast(1)
+            lines += appended.drop(1).split('\n')
+        } else {
+            val pieces = appended.split('\n')
+            lines += last + pieces[0]
+            lines += pieces.drop(1)
+        }
+        updateExtraction()
+        scanTail(chunkScanStart())
+    }
+
+    private fun updateExtraction() {
+        cleanLines.subList(stableLineCount, cleanLines.size).clear()
+        definitions.subList(stableEntryCount, definitions.size).clear()
+        var fence = stableFence
+        for (index in stableLineCount until lines.size) {
+            if (index == lines.size - 1) {
+                stableEntryCount = definitions.size
+                stableFence = fence
+            }
+            fence = extractDefinitionLines(lines, index, index + 1, fence, cleanLines, definitions)
+        }
+        stableLineCount = lines.size - 1
+    }
+
+    private fun chunkScanStart(): Int = if (chunks.size < 3) 0 else chunkStarts[chunks.size - 2]
+
+    private fun scanTail(startIndex: Int) {
+        if (startIndex == 0) {
+            chunks.clear()
+            chunkStarts.clear()
+            quoteGroups.clear()
+        } else {
+            chunks.subList(chunks.size - 2, chunks.size).clear()
+            chunkStarts.subList(chunkStarts.size - 2, chunkStarts.size).clear()
+            quoteGroups.removeAll { group -> group.startLine >= startIndex }
+        }
+        var chunkStart = startIndex
+        scanStructure(
+            lines = cleanLines,
+            startIndex = startIndex,
+            onBlank = { index ->
+                if (isChunkBoundary(cleanLines, index)) {
+                    addChunk(chunkStart, index)
+                    chunkStart = index + 1
+                }
+            },
+            onQuote = { quoteStart, content ->
+                quoteGroups += MarkdownQuoteGroup(quoteStart, collectQuoteEntries(content))
+            },
+        )
+        addChunk(chunkStart, cleanLines.size)
+    }
+
+    private fun addChunk(start: Int, end: Int) {
+        if (start >= end) return
+        val text = cleanLines.subList(start, end).joinToString("\n")
+        if (text.isNotBlank()) {
+            chunks += MarkdownChunk(text)
+            chunkStarts += start
+        }
+    }
+
+    private fun buildPlan(): MarkdownStreamPlan {
+        val context = InlineContext()
+        definitions.forEach { definition -> applyDefinition(definition, context) }
+        quoteGroups.forEach { group -> group.entries.forEach { entry -> applyDefinition(entry, context) } }
+        return MarkdownStreamPlan(
+            chunks = chunks.toList(),
+            links = context.links,
+            footnoteNumbers = context.footnoteNumbers,
+            footnotes = context.footnotes,
+        )
+    }
+}
+
+internal fun planMarkdownStream(source: String): MarkdownStreamPlan = MarkdownStreamPlanner().plan(source)
 
 internal fun parseMarkdownChunk(text: String): List<MarkdownBlock> =
     parseBlockLines(text.split('\n'), InlineContext())
@@ -142,19 +263,28 @@ internal fun parseMarkdownChunked(source: String): MarkdownDocument {
     )
 }
 
-private fun collectQuoteDefinitions(lines: List<String>, context: InlineContext) {
-    val clean = extractDefinitions(lines, context)
+private fun collectQuoteEntries(lines: List<String>): List<MarkdownDefinition> {
+    val entries = mutableListOf<MarkdownDefinition>()
+    val clean = mutableListOf<String>()
+    if (lines.none { line -> line.trimStart().startsWith("[") }) {
+        clean += lines
+    } else {
+        extractDefinitionLines(lines, 0, lines.size, false, clean, entries)
+    }
+    val result = entries.toMutableList()
     val quotes = mutableListOf<List<String>>()
-    scanStructure(clean, onQuote = { quote -> quotes += quote })
-    quotes.forEach { quote -> collectQuoteDefinitions(quote, context) }
+    scanStructure(clean, onQuote = { _, content -> quotes += content })
+    quotes.forEach { content -> result += collectQuoteEntries(content) }
+    return result
 }
 
 private fun scanStructure(
     lines: List<String>,
+    startIndex: Int = 0,
     onBlank: ((Int) -> Unit)? = null,
-    onQuote: ((List<String>) -> Unit)? = null,
+    onQuote: ((Int, List<String>) -> Unit)? = null,
 ) {
-    var index = 0
+    var index = startIndex
     var inFence = false
     var inMath = false
     while (index < lines.size) {
@@ -186,6 +316,7 @@ private fun scanStructure(
             }
 
             trimmed.startsWith(">") -> {
+                val quoteStart = index
                 val quote = mutableListOf<String>()
                 while (index < lines.size) {
                     val current = lines[index].trim()
@@ -193,7 +324,7 @@ private fun scanStructure(
                     quote += current.removePrefix(">").removePrefix(" ")
                     index++
                 }
-                onQuote?.invoke(quote)
+                onQuote?.invoke(quoteStart, quote)
             }
 
             trimmed.isEmpty() -> {
@@ -211,36 +342,12 @@ private fun isSingleLineMath(trimmed: String): Boolean {
     return rest.endsWith("$$") && rest.length >= 2
 }
 
-private fun splitMarkdownChunks(lines: List<String>, quotes: MutableList<List<String>>): List<String> {
-    if (lines.isEmpty()) return emptyList()
-    val chunks = mutableListOf<String>()
-    var start = 0
-    scanStructure(
-        lines,
-        onBlank = { index ->
-            if (isChunkBoundary(lines, index)) {
-                addChunk(chunks, lines, start, index)
-                start = index + 1
-            }
-        },
-        onQuote = { quote -> quotes += quote },
-    )
-    addChunk(chunks, lines, start, lines.size)
-    return chunks
-}
-
 private fun isChunkBoundary(lines: List<String>, index: Int): Boolean {
     var next = index + 1
     while (next < lines.size && lines[next].isBlank()) next++
     if (next >= lines.size) return true
     if (listItemPattern.matches(lines[next])) return false
     return isBlockStart(lines, next) || indentWidth(leadingWhitespace(lines[next])) == 0
-}
-
-private fun addChunk(chunks: MutableList<String>, lines: List<String>, start: Int, end: Int) {
-    if (start >= end) return
-    val text = lines.subList(start, end).joinToString("\n")
-    if (text.isNotBlank()) chunks += text
 }
 
 private fun parseBlocks(source: String, context: InlineContext): List<MarkdownBlock> =
@@ -372,37 +479,59 @@ private fun parseBlockLines(lines: List<String>, context: InlineContext): List<M
 
 private fun extractDefinitions(lines: List<String>, context: InlineContext): List<String> {
     if (lines.none { line -> line.trimStart().startsWith("[") }) return lines
-    val result = ArrayList<String>(lines.size)
-    var inFence = false
-    for (line in lines) {
+    val entries = mutableListOf<MarkdownDefinition>()
+    val clean = mutableListOf<String>()
+    extractDefinitionLines(lines, 0, lines.size, false, clean, entries)
+    entries.forEach { definition -> applyDefinition(definition, context) }
+    return clean
+}
+
+private fun extractDefinitionLines(
+    lines: List<String>,
+    start: Int,
+    end: Int,
+    inFence: Boolean,
+    clean: MutableList<String>,
+    entries: MutableList<MarkdownDefinition>,
+): Boolean {
+    var fence = inFence
+    for (index in start until end) {
+        val line = lines[index]
         val trimmed = line.trim()
         if (trimmed.startsWith("```")) {
-            inFence = !inFence
-            result += line
+            fence = !fence
+            clean += line
             continue
         }
-        if (inFence || !trimmed.startsWith("[")) {
-            result += line
+        if (fence || !trimmed.startsWith("[")) {
+            clean += line
             continue
         }
         val footnote = footnoteDefinitionPattern.matchEntire(trimmed)
         if (footnote != null) {
-            addFootnote(footnote.groupValues[1].trim(), footnote.groupValues[2].trim(), context)
-            result += ""
+            entries += MarkdownDefinition.Footnote(footnote.groupValues[1].trim(), footnote.groupValues[2].trim())
+            clean += ""
             continue
         }
         val reference = referenceDefinitionPattern.matchEntire(trimmed)
         if (reference != null) {
             val destination = reference.groupValues[2].removePrefix("<").removeSuffix(">")
             if (destination.isNotEmpty()) {
-                context.links.putIfAbsent(reference.groupValues[1].trim().lowercase(), destination)
-                result += ""
+                entries += MarkdownDefinition.Link(reference.groupValues[1].trim().lowercase(), destination)
+                clean += ""
                 continue
             }
         }
-        result += line
+        clean += line
     }
-    return result
+    return fence
+}
+
+private fun applyDefinition(definition: MarkdownDefinition, context: InlineContext) {
+    when (definition) {
+        is MarkdownDefinition.Footnote -> addFootnote(definition.label, definition.text, context)
+        is MarkdownDefinition.Link -> context.links.putIfAbsent(definition.label, definition.destination)
+    }
 }
 
 private fun addFootnote(label: String, text: String, context: InlineContext) {

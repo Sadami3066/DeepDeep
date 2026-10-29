@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
+import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -29,6 +30,7 @@ import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.UserQuestion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +74,8 @@ class ChatViewModelTest {
         attachmentStore: FakeAttachmentStore = FakeAttachmentStore(),
         interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
         dismissInterruptedQuestions: suspend (String) -> Unit = {},
+        interruptedRuns: suspend (String) -> List<InterruptedRun> = { emptyList() },
+        dismissInterruptedRun: suspend (String) -> Unit = {},
     ) = ChatViewModel(
         runtime,
         FakeProviders(),
@@ -83,6 +87,18 @@ class ChatViewModelTest {
         ioDispatcher = dispatcher,
         interruptedQuestions = interruptedQuestions,
         dismissInterruptedQuestions = dismissInterruptedQuestions,
+        interruptedRuns = interruptedRuns,
+        dismissInterruptedRun = dismissInterruptedRun,
+    )
+
+    private fun TurnNotice?.isInterruptedNoticeForTest(): Boolean =
+        this is TurnNotice.InterruptedQuestions || this is TurnNotice.InterruptedRun
+
+    private fun interruptedRun(sessionId: String) = InterruptedRun(
+        sessionId = sessionId,
+        runId = "run-$sessionId",
+        startedAt = 2L,
+        source = TurnSource.USER,
     )
 
     private fun interruptedQuestion(sessionId: String) = InterruptedQuestion(
@@ -284,6 +300,175 @@ class ChatViewModelTest {
 
         assertEquals(listOf("session-a"), dismissed)
         assertEquals("continue please", runtime.sent.single())
+        assertTrue(viewModel.state.value.messages.none { message ->
+            message.notice is TurnNotice.InterruptedQuestions
+        })
+    }
+
+    @Test
+    fun insertsInterruptedRunNoticeAfterOpeningSession() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val queries = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedRuns = { sessionId ->
+                queries += sessionId
+                if (sessionId == "session-a") listOf(interruptedRun(sessionId)) else emptyList()
+            },
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf("session-a"), queries)
+        val message = viewModel.state.value.messages.last()
+        assertEquals(TurnNotice.InterruptedRun(1), message.notice)
+        assertEquals(2, viewModel.state.value.messages.size)
+    }
+
+    @Test
+    fun keepsInterruptedRunNoticeAcrossConversationSwitches() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
+                "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
+            )
+        }
+        val queries = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedRuns = { sessionId ->
+                queries += sessionId
+                if (sessionId == "session-a") listOf(interruptedRun(sessionId)) else emptyList()
+            },
+        )
+        advanceUntilIdle()
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+
+        assertEquals(1, queries.count { it == "session-a" })
+        assertEquals(1, viewModel.state.value.messages.count { message ->
+            message.notice is TurnNotice.InterruptedRun
+        })
+    }
+
+    @Test
+    fun dismissesInterruptedRunOnNextMessage() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val dismissed = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
+            dismissInterruptedRun = { sessionId -> dismissed += sessionId },
+        )
+        advanceUntilIdle()
+
+        viewModel.onInputChange("continue please")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(listOf("session-a"), dismissed)
+        assertEquals("continue please", runtime.sent.single())
+        assertTrue(viewModel.state.value.messages.none { message ->
+            message.notice is TurnNotice.InterruptedRun
+        })
+    }
+
+    @Test
+    fun removesBothInterruptedNoticesAfterSendingMessage() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val dismissedQuestions = mutableListOf<String>()
+        val dismissedRuns = mutableListOf<String>()
+        val viewModel = viewModel(
+            runtime,
+            interruptedQuestions = { sessionId -> listOf(interruptedQuestion(sessionId)) },
+            dismissInterruptedQuestions = { sessionId -> dismissedQuestions += sessionId },
+            interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
+            dismissInterruptedRun = { sessionId -> dismissedRuns += sessionId },
+        )
+        advanceUntilIdle()
+        assertEquals(2, viewModel.state.value.messages.count { message -> message.notice.isInterruptedNoticeForTest() })
+
+        viewModel.onInputChange("continue please")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.messages.none { message -> message.notice.isInterruptedNoticeForTest() })
+        assertEquals(listOf("session-a"), dismissedQuestions)
+        assertEquals(listOf("session-a"), dismissedRuns)
+    }
+
+    @Test
+    fun doesNotRestoreInterruptedRunNoticeAfterSwitchingBack() = runTest(dispatcher) {
+        val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(first, second)
+            histories = mapOf(
+                "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
+                "session-b" to listOf(AssistantMessage(2, AssistantRole.USER, "from b")),
+            )
+        }
+        val interrupted = mutableListOf(interruptedRun("session-a"))
+        val viewModel = viewModel(
+            runtime,
+            interruptedRuns = { sessionId -> interrupted.filter { run -> run.sessionId == sessionId } },
+            dismissInterruptedRun = { sessionId -> interrupted.removeAll { run -> run.sessionId == sessionId } },
+        )
+        advanceUntilIdle()
+        assertEquals(2, viewModel.state.value.messages.size)
+
+        viewModel.onInputChange("continue please")
+        viewModel.send()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.messages.none { message ->
+            message.notice is TurnNotice.InterruptedRun
+        })
+
+        viewModel.openConversation("session-b")
+        advanceUntilIdle()
+        viewModel.openConversation("session-a")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.messages.none { message ->
+            message.notice is TurnNotice.InterruptedRun
+        })
+    }
+
+    @Test
+    fun insertsInterruptedQuestionAndRunNoticesTogether() = runTest(dispatcher) {
+        val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val runtime = FakeRuntime().apply {
+            sessions = listOf(session)
+            histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
+        }
+        val viewModel = viewModel(
+            runtime,
+            interruptedQuestions = { sessionId -> listOf(interruptedQuestion(sessionId)) },
+            interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
+        )
+        advanceUntilIdle()
+
+        val messages = viewModel.state.value.messages
+        assertEquals(3, messages.size)
+        assertEquals(TurnNotice.InterruptedQuestions(1), messages[1].notice)
+        assertEquals(TurnNotice.InterruptedRun(1), messages[2].notice)
     }
 
     @Test
@@ -919,6 +1104,8 @@ class ChatViewModelTest {
         val runId = "run-1"
         override val events: SharedFlow<SessionRuntimeEvent> = flow
         override val busySessionIds: StateFlow<Set<String>> = busy
+        val interruptedRunState = MutableStateFlow<List<InterruptedRun>>(emptyList())
+        override val interruptedRuns: StateFlow<List<InterruptedRun>> = interruptedRunState
         override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
         var sessions: List<ConversationSummary> = emptyList()
         var histories: Map<String, List<AssistantMessage>> = emptyMap()
@@ -937,6 +1124,10 @@ class ChatViewModelTest {
 
         override suspend fun start() = Unit
         override suspend fun ensureStarted() = Unit
+        val dismissedRuns = mutableListOf<String>()
+        override suspend fun dismissInterruptedRun(sessionId: String) {
+            dismissedRuns += sessionId
+        }
 
         override suspend fun workspaces(): List<RuntimeWorkspace> =
             listOf(RuntimeWorkspace(HOME_ID, "Home", HOME_CWD, isHome = true)) + extraProjects

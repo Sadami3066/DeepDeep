@@ -17,8 +17,8 @@
     <string name="notification_result_done">回答完成</string>
     <string name="notification_result_stopped">已停止</string>
     <string name="notification_result_failed">失败：%1$s</string>
-    <string name="notification_interrupted_title">有提问未完成</string>
-    <string name="notification_interrupted_text">上次有 %1$d 个提问未完成，已失效。点击打开会话继续。</string>
+    <string name="notification_interrupted_title">有未完成项</string>
+    <string name="notification_interrupted_text">上次有 %1$d 项未完成（提问或运行中断），已失效。点击打开会话继续。</string>
 
     <string name="notification_download_title">开发工具</string>
     <string name="notification_download_done">%1$s 安装完成</string>

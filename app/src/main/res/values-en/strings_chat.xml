@@ -112,6 +112,7 @@
     <string name="chat_notice_job">Background job · %1$s</string>
     <string name="chat_notice_job_failed">Background job failed · %1$s</string>
     <string name="chat_notice_interrupted_questions">Questions interrupted from the last session: %1$d. They can no longer be answered; tell me to continue</string>
+    <string name="chat_notice_interrupted_run">Runs interrupted from the last session: %1$d. Their result is unknown; tell me to continue</string>
     <string name="chat_cmd_compact">Compact context</string>
     <string name="chat_cmd_compact_desc">Condense older history now to free context</string>
     <string name="chat_cmd_goal">Goal</string>

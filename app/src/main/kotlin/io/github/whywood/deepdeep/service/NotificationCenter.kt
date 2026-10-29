@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
+import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -150,9 +151,9 @@ class NotificationCenter(
         post(ACCESSIBILITY_ID, builder.build())
     }
 
-    fun notifyInterruptedQuestions(questions: List<InterruptedQuestion>) {
-        val sessionId = interruptedNotificationSessionId(questions) ?: return
-        val text = context.getString(R.string.notification_interrupted_text, questions.size)
+    fun notifyInterruptedWork(questions: List<InterruptedQuestion>, runs: List<InterruptedRun>) {
+        val sessionId = interruptedNotificationTarget(questions, runs) ?: return
+        val text = context.getString(R.string.notification_interrupted_text, interruptedNotificationCount(questions, runs))
         val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.notification_interrupted_title))
@@ -162,7 +163,7 @@ class NotificationCenter(
             .setAutoCancel(true)
             .setGroup(GROUP_SESSIONS)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-        post(INTERRUPTED_QUESTIONS_ID, builder.build())
+        post(INTERRUPTED_ID, builder.build())
     }
 
     private fun accessibilitySettingsIntent(): PendingIntent {
@@ -363,7 +364,7 @@ class NotificationCenter(
         private const val INSTALL_ID = 200
         private const val INSTALL_RESULT_ID = 201
         private const val ACCESSIBILITY_ID = 300
-        private const val INTERRUPTED_QUESTIONS_ID = 400
+        private const val INTERRUPTED_ID = 400
         private const val GROUP_SESSIONS = "deepdeep_sessions"
 
         fun areNotificationsEnabled(context: Context): Boolean =
@@ -371,5 +372,21 @@ class NotificationCenter(
     }
 }
 
-internal fun interruptedNotificationSessionId(questions: List<InterruptedQuestion>): String? =
-    questions.minByOrNull { it.createdAt }?.sessionId
+internal fun interruptedNotificationCount(
+    questions: List<InterruptedQuestion>,
+    runs: List<InterruptedRun>,
+): Int = questions.size + runs.size
+
+internal fun interruptedNotificationTarget(
+    questions: List<InterruptedQuestion>,
+    runs: List<InterruptedRun>,
+): String? {
+    val question = questions.minByOrNull { it.createdAt }
+    val run = runs.minByOrNull { it.startedAt }
+    return when {
+        question == null -> run?.sessionId
+        run == null -> question.sessionId
+        question.createdAt <= run.startedAt -> question.sessionId
+        else -> run.sessionId
+    }
+}

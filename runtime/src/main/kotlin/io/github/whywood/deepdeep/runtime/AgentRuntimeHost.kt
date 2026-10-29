@@ -15,6 +15,7 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -44,6 +45,8 @@ class AgentRuntimeHost(
     private val goalDriver: GoalDriver? = null,
     private val sessionCleaner: ((String) -> Unit)? = null,
     private val sessionArchived: ((String) -> Unit)? = null,
+    private val runLedger: RunLedger = RunLedger(null),
+    private val keepHandleAlive: (String) -> Boolean = { true },
 ) : AgentRuntime {
     internal class Handle(
         val engine: PiSessionEngine,
@@ -52,6 +55,13 @@ class AgentRuntimeHost(
         val state: SessionCommandPlane.SessionState,
     ) {
         var unsubscribe: (() -> Unit)? = null
+
+        @Volatile
+        var lastActiveAt: Long = System.currentTimeMillis()
+
+        fun touch() {
+            lastActiveAt = System.currentTimeMillis()
+        }
     }
 
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
@@ -66,17 +76,35 @@ class AgentRuntimeHost(
     private val activeRunState = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
     override val activeRuns: StateFlow<Map<String, ActiveRunSnapshot>> = activeRunState.asStateFlow()
 
+    override val interruptedRuns: StateFlow<List<InterruptedRun>> = runLedger.interruptedRuns
+
     private val mutex = Mutex()
     private val mcpMutex = Mutex()
     private val commands = SessionCommandPlane()
     private val handles = ConcurrentHashMap<String, Handle>()
+    private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+    private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+    private var lastOpenedSessionId: String? = null
     private var started = false
 
     override suspend fun start() = mutex.withLock {
         if (started) return@withLock
         homeDir.mkdirs()
         workspacesDir.mkdirs()
+        if (handles.isEmpty()) {
+            try {
+                runLedger.loadLeftovers()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "run ledger load failed", error)
+            }
+        }
         started = true
+    }
+
+    override suspend fun dismissInterruptedRun(sessionId: String) {
+        runLedger.dismiss(sessionId)
     }
 
     override suspend fun ensureStarted() {
@@ -138,35 +166,58 @@ class AgentRuntimeHost(
     override suspend fun workspaceSessionCount(workspaceId: String): Int =
         catalog.list(workspaceFor(workspaceId).cwd).size
 
-    override suspend fun newSession(workspaceId: String): OpenedSession = mutex.withLock {
-        val workspace = workspaceFor(workspaceId)
-        val handle = attach(workspace.cwd, null)
-        emitListChanged()
-        OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), workspace.cwd)
+    override suspend fun newSession(workspaceId: String): OpenedSession {
+        val opened = mutex.withLock {
+            val workspace = workspaceFor(workspaceId)
+            val handle = attach(workspace.cwd, null)
+            handle.touch()
+            lastOpenedSessionId = handle.session.sessionId
+            emitListChanged()
+            OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), workspace.cwd)
+        }
+        sweepIdleHandles()
+        return opened
     }
 
-    override suspend fun openSession(filePath: String, cwd: String): OpenedSession = mutex.withLock {
-        handles.values.firstOrNull { it.session.sessionFile?.toString() == filePath }?.let { existing ->
-            OpenedSession(existing.session.sessionId, filePath, existing.cwd)
-        } ?: run {
-            val handle = attach(cwd, filePath)
-            OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), cwd)
+    override suspend fun openSession(filePath: String, cwd: String): OpenedSession {
+        val opened = mutex.withLock {
+            closingFiles[filePath]?.await()
+            handles.values.firstOrNull { it.session.sessionFile?.toString() == filePath }?.let { existing ->
+                existing.touch()
+                lastOpenedSessionId = existing.session.sessionId
+                OpenedSession(existing.session.sessionId, filePath, existing.cwd)
+            } ?: run {
+                val handle = attach(cwd, filePath)
+                handle.touch()
+                lastOpenedSessionId = handle.session.sessionId
+                OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), cwd)
+            }
         }
+        sweepIdleHandles()
+        return opened
     }
 
     override suspend fun closeSession(sessionId: String) = mutex.withLock {
         detach(sessionId)
     }
 
-    override suspend fun reloadSession(sessionId: String): String = mutex.withLock {
-        val handle = handles[sessionId] ?: error("Agent session is not ready")
-        check(!handle.state.busy) { "Agent session is busy" }
-        val file = handle.session.sessionFile?.toString() ?: error("Agent session has no file")
-        val cwd = handle.cwd
-        detach(sessionId)
-        val reopened = attach(cwd, file)
-        emitListChanged()
-        reopened.session.sessionId
+    override suspend fun reloadSession(sessionId: String): String {
+        val reopenedId = mutex.withLock {
+            val handle = handles[sessionId] ?: error("Agent session is not ready")
+            check(!handle.state.busy) { "Agent session is busy" }
+            val file = handle.session.sessionFile?.toString() ?: error("Agent session has no file")
+            val cwd = handle.cwd
+            val selected = lastOpenedSessionId == sessionId
+            val lastActiveAt = handle.lastActiveAt
+            detach(sessionId)
+            val reopened = attach(cwd, file)
+            reopened.lastActiveAt = lastActiveAt
+            if (selected) lastOpenedSessionId = reopened.session.sessionId
+            emitListChanged()
+            reopened.session.sessionId
+        }
+        sweepIdleHandles()
+        return reopenedId
     }
 
     suspend fun reloadMcp() = mcpMutex.withLock {
@@ -259,6 +310,7 @@ class AgentRuntimeHost(
             }
 
             is SessionCommandPlane.Delivery.Injected -> {
+                handle.touch()
                 emit(handle, RuntimeEvent.TurnInjected(delivery.runId, text, reminder))
                 handle.session.prompt(text, behavior = QueueBehavior.FollowUp)
                 emitListChanged()
@@ -284,6 +336,7 @@ class AgentRuntimeHost(
             }
 
             is SessionCommandPlane.Delivery.Injected -> {
+                handle.touch()
                 if (notice != null) emit(handle, NoticeEvent(delivery.runId, notice))
                 handle.session.prompt(prompt, behavior = QueueBehavior.FollowUp)
             }
@@ -294,8 +347,21 @@ class AgentRuntimeHost(
 
     override suspend fun activeRunId(sessionId: String): String? = activeRunState.value[sessionId]?.runId
 
-    private suspend fun handleFor(sessionId: String): Handle =
-        mutex.withLock { handles[sessionId] } ?: error("Agent session is not ready")
+    private suspend fun handleFor(sessionId: String): Handle {
+        mutex.withLock { handles[sessionId] }?.let { handle ->
+            handle.touch()
+            return handle
+        }
+        closingSessions[sessionId]?.await()
+        val summary = HandleBudget.reconnectTarget(catalog.listAll(visibleCwds()), sessionId)
+            ?: error("Agent session is not ready")
+        val handle = mutex.withLock {
+            closingSessions[sessionId]?.await()
+            handles[sessionId] ?: attach(summary.cwd, summary.filePath)
+        }
+        sweepIdleHandles()
+        return handle
+    }
 
     private suspend fun begin(handle: Handle, source: TurnSource): SessionCommandPlane.Start? {
         val start = commands.begin(handle.session.sessionId, source) ?: return null
@@ -304,18 +370,54 @@ class AgentRuntimeHost(
     }
 
     private suspend fun afterBegin(handle: Handle, source: TurnSource) {
+        handle.touch()
         publishBusy()
         publishActiveRun(handle)
+        recordRunStart(handle, source)
         goalDriver?.noteTurn(handle.session.sessionId, source)
     }
 
-    private fun release(handle: Handle, runId: String) {
+    private suspend fun recordRunStart(handle: Handle, source: TurnSource) {
+        val sessionId = handle.session.sessionId
+        val snapshot = commands.snapshot(sessionId) ?: return
+        val runId = snapshot.runId ?: return
+        try {
+            runLedger.begin(sessionId, runId, snapshot.runStartedAt, source)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(TAG, "run ledger begin failed session=$sessionId", error)
+        }
+    }
+
+    private fun forgetRunRecord(runId: String) {
+        backgroundScope.launch {
+            try {
+                runLedger.clear(runId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "run ledger clear failed run=$runId", error)
+            }
+        }
+    }
+
+    private suspend fun release(handle: Handle, runId: String) {
         val finish = commands.finish(handle.session.sessionId, runId)
         if (!finish.released) return
+        handle.touch()
         publishBusy()
         publishActiveRun(handle)
         emit(handle, RuntimeEvent.ActivityChanged(runId, null))
         emit(handle, RuntimeEvent.SessionListChanged())
+        try {
+            runLedger.clear(runId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(TAG, "run ledger clear failed run=$runId", error)
+        }
+        backgroundScope.launch { sweepIdleHandles() }
         if (finish.reconfigure) {
             val sessionId = handle.session.sessionId
             backgroundScope.launch {
@@ -373,6 +475,7 @@ class AgentRuntimeHost(
                 ),
             )
         } ?: return
+        forgetRunRecord(stopped.runId)
         handle.session.abort()
         goalDriver?.let { driver -> backgroundScope.launch { driver.pauseOnStop(sessionId) } }
     }
@@ -519,18 +622,25 @@ class AgentRuntimeHost(
             val token = commands.claimReconfigure(sessionId)
             if (token == 0L) return
             var again = false
+            var reattached = false
             try {
                 mutex.withLock {
                     if (!commands.ownsReconfigure(sessionId, token)) return@withLock
                     val handle = handles[sessionId] ?: return@withLock
                     val cwd = handle.cwd
                     val file = handle.session.sessionFile?.toString()
+                    val selected = lastOpenedSessionId == sessionId
+                    val lastActiveAt = handle.lastActiveAt
                     detach(sessionId, keepReconfigure = true)
-                    attach(cwd, file)
+                    val reopened = attach(cwd, file)
+                    reopened.lastActiveAt = lastActiveAt
+                    if (selected) lastOpenedSessionId = reopened.session.sessionId
+                    reattached = true
                 }
             } finally {
                 again = commands.releaseReconfigure(sessionId, token)
             }
+            if (reattached) sweepIdleHandles()
             if (!again) return
         }
     }
@@ -573,16 +683,86 @@ class AgentRuntimeHost(
         forget: Boolean = false,
         keepReconfigure: Boolean = false,
     ) {
-        val handle = handles.remove(sessionId)
-        commands.detach(sessionId, keepReconfigure)
-        if (forget) commands.forget(sessionId)
-        if (handle == null) return
-        handle.unsubscribe?.invoke()
-        handle.unsubscribe = null
-        handle.session.close()
+        val handle = detachLocked(sessionId, forget, keepReconfigure) ?: return
+        closeHandle(handle)
         publishBusy()
         activeRunState.update { it - sessionId }
     }
+
+    private fun detachLocked(
+        sessionId: String,
+        forget: Boolean = false,
+        keepReconfigure: Boolean = false,
+    ): Handle? {
+        if (lastOpenedSessionId == sessionId) lastOpenedSessionId = null
+        val handle = handles.remove(sessionId)
+        commands.detach(sessionId, keepReconfigure)
+        if (forget) commands.forget(sessionId)
+        return handle
+    }
+
+    private suspend fun closeHandle(handle: Handle) {
+        handle.unsubscribe?.invoke()
+        handle.unsubscribe = null
+        handle.session.close()
+    }
+
+    internal suspend fun sweepIdleHandles() {
+        val victims = mutex.withLock { evictionVictimsLocked() }
+        for (sessionId in victims) {
+            val gate = CompletableDeferred<Unit>()
+            val handle = mutex.withLock {
+                val current = handles[sessionId] ?: return@withLock null
+                if (!evictableLocked(sessionId, current)) return@withLock null
+                val removed = detachLocked(sessionId) ?: return@withLock null
+                closingSessions[sessionId] = gate
+                removed.session.sessionFile?.toString()?.let { closingFiles[it] = gate }
+                removed
+            } ?: continue
+            val file = handle.session.sessionFile?.toString()
+            try {
+                closeHandle(handle)
+            } finally {
+                closingSessions.remove(sessionId)
+                if (file != null) closingFiles.remove(file)
+                gate.complete(Unit)
+                publishBusy()
+                activeRunState.update { it - sessionId }
+            }
+        }
+    }
+
+    private fun evictionVictimsLocked(): List<String> {
+        if (handles.size <= HandleBudget.MAX_HANDLES) return emptyList()
+        val now = System.currentTimeMillis()
+        val entries = handles.map { (sessionId, handle) -> budgetEntryLocked(sessionId, handle, now) }
+        return HandleBudget.decideEvictions(entries, handles.size, now)
+    }
+
+    private fun evictableLocked(sessionId: String, handle: Handle): Boolean {
+        val entry = budgetEntryLocked(sessionId, handle, System.currentTimeMillis())
+        if (entry.busy || entry.reconfiguring || entry.keepAlive || entry.selected) return false
+        return System.currentTimeMillis() - handle.lastActiveAt > HandleBudget.IDLE_TTL_MS
+    }
+
+    private fun budgetEntryLocked(sessionId: String, handle: Handle, now: Long): HandleBudget.Entry {
+        val snapshot = commands.snapshot(sessionId)
+        return HandleBudget.Entry(
+            sessionId = sessionId,
+            lastActiveAt = handle.lastActiveAt,
+            busy = snapshot?.busy == true || snapshot?.runId != null,
+            reconfiguring = snapshot?.reconfiguring == true,
+            keepAlive = keepAliveSafely(sessionId),
+            selected = sessionId == lastOpenedSessionId,
+        )
+    }
+
+    private fun keepAliveSafely(sessionId: String): Boolean =
+        try {
+            keepHandleAlive(sessionId)
+        } catch (_: Exception) {
+            true
+        }
 
     private fun publishBusy() {
         busyState.value = commands.busySessionIds()

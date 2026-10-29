@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,6 +32,69 @@ class MarkdownChunkingTest {
             }
             previous = plan
         }
+    }
+
+    @Test
+    fun incrementalPlannerMatchesFreshPlanForEveryPrefix() {
+        val source = streamingDocument()
+        val planner = MarkdownStreamPlanner()
+        for (length in 0..source.length) {
+            val incremental = planner.plan(source.substring(0, length))
+            val fresh = planMarkdownStream(source.substring(0, length))
+            assertEquals("prefix $length chunks", fresh.chunks.map { it.text }, incremental.chunks.map { it.text })
+            assertEquals("prefix $length links", fresh.links, incremental.links)
+            assertEquals("prefix $length footnote numbers", fresh.footnoteNumbers, incremental.footnoteNumbers)
+            assertEquals("prefix $length footnotes", fresh.footnotes, incremental.footnotes)
+        }
+    }
+
+    @Test
+    fun incrementalPlannerReusesStableChunkInstances() {
+        val source = streamingDocument()
+        val planner = MarkdownStreamPlanner()
+        var previous: MarkdownStreamPlan? = null
+        for (length in 1..source.length) {
+            val plan = planner.plan(source.substring(0, length))
+            val before = previous
+            if (before != null) {
+                val stable = before.chunks.dropLast(2)
+                stable.forEachIndexed { index, chunk ->
+                    assertSame("prefix $length chunk $index", chunk, plan.chunks[index])
+                }
+            }
+            previous = plan
+        }
+    }
+
+    @Test
+    fun incrementalPlannerHandlesCarriageReturnBoundaries() {
+        val text = "alpha\r\nbeta\r\n\r\n- item\r\n- two"
+        val planner = MarkdownStreamPlanner()
+        for (length in 0..text.length) {
+            val incremental = planner.plan(text.substring(0, length))
+            val fresh = planMarkdownStream(text.substring(0, length))
+            assertEquals("prefix $length", fresh.chunks.map { it.text }, incremental.chunks.map { it.text })
+            assertEquals("prefix $length links", fresh.links, incremental.links)
+        }
+    }
+
+    @Test
+    fun plannerRebuildsWhenTextShortensOrReplaces() {
+        val planner = MarkdownStreamPlanner()
+        val long = "# Title\n\n- one\n\n- two\n\n```kt\nval x = 1\n```\n\ntail"
+        val longPlan = planner.plan(long)
+        assertSame(longPlan, planner.plan(long))
+
+        val shortened = planner.plan("# Title")
+        assertEquals(planMarkdownStream("# Title").chunks, shortened.chunks)
+
+        val replacedSource = "| a | b |\n| --- | --- |\n| 1 | 2 |"
+        val replaced = planner.plan(replacedSource)
+        val fresh = planMarkdownStream(replacedSource)
+        assertEquals(fresh.chunks, replaced.chunks)
+        assertEquals(fresh.links, replaced.links)
+        assertEquals(fresh.footnoteNumbers, replaced.footnoteNumbers)
+        assertEquals(fresh.footnotes, replaced.footnotes)
     }
 
     @Test

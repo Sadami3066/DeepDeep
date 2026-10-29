@@ -189,6 +189,12 @@ internal fun DeepDeepApp(
                     dismissInterruptedQuestions = { sessionId ->
                         graph.questionCenter.dismissInterrupted(sessionId)
                     },
+                    interruptedRuns = { sessionId ->
+                        graph.host.interruptedRuns.value.filter { run -> run.sessionId == sessionId }
+                    },
+                    dismissInterruptedRun = { sessionId ->
+                        graph.host.dismissInterruptedRun(sessionId)
+                    },
                 )
             }
         },

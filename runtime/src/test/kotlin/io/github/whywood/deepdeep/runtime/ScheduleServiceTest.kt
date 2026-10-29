@@ -584,6 +584,9 @@ class ScheduleServiceTest {
         override val events = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 16)
         override val busySessionIds = MutableStateFlow<Set<String>>(emptySet())
         override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
+        override val interruptedRuns = MutableStateFlow<List<InterruptedRun>>(emptyList())
+
+        override suspend fun dismissInterruptedRun(sessionId: String) = Unit
 
         val deliveries = mutableListOf<Delivery>()
         val openedFiles = mutableListOf<String>()

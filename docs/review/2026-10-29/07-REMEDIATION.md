@@ -27,7 +27,7 @@
 | R04 附件大小检查可绕过 | 修复 | `AttachmentStore.kt`：`copyWithLimit` 流式限额 25MiB；`ChatViewModel.kt` 导入完成复核会话 | `AttachmentStoreTest`、`ChatViewModelTest` | 未做（需文件选择器/超限文件） |
 | R05 read 整文件读入 | 修复（保留输出文案） | pi2kotlin 0.2.3 `ReadTool.kt`：文本单遍流式、目标窗口外只计数；图片先嗅探且 ≤8MB 才整读 | SDK `ReadToolStreamingTest` 5（含 23MB 文件）；原 `ReadToolTest` 14 未改断言 | 未做 |
 | R06 最近活动排序退化 | 修复 | 新增 `SessionIndex.kt`（`files/session-index.json`，size+mtime 缓存）；`SessionCatalog.kt` 改走索引，`updatedAt=max(header,mtime)` | `SessionIndexTest` 10 | 真机：老会话发一条消息后抽屉立即显示 `Just now` 并排到 Home 第一；索引文件已生成（4321 字节） |
-| R07 资源无淘汰策略 | 部分修复 | `ChatViewModel` 会话缓存限 8（LRU，当前会话保留）；`JobRegistry` 只留最近 50 条已结束记录 | `JobRegistryTest` 10 | 未做 |
+| R07 资源无淘汰策略 | 修复 | `ChatViewModel` 会话缓存限 8（LRU，当前会话保留）；`JobRegistry` 只留最近 50 条已结束记录；round39 补 Host 空闲 handle 预算：超过 6 个且空闲 >10 分钟才回收，回收前检查 busy/重配/最近打开 + App 的保留条件（未投递提醒/活跃目标/运行中 job/待答问题），被回收会话按需懒重连（提醒投递不丢） | `JobRegistryTest` 13、`HandleBudgetTest` 7、`RunLedgerTest` 5 | 真机：提醒在 round39 构建上准时投递；handle 预算（10 分钟 TTL）未在真机压测中触发 |
 | R08 持久性与成功语义 | round38 已补最小闭环 | 提醒投递 outbox（`delivery-intents.json` + `recoverPending()` 补投一次）、job 记录持久化（`jobs.json`，重启后 RUNNING→`interrupted`，结果未知但可读）、待答问题持久化（`pending.json`，重启后 `interrupted` 并在会话内提示 + 汇总通知） | `ScheduleServiceTest` 18、`JobRegistryTest` 13、`QuestionCenterTest` 12、`ChatViewModelTest`（中断提示/自动重试标签）、`NotificationCenterTest` | 真机见 `08-DEVICE-QA.md`（round38）；持久任务表/TaskRepository 仍未做，见文末 |
 
 ## 说明与偏差
@@ -53,3 +53,10 @@
 - D1（真机发现）：自动重试倒计时标签被宿主终态 `ActivityChanged(failedRunId, null)` 覆盖，状态行一直显示 Thinking。修复：倒计时期间忽略该 runId 的终态活动事件，`beginRetry`/清理时解除。
 - D2（真机发现，P1）：插件安装失败回滚在“无备份”时删除已安装 CLI（飞书/企微同构问题）。修复：安装前记录是否已有二进制，回滚时有备份恢复、之前已有则保留、首次安装才清理半成品；回滚命令用真实 bash 临时目录测试。
 - 真机复测与性能前后对比见 [`08-DEVICE-QA.md`](08-DEVICE-QA.md)。
+
+## round39 追加（R07 完成 + 运行中断入口 + 流式解析增量）
+
+- R07 空闲 handle 预算：`HandleBudget` 纯策略 + Host 懒重连 + App `keepHandleAlive` 四类引用检查；回收与重开同一会话有并发门闩。测试 `HandleBudgetTest` 7、`RunLedgerTest` 5。
+- R08 运行中断可见：`RunLedger`（`files/tasks/runs.json`）记录运行开始/结束，进程被杀后残留转 `interruptedRuns`，会话内灰字提示 + 启动汇总通知；发下一条消息清除。
+- 性能：Job 输出快照发布 100ms 合并（≤10 次/秒，状态变化立即）；Markdown 流式规划改有状态增量（单元层 63–91ms → 2ms，540 批 12970 字符；等价性 48 篇 + 逐字符前缀）。
+- 真机发现 D3（中断提示发消息后不消失）→ 修复 `dismissInterruptedNotice` 同步清理本地消息与缓存集合，补 4 个测试后复测通过。详见 [`09-DEVICE-QA-ROUND39.md`](09-DEVICE-QA-ROUND39.md)。

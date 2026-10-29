@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ class JobRegistry(
     private val wakeEnabled: () -> Boolean = { true },
     private val runnerFactory: ((String?) -> BackgroundCommandRunner)? = null,
     private val persistence: JobPersistence? = null,
+    private val now: () -> Long = System::currentTimeMillis,
 ) : JobController {
     private val lock = Any()
     private val records = LinkedHashMap<String, Record>()
@@ -26,6 +28,9 @@ class JobRegistry(
     private val persistRequests = Channel<Unit>(Channel.CONFLATED)
     private var sequence = 0L
     private var lastPersistAt = 0L
+    private val publishLock = Any()
+    private var lastPublishAt = 0L
+    private var pendingPublish: Job? = null
 
     override val jobs: StateFlow<List<JobSnapshot>> = jobsState.asStateFlow()
 
@@ -212,7 +217,7 @@ class JobRegistry(
         try {
             val exitCode = runner.run(record.command) { chunk ->
                 record.append(chunk)
-                publish()
+                publishOutput()
                 requestPersist()
             }
             settle(record, exitCode, null, false)
@@ -281,11 +286,35 @@ class JobRegistry(
     }
 
     private fun publish() {
+        synchronized(publishLock) {
+            pendingPublish?.cancel()
+            pendingPublish = null
+            lastPublishAt = now()
+        }
         synchronized(lock) {
             jobsState.value = records.values
                 .sortedWith(compareBy({ it.startedAt }, { it.sequence }))
                 .map { it.snapshot() }
         }
+    }
+
+    private fun publishOutput() {
+        var scheduled: Job? = null
+        synchronized(publishLock) {
+            if (pendingPublish != null) return
+            val wait = (PUBLISH_INTERVAL_MS - (now() - lastPublishAt)).coerceAtLeast(0L)
+            val job = scope.launch(start = CoroutineStart.LAZY) {
+                delay(wait)
+                synchronized(publishLock) {
+                    pendingPublish = null
+                    lastPublishAt = now()
+                }
+                publish()
+            }
+            pendingPublish = job
+            scheduled = job
+        }
+        scheduled?.start()
     }
 
     private class Record(
@@ -486,6 +515,7 @@ private const val DEFAULT_WAIT_MS = 30_000L
 private const val MAX_WAIT_MS = 600_000L
 private const val INTERRUPTED_OUTPUT_NOTE = "[上次运行被中断，结果未知]"
 private const val PERSIST_INTERVAL_MS = 1_000L
+private const val PUBLISH_INTERVAL_MS = 100L
 
 internal fun jobStatusText(status: JobStatus, exitCode: Int?): String = when (status) {
     JobStatus.RUNNING -> "running"

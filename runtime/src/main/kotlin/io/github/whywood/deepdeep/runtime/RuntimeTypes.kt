@@ -66,6 +66,13 @@ data class SessionModelSnapshot(
     val thinkingLevel: ThinkingLevel,
 )
 
+data class InterruptedRun(
+    val sessionId: String,
+    val runId: String,
+    val startedAt: Long,
+    val source: TurnSource,
+)
+
 data class InterruptedQuestion(
     val requestId: String,
     val sessionId: String,
@@ -262,6 +269,9 @@ interface AgentRuntime {
     val events: SharedFlow<SessionRuntimeEvent>
     val busySessionIds: kotlinx.coroutines.flow.StateFlow<Set<String>>
     val activeRuns: kotlinx.coroutines.flow.StateFlow<Map<String, ActiveRunSnapshot>>
+    val interruptedRuns: kotlinx.coroutines.flow.StateFlow<List<InterruptedRun>>
+
+    suspend fun dismissInterruptedRun(sessionId: String)
 
     suspend fun start()
 

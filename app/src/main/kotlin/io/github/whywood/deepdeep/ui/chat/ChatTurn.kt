@@ -133,6 +133,10 @@ private fun NoticeRow(notice: TurnNotice) {
         is TurnNotice.InterruptedQuestions -> NoticeText(
             stringResource(R.string.chat_notice_interrupted_questions, notice.count),
         )
+
+        is TurnNotice.InterruptedRun -> NoticeText(
+            stringResource(R.string.chat_notice_interrupted_run, notice.count),
+        )
     }
 }
 

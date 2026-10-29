@@ -12,7 +12,8 @@
 
 ## 多会话并发
 
-- `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor；会话之间互不关闭。
+- `AgentRuntimeHost` 持有 `Map<sessionId, Handle>`：每个 Handle 有自己的 PiSessionEngine(cwd)、AgentSession、shell executor；会话之间互不关闭。空闲 handle 有预算：超过 6 个且空闲超 10 分钟时才回收，回收前检查 busy/重配/最近打开，并询问 App 的 `keepHandleAlive`（未投递提醒、活跃目标、运行中 job、待答问题、当前会话都算保留）。被回收的会话在下次 send/retry/提醒投递时按 `SessionCatalog` 懒重连（重新打开同一 JSONL），提醒不会因为会话空闲而被丢掉。
+- `RunLedger` 记录每次运行的开始与结束（`files/tasks/runs.json`）。进程在运行中被系统结束，下次启动把这些残留记录转成 `interruptedRuns`，打开对应会话时插一条「上次运行被中断，结果未知」的本地提示，发下一条消息时清除；正常结束会删除记录，因此不会把完成的一轮误报为中断。
 - `SessionCommandPlane` 是每个会话运行状态的唯一所有者：每会话一把锁、一个单调递增的 epoch；send/retryLastTurn/deliverReminder/deliverBackgroundTurn/stop 的状态迁移都在锁内完成，`busy` 只由持有该 `runId` 的路径清除。停止时 epoch 递增，旧的延时重试/目标续跑作废；后台入口在忙时把内容注入当前轮（`QueueBehavior.FollowUp`），空闲才新起 run，不再用“先读 busy 再决定”的竞态判断。
 - 运行事件统一包装为 `SessionRuntimeEvent(sessionId, event)`；活动状态是类型化的 `RuntimeActivity`（思考/重试/压缩/运行工具），由 ChatViewModel 结合 `ChatUiStrings`（字符串资源）本地化后进入 UI，runtime 层不承载用户可见文案；ChatViewModel 用 `conversationCache` 保存每个会话的消息/流式状态，活跃会话直接更新 UI，后台会话事件写入缓存，切回时立即恢复并继续接收。
 - 发送/停止按 sessionId 定向；`busySessionIds` StateFlow 供 UI 展示后台运行状态；新建会话/切换项目不打断正在运行的任务。
@@ -111,7 +112,7 @@ Compose ChatScreen
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
 - 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。投递前先写 `files/schedules/delivery-intents.json`（intent 含 `scheduleId@nextRunAt` 去重键），成功后标记已投递再删 intent；进程在投递中死亡则下次启动 `recoverPending()` 补投一次，已投递的不重复投。
 - `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。默认不限轮次，显式传 `max_goal_rounds` 才有上限；加载后目标为未激活（显示暂停），需用户继续。
-- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。任务记录同时写入 `files/jobs/jobs.json`（最多 50 条、输出只留尾部 16KB）；进程重启后上次仍在运行的 job 显示为 `interrupted`（结果未知）并保留输出尾巴，不会静默消失。
+- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话最多 10 个运行中任务、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。任务记录同时写入 `files/jobs/jobs.json`（最多 50 条、输出只留尾部 16KB）；进程重启后上次仍在运行的 job 显示为 `interrupted`（结果未知）并保留输出尾巴，不会静默消失。输出触发快照发布按 100ms 合并（最多 10 次/秒，末次最新），开始/结束/停止等状态变化仍立即发布。
 - `present` 交付 v2：`items`（1–4 项）显式指定 `file|image|html|creative`；文件/图片/网页按 cwd 解析并校验存在性，创意经注入的 `WorkshopStore` 查询清单后返回 id/name/icon/version。聊天里图片内联预览、HTML 用内联 WebView 渲染并可全屏、文件为行卡、创意为入口卡；旧 `files` 输出与旧工坊入口卡保持兼容。
 - 设备短信工具已移除；短信与通话改由「小米云服务」插件读取（`mi_cloud_sms`），不申请 `READ_SMS`。
 - GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。截图保存到 `files/gui/screenshots/`，PRoot 固定挂载为 `/gui`。
@@ -149,7 +150,7 @@ Compose ChatScreen
 - `NotificationCenter` 由 `AgentService` 启动，收集 `RuntimeEvent`，维护 active runs。
 - 前台服务通知：会话标题 + 当前 `RuntimeActivity`；多会话显示数量；动作停止最近会话。
 - 完成通知：`RunFinished/RunFailed` 且 `AppVisibility.foreground == false` 时发出，点击带 sessionId 回到对应会话。
-- 启动时的中断提示：如果上次进程在等待提问时被杀，启动后发一条汇总通知（`session_results`），点击打开最早一条受影响会话；会话内另有本地灰字提示。
+- 启动时的中断提示：如果上次进程在等待提问或运行中被杀，启动后发一条汇总通知（`session_results`，文案为“未完成项”），点击打开最早一条受影响会话；会话内另有本地灰字提示（提问中断 / 运行中断分别一条），发下一条消息时清除。
 - 开发包安装：`DevPackageManager` 调用 `notifyInstall`，展示阶段/`n`/`m` 进度；完成后自动取消或发结果。
 - 频道：`agent_runtime`（LOW）、`session_results`（DEFAULT）、`downloads`（LOW）。
 - 通知权限沿用系统 `POST_NOTIFICATIONS`；设置页显示状态并可跳转系统通知设置。
@@ -190,7 +191,7 @@ Compose ChatScreen
 - ChatScrollController 按实际 overflow 跟随；用户上拖后暂停。
 - 按压态统一为圆角灰 wash（`DdPressable` / `DdListRow` / `DdMenu`），不使用方框 ripple。
 - `DdMenu` 统一浮层圆角、纯白背景、图标左对齐、danger 项与按压态。
-- Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。流式文本按块解析：`planMarkdownStream` 先做定义提取与结构扫描，再由 `parseMarkdownChunk` 只解析单个块，`ChatMarkdown` 按块文本缓存已解析结果，因此长回答流式增长时只有末尾未闭合块重新解析（等价性由 `MarkdownChunkingTest` 对整段解析逐字节对比）。
+- Markdown 解析在 `MarkdownParser`（嵌套列表树、图片块、递归引用、表格、setext、行内 AST、引用式链接/脚注上下文）；渲染在 `ChatMarkdown`（行内 span、表格横滚、引用条、数学块、脚注列表）；`CodeHighlighter` 负责语法高亮，`MarkdownImage` 负责图片异步加载/缓存/失败占位与全屏预览。流式文本用有状态的 `MarkdownStreamPlanner` 增量规划：文本追加时复用已确定的行、定义与稳定块，只重扫末尾未闭合段；`ChatMarkdown` 按块文本缓存解析结果，只有尾部增长块重新解析。整段与增量结果由 `MarkdownChunkingTest` 对 48 篇语料与逐字符前缀做等价断言（含 CRLF 跨批边界）。
 - 会话搜索：抽屉搜索图标进入 `Search` 页面，`ChatViewModel.loadSearchSessions()` 通过 runtime `allSessions()` 跨工作区读取未归档会话，按工作区分组、只匹配会话标题；归档页搜索独立保留。
 
 文本选择由 Compose context-menu provider 接管（`SelectionActions`）：自绘文字版复制/全选/引用/朗读菜单，通过 copy action + 剪贴板读取选中文本，朗读使用系统 TTS（manifest 需要 TTS_SERVICE queries）；`SelectionCoordinator` 记录当前选区 bounds，屏幕根节点在 Initial pass 检测选区外按下并重置对应消息的选择子树，从而即使 Compose 不主动清除也能收起选择与菜单。
@@ -218,6 +219,7 @@ filesDir/
   goals/            goals.json（按会话的目标与轮次）
   jobs/             jobs.json（后台任务记录，最多 50 条，重启后显示中断/未知）
   questions/        pending.json（等待中的提问，正常结束即删除）
+  tasks/            runs.json（进行中的运行记录，重启后残留转“运行被中断”）
   workshop/apps/<id>/   创意页面（manifest.json、entry、静态资源）
   workshop/build/       Agent 写作中的创意草稿
   workshop/userdata/<id>.db  每个创意的数据（SQLite KV）
