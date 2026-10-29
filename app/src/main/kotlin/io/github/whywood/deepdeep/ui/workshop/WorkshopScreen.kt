@@ -205,7 +205,7 @@ private fun WorkshopEmpty() {
         modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        DdIcon(icon = DdIcons.Compose, tint = colors.inkTertiary, size = 28.dp)
+        DdIcon(icon = DdIcons.Apps, tint = colors.inkTertiary, size = 28.dp)
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.workshop_empty_title),

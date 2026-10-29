@@ -165,7 +165,7 @@ fun WorkshopViewerScreen(
             )
             Box {
                 DdIconButton(
-                    icon = DdIcons.More,
+                    icon = DdIcons.DotsVertical,
                     onClick = { menuOpen = true },
                     contentDescription = stringResource(R.string.workshop_more),
                     modifier = Modifier.testTag("workshop_more"),

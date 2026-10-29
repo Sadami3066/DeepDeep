@@ -78,7 +78,7 @@ internal fun ChatTopBar(
             }
             Box {
                 DdIconButton(
-                    icon = DdIcons.More,
+                    icon = DdIcons.DotsVertical,
                     onClick = { menuOpen = true },
                     contentDescription = stringResource(R.string.assistant_more),
                     modifier = Modifier.testTag("assistant_more"),

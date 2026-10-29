@@ -57,7 +57,7 @@ internal fun InlineCodeText(
                     val top = baseline - ascent
                     val bottom = baseline + descent
                     drawRoundRect(
-                        color = colors.accentSoft,
+                        color = colors.inlineCodeBackground,
                         topLeft = Offset(startX - horizontalPadding, top),
                         size = Size(endX - startX + horizontalPadding * 2, bottom - top),
                         cornerRadius = cornerRadius,

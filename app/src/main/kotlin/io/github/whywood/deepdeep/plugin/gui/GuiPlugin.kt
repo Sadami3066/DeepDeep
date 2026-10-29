@@ -30,7 +30,7 @@ class GuiPlugin(
     }
 
     override val id: String = "gui"
-    override val icon: DdIcon = DdIcons.Monitor
+    override val icon: DdIcon = DdIcons.HandClick
     override val nameRes: Int = R.string.plugin_gui_name
     override val summaryRes: Int = R.string.plugin_gui_summary
     override val version: String = "2.0.0"

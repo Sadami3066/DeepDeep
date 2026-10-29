@@ -361,7 +361,15 @@ private fun ThemeControl(
     val colors = deepDeepColors()
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            DdIcon(icon = DdIcons.Moon, tint = colors.inkSecondary, size = 20.dp)
+            DdIcon(
+                icon = when (themeMode) {
+                    ThemeMode.SYSTEM -> DdIcons.Monitor
+                    ThemeMode.LIGHT -> DdIcons.Sun
+                    ThemeMode.DARK -> DdIcons.Moon
+                },
+                tint = colors.inkSecondary,
+                size = 20.dp,
+            )
             Spacer(Modifier.width(14.dp))
             Text(
                 text = stringResource(R.string.settings_theme),

@@ -47,7 +47,7 @@ fun GoalBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
-                icon = DdIcons.Sparkles,
+                icon = DdIcons.Target,
                 tint = colors.inkTertiary,
                 size = 16.dp,
             )

@@ -32,7 +32,7 @@ class MiCloudPlugin(
     val preferences: MiCloudPreferences by lazy { MiCloudPreferences(context, onCapabilitiesChanged) }
 
     override val id: String = "micloud"
-    override val icon: DdIcon = DdIcons.Globe
+    override val icon: DdIcon = DdIcons.Cloud
     override val nameRes: Int = R.string.plugin_micloud_name
     override val summaryRes: Int = R.string.plugin_micloud_summary
     override val version: String = "1.0.0"

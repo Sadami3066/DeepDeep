@@ -158,7 +158,7 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
             DdIcon(
                 icon = when (summary.kind) {
                     MessageSummaryKind.COMPACTION -> DdIcons.Refresh
-                    MessageSummaryKind.BRANCH -> DdIcons.Compose
+                    MessageSummaryKind.BRANCH -> DdIcons.GitFork
                 },
                 tint = colors.inkTertiary,
                 size = 13.dp,
@@ -273,7 +273,7 @@ private fun GoalRoundNotice(notice: TurnNotice.GoalRound) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        DdIcon(icon = DdIcons.Sparkles, tint = colors.accent, size = 14.dp)
+        DdIcon(icon = DdIcons.Target, tint = colors.accent, size = 14.dp)
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(

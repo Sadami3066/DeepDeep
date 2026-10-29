@@ -602,7 +602,7 @@ private fun AnnotatedString.Builder.appendInlineNodes(
                     }
                 } else {
                     val start = length
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = colors.inkSecondary)) {
                         append(node.text)
                     }
                     if (start < length) codeRanges += start until length

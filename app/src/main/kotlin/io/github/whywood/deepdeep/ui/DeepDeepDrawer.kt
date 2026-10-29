@@ -185,7 +185,7 @@ fun DeepDeepDrawer(
         Spacer(Modifier.height(18.dp))
         Column(Modifier.fillMaxWidth()) {
             DrawerNavItem(
-                icon = DdIcons.Compose,
+                icon = DdIcons.Apps,
                 label = stringResource(R.string.drawer_nav_workshop),
                 onClick = onOpenWorkshop,
                 testTag = "drawer_workshop",

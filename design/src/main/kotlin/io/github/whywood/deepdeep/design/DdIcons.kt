@@ -76,4 +76,10 @@ object DdIcons {
     val Pin = DdIcon(R.drawable.ic_dd_pin)
     val Font = DdIcon(R.drawable.ic_dd_font)
     val Shield = DdIcon(R.drawable.ic_dd_shield)
+    val Apps = DdIcon(R.drawable.ic_dd_apps)
+    val HandClick = DdIcon(R.drawable.ic_dd_hand_click)
+    val Cloud = DdIcon(R.drawable.ic_dd_cloud)
+    val Target = DdIcon(R.drawable.ic_dd_target)
+    val DotsVertical = DdIcon(R.drawable.ic_dd_dots_vertical)
+    val GitFork = DdIcon(R.drawable.ic_dd_git_fork)
 }
