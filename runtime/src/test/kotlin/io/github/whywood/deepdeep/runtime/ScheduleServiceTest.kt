@@ -385,7 +385,10 @@ class ScheduleServiceTest {
             )
             fixture.clock.advance(Duration.ofDays(1))
             fixture.service.start()
-            runCurrent()
+            awaitStoreIo {
+                fixture.runtime.deliveries.size == 1 &&
+                    fixture.service.schedules.value.singleOrNull()?.lastDeliveredAt != null
+            }
 
             assertEquals(1, fixture.runtime.deliveries.size)
             assertEquals("Catch up", fixture.runtime.deliveries.single().reminder)
@@ -411,7 +414,11 @@ class ScheduleServiceTest {
             val restarted = fixture.restarted()
             try {
                 restarted.start()
-                runCurrent()
+                awaitStoreIo {
+                    fixture.runtime.deliveries.size == 1 &&
+                        fixture.pendingIntentCount() == 0 &&
+                        fixture.service.schedules.value.singleOrNull()?.lastDeliveredAt != null
+                }
             } finally {
                 restarted.stop()
             }
@@ -444,7 +451,9 @@ class ScheduleServiceTest {
             val restarted = fixture.restarted()
             try {
                 restarted.start()
-                runCurrent()
+                awaitStoreIo {
+                    fixture.pendingIntentCount() == 0 && fixture.service.schedules.value.isNotEmpty()
+                }
             } finally {
                 restarted.stop()
             }
@@ -470,10 +479,14 @@ class ScheduleServiceTest {
             fixture.writeIntent(created, fixture.clock.millis())
 
             fixture.service.start()
-            runCurrent()
+            awaitStoreIo {
+                fixture.runtime.deliveries.size == 1 &&
+                    fixture.pendingIntentCount() == 0 &&
+                    fixture.service.schedules.value.isNotEmpty()
+            }
             fixture.service.stop()
             fixture.service.start()
-            runCurrent()
+            awaitStoreIo { fixture.service.schedules.value.isNotEmpty() }
             fixture.service.stop()
 
             assertEquals(1, fixture.runtime.deliveries.size)
@@ -507,6 +520,16 @@ class ScheduleServiceTest {
         } finally {
             fixture.close()
         }
+    }
+
+    private fun kotlinx.coroutines.test.TestScope.awaitStoreIo(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 3_000
+        while (System.currentTimeMillis() < deadline) {
+            runCurrent()
+            if (condition()) return
+            Thread.sleep(2)
+        }
+        runCurrent()
     }
 
     private class Fixture(private val scope: CoroutineScope) {

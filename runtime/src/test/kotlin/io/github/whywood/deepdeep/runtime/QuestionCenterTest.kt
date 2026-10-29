@@ -73,7 +73,7 @@ class QuestionCenterTest {
     fun loadPersistedTurnsPendingQuestionsIntoInterruptedOnes() = runTest {
         val directory = Files.createTempDirectory("deepdeep-questions").toFile()
         try {
-            val first = QuestionCenter({ true }, QuestionPersistence(directory))
+            val first = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
             backgroundScope.launch {
                 first.ask("session-1", "call-1", listOf(question("q1")))
             }
@@ -104,13 +104,14 @@ class QuestionCenterTest {
     fun answeredQuestionsDoNotBecomeInterrupted() = runTest {
         val directory = Files.createTempDirectory("deepdeep-questions").toFile()
         try {
-            val center = QuestionCenter({ true }, QuestionPersistence(directory))
+            val center = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
             var outcome: QuestionOutcome? = null
             val job = launch {
                 outcome = center.ask("session-1", "call-1", listOf(question("q1")))
             }
             runCurrent()
             center.answer(center.pending.value.single().requestId, listOf(QuestionAnswer("q1", selected = listOf("A"))))
+            runCurrent()
             job.join()
 
             assertTrue(center.interrupted.value.isEmpty())
@@ -121,6 +122,36 @@ class QuestionCenterTest {
         } finally {
             directory.deleteRecursively()
         }
+    }
+
+    @Test
+    fun answerDefersPersistenceRemovalToPersistScope() = runTest {
+        val directory = Files.createTempDirectory("deepdeep-questions").toFile()
+        try {
+            val center = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
+            var outcome: QuestionOutcome? = null
+            val job = launch {
+                outcome = center.ask("session-1", "call-1", listOf(question("q1")))
+            }
+            runCurrent()
+            assertEquals(1, persistedQuestionCount(directory))
+            center.answer(center.pending.value.single().requestId, listOf(QuestionAnswer("q1", selected = listOf("A"))))
+            assertTrue(center.pending.value.isEmpty())
+            assertEquals(1, persistedQuestionCount(directory))
+            runCurrent()
+            assertEquals(0, persistedQuestionCount(directory))
+            job.join()
+            assertTrue(outcome is QuestionOutcome.Answered)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    private fun persistedQuestionCount(directory: File): Int {
+        val file = File(directory, "pending.json")
+        if (!file.isFile) return 0
+        val root = Json.parseToJsonElement(file.readText()) as JsonObject
+        return (root["questions"] as? JsonArray)?.size ?: 0
     }
 
     @Test

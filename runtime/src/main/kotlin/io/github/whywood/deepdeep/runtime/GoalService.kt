@@ -3,11 +3,13 @@ package io.github.whywood.deepdeep.runtime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class GoalService(
     private val store: GoalStore,
@@ -195,7 +197,7 @@ class GoalService(
         )
     }
 
-    private fun blockOnRoundLimit(sessionId: String, goal: Goal) {
+    private suspend fun blockOnRoundLimit(sessionId: String, goal: Goal) {
         armedSessions -= sessionId
         persistGoal(
             sessionId,
@@ -232,14 +234,14 @@ class GoalService(
         }
     }
 
-    private fun persistGoal(sessionId: String, goal: Goal): GoalView {
+    private suspend fun persistGoal(sessionId: String, goal: Goal): GoalView {
         persisted[sessionId] = goal
         persist()
         return goalsState.value.getValue(sessionId)
     }
 
-    private fun persist() {
-        store.replace(persisted.toMap())
+    private suspend fun persist() {
+        withContext(Dispatchers.IO) { store.replace(persisted.toMap()) }
         goalsState.value = views()
     }
 

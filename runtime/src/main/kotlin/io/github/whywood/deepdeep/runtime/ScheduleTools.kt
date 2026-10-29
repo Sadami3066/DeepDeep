@@ -119,14 +119,14 @@ private val deleteParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("id")) })
 }
 
-fun scheduleTools(cwd: Path, context: AppToolContext, binding: SessionBinding): List<CodingTool> = listOf(
-    scheduleCreateTool(cwd, context, binding),
-    scheduleListTool(cwd, context, binding),
-    scheduleUpdateTool(cwd, context, binding),
-    scheduleDeleteTool(cwd, context, binding),
+fun scheduleTools(cwd: Path, service: ScheduleService, binding: SessionBinding): List<CodingTool> = listOf(
+    scheduleCreateTool(service, binding),
+    scheduleListTool(service, binding),
+    scheduleUpdateTool(service, binding),
+    scheduleDeleteTool(service, binding),
 )
 
-private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
+private fun scheduleCreateTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_create",
     description = "Create a reminder bound to the current conversation. When it fires, a reminder message is posted into this same conversation and starts a run here; no separate session or workspace is created.",
     parameters = createParameters,
@@ -147,7 +147,7 @@ private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: Sess
             val frequency = args.requiredString("frequency")
             val name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() } ?: promptPreview(prompt)
             val trigger = parseTrigger(args, base = null, requestedFrequency = frequency)
-            val created = context.scheduleService.create(
+            val created = service.create(
                 NewSchedule(
                     name = name,
                     prompt = prompt,
@@ -163,7 +163,7 @@ private fun scheduleCreateTool(cwd: Path, context: AppToolContext, binding: Sess
     },
 )
 
-private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
+private fun scheduleListTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_list",
     description = "List the reminders bound to the current conversation with trigger, next run time, enabled state and last delivery result.",
     parameters = listParameters,
@@ -174,7 +174,7 @@ private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: Sessio
         signal?.throwIfAborted()
         scheduleToolResult {
             val session = requireSession(binding)
-            val schedules = context.scheduleService.list()
+            val schedules = service.list()
                 .filter { it.sessionId == session.sessionId }
                 .sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.createdAt }))
             val result = buildJsonObject {
@@ -187,7 +187,7 @@ private fun scheduleListTool(cwd: Path, context: AppToolContext, binding: Sessio
     },
 )
 
-private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
+private fun scheduleUpdateTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_update",
     description = "Update a reminder bound to the current conversation. Only provided fields change; the reminder cannot be rebound to another conversation.",
     parameters = updateParameters,
@@ -199,7 +199,7 @@ private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: Sess
         scheduleToolResult {
             val session = requireSession(binding)
             val id = args.requiredString("id")
-            val existing = context.scheduleService.list()
+            val existing = service.list()
                 .firstOrNull { it.id == id && it.sessionId == session.sessionId }
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
             val hasTriggerArgs = listOf("frequency", "date", "time", "cron").any { args.containsKey(it) }
@@ -214,14 +214,14 @@ private fun scheduleUpdateTool(cwd: Path, context: AppToolContext, binding: Sess
                 trigger = trigger,
                 enabled = args.boolOrNull("enabled"),
             )
-            val updated = context.scheduleService.update(id, patch)
+            val updated = service.update(id, patch)
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
             textResult(scheduleJson(updated).toString())
         }
     },
 )
 
-private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: SessionBinding): CodingTool = CodingTool(
+private fun scheduleDeleteTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule_delete",
     description = "Delete a reminder bound to the current conversation by id.",
     parameters = deleteParameters,
@@ -233,10 +233,10 @@ private fun scheduleDeleteTool(cwd: Path, context: AppToolContext, binding: Sess
         scheduleToolResult {
             val session = requireSession(binding)
             val id = args.requiredString("id")
-            val existing = context.scheduleService.list()
+            val existing = service.list()
                 .firstOrNull { it.id == id && it.sessionId == session.sessionId }
                 ?: throw IllegalArgumentException("未找到定时任务：$id")
-            if (!context.scheduleService.delete(existing.id)) {
+            if (!service.delete(existing.id)) {
                 throw IllegalArgumentException("未找到定时任务：$id")
             }
             val result = buildJsonObject {

@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentToolResult
 import dev.pi.ai.TextContent
-import dev.pi.coding.tools.CodingTool
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
@@ -24,17 +23,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-class WorkshopDataToolsTest {
+class WorkshopEditToolTest {
     private lateinit var root: File
     private lateinit var store: WorkshopStore
-    private lateinit var tools: Map<String, CodingTool>
+    private lateinit var tool: dev.pi.coding.tools.CodingTool
 
     @Before
     fun setUp() {
-        root = Files.createTempDirectory("deepdeep-workshop-data-tools").toFile()
+        root = Files.createTempDirectory("deepdeep-workshop-edit-tool").toFile()
         store = WorkshopStore(File(root, "workshop"))
         MemoryWorkshopData.reset()
-        tools = workshopDataTools(store) { file -> MemoryWorkshopData(file) }.associateBy { it.name }
+        tool = workshopEditTool(store) { file -> MemoryWorkshopData(file) }
     }
 
     @After
@@ -49,8 +48,22 @@ class WorkshopDataToolsTest {
     private fun resultJson(result: AgentToolResult): JsonObject =
         Json.parseToJsonElement(resultText(result)).jsonObject
 
-    private suspend fun execute(name: String, args: JsonObject): AgentToolResult =
-        tools.getValue(name).execute("call-1", args, null, null)
+    private suspend fun execute(args: JsonObject): AgentToolResult =
+        tool.execute("call-1", args, null, null)
+
+    private suspend fun execute(
+        action: String,
+        app: String,
+        key: String? = null,
+        value: JsonElement? = null,
+    ): AgentToolResult = execute(
+        buildJsonObject {
+            put("action", action)
+            put("app", app)
+            key?.let { put("key", it) }
+            value?.let { put("value", it) }
+        },
+    )
 
     private suspend fun createApp(name: String): String {
         val draft = store.createDraft(name)
@@ -66,50 +79,26 @@ class WorkshopDataToolsTest {
     }
 
     private suspend fun setValue(app: String, key: String, value: JsonElement): AgentToolResult =
-        execute(
-            "workshop_data_set",
-            buildJsonObject {
-                put("app", app)
-                put("key", key)
-                put("value", value)
-            },
-        )
+        execute("set", app, key, value)
 
     private suspend fun getValue(app: String, key: String): AgentToolResult =
-        execute(
-            "workshop_data_get",
-            buildJsonObject {
-                put("app", app)
-                put("key", key)
-            },
-        )
+        execute("get", app, key)
 
     @Test
-    fun catalogContainsTheFourDataTools() {
+    fun catalogContainsSingleEditTool() {
+        assertEquals("workshop_edit", tool.name)
+        val parameters = tool.parameters
         assertEquals(
-            setOf("workshop_data_get", "workshop_data_set", "workshop_data_delete", "workshop_data_keys"),
-            tools.keys,
+            listOf("action", "app"),
+            parameters.getValue("required").jsonArray.map { it.jsonPrimitive.content },
         )
-        val get = tools.getValue("workshop_data_get").parameters
-        assertEquals(listOf("app", "key"), get.getValue("required").jsonArray.map { it.jsonPrimitive.content })
-        val set = tools.getValue("workshop_data_set").parameters
+        val properties = parameters.getValue("properties").jsonObject
+        assertEquals(setOf("action", "app", "key", "value"), properties.keys)
         assertEquals(
-            listOf("app", "key", "value"),
-            set.getValue("required").jsonArray.map { it.jsonPrimitive.content },
+            listOf("get", "set", "delete", "keys"),
+            properties.getValue("action").jsonObject.getValue("enum").jsonArray.map { it.jsonPrimitive.content },
         )
-        assertTrue(
-            set.getValue("properties").jsonObject.getValue("value").jsonObject.isEmpty(),
-        )
-        assertEquals(
-            listOf("app", "key"),
-            tools.getValue("workshop_data_delete").parameters.getValue("required").jsonArray
-                .map { it.jsonPrimitive.content },
-        )
-        assertEquals(
-            listOf("app"),
-            tools.getValue("workshop_data_keys").parameters.getValue("required").jsonArray
-                .map { it.jsonPrimitive.content },
-        )
+        assertTrue(properties.getValue("value").jsonObject["type"] == null)
         assertEquals(
             setOf("workshop_create", "workshop_load", "workshop_list"),
             workshopTools(store).map { it.name }.toSet(),
@@ -153,25 +142,13 @@ class WorkshopDataToolsTest {
     fun deleteReturnsDeletedFlag() = runTest {
         val app = createApp("Delete App")
         setValue(app, "draft", JsonPrimitive("text"))
-        val deleted = execute(
-            "workshop_data_delete",
-            buildJsonObject {
-                put("app", app)
-                put("key", "draft")
-            },
-        )
+        val deleted = execute("delete", app, "draft")
         assertNull(deleted.isError)
         assertEquals(
             "{\"ok\":true,\"app\":\"delete-app\",\"key\":\"draft\",\"deleted\":true}",
             resultText(deleted),
         )
-        val again = execute(
-            "workshop_data_delete",
-            buildJsonObject {
-                put("app", app)
-                put("key", "draft")
-            },
-        )
+        val again = execute("delete", app, "draft")
         assertEquals(false, resultJson(again).getValue("deleted").jsonPrimitive.boolean)
         assertEquals(JsonNull, resultJson(getValue(app, "draft")).getValue("value"))
     }
@@ -180,7 +157,7 @@ class WorkshopDataToolsTest {
     fun keysAreSorted() = runTest {
         val app = createApp("Keys App")
         listOf("zebra", "alpha", "middle").forEach { key -> setValue(app, key, JsonPrimitive(key)) }
-        val result = execute("workshop_data_keys", buildJsonObject { put("app", app) })
+        val result = execute("keys", app)
         assertNull(result.isError)
         assertEquals(
             "{\"ok\":true,\"app\":\"keys-app\",\"keys\":[\"alpha\",\"middle\",\"zebra\"]}",
@@ -193,7 +170,7 @@ class WorkshopDataToolsTest {
         val emptyApp = createApp("Empty App")
         assertEquals(
             "{\"ok\":true,\"app\":\"empty-app\",\"keys\":[]}",
-            resultText(execute("workshop_data_keys", buildJsonObject { put("app", emptyApp) })),
+            resultText(execute("keys", emptyApp)),
         )
     }
 
@@ -220,10 +197,7 @@ class WorkshopDataToolsTest {
         assertTrue(resultText(malformed).contains("not found"))
 
         createInvalidApp("broken-app")
-        val invalid = execute(
-            "workshop_data_keys",
-            buildJsonObject { put("app", "broken-app") },
-        )
+        val invalid = execute("keys", "broken-app")
         assertEquals(true, invalid.isError)
         assertTrue(resultText(invalid).contains("invalid"))
         assertTrue(resultText(invalid).contains("manifest_invalid"))
@@ -233,19 +207,47 @@ class WorkshopDataToolsTest {
     fun invalidKeysAreErrors() = runTest {
         val app = createApp("Key Rules App")
         listOf("Key", "-key", "a".repeat(65), "has space").forEach { key ->
-            val result = execute(
-                "workshop_data_get",
-                buildJsonObject {
-                    put("app", app)
-                    put("key", key)
-                },
-            )
+            val result = getValue(app, key)
             assertEquals(true, result.isError)
             assertTrue(resultText(result).contains("invalid key"))
         }
-        val missingKey = execute("workshop_data_get", buildJsonObject { put("app", app) })
-        assertEquals(true, missingKey.isError)
-        assertTrue(resultText(missingKey).contains("key"))
+    }
+
+    @Test
+    fun keyIsRequiredForGetSetAndDelete() = runTest {
+        val app = createApp("Missing Key Argument App")
+        listOf("get", "set", "delete").forEach { action ->
+            val result = execute(action, app)
+            assertEquals(true, result.isError)
+            assertTrue(resultText(result).contains("key"))
+        }
+    }
+
+    @Test
+    fun valueIsRequiredForSet() = runTest {
+        val app = createApp("Missing Value App")
+        val result = execute("set", app, "k")
+        assertEquals(true, result.isError)
+        assertTrue(resultText(result).contains("value"))
+    }
+
+    @Test
+    fun actionIsRequiredAndValidated() = runTest {
+        val app = createApp("Action App")
+        val missing = execute(buildJsonObject { put("app", app) })
+        assertEquals(true, missing.isError)
+        assertTrue(resultText(missing).contains("action"))
+
+        val unknown = execute("rename", app)
+        assertEquals(true, unknown.isError)
+        assertEquals("action must be get, set, delete or keys", resultText(unknown))
+    }
+
+    @Test
+    fun appIsRequired() = runTest {
+        val result = execute(buildJsonObject { put("action", "keys") })
+        assertEquals(true, result.isError)
+        assertTrue(resultText(result).contains("app"))
     }
 
     @Test
@@ -260,24 +262,6 @@ class WorkshopDataToolsTest {
         assertNull(allowed.isError)
         val stored = resultJson(getValue(app, "big")).getValue("value").jsonPrimitive.content
         assertEquals(262140, stored.length)
-    }
-
-    @Test
-    fun missingArgumentsAreErrors() = runTest {
-        val missingApp = execute("workshop_data_get", buildJsonObject { put("key", "k") })
-        assertEquals(true, missingApp.isError)
-        assertTrue(resultText(missingApp).contains("app"))
-
-        val app = createApp("Missing Value App")
-        val missingValue = execute(
-            "workshop_data_set",
-            buildJsonObject {
-                put("app", app)
-                put("key", "k")
-            },
-        )
-        assertEquals(true, missingValue.isError)
-        assertTrue(resultText(missingValue).contains("value"))
     }
 
     @Test

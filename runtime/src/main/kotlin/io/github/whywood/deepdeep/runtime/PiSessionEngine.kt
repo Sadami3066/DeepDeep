@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.http.okHttpTransport
+import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.AgentSessionOptions
 import dev.pi.coding.createAgentSession
 import dev.pi.coding.mcp.McpConfigLoader
@@ -27,6 +27,7 @@ class PiSessionEngine(
     workspace: File,
     agentDir: File,
     private val credentials: CredentialStore,
+    private val transport: HttpTransport,
     private val shellExecutor: ShellExecutor?,
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
@@ -39,8 +40,6 @@ class PiSessionEngine(
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
-
-    private val transport = okHttpTransport()
 
     suspend fun createSession(
         file: Path?,

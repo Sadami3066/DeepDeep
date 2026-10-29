@@ -92,6 +92,8 @@ class WorkshopAgentServiceTest {
     fun maxTurnsDefaultsToSixteen() {
         assertEquals(16, workshopAgentMaxTurns(null))
         assertEquals(64, workshopAgentMaxTurns(64))
+        assertEquals(8, workshopAgentMaxTurns(null, 8))
+        assertEquals(64, workshopAgentMaxTurns(64, 8))
     }
 
     @Test

@@ -21,6 +21,7 @@ class JobRegistry(
     private val runnerFactory: ((String?) -> BackgroundCommandRunner)? = null,
     private val persistence: JobPersistence? = null,
     private val now: () -> Long = System::currentTimeMillis,
+    private val maxRunningPerSession: () -> Int = { MAX_RUNNING_PER_SESSION },
 ) : JobController {
     private val lock = Any()
     private val records = LinkedHashMap<String, Record>()
@@ -55,8 +56,9 @@ class JobRegistry(
         val activeRunner = runnerFor(cwd)
         val record = synchronized(lock) {
             val running = records.values.count { it.sessionId == sessionId && it.isRunning() }
-            if (running >= MAX_RUNNING_PER_SESSION) {
-                return JobStart(null, "too many running jobs for this session (max $MAX_RUNNING_PER_SESSION)")
+            val limit = maxRunningPerSession()
+            if (running >= limit) {
+                return JobStart(null, "too many running jobs for this session (max $limit)")
             }
             val created = Record(
                 id = newIdLocked(),

@@ -2,10 +2,15 @@ package io.github.whywood.deepdeep.runtime
 
 import dev.pi.ai.RunSignal
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class QuestionOption(
     val label: String,
@@ -45,6 +50,8 @@ sealed interface QuestionOutcome {
 class QuestionCenter(
     private val isForeground: () -> Boolean,
     private val persistence: QuestionPersistence? = null,
+    private val persistScope: CoroutineScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1)),
 ) {
     private val lock = Any()
     private val pendingState = MutableStateFlow<List<PendingQuestion>>(emptyList())
@@ -88,7 +95,7 @@ class QuestionCenter(
                 questions = questions,
             )
         }
-        runCatching {
+        persist {
             persistence?.append(
                 InterruptedQuestion(
                     requestId = requestId,
@@ -125,6 +132,17 @@ class QuestionCenter(
             waiters.remove(requestId)
             pendingState.value = pendingState.value.filterNot { it.requestId == requestId }
         }
-        runCatching { persistence?.remove(requestId) }
+        persist { persistence?.remove(requestId) }
+    }
+
+    private fun persist(block: suspend () -> Unit) {
+        persistScope.launch {
+            try {
+                block()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+            }
+        }
     }
 }

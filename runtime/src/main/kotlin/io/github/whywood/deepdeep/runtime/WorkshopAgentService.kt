@@ -4,6 +4,7 @@ import dev.pi.agent.AgentEvent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.ai.auth.CredentialStore
+import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.prompt.Skill
 import dev.pi.coding.prompt.loadSkills
 import dev.pi.coding.session.AgentSession
@@ -41,6 +42,7 @@ internal val WORKSHOP_AGENT_TOOL_NAMES =
 class WorkshopAgentService(
     private val providers: ProviderCatalog,
     private val credentials: CredentialStore,
+    private val transport: HttpTransport,
     private val agentDir: File,
     private val runRoot: File,
     private val appToolContext: AppToolContext,
@@ -49,6 +51,7 @@ class WorkshopAgentService(
     private val personalization: suspend () -> Personalization,
     private val pluginPromptBody: suspend () -> String?,
     private val sharedStorage: suspend () -> Boolean,
+    private val defaultMaxTurns: () -> Int = { DEFAULT_MAX_TURNS },
 ) : WorkshopAgentGateway {
     override suspend fun models(): List<WorkshopAgentModel> =
         buildWorkshopAgentModels(providers, configuredProviders())
@@ -84,7 +87,7 @@ class WorkshopAgentService(
             models = models(),
             configuredProviders = configuredProviders(),
         )
-        val maxTurns = workshopAgentMaxTurns(request.maxTurns)
+        val maxTurns = workshopAgentMaxTurns(request.maxTurns, defaultMaxTurns())
         val root = createRunDirectory()
         var session: AgentSession? = null
         var unsubscribe: (() -> Unit)? = null
@@ -203,6 +206,7 @@ class WorkshopAgentService(
         workspace = workspace,
         agentDir = tempAgentDir,
         credentials = credentials,
+        transport = transport,
         shellExecutor = null,
         providers = providers,
         personalization = personalization,
@@ -310,7 +314,7 @@ internal fun validateWorkshopAgentRequest(request: WorkshopAgentRequest) {
     }
 }
 
-internal fun workshopAgentMaxTurns(maxTurns: Int?): Int = maxTurns ?: DEFAULT_MAX_TURNS
+internal fun workshopAgentMaxTurns(maxTurns: Int?, default: Int = DEFAULT_MAX_TURNS): Int = maxTurns ?: default
 
 internal fun resolveWorkshopAgentConfig(
     request: WorkshopAgentRequest,

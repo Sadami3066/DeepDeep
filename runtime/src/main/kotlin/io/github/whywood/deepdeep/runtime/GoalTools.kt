@@ -78,9 +78,13 @@ private val updateGoalParameters: JsonObject = buildJsonObject {
     })
 }
 
-fun goalTools(binding: SessionBinding, service: GoalService): List<CodingTool> = listOf(
+fun goalTools(
+    binding: SessionBinding,
+    service: GoalService,
+    defaultMaxRounds: () -> Int = { 0 },
+): List<CodingTool> = listOf(
     getGoalTool(binding, service),
-    createGoalTool(binding, service),
+    createGoalTool(binding, service, defaultMaxRounds),
     updateGoalTool(binding, service),
 )
 
@@ -104,7 +108,11 @@ private fun getGoalTool(binding: SessionBinding, service: GoalService): CodingTo
     },
 )
 
-private fun createGoalTool(binding: SessionBinding, service: GoalService): CodingTool = CodingTool(
+private fun createGoalTool(
+    binding: SessionBinding,
+    service: GoalService,
+    defaultMaxRounds: () -> Int,
+): CodingTool = CodingTool(
     name = "create_goal",
     description = "Create a goal for the current conversation. The goal is armed immediately, so subsequent turns keep working toward the objective until it is completed, blocked or paused.",
     parameters = createGoalParameters,
@@ -128,7 +136,7 @@ private fun createGoalTool(binding: SessionBinding, service: GoalService): Codin
                 )
             }
             val objective = args.requiredString("objective")
-            val maxRounds = args.intOrNull("max_goal_rounds")
+            val maxRounds = args.intOrNull("max_goal_rounds") ?: defaultMaxRounds().takeIf { it > 0 }
             val created = service.create(session.sessionId, objective, maxRounds)
                 ?: return@goalToolResult textResult("The objective must not be blank.", isError = true)
             textResult(goalViewJson(created).toString())
@@ -136,7 +144,10 @@ private fun createGoalTool(binding: SessionBinding, service: GoalService): Codin
     },
 )
 
-private fun updateGoalTool(binding: SessionBinding, service: GoalService): CodingTool = CodingTool(
+private fun updateGoalTool(
+    binding: SessionBinding,
+    service: GoalService,
+): CodingTool = CodingTool(
     name = "update_goal",
     description = "Update the goal for the current conversation. The revision must match the current goal. Actions edit, pause and resume require a direct user request; complete is allowed after the objective is achieved; blocked is only allowed during a goal round after the same blocker persisted for at least 3 rounds.",
     parameters = updateGoalParameters,
