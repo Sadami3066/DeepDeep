@@ -223,7 +223,7 @@ AOSP（jank 判定与 frame 字段）：
 - 采集：`adb shell dumpsys gfxinfo io.github.whywood.deepdeep reset` → 执行一次 返回聊天 → `dumpsys gfxinfo ... framestats`（CSV）→ `dumpsys gfxinfo ...`（摘要）。所有数据在 release 包、同设备。
 - CSV 列表头与 AOSP `FrameInfoIndex` 一致；**注意本机 Android 13 的 framestats 表头把 `FrameStartTime`/`FrameInterval` 两列名字换位了**（实际数据列 10=FrameStartTime、列 11=FrameInterval，值 8333333ns=120Hz），直接按表头取 `FrameInterval` 会得到错误值；本报告用时间戳差值校验后使用。
 - gfxinfo 摘要的 "janky" 采用 legacy 16.67ms 阈值；120Hz 下应额外看 `FrameDeadline/FrameInterval`（framestats）与 `Frame deadline missed`。`Slow issue draw commands` 等类型计数只在 janky 帧统计（JankTracker.cpp），不能当作"全部帧里慢的帧数"。
-- 本次可比性：back/back2/fwd 同一进程 pid 4494（HEAD 构建）；layer-back-1/2 为新装进程 pid 7589（00:48 安装，早于当前工作树 WIP）；A/B 非同一次构建，需按附录 B 的 WIP 重新受控测量。
+- 本次可比性：back/back2/fwd 同一进程 pid 4494（HEAD 构建）；layer-back-1/2 为新装进程 pid 7589（00:48 安装，早于最终实现）；A/B 非同一次构建。最终实现的收尾后实测见附录 B 与 `artifacts/validation/round42/lead/QA-LOG.md`；正式门禁仍需 Macrobenchmark。
 
 ## 附录 B：最终实现与收尾后实测
 
