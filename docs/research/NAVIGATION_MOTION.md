@@ -225,8 +225,9 @@ AOSP（jank 判定与 frame 字段）：
 - gfxinfo 摘要的 "janky" 采用 legacy 16.67ms 阈值；120Hz 下应额外看 `FrameDeadline/FrameInterval`（framestats）与 `Frame deadline missed`。`Slow issue draw commands` 等类型计数只在 janky 帧统计（JankTracker.cpp），不能当作"全部帧里慢的帧数"。
 - 本次可比性：back/back2/fwd 同一进程 pid 4494（HEAD 构建）；layer-back-1/2 为新装进程 pid 7589（00:48 安装，早于当前工作树 WIP）；A/B 非同一次构建，需按附录 B 的 WIP 重新受控测量。
 
-## 附录 B：WIP 原型（当时未测量，现已收尾为正式实现）
+## 附录 B：最终实现与收尾后实测
 
-- `AppScreenTransition.kt` 已被未提交地改写为自研 host 原型：`Animatable<Float>` 进度、`front/back` 双页、每页 `graphicsLayer { translationX = offset * size.width * directionSign }` + `pointerInput` 屏障 + `rememberSaveableStateHolder` + RTL 处理；仍保留大量 `Log.d("DDNAV", ...)` 调试日志（不应进入正式构建），且 `back` 在第三次导航时直接 `snapTo(1f)` 丢弃中断（快速连续导航会跳变）。
-- `DeepDeepApp.kt` 未提交改动把 `rememberFrozenChatState` 改为 `baseFrozen`（进/出转场期间冻结聊天状态，出转场 320ms 后解冻），方向正确；`baseDrawingEnabled`/`baseDrawSuspended` 逻辑保留。
-- **下文 A/B 的 layer 数据来自 00:48 安装的"AnimatedContent + graphicsLayer 补丁"构建（pid 7589），不是这份 WIP**；WIP 需要重新 `compile/install` 后用同一套 gfxinfo+Macrobenchmark 复测，并补：预测性返回（PredictiveBackHandler + manifest opt-in）、快速导航 retarget、语义隐藏、去日志。
+- `AppScreenTransition.kt` 最终实现：`Animatable<Float>` 进度；`front/back` 双页 + 聊天 base；每页 `graphicsLayer { translationX = ... }`（draw 阶段读进度，不触发布局）；push 新页全宽滑入、pop 旧页全宽滑出（z 序按方向），同层级淡入淡出；`rememberSaveableStateHolder` + `SaveableStateProvider(routeKey)`；转场触摸屏障；RTL 取反；`key(routeKey)` 提到页面循环体最外层；调试日志已移除。快速连续导航仍采用「上一段直接收尾再开始下一段」的简单策略，没有 retarget。
+- `DeepDeepApp.kt` 最终实现：导航状态读取隔离进 `NavigationChrome`/`NavigationBackHandler`；聊天在转场期间吃冻结快照，返回动画结束后再延后 160ms 解冻；`baseDrawingEnabled` 逻辑保留。
+- 最终构建 3 次采样：41–42 帧、janky 3–5（7–12%）、p50 9–10ms、p90 9–28ms（其中一次设备被后台抢占，GPU p50 13.8ms）；atrace 实测返回键到首帧开始动画 3–5ms，说明 gfxinfo 首帧 60–70ms 的 outlier 是 FrameTimeline IntendedVsync 计数而非真实延迟；动画结束帧约 20ms（退出页销毁 + 聊天解冻，已移到动画后）。
+- **未做**：PredictiveBackHandler 跟手进度（需 manifest `enableOnBackInvokedCallback`）、outgoing 页语义隐藏、Macrobenchmark/Baseline Profile 门禁；转场中快速连点仍是收尾跳变。A/B 数据来自不同构建与进程，正式门禁仍需 Macrobenchmark。
