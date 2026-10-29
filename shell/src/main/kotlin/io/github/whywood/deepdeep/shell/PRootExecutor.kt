@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.shell
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.util.TimeZone
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -191,6 +192,7 @@ class PRootExecutor(
                             "PATH" to "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                             "TERM" to "dumb",
                             "LANG" to "C.UTF-8",
+                            "TZ" to posixTimeZone(TimeZone.getDefault(), System.currentTimeMillis()),
                             "PROOT_TMP_DIR" to tempDir.absolutePath,
                             "PROOT_LOADER" to prootLoader.absolutePath,
                         ),
