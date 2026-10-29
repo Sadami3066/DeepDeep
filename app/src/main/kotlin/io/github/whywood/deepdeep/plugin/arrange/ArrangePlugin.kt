@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
+import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginAction
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
@@ -22,6 +23,7 @@ class ArrangePlugin(
     private val calendar: ArrangeCalendarGateway = AndroidArrangeCalendarGateway(context),
 ) : OfficialPlugin {
     override val id: String = "arrange"
+    override val kind: PluginKind = PluginKind.INTERNAL
     override val icon: DdIcon = DdIcons.Clock
     override val nameRes: Int = R.string.plugin_arrange_name
     override val summaryRes: Int = R.string.plugin_arrange_summary

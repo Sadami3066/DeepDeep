@@ -42,4 +42,24 @@
     <string name="plugins_update_available">Update available: %1$s</string>
     <string name="plugins_downloading_percent">Downloading · %1$d%%</string>
     <string name="plugins_installing_stage">%1$s</string>
+    <string name="plugins_size_builtin">Built-in</string>
+    <string name="plugins_status_builtin">Enabled</string>
+    <string name="plugins_setting_section">Settings</string>
+    <string name="plugins_setting_max_rounds">Max goal rounds (0 = unlimited)</string>
+    <string name="plugins_setting_max_running">Concurrent jobs</string>
+    <string name="plugins_setting_skill_enabled">Enable Workshop skill</string>
+    <string name="plugins_setting_max_turns">Max Workshop agent turns</string>
+    <string name="plugins_internal_goal_name">Goals</string>
+    <string name="plugins_internal_goal_summary">Advance long-running goals across turns with pause, resume and automatic continuation.</string>
+    <string name="plugins_internal_jobs_name">Background jobs</string>
+    <string name="plugins_internal_jobs_summary">Start, inspect and stop background command jobs.</string>
+    <string name="plugins_internal_schedule_name">Schedules</string>
+    <string name="plugins_internal_schedule_summary">Create reminders and recurring tasks in this conversation.</string>
+    <string name="plugins_internal_workshop_name">Workshop</string>
+    <string name="plugins_internal_workshop_summary">Create, edit and load Workshop mini apps.</string>
+    <string name="plugins_tab_external">External</string>
+    <string name="plugins_tab_internal">Internal</string>
+    <string name="plugins_empty_external">No external plugins</string>
+    <string name="plugins_empty_internal">No internal plugins</string>
+    <string name="plugins_search_placeholder">Search plugins</string>
 </resources>

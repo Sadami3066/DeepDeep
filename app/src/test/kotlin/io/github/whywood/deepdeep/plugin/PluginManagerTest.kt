@@ -5,6 +5,7 @@ import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -36,6 +37,8 @@ class PluginManagerTest {
 
     private fun recordsFile() = File(temporaryFolder.root, "plugins/plugins.json")
 
+    private fun settingsFile() = File(temporaryFolder.root, "plugins/settings.json")
+
     private fun newManager(
         scope: TestScope,
         plugin: OfficialPlugin = FakePlugin(),
@@ -52,6 +55,7 @@ class PluginManagerTest {
                 repoDir = File(temporaryFolder.root, "skills"),
                 ioDispatcher = dispatcher,
             ),
+            settingsStore = PluginSettingsStore(settingsFile(), dispatcher),
             strings = strings,
             scope = scope,
             isForeground = isForeground,
@@ -391,6 +395,123 @@ class PluginManagerTest {
         assertEquals("res:${R.string.plugins_title}", readyLabel)
     }
 
+    @Test
+    fun externalPluginKindIsDefault() {
+        assertEquals(PluginKind.EXTERNAL, FakePlugin().kind)
+    }
+
+    @Test
+    fun startSeedsInternalPluginRecordAndSettings() = runTest {
+        val plugin = FakeInternalPlugin()
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val record = PluginRecordStore(recordsFile()).load().records.getValue(plugin.id)
+        assertTrue(record.enabled)
+        assertTrue(manager.state.value.snapshot(plugin.id)!!.installed)
+        assertEquals(mapOf("max_rounds" to "0", "skill_enabled" to "true"), plugin.applied)
+        assertEquals("0", manager.state.value.snapshot(plugin.id)!!.settings["max_rounds"])
+        assertEquals(listOf("internal_tool"), manager.tools(SessionBinding()).map { it.name })
+
+        manager.uninstall(plugin.id)
+        advanceUntilIdle()
+        assertNotNull(PluginRecordStore(recordsFile()).load().records[plugin.id])
+    }
+
+    @Test
+    fun disablingInternalPluginHidesToolsButKeepsRecord() = runTest {
+        val plugin = FakeInternalPlugin()
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        manager.setEnabled(plugin.id, false)
+        advanceUntilIdle()
+
+        assertTrue(manager.tools(SessionBinding()).isEmpty())
+        assertNotNull(PluginRecordStore(recordsFile()).load().records[plugin.id])
+    }
+
+    @Test
+    fun setSettingPersistsAndNotifiesPlugin() = runTest {
+        var contributions = 0
+        val plugin = FakeInternalPlugin()
+        val manager = newManager(
+            scope = this,
+            plugin = plugin,
+            onContributionsChanged = { contributions++ },
+        )
+        manager.start()
+        advanceUntilIdle()
+
+        manager.setSetting(plugin.id, "max_rounds", "12")
+        advanceUntilIdle()
+
+        assertEquals("12", plugin.applied["max_rounds"])
+        assertEquals("12", PluginSettingsStore(settingsFile()).readAll(plugin.id)["max_rounds"])
+        assertEquals("12", manager.state.value.snapshot(plugin.id)!!.settings["max_rounds"])
+        assertTrue(contributions > 0)
+
+        manager.setSetting(plugin.id, "max_rounds", "999")
+        advanceUntilIdle()
+        assertEquals("50", plugin.applied["max_rounds"])
+    }
+
+    @Test
+    fun refreshIfStaleReusesCachedStatuses() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        plugin.statusCalls = 0
+        manager.refreshIfStale()
+        advanceUntilIdle()
+        assertEquals(0, plugin.statusCalls)
+
+        manager.refresh()
+        advanceUntilIdle()
+        assertEquals(1, plugin.statusCalls)
+    }
+
+    private class FakeInternalPlugin : OfficialPlugin {
+        override val id: String = "fake-internal"
+        override val kind: PluginKind = PluginKind.INTERNAL
+        override val icon: DdIcon = DdIcons.Target
+        override val nameRes: Int = R.string.plugins_title
+        override val summaryRes: Int = R.string.plugins_title
+        override val version: String = "1.0"
+        override val sizeLabelRes: Int = R.string.plugins_title
+
+        var applied: Map<String, String> = emptyMap()
+
+        override fun settings(): List<PluginSettingSpec> = listOf(
+            PluginSettingSpec.Number("max_rounds", R.string.plugins_title, 0, 50, 0),
+            PluginSettingSpec.Toggle("skill_enabled", R.string.plugins_title, true),
+        )
+
+        override suspend fun onSettingsChanged(values: Map<String, String>) {
+            applied = values
+        }
+
+        override fun tools(binding: SessionBinding): List<CodingTool> = listOf(testTool("internal_tool"))
+
+        override fun skills(): List<PluginSkill> = listOf(PluginSkill("internal-skill", "body"))
+
+        override suspend fun availability(): PluginAvailability = PluginAvailability.Available
+
+        override suspend fun install(progress: PluginProgress) = Unit
+
+        override suspend fun uninstall() = Unit
+
+        override suspend fun status(): PluginStatus = PluginStatus.Ready("ready")
+    }
+
     private class FakePlugin(
         var availability: PluginAvailability = PluginAvailability.Available,
     ) : OfficialPlugin {
@@ -443,18 +564,17 @@ class PluginManagerTest {
 
         override fun skills(): List<PluginSkill> = listOf(PluginSkill("fake-skill", "body"))
 
-        override fun tools(): List<CodingTool> = listOf(testTool(), testTool())
+        override fun tools(): List<CodingTool> = listOf(testTool("fake_tool"), testTool("fake_tool"))
 
         override fun promptBody(status: PluginStatus): String = "PROMPT:${status.label}"
     }
 
-    private companion object {
-        fun testTool(): CodingTool = CodingTool(
-            name = "fake_tool",
-            description = "fake",
-            parameters = buildJsonObject { put("type", "object") },
-            label = "fake_tool",
-            execute = { _, _, _, _ -> textResult("ok") },
-        )
-    }
 }
+
+private fun testTool(name: String): CodingTool = CodingTool(
+    name = name,
+    description = "fake",
+    parameters = buildJsonObject { put("type", "object") },
+    label = name,
+    execute = { _, _, _, _ -> textResult("ok") },
+)

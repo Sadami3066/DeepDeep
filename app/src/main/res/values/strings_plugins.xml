@@ -42,4 +42,24 @@
     <string name="plugins_update_available">可更新到 %1$s</string>
     <string name="plugins_downloading_percent">下载中 · %1$d%%</string>
     <string name="plugins_installing_stage">%1$s</string>
+    <string name="plugins_size_builtin">内置</string>
+    <string name="plugins_status_builtin">已启用</string>
+    <string name="plugins_setting_section">设置</string>
+    <string name="plugins_setting_max_rounds">目标轮数上限（0 不限）</string>
+    <string name="plugins_setting_max_running">同时运行任务数</string>
+    <string name="plugins_setting_skill_enabled">启用创意工坊技能</string>
+    <string name="plugins_setting_max_turns">工坊 Agent 最大回合</string>
+    <string name="plugins_internal_goal_name">目标</string>
+    <string name="plugins_internal_goal_summary">跨回合推进长期目标，支持暂停、恢复与自动续跑。</string>
+    <string name="plugins_internal_jobs_name">后台任务</string>
+    <string name="plugins_internal_jobs_summary">启动、查看并终止后台命令任务。</string>
+    <string name="plugins_internal_schedule_name">定时任务</string>
+    <string name="plugins_internal_schedule_summary">在当前会话里创建提醒和周期任务。</string>
+    <string name="plugins_internal_workshop_name">创意工坊</string>
+    <string name="plugins_internal_workshop_summary">创建、编辑并加载 Workshop 迷你应用。</string>
+    <string name="plugins_tab_external">外部</string>
+    <string name="plugins_tab_internal">内部</string>
+    <string name="plugins_empty_external">暂无外部插件</string>
+    <string name="plugins_empty_internal">暂无内部插件</string>
+    <string name="plugins_search_placeholder">搜索插件</string>
 </resources>

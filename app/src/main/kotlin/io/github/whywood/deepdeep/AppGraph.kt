@@ -24,14 +24,17 @@ import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
+import io.github.whywood.deepdeep.plugin.internal.GoalPlugin
+import io.github.whywood.deepdeep.plugin.internal.JobsPlugin
+import io.github.whywood.deepdeep.plugin.internal.SchedulePlugin
+import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.plugin.PluginRecordStore
+import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
-import io.github.whywood.deepdeep.runtime.BuiltinSkillFile
-import io.github.whywood.deepdeep.runtime.BuiltinSkills
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
 import io.github.whywood.deepdeep.runtime.InstallationIdStore
@@ -51,12 +54,8 @@ import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.TurnSource
-import io.github.whywood.deepdeep.runtime.goalTools
-import io.github.whywood.deepdeep.runtime.jobTools
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
-import io.github.whywood.deepdeep.runtime.workshopDataTools
-import io.github.whywood.deepdeep.runtime.workshopTools
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
@@ -85,6 +84,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AppGraph(context: Context) {
     private val appContext = context.applicationContext
@@ -93,12 +93,8 @@ class AppGraph(context: Context) {
     private val sharedStorage = MutableStateFlow(false)
     private var questionRecoveryLoaded = false
 
-    private companion object {
-        const val WORKSHOP_SKILL_ID = "workshop"
-    }
-
     init {
-        StorageMigration.migrate(appContext.filesDir)
+        scope.launch { StorageMigration.migrate(appContext.filesDir) }
         OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
     }
 
@@ -173,6 +169,8 @@ class AppGraph(context: Context) {
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
     val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
     val skillCatalog = SkillCatalog(agentDir)
+    val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
+    private val pluginStrings = AndroidPluginStrings(appContext)
     val goalService: GoalService by lazy { GoalService(GoalStore(File(appContext.filesDir, "goals")), scope) }
     val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -183,6 +181,7 @@ class AppGraph(context: Context) {
             wakeEnabled = { jobWake.value },
             runnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
             persistence = JobPersistence(File(appContext.filesDir, "jobs")),
+            maxRunningPerSession = { pluginSettingsStore.cachedInt("jobs", "max_running", 10) },
         )
     }
     val questionCenter = QuestionCenter(
@@ -219,6 +218,7 @@ class AppGraph(context: Context) {
                     onCapabilitiesChanged = {
                         scope.launch { host.reconfigure() }
                     },
+                    onSessionRestored = { pluginManager.refresh() },
                 ),
                 WecomPlugin(
                     context = appContext,
@@ -227,13 +227,18 @@ class AppGraph(context: Context) {
                     downloader = PluginDownloader(),
                     workspaceDir = homeDir,
                 ),
+                GoalPlugin(goalService, pluginStrings),
+                JobsPlugin(jobRegistry, pluginStrings),
+                SchedulePlugin(scheduleService, pluginStrings),
+                WorkshopPlugin(workshopStore, appContext.assets, pluginStrings),
             ),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
             skillStore = PluginSkillStore(
                 skillsDir = File(agentDir, "skills"),
                 repoDir = File(appContext.filesDir, "skills"),
             ),
-            strings = AndroidPluginStrings(appContext),
+            settingsStore = pluginSettingsStore,
+            strings = pluginStrings,
             scope = scope,
             isForeground = { AppVisibility.foreground },
             notifyInstall = { label, stage, progress ->
@@ -252,15 +257,11 @@ class AppGraph(context: Context) {
     }
     private val appToolContext: AppToolContext by lazy {
         AppToolContext(
-            scheduleService = scheduleService,
             questionCenter = questionCenter,
             pluginController = pluginManager,
-            pluginTools = { pluginManager.tools() },
+            pluginTools = { binding -> pluginManager.tools(binding) },
             extraToolFactories = listOf(
-                { _ -> workshopTools(workshopStore) + workshopDataTools(workshopStore) },
-                { binding -> goalTools(binding, goalService) },
-                { binding -> jobTools(binding, jobRegistry) },
-                { binding -> listOf(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() }) },
+                { _, binding -> listOf(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() }) },
             ),
         )
     }
@@ -292,6 +293,7 @@ class AppGraph(context: Context) {
         WorkshopAgentService(
             providers = providerCatalog,
             credentials = credentials,
+            transport = httpTransport,
             agentDir = agentDir,
             runRoot = File(appContext.filesDir, "agent-runs"),
             appToolContext = appToolContext,
@@ -300,6 +302,7 @@ class AppGraph(context: Context) {
             personalization = { personalizationStore.read().toRuntime() },
             pluginPromptBody = { pluginManager.promptBody() },
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            defaultMaxTurns = { pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
         )
     }
 
@@ -308,6 +311,7 @@ class AppGraph(context: Context) {
             workspace = cwd,
             agentDir = agentDir,
             credentials = credentials,
+            transport = httpTransport,
             shellExecutor = shellExecutorFor(cwd),
             providers = providerCatalog,
             personalization = { personalizationStore.read().toRuntime() },
@@ -355,7 +359,6 @@ class AppGraph(context: Context) {
     val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     init {
-        ensureBuiltinSkills()
         scope.launch {
             pluginManager.start()
             host.reconfigure()
@@ -363,10 +366,8 @@ class AppGraph(context: Context) {
         scope.launch {
             host.events.collect { event ->
                 when (event.event) {
-                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
-                        pluginManager.refreshIfStale()
+                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed ->
                         runCatching { skillRepository.syncIfChanged() }
-                    }
                     else -> Unit
                 }
             }
@@ -376,33 +377,15 @@ class AppGraph(context: Context) {
     suspend fun prepare() {
         if (!questionRecoveryLoaded) {
             questionRecoveryLoaded = true
-            questionCenter.loadPersisted()
+            withContext(Dispatchers.IO) { questionCenter.loadPersisted() }
             host.start()
             notificationCenter.notifyInterruptedWork(questionCenter.interrupted.value, host.interruptedRuns.value)
         }
-        LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
-        importDebugKey()
-        credentials.preloadAll()
-    }
-
-    private fun ensureBuiltinSkills() {
-        val files = runCatching { readSkillAssets("skills/workshop") }.getOrNull().orEmpty()
-        if (files.isEmpty()) return
-        BuiltinSkills.ensure(
-            repoDir = File(appContext.filesDir, "skills"),
-            agentDir = agentDir,
-            id = WORKSHOP_SKILL_ID,
-            files = files,
-        )
-    }
-
-    private fun readSkillAssets(root: String): List<BuiltinSkillFile> {
-        val children = appContext.assets.list(root).orEmpty()
-        if (children.isEmpty()) {
-            val content = appContext.assets.open(root).bufferedReader().use { it.readText() }
-            return listOf(BuiltinSkillFile(root.removePrefix("skills/$WORKSHOP_SKILL_ID/"), content))
+        withContext(Dispatchers.IO) {
+            LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
+            importDebugKey()
         }
-        return children.flatMap { child -> readSkillAssets("$root/$child") }
+        credentials.preloadAll()
     }
 
     private suspend fun importDebugKey() {

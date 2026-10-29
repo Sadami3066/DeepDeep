@@ -21,18 +21,24 @@ class PluginSkillStore(
         skills: List<PluginSkill>,
         previousIds: List<String>,
         active: Boolean,
-    ) = mutex.withLock {
+    ): List<String> = mutex.withLock {
         withContext(ioDispatcher) {
-            skills.forEach { skill -> writeSkill(repoDir, pluginId, skill) }
+            val skipped = mutableListOf<String>()
+            skills.forEach { skill ->
+                if (!writeSkill(repoDir, pluginId, skill)) skipped += skill.id
+            }
             val currentIds = skills.mapTo(mutableSetOf()) { it.id }
             (previousIds - currentIds).forEach { id -> removeSkill(pluginId, id) }
             skills.forEach { skill ->
                 if (active) {
-                    copyOwned(repoDir, skillsDir, pluginId, skill.id)
+                    if (!copyOwned(repoDir, skillsDir, pluginId, skill)) {
+                        if (skill.id !in skipped) skipped += skill.id
+                    }
                 } else {
                     removeOwned(skillsDir, pluginId, skill.id)
                 }
             }
+            skipped
         }
     }
 
@@ -40,22 +46,25 @@ class PluginSkillStore(
         pluginId: String,
         skills: List<PluginSkill>,
         enabled: Boolean,
-    ) = mutex.withLock {
+    ): List<String> = mutex.withLock {
         withContext(ioDispatcher) {
+            val skipped = mutableListOf<String>()
             skills.forEach { skill ->
                 if (enabled) {
-                    ensureRepoSkill(pluginId, skill)
-                    copyOwned(repoDir, skillsDir, pluginId, skill.id)
+                    if (!ensureRepoSkill(pluginId, skill) || !copyOwned(repoDir, skillsDir, pluginId, skill)) {
+                        skipped += skill.id
+                    }
                 } else {
                     removeOwned(skillsDir, pluginId, skill.id)
                 }
             }
+            skipped
         }
     }
 
-    suspend fun ensureRepo(pluginId: String, skills: List<PluginSkill>) = mutex.withLock {
+    suspend fun ensureRepo(pluginId: String, skills: List<PluginSkill>): List<String> = mutex.withLock {
         withContext(ioDispatcher) {
-            skills.forEach { skill -> ensureRepoSkill(pluginId, skill) }
+            skills.mapNotNull { skill -> skill.id.takeIf { !ensureRepoSkill(pluginId, skill) } }
         }
     }
 
@@ -65,37 +74,47 @@ class PluginSkillStore(
         }
     }
 
-    private fun ensureRepoSkill(pluginId: String, skill: PluginSkill) {
+    private fun ensureRepoSkill(pluginId: String, skill: PluginSkill): Boolean {
         if (!isSafeId(skill.id)) throw IOException("invalid plugin skill id: ${skill.id}")
         val repo = File(repoDir, skill.id)
         if (marker(repo) == pluginId || File(repo, SKILL_FILE).isFile) {
-            writeSkill(repoDir, pluginId, skill)
-            return
+            return writeSkill(repoDir, pluginId, skill)
         }
         val active = File(skillsDir, skill.id)
         if (marker(active) == pluginId) {
             active.copyRecursively(repo, overwrite = true)
-            return
+            return true
         }
-        writeSkill(repoDir, pluginId, skill)
+        return writeSkill(repoDir, pluginId, skill)
     }
 
-    private fun writeSkill(parent: File, pluginId: String, skill: PluginSkill) {
-        if (!isSafeId(skill.id)) throw IOException("invalid plugin skill id: ${skill.id}")
-        if (skill.markdown.isBlank()) throw IOException("empty plugin skill: ${skill.id}")
+    private fun writeSkill(parent: File, pluginId: String, skill: PluginSkill): Boolean {
+        validateSkill(skill)
         val target = File(parent, skill.id)
         val targetMarker = marker(target)
         if (targetMarker != null && targetMarker != pluginId) {
             throw IOException("skill directory already exists: ${skill.id}")
         }
-        if (target.exists() && targetMarker == null) {
-            throw IOException("skill directory already exists: ${skill.id}")
+        if (target.exists() && targetMarker == null && !skill.legacyOwned) {
+            val existing = runCatching { File(target, SKILL_FILE).readText() }.getOrNull() ?: return false
+            if (existing != skill.markdown) return false
         }
+        publishSkillDirectory(parent, pluginId, skill)
+        return true
+    }
+
+    private fun publishSkillDirectory(parent: File, pluginId: String, skill: PluginSkill) {
         parent.mkdirs()
+        val target = File(parent, skill.id)
         val temp = File(parent, ".tmp-${skill.id}-${UUID.randomUUID()}")
         try {
             temp.mkdirs()
             File(temp, SKILL_FILE).writeText(skill.markdown, Charsets.UTF_8)
+            skill.files.forEach { file ->
+                val destination = File(temp, file.path)
+                destination.parentFile?.mkdirs()
+                destination.writeText(file.content, Charsets.UTF_8)
+            }
             File(temp, MARKER).writeText(pluginId, Charsets.UTF_8)
             replaceDirectory(temp, target)
         } finally {
@@ -103,25 +122,52 @@ class PluginSkillStore(
         }
     }
 
-    private fun copyOwned(sourceParent: File, targetParent: File, pluginId: String, id: String) {
-        if (!isSafeId(id)) return
-        val source = File(sourceParent, id)
-        if (marker(source) != pluginId) {
-            throw IOException("missing plugin skill: $id")
-        }
-        val target = File(targetParent, id)
+    private fun copyOwned(sourceParent: File, targetParent: File, pluginId: String, skill: PluginSkill): Boolean {
+        if (!isSafeId(skill.id)) return false
+        val source = File(sourceParent, skill.id)
+        if (marker(source) != pluginId) return false
+        val target = File(targetParent, skill.id)
         val targetMarker = marker(target)
         if (target.exists() && targetMarker != pluginId) {
-            throw IOException("skill directory already exists: $id")
+            if (targetMarker != null) throw IOException("skill directory already exists: ${skill.id}")
+            if (!skill.legacyOwned) {
+                val sourceMarkdown = runCatching { File(source, SKILL_FILE).readText() }.getOrNull() ?: return false
+                val targetMarkdown = runCatching { File(target, SKILL_FILE).readText() }.getOrNull() ?: return false
+                if (sourceMarkdown != targetMarkdown) return false
+            }
         }
         targetParent.mkdirs()
-        val temp = File(targetParent, ".tmp-$id-${UUID.randomUUID()}")
+        val temp = File(targetParent, ".tmp-${skill.id}-${UUID.randomUUID()}")
         try {
             source.copyRecursively(temp, overwrite = true)
             replaceDirectory(temp, target)
         } finally {
             temp.deleteRecursively()
         }
+        return true
+    }
+
+    private fun validateSkill(skill: PluginSkill) {
+        if (!isSafeId(skill.id)) throw IOException("invalid plugin skill id: ${skill.id}")
+        if (skill.markdown.isBlank()) throw IOException("empty plugin skill: ${skill.id}")
+        val seen = mutableSetOf<String>()
+        skill.files.forEach { file ->
+            val path = safeRelativePath(file.path)
+                ?: throw IOException("invalid plugin skill file path: ${file.path}")
+            if (path == SKILL_FILE || path == MARKER) {
+                throw IOException("reserved plugin skill file path: $path")
+            }
+            if (!seen.add(path)) throw IOException("duplicate plugin skill file: $path")
+        }
+    }
+
+    private fun safeRelativePath(raw: String): String? {
+        val replaced = raw.replace('\\', '/')
+        if (replaced.isEmpty() || replaced.startsWith("/")) return null
+        if (replaced.any { it.code < 0x20 || it.code == 0x7f } || replaced.contains(':')) return null
+        val segments = replaced.split('/')
+        if (segments.any { it.isEmpty() || it == "." || it == ".." }) return null
+        return segments.joinToString("/")
     }
 
     private fun removeSkill(pluginId: String, id: String) {

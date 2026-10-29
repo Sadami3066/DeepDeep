@@ -3,9 +3,17 @@ package io.github.whywood.deepdeep.plugin
 import androidx.annotation.StringRes
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.runtime.SessionBinding
+
+enum class PluginKind {
+    EXTERNAL,
+    INTERNAL,
+}
 
 interface OfficialPlugin {
     val id: String
+
+    val kind: PluginKind get() = PluginKind.EXTERNAL
 
     val icon: DdIcon
 
@@ -43,6 +51,12 @@ interface OfficialPlugin {
     fun skills(): List<PluginSkill> = emptyList()
 
     fun tools(): List<CodingTool> = emptyList()
+
+    fun tools(binding: SessionBinding): List<CodingTool> = tools()
+
+    fun settings(): List<PluginSettingSpec> = emptyList()
+
+    suspend fun onSettingsChanged(values: Map<String, String>) {}
 
     fun promptBody(status: PluginStatus): String? = null
 }
@@ -100,9 +114,16 @@ data class PluginDetailRow(
     val value: String,
 )
 
+data class PluginSkillFile(
+    val path: String,
+    val content: String,
+)
+
 data class PluginSkill(
     val id: String,
     val markdown: String,
+    val files: List<PluginSkillFile> = emptyList(),
+    val legacyOwned: Boolean = false,
 )
 
 interface PluginStrings {

@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
+import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginAction
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
@@ -30,6 +31,7 @@ class GuiPlugin(
     }
 
     override val id: String = "gui"
+    override val kind: PluginKind = PluginKind.INTERNAL
     override val icon: DdIcon = DdIcons.HandClick
     override val nameRes: Int = R.string.plugin_gui_name
     override val summaryRes: Int = R.string.plugin_gui_summary

@@ -6,6 +6,7 @@ data class PluginSnapshot(
     val availability: PluginAvailability,
     val status: PluginStatus?,
     val enabled: Boolean,
+    val settings: Map<String, String> = emptyMap(),
 ) {
     val installed: Boolean get() = installedVersion != null
 

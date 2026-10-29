@@ -4,6 +4,7 @@ import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.PluginController
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
+import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
@@ -22,6 +23,7 @@ class PluginManager(
     plugins: List<OfficialPlugin>,
     private val recordStore: PluginRecordStore,
     private val skillStore: PluginSkillStore,
+    private val settingsStore: PluginSettingsStore,
     private val strings: PluginStrings,
     private val scope: CoroutineScope,
     private val isForeground: () -> Boolean,
@@ -45,14 +47,29 @@ class PluginManager(
 
     suspend fun start() {
         _state.update { it.copy(loading = true) }
-        val records = recordStore.load().records
+        val records = recordStore.load().records.toMutableMap()
         plugins.values.forEach { plugin ->
             runCatching { plugin.recover() }
+            if (plugin.kind == PluginKind.INTERNAL && plugin.id !in records) {
+                val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
+                val record = PluginRecord(
+                    id = plugin.id,
+                    version = plugin.version,
+                    installedAt = System.currentTimeMillis(),
+                    skillIds = skills.map { it.id },
+                    enabled = true,
+                )
+                runCatching { recordStore.upsert(record) }
+                records[plugin.id] = record
+            }
+            applySettings(plugin)
             val record = records[plugin.id] ?: return@forEach
             val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
-            runCatching { skillStore.ensureRepo(plugin.id, skills) }
-            if (!record.enabled) {
-                runCatching { skillStore.setActive(plugin.id, skills, false) }
+            runCatching { skillStore.sync(plugin.id, skills, record.skillIds, record.enabled) }
+            val ids = skills.map { it.id }
+            if (ids != record.skillIds) {
+                runCatching { recordStore.upsert(record.copy(skillIds = ids)) }
+                records[plugin.id] = record.copy(skillIds = ids)
             }
         }
         refreshStatuses()
@@ -69,14 +86,21 @@ class PluginManager(
     }
 
     fun refreshIfStale(minIntervalMillis: Long = REFRESH_STALE_INTERVAL_MS) {
-        if (System.currentTimeMillis() - lastRefreshAt < minIntervalMillis) return
+        if (minIntervalMillis > 0 && System.currentTimeMillis() - lastRefreshAt < minIntervalMillis) return
         refresh()
     }
 
-    fun tools(): List<CodingTool> = _state.value.plugins
+    fun tools(binding: SessionBinding): List<CodingTool> = _state.value.plugins
         .filter { it.installed && it.enabled }
-        .flatMap { snapshot -> snapshot.plugin.tools() }
+        .flatMap { snapshot ->
+            when (snapshot.plugin.kind) {
+                PluginKind.EXTERNAL -> snapshot.plugin.tools()
+                PluginKind.INTERNAL -> snapshot.plugin.tools(binding)
+            }
+        }
         .distinctBy { it.name }
+
+    fun tools(): List<CodingTool> = tools(SessionBinding())
 
     fun setEnabled(pluginId: String, enabled: Boolean) {
         val plugin = plugins[pluginId] ?: return
@@ -104,18 +128,63 @@ class PluginManager(
         }
     }
 
+    fun setSetting(pluginId: String, key: String, value: String) {
+        val plugin = plugins[pluginId] ?: return
+        val spec = plugin.settings().firstOrNull { it.key == key } ?: return
+        val normalized = spec.normalize(value) ?: return
+        val current = _state.value.snapshot(pluginId) ?: return
+        if (current.settings[key] == normalized) return
+        _state.update { state ->
+            state.copy(
+                plugins = state.plugins.map { snapshot ->
+                    if (snapshot.plugin.id == pluginId) {
+                        snapshot.copy(settings = snapshot.settings + (key to normalized))
+                    } else {
+                        snapshot
+                    }
+                },
+            )
+        }
+        scope.launch {
+            runCatching {
+                settingsStore.set(pluginId, key, normalized)
+                val values = applySettings(plugin)
+                val record = recordStore.load().records[pluginId]
+                if (record != null) {
+                    val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
+                    runCatching { skillStore.sync(pluginId, skills, record.skillIds, record.enabled) }
+                    val ids = skills.map { it.id }
+                    if (ids != record.skillIds) recordStore.upsert(record.copy(skillIds = ids))
+                }
+                _state.update { state ->
+                    state.copy(
+                        plugins = state.plugins.map { snapshot ->
+                            if (snapshot.plugin.id == pluginId) snapshot.copy(settings = values) else snapshot
+                        },
+                    )
+                }
+                onContributionsChanged()
+            }.onFailure { error ->
+                _state.update { it.copy(error = errorMessage(error)) }
+            }
+        }
+    }
+
     fun install(pluginId: String) {
         val plugin = plugins[pluginId] ?: return
+        if (plugin.kind == PluginKind.INTERNAL) return
         launchBusy { installInternal(plugin) }
     }
 
     fun update(pluginId: String) {
         val plugin = plugins[pluginId] ?: return
+        if (plugin.kind == PluginKind.INTERNAL) return
         launchBusy { installInternal(plugin) }
     }
 
     fun uninstall(pluginId: String) {
         val plugin = plugins[pluginId] ?: return
+        if (plugin.kind == PluginKind.INTERNAL) return
         launchBusy {
             val record = recordStore.load().records[pluginId]
             plugin.uninstall()
@@ -165,6 +234,19 @@ class PluginManager(
     override suspend fun setup(pluginId: String): PluginSetupResult {
         val plugin = plugins[pluginId]
             ?: return PluginSetupResult(false, pluginId, false, false, error = "unknown plugin")
+        if (plugin.kind == PluginKind.INTERNAL) {
+            val status = runCatching { plugin.status() }.getOrNull()
+            val ready = status is PluginStatus.Ready
+            return PluginSetupResult(
+                ok = ready,
+                pluginId = pluginId,
+                installed = true,
+                ready = ready,
+                status = status?.label,
+                account = (status as? PluginStatus.Ready)?.account,
+                error = status?.label?.takeIf { !ready },
+            )
+        }
         val records = recordStore.load().records
         var installed = records.containsKey(pluginId)
         if (records[pluginId]?.enabled == false) {
@@ -454,7 +536,14 @@ class PluginManager(
                     PluginStatus.Failed(error.message ?: error.javaClass.simpleName)
                 }
             }
-            PluginSnapshot(plugin, record?.version, availability, status, enabled)
+            PluginSnapshot(
+                plugin = plugin,
+                installedVersion = record?.version,
+                availability = availability,
+                status = status,
+                enabled = enabled,
+                settings = resolveSettings(plugin),
+            )
         }
         lastRefreshAt = System.currentTimeMillis()
         _state.update {
@@ -536,6 +625,21 @@ class PluginManager(
         override fun cancelled(): Boolean = cancelRequested
     }
 
+    private suspend fun applySettings(plugin: OfficialPlugin): Map<String, String> {
+        val values = resolveSettings(plugin)
+        runCatching { plugin.onSettingsChanged(values) }
+        return values
+    }
+
+    private suspend fun resolveSettings(plugin: OfficialPlugin): Map<String, String> {
+        val specs = plugin.settings()
+        if (specs.isEmpty()) return emptyMap()
+        val stored = runCatching { settingsStore.readAll(plugin.id) }.getOrDefault(emptyMap())
+        val values = LinkedHashMap<String, String>()
+        specs.forEach { spec -> values[spec.key] = stored[spec.key] ?: spec.default }
+        return values
+    }
+
     private fun errorMessage(error: Throwable): String =
         error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
 
@@ -546,6 +650,6 @@ class PluginManager(
     }
 
     private companion object {
-        const val REFRESH_STALE_INTERVAL_MS = 30_000L
+        const val REFRESH_STALE_INTERVAL_MS = 120_000L
     }
 }
