@@ -4,13 +4,9 @@
     <string name="assistant_action_speak">朗读</string>
     <string name="assistant_attach_add">添加附件</string>
     <string name="assistant_attach_empty">空文件</string>
-    <string name="assistant_attach_failed">无法读取该文件</string>
-    <string name="assistant_attach_limit">最多添加 15 个附件</string>
     <string name="assistant_attach_missing">文件不存在</string>
     <string name="assistant_attach_open">查看附件</string>
-    <string name="assistant_attach_remove">移除附件</string>
     <string name="assistant_attach_share">分享文件</string>
-    <string name="assistant_attach_too_large">文件超过 25MB，无法添加</string>
     <string name="assistant_attach_unpreviewable">无法预览此文件</string>
     <string name="assistant_close">关闭</string>
     <string name="assistant_configure_hint">尚未配置模型</string>
@@ -43,7 +39,6 @@
     <string name="assistant_quote_remove">取消引用</string>
     <string name="assistant_reasoning">思考</string>
     <string name="assistant_send">发送</string>
-    <string name="assistant_settings">设置</string>
     <string name="assistant_reload">重新加载</string>
     <string name="chat_reload_done">已重新加载当前会话</string>
     <string name="chat_reload_failed">重新加载失败</string>
@@ -74,7 +69,7 @@
     <string name="chat_error_runtime_start">运行时启动失败</string>
     <string name="chat_error_preparing">正在准备会话，请稍候…</string>
     <string name="chat_error_max_attachments">最多添加 20 个附件</string>
-    <string name="chat_error_attachment_too_large">附件超过 25MB，无法添加</string>
+    <string name="chat_error_attachment_too_large">附件超过 1.0 GB，无法添加</string>
     <string name="chat_error_attachment_failed">附件添加失败</string>
     <string name="chat_error_restoring">正在恢复会话，请稍候…</string>
     <string name="chat_error_session_not_ready">会话尚未就绪，请稍候…</string>
@@ -97,7 +92,6 @@
     <string name="assistant_retry">重试</string>
     <string name="chat_status_auto_retry">自动重试 %1$d/%2$d</string>
     <string name="chat_error_with_code">%1$s（%2$s）</string>
-    <string name="assistant_retrying">重试中</string>
     <string name="assistant_model_provider">厂商</string>
     <string name="chat_error_insufficient_balance">余额不足，请充值后重试</string>
     <string name="chat_error_model_unavailable">模型不可用，请切换模型</string>
@@ -120,7 +114,19 @@
     <string name="chat_cmd_unknown">未知命令：/%1$s</string>
     <string name="chat_question_other">另一个会话正在等待回答</string>
     <string name="chat_question_other_action">前往回答</string>
-    <string name="chat_question_waiting">Agent 正在等待你的回答</string>
     <string name="chat_cmd_goal_invalid">目标内容不能为空</string>
     <string name="chat_notice_goal_round_unbounded">目标 · 第 %1$d 轮</string>
+    <string name="assistant_queue_steer">插话</string>
+    <string name="assistant_queue_follow_up">排队</string>
+    <string name="assistant_queue_clear">清空队列</string>
+    <string name="assistant_send_steer">插话发送</string>
+    <string name="assistant_importing_image">正在处理图片…</string>
+    <string name="assistant_summary_compacted">上下文已压缩</string>
+    <string name="assistant_summary_branch">来自分支</string>
+    <string name="assistant_summary_tokens">%1$s → %2$s tokens</string>
+    <string name="assistant_summary_tokens_before">%1$s tokens（压缩前）</string>
+    <string name="chat_error_stop_before_command">停止当前回答后再发送命令</string>
+    <string name="chat_error_insufficient_space">存储空间不足，无法添加附件</string>
+    <string name="chat_error_unsupported_image">不支持该图片格式</string>
+    <string name="chat_error_image_failed">图片处理失败，已按文件发送</string>
 </resources>

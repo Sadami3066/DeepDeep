@@ -1,7 +1,5 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.asLlmMessage
 import dev.pi.ai.AssistantMessage as PiAssistantMessage
 import dev.pi.ai.BlockContent
 import dev.pi.ai.PlainTextContent
@@ -11,12 +9,16 @@ import dev.pi.ai.ThinkingContent
 import dev.pi.ai.ToolCall
 import dev.pi.ai.ToolResultMessage
 import dev.pi.ai.UserMessage
+import dev.pi.coding.session.BranchSummaryEntry
+import dev.pi.coding.session.CompactionEntry
+import dev.pi.coding.session.SessionEntry
+import dev.pi.coding.session.SessionMessageEntry
 import kotlinx.serialization.json.JsonObject
 
 private const val REMINDER_PREFIX = "[定时提醒]"
 
 object HistoryMapper {
-    fun mapHistory(messages: List<AgentMessage>): List<AssistantMessage> {
+    fun mapEntries(entries: List<SessionEntry>): List<AssistantMessage> {
         val result = mutableListOf<AssistantMessage>()
         val traces = mutableMapOf<String, ToolTrace>()
         var current: AssistantMessage? = null
@@ -32,128 +34,160 @@ object HistoryMapper {
             current = null
         }
 
-        for (agentMessage in messages) {
-            when (val message = agentMessage.asLlmMessage()) {
-                is UserMessage -> {
-                    flush()
-                    val text = message.content.asText()
-                    if (text.isNotBlank()) {
-                        val reminder = parseReminder(text)
-                        if (reminder == null) {
-                            result += AssistantMessage(messageId++, AssistantRole.USER, text)
+        for (entry in entries) {
+            when (entry) {
+                is SessionMessageEntry -> when (val message = entry.message) {
+                    is UserMessage -> {
+                        flush()
+                        val text = message.content.asText()
+                        if (text.isNotBlank()) {
+                            val reminder = parseReminder(text)
+                            if (reminder == null) {
+                                result += AssistantMessage(messageId++, AssistantRole.USER, text)
+                            } else {
+                                result += AssistantMessage(
+                                    id = messageId++,
+                                    role = AssistantRole.USER,
+                                    text = reminder.body,
+                                    reminder = reminder.name,
+                                )
+                            }
+                        }
+                    }
+
+                    is PiAssistantMessage -> {
+                        val base = current ?: AssistantMessage(
+                            id = messageId++,
+                            role = AssistantRole.ASSISTANT,
+                            text = "",
+                            status = MessageStatus.DONE,
+                            startedAt = message.timestamp,
+                        )
+                        val newSteps = mutableListOf<AssistantStep>()
+                        var lastToolIndex = -1
+                        for (content in message.content) {
+                            when (content) {
+                                is ThinkingContent -> {
+                                    if (content.thinking.isNotBlank()) {
+                                        newSteps += AssistantStep.Reasoning(stepId++, content.thinking)
+                                    }
+                                }
+
+                                is TextContent -> {
+                                    if (content.text.isNotBlank()) {
+                                        newSteps += AssistantStep.Text(stepId++, content.text)
+                                    }
+                                }
+
+                                is ToolCall -> {
+                                    val trace = ToolTrace(
+                                        id = stepId++,
+                                        name = content.name,
+                                        arguments = content.arguments.toStringMap(),
+                                        toolCallId = content.id,
+                                    )
+                                    traces[content.id] = trace
+                                    newSteps += AssistantStep.Tool(trace)
+                                    lastToolIndex = newSteps.lastIndex
+                                }
+
+                                else -> Unit
+                            }
+                        }
+                        val finalText = if (lastToolIndex >= 0) {
+                            newSteps.drop(lastToolIndex + 1).filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
                         } else {
-                            result += AssistantMessage(
-                                id = messageId++,
-                                role = AssistantRole.USER,
-                                text = reminder.body,
-                                reminder = reminder.name,
+                            newSteps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
+                        }
+                        val processSteps = if (lastToolIndex >= 0) {
+                            newSteps.filterIndexed { index, step -> !(step is AssistantStep.Text && index > lastToolIndex) }
+                        } else {
+                            newSteps.filterNot { it is AssistantStep.Text }
+                        }
+                        current = base.copy(
+                            text = finalText.ifBlank { base.text },
+                            steps = base.steps + processSteps,
+                            startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
+                            finishedAt = message.timestamp,
+                            status = turnStatus(base.status, message.stopReason),
+                            error = message.errorMessage?.takeIf { it.isNotBlank() } ?: base.error,
+                        )
+                    }
+
+                    is ToolResultMessage -> {
+                        val output = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
+                        val existing = traces[message.toolCallId]
+                        val base = current ?: AssistantMessage(
+                            id = messageId++,
+                            role = AssistantRole.ASSISTANT,
+                            text = "",
+                            status = MessageStatus.DONE,
+                            startedAt = message.timestamp,
+                        )
+                        if (existing == null) {
+                            val trace = ToolTrace(
+                                id = stepId++,
+                                name = message.toolName,
+                                arguments = emptyMap(),
+                                status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
+                                output = output.takeIf { it.isNotBlank() && !message.isError },
+                                error = output.takeIf { it.isNotBlank() && message.isError },
+                                toolCallId = message.toolCallId,
+                            )
+                            traces[message.toolCallId] = trace
+                            current = base.copy(
+                                steps = base.steps + AssistantStep.Tool(trace),
+                                finishedAt = message.timestamp,
+                            )
+                        } else {
+                            val updated = existing.copy(
+                                status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
+                                output = output.takeIf { it.isNotBlank() && !message.isError },
+                                error = output.takeIf { it.isNotBlank() && message.isError },
+                            )
+                            traces[message.toolCallId] = updated
+                            current = base.copy(
+                                steps = base.steps.map { step ->
+                                    if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
+                                        AssistantStep.Tool(updated)
+                                    } else {
+                                        step
+                                    }
+                                },
+                                finishedAt = message.timestamp,
                             )
                         }
                     }
+
+                    else -> Unit
                 }
 
-                is PiAssistantMessage -> {
-                    val base = current ?: AssistantMessage(
+                is CompactionEntry -> {
+                    flush()
+                    result += AssistantMessage(
                         id = messageId++,
                         role = AssistantRole.ASSISTANT,
                         text = "",
-                        status = MessageStatus.DONE,
-                        startedAt = message.timestamp,
-                    )
-                    val newSteps = mutableListOf<AssistantStep>()
-                    var lastToolIndex = -1
-                    for (content in message.content) {
-                        when (content) {
-                            is ThinkingContent -> {
-                                if (content.thinking.isNotBlank()) {
-                                    newSteps += AssistantStep.Reasoning(stepId++, content.thinking)
-                                }
-                            }
-
-                            is TextContent -> {
-                                if (content.text.isNotBlank()) {
-                                    newSteps += AssistantStep.Text(stepId++, content.text)
-                                }
-                            }
-
-                            is ToolCall -> {
-                                val trace = ToolTrace(
-                                    id = stepId++,
-                                    name = content.name,
-                                    arguments = content.arguments.toStringMap(),
-                                    toolCallId = content.id,
-                                )
-                                traces[content.id] = trace
-                                newSteps += AssistantStep.Tool(trace)
-                                lastToolIndex = newSteps.lastIndex
-                            }
-
-                            else -> Unit
-                        }
-                    }
-                    val finalText = if (lastToolIndex >= 0) {
-                        newSteps.drop(lastToolIndex + 1).filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                    } else {
-                        newSteps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                    }
-                    val processSteps = if (lastToolIndex >= 0) {
-                        newSteps.filterIndexed { index, step -> !(step is AssistantStep.Text && index > lastToolIndex) }
-                    } else {
-                        newSteps.filterNot { it is AssistantStep.Text }
-                    }
-                    current = base.copy(
-                        text = finalText.ifBlank { base.text },
-                        steps = base.steps + processSteps,
-                        startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
-                        finishedAt = message.timestamp,
-                        status = turnStatus(base.status, message.stopReason),
-                        error = message.errorMessage?.takeIf { it.isNotBlank() } ?: base.error,
+                        summary = MessageSummary(
+                            kind = MessageSummaryKind.COMPACTION,
+                            text = entry.summary,
+                            tokensBefore = entry.tokensBefore,
+                        ),
                     )
                 }
 
-                is ToolResultMessage -> {
-                    val output = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
-                    val existing = traces[message.toolCallId]
-                    val base = current ?: AssistantMessage(
+                is BranchSummaryEntry -> {
+                    flush()
+                    result += AssistantMessage(
                         id = messageId++,
                         role = AssistantRole.ASSISTANT,
                         text = "",
-                        status = MessageStatus.DONE,
-                        startedAt = message.timestamp,
+                        summary = MessageSummary(
+                            kind = MessageSummaryKind.BRANCH,
+                            text = entry.summary,
+                            fromId = entry.fromId,
+                        ),
                     )
-                    if (existing == null) {
-                        val trace = ToolTrace(
-                            id = stepId++,
-                            name = message.toolName,
-                            arguments = emptyMap(),
-                            status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = output.takeIf { it.isNotBlank() && !message.isError },
-                            error = output.takeIf { it.isNotBlank() && message.isError },
-                            toolCallId = message.toolCallId,
-                        )
-                        traces[message.toolCallId] = trace
-                        current = base.copy(
-                            steps = base.steps + AssistantStep.Tool(trace),
-                            finishedAt = message.timestamp,
-                        )
-                    } else {
-                        val updated = existing.copy(
-                            status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                            output = output.takeIf { it.isNotBlank() && !message.isError },
-                            error = output.takeIf { it.isNotBlank() && message.isError },
-                        )
-                        traces[message.toolCallId] = updated
-                        current = base.copy(
-                            steps = base.steps.map { step ->
-                                if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
-                                    AssistantStep.Tool(updated)
-                                } else {
-                                    step
-                                }
-                            },
-                            finishedAt = message.timestamp,
-                        )
-                    }
                 }
 
                 else -> Unit

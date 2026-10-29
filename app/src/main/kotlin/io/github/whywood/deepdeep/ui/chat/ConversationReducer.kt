@@ -135,6 +135,11 @@ internal fun reduce(
 
     is RuntimeEvent.TurnInjected -> state.injectTurn(event, strings, now)
 
+    is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, strings, now)
+
+    is RuntimeEvent.QueueChanged -> state
+    is RuntimeEvent.QueuedInputsDropped -> state
+
     is NoticeEvent -> state.appendNotice(event.notice, now)
     is BackgroundTurnStarted -> state.startBackgroundTurn(event, strings, now)
     is UsageChanged -> state.copy(usage = event.usage)
@@ -142,6 +147,50 @@ internal fun reduce(
     is RuntimeEvent.SessionListChanged -> state
     is RuntimeEvent.SessionRemoved -> state
     is RuntimeEvent.SessionArchived -> state
+}
+
+internal fun ConversationState.admitUserInput(
+    text: String,
+    runId: String,
+    strings: ChatUiStrings,
+    now: Long,
+): ConversationState {
+    if (runId.isNotBlank() && messages.none { it.runId == runId }) return this
+    val settled = messages.toMutableList()
+    val streamingIndex = settled.indexOfLast {
+        it.role == AssistantRole.ASSISTANT && it.streaming && (runId.isBlank() || it.runId == runId)
+    }.takeIf { it >= 0 } ?: settled.indexOfLast { it.role == AssistantRole.ASSISTANT && it.streaming }
+    if (streamingIndex >= 0) {
+        val streaming = settled[streamingIndex]
+        settled[streamingIndex] = streaming.copy(
+            streaming = false,
+            retrying = false,
+            status = if (streaming.status == MessageStatus.RUNNING) MessageStatus.DONE else streaming.status,
+            finishedAt = now,
+            steps = failRunningTools(streaming.steps),
+        )
+    }
+    val userId = nextMessageId(settled)
+    settled += AssistantMessage(
+        id = userId,
+        role = AssistantRole.USER,
+        text = text,
+    )
+    settled += AssistantMessage(
+        id = userId + 1,
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        streaming = true,
+        status = MessageStatus.RUNNING,
+        startedAt = now,
+        runId = runId,
+    )
+    return copy(
+        messages = settled,
+        sending = true,
+        activity = strings.thinking,
+        activityStartedAt = now,
+    )
 }
 
 internal fun ConversationState.finishWithStatus(

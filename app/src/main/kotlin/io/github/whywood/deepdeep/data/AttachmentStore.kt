@@ -1,11 +1,14 @@
 package io.github.whywood.deepdeep.data
 
+import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -16,6 +19,8 @@ import kotlinx.coroutines.withContext
 sealed interface AttachmentImport {
     data class Imported(val ref: AttachmentRef) : AttachmentImport
     data object TooLarge : AttachmentImport
+    data object InsufficientSpace : AttachmentImport
+    data object UnsupportedImage : AttachmentImport
     data object Failed : AttachmentImport
 }
 
@@ -30,6 +35,7 @@ interface AttachmentStore {
 class FileAttachmentStore(context: Context, private val home: File) : AttachmentStore {
     private val appContext = context.applicationContext
 
+    @SuppressLint("UsableSpace")
     override suspend fun import(uri: Uri, root: File): AttachmentImport = withContext(Dispatchers.IO) {
         val resolver = appContext.contentResolver
         val meta = queryMeta(resolver, uri) ?: return@withContext AttachmentImport.Failed
@@ -38,6 +44,12 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
         val relativePath = "$ATTACHMENTS_DIRECTORY/${id}_$name"
         val target = File(root, relativePath)
+        if (meta.size > 0 && !hasSpaceForImport(meta.size, root.usableSpace)) {
+            return@withContext AttachmentImport.InsufficientSpace
+        }
+        if (meta.mime.startsWith("image/") && !isSupportedImage(resolver, uri)) {
+            return@withContext AttachmentImport.UnsupportedImage
+        }
         val copied = runCatching {
             val input = resolver.openInputStream(uri) ?: return@withContext AttachmentImport.Failed
             input.use { writeAttachment(it, target, MAX_BYTES) }
@@ -64,7 +76,7 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         val trimmed = raw.trim().trim('<', '>', '"', '\'')
         if (trimmed.isEmpty()) return null
         val decoded = if (trimmed.startsWith("file://")) {
-            runCatching { Uri.parse(trimmed).path }.getOrNull()
+            runCatching { trimmed.toUri().path }.getOrNull()
         } else {
             trimmed.replace("%20", " ")
         } ?: return null
@@ -132,6 +144,17 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         }
     }
 
+    private fun isSupportedImage(resolver: ContentResolver, uri: Uri): Boolean {
+        val input = runCatching { resolver.openInputStream(uri) }.getOrNull() ?: return false
+        return runCatching {
+            input.use {
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(it, null, options)
+                isSupportedImageSize(options.outWidth, options.outHeight)
+            }
+        }.getOrDefault(false)
+    }
+
     private data class Meta(val name: String, val mime: String, val size: Long)
 
     private fun queryMeta(resolver: ContentResolver, uri: Uri): Meta? {
@@ -156,10 +179,19 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
     }
 
     companion object {
-        const val MAX_BYTES = 25L * 1024 * 1024
+        const val MAX_BYTES = 1024L * 1024 * 1024
+        const val MAX_IMAGE_PIXELS = 64L * 1024 * 1024
         private const val ATTACHMENTS_DIRECTORY = "attachments"
     }
 }
+
+private const val IMPORT_SPACE_MARGIN_BYTES = 64L * 1024 * 1024
+
+internal fun hasSpaceForImport(fileSize: Long, usableSpace: Long): Boolean =
+    fileSize + IMPORT_SPACE_MARGIN_BYTES <= usableSpace
+
+internal fun isSupportedImageSize(width: Int, height: Int): Boolean =
+    width > 0 && height > 0 && width.toLong() * height.toLong() <= FileAttachmentStore.MAX_IMAGE_PIXELS
 
 internal fun copyWithLimit(input: InputStream, output: OutputStream, limit: Long): Boolean {
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)

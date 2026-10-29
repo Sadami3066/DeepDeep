@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -51,5 +52,31 @@ class AttachmentStoreTest {
 
         assertFalse(writeAttachment(unknownLength, target, 1_024))
         assertFalse(target.exists())
+    }
+
+    @Test
+    fun attachmentLimitIsOneGiB() {
+        assertEquals(1_073_741_824L, FileAttachmentStore.MAX_BYTES)
+    }
+
+    @Test
+    fun requiresSpaceMarginAboveFileSize() {
+        val margin = 64L * 1024 * 1024
+        assertTrue(hasSpaceForImport(1_024L, 1_024L + margin))
+        assertFalse(hasSpaceForImport(1_024L, 1_024L + margin - 1))
+    }
+
+    @Test
+    fun formatsGigabyteSizes() {
+        assertEquals("1.0 GB", formatAttachmentSize(1L shl 30))
+        assertEquals("1.5 GB", formatAttachmentSize(1_610_612_736L))
+        assertEquals("1024.0 MB", formatAttachmentSize((1L shl 30) - 1))
+    }
+
+    @Test
+    fun limitsImagePixelsTo64Megapixels() {
+        assertTrue(isSupportedImageSize(8_192, 8_192))
+        assertFalse(isSupportedImageSize(8_192, 8_193))
+        assertFalse(isSupportedImageSize(0, 0))
     }
 }

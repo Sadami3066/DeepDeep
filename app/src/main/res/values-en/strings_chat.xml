@@ -4,13 +4,9 @@
     <string name="assistant_action_speak">Read aloud</string>
     <string name="assistant_attach_add">Add attachment</string>
     <string name="assistant_attach_empty">Empty file</string>
-    <string name="assistant_attach_failed">Could not read this file</string>
-    <string name="assistant_attach_limit">Up to 15 attachments</string>
     <string name="assistant_attach_missing">File not found</string>
     <string name="assistant_attach_open">View attachment</string>
-    <string name="assistant_attach_remove">Remove attachment</string>
     <string name="assistant_attach_share">Share file</string>
-    <string name="assistant_attach_too_large">File is larger than 25 MB</string>
     <string name="assistant_attach_unpreviewable">Cannot preview this file</string>
     <string name="assistant_close">Close</string>
     <string name="assistant_configure_hint">No model configured</string>
@@ -43,7 +39,6 @@
     <string name="assistant_quote_remove">Remove quote</string>
     <string name="assistant_reasoning">Thinking</string>
     <string name="assistant_send">Send</string>
-    <string name="assistant_settings">Settings</string>
     <string name="assistant_reload">Reload</string>
     <string name="chat_reload_done">Session reloaded</string>
     <string name="chat_reload_failed">Reload failed</string>
@@ -74,7 +69,7 @@
     <string name="chat_error_runtime_start">Runtime failed to start</string>
     <string name="chat_error_preparing">Preparing session…</string>
     <string name="chat_error_max_attachments">Up to 20 attachments</string>
-    <string name="chat_error_attachment_too_large">Attachment exceeds 25 MB</string>
+    <string name="chat_error_attachment_too_large">Attachment exceeds 1.0 GB</string>
     <string name="chat_error_attachment_failed">Failed to add attachment</string>
     <string name="chat_error_restoring">Restoring session…</string>
     <string name="chat_error_session_not_ready">Session is not ready</string>
@@ -97,7 +92,6 @@
     <string name="assistant_retry">Retry</string>
     <string name="chat_status_auto_retry">Retrying %1$d/%2$d</string>
     <string name="chat_error_with_code">%1$s (%2$s)</string>
-    <string name="assistant_retrying">Retrying</string>
     <string name="assistant_model_provider">Provider</string>
     <string name="chat_error_insufficient_balance">Insufficient balance. Top up and try again.</string>
     <string name="chat_error_model_unavailable">Model unavailable. Switch models.</string>
@@ -120,7 +114,19 @@
     <string name="chat_cmd_unknown">Unknown command: /%1$s</string>
     <string name="chat_question_other">Another conversation is waiting for an answer</string>
     <string name="chat_question_other_action">Go answer</string>
-    <string name="chat_question_waiting">The agent is waiting for your answer</string>
     <string name="chat_cmd_goal_invalid">Goal objective cannot be empty</string>
     <string name="chat_notice_goal_round_unbounded">Goal · round %1$d</string>
+    <string name="assistant_queue_steer">Steer</string>
+    <string name="assistant_queue_follow_up">Queue</string>
+    <string name="assistant_queue_clear">Clear queue</string>
+    <string name="assistant_send_steer">Send steering message</string>
+    <string name="assistant_importing_image">Processing image…</string>
+    <string name="assistant_summary_compacted">Context compacted</string>
+    <string name="assistant_summary_branch">Branch summary</string>
+    <string name="assistant_summary_tokens">%1$s → %2$s tokens</string>
+    <string name="assistant_summary_tokens_before">%1$s tokens before</string>
+    <string name="chat_error_stop_before_command">Stop the current reply before sending a command</string>
+    <string name="chat_error_insufficient_space">Not enough storage to add this attachment</string>
+    <string name="chat_error_unsupported_image">This image format is not supported</string>
+    <string name="chat_error_image_failed">Could not process the image; sending it as a file</string>
 </resources>

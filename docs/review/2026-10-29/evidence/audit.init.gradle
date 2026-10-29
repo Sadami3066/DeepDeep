@@ -1,9 +1,0 @@
-gradle.afterProject { p ->
-    if (p.path in [':app', ':runtime', ':shell']) {
-        p.android.sourceSets.getByName('test').kotlin.srcDir(p.rootProject.file('docs/review/2026-10-29/harness/' + p.name))
-        p.tasks.withType(Test).configureEach {
-            outputs.upToDateWhen { false }
-            testLogging.showStandardStreams = true
-        }
-    }
-}

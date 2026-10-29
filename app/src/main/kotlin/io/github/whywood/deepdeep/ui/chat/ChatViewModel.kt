@@ -4,8 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.ImageNormalizer
+import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -15,11 +18,14 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
+import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
@@ -61,6 +67,9 @@ class ChatViewModel(
     private val dismissInterruptedQuestions: suspend (String) -> Unit = {},
     private val interruptedRuns: suspend (String) -> List<InterruptedRun> = { emptyList() },
     private val dismissInterruptedRun: suspend (String) -> Unit = {},
+    private val normalizeImage: suspend (File, String) -> NormalizedImage? = { file, mime ->
+        ImageNormalizer.normalize(file, mime)
+    },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ChatUiState())
     val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
@@ -152,7 +161,7 @@ class ChatViewModel(
 
     fun attach(uri: Uri) {
         val current = mutableState.value
-        if (current.sending || current.switchingConversation) return
+        if (current.switchingConversation) return
         val sessionId = current.conversationId ?: return
         val root = current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
         if (root == null) {
@@ -189,6 +198,8 @@ class ChatViewModel(
                 }
 
                 is AttachmentImport.TooLarge -> mutableState.update { it.copy(error = uiStrings.attachmentTooLarge) }
+                is AttachmentImport.InsufficientSpace -> mutableState.update { it.copy(error = uiStrings.insufficientSpace) }
+                is AttachmentImport.UnsupportedImage -> mutableState.update { it.copy(error = uiStrings.unsupportedImage) }
                 is AttachmentImport.Failed -> mutableState.update { it.copy(error = uiStrings.attachmentFailed) }
             }
         }
@@ -211,9 +222,17 @@ class ChatViewModel(
             mutableState.update { it.copy(error = uiStrings.sessionNotReady) }
             return
         }
-        if (current.sending || current.switchingConversation) return
+        if (current.switchingConversation || current.importingAttachment) return
         val text = current.input.trim()
         if (text.isEmpty()) return
+        if (current.sending) {
+            if (text.startsWith("/")) {
+                mutableState.update { it.copy(error = uiStrings.stopBeforeCommand) }
+            } else {
+                steerNow()
+            }
+            return
+        }
         when (val parsed = parseChatCommand(text)) {
             is ParsedCommand.Skill -> {
                 expandAndSend(parsed.name, parsed.args)
@@ -227,7 +246,76 @@ class ChatViewModel(
             expandInlineAndSend(mentions)
             return
         }
-        startTurn(buildPrompt(current.quote, current.attachments, text))
+        startTurn(
+            prompt = buildPrompt(current.quote, current.attachments, text),
+            imageRefs = imageRefs(current.attachments),
+        )
+    }
+
+    fun steerNow() {
+        submitQueued(InputQueueKind.STEER)
+    }
+
+    fun followUpNow() {
+        submitQueued(InputQueueKind.FOLLOW_UP)
+    }
+
+    fun clearQueuedInputs() {
+        val sessionId = mutableState.value.conversationId ?: return
+        val dropped = runCatching { runtime.clearQueuedInputs(sessionId) }.getOrDefault(emptyList())
+        mutableState.update { state ->
+            state.copy(
+                input = mergeDroppedInput(state.input, dropped),
+                queuedInputs = emptyList(),
+            )
+        }
+    }
+
+    private fun submitQueued(kind: InputQueueKind) {
+        val current = mutableState.value
+        if (!current.ready || !current.historyLoaded) {
+            mutableState.update { it.copy(error = uiStrings.restoringSession) }
+            return
+        }
+        val sessionId = current.conversationId ?: return
+        if (current.switchingConversation || current.importingAttachment) return
+        if (!current.sending) {
+            send()
+            return
+        }
+        val text = current.input.trim()
+        if (text.isEmpty()) return
+        if (text.startsWith("/")) {
+            mutableState.update { it.copy(error = uiStrings.stopBeforeCommand) }
+            return
+        }
+        val root = attachmentRoot(current)
+        val imageRefs = imageRefs(current.attachments)
+        if (imageRefs.isNotEmpty() && root == null) {
+            mutableState.update { it.copy(error = uiStrings.preparingSession) }
+            return
+        }
+        val prompt = buildPrompt(current.quote, current.attachments, text)
+        mutableState.update {
+            it.copy(input = "", quote = null, attachments = emptyList(), error = null)
+        }
+        cacheCurrentSession()
+        viewModelScope.launch {
+            val images = normalizeAttachments(sessionId, imageRefs, root)
+            try {
+                sessionOpenJobs[sessionId]?.join()
+                when (kind) {
+                    InputQueueKind.STEER -> runtime.steer(sessionId, prompt, images)
+                    InputQueueKind.FOLLOW_UP -> runtime.followUp(sessionId, prompt, images)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                mutableState.update {
+                    it.copy(error = userFacingError(error.message ?: uiStrings.requestFailed))
+                }
+            }
+        }
     }
 
     fun retry(messageId: Long) {
@@ -375,9 +463,18 @@ class ChatViewModel(
         autoRetryJobs.remove(sessionId)?.cancel()
     }
 
-    private fun startTurn(prompt: String, titleSeed: String = prompt) {
+    private fun startTurn(
+        prompt: String,
+        titleSeed: String = prompt,
+        imageRefs: List<AttachmentRef> = emptyList(),
+    ) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
+        val root = attachmentRoot(current)
+        if (imageRefs.isNotEmpty() && root == null) {
+            mutableState.update { it.copy(error = uiStrings.preparingSession) }
+            return
+        }
         clearAutoRetry(sessionId)
         dismissInterruptedNotice(sessionId)
         val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
@@ -411,9 +508,10 @@ class ChatViewModel(
         }
         cacheCurrentSession()
         viewModelScope.launch {
+            val images = normalizeAttachments(sessionId, imageRefs, root)
             try {
                 sessionOpenJobs[sessionId]?.join()
-                runtime.send(sessionId, prompt)
+                runtime.send(sessionId, prompt, images)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -436,8 +534,9 @@ class ChatViewModel(
                 return@launch
             }
             startTurn(
-                buildPrompt(current.quote, current.attachments, expansion.prompt),
+                prompt = buildPrompt(current.quote, current.attachments, expansion.prompt),
                 titleSeed = args.trim().ifBlank { expansion.name },
+                imageRefs = imageRefs(current.attachments),
             )
         }
     }
@@ -468,8 +567,9 @@ class ChatViewModel(
                 }
             }
             startTurn(
-                buildPrompt(current.quote, current.attachments, prompt),
+                prompt = buildPrompt(current.quote, current.attachments, prompt),
                 titleSeed = mentions.text.trim().ifBlank { expansions.firstOrNull()?.name.orEmpty() },
+                imageRefs = imageRefs(current.attachments),
             )
         }
     }
@@ -478,7 +578,15 @@ class ChatViewModel(
         flushPendingDeltas()
         val sessionId = mutableState.value.conversationId ?: return
         clearAutoRetry(sessionId)
-        runtime.stop(sessionId)
+        val dropped = runtime.stop(sessionId)
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { state ->
+                state.copy(
+                    input = mergeDroppedInput(state.input, dropped),
+                    queuedInputs = emptyList(),
+                )
+            }
+        }
         if (runtime.activeRuns.value[sessionId] == null) {
             scheduleReconcile(sessionId, STOP_RECONCILE_DELAY_MS)
         }
@@ -918,6 +1026,8 @@ class ChatViewModel(
                 quote = null,
                 attachments = emptyList(),
                 error = null,
+                queuedInputs = emptyList(),
+                importingAttachment = false,
             )
         }
         applySessionModel(cached?.sessionModel)
@@ -974,6 +1084,7 @@ class ChatViewModel(
                 var history = withContext(ioDispatcher) { runtime.history(summary.id) }
                 var sessionModel = withContext(ioDispatcher) { runtime.sessionModel(summary.id) }
                 val usage = withContext(ioDispatcher) { runtime.usage(summary.id) }
+                val queuedInputs = runtime.queuedInputs(summary.id)
                 var activeRun = runtime.activeRuns.value[summary.id]
                 if (activeRun != null) {
                     activeRun = runtime.activeRuns.value[summary.id]
@@ -1019,6 +1130,8 @@ class ChatViewModel(
                             usage = resolved.usage,
                             historyLoaded = true,
                             switchingConversation = false,
+                            queuedInputs = queuedInputs,
+                            importingAttachment = false,
                         )
                     }
                     applySessionModel(resolved.sessionModel)
@@ -1065,6 +1178,8 @@ class ChatViewModel(
                         quote = null,
                         attachments = emptyList(),
                         error = null,
+                        queuedInputs = emptyList(),
+                        importingAttachment = false,
                     )
                 }
                 applySessionModel(sessionModel)
@@ -1130,6 +1245,25 @@ class ChatViewModel(
 
     private fun onSessionEvent(scoped: SessionRuntimeEvent) {
         val event = scoped.event
+        if (event is RuntimeEvent.QueueChanged) {
+            flushPendingDeltas()
+            if (scoped.sessionId == mutableState.value.conversationId) {
+                mutableState.update { it.copy(queuedInputs = queueInputs(event.steering, event.followUp)) }
+            }
+            return
+        }
+        if (event is RuntimeEvent.QueuedInputsDropped) {
+            flushPendingDeltas()
+            if (scoped.sessionId == mutableState.value.conversationId) {
+                mutableState.update { state ->
+                    state.copy(
+                        input = mergeDroppedInput(state.input, event.texts),
+                        queuedInputs = emptyList(),
+                    )
+                }
+            }
+            return
+        }
         when (event) {
             is RuntimeEvent.SessionListChanged -> {
                 flushPendingDeltas()
@@ -1363,6 +1497,58 @@ class ChatViewModel(
     private fun titleFrom(messages: List<AssistantMessage>): String {
         val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return uiStrings.newChatTitle
         return titleFrom(firstUser)
+    }
+
+    private fun attachmentRoot(state: ChatUiState): File? =
+        state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
+
+    private fun imageRefs(attachments: List<AttachmentRef>): List<AttachmentRef> =
+        attachments.filter { it.kind == AttachmentKind.IMAGE }
+
+    private suspend fun normalizeAttachments(
+        sessionId: String,
+        refs: List<AttachmentRef>,
+        root: File?,
+    ): List<ImagePart> {
+        if (refs.isEmpty() || root == null) return emptyList()
+        if (mutableState.value.conversationId == sessionId) {
+            mutableState.update { it.copy(importingAttachment = true) }
+        }
+        var failed = false
+        val parts = try {
+            withContext(ioDispatcher) {
+                refs.mapNotNull { ref ->
+                    val normalized = runCatching {
+                        normalizeImage(attachmentStore.file(ref, root), ref.mime)
+                    }.getOrNull()
+                    if (normalized == null) {
+                        failed = true
+                        null
+                    } else {
+                        ImagePart(normalized.data, normalized.mimeType)
+                    }
+                }
+            }
+        } finally {
+            if (mutableState.value.conversationId == sessionId) {
+                mutableState.update { it.copy(importingAttachment = false) }
+            }
+        }
+        if (failed && mutableState.value.conversationId == sessionId) {
+            mutableState.update { it.copy(error = it.error ?: uiStrings.imageFailed) }
+        }
+        return parts
+    }
+
+    private fun queueInputs(steering: List<String>, followUp: List<String>): List<QueuedInput> =
+        steering.map { QueuedInput(InputQueueKind.STEER, it) } +
+            followUp.map { QueuedInput(InputQueueKind.FOLLOW_UP, it) }
+
+    private fun mergeDroppedInput(input: String, dropped: List<String>): String {
+        val texts = dropped.map { it.trim() }.filter { it.isNotEmpty() }
+        if (texts.isEmpty()) return input
+        val merged = texts.joinToString("\n\n")
+        return if (input.isBlank()) merged else input.trimEnd() + "\n\n" + merged
     }
 
     private companion object {

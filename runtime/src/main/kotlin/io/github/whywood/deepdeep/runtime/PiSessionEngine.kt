@@ -139,7 +139,8 @@ class PiSessionEngine(
         info.toSummary()
     }
 
-    fun history(session: AgentSession): List<AssistantMessage> = HistoryMapper.mapHistory(session.messages)
+    fun history(session: AgentSession): List<AssistantMessage> =
+        HistoryMapper.mapEntries(session.sessionManager.getBranch())
 
     suspend fun deleteSessionFile(filePath: String) {
         runCatching { fs.delete(filePath.toPath()) }

@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,11 +17,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -42,6 +47,8 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.MessageSummary
+import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.TurnNotice
@@ -83,6 +90,11 @@ internal fun ChatTurn(
         NoticeRow(notice)
         return
     }
+    val summary = message.summary
+    if (summary != null) {
+        MessageSummaryCard(message.id, summary)
+        return
+    }
     if (message.role == AssistantRole.USER) {
         UserBubble(
             message = message,
@@ -106,6 +118,83 @@ internal fun ChatTurn(
             onSharePresentFile = onSharePresentFile,
             onOpenWorkshop = onOpenWorkshop,
         )
+    }
+}
+
+@Composable
+private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
+    val colors = deepDeepColors()
+    var expanded by remember(messageId) { mutableStateOf(false) }
+    val title = when (summary.kind) {
+        MessageSummaryKind.COMPACTION -> stringResource(R.string.assistant_summary_compacted)
+        MessageSummaryKind.BRANCH -> stringResource(R.string.assistant_summary_branch)
+    }
+    val tokensBefore = summary.tokensBefore
+    val tokensAfter = summary.tokensAfter
+    val tokens = if (summary.kind == MessageSummaryKind.COMPACTION && tokensBefore != null) {
+        if (tokensAfter != null) {
+            stringResource(
+                R.string.assistant_summary_tokens,
+                formatTokenCount(tokensBefore),
+                formatTokenCount(tokensAfter),
+            )
+        } else {
+            stringResource(R.string.assistant_summary_tokens_before, formatTokenCount(tokensBefore))
+        }
+    } else {
+        null
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.wash)
+                .clickable { expanded = !expanded }
+                .padding(start = 12.dp, end = 10.dp, top = 9.dp, bottom = 9.dp)
+                .testTag("assistant_summary"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIcon(
+                icon = when (summary.kind) {
+                    MessageSummaryKind.COMPACTION -> DdIcons.Refresh
+                    MessageSummaryKind.BRANCH -> DdIcons.Compose
+                },
+                tint = colors.inkTertiary,
+                size = 13.dp,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = title,
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                color = colors.inkSecondary,
+            )
+            if (tokens != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = tokens,
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                    color = colors.inkTertiary,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            DdIcon(
+                icon = DdIcons.ChevronDown,
+                modifier = Modifier.rotate(if (expanded) 180f else 0f),
+                tint = colors.inkTertiary,
+                size = 14.dp,
+            )
+        }
+        if (summary.text.isNotBlank()) {
+            Text(
+                text = summary.text.trim(),
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp),
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
+                color = colors.inkTertiary,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

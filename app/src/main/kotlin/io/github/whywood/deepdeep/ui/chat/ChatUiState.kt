@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -43,4 +44,6 @@ data class ChatUiState(
     val reloading: Boolean = false,
     val usage: SessionUsage? = null,
     val compacting: Boolean = false,
+    val queuedInputs: List<QueuedInput> = emptyList(),
+    val importingAttachment: Boolean = false,
 )

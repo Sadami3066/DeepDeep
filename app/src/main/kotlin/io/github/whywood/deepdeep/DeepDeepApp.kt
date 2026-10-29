@@ -112,7 +112,7 @@ import kotlinx.coroutines.withContext
 internal fun DeepDeepApp(
     graph: AppGraph,
     theme: ThemeMode,
-    fontStyle: DdFontStyle = DdFontStyle.NEWSREADER,
+    fontStyle: DdFontStyle = DdFontStyle.LORA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingShare: SharePayload? = null,
@@ -170,6 +170,10 @@ internal fun DeepDeepApp(
         compactionBusy = stringResource(R.string.chat_compact_busy),
         compactionUnavailable = stringResource(R.string.chat_compact_unavailable),
         skillMissing = { name -> skillMissingTemplate.replace("%1\$s", name) },
+        stopBeforeCommand = stringResource(R.string.chat_error_stop_before_command),
+        insufficientSpace = stringResource(R.string.chat_error_insufficient_space),
+        unsupportedImage = stringResource(R.string.chat_error_unsupported_image),
+        imageFailed = stringResource(R.string.chat_error_image_failed),
     )
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
@@ -406,7 +410,12 @@ internal fun DeepDeepApp(
     }
 
     fun submitChatInput() {
-        when (val parsed = parseChatCommand(state.input)) {
+        val parsed = parseChatCommand(state.input)
+        if (state.sending && parsed !is ParsedCommand.None) {
+            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
+            return
+        }
+        when (parsed) {
             ParsedCommand.None -> chatViewModel.send()
             is ParsedCommand.Skill -> chatViewModel.send()
             is ParsedCommand.Found -> {
@@ -549,6 +558,10 @@ internal fun DeepDeepApp(
                     },
                     onOpenFile = openWorkspaceFile,
                     onOpenFiles = { filesSheetOpen = true },
+                    queuedInputs = state.queuedInputs,
+                    importingAttachment = state.importingAttachment,
+                    onFollowUp = chatViewModel::followUpNow,
+                    onClearQueue = chatViewModel::clearQueuedInputs,
                     onVoiceClick = { voiceSheetOpen = true },
                     onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                     onOpenPresentFile = { raw ->

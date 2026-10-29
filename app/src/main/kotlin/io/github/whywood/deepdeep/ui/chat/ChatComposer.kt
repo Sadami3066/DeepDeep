@@ -6,7 +6,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -45,6 +48,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -74,11 +80,14 @@ import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatComposer(
     value: String,
@@ -106,14 +115,18 @@ internal fun ChatComposer(
     onRemoveAttachment: (String) -> Unit,
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+    onFollowUp: () -> Unit = {},
+    onClearQueue: () -> Unit = {},
+    queuedInputs: List<QueuedInput> = emptyList(),
+    importingAttachment: Boolean = false,
     onVoiceClick: (() -> Unit)? = null,
     modelsOpen: Boolean = false,
     onModelsOpenChange: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     var showProviders by remember { mutableStateOf(false) }
-    val canSend = ready && configured && value.isNotBlank() && !sending
+    val canSend = ready && configured && value.isNotBlank() && !importingAttachment
     val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
     val placeholder = when {
@@ -155,6 +168,21 @@ internal fun ChatComposer(
                         .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 2.dp),
                 ) {
                     Column {
+                        if (queuedInputs.isNotEmpty()) {
+                            QueueStrip(
+                                queuedInputs = queuedInputs,
+                                onClear = onClearQueue,
+                                modifier = Modifier.padding(bottom = 10.dp),
+                            )
+                        }
+                        if (importingAttachment) {
+                            Text(
+                                text = stringResource(R.string.assistant_importing_image),
+                                modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
+                                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                                color = colors.inkTertiary,
+                            )
+                        }
                         AnimatedVisibility(
                             visible = quote != null,
                             enter = fadeIn(tween(DdMotion.FAST)) +
@@ -261,7 +289,6 @@ internal fun ChatComposer(
                         size = 34.dp,
                         iconSize = 17.dp,
                         tint = colors.inkTertiary,
-                        enabled = !sending,
                     )
                     ComposerChip(
                         text = label,
@@ -289,32 +316,48 @@ internal fun ChatComposer(
                         }
                         Spacer(Modifier.width(6.dp))
                     }
-                    DdPressable(
-                        onClick = { if (sending) onStop() else onSend() },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .testTag(if (sending) "assistant_stop" else "assistant_send"),
-                        shape = CircleShape,
-                        background = if (canSend) colors.accent else colors.wash,
-                        enabled = sending || canSend,
-                        contentDescription = stringResource(
-                            if (sending) R.string.assistant_stop else R.string.assistant_send,
-                        ),
-                    ) {
-                        if (sending) {
+                    if (sending) {
+                        DdPressable(
+                            onClick = onStop,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .testTag("assistant_stop"),
+                            shape = CircleShape,
+                            background = colors.wash,
+                            contentDescription = stringResource(R.string.assistant_stop),
+                        ) {
                             Box(
                                 Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
+                                    .size(12.dp)
+                                    .clip(RoundedCornerShape(2.dp))
                                     .background(colors.danger),
                             )
-                        } else {
-                            DdIcon(
-                                icon = DdIcons.ArrowUp,
-                                tint = if (canSend) colors.onAccent else colors.inkTertiary,
-                                size = 18.dp,
-                            )
                         }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    val sendDescription = stringResource(
+                        if (sending) R.string.assistant_send_steer else R.string.assistant_send,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(if (canSend) colors.accent else colors.wash)
+                            .combinedClickable(
+                                enabled = canSend,
+                                role = Role.Button,
+                                onClick = onSend,
+                                onLongClick = { if (sending && canSend) onFollowUp() },
+                            )
+                            .semantics { contentDescription = sendDescription }
+                            .testTag("assistant_send"),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DdIcon(
+                            icon = DdIcons.ArrowUp,
+                            tint = if (canSend) colors.onAccent else colors.inkTertiary,
+                            size = 18.dp,
+                        )
                     }
                 }
             }
@@ -458,6 +501,55 @@ internal fun ChatComposer(
                 Spacer(Modifier.height(28.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun QueueStrip(
+    queuedInputs: List<QueuedInput>,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            queuedInputs.forEach { input ->
+                val label = stringResource(
+                    if (input.kind == InputQueueKind.STEER) R.string.assistant_queue_steer
+                    else R.string.assistant_queue_follow_up,
+                )
+                Box(
+                    modifier = Modifier
+                        .testTag("assistant_queue_chip")
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(colors.wash)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = label + " · " + input.text.replace(Regex("\\s+"), " ").trim().let { text ->
+                            if (text.length <= 40) text else text.take(40).trimEnd() + "…"
+                        },
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                        color = colors.inkSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        DdIconButton(
+            icon = DdIcons.Close,
+            onClick = onClear,
+            contentDescription = stringResource(R.string.assistant_queue_clear),
+            modifier = Modifier.testTag("assistant_queue_clear"),
+            size = 28.dp,
+            iconSize = 13.dp,
+            tint = colors.inkTertiary,
+        )
     }
 }
 

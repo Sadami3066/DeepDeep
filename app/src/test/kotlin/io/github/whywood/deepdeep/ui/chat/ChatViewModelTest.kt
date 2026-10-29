@@ -11,6 +11,8 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
@@ -30,6 +32,7 @@ import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.UserQuestion
 import kotlinx.coroutines.CompletableDeferred
@@ -1080,6 +1083,138 @@ class ChatViewModelTest {
         assertTrue(viewModel.state.value.messages.isEmpty())
     }
 
+    @Test
+    fun sendWhileBusySteersCurrentInput() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.sending)
+
+        viewModel.onInputChange("change direction")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(listOf("change direction"), runtime.steered)
+        assertEquals("", viewModel.state.value.input)
+    }
+
+    @Test
+    fun sendWhileBusyRejectsCommands() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        advanceUntilIdle()
+
+        viewModel.onInputChange("/compact")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(ChatUiStrings.fallback().stopBeforeCommand, viewModel.state.value.error)
+        assertTrue(runtime.steered.isEmpty())
+    }
+
+    @Test
+    fun followUpNowQueuesWhileBusy() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        advanceUntilIdle()
+
+        viewModel.onInputChange("after this")
+        viewModel.followUpNow()
+        advanceUntilIdle()
+
+        assertEquals(listOf("after this"), runtime.followUps)
+        assertEquals("", viewModel.state.value.input)
+    }
+
+    @Test
+    fun stopRestoresDroppedQueueText() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        advanceUntilIdle()
+        runtime.stopDropped = listOf("queued one", "queued two")
+
+        viewModel.stop()
+        advanceUntilIdle()
+
+        assertEquals("queued one\n\nqueued two", viewModel.state.value.input)
+        assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
+    }
+
+    @Test
+    fun queuedInputEventsUpdateQueueAndDroppedTextsRestoreInput() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+
+        runtime.emitFor(
+            sessionId,
+            RuntimeEvent.QueueChanged(
+                runtime.runId,
+                steering = listOf("steer text"),
+                followUp = listOf("follow text"),
+            ),
+        )
+        advanceUntilIdle()
+        assertEquals(
+            listOf(
+                QueuedInput(InputQueueKind.STEER, "steer text"),
+                QueuedInput(InputQueueKind.FOLLOW_UP, "follow text"),
+            ),
+            viewModel.state.value.queuedInputs,
+        )
+
+        runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("lost text"), runtime.runId))
+        advanceUntilIdle()
+        assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
+        assertEquals("lost text", viewModel.state.value.input)
+    }
+
+    @Test
+    fun userInputAdmittedSplitsAssistantMessage() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.onInputChange("first")
+        viewModel.send()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "before steering"))
+        runtime.emitFor(sessionId, RuntimeEvent.UserInputAdmitted(runtime.runId, "steer text"))
+        advanceUntilIdle()
+
+        val messages = viewModel.state.value.messages
+        assertEquals(4, messages.size)
+        assertEquals(MessageStatus.DONE, messages[1].status)
+        assertFalse(messages[1].streaming)
+        assertEquals(AssistantRole.USER, messages[2].role)
+        assertEquals("steer text", messages[2].text)
+        assertEquals(AssistantRole.ASSISTANT, messages[3].role)
+        assertTrue(messages[3].streaming)
+        assertEquals(runtime.runId, messages[3].runId)
+        assertTrue(viewModel.state.value.sending)
+
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "after steering"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "after steering", RunStatus.DONE, 4000L))
+        advanceUntilIdle()
+        assertEquals("after steering", viewModel.state.value.messages.last().text)
+        assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
+    }
+
     private class FakeSkillExpander(
         private val result: SkillExpansion?,
         private val available: List<SkillSummary> = emptyList(),
@@ -1113,6 +1248,11 @@ class ChatViewModelTest {
         val historyCalls = mutableMapOf<String, Int>()
         val openCalls = mutableListOf<String>()
         val sent = mutableListOf<String>()
+        val sentImages = mutableListOf<List<ImagePart>>()
+        val steered = mutableListOf<String>()
+        val followUps = mutableListOf<String>()
+        var queued: List<QueuedInput> = emptyList()
+        var stopDropped: List<String> = emptyList()
         val delivered = mutableListOf<Triple<String, String, String?>>()
         val stopped = mutableListOf<String>()
         private var createdCount = 0
@@ -1163,8 +1303,27 @@ class ChatViewModelTest {
 
         override suspend fun reloadSession(sessionId: String): String = sessionId
 
-        override suspend fun send(sessionId: String, text: String) {
+        override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
             sent += text
+            sentImages += images
+        }
+
+        override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
+            steered += text
+            sentImages += images
+        }
+
+        override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) {
+            followUps += text
+            sentImages += images
+        }
+
+        override fun queuedInputs(sessionId: String): List<QueuedInput> = queued
+
+        override fun clearQueuedInputs(sessionId: String): List<String> {
+            val dropped = queued.map { it.text }
+            queued = emptyList()
+            return dropped
         }
 
         var retried = 0
@@ -1173,8 +1332,11 @@ class ChatViewModelTest {
             retried += 1
         }
 
-        override fun stop(sessionId: String) {
+        override fun stop(sessionId: String): List<String> {
             stopped += sessionId
+            val dropped = stopDropped
+            stopDropped = emptyList()
+            return dropped
         }
 
         override suspend fun history(sessionId: String): List<AssistantMessage> {

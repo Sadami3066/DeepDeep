@@ -94,6 +94,7 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.GoalView
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -154,6 +155,10 @@ fun ChatScreen(
     onOpenWorkshop: (String) -> Unit = {},
     onOpenFiles: () -> Unit = {},
     onVoiceClick: (() -> Unit)? = null,
+    queuedInputs: List<QueuedInput> = emptyList(),
+    importingAttachment: Boolean = false,
+    onFollowUp: () -> Unit = {},
+    onClearQueue: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -491,8 +496,10 @@ fun ChatScreen(
             attachmentRoot = attachmentRoot,
             onValueChange = onInputChange,
             onSend = {
-                keyboard?.hide()
-                focusManager.clearFocus()
+                if (!state.sending) {
+                    keyboard?.hide()
+                    focusManager.clearFocus()
+                }
                 onSend()
             },
             onStop = onStop,
@@ -504,6 +511,10 @@ fun ChatScreen(
             onRemoveAttachment = onRemoveAttachment,
             onOpenAttachment = onOpenAttachment,
             onOpenSettings = onOpenSettings,
+            onFollowUp = onFollowUp,
+            onClearQueue = onClearQueue,
+            queuedInputs = queuedInputs,
+            importingAttachment = importingAttachment,
             onVoiceClick = onVoiceClick?.let { openVoice ->
                 {
                     keyboard?.hide()

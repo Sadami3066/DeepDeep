@@ -2,12 +2,19 @@ package io.github.whywood.deepdeep.runtime
 
 import android.util.Log
 import dev.pi.agent.AgentEvent
+import dev.pi.agent.AgentMessage
 import dev.pi.agent.asAssistantMessage
+import dev.pi.agent.asLlmMessage
+import dev.pi.ai.BlockContent
+import dev.pi.ai.ImageContent
+import dev.pi.ai.PlainTextContent
 import dev.pi.ai.StopReason
 import dev.pi.ai.TextContent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
-import dev.pi.coding.compaction.estimateContextTokens
+import dev.pi.ai.UserMessage
+import dev.pi.coding.compaction.buildSessionProjection
+import dev.pi.coding.compaction.estimateProjectedContextTokens
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.QueueBehavior
 import dev.pi.coding.session.SessionEvent
@@ -54,6 +61,8 @@ class AgentRuntimeHost(
         val cwd: String,
         val state: SessionCommandPlane.SessionState,
     ) {
+        val pending = PendingInputs()
+
         var unsubscribe: (() -> Unit)? = null
 
         @Volatile
@@ -258,10 +267,56 @@ class AgentRuntimeHost(
         }
     }
 
-    override suspend fun send(sessionId: String, text: String) {
+    override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
         val handle = handleFor(sessionId)
         val start = begin(handle, TurnSource.USER) ?: error("Agent session is busy")
-        runTurn(handle, start.runId, text)
+        runTurn(handle, start.runId, text, images.toImageContents())
+    }
+
+    override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
+        submitQueuedInput(sessionId, InputQueueKind.STEER, text, images)
+    }
+
+    override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) {
+        submitQueuedInput(sessionId, InputQueueKind.FOLLOW_UP, text, images)
+    }
+
+    override fun queuedInputs(sessionId: String): List<QueuedInput> {
+        val handle = handles[sessionId] ?: return emptyList()
+        val snapshot = handle.pending.snapshot()
+        return snapshot.steering.map { QueuedInput(InputQueueKind.STEER, it) } +
+            snapshot.followUp.map { QueuedInput(InputQueueKind.FOLLOW_UP, it) }
+    }
+
+    override fun clearQueuedInputs(sessionId: String): List<String> {
+        val handle = handles[sessionId] ?: return emptyList()
+        return clearQueuedInputs(handle)
+    }
+
+    private suspend fun submitQueuedInput(
+        sessionId: String,
+        kind: InputQueueKind,
+        text: String,
+        images: List<ImagePart>,
+    ) {
+        val handle = handleFor(sessionId)
+        val contents = images.toImageContents()
+        val start = begin(handle, TurnSource.USER)
+        if (start != null) {
+            runTurn(handle, start.runId, text, contents)
+            return
+        }
+        handle.pending.enqueue(kind, text)
+        emitQueueChanged(handle, handle.state.runId.orEmpty())
+        try {
+            handle.session.prompt(text, contents, kind.behavior())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            handle.pending.discard(kind, text)
+            emitQueueChanged(handle, handle.state.runId.orEmpty())
+            throw error
+        }
     }
 
     override suspend fun retryLastTurn(sessionId: String) {
@@ -405,6 +460,10 @@ class AgentRuntimeHost(
     private suspend fun release(handle: Handle, runId: String) {
         val finish = commands.finish(handle.session.sessionId, runId)
         if (!finish.released) return
+        val droppedInputs = dropPendingInputs(handle, runId)
+        if (droppedInputs.isNotEmpty()) {
+            emit(handle, RuntimeEvent.QueuedInputsDropped(droppedInputs, runId))
+        }
         handle.touch()
         publishBusy()
         publishActiveRun(handle)
@@ -431,6 +490,7 @@ class AgentRuntimeHost(
         handle: Handle,
         runId: String,
         text: String,
+        images: List<ImageContent>? = null,
         setTitle: Boolean = true,
     ) {
         try {
@@ -438,7 +498,7 @@ class AgentRuntimeHost(
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
-            handle.session.prompt(text)
+            handle.session.prompt(text, images)
             if (!handle.state.stopRequested) {
                 val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
                 maybeContinueGoal(handle, status)
@@ -461,8 +521,9 @@ class AgentRuntimeHost(
         }
     }
 
-    override fun stop(sessionId: String) {
-        val handle = handles[sessionId] ?: return
+    override fun stop(sessionId: String): List<String> {
+        val handle = handles[sessionId] ?: return emptyList()
+        val droppedInputs = clearQueuedInputs(handle)
         val stopped = commands.stop(sessionId) { stop ->
             val text = runCatching { handle.session.getLastAssistantText().orEmpty() }.getOrDefault("")
             emit(
@@ -474,10 +535,11 @@ class AgentRuntimeHost(
                     finishedAt = System.currentTimeMillis(),
                 ),
             )
-        } ?: return
+        } ?: return droppedInputs
         forgetRunRecord(stopped.runId)
         handle.session.abort()
         goalDriver?.let { driver -> backgroundScope.launch { driver.pauseOnStop(sessionId) } }
+        return droppedInputs
     }
 
     override suspend fun history(sessionId: String): List<AssistantMessage> {
@@ -565,10 +627,10 @@ class AgentRuntimeHost(
     override suspend fun usage(sessionId: String): SessionUsage? {
         val handle = mutex.withLock { handles[sessionId] } ?: return null
         return runCatching {
-            val stats = handle.session.sessionManager.getSessionStats()
-            val contextTokens = estimateContextTokens(
-                handle.session.sessionManager.buildSessionContext().messages,
-            ).tokens
+            val manager = handle.session.sessionManager
+            val branch = manager.getBranch()
+            val stats = manager.getSessionStats()
+            val contextTokens = estimateProjectedContextTokens(buildSessionProjection(branch), branch).tokens
             SessionUsage(
                 contextTokens = contextTokens,
                 contextWindow = handle.session.model.contextWindow,
@@ -789,6 +851,33 @@ class AgentRuntimeHost(
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
+    private fun admitQueuedInput(handle: Handle, runId: String, message: AgentMessage) {
+        val text = message.userText() ?: return
+        handle.pending.admit(text) ?: return
+        emit(handle, RuntimeEvent.UserInputAdmitted(runId, text))
+        emitQueueChanged(handle, runId)
+    }
+
+    private fun emitQueueChanged(handle: Handle, runId: String) {
+        val snapshot = handle.pending.snapshot()
+        emit(handle, RuntimeEvent.QueueChanged(runId, snapshot.steering, snapshot.followUp))
+    }
+
+    private fun dropPendingInputs(handle: Handle, runId: String = handle.state.runId.orEmpty()): List<String> {
+        val dropped = handle.pending.drain()
+        if (dropped.isEmpty()) return emptyList()
+        runCatching { handle.session.agent.clearAllQueues() }
+        emitQueueChanged(handle, runId)
+        return dropped.map { it.text }
+    }
+
+    private fun clearQueuedInputs(handle: Handle): List<String> {
+        val dropped = handle.pending.drain()
+        runCatching { handle.session.agent.clearAllQueues() }
+        if (dropped.isNotEmpty()) emitQueueChanged(handle, handle.state.runId.orEmpty())
+        return dropped.map { it.text }
+    }
+
     private fun publishActiveRun(handle: Handle) {
         val sessionId = handle.session.sessionId
         val snapshot = commands.snapshot(sessionId)
@@ -923,6 +1012,8 @@ class AgentRuntimeHost(
 
     private suspend fun onAgentEvent(handle: Handle, runId: String, event: AgentEvent) {
         when (event) {
+            is AgentEvent.MessageStart -> admitQueuedInput(handle, runId, event.message)
+
             is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
                 is TextDeltaEvent -> emit(handle, RuntimeEvent.TextDelta(runId, update.delta))
                 is ThinkingDeltaEvent -> emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
@@ -974,3 +1065,19 @@ class AgentRuntimeHost(
 }
 
 private const val TAG = "DeepDeepRuntime"
+
+private fun AgentMessage.userText(): String? {
+    val message = asLlmMessage() as? UserMessage ?: return null
+    return when (val content = message.content) {
+        is PlainTextContent -> content.text
+        is BlockContent -> content.blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
+    }
+}
+
+private fun List<ImagePart>.toImageContents(): List<ImageContent>? =
+    map { ImageContent(it.data, it.mimeType) }.takeIf { it.isNotEmpty() }
+
+private fun InputQueueKind.behavior(): QueueBehavior = when (this) {
+    InputQueueKind.STEER -> QueueBehavior.Steer
+    InputQueueKind.FOLLOW_UP -> QueueBehavior.FollowUp
+}

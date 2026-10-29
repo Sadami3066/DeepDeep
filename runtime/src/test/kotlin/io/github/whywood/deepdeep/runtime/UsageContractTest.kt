@@ -47,7 +47,15 @@ class UsageContractTest {
 
         override suspend fun reloadSession(sessionId: String): String = error("unused")
 
-        override suspend fun send(sessionId: String, text: String) = Unit
+        override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) = Unit
+
+        override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) = Unit
+
+        override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) = Unit
+
+        override fun queuedInputs(sessionId: String): List<QueuedInput> = emptyList()
+
+        override fun clearQueuedInputs(sessionId: String): List<String> = emptyList()
 
         override suspend fun retryLastTurn(sessionId: String) = Unit
 
@@ -55,7 +63,7 @@ class UsageContractTest {
 
         override suspend fun activeRunId(sessionId: String): String? = null
 
-        override fun stop(sessionId: String) = Unit
+        override fun stop(sessionId: String): List<String> = emptyList()
 
         override suspend fun history(sessionId: String): List<AssistantMessage> = emptyList()
 

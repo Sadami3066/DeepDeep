@@ -51,6 +51,10 @@ data class ChatUiStrings(
     val compactionBusy: String,
     val compactionUnavailable: String,
     val skillMissing: (String) -> String = { name -> "Skill not found: $name" },
+    val stopBeforeCommand: String = "Stop the current reply before sending a command",
+    val insufficientSpace: String = "Not enough storage to add this attachment",
+    val unsupportedImage: String = "This image format is not supported",
+    val imageFailed: String = "Could not process the image; sending it as a file",
 ) {
     fun activity(activity: RuntimeActivity?): String? = when (activity) {
         null -> null
@@ -127,8 +131,8 @@ data class ChatUiStrings(
             requestFailed = "Request failed. Try again.",
             runtimeStartFailed = "Runtime failed to start",
             preparingSession = "Preparing session…",
-            maxAttachments = "Up to 15 attachments",
-            attachmentTooLarge = "Attachment exceeds 25 MB",
+            maxAttachments = "Up to 20 attachments",
+            attachmentTooLarge = "Attachment exceeds 1.0 GB",
             attachmentFailed = "Failed to add attachment",
             restoringSession = "Restoring session…",
             sessionNotReady = "Session is not ready",
@@ -155,6 +159,10 @@ data class ChatUiStrings(
             compactionBusy = "Cannot compact while a reply is running",
             compactionUnavailable = "This session cannot be compacted",
             skillMissing = { name -> "Skill not found: $name" },
+            stopBeforeCommand = "Stop the current reply before sending a command",
+            insufficientSpace = "Not enough storage to add this attachment",
+            unsupportedImage = "This image format is not supported",
+            imageFailed = "Could not process the image; sending it as a file",
         )
     }
 }

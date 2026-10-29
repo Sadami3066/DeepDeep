@@ -81,6 +81,21 @@ data class InterruptedQuestion(
     val createdAt: Long,
 )
 
+data class ImagePart(
+    val data: String,
+    val mimeType: String,
+)
+
+enum class InputQueueKind {
+    STEER,
+    FOLLOW_UP,
+}
+
+data class QueuedInput(
+    val kind: InputQueueKind,
+    val text: String,
+)
+
 enum class AssistantRole {
     USER,
     ASSISTANT,
@@ -137,6 +152,19 @@ data class ToolTrace(
     val durationMs: Long? = null,
 )
 
+enum class MessageSummaryKind {
+    COMPACTION,
+    BRANCH,
+}
+
+data class MessageSummary(
+    val kind: MessageSummaryKind,
+    val text: String,
+    val tokensBefore: Long? = null,
+    val tokensAfter: Long? = null,
+    val fromId: String? = null,
+)
+
 data class AssistantMessage(
     val id: Long,
     val role: AssistantRole,
@@ -151,6 +179,7 @@ data class AssistantMessage(
     val reminder: String? = null,
     val retrying: Boolean = false,
     val notice: TurnNotice? = null,
+    val summary: MessageSummary? = null,
 )
 
 enum class RunStatus {
@@ -229,6 +258,22 @@ sealed interface RuntimeEvent {
         val reminder: String?,
     ) : RuntimeEvent
 
+    data class UserInputAdmitted(
+        override val runId: String,
+        val text: String,
+    ) : RuntimeEvent
+
+    data class QueueChanged(
+        override val runId: String,
+        val steering: List<String>,
+        val followUp: List<String>,
+    ) : RuntimeEvent
+
+    data class QueuedInputsDropped(
+        val texts: List<String>,
+        override val runId: String = "",
+    ) : RuntimeEvent
+
     data class SessionRemoved(
         override val runId: String = "",
     ) : RuntimeEvent
@@ -297,7 +342,15 @@ interface AgentRuntime {
 
     suspend fun reloadSession(sessionId: String): String
 
-    suspend fun send(sessionId: String, text: String)
+    suspend fun send(sessionId: String, text: String, images: List<ImagePart> = emptyList())
+
+    suspend fun steer(sessionId: String, text: String, images: List<ImagePart> = emptyList())
+
+    suspend fun followUp(sessionId: String, text: String, images: List<ImagePart> = emptyList())
+
+    fun queuedInputs(sessionId: String): List<QueuedInput>
+
+    fun clearQueuedInputs(sessionId: String): List<String>
 
     suspend fun retryLastTurn(sessionId: String)
 
@@ -305,7 +358,7 @@ interface AgentRuntime {
 
     suspend fun activeRunId(sessionId: String): String?
 
-    fun stop(sessionId: String)
+    fun stop(sessionId: String): List<String>
 
     suspend fun history(sessionId: String): List<AssistantMessage>
 
