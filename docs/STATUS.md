@@ -1,5 +1,27 @@
 # Status
 
+## Done: 运行中插话、原始历史、图片多模态与界面收敛
+
+**对话**
+- 运行中可继续输入：点发送=插话（当前工具执行后、下一次模型调用前送达），长按发送=排队（本轮结束后送达）；队列条支持清空并把文本回填输入框，停止也会回填未送达文本；切走/杀进程后历史顺序一致。
+- UI 历史改读会话原始分支：压缩前的消息不再消失，压缩/分支摘要以可折叠卡片展示；压缩卡片在切会话与 force-stop 重开后保持。
+- 图片附件改为多模态直传：长边 ≤2048、EXIF 方向校正、PNG/JPEG 阶梯压缩；模型无需 read 文件即可描述。单附件上限 1 GiB（1.0 GB），图片准入 64MP 与可解码校验，空间不足/格式不支持有明确提示。
+- 上下文压缩：触发估算统一为投影 + usage 口径，并在工具批结束后、下一次模型调用前检查；SDK 发布 0.2.4（Maven Local 与远端仓库）。
+
+**界面与资源**
+- 语言菜单改为锚定下拉，选中先收起再重建 Activity；中英切换后菜单不再残留。
+- 45 个 UI 图标全部替换为 Tabler（MIT 许可同步）。
+- 英文字体收敛为 Lora（默认）与 Manrope（OFL）；移除 Instrument Sans/Geist/IBM Plex/Newsreader 及其许可与资源。
+
+**Bug 修复**
+- proot 内 bash 时间比系统慢 8 小时：启动环境注入 POSIX `TZ`，`date +%z` 为 +0800（`date` 的时区缩写显示 GMT，时间与偏移正确）。
+- 删除 `docs/review/` 与相关引用。
+
+**验证**
+- 949 unit tests 全绿（app 552 / runtime 365 / shell 32，0 failures；round39 为 916）；lint 0 errors / 158 warnings（低于此前 161 基线）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13）11 项：插话、排队与清空回填、停止回填、压缩卡片与 kill 后历史保留、JPEG 多模态描述、1.15 GB 文件被 1.0 GB 上限拒绝且无残留、语言切换菜单消失、字体仅两档、Tabler 图标、bash `+0800`、回归无 `FATAL EXCEPTION`。证据 `artifacts/validation/round40/`。
+- SDK 0.2.4：`pi-coding-agent` 540 tests 全绿。
+
 ## Done: 运行恢复入口、空闲 handle 预算与流式解析增量
 
 **运行中断可见**
@@ -25,7 +47,7 @@
 
 **验证**
 - 916 unit tests 全绿（app 538 / runtime 352 / shell 26，0 failures；round38 为 890）；lint 0 errors / 161 warnings / 5 hints（与基线一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
-- 设备报告 `docs/review/2026-10-29/09-DEVICE-QA-ROUND39.md`，证据 `artifacts/validation/round39/`。
+- 设备证据 `artifacts/validation/round39/`。
 
 ## Done: 可靠性收尾（R08 最小闭环）与真机缺陷修复
 
@@ -44,7 +66,7 @@
 
 **验证**
 - 890 unit tests 全绿（app 524 / runtime 340 / shell 26，0 failures；round37 为 865）；lint 0 errors / 161 warnings / 5 hints（与基线一致）；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`verifyModuleBoundaries` 通过。
-- 真机（Redmi 22101316UCP / Android 13 / MIUI 14）：D1 断网自动重试时状态行显示 `Retrying n/5`；D2 断网 Reinstall 失败后 `lark-cli` md5/大小不变、插件仍已连接、记录与技能完好；强制杀进程后 `job_list` 显示 `interrupted`、待答问题重启后提示+通知；R02 运行中插件变更不中断本轮；抽屉排序、`.corrupt` 无新增、无 `FATAL EXCEPTION`。证据 `artifacts/validation/round38/`，报告 `docs/review/2026-10-29/08-DEVICE-QA.md`。
+- 真机（Redmi 22101316UCP / Android 13 / MIUI 14）：D1 断网自动重试时状态行显示 `Retrying n/5`；D2 断网 Reinstall 失败后 `lark-cli` md5/大小不变、插件仍已连接、记录与技能完好；强制杀进程后 `job_list` 显示 `interrupted`、待答问题重启后提示+通知；R02 运行中插件变更不中断本轮；抽屉排序、`.corrupt` 无新增、无 `FATAL EXCEPTION`。证据 `artifacts/validation/round38/`。
 
 ## Done: 全局整合（按 2026-10-29 代码审阅报告收敛运行秩序）
 
