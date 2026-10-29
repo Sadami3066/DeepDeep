@@ -35,16 +35,13 @@
     <string name="settings_version">版本</string>
     <string name="settings_license">开源许可</string>
     <string name="settings_license_title">开源许可</string>
-    <string name="settings_license_sans">Instrument Sans</string>
-    <string name="settings_license_serif">Newsreader</string>
-    <string name="settings_license_icons">Lucide Icons</string>
+    <string name="settings_license_icons">Tabler Icons</string>
     <string name="settings_license_provider_icons">厂商图标</string>
     <string name="settings_license_provider_icons_body">LobeHub MIT · Radius 官方图示</string>
-    <string name="settings_license_geist">Geist</string>
-    <string name="settings_license_plex">IBM Plex Sans</string>
+    <string name="settings_license_manrope">Manrope</string>
     <string name="settings_license_lora">Lora</string>
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>
-    <string name="settings_license_isc">ISC License</string>
+    <string name="settings_license_mit">MIT License</string>
 
     <string name="settings_placeholder">尚未接入</string>
 

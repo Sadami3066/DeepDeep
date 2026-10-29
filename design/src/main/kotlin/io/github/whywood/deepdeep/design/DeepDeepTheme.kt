@@ -112,36 +112,21 @@ private val Dark = DeepDeepColors(
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }
 
 enum class DdFontStyle(val id: String, val displayName: String) {
-    INSTRUMENT("instrument", "Instrument Sans"),
-    GEIST("geist", "Geist"),
-    IBM_PLEX_SANS("ibm_plex_sans", "IBM Plex Sans"),
-    NEWSREADER("newsreader", "Newsreader"),
     LORA("lora", "Lora"),
+    MANROPE("manrope", "Manrope"),
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: NEWSREADER
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: LORA
     }
 }
 
 @OptIn(ExperimentalTextApi::class)
 object DdFonts {
-    private val InstrumentSans = FontFamily(
-        Font(R.font.instrument_sans_regular, FontWeight.Normal),
-        Font(R.font.instrument_sans_medium, FontWeight.Medium),
-        Font(R.font.instrument_sans_semibold, FontWeight.SemiBold),
-    )
-
-    private val NewsreaderFamily = FontFamily(
-        Font(R.font.newsreader_regular, FontWeight.Normal),
-        Font(R.font.newsreader_medium, FontWeight.Medium),
-    )
-
-    private val GeistFamily = variableFamily(R.font.geist_variable)
-    private val IbmPlexSansFamily = variableFamily(R.font.ibm_plex_sans_variable)
     private val LoraFamily = variableFamily(R.font.lora_variable)
+    private val ManropeFamily = variableFamily(R.font.manrope_variable)
 
-    var style: DdFontStyle = DdFontStyle.NEWSREADER
+    var style: DdFontStyle = DdFontStyle.LORA
         private set
 
     fun apply(style: DdFontStyle) {
@@ -149,19 +134,13 @@ object DdFonts {
     }
 
     fun familyFor(style: DdFontStyle): FontFamily = when (style) {
-        DdFontStyle.INSTRUMENT -> InstrumentSans
-        DdFontStyle.GEIST -> GeistFamily
-        DdFontStyle.IBM_PLEX_SANS -> IbmPlexSansFamily
-        DdFontStyle.NEWSREADER -> NewsreaderFamily
         DdFontStyle.LORA -> LoraFamily
+        DdFontStyle.MANROPE -> ManropeFamily
     }
 
     val Sans: FontFamily get() = familyFor(style)
 
-    val Display: FontFamily
-        get() = if (style == DdFontStyle.INSTRUMENT) NewsreaderFamily else familyFor(style)
-
-    val Newsreader: FontFamily get() = NewsreaderFamily
+    val Display: FontFamily get() = familyFor(style)
 
     private fun variableFamily(resId: Int): FontFamily = FontFamily(
         Font(resId, FontWeight.Normal, variationSettings = weightVariant(400)),

@@ -4,11 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,11 +27,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,12 +47,12 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
@@ -60,12 +63,9 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 
-private const val INSTRUMENT_SANS_URL = "https://github.com/Instrument/instrument-sans"
-private const val NEWSREADER_URL = "https://github.com/productiontype/Newsreader"
-private const val LUCIDE_URL = "https://github.com/lucide-icons/lucide"
+private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
 private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
-private const val GEIST_URL = "https://github.com/vercel/geist-font"
-private const val IBM_PLEX_URL = "https://github.com/IBM/plex"
+private const val MANROPE_URL = "https://fonts.google.com/specimen/Manrope"
 private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
 
 @Composable
@@ -211,7 +211,9 @@ fun SettingsScreen(
                         if (selected != language) {
                             language = selected
                             languagePreferences.save(selected)
-                            context.findActivity()?.recreate()
+                            Handler(Looper.getMainLooper()).post {
+                                context.findActivity()?.recreate()
+                            }
                         }
                     },
                 )
@@ -396,59 +398,67 @@ private fun LanguageRow(
 ) {
     val colors = deepDeepColors()
     var expanded by remember { mutableStateOf(false) }
-    DdPressable(
-        onClick = { expanded = true },
-        modifier = Modifier.fillMaxWidth().testTag("settings_language"),
-        shape = RoundedCornerShape(20.dp),
-        contentDescription = stringResource(R.string.settings_language),
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 60.dp)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DdIcon(icon = DdIcons.Globe, tint = colors.inkSecondary, size = 20.dp)
-            Spacer(Modifier.width(14.dp))
-            Text(
-                text = stringResource(R.string.settings_language),
-                modifier = Modifier.weight(1f),
-                style = DdType.body,
-                color = colors.ink,
-                maxLines = 1,
-            )
-            Box {
-                Text(
-                    text = languageLabel(language),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                )
-                DdMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    menuWidth = 184.dp,
+    var pending by remember { mutableStateOf<AppLanguage?>(null) }
+    LaunchedEffect(pending) {
+        val selected = pending ?: return@LaunchedEffect
+        withFrameNanos { }
+        onLanguageChange(selected)
+        pending = null
+    }
+    DdDropdown(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+        anchor = {
+            DdPressable(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth().testTag("settings_language"),
+                shape = RoundedCornerShape(20.dp),
+                contentDescription = stringResource(R.string.settings_language),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 60.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AppLanguage.entries.forEach { option ->
-                        DdMenuItem(
-                            text = languageLabel(option),
-                            onClick = {
-                                onLanguageChange(option)
-                                expanded = false
-                            },
-                            selected = option == language,
-                            trailing = {
-                                if (option == language) {
-                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-                                }
-                            },
-                        )
-                    }
+                    DdIcon(icon = DdIcons.Globe, tint = colors.inkSecondary, size = 20.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = stringResource(R.string.settings_language),
+                        modifier = Modifier.weight(1f),
+                        style = DdType.body,
+                        color = colors.ink,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = languageLabel(language),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
                 }
             }
-            Spacer(Modifier.width(6.dp))
-            DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
+        },
+    ) {
+        AppLanguage.entries.forEach { option ->
+            DdMenuItem(
+                text = languageLabel(option),
+                onClick = {
+                    expanded = false
+                    if (option != language) pending = option
+                },
+                selected = option == language,
+                trailing = if (option == language) {
+                    {
+                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
+                    }
+                } else {
+                    null
+                },
+            )
         }
     }
 }
@@ -479,45 +489,27 @@ private fun LicenseSheet(onClose: () -> Unit) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(8.dp))
             LicenseRow(
-                title = stringResource(R.string.settings_license_sans),
+                title = stringResource(R.string.settings_license_manrope),
                 subtitle = stringResource(R.string.settings_license_ofl),
-                onClick = { uriHandler.openUri(INSTRUMENT_SANS_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_serif),
-                subtitle = stringResource(R.string.settings_license_ofl),
-                onClick = { uriHandler.openUri(NEWSREADER_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_icons),
-                subtitle = stringResource(R.string.settings_license_isc),
-                onClick = { uriHandler.openUri(LUCIDE_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_provider_icons),
-                subtitle = stringResource(R.string.settings_license_provider_icons_body),
-                onClick = { uriHandler.openUri(PROVIDER_LOGOS_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_geist),
-                subtitle = stringResource(R.string.settings_license_ofl),
-                onClick = { uriHandler.openUri(GEIST_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_plex),
-                subtitle = stringResource(R.string.settings_license_ofl),
-                onClick = { uriHandler.openUri(IBM_PLEX_URL) },
+                onClick = { uriHandler.openUri(MANROPE_URL) },
             )
             DdHairline()
             LicenseRow(
                 title = stringResource(R.string.settings_license_lora),
                 subtitle = stringResource(R.string.settings_license_ofl),
                 onClick = { uriHandler.openUri(LORA_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_icons),
+                subtitle = stringResource(R.string.settings_license_mit),
+                onClick = { uriHandler.openUri(TABLER_ICONS_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_provider_icons),
+                subtitle = stringResource(R.string.settings_license_provider_icons_body),
+                onClick = { uriHandler.openUri(PROVIDER_LOGOS_URL) },
             )
             Spacer(Modifier.height(28.dp))
         }
