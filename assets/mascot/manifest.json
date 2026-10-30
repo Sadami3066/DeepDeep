@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "collection": "deepdeep-whale-girl",
+  "created": "2026-10-21",
+  "generator": "built-in image_gen",
+  "delivery": "Original generated pixels; not resized or recompressed; not bundled in APK.",
+  "provenance_note": "User supplied character references; author/license not provided. No new license is asserted for reference images or generated derivatives.",
+  "references": [
+    {
+      "id": "character-turnaround",
+      "file": "references/character-turnaround.png",
+      "source": "user-provided",
+      "license": "not-provided",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 2256676,
+      "sha256": "1debce40cf05ef1b6ee1ec138595036d55667224cb1306e3f4d77de0e2b0b97e"
+    },
+    {
+      "id": "chibi-turnaround",
+      "file": "references/chibi-turnaround.png",
+      "source": "user-provided",
+      "license": "not-provided",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 2123873,
+      "sha256": "539548dbdf78a6488b9baca3af07521fe422c62bd8dee6e5664a1880754325b6"
+    }
+  ],
+  "assets": [
+    {
+      "id": "avatar",
+      "file": "generated/mascot_avatar.png",
+      "status": "candidate",
+      "purpose": "助手头像 / 关于页",
+      "suggested_display": "48–96 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 1779203,
+      "sha256": "a008131c9a91a6bf4ddfad2c07733236d126b82b32b8b68575048ee9be1c8209",
+      "prompt_id": "avatar"
+    },
+    {
+      "id": "welcome",
+      "file": "generated/mascot_welcome.png",
+      "status": "candidate",
+      "purpose": "欢迎 / 新对话 / 空状态",
+      "suggested_display": "144–240 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 1469288,
+      "sha256": "b266036feff2bf42be308d924b10a416fdfd45284dfefccac080382a5bed6cf6",
+      "prompt_id": "welcome"
+    },
+    {
+      "id": "thinking",
+      "file": "generated/mascot_thinking.png",
+      "status": "candidate",
+      "purpose": "等待 / 处理中",
+      "suggested_display": "128–200 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 1579701,
+      "sha256": "b26b8a52893f41dc0e3c9f38829a8e7fc6e711e5b84f8f93e91e9e93ee353fd4",
+      "prompt_id": "thinking"
+    },
+    {
+      "id": "success",
+      "file": "generated/mascot_success.png",
+      "status": "candidate",
+      "purpose": "操作完成",
+      "suggested_display": "128–200 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 1434966,
+      "sha256": "16ec6561771fa472b2c3f610924cfffe0371e9682cb59bcd946383be4bcb7bbd",
+      "prompt_id": "success"
+    },
+    {
+      "id": "retry",
+      "file": "generated/mascot_retry.png",
+      "status": "candidate",
+      "purpose": "可恢复错误 / 重试",
+      "suggested_display": "128–200 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 1518792,
+      "sha256": "e8dfc116e9840fedeaa3341a7cf90b0c38b2fe59ad164ce367a103659ddc53c0",
+      "prompt_id": "retry"
+    },
+    {
+      "id": "whale_mark",
+      "file": "generated/whale_mark.png",
+      "status": "candidate",
+      "purpose": "装饰 / 图标候选",
+      "suggested_display": "32–64 dp",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "bytes": 816560,
+      "sha256": "4a8e6574d6ba903d9ca30d0942e9cd676aa18f51f412d7576858b6a56436e9db",
+      "prompt_id": "whale_mark"
+    }
+  ]
+}

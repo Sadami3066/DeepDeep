@@ -1,0 +1,28 @@
+{
+  "columns": 4,
+  "rows": 4,
+  "row_edges": [0, 0.39, 0.63, 0.77, 1],
+  "alpha_threshold": 96,
+  "min_component_pixels": 128,
+  "edge_expand": 2,
+  "padding": 12,
+  "largest_only": ["mascot_idle", "mascot_wave", "mascot_thinking", "mascot_sleepy"],
+  "names": [
+    "mascot_idle",
+    "mascot_wave",
+    "mascot_thinking",
+    "mascot_sleepy",
+    "icon_whale",
+    "icon_chat",
+    "icon_microphone",
+    "icon_settings",
+    "button_primary",
+    "button_secondary",
+    "chip_selected",
+    "chip_idle",
+    "card_panel",
+    "bubble_assistant",
+    "divider_wave",
+    "accent_bow"
+  ]
+}

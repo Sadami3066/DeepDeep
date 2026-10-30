@@ -3,7 +3,7 @@ deepdeep UI assets
 Lora
 - Source: https://github.com/cyrealtype/Lora-Cyrillic
 - Files: lora_variable.ttf
-- License: SIL Open Font License 1.1.
+- License: SIL Open Font License 1.1 (lora-OFL.txt).
 
 Manrope
 - Source: https://github.com/googlefonts/manrope

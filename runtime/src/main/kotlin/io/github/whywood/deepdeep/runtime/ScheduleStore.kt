@@ -9,6 +9,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -55,6 +56,8 @@ class ScheduleStore(
     private val file = File(directory, FILE_NAME)
     private val changesFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     val changes: SharedFlow<Unit> = changesFlow.asSharedFlow()
+
+    internal val loadCount = AtomicInteger()
 
     suspend fun list(): List<Schedule> = mutex.withLock { load() }
 
@@ -247,6 +250,7 @@ class ScheduleStore(
             ?.toEpochMilli()
 
     private fun load(): List<Schedule> {
+        loadCount.incrementAndGet()
         if (!file.exists()) return emptyList()
         val text: String = runCatching { file.readText() }.getOrElse { error ->
             return discardCorrupt("定时任务数据读取失败", error)

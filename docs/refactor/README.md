@@ -57,7 +57,7 @@
 | M1-5 | 真机验收稳定 ID `docs/ACCEPTANCE.md` + 证据压缩进 `docs/evidence/` |
 | M1-6 | git 卫生：`.gitattributes`、`gc`、`.mailmap`、`assets/`+`rs.html` 处置 |
 | M1-7 | CI（PR 触发 verify）+ master 分支保护 |
-| M1-8 | 文档分层：README 重写、`DEVELOPMENT.md`、`ARCHITECTURE.md` 收敛、`STATUS.md`/`PLAN.md` 移出、ADR×5 |
+| M1-8 | 文档分层：README 重写、`DEVELOPMENT.md`、`ARCHITECTURE.md` 收敛、`STATUS.md`/`PLAN.md` 移出、ADR×7 |
 | M1-9 | 合规基线：`LICENSE`/`NOTICE`/`THIRD_PARTY_NOTICES.md` + 5 类缺失文本 + proot 义务 + 应用内许可页 |
 | M1-10 | 首个 agent 试跑（G1/G2/G3 + 回滚演练） |
 
@@ -115,7 +115,7 @@ Maven Central 收口（group `io.github.sadami3066`、v0.3）｜正式签名 + t
 | 里程碑 | 状态 |
 |---|---|
 | M0 | 完成（2026-10-30，判据 1、2 通过） |
-| M1 | 未开始 |
+| M1 | 完成（2026-10-30，判据 3、4、6 通过；CI 首跑 7m44s 绿） |
 | M2 | 未开始 |
 | M3 | 未开始 |
 | M4 | 未开始（不执行） |
