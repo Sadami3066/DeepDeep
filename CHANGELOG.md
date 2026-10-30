@@ -19,5 +19,11 @@
 - chore: replace wildcard imports in AppRoutes with explicit ones [M3-h2]
 - refactor: give the Workshop screen a state holder and surface scan/delete errors [M3-15]
 - refactor: extract conversation cache and session draft store from ChatViewModel [M3-7]
+- docs: add generated changelog and link community/release docs from README [M4-prep]
+- refactor: move the session open pipeline into SessionOpener [M3-8]
+- refactor: split session list, workspace, model and usage out of ChatViewModel [M3-9]
+- docs: describe the runtime-api module and the solved boundary debt [M3-17]
+- refactor: collapse the chat double model and shrink ChatScreen's parameter surface [M3-10]
+- docs: refresh baseline and hotspot sizes after M3 completion [M3-17]
 
 生成命令：`./scripts/changelog.sh <from-tag> <to-tag>`（不手写流水账）
