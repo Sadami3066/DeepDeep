@@ -20,7 +20,7 @@ internal class ConversationCache(private val target: ConversationWriteTarget) {
         if (!state.historyLoaded) return null
         flush()
         val loaded = target.readCached(sessionId)?.loaded == true
-        target.store(sessionId, state.conversationState().copy(loaded = loaded))
+        target.store(sessionId, state.conversation.copy(loaded = loaded))
         return sessionId
     }
 

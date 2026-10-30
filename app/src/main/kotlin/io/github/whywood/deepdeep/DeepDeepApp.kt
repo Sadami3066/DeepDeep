@@ -35,6 +35,8 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
+import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
+import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
@@ -387,120 +389,120 @@ internal fun DeepDeepApp(
                 val frozenState = rememberFrozenChatState(state, baseFrozen)
                 ChatScreen(
                     state = remember(frozenState, configuredProviders) {
-                        frozenState.copy(configured = frozenState.providerId in configuredProviders)
-                    },
+                                            frozenState.copy(configured = frozenState.providerId in configuredProviders)
+                                        },
                     nickname = nickname,
-                    chatUiStrings = chatUiStrings,
-                    onInputChange = chatViewModel::onInputChange,
-                    onSend = ::submitChatInput,
-                    onStop = chatViewModel::stop,
-                    onOpenDrawer = { drawerOpen = true },
-                    onOpenSettings = ::openSettings,
-                    onReload = {
-                        scope.launch {
-                            val result = chatViewModel.reloadSession()
-                            Toast.makeText(
-                                context,
-                                result.exceptionOrNull()?.message ?: reloadDoneMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    },
                     providers = configuredProviderList,
-                    onModelChange = chatViewModel::setModel,
-                    onProviderChange = chatViewModel::setProvider,
-                    onThinkingLevelChange = chatViewModel::setThinkingLevel,
-                    onToggleStep = chatViewModel::toggleStep,
-                    onQuoteMessage = chatViewModel::quote,
-                    onClearQuote = chatViewModel::clearQuote,
-                    attachments = frozenState.attachments,
-                    onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
-                    onRemoveAttachment = chatViewModel::removeAttachment,
-                    onOpenAttachment = {
-                        previewRoot = attachmentRoot
-                        previewAttachment = it
-                    },
                     attachmentRoot = attachmentRoot,
-                    autoCollapseProcess = uiPreferences.autoCollapseProcess,
-                    reminderCount = reminderCount,
-                    onOpenSchedules = { navigator.push(AppDestination.Schedules) },
-                    onRetry = chatViewModel::retry,
-                    reloading = frozenState.reloading,
-                    usage = frozenState.usage,
-                    compacting = frozenState.compacting,
-                    commandItems = commandItems,
-                    onPickCommand = ::pickCommand,
-                    goal = activeGoal,
-                    onPauseGoal = {
-                        state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
-                    },
-                    onResumeGoal = {
-                        state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
-                    },
-                    jobCount = runningJobCount,
-                    onOpenJobs = {
-                        selectedJobId = null
-                        jobOutput = null
-                        jobsSheetOpen = true
-                    },
-                    modelsOpen = modelsOpen,
-                    onModelsOpenChange = { modelsOpen = it },
-                    onOpenUsage = { usageSheetOpen = true },
-                    pendingQuestions = activeQuestions,
-                    onAnswerQuestion = { pending, answers ->
-                        graph.questionCenter.answer(pending.requestId, answers)
-                    },
-                    foreignQuestion = foreignQuestion,
-                    onOpenForeignQuestion = { sessionId ->
-                        navigator.reset(AppDestination.Chat)
-                        chatViewModel.openConversationById(sessionId)
-                    },
-                    onOpenFile = openWorkspaceFile,
-                    onOpenFiles = { filesSheetOpen = true },
-                    queuedInputs = frozenState.queuedInputs,
-                    importingAttachment = frozenState.importingAttachment,
-                    onFollowUp = chatViewModel::followUpNow,
-                    onClearQueue = chatViewModel::clearQueuedInputs,
+                    chatUiStrings = chatUiStrings,
+                    actions = ChatScreenActions(
+                        onInputChange = chatViewModel::onInputChange,
+                        onSend = ::submitChatInput,
+                        onStop = chatViewModel::stop,
+                        onOpenDrawer = { drawerOpen = true },
+                        onOpenSettings = ::openSettings,
+                        onReload = {
+                                                scope.launch {
+                                                    val result = chatViewModel.reloadSession()
+                                                    Toast.makeText(
+                                                        context,
+                                                        result.exceptionOrNull()?.message ?: reloadDoneMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            },
+                        onModelChange = chatViewModel::setModel,
+                        onProviderChange = chatViewModel::setProvider,
+                        onThinkingLevelChange = chatViewModel::setThinkingLevel,
+                        onToggleStep = chatViewModel::toggleStep,
+                        onQuoteMessage = chatViewModel::quote,
+                        onClearQuote = chatViewModel::clearQuote,
+                        onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
+                        onRemoveAttachment = chatViewModel::removeAttachment,
+                        onOpenAttachment = {
+                                                previewRoot = attachmentRoot
+                                                previewAttachment = it
+                                            },
+                        onOpenFile = openWorkspaceFile,
+                        onOpenSchedules = { navigator.push(AppDestination.Schedules) },
+                        onRetry = chatViewModel::retry,
+                        onPickCommand = ::pickCommand,
+                        onPauseGoal = {
+                                                state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
+                                            },
+                        onResumeGoal = {
+                                                state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
+                                            },
+                        onOpenJobs = {
+                                                selectedJobId = null
+                                                jobOutput = null
+                                                jobsSheetOpen = true
+                                            },
+                        onModelsOpenChange = { modelsOpen = it },
+                        onOpenUsage = { usageSheetOpen = true },
+                        onAnswerQuestion = { pending, answers ->
+                                                graph.questionCenter.answer(pending.requestId, answers)
+                                            },
+                        onOpenForeignQuestion = { sessionId ->
+                                                navigator.reset(AppDestination.Chat)
+                                                chatViewModel.openConversationById(sessionId)
+                                            },
+                        onOpenPresentFile = { raw ->
+                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                if (resolved == null) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        attachmentMissingMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                } else if (resolved.kind != AttachmentKind.OTHER) {
+                                                    previewRoot = attachmentRoot
+                                                    previewAttachment = resolved
+                                                } else {
+                                                    val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
+                                                    val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
+                                                    if (!opened) {
+                                                        Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            },
+                        onSharePresentFile = { raw ->
+                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                if (resolved == null) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        attachmentMissingMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                } else {
+                                                    val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
+                                                    if (intent != null) {
+                                                        context.startActivity(shareChooser(context, intent, shareChooserTitle))
+                                                    } else {
+                                                        Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            },
+                        onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                        onOpenFiles = { filesSheetOpen = true },
+                        onVoiceClick = { voiceSheetOpen = true },
+                        onFollowUp = chatViewModel::followUpNow,
+                        onClearQueue = chatViewModel::clearQueuedInputs,
+                        onScrollAnchorChange = chatViewModel::updateScrollAnchor,
+                    ),
+                    overlay = ChatScreenOverlay(
+                        reminderCount = reminderCount,
+                        reloading = frozenState.reloading,
+                        compacting = frozenState.compacting,
+                        commandItems = commandItems,
+                        goal = activeGoal,
+                        jobCount = runningJobCount,
+                        modelsOpen = modelsOpen,
+                        pendingQuestions = activeQuestions,
+                        foreignQuestion = foreignQuestion,
+                    ),
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
-                    onScrollAnchorChange = chatViewModel::updateScrollAnchor,
-                    onVoiceClick = { voiceSheetOpen = true },
-                    onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
-                    onOpenPresentFile = { raw ->
-                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                        if (resolved == null) {
-                            Toast.makeText(
-                                context,
-                                attachmentMissingMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        } else if (resolved.kind != AttachmentKind.OTHER) {
-                            previewRoot = attachmentRoot
-                            previewAttachment = resolved
-                        } else {
-                            val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
-                            val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
-                            if (!opened) {
-                                Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    onSharePresentFile = { raw ->
-                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                        if (resolved == null) {
-                            Toast.makeText(
-                                context,
-                                attachmentMissingMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        } else {
-                            val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
-                            if (intent != null) {
-                                context.startActivity(shareChooser(context, intent, shareChooserTitle))
-                            } else {
-                                Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
+                    autoCollapseProcess = uiPreferences.autoCollapseProcess,
                 )
             },
         ) { destination ->

@@ -201,7 +201,7 @@ class ChatControllersTest {
                 ),
             )
         }
-        state = state.copy(conversationId = "session-1", sending = false)
+        state = state.copy(conversationId = "session-1", conversation = state.conversation.copy(sending = false))
         val controller = UsageController(
             runtime = runtime, ioDispatcher = dispatcher, target = target(),
             state = { state }, update = ::update, cacheCurrentSession = {},

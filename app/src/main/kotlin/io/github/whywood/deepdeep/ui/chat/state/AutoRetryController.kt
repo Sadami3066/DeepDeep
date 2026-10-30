@@ -169,25 +169,6 @@ internal class AutoRetryController(
     }
 }
 
-internal fun ChatUiState.conversationState(): ConversationState = ConversationState(
-    messages = messages,
-    title = conversationTitle,
-    sending = sending,
-    activity = activity,
-    activityStartedAt = activityStartedAt,
-    usage = usage,
-    sessionModel = sessionModel(),
-)
-
-internal fun ChatUiState.applyConversation(state: ConversationState): ChatUiState = copy(
-    messages = state.messages,
-    conversationTitle = state.title,
-    sending = state.sending,
-    activity = state.activity,
-    activityStartedAt = state.activityStartedAt,
-    usage = state.usage,
-)
-
 internal fun ChatUiState.sessionModel(): SessionModelSnapshot? =
     providerId.takeIf { it.isNotBlank() }
         ?.let { provider -> SessionModelSnapshot(provider, modelId, thinkingLevel) }

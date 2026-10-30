@@ -9,22 +9,17 @@ import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.ImageNormalizer
 import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.runtime.AgentRuntime
-import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
-import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
-import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
-import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.QueuedInput
-import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
@@ -35,9 +30,6 @@ import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.chat.state.AutoRetryController
 import io.github.whywood.deepdeep.ui.chat.state.ConversationCache
-import io.github.whywood.deepdeep.ui.chat.state.applyConversation
-import io.github.whywood.deepdeep.ui.chat.state.conversationState
-import io.github.whywood.deepdeep.ui.chat.state.sessionModel
 import io.github.whywood.deepdeep.ui.chat.state.ConversationWriteTarget
 import io.github.whywood.deepdeep.ui.chat.state.DeltaBatcher
 import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
@@ -95,8 +87,8 @@ class ChatViewModel(
         updateState = { transform -> mutableState.update(transform) },
     )
     private val conversationTarget = ConversationWriteTarget(
-        activeReader = { mutableState.value.conversationState() },
-        activeWriter = { state -> mutableState.update { it.applyConversation(state) } },
+        activeReader = { mutableState.value.conversation },
+        activeWriter = { state -> mutableState.update { it.copy(conversation = state) } },
         protectedSessionIds = { runtime.busySessionIds.value + listOfNotNull(mutableState.value.conversationId) },
         onEvict = { sessionId -> sessionDrafts.forget(sessionId) },
     )
@@ -196,12 +188,11 @@ class ChatViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 mutableState.update {
-                    it.copy(ready = true, historyLoaded = true, error = chatError(uiStrings, error.message ?: uiStrings.runtimeStartFailed))
+                    it.copy(ready = true, conversation = it.conversation.copy(loaded = true), error = chatError(uiStrings, error.message ?: uiStrings.runtimeStartFailed))
                 }
             }
         }
     }
-
     fun updateUiStrings(strings: ChatUiStrings) {
         val languageChanged = uiStrings.newChatTitle != strings.newChatTitle ||
             uiStrings.thinking != strings.thinking
@@ -210,13 +201,10 @@ class ChatViewModel(
             viewModelScope.launch { refreshSessions() }
         }
     }
-
     fun requestSessionsRefresh() {
         viewModelScope.launch { refreshSessions() }
     }
-
     fun onInputChange(value: String) = sessionDrafts.updateInput(value)
-
     fun refreshAvailableSkills() {
         val cwd = mutableState.value.conversationCwd
         if (cwd.isBlank()) {
@@ -364,7 +352,7 @@ class ChatViewModel(
     }
 
     private fun applyRunError(reduced: ConversationState, error: String?) {
-        mutableState.update { it.applyConversation(reduced).copy(error = error ?: it.error) }
+        mutableState.update { it.copy(conversation = reduced, error = error ?: it.error) }
         cacheCurrentSession()
     }
 
@@ -409,26 +397,28 @@ class ChatViewModel(
         val now = System.currentTimeMillis()
         mutableState.update {
             it.copy(
-                messages = it.messages + AssistantMessage(nextId, AssistantRole.USER, prompt) + AssistantMessage(
-                    id = assistantId,
-                    role = AssistantRole.ASSISTANT,
-                    text = "",
-                    streaming = true,
-                    status = MessageStatus.RUNNING,
-                    startedAt = now,
+                conversation = it.conversation.copy(
+                    messages = it.messages + AssistantMessage(nextId, AssistantRole.USER, prompt) + AssistantMessage(
+                        id = assistantId,
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        streaming = true,
+                        status = MessageStatus.RUNNING,
+                        startedAt = now,
+                    ),
+                    sending = true,
+                    activity = RuntimeActivity.Thinking,
+                    activityStartedAt = now,
+                    title = if (sessionList.isDefaultChatTitle(it.conversationTitle)) {
+                        sessionList.titleFrom(titleSeed)
+                    } else {
+                        it.conversationTitle
+                    },
                 ),
                 input = "",
                 quote = null,
                 attachments = emptyList(),
-                sending = true,
-                activity = RuntimeActivity.Thinking,
-                activityStartedAt = now,
                 error = null,
-                conversationTitle = if (sessionList.isDefaultChatTitle(it.conversationTitle)) {
-                    sessionList.titleFrom(titleSeed)
-                } else {
-                    it.conversationTitle
-                },
             )
         }
         cacheCurrentSession()
@@ -448,14 +438,14 @@ class ChatViewModel(
     private fun expandAndSend(name: String, args: String) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
-        mutableState.update { it.copy(sending = true, error = null) }
+        mutableState.update { it.copy(conversation = it.conversation.copy(sending = true), error = null) }
         viewModelScope.launch {
             val expansion = withContext(ioDispatcher) {
                 skillExpander?.expand(current.conversationCwd, name, args)
             }
             if (mutableState.value.conversationId != sessionId) return@launch
             if (expansion == null) {
-                mutableState.update { it.copy(sending = false, error = uiStrings.skillMissing(name)) }
+                mutableState.update { it.copy(conversation = it.conversation.copy(sending = false), error = uiStrings.skillMissing(name)) }
                 return@launch
             }
             startTurn(
@@ -469,7 +459,7 @@ class ChatViewModel(
     private fun expandInlineAndSend(mentions: SkillMentions) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
-        mutableState.update { it.copy(sending = true, error = null) }
+        mutableState.update { it.copy(conversation = it.conversation.copy(sending = true), error = null) }
         viewModelScope.launch {
             val expansions = withContext(ioDispatcher) {
                 mentions.names.map { name -> skillExpander?.expand(current.conversationCwd, name, "") }
@@ -477,7 +467,7 @@ class ChatViewModel(
             if (mutableState.value.conversationId != sessionId) return@launch
             val missing = mentions.names.getOrNull(expansions.indexOfFirst { it == null })
             if (missing != null) {
-                mutableState.update { it.copy(sending = false, error = uiStrings.skillMissing(missing)) }
+                mutableState.update { it.copy(conversation = it.conversation.copy(sending = false), error = uiStrings.skillMissing(missing)) }
                 return@launch
             }
             val prompt = buildString {
@@ -599,7 +589,8 @@ class ChatViewModel(
     fun toggleStep(messageId: Long, stepId: Long) {
         mutableState.update { state ->
             state.copy(
-                messages = state.messages.map { message ->
+                conversation = state.conversation.copy(
+                    messages = state.messages.map { message ->
                     if (message.id != messageId) return@map message
                     message.copy(
                         steps = message.steps.map { step ->
@@ -614,7 +605,8 @@ class ChatViewModel(
                             }
                         },
                     )
-                },
+                    },
+                ),
             )
         }
     }

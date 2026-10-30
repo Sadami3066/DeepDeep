@@ -35,9 +35,11 @@ internal class UsageController(
         val next = localized + notices
         update {
             it.copy(
-                messages = next,
-                historyLoaded = true,
-                conversationTitle = it.conversationTitle.ifBlank { titleFrom(next) },
+                conversation = it.conversation.copy(
+                    messages = next,
+                    loaded = true,
+                    title = it.conversationTitle.ifBlank { titleFrom(next) },
+                ),
             )
         }
         cacheCurrentSession()

@@ -16,7 +16,7 @@ import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.UsageChanged
 
-internal data class ConversationState(
+data class ConversationState(
     val messages: List<AssistantMessage> = emptyList(),
     val title: String = "",
     val sending: Boolean = false,

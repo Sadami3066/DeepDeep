@@ -16,15 +16,12 @@ data class QuotedMessage(
 )
 
 data class ChatUiState(
+    val conversation: ConversationState = ConversationState(),
     val ready: Boolean = false,
     val configured: Boolean = false,
-    val messages: List<AssistantMessage> = emptyList(),
     val input: String = "",
     val quote: QuotedMessage? = null,
     val attachments: List<AttachmentRef> = emptyList(),
-    val sending: Boolean = false,
-    val activity: RuntimeActivity? = null,
-    val activityStartedAt: Long? = null,
     val error: String? = null,
     val providerId: String = "",
     val modelId: String = "",
@@ -32,7 +29,6 @@ data class ChatUiState(
     val thinkingLevel: ThinkingLevel = ThinkingLevel.OFF,
     val models: List<ModelOption> = emptyList(),
     val conversationId: String? = null,
-    val conversationTitle: String = "",
     val conversations: List<ConversationSummary> = emptyList(),
     val archivedConversations: List<ConversationSummary> = emptyList(),
     val archivedCount: Int = 0,
@@ -40,11 +36,20 @@ data class ChatUiState(
     val currentWorkspaceId: String = "home",
     val conversationCwd: String = "",
     val busySessionIds: Set<String> = emptySet(),
-    val historyLoaded: Boolean = false,
     val switchingConversation: Boolean = false,
     val reloading: Boolean = false,
-    val usage: SessionUsage? = null,
     val compacting: Boolean = false,
     val queuedInputs: List<QueuedInput> = emptyList(),
     val importingAttachment: Boolean = false,
-)
+) {
+    val messages: List<AssistantMessage> get() = conversation.messages
+    val conversationTitle: String get() = conversation.title
+    val sending: Boolean get() = conversation.sending
+    val activity: RuntimeActivity? get() = conversation.activity
+    val activityStartedAt: Long? get() = conversation.activityStartedAt
+    val historyLoaded: Boolean get() = conversation.loaded
+    val usage: SessionUsage? get() = conversation.usage
+
+    fun updateConversation(transform: (ConversationState) -> ConversationState): ChatUiState =
+        copy(conversation = transform(conversation))
+}

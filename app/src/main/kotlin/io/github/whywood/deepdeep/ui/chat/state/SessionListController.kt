@@ -48,7 +48,7 @@ internal class SessionListController(
                 conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedConversations = archived.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedCount = archived.size,
-                conversationTitle = title?.let(::localizedTitle) ?: it.conversationTitle,
+                conversation = it.conversation.copy(title = title?.let(::localizedTitle) ?: it.conversationTitle),
             )
         }
         cacheCurrentSession()
@@ -74,10 +74,10 @@ internal class SessionListController(
         runtime.activeRuns.value[sessionId]?.let { active ->
             val current = state()
             if (current.conversationId != sessionId || !current.sending) return
-            val conversation = current.conversationState()
+            val conversation = current.conversation
             if (conversation.messages.any { it.runId == active.runId }) return
             val adopted = conversation.adoptActiveRun(active.runId, RuntimeActivity.Thinking, active.startedAt)
-            update { it.applyConversation(adopted) }
+            update { it.copy(conversation = adopted) }
             cacheCurrentSession()
             return
         }
@@ -105,12 +105,14 @@ internal class SessionListController(
         if (isCurrent) {
             update {
                 it.copy(
-                    messages = settled,
-                    sending = false,
-                    activity = null,
-                    activityStartedAt = null,
-                    historyLoaded = true,
-                    conversationTitle = it.conversationTitle.ifBlank { titleFrom(settled) },
+                    conversation = it.conversation.copy(
+                        messages = settled,
+                        sending = false,
+                        activity = null,
+                        activityStartedAt = null,
+                        loaded = true,
+                        title = it.conversationTitle.ifBlank { titleFrom(settled) },
+                    ),
                 )
             }
             applySessionModel(sessionModel)

@@ -32,10 +32,12 @@ class ConversationCacheTest {
         cache.store("session-1", ConversationState(loaded = true))
         var flushed = false
         val state = ChatUiState(
+            conversation = ConversationState(
+                messages = listOf(AssistantMessage(0, AssistantRole.USER, "hi")),
+                loaded = true,
+            ),
             conversationId = "session-1",
-            historyLoaded = true,
             input = "hello",
-            messages = listOf(AssistantMessage(0, AssistantRole.USER, "hi")),
         )
 
         val id = cache.rememberCurrent(state) { flushed = true }
@@ -54,7 +56,7 @@ class ConversationCacheTest {
         var flushed = false
 
         assertNull(cache.rememberCurrent(ChatUiState(conversationId = "session-1")) { flushed = true })
-        assertNull(cache.rememberCurrent(ChatUiState(historyLoaded = true)) { flushed = true })
+        assertNull(cache.rememberCurrent(ChatUiState(conversation = ConversationState(loaded = true))) { flushed = true })
         assertFalse(flushed)
         assertNull(cache.readCached("session-1"))
     }

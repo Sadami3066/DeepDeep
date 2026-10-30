@@ -101,17 +101,19 @@ internal class SessionOpener(
         val workspaceId = current.workspaces.firstOrNull { it.cwd == summary.cwd }?.id ?: current.currentWorkspaceId
         update {
             it.copy(
+                conversation = ConversationState(
+                    messages = animated?.messages ?: emptyList(),
+                    title = animated?.title?.ifBlank { summary.title } ?: summary.title,
+                    sending = animated?.sending ?: false,
+                    activity = animated?.activity,
+                    activityStartedAt = animated?.activityStartedAt,
+                    loaded = animated?.loaded == true,
+                    usage = animated?.usage,
+                ),
                 conversationId = summary.id,
                 conversationCwd = summary.cwd,
                 currentWorkspaceId = workspaceId,
-                conversationTitle = animated?.title?.ifBlank { summary.title } ?: summary.title,
-                messages = animated?.messages ?: emptyList(),
-                sending = animated?.sending ?: false,
-                activity = animated?.activity,
-                activityStartedAt = animated?.activityStartedAt,
-                usage = animated?.usage,
                 compacting = false,
-                historyLoaded = animated?.loaded == true,
                 switchingConversation = animated == null,
                 input = draft?.input.orEmpty(),
                 quote = draft?.quote,
@@ -178,8 +180,8 @@ internal class SessionOpener(
         rememberState(summary.id, resolved)
         if (isActive(summary.id)) {
             update {
-                it.applyConversation(resolved).copy(
-                    historyLoaded = true,
+                it.copy(
+                    conversation = resolved.copy(loaded = true),
                     switchingConversation = false,
                     queuedInputs = queuedInputs,
                     importingAttachment = false,
@@ -198,18 +200,12 @@ internal class SessionOpener(
                 rememberState(opened.sessionId, ConversationState(sessionModel = sessionModel))
                 update {
                     it.copy(
+                        conversation = ConversationState(loaded = true),
                         conversationId = opened.sessionId,
                         conversationCwd = projectCwd,
                         currentWorkspaceId = it.workspaces.firstOrNull { workspace -> workspace.cwd == projectCwd }?.id
                             ?: workspaceId,
-                        conversationTitle = "",
-                        messages = emptyList(),
-                        sending = false,
-                        activity = null,
-                        activityStartedAt = null,
-                        usage = null,
                         compacting = false,
-                        historyLoaded = true,
                         switchingConversation = false,
                         input = initialInput,
                         quote = null,
@@ -237,7 +233,7 @@ internal class SessionOpener(
         val recent = sessions.maxByOrNull { it.updatedAt }
         val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()
         if (home == null) {
-            update { it.copy(ready = true, historyLoaded = true, error = startupFailedText()) }
+            update { it.copy(ready = true, conversation = it.conversation.copy(loaded = true), error = startupFailedText()) }
             return
         }
         val workspace = recent?.let { summary -> workspaces.firstOrNull { it.cwd == summary.cwd } } ?: home
@@ -248,7 +244,7 @@ internal class SessionOpener(
                 currentWorkspaceId = workspace.id,
                 conversationCwd = recent?.cwd ?: home.cwd,
                 conversations = sessions.map { session -> session.copy(title = localizeTitle(session.title)) },
-                historyLoaded = recent != null,
+                conversation = it.conversation.copy(loaded = recent != null),
             )
         }
         if (recent != null) switchToSummary(recent) else createSession(workspace.id)
