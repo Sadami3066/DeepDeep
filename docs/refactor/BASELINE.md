@@ -1,14 +1,14 @@
 # 基线快照（M0-6）
 
-采集于 2026-10-30，分支 `refactor/team-foundation`，M3-3/M3-6/M3-13/M3-14 落地后。
+采集于 2026-10-30，分支 `refactor/team-foundation`，M3 全部 17 项落地后。
 所有数字均由命令生成；**命令输出优先于本文**。数字漂移时先改文档再改代码。
 
 ## 基线
 
 | 指标 | 基线值 | 阈值规则 |
 |---|---|---|
-| 单元测试 | **1130**（app 721 / runtime 377 / shell 32） | 不得下降；`failures=0`、`skipped=0` |
-| Lint | **0 error / 157 warning**（app 151、runtime 1、shell 1、design 4） | error 必须为 0；warning 不得增加，增加需在 PR 说明 |
+| 单元测试 | **1165**（app 756 / runtime 377 / shell 32） | 不得下降；`failures=0`、`skipped=0` |
+| Lint | **0 error / 156 warning**（app 150、runtime 1、shell 1、design 4） | error 必须为 0；warning 不得增加，增加需在 PR 说明 |
 | 编译警告 | **13 条** Kotlin `w:` | 不得增加 |
 | `verify.sh` 耗时 | 单实例 `--max-workers=1` 全量 1m18s（本机）；CI 4 核约 3–5 分钟 | 仅记录，不作门禁；构建必须串行 |
 | release APK | 未纳入门禁（本地分发取舍，见 ADR-0001 待写） | — |

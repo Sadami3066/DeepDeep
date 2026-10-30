@@ -33,8 +33,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 | 指标 | 基线 |
 |---|---|
-| 单测 | 1024（app 624 / runtime 368 / shell 32），0 失败、0 skip |
-| Lint | 0 error；158 warning |
+| 单测 | 1165（app 756 / runtime 377 / shell 32），0 失败、0 skip |
+| Lint | 0 error；156 warning |
 | 编译警告 | 13 条 Kotlin `w:` |
 
 数字以 `docs/refactor/BASELINE.md` 的复算命令为准。**测试数下降、出现 skip、删断言 = 失败**。
@@ -50,7 +50,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 4. 热点文件（不要往里加东西；改它必须单独任务卡 + 新增测试）
 
-`ChatViewModel.kt`(1660) ｜ `DeepDeepApp.kt`(1213) ｜ `AgentRuntimeHost.kt`(1083，零直接单测) ｜ `MarkdownParser.kt`(1193)
+`ChatViewModel.kt`(799) ｜ `DeepDeepApp.kt`(644) ｜ `AgentRuntimeHost.kt`(1119，已有 6 场景直接测试) ｜ `PluginSetupSession.kt`(319)
 
 ## 5. 交付物（缺一不可）
 
