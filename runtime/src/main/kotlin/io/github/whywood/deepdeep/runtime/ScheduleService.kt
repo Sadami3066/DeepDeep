@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Clock
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -37,6 +38,7 @@ class ScheduleService(
     private val scope: CoroutineScope,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val intentsFile: File? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val schedulesState = MutableStateFlow<List<Schedule>>(emptyList())
     val schedules: StateFlow<List<Schedule>> = schedulesState.asStateFlow()
@@ -60,7 +62,6 @@ class ScheduleService(
             launch {
                 runtime.events.collect { event ->
                     guard("handle schedule event failed") { handleRuntimeEvent(event) }
-                    wake.trySend(Unit)
                 }
             }
             launch { timerLoop() }
@@ -83,18 +84,18 @@ class ScheduleService(
     }
 
     suspend fun list(): List<Schedule> {
-        val schedules = withContext(Dispatchers.IO) { store.list() }
+        val schedules = readSchedules()
         schedulesState.value = schedules
         return schedules
     }
 
     suspend fun recomputeTargets() {
-        withContext(Dispatchers.IO) { store.recomputeTargets() }
+        withContext(ioDispatcher) { store.recomputeTargets() }
         refresh()
     }
 
     suspend fun create(newSchedule: NewSchedule): Schedule {
-        val created = withContext(Dispatchers.IO) { store.create(newSchedule) }
+        val created = withContext(ioDispatcher) { store.create(newSchedule) }
         refresh()
         return created
     }
@@ -120,31 +121,31 @@ class ScheduleService(
     )
 
     suspend fun update(id: String, patch: SchedulePatch): Schedule? {
-        val updated = withContext(Dispatchers.IO) { store.update(id, patch) }
+        val updated = withContext(ioDispatcher) { store.update(id, patch) }
         refresh()
         return updated
     }
 
     suspend fun delete(id: String): Boolean {
-        val deleted = withContext(Dispatchers.IO) { store.delete(id) }
+        val deleted = withContext(ioDispatcher) { store.delete(id) }
         refresh()
         return deleted
     }
 
     suspend fun runNow(id: String): Result<Unit> = deliveryMutex.withLock {
-        val schedule = withContext(Dispatchers.IO) { store.list() }.firstOrNull { it.id == id }
+        val schedule = readSchedules().firstOrNull { it.id == id }
             ?: return@withLock Result.failure(IllegalArgumentException("schedule not found"))
         val intent = intentFor(schedule, clock.millis())
         addIntent(intent)
         val error = deliverSchedules(listOf(schedule))
         val now = clock.millis()
         if (error == null) {
-            withContext(Dispatchers.IO) { store.markRunNow(id, now) }
+            withContext(ioDispatcher) { store.markRunNow(id, now) }
             removeIntent(intent.dedupeKey)
             refresh()
             Result.success(Unit)
         } else {
-            withContext(Dispatchers.IO) { store.markRunNow(id, now, error) }
+            withContext(ioDispatcher) { store.markRunNow(id, now, error) }
             removeIntent(intent.dedupeKey)
             refresh()
             Result.failure(ScheduleDeliveryException(error))
@@ -153,7 +154,7 @@ class ScheduleService(
 
     internal suspend fun deliverDue() = deliveryMutex.withLock {
         val now = clock.millis()
-        val due = withContext(Dispatchers.IO) { store.list() }
+        val due = readSchedules()
             .filter { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
         if (due.isNotEmpty()) {
             due.groupBy { it.sessionId }.forEach { (_, group) ->
@@ -170,7 +171,7 @@ class ScheduleService(
             refresh()
             return@withLock
         }
-        val schedules = withContext(Dispatchers.IO) { store.list() }.associateBy { it.id }
+        val schedules = readSchedules().associateBy { it.id }
         val deliverable = mutableListOf<DeliveryIntent>()
         intents.forEach { intent ->
             val schedule = schedules[intent.scheduleId]
@@ -189,9 +190,9 @@ class ScheduleService(
                 val schedule = schedules[intent.scheduleId]
                 if (schedule != null) {
                     if (error == null) {
-                        withContext(Dispatchers.IO) { store.markDelivered(schedule.id, at) }
+                        withContext(ioDispatcher) { store.markDelivered(schedule.id, at) }
                     } else {
-                        withContext(Dispatchers.IO) { store.markDeliveryFailed(schedule.id, error, at) }
+                        withContext(ioDispatcher) { store.markDeliveryFailed(schedule.id, error, at) }
                     }
                 }
                 removeIntent(intent.dedupeKey)
@@ -202,14 +203,22 @@ class ScheduleService(
 
     internal suspend fun handleRuntimeEvent(event: SessionRuntimeEvent) {
         when (val inner = event.event) {
-            is RuntimeEvent.SessionRemoved ->
-                withContext(Dispatchers.IO) { store.deleteBySession(event.sessionId) }
+            is RuntimeEvent.SessionRemoved -> try {
+                withContext(ioDispatcher) { store.deleteBySession(event.sessionId) }
+            } finally {
+                wake.trySend(Unit)
+            }
 
-            is RuntimeEvent.SessionArchived ->
-                if (inner.archived) withContext(Dispatchers.IO) { store.disableBySession(event.sessionId) }
+            is RuntimeEvent.SessionArchived -> if (inner.archived) {
+                try {
+                    withContext(ioDispatcher) { store.disableBySession(event.sessionId) }
+                } finally {
+                    wake.trySend(Unit)
+                }
+            }
+
             else -> Unit
         }
-        refresh()
     }
 
     private suspend fun deliverGroup(group: List<Schedule>, now: Long) {
@@ -218,9 +227,9 @@ class ScheduleService(
         val error = deliverSchedules(group)
         val at = clock.millis()
         if (error == null) {
-            withContext(Dispatchers.IO) { group.forEach { store.markDelivered(it.id, at) } }
+            withContext(ioDispatcher) { group.forEach { store.markDelivered(it.id, at) } }
         } else {
-            withContext(Dispatchers.IO) { group.forEach { store.markDeliveryFailed(it.id, error, at) } }
+            withContext(ioDispatcher) { group.forEach { store.markDeliveryFailed(it.id, error, at) } }
         }
         intents.forEach { removeIntent(it.dedupeKey) }
     }
@@ -328,7 +337,7 @@ class ScheduleService(
         while (currentCoroutineContext().isActive) {
             val delivered = try {
                 val now = clock.millis()
-                val current = store.list()
+                val current = readSchedules()
                 val hasDue = current.any { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
                 if (hasDue) {
                     deliverDue()
@@ -352,6 +361,10 @@ class ScheduleService(
 
     private suspend fun refresh() {
         list()
+    }
+
+    private suspend fun readSchedules(): List<Schedule> = withContext(ioDispatcher) {
+        store.list()
     }
 
     private companion object {

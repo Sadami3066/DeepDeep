@@ -8,11 +8,14 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -295,7 +298,7 @@ class ScheduleServiceTest {
 
     @Test
     fun sessionRemovedDeletesBoundSchedules() = runTest {
-        val fixture = Fixture(backgroundScope)
+        val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
         try {
             fixture.schedule(
                 name = "Keep",
@@ -309,9 +312,12 @@ class ScheduleServiceTest {
                 trigger = ScheduleTrigger.Daily(LocalTime.of(10, 0)),
                 sessionId = "session-1",
             )
+            fixture.service.start()
+            runCurrent()
             fixture.service.handleRuntimeEvent(
                 SessionRuntimeEvent("session-1", RuntimeEvent.SessionRemoved()),
             )
+            runCurrent()
             assertEquals(listOf("Keep"), fixture.store.list().map { it.name })
             assertEquals(listOf("Keep"), fixture.service.schedules.value.map { it.name })
         } finally {
@@ -343,6 +349,131 @@ class ScheduleServiceTest {
             assertFalse(unarchived.enabled)
             assertNull(unarchived.nextRunAt)
             assertEquals(created.id, unarchived.id)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun textDeltasDoNotReadSchedules() = runTest {
+        val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
+        try {
+            fixture.schedule(
+                name = "Keep",
+                prompt = "keep",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.service.start()
+            runCurrent()
+            assertEquals(1, fixture.runtime.events.subscriptionCount.value)
+            val baseline = fixture.store.loadCount.get()
+            assertTrue(baseline > 0)
+
+            emitRuntimeEvents(fixture.runtime.events, count = 10) { index ->
+                SessionRuntimeEvent("session-1", RuntimeEvent.TextDelta(runId = "run-1", text = "token $index"))
+            }
+            assertEquals(baseline, fixture.store.loadCount.get())
+
+            emitRuntimeEvents(fixture.runtime.events, count = 50) { index ->
+                SessionRuntimeEvent("session-1", RuntimeEvent.TextDelta(runId = "run-1", text = "after $index"))
+            }
+            assertEquals(baseline, fixture.store.loadCount.get())
+
+            fixture.runtime.events.tryEmit(
+                SessionRuntimeEvent("session-1", RuntimeEvent.SessionRemoved()),
+            )
+            runCurrent()
+            assertTrue(fixture.store.loadCount.get() > baseline)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun nonLifecycleRuntimeEventsDoNotReadSchedules() = runTest {
+        val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
+        try {
+            fixture.schedule(
+                name = "Keep",
+                prompt = "keep",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            fixture.service.start()
+            runCurrent()
+            val baseline = fixture.store.loadCount.get()
+
+            listOf<RuntimeEvent>(
+                RuntimeEvent.RunStarted(runId = "run-1", startedAt = 0),
+                RuntimeEvent.ActivityChanged(runId = "run-1", activity = null),
+                RuntimeEvent.TextDelta(runId = "run-1", text = "a"),
+                RuntimeEvent.ReasoningDelta(runId = "run-1", text = "b"),
+                RuntimeEvent.ToolStarted(
+                    runId = "run-1",
+                    callId = "call-1",
+                    name = "tool",
+                    arguments = emptyMap(),
+                    startedAt = 0,
+                ),
+                RuntimeEvent.ToolFinished(
+                    runId = "run-1",
+                    callId = "call-1",
+                    name = "tool",
+                    result = "{}",
+                    isError = false,
+                    durationMs = 1,
+                ),
+                RuntimeEvent.RunFinished(runId = "run-1", text = "done", status = RunStatus.DONE, finishedAt = 1),
+                RuntimeEvent.RunFailed(runId = "run-1", message = "boom"),
+                RuntimeEvent.SessionListChanged(),
+            ).forEach { event ->
+                assertTrue(fixture.runtime.events.tryEmit(SessionRuntimeEvent("session-1", event)))
+                runCurrent()
+            }
+            assertEquals(baseline, fixture.store.loadCount.get())
+
+            fixture.runtime.events.tryEmit(
+                SessionRuntimeEvent("session-1", RuntimeEvent.SessionRemoved()),
+            )
+            runCurrent()
+            assertTrue(fixture.store.loadCount.get() > baseline)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun sessionLifecycleEventsReadSchedules() = runTest {
+        val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
+        try {
+            fixture.schedule(
+                name = "Keep",
+                prompt = "keep",
+                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                sessionId = "session-1",
+            )
+            val before = fixture.store.loadCount.get()
+
+            fixture.service.handleRuntimeEvent(
+                SessionRuntimeEvent("session-1", RuntimeEvent.TextDelta(runId = "run-1", text = "token")),
+            )
+            assertEquals(before, fixture.store.loadCount.get())
+
+            fixture.service.handleRuntimeEvent(
+                SessionRuntimeEvent("session-1", RuntimeEvent.SessionArchived(archived = false)),
+            )
+            assertEquals(before, fixture.store.loadCount.get())
+
+            fixture.service.handleRuntimeEvent(
+                SessionRuntimeEvent("session-1", RuntimeEvent.SessionArchived(archived = true)),
+            )
+            assertEquals(before + 1, fixture.store.loadCount.get())
+
+            fixture.service.handleRuntimeEvent(
+                SessionRuntimeEvent("session-1", RuntimeEvent.SessionRemoved()),
+            )
+            assertEquals(before + 2, fixture.store.loadCount.get())
         } finally {
             fixture.close()
         }
@@ -438,7 +569,7 @@ class ScheduleServiceTest {
                 awaitStoreIo {
                     fixture.runtime.deliveries.size == 1 &&
                         fixture.pendingIntentCount() == 0 &&
-                        fixture.service.schedules.value.singleOrNull()?.lastDeliveredAt != null
+                        restarted.schedules.value.singleOrNull()?.lastDeliveredAt != null
                 }
             } finally {
                 restarted.stop()
@@ -551,18 +682,35 @@ class ScheduleServiceTest {
             Thread.sleep(2)
         }
         runCurrent()
+        if (!condition()) error("awaitStoreIo 超时：条件在 3000ms 内未成立")
     }
 
-    private class Fixture(private val scope: CoroutineScope) {
+    private fun kotlinx.coroutines.test.TestScope.emitRuntimeEvents(
+        events: MutableSharedFlow<SessionRuntimeEvent>,
+        count: Int,
+        event: (Int) -> SessionRuntimeEvent,
+    ) {
+        repeat(count) { index ->
+            while (!events.tryEmit(event(index))) {
+                runCurrent()
+            }
+            runCurrent()
+        }
+    }
+
+    private class Fixture(
+        private val scope: CoroutineScope,
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ) {
         val zone: ZoneId = ZoneId.of("Asia/Shanghai")
         val clock = MutableTestClock(Instant.parse("2026-10-23T04:00:00Z"), zone)
         val directory: File = Files.createTempDirectory("deepdeep-schedule-service").toFile()
         val intentsFile = File(directory, "delivery-intents.json")
         val runtime = FakeAgentRuntime()
         val store = ScheduleStore(directory, clock) { zone }
-        val service = ScheduleService(runtime, store, scope, clock, intentsFile)
+        val service = ScheduleService(runtime, store, scope, clock, intentsFile, ioDispatcher)
 
-        fun restarted(): ScheduleService = ScheduleService(runtime, store, scope, clock, intentsFile)
+        fun restarted(): ScheduleService = ScheduleService(runtime, store, scope, clock, intentsFile, ioDispatcher)
 
         fun writeIntent(schedule: Schedule, createdAt: Long) {
             val root = buildJsonObject {
