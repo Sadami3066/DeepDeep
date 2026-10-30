@@ -73,8 +73,8 @@ class ProviderCatalog(
     }
 
     companion object {
-        const val DEFAULT_PROVIDER_ID = "deepseek"
-        const val DEFAULT_MODEL_ID = "deepseek-v4.1-flash"
+        const val DEFAULT_PROVIDER_ID = ProviderDefaults.DEFAULT_PROVIDER_ID
+        const val DEFAULT_MODEL_ID = ProviderDefaults.DEFAULT_MODEL_ID
 
         private val OAUTH_PROVIDERS = bundledOAuthFlows().keys
         private val KEYLESS_PROVIDERS = setOf(

@@ -109,7 +109,7 @@ allprojects {
 val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
     group = "verification"
     description = "Checks package-level import rules that module boundaries cannot express."
-    val sourceRoots = listOf("app", "runtime", "shell", "design").associateWith { module ->
+    val sourceRoots = listOf("app", "runtime", "runtime-api", "shell", "design").associateWith { module ->
         layout.projectDirectory.dir("$module/src/main/kotlin")
     }
     val allowlistFile = layout.projectDirectory.file("gradle/package-boundaries.allow")
@@ -174,7 +174,8 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
 gradle.projectsEvaluated {
     val allowed = mapOf(
         ":app" to setOf(":runtime", ":shell", ":design"),
-        ":runtime" to emptySet(),
+        ":runtime" to setOf(":runtime-api"),
+        ":runtime-api" to emptySet(),
         ":shell" to emptySet(),
         ":design" to emptySet(),
     )
@@ -197,11 +198,11 @@ gradle.projectsEvaluated {
         inputs.property("violations", violations)
         doLast {
             check(violations.isEmpty()) { "Invalid module dependencies: ${violations.joinToString()}" }
-            logger.lifecycle("Module boundaries verified: app -> runtime/shell/design")
+            logger.lifecycle("Module boundaries verified: app -> runtime/shell/design; runtime -> runtime-api")
         }
     }
 
-    val unitTestTasks = subprojects.map { it.tasks.named("testDebugUnitTest") }
+    val unitTestTasks = subprojects.mapNotNull { it.tasks.findByName("testDebugUnitTest") ?: it.tasks.findByName("test") }
     val lintTasks = subprojects.mapNotNull { it.tasks.findByName("lintDebug") }
     tasks.named("check") {
         dependsOn(verifyModuleBoundaries)

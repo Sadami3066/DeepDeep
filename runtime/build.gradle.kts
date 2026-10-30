@@ -23,6 +23,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":runtime-api"))
     api(libs.pi.coding.agent.android)
     implementation(libs.okio)
     implementation(libs.androidx.core)
