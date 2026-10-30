@@ -21,27 +21,27 @@ JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。首次：
 
 ```bash
 ./scripts/verify.sh        # 门禁：编译 + 单测 + lint + 模块边界（带全局锁，串行）
-./gradlew :app:assembleDebug
+./scripts/gradlew-locked :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 - `dev.pi` SDK 由 `syncPiSdk` 从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
-- 离线或调试 SDK 时：`./gradlew ... -PpiSdkLocalZip=/path/to/pi2kotlin-0.2.4-m2.zip`。
-- **禁止并发跑 Gradle**：本机可用内存约 3G，`verify.sh` 已用 `flock` 串行；不要绕过它。
+- 离线或调试 SDK 时：`./scripts/gradlew-locked ... -PpiSdkLocalZip=/path/to/pi2kotlin-0.2.4-m2.zip`。
+- **所有 Gradle 调用必须走 `./scripts/gradlew-locked`**（`verify.sh` 已封装）。它用 `flock` 全局串行并默认 `--max-workers=1`：本机内存有限，并发构建已在 2026-10-30 造成整机 OOM 死机。**禁止直接 `./gradlew`**。
 
 ## 2. 基线（不得下降）
 
 | 指标 | 基线 |
 |---|---|
-| 单测 | 1024（app 624 / runtime 368 / shell 32），0 失败、0 skip |
-| Lint | 0 error；158 warning |
+| 单测 | 1165（app 756 / runtime 377 / shell 32），0 失败、0 skip |
+| Lint | 0 error；156 warning |
 | 编译警告 | 13 条 Kotlin `w:` |
 
 数字以 `docs/refactor/BASELINE.md` 的复算命令为准。**测试数下降、出现 skip、删断言 = 失败**。
 
 ## 3. 硬边界
 
-- 模块依赖只允许 `:app → {:runtime, :shell, :design}`；`:runtime`/`:shell`/`:design` 互不依赖。
+- 模块依赖只允许 `:app → {:runtime, :shell, :design}`、`:runtime → :runtime-api`；其余模块之间不得互相依赖（`verifyModuleBoundaries` 强制）。
 - 不擅自修改：`settings.gradle.kts`、根 `build.gradle.kts`、`gradle/libs.versions.toml`、签名配置、`.gitignore`。需要改就在任务卡里写明并等 Lead 批准。
 - 不碰：`artifacts/`、`*.ttf`、`*.rootfs`、`*.so`、任何 4MB 以上文件、`docs/review/` 的原始数据。
 - 只改任务卡「允许修改的文件」里的文件；需要额外文件先停下要授权。
@@ -50,7 +50,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 4. 热点文件（不要往里加东西；改它必须单独任务卡 + 新增测试）
 
-`ChatViewModel.kt`(1660) ｜ `DeepDeepApp.kt`(1213) ｜ `AgentRuntimeHost.kt`(1083，零直接单测) ｜ `MarkdownParser.kt`(1193)
+`ChatViewModel.kt`(799) ｜ `DeepDeepApp.kt`(644) ｜ `AgentRuntimeHost.kt`(1119，已有 6 场景直接测试) ｜ `PluginSetupSession.kt`(319)
 
 ## 5. 交付物（缺一不可）
 

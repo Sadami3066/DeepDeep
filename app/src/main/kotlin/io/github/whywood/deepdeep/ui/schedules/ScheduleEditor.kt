@@ -1,12 +1,25 @@
 package io.github.whywood.deepdeep.ui.schedules
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -17,8 +30,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.*
-import io.github.whywood.deepdeep.runtime.*
+import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSwitch
+import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextField
+import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.ConversationSummary
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -30,11 +54,12 @@ internal fun ScheduleEditor(
     isEditing: Boolean,
     externalError: String?,
     saving: Boolean,
-    runtime: ConversationQueries,
+    conversations: List<ConversationSummary>,
+    workspaceNames: Map<String, String>,
     onDismiss: () -> Unit,
     onSave: (ScheduleDraft) -> Unit,
-    onRunNow: () -> Unit,
-    onDelete: () -> Unit,
+    onRunNow: (ScheduleDraft) -> Unit,
+    onDelete: (ScheduleDraft) -> Unit,
     onOpenConversation: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -50,14 +75,6 @@ internal fun ScheduleEditor(
     var showDatePicker by remember { mutableStateOf(false) }
     var showConversationPicker by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    LaunchedEffect(draft.sessionId) {
-        val sessionId = draft.sessionId
-        if (sessionId.isNotBlank() && draft.conversationTitle.isBlank()) {
-            val title = runCatching { runtime.sessionTitle(sessionId) }.getOrNull()
-            if (!title.isNullOrBlank()) draft = draft.copy(conversationTitle = title)
-        }
-    }
 
     fun submit() {
         val prepared = if (draft.name.isBlank() && draft.prompt.isNotBlank()) draft.copy(name = ScheduleDraft.preview(draft.prompt)) else draft
@@ -131,7 +148,7 @@ internal fun ScheduleEditor(
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
                 if (isEditing) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        DdTextAction(stringResource(R.string.schedules_run_now), onRunNow, Modifier.testTag("schedule_run_now"), enabled = !saving)
+                        DdTextAction(stringResource(R.string.schedules_run_now), { onRunNow(draft) }, Modifier.testTag("schedule_run_now"), enabled = !saving)
                         Spacer(Modifier.weight(1f))
                         DdTextAction(stringResource(R.string.schedules_delete), { showDeleteConfirm = true }, Modifier.testTag("schedule_delete"), colors.danger, !saving)
                     }
@@ -145,7 +162,7 @@ internal fun ScheduleEditor(
 
     if (showTimePicker) DdTimePicker(draft.time, { draft = draft.copy(time = it); validationError = null }) { showTimePicker = false }
     if (showDatePicker) DdDatePicker(draft.date, { draft = draft.copy(date = it); validationError = null }) { showDatePicker = false }
-    if (showConversationPicker) ConversationPickerSheet(runtime, draft.sessionId, { session ->
+    if (showConversationPicker) ConversationPickerSheet(conversations, workspaceNames, draft.sessionId, { session ->
         draft = draft.copy(
             sessionId = session.id,
             sessionFile = session.filePath,
@@ -174,7 +191,7 @@ internal fun ScheduleEditor(
         )
         DdTextAction(
             stringResource(R.string.schedules_delete_confirm),
-            { showDeleteConfirm = false; onDelete() },
+            { showDeleteConfirm = false; onDelete(draft) },
             Modifier.testTag("schedule_delete_confirm"),
             colors.danger,
         )
@@ -267,37 +284,24 @@ private fun conversationLabel(draft: ScheduleDraft): String = when {
 
 @Composable
 private fun ConversationPickerSheet(
-    runtime: ConversationQueries,
+    conversations: List<ConversationSummary>,
+    workspaceNames: Map<String, String>,
     selectedId: String,
     onSelect: (ConversationSummary) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    var loading by remember { mutableStateOf(true) }
-    var sessions by remember { mutableStateOf<List<ConversationSummary>>(emptyList()) }
-    var workspaces by remember { mutableStateOf<List<RuntimeWorkspace>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        workspaces = runCatching { runtime.workspaces() }.getOrDefault(emptyList())
-        sessions = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
-            .filterNot { it.archived }
-            .sortedByDescending { it.updatedAt }
-        loading = false
-    }
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).testTag("schedule_conversation_picker")) {
             DdSheetHeader(stringResource(R.string.schedules_conversation_picker_title), onDismiss)
-            when {
-                loading -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    DdSpinner(size = 20.dp, strokeWidth = 2.dp)
-                }
-
-                sessions.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+            if (conversations.isEmpty()) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.schedules_conversation_empty), style = DdType.bodySmall, color = colors.inkTertiary)
                 }
-
-                else -> Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                    sessions.forEachIndexed { index, session ->
-                        val workspaceName = workspaces.firstOrNull { it.cwd == session.cwd }?.name.orEmpty()
+            } else {
+                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+                    conversations.forEachIndexed { index, session ->
+                        val workspaceName = workspaceNames[session.cwd].orEmpty()
                         Row(
                             Modifier.fillMaxWidth().clickable { onSelect(session) }.heightIn(min = 56.dp).padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -310,7 +314,7 @@ private fun ConversationPickerSheet(
                             }
                             if (session.id == selectedId) DdIcon(DdIcons.Check, colors.accent, size = 18.dp)
                         }
-                        if (index != sessions.lastIndex) DdHairline()
+                        if (index != conversations.lastIndex) DdHairline()
                     }
                     Spacer(Modifier.height(24.dp))
                 }

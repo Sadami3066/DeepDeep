@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,9 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pi.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -51,12 +50,9 @@ import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
 import java.net.URI
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-internal data class McpServerEntry(
+data class McpServerEntry(
     val name: String,
     val config: McpServerConfig,
 )
@@ -71,88 +67,80 @@ fun McpScreen(
     onReconnect: suspend (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
-    var entries by remember { mutableStateOf<List<McpServerEntry>>(emptyList()) }
-    var probes by remember { mutableStateOf<Map<String, McpProbeResult>>(emptyMap()) }
-    var errors by remember { mutableStateOf<List<String>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var probing by remember { mutableStateOf(false) }
-    var busyName by remember { mutableStateOf<String?>(null) }
-    var failureRes by remember { mutableStateOf<Int?>(null) }
+    val holder = remember(store, probe, oauth) { McpStateHolder(store, probe, oauth, scope) }
+    val state by holder.state.collectAsStateWithLifecycle()
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var editorName by rememberSaveable { mutableStateOf("") }
     var importing by rememberSaveable { mutableStateOf(false) }
-    var refreshKey by remember { mutableIntStateOf(0) }
-    var forceProbe by remember { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
 
-    val visibleEntries = remember(entries, query) { filterMcpServers(entries, query) }
-
-    LaunchedEffect(refreshKey) {
-        loading = entries.isEmpty()
-        val force = forceProbe
-        forceProbe = false
-        val snapshot = runCatching { store.load() }.getOrNull()
-        if (snapshot == null) {
-            failureRes = R.string.mcp_error_load_failed
-            loading = false
-            return@LaunchedEffect
-        }
-        errors = snapshot.errors
-        entries = snapshot.servers
-            .map { McpServerEntry(it.key, it.value) }
-            .sortedBy { it.name.lowercase() }
-        val targets = snapshot.servers
-            .filter { (_, config) -> config.enabled && config is McpServerConfig.Http }
-            .map { (name, config) -> name to config }
-        val now = System.currentTimeMillis()
-        mcpProbeCache.retain(snapshot.servers.keys)
-        probes = targets.mapNotNull { (name, config) ->
-            mcpProbeCache.lookup(name, config, now)?.let { cached -> name to cached.result }
-        }.toMap()
-        val stale = if (force) {
-            targets
-        } else {
-            targets.filter { (name, config) -> mcpProbeCache.lookup(name, config, now)?.fresh != true }
-        }
-        probing = stale.isNotEmpty()
-        loading = false
-        if (stale.isNotEmpty()) {
-            val refreshed = coroutineScope {
-                stale.map { (name, config) ->
-                    async { name to probe.probe(name, config) }
-                }.awaitAll()
-            }
-            val storedAt = System.currentTimeMillis()
-            refreshed.forEach { (name, result) ->
-                targets.firstOrNull { it.first == name }?.let { (_, config) ->
-                    mcpProbeCache.store(name, config, result, storedAt)
-                }
-            }
-            probes = probes + refreshed.toMap()
-        }
-        probing = false
+    LaunchedEffect(holder) {
+        holder.load()
     }
 
-    fun toggle(entry: McpServerEntry, enabled: Boolean) {
-        if (busyName != null) return
-        busyName = entry.name
-        scope.launch {
-            val result = runCatching {
-                store.setEnabled(entry.name, enabled)
-                onReloadSessions()
+    McpScreenContent(
+        state = state,
+        onBack = onBack,
+        onQueryChange = holder::setQuery,
+        onRefresh = { scope.launch { holder.refresh() } },
+        onRetry = holder::retry,
+        onToggle = { entry, enabled ->
+            scope.launch {
+                if (holder.setEnabled(entry.name, enabled)) onReloadSessions()
             }
-            busyName = null
-            if (result.isSuccess) {
-                mcpProbeCache.invalidate(entry.name)
-                refreshKey++
-            } else {
-                failureRes = R.string.mcp_error_toggle_failed
-            }
-        }
+        },
+        onOpen = { entry ->
+            editorName = entry.name
+            editorOpen = true
+        },
+        onAdd = { importing = true },
+        modifier = modifier,
+    )
+
+    if (editorOpen) {
+        McpEditorSheet(
+            target = McpEditorTarget(editorName),
+            store = store,
+            probe = probe,
+            oauth = oauth,
+            onDismiss = { editorOpen = false },
+            onReloadSessions = onReloadSessions,
+            onReconnect = onReconnect,
+            onCommitted = {
+                holder.invalidateProbe(editorName)
+                scope.launch { holder.load() }
+            },
+        )
     }
 
+    if (importing) {
+        McpImportSheet(
+            store = store,
+            onDismiss = { importing = false },
+            onReloadSessions = onReloadSessions,
+            onCommitted = {
+                holder.clearProbeCache()
+                scope.launch { holder.load() }
+            },
+        )
+    }
+}
+
+@Composable
+private fun McpScreenContent(
+    state: McpUiState,
+    onBack: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    onToggle: (McpServerEntry, Boolean) -> Unit,
+    onOpen: (McpServerEntry) -> Unit,
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    val error = state.error
+    val visibleServers = state.visibleServers
     Column(
         modifier
             .fillMaxSize()
@@ -179,17 +167,14 @@ fun McpScreen(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (probing || loading) {
+            if (state.probing || state.loading) {
                 Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                     DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 }
             } else {
                 DdIconButton(
                     icon = DdIcons.Refresh,
-                    onClick = {
-                        forceProbe = true
-                        refreshKey++
-                    },
+                    onClick = onRefresh,
                     contentDescription = stringResource(R.string.mcp_refresh),
                     modifier = Modifier.testTag("mcp_probe_refresh"),
                     tint = colors.ink,
@@ -198,7 +183,7 @@ fun McpScreen(
             }
             DdIconButton(
                 icon = DdIcons.Plus,
-                onClick = { importing = true },
+                onClick = onAdd,
                 contentDescription = stringResource(R.string.mcp_add),
                 modifier = Modifier.testTag("mcp_add"),
                 tint = colors.ink,
@@ -206,8 +191,8 @@ fun McpScreen(
             )
         }
         DdSearchField(
-            query = query,
-            onQueryChange = { query = it },
+            query = state.searchQuery,
+            onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.mcp_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -221,26 +206,33 @@ fun McpScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            if (errors.isNotEmpty()) {
+            if (state.notices.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = errors.joinToString("\n"),
+                    text = state.notices.joinToString("\n"),
                     modifier = Modifier.padding(horizontal = 4.dp).testTag("mcp_errors"),
                     style = DdType.bodySmall,
                     color = colors.danger,
                 )
             }
             when {
-                loading -> Box(
+                state.loading -> Box(
                     Modifier.fillMaxWidth().padding(top = 120.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     DdSpinner(size = 22.dp)
                 }
 
-                entries.isEmpty() -> EmptyMcp()
+                state.servers.isEmpty() && error != null -> Box(
+                    Modifier.fillMaxWidth().padding(top = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    McpErrorRow(error = error, onRetry = onRetry)
+                }
 
-                visibleEntries.isEmpty() -> Box(
+                state.servers.isEmpty() -> EmptyMcp()
+
+                visibleServers.isEmpty() -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -252,17 +244,21 @@ fun McpScreen(
                 }
 
                 else -> {
-                    visibleEntries.forEachIndexed { index, entry ->
+                    if (error != null) {
+                        McpErrorRow(
+                            error = error,
+                            onRetry = onRetry,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                    visibleServers.forEachIndexed { index, entry ->
                         if (index > 0) DdHairline()
                         McpServerRow(
                             entry = entry,
-                            probeResult = probes[entry.name],
-                            switchEnabled = busyName == null,
-                            onOpen = {
-                                editorName = entry.name
-                                editorOpen = true
-                            },
-                            onToggle = { toggle(entry, it) },
+                            probeResult = state.probes[entry.name],
+                            switchEnabled = state.toggleEnabled,
+                            onOpen = { onOpen(entry) },
+                            onToggle = { enabled -> onToggle(entry, enabled) },
                         )
                     }
                     Spacer(Modifier.height(32.dp))
@@ -271,55 +267,34 @@ fun McpScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+}
 
-    if (editorOpen) {
-        McpEditorSheet(
-            target = McpEditorTarget(editorName),
-            store = store,
-            probe = probe,
-            oauth = oauth,
-            onDismiss = { editorOpen = false },
-            onReloadSessions = onReloadSessions,
-            onReconnect = onReconnect,
-            onCommitted = {
-                mcpProbeCache.invalidate(editorName)
-                refreshKey++
-            },
+@Composable
+private fun McpErrorRow(
+    error: McpError,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    val title = stringResource(error.titleRes)
+    val message = error.messageRes?.let { stringResource(it) }
+    Row(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = listOfNotNull(title, message, error.detail?.takeIf { it.isNotBlank() }).joinToString(" · "),
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall,
+            color = colors.danger,
         )
-    }
-
-    if (importing) {
-        McpImportSheet(
-            store = store,
-            onDismiss = { importing = false },
-            onReloadSessions = onReloadSessions,
-            onCommitted = {
-                mcpProbeCache.clear()
-                refreshKey++
-            },
-        )
-    }
-
-    failureRes?.let { messageRes ->
-        DdDialog(
-            onDismissRequest = { failureRes = null },
-            modifier = Modifier.testTag("mcp_error_dialog"),
-            title = stringResource(R.string.mcp_error_title),
-            content = {
-                Text(
-                    text = stringResource(messageRes),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                )
-            },
-            actions = {
-                DdTextAction(
-                    text = stringResource(R.string.mcp_close),
-                    onClick = { failureRes = null },
-                    modifier = Modifier.testTag("mcp_error_close"),
-                )
-            },
-        )
+        if (error.retryable) {
+            DdTextAction(
+                text = stringResource(R.string.assistant_retry),
+                onClick = onRetry,
+                modifier = Modifier.testTag("mcp_error_retry"),
+            )
+        }
     }
 }
 
@@ -384,16 +359,6 @@ private fun rowSubtitle(entry: McpServerEntry, result: McpProbeResult?): String 
 
 private fun urlHost(url: String): String = runCatching { URI(url).host }.getOrNull().orEmpty()
 
-internal fun filterMcpServers(entries: List<McpServerEntry>, query: String): List<McpServerEntry> {
-    val normalized = query.trim()
-    if (normalized.isEmpty()) return entries
-    return entries.filter { entry ->
-        entry.name.contains(normalized, ignoreCase = true) ||
-            entry.config.description?.contains(normalized, ignoreCase = true) == true ||
-            (entry.config as? McpServerConfig.Http)?.url?.contains(normalized, ignoreCase = true) == true
-    }
-}
-
 internal data class CachedProbe(
     val result: McpProbeResult,
     val fresh: Boolean,
@@ -446,8 +411,6 @@ internal class McpProbeCache(private val ttlMs: Long = PROBE_CACHE_TTL_MS) {
         const val PROBE_CACHE_TTL_MS = 60_000L
     }
 }
-
-internal val mcpProbeCache = McpProbeCache()
 
 internal fun McpServerConfig.probeSignature(): String = when (this) {
     is McpServerConfig.Http -> buildString {

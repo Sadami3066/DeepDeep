@@ -106,65 +106,83 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+data class ChatScreenActions(
+    val onInputChange: (String) -> Unit,
+    val onSend: () -> Unit,
+    val onStop: () -> Unit,
+    val onOpenDrawer: () -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onReload: () -> Unit,
+    val onModelChange: (String) -> Unit,
+    val onProviderChange: (String) -> Unit,
+    val onThinkingLevelChange: (ThinkingLevel) -> Unit,
+    val onToggleStep: (messageId: Long, stepId: Long) -> Unit,
+    val onQuoteMessage: (Long, String) -> Unit,
+    val onClearQuote: () -> Unit,
+    val onPickAttachment: () -> Unit,
+    val onRemoveAttachment: (String) -> Unit,
+    val onOpenAttachment: (AttachmentRef) -> Unit,
+    val onOpenFile: (String) -> Unit,
+    val onOpenSchedules: () -> Unit,
+    val onRetry: (Long) -> Unit,
+    val onPickCommand: (CommandItem) -> Unit,
+    val onPauseGoal: () -> Unit,
+    val onResumeGoal: () -> Unit,
+    val onOpenJobs: () -> Unit,
+    val onModelsOpenChange: (Boolean) -> Unit,
+    val onOpenUsage: () -> Unit,
+    val onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
+    val onOpenForeignQuestion: (String) -> Unit,
+    val onOpenPresentFile: (String) -> Unit,
+    val onSharePresentFile: (String) -> Unit,
+    val onOpenWorkshop: (String) -> Unit,
+    val onOpenFiles: () -> Unit,
+    val onVoiceClick: (() -> Unit)?,
+    val onFollowUp: () -> Unit,
+    val onClearQueue: () -> Unit,
+    val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
+)
+
+data class ChatScreenOverlay(
+    val reminderCount: Int,
+    val reloading: Boolean,
+    val compacting: Boolean = false,
+    val commandItems: List<CommandItem> = emptyList(),
+    val goal: GoalView? = null,
+    val jobCount: Int = 0,
+    val modelsOpen: Boolean = false,
+    val pendingQuestions: List<PendingQuestion> = emptyList(),
+    val foreignQuestion: PendingQuestion? = null,
+)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
     state: ChatUiState,
     nickname: String,
-    onInputChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-    onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onReload: () -> Unit,
     providers: List<ProviderSummary>,
-    onModelChange: (String) -> Unit,
-    onProviderChange: (String) -> Unit,
-    onThinkingLevelChange: (ThinkingLevel) -> Unit,
-    onToggleStep: (messageId: Long, stepId: Long) -> Unit,
-    onQuoteMessage: (Long, String) -> Unit,
-    onClearQuote: () -> Unit,
-    attachments: List<AttachmentRef>,
-    onPickAttachment: () -> Unit,
-    onRemoveAttachment: (String) -> Unit,
-    onOpenAttachment: (AttachmentRef) -> Unit,
-    onOpenFile: (String) -> Unit,
     attachmentRoot: File,
     chatUiStrings: ChatUiStrings,
+    actions: ChatScreenActions,
+    overlay: ChatScreenOverlay,
+    scrollAnchorFor: (String) -> ScrollAnchor?,
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
-    reminderCount: Int,
-    onOpenSchedules: () -> Unit,
-    onRetry: (Long) -> Unit,
-    reloading: Boolean,
-    usage: SessionUsage? = null,
-    compacting: Boolean = false,
-    commandItems: List<CommandItem> = emptyList(),
-    onPickCommand: (CommandItem) -> Unit = {},
-    goal: GoalView? = null,
-    onPauseGoal: () -> Unit = {},
-    onResumeGoal: () -> Unit = {},
-    jobCount: Int = 0,
-    onOpenJobs: () -> Unit = {},
-    modelsOpen: Boolean = false,
-    onModelsOpenChange: (Boolean) -> Unit = {},
-    onOpenUsage: () -> Unit = {},
-    pendingQuestions: List<PendingQuestion> = emptyList(),
-    onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
-    foreignQuestion: PendingQuestion? = null,
-    onOpenForeignQuestion: (String) -> Unit = {},
-    onOpenPresentFile: (String) -> Unit = {},
-    onSharePresentFile: (String) -> Unit = {},
-    onOpenWorkshop: (String) -> Unit = {},
-    onOpenFiles: () -> Unit = {},
-    onVoiceClick: (() -> Unit)? = null,
-    queuedInputs: List<QueuedInput> = emptyList(),
-    importingAttachment: Boolean = false,
-    onFollowUp: () -> Unit = {},
-    onClearQueue: () -> Unit = {},
-    scrollAnchorFor: (String) -> ScrollAnchor? = { null },
-    onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit = { _, _, _, _ -> },
 ) {
+    val (
+        onInputChange, onSend, onStop, onOpenDrawer, onOpenSettings, onReload,
+        onModelChange, onProviderChange, onThinkingLevelChange, onToggleStep,
+        onQuoteMessage, onClearQuote, onPickAttachment, onRemoveAttachment,
+        onOpenAttachment, onOpenFile, onOpenSchedules, onRetry, onPickCommand,
+        onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
+        onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
+        onOpenWorkshop, onOpenFiles, onVoiceClick, onFollowUp, onClearQueue, onScrollAnchorChange,
+    ) = actions
+    val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
+    val usage = state.usage
+    val attachments = state.attachments
+    val queuedInputs = state.queuedInputs
+    val importingAttachment = state.importingAttachment
     val colors = deepDeepColors()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -314,24 +332,25 @@ fun ChatScreen(
     ) {
         CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {
         ChatTopBar(
-            onMenu = {
-                keyboard?.hide()
-                onOpenDrawer()
-            },
-            onReload = {
-                keyboard?.hide()
-                onReload()
-            },
-            reloading = reloading,
-            reminderCount = reminderCount,
-            onOpenSchedules = {
-                keyboard?.hide()
-                onOpenSchedules()
-            },
-            onOpenFiles = {
-                keyboard?.hide()
-                onOpenFiles()
-            },
+            state = ChatTopBarState(reminderCount = reminderCount, reloading = reloading),
+            actions = ChatTopBarActions(
+                onMenu = {
+                    keyboard?.hide()
+                    onOpenDrawer()
+                },
+                onReload = {
+                    keyboard?.hide()
+                    onReload()
+                },
+                onOpenSchedules = {
+                    keyboard?.hide()
+                    onOpenSchedules()
+                },
+                onOpenFiles = {
+                    keyboard?.hide()
+                    onOpenFiles()
+                },
+            ),
             modifier = Modifier.padding(top = with(density) { stableStatusTopPx.toDp() }),
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -518,51 +537,55 @@ fun ChatScreen(
             }
         }
         ChatComposer(
-            value = state.input,
-            ready = state.ready && state.historyLoaded && !state.switchingConversation,
-            sending = state.sending,
-            configured = configured,
-            modelLabel = if (configured) state.modelLabel else "",
-            modelId = state.modelId,
-            models = state.models,
-            providerId = state.providerId,
-            providers = providers,
-            thinkingLevel = state.thinkingLevel,
-            thinkingLevels = thinkingLevels,
-            quote = state.quote,
-            attachments = attachments,
-            attachmentRoot = attachmentRoot,
-            onValueChange = onInputChange,
-            onSend = {
-                if (!state.sending) {
-                    keyboard?.hide()
-                    focusManager.clearFocus()
-                    pendingLocalSend = true
-                }
-                onSend()
-            },
-            onStop = onStop,
-            onModelChange = onModelChange,
-            onProviderChange = onProviderChange,
-            onThinkingLevelChange = onThinkingLevelChange,
-            onClearQuote = onClearQuote,
-            onPickAttachment = onPickAttachment,
-            onRemoveAttachment = onRemoveAttachment,
-            onOpenAttachment = onOpenAttachment,
-            onOpenSettings = onOpenSettings,
-            onFollowUp = onFollowUp,
-            onClearQueue = onClearQueue,
-            queuedInputs = queuedInputs,
-            importingAttachment = importingAttachment,
-            onVoiceClick = onVoiceClick?.let { openVoice ->
-                {
-                    keyboard?.hide()
-                    focusManager.clearFocus()
-                    openVoice()
-                }
-            },
-            modelsOpen = modelsOpen,
-            onModelsOpenChange = onModelsOpenChange,
+            state = ChatComposerState(
+                value = state.input,
+                ready = state.ready && state.historyLoaded && !state.switchingConversation,
+                sending = state.sending,
+                configured = configured,
+                modelLabel = if (configured) state.modelLabel else "",
+                modelId = state.modelId,
+                models = state.models,
+                providerId = state.providerId,
+                providers = providers,
+                thinkingLevel = state.thinkingLevel,
+                thinkingLevels = thinkingLevels,
+                quote = state.quote,
+                attachments = attachments,
+                attachmentRoot = attachmentRoot,
+                queuedInputs = queuedInputs,
+                importingAttachment = importingAttachment,
+                modelsOpen = modelsOpen,
+            ),
+            actions = ChatComposerActions(
+                onValueChange = onInputChange,
+                onSend = {
+                    if (!state.sending) {
+                        keyboard?.hide()
+                        focusManager.clearFocus()
+                        pendingLocalSend = true
+                    }
+                    onSend()
+                },
+                onStop = onStop,
+                onModelChange = onModelChange,
+                onProviderChange = onProviderChange,
+                onThinkingLevelChange = onThinkingLevelChange,
+                onClearQuote = onClearQuote,
+                onPickAttachment = onPickAttachment,
+                onRemoveAttachment = onRemoveAttachment,
+                onOpenAttachment = onOpenAttachment,
+                onOpenSettings = onOpenSettings,
+                onFollowUp = onFollowUp,
+                onClearQueue = onClearQueue,
+                onVoiceClick = onVoiceClick?.let { openVoice ->
+                    {
+                        keyboard?.hide()
+                        focusManager.clearFocus()
+                        openVoice()
+                    }
+                },
+                onModelsOpenChange = onModelsOpenChange,
+            ),
             modifier = Modifier
                 .onSizeChanged { composerHeightPx = it.height }
                 .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),

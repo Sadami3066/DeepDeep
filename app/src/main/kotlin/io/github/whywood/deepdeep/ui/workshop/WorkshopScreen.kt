@@ -21,11 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
@@ -51,9 +50,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.WorkshopCreation
 import io.github.whywood.deepdeep.runtime.WorkshopInvalid
 import io.github.whywood.deepdeep.runtime.WorkshopStore
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val ICON_FALLBACK = "✦"
 
@@ -65,46 +62,39 @@ fun WorkshopScreen(
     onCreate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
+    val holder = remember(store) { WorkshopStateHolder(store, scope) }
+    LaunchedEffect(holder) { holder.load() }
+    val state by holder.state.collectAsStateWithLifecycle()
+
+    WorkshopContent(
+        state = state,
+        onBack = onBack,
+        onOpen = onOpen,
+        onCreate = onCreate,
+        onQueryChange = holder::setQuery,
+        onRefresh = { scope.launch { holder.refresh() } },
+        onRetry = holder::retry,
+        onDelete = { id -> scope.launch { holder.delete(id) } },
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun WorkshopContent(
+    state: WorkshopUiState,
+    onBack: () -> Unit,
+    onOpen: (String) -> Unit,
+    onCreate: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    onDelete: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
     val loadingLabel = stringResource(R.string.workshop_loading)
-    var creations by remember { mutableStateOf<List<WorkshopCreation>>(emptyList()) }
-    var invalid by remember { mutableStateOf<List<WorkshopInvalid>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var scanFailed by remember { mutableStateOf(false) }
-    var deleteFailed by remember { mutableStateOf(false) }
-    var refreshKey by remember { mutableIntStateOf(0) }
     var invalidTarget by remember { mutableStateOf<WorkshopInvalid?>(null) }
-    var query by rememberSaveable { mutableStateOf("") }
-
-    val filtered = remember(creations, invalid, query) { filterWorkshop(creations, invalid, query) }
-
-    LaunchedEffect(refreshKey) {
-        loading = true
-        scanFailed = false
-        deleteFailed = false
-        withContext(Dispatchers.IO) { runCatching { store.scan() } }.fold(
-            onSuccess = { scan ->
-                creations = scan.creations
-                invalid = scan.invalid
-            },
-            onFailure = { scanFailed = true },
-        )
-        loading = false
-    }
-
-    fun delete(target: WorkshopInvalid) {
-        invalidTarget = null
-        deleteFailed = false
-        scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { store.delete(target.id) } }
-            if (result.isSuccess) {
-                refreshKey++
-            } else {
-                deleteFailed = true
-            }
-        }
-    }
 
     Column(
         modifier
@@ -132,14 +122,14 @@ fun WorkshopScreen(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (loading) {
+            if (state.loading) {
                 Box(Modifier.size(44.dp).testTag("workshop_refresh_spinner"), contentAlignment = Alignment.Center) {
                     DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 }
             } else {
                 DdIconButton(
                     icon = DdIcons.Refresh,
-                    onClick = { refreshKey++ },
+                    onClick = onRefresh,
                     contentDescription = stringResource(R.string.workshop_refresh),
                     modifier = Modifier.testTag("workshop_refresh"),
                     tint = colors.ink,
@@ -156,8 +146,8 @@ fun WorkshopScreen(
             )
         }
         DdSearchField(
-            query = query,
-            onQueryChange = { query = it },
+            query = state.query,
+            onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.workshop_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -171,17 +161,14 @@ fun WorkshopScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            if (scanFailed) {
+            state.error?.let { error ->
                 WorkshopErrorRow(
-                    text = stringResource(R.string.workshop_error_scan_failed),
-                    onRetry = { refreshKey++ },
+                    text = stringResource(error.messageRes),
+                    onRetry = if (error.retryable) onRetry else null,
                 )
             }
-            if (deleteFailed) {
-                WorkshopErrorRow(text = stringResource(R.string.workshop_error_delete_failed))
-            }
             when {
-                loading && creations.isEmpty() && invalid.isEmpty() -> Box(
+                state.loading && state.isEmpty -> Box(
                     Modifier
                         .fillMaxWidth()
                         .padding(top = 120.dp)
@@ -191,11 +178,11 @@ fun WorkshopScreen(
                     DdSpinner(size = 22.dp)
                 }
 
-                scanFailed && creations.isEmpty() && invalid.isEmpty() -> Unit
+                state.error != null && state.isEmpty -> Unit
 
-                creations.isEmpty() && invalid.isEmpty() -> WorkshopEmpty()
+                state.isEmpty -> WorkshopEmpty()
 
-                filtered.creations.isEmpty() && filtered.invalid.isEmpty() -> Box(
+                state.filtered.creations.isEmpty() && state.filtered.invalid.isEmpty() -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -209,7 +196,7 @@ fun WorkshopScreen(
                 else -> {
                     Spacer(Modifier.height(8.dp))
                     var first = true
-                    filtered.creations.forEach { creation ->
+                    state.filtered.creations.forEach { creation ->
                         if (!first) DdHairline()
                         first = false
                         WorkshopAppRow(
@@ -217,7 +204,7 @@ fun WorkshopScreen(
                             onClick = { onOpen(creation.manifest.id) },
                         )
                     }
-                    filtered.invalid.forEach { item ->
+                    state.filtered.invalid.forEach { item ->
                         if (!first) DdHairline()
                         first = false
                         WorkshopRow(
@@ -241,7 +228,10 @@ fun WorkshopScreen(
             id = target.id,
             reasonText = stringResource(invalidReasonLabelRes(target.reason)),
             onDismiss = { invalidTarget = null },
-            onDelete = { delete(target) },
+            onDelete = {
+                invalidTarget = null
+                onDelete(target.id)
+            },
         )
     }
 }

@@ -88,42 +88,60 @@ import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
 @OptIn(ExperimentalFoundationApi::class)
+data class ChatComposerState(
+    val value: String,
+    val ready: Boolean,
+    val sending: Boolean,
+    val configured: Boolean,
+    val modelLabel: String,
+    val modelId: String,
+    val models: List<ModelOption>,
+    val providerId: String,
+    val providers: List<ProviderSummary>,
+    val thinkingLevel: ThinkingLevel,
+    val thinkingLevels: List<ThinkingLevel>,
+    val quote: QuotedMessage?,
+    val attachments: List<AttachmentRef>,
+    val attachmentRoot: File,
+    val queuedInputs: List<QueuedInput>,
+    val importingAttachment: Boolean,
+    val modelsOpen: Boolean,
+)
+
+data class ChatComposerActions(
+    val onValueChange: (String) -> Unit,
+    val onSend: () -> Unit,
+    val onStop: () -> Unit,
+    val onModelChange: (String) -> Unit,
+    val onProviderChange: (String) -> Unit,
+    val onThinkingLevelChange: (ThinkingLevel) -> Unit,
+    val onClearQuote: () -> Unit,
+    val onPickAttachment: () -> Unit,
+    val onRemoveAttachment: (String) -> Unit,
+    val onOpenAttachment: (AttachmentRef) -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onFollowUp: () -> Unit,
+    val onClearQueue: () -> Unit,
+    val onVoiceClick: (() -> Unit)?,
+    val onModelsOpenChange: (Boolean) -> Unit,
+)
+
 @Composable
 internal fun ChatComposer(
-    value: String,
-    ready: Boolean,
-    sending: Boolean,
-    configured: Boolean,
-    modelLabel: String,
-    modelId: String,
-    models: List<ModelOption>,
-    providerId: String,
-    providers: List<ProviderSummary>,
-    thinkingLevel: ThinkingLevel,
-    thinkingLevels: List<ThinkingLevel>,
-    quote: QuotedMessage?,
-    attachments: List<AttachmentRef>,
-    attachmentRoot: File,
-    onValueChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-    onModelChange: (String) -> Unit,
-    onProviderChange: (String) -> Unit,
-    onThinkingLevelChange: (ThinkingLevel) -> Unit,
-    onClearQuote: () -> Unit,
-    onPickAttachment: () -> Unit,
-    onRemoveAttachment: (String) -> Unit,
-    onOpenAttachment: (AttachmentRef) -> Unit,
-    onOpenSettings: () -> Unit,
+    state: ChatComposerState,
+    actions: ChatComposerActions,
     modifier: Modifier = Modifier,
-    onFollowUp: () -> Unit = {},
-    onClearQueue: () -> Unit = {},
-    queuedInputs: List<QueuedInput> = emptyList(),
-    importingAttachment: Boolean = false,
-    onVoiceClick: (() -> Unit)? = null,
-    modelsOpen: Boolean = false,
-    onModelsOpenChange: (Boolean) -> Unit = {},
 ) {
+    val (
+        value, ready, sending, configured, modelLabel, modelId, models, providerId, providers,
+        thinkingLevel, thinkingLevels, quote, attachments, attachmentRoot, queuedInputs,
+        importingAttachment, modelsOpen,
+    ) = state
+    val (
+        onValueChange, onSend, onStop, onModelChange, onProviderChange, onThinkingLevelChange,
+        onClearQuote, onPickAttachment, onRemoveAttachment, onOpenAttachment, onOpenSettings,
+        onFollowUp, onClearQueue, onVoiceClick, onModelsOpenChange,
+    ) = actions
     val colors = deepDeepColors()
     var showProviders by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment

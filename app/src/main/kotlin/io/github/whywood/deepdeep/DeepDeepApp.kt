@@ -1,57 +1,28 @@
 package io.github.whywood.deepdeep
 
-import android.content.ComponentCallbacks2
-import android.content.ComponentName
-import android.content.Context
-import android.content.res.Configuration
-import android.content.Intent
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
@@ -59,60 +30,48 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.UiPreferences
-import io.github.whywood.deepdeep.data.UiToggle
-import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.DeepDeepDrawer
-import io.github.whywood.deepdeep.ui.mcp.McpScreen
-import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
-import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
-import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
-import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
+import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
-import io.github.whywood.deepdeep.ui.chat.commandQuery
-import io.github.whywood.deepdeep.ui.chat.ParsedCommand
-import io.github.whywood.deepdeep.ui.chat.UsageSheet
-import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
-import io.github.whywood.deepdeep.ui.chat.parseChatCommand
-import io.github.whywood.deepdeep.ui.files.FileBrowserSheet
-import io.github.whywood.deepdeep.ui.jobs.JobsSheet
-import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
-import io.github.whywood.deepdeep.ui.skills.SkillsScreen
-import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
-import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
-import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
-import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
+import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
+import io.github.whywood.deepdeep.ui.navigation.deepLinkStack
+import io.github.whywood.deepdeep.ui.shell.OverlayHost
+import io.github.whywood.deepdeep.ui.shell.ShellCommandAction
+import io.github.whywood.deepdeep.ui.shell.ShellCommandExecutor
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeActions
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeChatState
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeHost
+import io.github.whywood.deepdeep.ui.shell.ShellSubmitPlan
+import io.github.whywood.deepdeep.ui.shell.buildCommandItems
+import io.github.whywood.deepdeep.ui.shell.commandInsertion
+import io.github.whywood.deepdeep.ui.shell.planSubmission
+import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
+import io.github.whywood.deepdeep.ui.shell.ShellCommandPalette
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationBackHandler
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
+import io.github.whywood.deepdeep.ui.shell.rememberShellChatViewModel
+import io.github.whywood.deepdeep.ui.shell.ShellChatLifecycle
+import io.github.whywood.deepdeep.ui.shell.ShellDrawerActions
+import io.github.whywood.deepdeep.ui.shell.ShellDrawerState
+import io.github.whywood.deepdeep.ui.shell.ShellOverlay
+import io.github.whywood.deepdeep.ui.shell.ShellOverlayActions
+import io.github.whywood.deepdeep.ui.shell.ShellOverlayState
+import io.github.whywood.deepdeep.ui.shell.rememberFrozenChatState
+import io.github.whywood.deepdeep.ui.shell.shareChooser
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
-import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
-import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
-import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
-import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
-import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
-import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
-import io.github.whywood.deepdeep.ui.settings.FontScreen
-import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
-import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
-import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
-import io.github.whywood.deepdeep.ui.settings.SettingsScreen
-import io.github.whywood.deepdeep.ui.voice.VoiceAssistantSheet
-import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
-import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
-import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
-import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
@@ -137,91 +96,10 @@ internal fun DeepDeepApp(
 ) {
     val scope = rememberCoroutineScope()
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
-    val retryTemplate = stringResource(R.string.chat_status_retrying_format)
-    val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
-    val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
-    val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
-    val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
     val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
     val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
-    val chatUiStrings = ChatUiStrings(
-        thinking = stringResource(R.string.chat_status_thinking),
-        retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
-        compacting = stringResource(R.string.chat_status_compacting),
-        compactionFailed = stringResource(R.string.chat_status_compaction_failed),
-        runningTool = { name -> runningToolTemplate.replace("%1\$s", displayToolName(name)) },
-        requestFailed = stringResource(R.string.chat_error_request_failed),
-        runtimeStartFailed = stringResource(R.string.chat_error_runtime_start),
-        preparingSession = stringResource(R.string.chat_error_preparing),
-        maxAttachments = stringResource(R.string.chat_error_max_attachments),
-        attachmentTooLarge = stringResource(R.string.chat_error_attachment_too_large),
-        attachmentFailed = stringResource(R.string.chat_error_attachment_failed),
-        restoringSession = stringResource(R.string.chat_error_restoring),
-        sessionNotReady = stringResource(R.string.chat_error_session_not_ready),
-        createWorkspaceFailed = stringResource(R.string.chat_error_create_workspace),
-        switchModelFailed = stringResource(R.string.chat_error_switch_model),
-        switchThinkingFailed = stringResource(R.string.chat_error_switch_thinking),
-        openConversationFailed = stringResource(R.string.chat_error_open_conversation),
-        reloadBusy = stringResource(R.string.chat_reload_busy),
-        reloadFailed = stringResource(R.string.chat_reload_failed),
-        newChatFailed = stringResource(R.string.chat_error_new_chat),
-        newChatTitle = stringResource(R.string.chat_title_new),
-        invalidApiKey = stringResource(R.string.chat_error_invalid_api_key),
-        rateLimited = stringResource(R.string.chat_error_rate_limited),
-        timeout = stringResource(R.string.chat_error_timeout),
-        networkError = stringResource(R.string.chat_error_network),
-        invalidToolArgs = stringResource(R.string.chat_error_invalid_tool_args),
-        serviceUnavailable = stringResource(R.string.chat_error_service_unavailable),
-        insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
-        modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
-        retry = stringResource(R.string.assistant_retry),
-        autoRetrying = { attempt, max ->
-            autoRetryTemplate.replace("%1\$d", attempt.toString()).replace("%2\$d", max.toString())
-        },
-        withCode = { base, code ->
-            errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)
-        },
-        nothingToCompact = stringResource(R.string.chat_compact_none),
-        compactionBusy = stringResource(R.string.chat_compact_busy),
-        compactionUnavailable = stringResource(R.string.chat_compact_unavailable),
-        skillMissing = { name -> skillMissingTemplate.replace("%1\$s", name) },
-        stopBeforeCommand = stringResource(R.string.chat_error_stop_before_command),
-        insufficientSpace = stringResource(R.string.chat_error_insufficient_space),
-        unsupportedImage = stringResource(R.string.chat_error_unsupported_image),
-        imageFailed = stringResource(R.string.chat_error_image_failed),
-    )
-    val chatViewModel: ChatViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer {
-                ChatViewModel(
-                    runtime = graph.host,
-                    providers = graph.providerCatalog,
-                    modelConfigStore = graph.modelConfigStore,
-                    attachmentStore = graph.attachmentStore,
-                    prepareRuntime = graph::prepare,
-                    autoRetry = graph.appPreferences.preferences.map { preferences -> preferences.autoRetry },
-                    uiStrings = chatUiStrings,
-                    skillExpander = graph.skillCatalog,
-                    interruptedQuestions = { sessionId ->
-                        graph.questionCenter.interrupted.value.filter { it.sessionId == sessionId }
-                    },
-                    dismissInterruptedQuestions = { sessionId ->
-                        graph.questionCenter.dismissInterrupted(sessionId)
-                    },
-                    interruptedRuns = { sessionId ->
-                        graph.host.interruptedRuns.value.filter { run -> run.sessionId == sessionId }
-                    },
-                    dismissInterruptedRun = { sessionId ->
-                        graph.host.dismissInterruptedRun(sessionId)
-                    },
-                )
-            }
-        },
-    )
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current
-    LaunchedEffect(locale) {
-        chatViewModel.updateUiStrings(chatUiStrings)
-    }
+    val chatUiStrings = rememberShellChatUiStrings()
+    val chatViewModel: ChatViewModel = rememberShellChatViewModel(graph, chatUiStrings)
     val stateHolder = chatViewModel.state.collectAsStateWithLifecycle()
     val state by stateHolder
     val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
@@ -230,21 +108,7 @@ internal fun DeepDeepApp(
     }
     var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
-    DisposableEffect(context, chatViewModel) {
-        val callbacks = object : ComponentCallbacks2 {
-            override fun onTrimMemory(level: Int) {
-                chatViewModel.onTrimMemory(level)
-            }
-
-            override fun onConfigurationChanged(newConfig: Configuration) = Unit
-
-            override fun onLowMemory() = Unit
-        }
-        context.applicationContext.registerComponentCallbacks(callbacks)
-        onDispose {
-            context.applicationContext.unregisterComponentCallbacks(callbacks)
-        }
-    }
+    ShellChatLifecycle(chatViewModel)
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach(chatViewModel::attach)
@@ -289,11 +153,7 @@ internal fun DeepDeepApp(
         }
     }
     val navigator = rememberAppNavigator()
-    val density = LocalDensity.current
-    val drawerWidthPx = with(density) { 304.dp.toPx() }
-
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
-    var shareWaitStartedAt by remember { mutableStateOf(0L) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
     val activeQuestions = pendingQuestions.filter { it.sessionId == state.conversationId }
@@ -330,76 +190,79 @@ internal fun DeepDeepApp(
     }
     var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteCount by remember { mutableIntStateOf(0) }
-    val drawerTransition = updateTransition(drawerOpen, label = "drawer")
-    val drawerProgress = drawerTransition.animateFloat(
-        transitionSpec = { tween(DdMotion.BASE, easing = DdMotion.EaseOut) },
-        label = "drawer-progress",
-    ) { open -> if (open) 1f else 0f }
-    var drawerMounted by remember { mutableStateOf(drawerOpen) }
-    LaunchedEffect(Unit) {
-        snapshotFlow { drawerOpen || drawerProgress.value > 0.01f }
-            .collect { visible -> drawerMounted = visible }
-    }
     val appResources = LocalResources.current
-    LifecycleResumeEffect(Unit) {
-        chatViewModel.onAppForeground()
-        GuiAccessibilityState.refresh(context)
-        onPauseOrDispose { }
-    }
-    LaunchedEffect(openVoiceAssistant) {
-        if (!openVoiceAssistant) return@LaunchedEffect
-        voiceSheetOpen = true
-        onOpenVoiceAssistantConsumed()
-    }
-    LaunchedEffect(
-        pendingShare,
-        state.ready,
-        state.historyLoaded,
-        state.sending,
-        state.switchingConversation,
-        state.conversationCwd,
-        state.conversationId,
-    ) {
-        val payload = pendingShare ?: run {
-            shareWaitStartedAt = 0L
-            return@LaunchedEffect
-        }
-        if (!state.ready) return@LaunchedEffect
-        if (state.conversationId == null) {
-            if (shareWaitStartedAt == 0L) shareWaitStartedAt = System.currentTimeMillis()
-            val remaining = SHARE_IMPORT_TIMEOUT_MS - (System.currentTimeMillis() - shareWaitStartedAt)
-            if (remaining > 0) delay(remaining)
-            if (chatViewModel.state.value.conversationId == null) {
+    val intakeChat = ShellIntakeChatState(
+        ready = state.ready,
+        historyLoaded = state.historyLoaded,
+        sending = state.sending,
+        switchingConversation = state.switchingConversation,
+        conversationId = state.conversationId,
+        conversationCwd = state.conversationCwd,
+        conversations = state.conversations,
+        archivedConversations = state.archivedConversations,
+        archivedCount = state.archivedCount,
+    )
+    ShellIntakeHost(
+        openSessionId = openSessionId,
+        pendingShare = pendingShare,
+        pendingDeepDestination = pendingDeepDestination,
+        openVoiceAssistant = openVoiceAssistant,
+        chat = intakeChat,
+        chatSnapshot = {
+            val latest = chatViewModel.state.value
+            ShellIntakeChatState(
+                latest.ready, latest.historyLoaded, latest.sending, latest.switchingConversation,
+                latest.conversationId, latest.conversationCwd, latest.conversations,
+                latest.archivedConversations, latest.archivedCount,
+            )
+        },
+        actions = ShellIntakeActions(
+            onOpenSession = { sessionId ->
+                drawerOpen = false
+                navigator.reset(AppDestination.Chat)
+                chatViewModel.openConversation(sessionId)
+                onOpenSessionConsumed()
+            },
+            onSessionMissing = {
+                Toast.makeText(context, sessionMissingMessage, Toast.LENGTH_SHORT).show()
+                onOpenSessionConsumed()
+            },
+            onRefreshSessions = chatViewModel::requestSessionsRefresh,
+            onApplyDeepLink = { destination ->
+                drawerOpen = false
+                navigator.reset(AppDestination.Chat)
+                deepLinkStack(destination).forEach(navigator::push)
+                onDeepDestinationConsumed()
+            },
+            onShareStaged = { payload ->
+                val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
+                staged.files.forEach { stagedFile ->
+                    graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
+                }
+                if (payload.text.isNotBlank()) chatViewModel.onInputChange(payload.text)
+                staged.failures.forEach { failure ->
+                    Toast.makeText(context, graph.shareStaging.messageFor(failure), Toast.LENGTH_SHORT).show()
+                }
+                if (payload.streams.isEmpty() && payload.text.isBlank()) {
+                    Toast.makeText(context, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
+                }
+                navigator.reset(AppDestination.Chat)
+                onShareConsumed()
+            },
+            onShareTimeout = {
                 Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
                 onShareConsumed()
-            }
-            shareWaitStartedAt = 0L
-            return@LaunchedEffect
-        }
-        shareWaitStartedAt = 0L
-        if (!state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
-        if (state.conversationCwd.isBlank()) return@LaunchedEffect
-        val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
-        staged.files.forEach { stagedFile ->
-            graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
-        }
-        if (payload.text.isNotBlank()) chatViewModel.onInputChange(payload.text)
-        staged.failures.forEach { failure ->
-            Toast.makeText(context, graph.shareStaging.messageFor(failure), Toast.LENGTH_SHORT).show()
-        }
-        if (payload.streams.isEmpty() && payload.text.isBlank()) {
-            Toast.makeText(context, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
-        }
-        navigator.reset(AppDestination.Chat)
-        onShareConsumed()
-    }
+            },
+            onOpenVoiceAssistant = {
+                voiceSheetOpen = true
+                onOpenVoiceAssistantConsumed()
+            },
+        ),
+    )
     LaunchedEffect(state.ready, state.conversationId, state.conversationCwd) {
         if (state.ready) chatViewModel.refreshAvailableSkills()
     }
-    val paletteOpen by remember { derivedStateOf<Boolean> { commandQuery(stateHolder.value.input) != null } }
-    LaunchedEffect(paletteOpen) {
-        if (paletteOpen) chatViewModel.refreshAvailableSkills()
-    }
+    ShellCommandPalette(input = state.input) { chatViewModel.refreshAvailableSkills() }
 
     val compactTitle = stringResource(R.string.chat_cmd_compact)
     val compactDescription = stringResource(R.string.chat_cmd_compact_desc)
@@ -415,96 +278,61 @@ internal fun DeepDeepApp(
         goalTitle,
         goalDescription,
     ) {
-        buildList {
-            add(
-                CommandItem(
-                    id = ChatCommand.COMPACT.commandName,
-                    name = ChatCommand.COMPACT.commandName,
-                    title = compactTitle,
-                    description = compactDescription,
-                    enabled = state.conversationId != null && !state.sending && !state.compacting,
-                    insertText = "/${ChatCommand.COMPACT.commandName} ",
-                ),
-            )
-            add(
-                CommandItem(
-                    id = ChatCommand.GOAL.commandName,
-                    name = ChatCommand.GOAL.commandName,
-                    title = goalTitle,
-                    description = goalDescription,
-                    enabled = state.conversationId != null,
-                    insertText = "/${ChatCommand.GOAL.commandName} ",
-                ),
-            )
-            availableSkills.forEach { skill ->
-                add(
-                    CommandItem(
-                        id = "skill:${skill.name}",
-                        name = "skill:${skill.name}",
-                        title = skill.name,
-                        description = skill.description,
-                        enabled = state.conversationId != null && !state.sending,
-                        insertText = "/skill:${skill.name} ",
-                    ),
-                )
-            }
-        }
+        buildCommandItems(
+            conversationId = state.conversationId,
+            sending = state.sending,
+            compacting = state.compacting,
+            skills = availableSkills,
+            compactTitle = compactTitle,
+            compactDescription = compactDescription,
+            goalTitle = goalTitle,
+            goalDescription = goalDescription,
+        )
     }
-
-    fun runGoalCommand(args: String) {
-        val sessionId = state.conversationId
-        if (sessionId == null) {
-            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_session_not_ready))
-            return
-        }
-        when (args) {
-            "" -> chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
-            "pause" -> scope.launch { graph.goalService.pause(sessionId) }
-            "resume" -> scope.launch { graph.goalService.resume(sessionId) }
-            "clear" -> scope.launch { graph.goalService.clear(sessionId) }
-            else -> scope.launch {
-                if (graph.goalService.create(sessionId, args) == null) {
-                    chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+    val commandExecutor = object : ShellCommandExecutor {
+        override fun perform(action: ShellCommandAction) {
+            val sessionId = chatViewModel.state.value.conversationId
+            when (action) {
+                ShellCommandAction.Compact -> chatViewModel.compactContext()
+                ShellCommandAction.GoalPause,
+                ShellCommandAction.GoalResume,
+                ShellCommandAction.GoalClear,
+                ShellCommandAction.GoalInvalid,
+                is ShellCommandAction.GoalCreate,
+                -> if (sessionId == null) {
+                    chatViewModel.showCommandError(appResources.getString(R.string.chat_error_session_not_ready))
+                } else {
+                    when (action) {
+                        ShellCommandAction.GoalPause -> scope.launch { graph.goalService.pause(sessionId) }
+                        ShellCommandAction.GoalResume -> scope.launch { graph.goalService.resume(sessionId) }
+                        ShellCommandAction.GoalClear -> scope.launch { graph.goalService.clear(sessionId) }
+                        is ShellCommandAction.GoalCreate -> scope.launch {
+                            if (graph.goalService.create(sessionId, action.objective) == null) {
+                                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+                            }
+                        }
+                        else -> chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+                    }
                 }
             }
         }
     }
 
-    fun runChatCommand(command: ChatCommand, args: String) {
-        when (command) {
-            ChatCommand.COMPACT -> chatViewModel.compactContext()
-            ChatCommand.GOAL -> runGoalCommand(args.trim())
-        }
-    }
-
     fun pickCommand(item: CommandItem) {
-        val trigger = findCommandTrigger(state.input)
-        val base = if (trigger != null) {
-            state.input.removeRange(trigger.start, state.input.length).trimEnd()
-        } else {
-            state.input.trimEnd()
-        }
-        val separator = if (base.isEmpty() || base.last().isWhitespace()) "" else " "
-        chatViewModel.onInputChange(base + separator + item.insertText)
+        chatViewModel.onInputChange(commandInsertion(state.input, item.insertText))
     }
 
     fun submitChatInput() {
-        val parsed = parseChatCommand(state.input)
-        if (state.sending && parsed !is ParsedCommand.None) {
-            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
-            return
-        }
-        when (parsed) {
-            ParsedCommand.None -> chatViewModel.send()
-            is ParsedCommand.Skill -> chatViewModel.send()
-            is ParsedCommand.Found -> {
+        when (val plan = planSubmission(state.input, state.sending)) {
+            ShellSubmitPlan.Send -> chatViewModel.send()
+            ShellSubmitPlan.RejectWhileSending ->
+                chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
+            is ShellSubmitPlan.RunCommand -> {
                 chatViewModel.onInputChange("")
-                runChatCommand(parsed.command, parsed.args)
+                commandExecutor.perform(plan.action)
             }
-
-            is ParsedCommand.Unknown -> {
-                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_unknown, parsed.name))
-            }
+            is ShellSubmitPlan.UnknownCommand ->
+                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_unknown, plan.name))
         }
     }
 
@@ -536,61 +364,13 @@ internal fun DeepDeepApp(
         }
     }
 
-    NavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
-    NavigationChrome(navigator = navigator)
+    ShellNavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
+    ShellNavigationChrome(navigator = navigator)
 
     LaunchedEffect(state.ready, state.currentWorkspaceId) {
         if (state.ready && state.currentWorkspaceId.isNotBlank()) {
             expandedWorkspaceIds = expandedWorkspaceIds + state.currentWorkspaceId
         }
-    }
-
-    LaunchedEffect(openSessionId, state.ready, state.conversations, state.archivedConversations) {
-        val sessionId = openSessionId ?: return@LaunchedEffect
-        if (!state.ready) return@LaunchedEffect
-        val found = state.conversations.any { it.id == sessionId } ||
-            state.archivedConversations.any { it.id == sessionId }
-        if (!found) {
-            chatViewModel.requestSessionsRefresh()
-            delay(SESSION_LOOKUP_GRACE_MS)
-            var latest = chatViewModel.state.value
-            if (latest.archivedCount > 0 && latest.archivedConversations.isEmpty()) {
-                delay(SESSION_LOOKUP_GRACE_MS)
-                latest = chatViewModel.state.value
-            }
-            val appearsLater = latest.conversations.any { it.id == sessionId } ||
-                latest.archivedConversations.any { it.id == sessionId }
-            if (!appearsLater) {
-                Toast.makeText(context, sessionMissingMessage, Toast.LENGTH_SHORT).show()
-                onOpenSessionConsumed()
-            }
-            return@LaunchedEffect
-        }
-        drawerOpen = false
-        navigator.reset(AppDestination.Chat)
-        chatViewModel.openConversation(sessionId)
-        onOpenSessionConsumed()
-    }
-
-    LaunchedEffect(pendingDeepDestination, state.ready) {
-        val destination = pendingDeepDestination ?: return@LaunchedEffect
-        if (!state.ready) return@LaunchedEffect
-        drawerOpen = false
-        navigator.reset(AppDestination.Chat)
-        when (destination) {
-            is AppDestination.PluginDetail -> {
-                navigator.push(AppDestination.Plugins)
-                navigator.push(destination)
-            }
-
-            is AppDestination.WorkshopDetail -> {
-                navigator.push(AppDestination.Workshop)
-                navigator.push(destination)
-            }
-
-            else -> navigator.push(destination)
-        }
-        onDeepDestinationConsumed()
     }
 
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
@@ -609,500 +389,133 @@ internal fun DeepDeepApp(
                 val frozenState = rememberFrozenChatState(state, baseFrozen)
                 ChatScreen(
                     state = remember(frozenState, configuredProviders) {
-                        frozenState.copy(configured = frozenState.providerId in configuredProviders)
-                    },
+                                            frozenState.copy(configured = frozenState.providerId in configuredProviders)
+                                        },
                     nickname = nickname,
-                    chatUiStrings = chatUiStrings,
-                    onInputChange = chatViewModel::onInputChange,
-                    onSend = ::submitChatInput,
-                    onStop = chatViewModel::stop,
-                    onOpenDrawer = { drawerOpen = true },
-                    onOpenSettings = ::openSettings,
-                    onReload = {
-                        scope.launch {
-                            val result = chatViewModel.reloadSession()
-                            Toast.makeText(
-                                context,
-                                result.exceptionOrNull()?.message ?: reloadDoneMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    },
                     providers = configuredProviderList,
-                    onModelChange = chatViewModel::setModel,
-                    onProviderChange = chatViewModel::setProvider,
-                    onThinkingLevelChange = chatViewModel::setThinkingLevel,
-                    onToggleStep = chatViewModel::toggleStep,
-                    onQuoteMessage = chatViewModel::quote,
-                    onClearQuote = chatViewModel::clearQuote,
-                    attachments = frozenState.attachments,
-                    onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
-                    onRemoveAttachment = chatViewModel::removeAttachment,
-                    onOpenAttachment = {
-                        previewRoot = attachmentRoot
-                        previewAttachment = it
-                    },
                     attachmentRoot = attachmentRoot,
-                    autoCollapseProcess = uiPreferences.autoCollapseProcess,
-                    reminderCount = reminderCount,
-                    onOpenSchedules = { navigator.push(AppDestination.Schedules) },
-                    onRetry = chatViewModel::retry,
-                    reloading = frozenState.reloading,
-                    usage = frozenState.usage,
-                    compacting = frozenState.compacting,
-                    commandItems = commandItems,
-                    onPickCommand = ::pickCommand,
-                    goal = activeGoal,
-                    onPauseGoal = {
-                        state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
-                    },
-                    onResumeGoal = {
-                        state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
-                    },
-                    jobCount = runningJobCount,
-                    onOpenJobs = {
-                        selectedJobId = null
-                        jobOutput = null
-                        jobsSheetOpen = true
-                    },
-                    modelsOpen = modelsOpen,
-                    onModelsOpenChange = { modelsOpen = it },
-                    onOpenUsage = { usageSheetOpen = true },
-                    pendingQuestions = activeQuestions,
-                    onAnswerQuestion = { pending, answers ->
-                        graph.questionCenter.answer(pending.requestId, answers)
-                    },
-                    foreignQuestion = foreignQuestion,
-                    onOpenForeignQuestion = { sessionId ->
-                        navigator.reset(AppDestination.Chat)
-                        chatViewModel.openConversationById(sessionId)
-                    },
-                    onOpenFile = openWorkspaceFile,
-                    onOpenFiles = { filesSheetOpen = true },
-                    queuedInputs = frozenState.queuedInputs,
-                    importingAttachment = frozenState.importingAttachment,
-                    onFollowUp = chatViewModel::followUpNow,
-                    onClearQueue = chatViewModel::clearQueuedInputs,
+                    chatUiStrings = chatUiStrings,
+                    actions = ChatScreenActions(
+                        onInputChange = chatViewModel::onInputChange,
+                        onSend = ::submitChatInput,
+                        onStop = chatViewModel::stop,
+                        onOpenDrawer = { drawerOpen = true },
+                        onOpenSettings = ::openSettings,
+                        onReload = {
+                                                scope.launch {
+                                                    val result = chatViewModel.reloadSession()
+                                                    Toast.makeText(
+                                                        context,
+                                                        result.exceptionOrNull()?.message ?: reloadDoneMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            },
+                        onModelChange = chatViewModel::setModel,
+                        onProviderChange = chatViewModel::setProvider,
+                        onThinkingLevelChange = chatViewModel::setThinkingLevel,
+                        onToggleStep = chatViewModel::toggleStep,
+                        onQuoteMessage = chatViewModel::quote,
+                        onClearQuote = chatViewModel::clearQuote,
+                        onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
+                        onRemoveAttachment = chatViewModel::removeAttachment,
+                        onOpenAttachment = {
+                                                previewRoot = attachmentRoot
+                                                previewAttachment = it
+                                            },
+                        onOpenFile = openWorkspaceFile,
+                        onOpenSchedules = { navigator.push(AppDestination.Schedules) },
+                        onRetry = chatViewModel::retry,
+                        onPickCommand = ::pickCommand,
+                        onPauseGoal = {
+                                                state.conversationId?.let { id -> scope.launch { graph.goalService.pause(id) } }
+                                            },
+                        onResumeGoal = {
+                                                state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
+                                            },
+                        onOpenJobs = {
+                                                selectedJobId = null
+                                                jobOutput = null
+                                                jobsSheetOpen = true
+                                            },
+                        onModelsOpenChange = { modelsOpen = it },
+                        onOpenUsage = { usageSheetOpen = true },
+                        onAnswerQuestion = { pending, answers ->
+                                                graph.questionCenter.answer(pending.requestId, answers)
+                                            },
+                        onOpenForeignQuestion = { sessionId ->
+                                                navigator.reset(AppDestination.Chat)
+                                                chatViewModel.openConversationById(sessionId)
+                                            },
+                        onOpenPresentFile = { raw ->
+                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                if (resolved == null) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        attachmentMissingMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                } else if (resolved.kind != AttachmentKind.OTHER) {
+                                                    previewRoot = attachmentRoot
+                                                    previewAttachment = resolved
+                                                } else {
+                                                    val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
+                                                    val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
+                                                    if (!opened) {
+                                                        Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            },
+                        onSharePresentFile = { raw ->
+                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                if (resolved == null) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        attachmentMissingMessage,
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                } else {
+                                                    val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
+                                                    if (intent != null) {
+                                                        context.startActivity(shareChooser(context, intent, shareChooserTitle))
+                                                    } else {
+                                                        Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            },
+                        onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                        onOpenFiles = { filesSheetOpen = true },
+                        onVoiceClick = { voiceSheetOpen = true },
+                        onFollowUp = chatViewModel::followUpNow,
+                        onClearQueue = chatViewModel::clearQueuedInputs,
+                        onScrollAnchorChange = chatViewModel::updateScrollAnchor,
+                    ),
+                    overlay = ChatScreenOverlay(
+                        reminderCount = reminderCount,
+                        reloading = frozenState.reloading,
+                        compacting = frozenState.compacting,
+                        commandItems = commandItems,
+                        goal = activeGoal,
+                        jobCount = runningJobCount,
+                        modelsOpen = modelsOpen,
+                        pendingQuestions = activeQuestions,
+                        foreignQuestion = foreignQuestion,
+                    ),
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
-                    onScrollAnchorChange = chatViewModel::updateScrollAnchor,
-                    onVoiceClick = { voiceSheetOpen = true },
-                    onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
-                    onOpenPresentFile = { raw ->
-                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                        if (resolved == null) {
-                            Toast.makeText(
-                                context,
-                                attachmentMissingMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        } else if (resolved.kind != AttachmentKind.OTHER) {
-                            previewRoot = attachmentRoot
-                            previewAttachment = resolved
-                        } else {
-                            val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
-                            val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
-                            if (!opened) {
-                                Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    onSharePresentFile = { raw ->
-                        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                        if (resolved == null) {
-                            Toast.makeText(
-                                context,
-                                attachmentMissingMessage,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        } else {
-                            val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
-                            if (intent != null) {
-                                context.startActivity(shareChooser(context, intent, shareChooserTitle))
-                            } else {
-                                Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
+                    autoCollapseProcess = uiPreferences.autoCollapseProcess,
                 )
             },
         ) { destination ->
-            when (destination) {
-                AppDestination.Chat -> Box(Modifier.fillMaxSize())
-
-                AppDestination.Settings -> SettingsScreen(
-                    nickname = nickname,
-                    providerName = defaultProvider?.name,
-                    modelName = defaultModelLabel,
-                    configured = defaultModelConfig.providerId in configuredProviders,
-                    themeMode = theme,
-                    linuxState = linuxState,
-                    versionName = BuildConfig.VERSION_NAME,
-                    fontLabel = fontStyle.displayName,
-                    onBack = ::back,
-                    onThemeModeChange = onThemeChange,
-                    onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
-                    onOpenProviders = { navigator.push(AppDestination.Providers) },
-                    onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
-                    onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
-                    onOpenFonts = { navigator.push(AppDestination.Fonts) },
-                    onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
-                    archivedCount = state.archivedCount,
-                    onOpenArchived = { navigator.push(AppDestination.Archived) },
-                )
-
-                AppDestination.Providers -> ProviderListScreen(
-                    providers = graph.providerCatalog.summaries,
-                    configuredProviderIds = configuredProviders,
-                    onBack = ::back,
-                    onProviderClick = { id -> navigator.push(AppDestination.ProviderDetail(id)) },
-                )
-
-                AppDestination.RuntimeSettings -> {
-                    LaunchedEffect(Unit) { graph.linuxEnvironment.refreshState() }
-                    LaunchedEffect(linuxState) { graph.devPackageManager.refresh() }
-                    RuntimeSettingsScreen(
-                        linuxState = linuxState,
-                        linuxSupported = graph.linuxEnvironment.isSupported,
-                        linuxEnabled = linuxEnabled,
-                        sharedStorageEnabled = sharedStorageEnabled,
-                        devPackages = devPackages,
-                        onBack = ::back,
-                        onInstall = { scope.launch { graph.linuxEnvironment.install() } },
-                        onReset = {
-                            scope.launch {
-                                graph.linuxSettings.setEnabled(false)
-                                graph.linuxEnvironment.reset()
-                                graph.host.reconfigure()
-                            }
-                        },
-                        onEnabledChange = { enabled ->
-                            scope.launch {
-                                graph.linuxSettings.setEnabled(enabled)
-                                graph.host.reconfigure()
-                            }
-                        },
-                        onSharedStorageChange = { enabled ->
-                            scope.launch { graph.linuxSettings.setSharedStorageEnabled(enabled) }
-                        },
-                        onInstallBundle = graph.devPackageManager::installBundle,
-                        onRefreshPackages = graph.devPackageManager::refresh,
-                    )
-                }
-
-                AppDestination.Personalization -> PersonalizationScreen(
-                    value = personalization,
-                    onBack = ::back,
-                    onSave = { value -> scope.launch { graph.personalizationStore.save(value) } },
-                )
-
-                AppDestination.Privacy -> PrivacyScreen(onBack = ::back)
-
-                AppDestination.Fonts -> FontScreen(
-                    current = fontStyle,
-                    onBack = ::back,
-                    onSelect = onFontStyleChange,
-                )
-
-                AppDestination.ChatSettings -> ChatSettingsScreen(
-                    preferences = uiPreferences,
-                    onBack = ::back,
-                    onToggle = { toggle, enabled ->
-                        scope.launch { graph.appPreferences.set(toggle, enabled) }
-                    },
-                    voiceAutoSpeak = voiceAutoSpeak,
-                    onVoiceAutoSpeakChange = { enabled ->
-                        scope.launch { graph.voicePreferences.setAutoSpeak(enabled) }
-                    },
-                    voiceSendAfterRecognition = voiceSendAfterRecognition,
-                    onVoiceSendAfterRecognitionChange = { enabled ->
-                        scope.launch { graph.voicePreferences.setSendAfterRecognition(enabled) }
-                    },
-                )
-
-                is AppDestination.ProviderDetail -> {
-                    val provider = graph.providerCatalog.summary(destination.id)
-                    if (provider == null) {
-                        LaunchedEffect(destination.id) {
-                            navigator.pop()
-                        }
-                    } else {
-                        val authKind = authKinds[provider.id]
-                        val savedApiKey = remember(provider.id, credentialRevision) {
-                            graph.credentials.cachedApiKey(provider.id)
-                        }
-                        ProviderDetailScreen(
-                            provider = provider,
-                            configured = provider.id in configuredProviders,
-                            savedApiKey = savedApiKey,
-                            authKind = authKind,
-                            oauthService = graph.providerOAuthService,
-                            onAuthChanged = {},
-                            onBack = ::back,
-                            onSaveApiKey = { key ->
-                                runCatching {
-                                    graph.credentials.writeApiKey(provider.id, key, null)
-                                    graph.credentials.awaitCommit(provider.id)
-                                }
-                            },
-                            onClearApiKey = {
-                                runCatching {
-                                    graph.credentials.delete(provider.id)
-                                    graph.credentials.awaitCommit(provider.id)
-                                }
-                            },
-                        )
-                    }
-                }
-
-                AppDestination.Mcp -> McpScreen(
-                    store = graph.mcpConfigStore,
-                    probe = graph.mcpServerProbe,
-                    oauth = graph.mcpOAuthService,
-                    onBack = ::back,
-                    onReloadSessions = { graph.host.reloadMcp() },
-                    onReconnect = { server -> graph.host.reconnectMcp(server) },
-                )
-
-                AppDestination.Plugins -> PluginsScreen(
-                    manager = graph.pluginManager,
-                    onBack = ::back,
-                    onOpenPlugin = { pluginId -> navigator.push(AppDestination.PluginDetail(pluginId)) },
-                )
-
-                is AppDestination.PluginDetail -> PluginDetailScreen(
-                    manager = graph.pluginManager,
-                    pluginId = destination.id,
-                    onBack = ::back,
-                )
-
-                AppDestination.Archived -> ArchivedSessionsScreen(
-                    archivedSessions = state.archivedConversations,
-                    onBack = ::back,
-                    onOpen = { id ->
-                        chatViewModel.openConversation(id)
-                        openChat()
-                    },
-                    onRename = chatViewModel::renameSession,
-                    onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
-                    onDelete = chatViewModel::deleteSession,
-                )
-
-                AppDestination.Search -> SessionSearchScreen(
-                    onBack = ::back,
-                    loadSessions = chatViewModel::loadSearchSessions,
-                    onOpen = { id ->
-                        chatViewModel.openConversation(id)
-                        navigator.reset(AppDestination.Chat)
-                    },
-                )
-
-                AppDestination.Skills -> SkillsScreen(
-                    repository = graph.skillRepository,
-                    onBack = ::back,
-                )
-
-                AppDestination.Schedules -> ScheduleScreen(
-                    service = graph.scheduleService,
-                    runtime = graph.host,
-                    initialConversationId = state.conversationId,
-                    onBack = ::back,
-                    onOpenConversation = { sessionId ->
-                        chatViewModel.openConversationById(sessionId)
-                        navigator.reset(AppDestination.Chat)
-                    },
-                )
-
-                is AppDestination.WorkspaceSettings -> {
-                    val workspace = state.workspaces.firstOrNull { it.id == destination.workspaceId }
-                    if (workspace == null) {
-                        LaunchedEffect(destination.workspaceId) { navigator.pop() }
-                    } else {
-                        WorkspaceSettingsScreen(
-                            workspace = workspace,
-                            skillRepository = graph.skillRepository,
-                            agentDocStore = graph.agentDocStore,
-                            onBack = ::back,
-                            onOpenSkills = { navigator.push(AppDestination.Skills) },
-                        )
-                    }
-                }
-
-                AppDestination.Workshop -> WorkshopScreen(
-                    store = graph.workshopStore,
-                    onBack = ::back,
-                    onOpen = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
-                    onCreate = ::openWorkshopCreate,
-                )
-
-                is AppDestination.WorkshopDetail -> WorkshopViewerScreen(
-                    store = graph.workshopStore,
-                    creationId = destination.id,
-                    agentGateway = graph.workshopAgentService,
-                    onBack = ::back,
-                )
-            }
-        }
-
-        if (drawerMounted) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = drawerProgress.value }
-                    .drawBehind { drawRect(colors.scrim.copy(alpha = 0.32f * drawerProgress.value)) }
-                    .then(
-                        if (drawerOpen) {
-                            Modifier.clickable { drawerOpen = false }
-                        } else {
-                            Modifier
-                        },
-                    ),
+            AppRouteContent(
+                destination, navigator, ::back, ::openChat, ::openWorkshopCreate,
+                state, chatViewModel, graph, scope, theme, onThemeChange, fontStyle,
+                onFontStyleChange, nickname, defaultProvider?.name, defaultModelLabel,
+                defaultModelConfig, configuredProviders, linuxState, linuxEnabled,
+                sharedStorageEnabled, devPackages, personalization, uiPreferences,
+                voiceAutoSpeak, voiceSendAfterRecognition, authKinds, credentialRevision,
             )
         }
-        if (drawerMounted) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .width(304.dp)
-                    .align(Alignment.CenterStart)
-                    .graphicsLayer { translationX = -drawerWidthPx * (1f - drawerProgress.value) },
-            ) {
-                DeepDeepDrawer(
-                    sessions = state.conversations,
-                    workspaces = state.workspaces,
-                    pinnedWorkspaceIds = uiPreferences.pinnedWorkspaceIds,
-                    expandedWorkspaceIds = expandedWorkspaceIds,
-                    busySessionIds = state.busySessionIds,
-                    reminderSessionIds = schedules.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
-                    userName = nickname,
-                    onOpenSearch = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Search)
-                    },
-                    onOpenWorkshop = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Workshop)
-                    },
-                    onOpenSkills = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Skills)
-                    },
-                    onOpenMcp = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Mcp)
-                    },
-                    onOpenPlugins = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Plugins)
-                    },
-                    onScheduled = {
-                        drawerOpen = false
-                        navigator.push(AppDestination.Schedules)
-                    },
-                    onCreateWorkspace = {
-                        drawerOpen = false
-                        workspaceCreateOpen = true
-                    },
-                    onToggleWorkspaceExpanded = { workspaceId ->
-                        expandedWorkspaceIds = if (workspaceId in expandedWorkspaceIds) {
-                            expandedWorkspaceIds - workspaceId
-                        } else {
-                            expandedWorkspaceIds + workspaceId
-                        }
-                    },
-                    onToggleWorkspacePinned = { workspaceId ->
-                        val pinned = workspaceId in uiPreferences.pinnedWorkspaceIds
-                        scope.launch { graph.appPreferences.setWorkspacePinned(workspaceId, !pinned) }
-                    },
-                    onNewSessionInWorkspace = { workspaceId ->
-                        drawerOpen = false
-                        chatViewModel.newSession(workspaceId)
-                    },
-                    onWorkspaceSettings = { workspaceId ->
-                        drawerOpen = false
-                        navigator.push(AppDestination.WorkspaceSettings(workspaceId))
-                    },
-                    onRenameWorkspace = { workspaceId ->
-                        drawerOpen = false
-                        workspaceRenameId = workspaceId
-                    },
-                    onDeleteWorkspace = { workspaceId ->
-                        drawerOpen = false
-                        val target = state.workspaces.firstOrNull { it.id == workspaceId }
-                        if (target != null) {
-                            workspaceDeleteTarget = target
-                            scope.launch {
-                                workspaceDeleteCount = chatViewModel.loadWorkspaceSessionCount(workspaceId)
-                            }
-                        }
-                    },
-                    onConversation = { id ->
-                        drawerOpen = false
-                        chatViewModel.openConversation(id)
-                    },
-                    onRename = chatViewModel::renameSession,
-                    onSetPinned = chatViewModel::setSessionPinned,
-                    onSetArchived = chatViewModel::setSessionArchived,
-                    onDelete = chatViewModel::deleteSession,
-                    onSettings = ::openSettings,
-                )
-            }
-        }
-        if (workspaceCreateOpen) {
-            WorkspaceNameDialog(
-                mode = WorkspaceNameMode.CREATE,
-                existingNames = state.workspaces.map { it.name },
-                onConfirm = { name ->
-                    workspaceCreateOpen = false
-                    chatViewModel.createWorkspace(name)
-                },
-                onDismiss = { workspaceCreateOpen = false },
-            )
-        }
-        workspaceRenameTarget?.let { target ->
-            WorkspaceNameDialog(
-                mode = WorkspaceNameMode.RENAME,
-                initial = target.name,
-                existingNames = state.workspaces.filterNot { it.id == target.id }.map { it.name },
-                onConfirm = { name ->
-                    workspaceRenameId = null
-                    chatViewModel.renameWorkspace(target.id, name)
-                },
-                onDismiss = { workspaceRenameId = null },
-            )
-        }
-        workspaceDeleteTarget?.let { target ->
-            DeleteWorkspaceDialog(
-                name = target.name,
-                sessionCount = workspaceDeleteCount,
-                onConfirm = {
-                    workspaceDeleteTarget = null
-                    chatViewModel.deleteWorkspace(target.id)
-                },
-                onDismiss = { workspaceDeleteTarget = null },
-            )
-        }
-        previewAttachment?.let { attachment ->
-            val root = previewRoot ?: attachmentRoot
-            AttachmentPreviewDialog(
-                attachment = attachment,
-                file = graph.attachmentStore.file(attachment, root),
-                onDismiss = {
-                    previewAttachment = null
-                    previewRoot = null
-                },
-                onShare = {
-                    val intent = graph.attachmentStore.shareIntent(attachment, root)
-                    if (intent != null) {
-                        context.startActivity(shareChooser(context, intent, shareChooserTitle))
-                    }
-                },
-            )
-        }
-        if (usageSheetOpen) {
-            state.usage?.let { usage ->
-                UsageSheet(usage = usage, onDismiss = { usageSheetOpen = false })
-            }
-        }
+
         LaunchedEffect(jobsSheetOpen, selectedJobId) {
             val id = selectedJobId
             if (!jobsSheetOpen || id == null) return@LaunchedEffect
@@ -1113,103 +526,119 @@ internal fun DeepDeepApp(
                 delay(800)
             }
         }
-        if (jobsSheetOpen) {
-            JobsSheet(
-                jobs = activeJobs,
-                selectedJobId = selectedJobId,
-                output = jobOutput,
-                onSelect = { id ->
-                    if (selectedJobId == id) {
-                        selectedJobId = null
-                        jobOutput = null
-                    } else {
-                        selectedJobId = id
-                        jobOutput = null
-                        scope.launch { jobOutput = graph.jobRegistry.read(id).output }
+        OverlayHost(
+            overlays = ShellOverlayState(
+                workspaceCreate = ShellOverlay.WorkspaceCreate(state.workspaces.map { it.name })
+                    .takeIf { workspaceCreateOpen },
+                workspaceRename = workspaceRenameTarget?.let { target ->
+                    ShellOverlay.WorkspaceRename(
+                        target.id, target.name, state.workspaces.filterNot { it.id == target.id }.map { it.name },
+                    )
+                },
+                workspaceDelete = workspaceDeleteTarget?.let {
+                    ShellOverlay.WorkspaceDelete(it.id, it.name, workspaceDeleteCount)
+                },
+                attachmentPreview = previewAttachment?.let {
+                    ShellOverlay.AttachmentPreview(it, graph.attachmentStore.file(it, previewRoot ?: attachmentRoot))
+                },
+                usage = state.usage?.takeIf { usageSheetOpen }?.let(ShellOverlay::Usage),
+                jobs = ShellOverlay.Jobs(activeJobs, selectedJobId, jobOutput).takeIf { jobsSheetOpen },
+                files = ShellOverlay.Files(
+                    attachmentRoot,
+                    state.workspaces.firstOrNull { it.cwd == state.conversationCwd }?.name ?: attachmentRoot.name,
+                ).takeIf { filesSheetOpen },
+                pluginSetup = pluginsState.interaction?.let(ShellOverlay::PluginSetup),
+                voiceAssistant = ShellOverlay.VoiceAssistant(
+                    state.messages
+                        .lastOrNull { it.role == io.github.whywood.deepdeep.runtime.AssistantRole.ASSISTANT }
+                        ?.text
+                        .orEmpty(),
+                    state.sending, voiceAutoSpeak, voiceSendAfterRecognition,
+                ).takeIf { voiceSheetOpen },
+            ),
+            overlayActions = ShellOverlayActions(
+                onConfirmWorkspaceCreate = { name -> workspaceCreateOpen = false; chatViewModel.createWorkspace(name) },
+                onDismissWorkspaceCreate = { workspaceCreateOpen = false },
+                onConfirmWorkspaceRename = { name ->
+                    val id = workspaceRenameId
+                    workspaceRenameId = null
+                    id?.let { chatViewModel.renameWorkspace(it, name) }
+                },
+                onDismissWorkspaceRename = { workspaceRenameId = null },
+                onConfirmWorkspaceDelete = {
+                    val target = workspaceDeleteTarget
+                    workspaceDeleteTarget = null
+                    target?.let { chatViewModel.deleteWorkspace(it.id) }
+                },
+                onDismissWorkspaceDelete = { workspaceDeleteTarget = null },
+                onDismissAttachmentPreview = { previewAttachment = null; previewRoot = null },
+                onShareAttachmentPreview = {
+                    previewAttachment?.let { attachment ->
+                        graph.attachmentStore.shareIntent(attachment, previewRoot ?: attachmentRoot)
+                    }?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
+                },
+                onDismissUsage = { usageSheetOpen = false },
+                onSelectJob = { id ->
+                    val same = selectedJobId == id
+                    selectedJobId = if (same) null else id
+                    jobOutput = null
+                    if (!same) scope.launch { jobOutput = graph.jobRegistry.read(id).output }
+                },
+                onCloseJobOutput = { selectedJobId = null; jobOutput = null },
+                onKillJob = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
+                onClearSettledJobs = { graph.jobRegistry.clearSettled() },
+                onDismissJobs = { jobsSheetOpen = false },
+                onOpenFile = openWorkspaceFile,
+                onDismissFiles = { filesSheetOpen = false },
+                onFillVoice = chatViewModel::onInputChange,
+                onSendVoice = { text -> chatViewModel.onInputChange(text); chatViewModel.send() },
+                onDismissVoice = { voiceSheetOpen = false },
+            ),
+            drawer = ShellDrawerState(
+                drawerOpen,
+                state.conversations,
+                state.workspaces,
+                uiPreferences.pinnedWorkspaceIds,
+                expandedWorkspaceIds,
+                state.busySessionIds,
+                schedules.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
+                nickname,
+            ),
+            drawerActions = ShellDrawerActions(
+                onNavigate = { destination -> drawerOpen = false; navigator.push(destination) },
+                onDismiss = { drawerOpen = false },
+                onCreateWorkspace = { drawerOpen = false; workspaceCreateOpen = true },
+                onToggleWorkspaceExpanded = { id ->
+                    expandedWorkspaceIds = if (id in expandedWorkspaceIds) expandedWorkspaceIds - id else expandedWorkspaceIds + id
+                },
+                onToggleWorkspacePinned = { id ->
+                    val pinned = id in uiPreferences.pinnedWorkspaceIds
+                    scope.launch { graph.appPreferences.setWorkspacePinned(id, !pinned) }
+                },
+                onNewSessionInWorkspace = { id -> drawerOpen = false; chatViewModel.newSession(id) },
+                onWorkspaceSettings = { id ->
+                    drawerOpen = false
+                    navigator.push(AppDestination.WorkspaceSettings(id))
+                },
+                onRenameWorkspace = { id -> drawerOpen = false; workspaceRenameId = id },
+                onDeleteWorkspace = { id ->
+                    drawerOpen = false
+                    state.workspaces.firstOrNull { it.id == id }?.let {
+                        workspaceDeleteTarget = it
+                        scope.launch { workspaceDeleteCount = chatViewModel.loadWorkspaceSessionCount(id) }
                     }
                 },
-                onCloseOutput = {
-                    selectedJobId = null
-                    jobOutput = null
-                },
-                onKill = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
-                onClearSettled = { graph.jobRegistry.clearSettled() },
-                onDismiss = { jobsSheetOpen = false },
-            )
-        }
-        if (filesSheetOpen) {
-            val rootLabel = state.workspaces
-                .firstOrNull { it.cwd == state.conversationCwd }
-                ?.name
-                ?: attachmentRoot.name
-            FileBrowserSheet(
-                root = attachmentRoot,
-                rootLabel = rootLabel,
-                onOpenFile = openWorkspaceFile,
-                onDismiss = { filesSheetOpen = false },
-            )
-        }
-        pluginsState.interaction?.let { interaction ->
-            PluginSetupSheet(
-                manager = graph.pluginManager,
-                interaction = interaction,
-            )
-        }
-        if (voiceSheetOpen) {
-            VoiceAssistantSheet(
-                answer = state.messages
-                    .lastOrNull { it.role == io.github.whywood.deepdeep.runtime.AssistantRole.ASSISTANT }
-                    ?.text
-                    .orEmpty(),
-                answerStreaming = state.sending,
-                autoSpeak = voiceAutoSpeak,
-                sendAfterRecognition = voiceSendAfterRecognition,
-                onFill = chatViewModel::onInputChange,
-                onSend = { text ->
-                    chatViewModel.onInputChange(text)
-                    chatViewModel.send()
-                },
-                onDismiss = { voiceSheetOpen = false },
-            )
-        }
-    }
-    }
-}
-
-private fun shareChooser(context: Context, intent: Intent, title: String): Intent =
-    Intent.createChooser(intent, title).apply {
-        putExtra(
-            Intent.EXTRA_EXCLUDE_COMPONENTS,
-            arrayOf(ComponentName(context.packageName, MainActivity::class.java.name)),
+                onConversation = { id -> drawerOpen = false; chatViewModel.openConversation(id) },
+                onRename = chatViewModel::renameSession,
+                onSetPinned = chatViewModel::setSessionPinned,
+                onSetArchived = chatViewModel::setSessionArchived,
+                onDelete = chatViewModel::deleteSession,
+                onSettings = ::openSettings,
+            ),
+            pluginSetupContent = { interaction -> PluginSetupSheet(graph.pluginManager, interaction) },
         )
     }
-
-@Composable
-private fun NavigationBackHandler(navigator: AppNavigator, drawerOpen: Boolean, onBack: () -> Unit) {
-    BackHandler(enabled = drawerOpen || navigator.canPop, onBack = onBack)
-}
-
-@Composable
-private fun NavigationChrome(navigator: AppNavigator) {
-    val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(navigator.current) {
-        if (navigator.current != AppDestination.Chat) {
-            focusManager.clearFocus()
-            keyboard?.hide()
-        }
     }
-}
-
-@Composable
-private fun rememberFrozenChatState(live: ChatUiState, frozen: Boolean): ChatUiState {
-    val snapshot = remember { mutableStateOf(live) }
-    if (!frozen) {
-        SideEffect { snapshot.value = live }
-    }
-    return if (frozen) snapshot.value else live
 }
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
-private const val SHARE_IMPORT_TIMEOUT_MS = 8_000L
-private const val SESSION_LOOKUP_GRACE_MS = 1_500L

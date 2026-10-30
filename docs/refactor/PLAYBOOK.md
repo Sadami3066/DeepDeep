@@ -76,7 +76,7 @@ git diff --name-only     # 对照白名单
 git diff --stat          # 对照预算
 ```
 
-本机可用内存约 3G：`verify.sh` 用 `flock` 全局串行，**禁止两个 agent 同时跑构建**。OOM 不是风格问题。
+本机可用内存有限：**所有 Gradle 调用必须走 `./scripts/gradlew-locked`**（`verify.sh` 已封装），它用 `flock` 全局串行并默认 `--max-workers=1`。并发构建在 2026-10-30 已造成整机 OOM 死机一次——禁止直接 `./gradlew`，也不要绕过 `verify.sh` 直接跑构建。定向测试同样走 `./scripts/gradlew-locked <task>`。
 
 ## 5. 协作规则
 

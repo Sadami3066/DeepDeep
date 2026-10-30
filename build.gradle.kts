@@ -134,6 +134,10 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
             root.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach { file ->
                 val relative = file.relativeTo(root).path.replace('\\', '/')
                 val packageName = relative.substringBeforeLast('/', "").replace('/', '.')
+                val compositionLayer = packageName == "$base.ui.navigation" ||
+                    packageName.startsWith("$base.ui.navigation.") ||
+                    packageName == "$base.ui.shell" ||
+                    packageName.startsWith("$base.ui.shell.")
                 file.readLines().forEach { raw ->
                     val line = raw.trim()
                     if (!line.startsWith("import ")) return@forEach
@@ -147,7 +151,7 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
                             check("ui/$relative|$imported", "shell access from ui")
                         }
                         val parts = imported.split('.')
-                        if (parts.size > 6 && parts[4] == "ui") {
+                        if (parts.size > 6 && parts[4] == "ui" && !compositionLayer) {
                             val mine = packageName.removePrefix("$base.ui.").substringBefore('.')
                             val target = parts[5]
                             if (target != mine && target != "common" && target != "navigation") {
@@ -158,6 +162,7 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
                 }
             }
         }
+        logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/DeepDeepApplication")
         val stale = allowlist - observed
         if (stale.isNotEmpty()) {
             logger.lifecycle("Package boundary allowlist has ${stale.size} stale entries (remove them):")

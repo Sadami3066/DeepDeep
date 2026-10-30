@@ -24,16 +24,26 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 
+data class ChatTopBarState(
+    val reminderCount: Int,
+    val reloading: Boolean,
+)
+
+data class ChatTopBarActions(
+    val onMenu: () -> Unit,
+    val onReload: () -> Unit,
+    val onOpenSchedules: () -> Unit,
+    val onOpenFiles: () -> Unit = {},
+)
+
 @Composable
 internal fun ChatTopBar(
-    onMenu: () -> Unit,
-    onReload: () -> Unit,
-    reminderCount: Int,
-    onOpenSchedules: () -> Unit,
-    reloading: Boolean,
-    onOpenFiles: () -> Unit = {},
+    state: ChatTopBarState,
+    actions: ChatTopBarActions,
     modifier: Modifier = Modifier,
 ) {
+    val (reminderCount, reloading) = state
+    val (onMenu, onReload, onOpenSchedules, onOpenFiles) = actions
     val colors = deepDeepColors()
     var menuOpen by remember { mutableStateOf(false) }
     Box(
