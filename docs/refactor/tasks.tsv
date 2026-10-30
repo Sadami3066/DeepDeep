@@ -7,15 +7,15 @@ M0-5	M0	done	scripts/dev-setup.sh	scripts/dev-setup.sh;README.md	-	删 local.pro
 M0-6	M0	done	基线快照 docs/refactor/BASELINE.md	docs/refactor/BASELINE.md	-	四个数字由命令生成且可复算	见文件内命令	删除文件	S	agent	-
 M0-7	M0	done	verify.sh 全局串行锁（flock）	scripts/verify.sh	M0-3	两个 verify 并发时第二个等待而非并行	同时起两个 verify.sh	git revert	S	agent	-
 M0-8	M0	done	干净 clone 全流程演练	无	M0-2,M0-3,M0-5	/tmp 新目录 clone + 空 m2 + 无 local.properties 全绿	见 README 判据 1	-	S	agent	-
-M1-1	M1	pending	docs/refactor 三份文档入库	docs/refactor/*	-	文件存在；tasks.tsv 列齐 12 字段	wc -l docs/refactor/*	git revert	S	agent	-
-M1-2	M1	pending	AGENTS.md 规则入口	AGENTS.md	M0	新 agent 只读它能复述正确命令与禁区	人工复述 + 一条试跑	git revert	S	agent	-
-M1-3	M1	pending	PR 模板与提交规范	 .github/pull_request_template.md	M0	模板四段齐全；测试数下降的假 PR 会被规则拦下	gh pr view 模板渲染	git revert	S	agent	-
-M1-4	M1	pending	findings.tsv 入库 + status 列	docs/review/10-30/findings.tsv	-	grep 能回答 128 条修了哪些；4 个已修条目状态正确	awk -F'\t' 'NR>1{print $NF}' docs/review/10-30/findings.tsv | sort | uniq -c	git revert	S	agent	GL-022
-M1-5	M1	pending	真机验收稳定 ID + 证据链	docs/ACCEPTANCE.md;scripts/collect-evidence.sh	M1-1	191 条流水号全部映射到稳定 ID；证据脚本产出 <=10 张 720p/轮	grep -c 'ACC-' docs/ACCEPTANCE.md	git revert	M	agent	-
-M1-6	M1	pending	git 卫生：gitattributes/gc/mailmap/assets 处置	.gitattributes;.gitignore;.mailmap	-	.git 体积下降；大图不在 git status；作者身份统一	git count-objects -vH; git status --short	git revert（历史不可回滚，仅文件）	S	agent	GL-011,GL-012,GL-022
-M1-7	M1	pending	CI workflow + master 分支保护	.github/workflows/ci.yml	M0-3	首跑 verify 绿；分支保护要求 verify	gh run list; gh api repos/Sadami3066/DeepDeep/branches/master/protection	关闭 workflow / 去掉保护	M	human-approve	GL-001
-M1-8	M1	pending	文档分层与 ADR	README.md;docs/DEVELOPMENT.md;docs/ARCHITECTURE.md;docs/adr/*	M1-1	新人只读 README+DEVELOPMENT 30 分钟出 APK；无 0.2.2 残留引用	grep -rn '0.2.2' README.md docs/ | wc -l	git revert	M	agent	-
-M1-9	M1	pending	合规基线 LICENSE/NOTICE/第三方声明	LICENSE;NOTICE;THIRD_PARTY_NOTICES.md;app/src/main/assets/licenses/*;design/src/main/assets/licenses/*	M1-1	notice 引用文本全部存在；APK 内可见；清单逐条打勾	见 THIRD_PARTY_NOTICES 自检命令	git revert	M	agent	GL-022
+M1-1	M1	done	docs/refactor 三份文档入库	docs/refactor/*	-	文件存在；tasks.tsv 列齐 12 字段	wc -l docs/refactor/*	git revert	S	agent	-
+M1-2	M1	done	AGENTS.md 规则入口	AGENTS.md	M0	新 agent 只读它能复述正确命令与禁区	人工复述 + 一条试跑	git revert	S	agent	-
+M1-3	M1	done	PR 模板与提交规范	 .github/pull_request_template.md	M0	模板四段齐全；测试数下降的假 PR 会被规则拦下	gh pr view 模板渲染	git revert	S	agent	-
+M1-4	M1	done	findings.tsv 入库 + status 列	docs/review/10-30/findings.tsv	-	grep 能回答 128 条修了哪些；4 个已修条目状态正确	awk -F'\t' 'NR>1{print $NF}' docs/review/10-30/findings.tsv | sort | uniq -c	git revert	S	agent	GL-022
+M1-5	M1	done	真机验收稳定 ID + 证据链	docs/ACCEPTANCE.md;scripts/collect-evidence.sh	M1-1	191 条流水号全部映射到稳定 ID；证据脚本产出 <=10 张 720p/轮	grep -c 'ACC-' docs/ACCEPTANCE.md	git revert	M	agent	-
+M1-6	M1	done	git 卫生：gitattributes/gc/mailmap/assets 处置	.gitattributes;.gitignore;.mailmap	-	.git 体积下降；大图不在 git status；作者身份统一	git count-objects -vH; git status --short	git revert（历史不可回滚，仅文件）	S	agent	GL-011,GL-012,GL-022
+M1-7	M1	done	CI workflow + master 分支保护	.github/workflows/ci.yml	M0-3	首跑 verify 绿；分支保护要求 verify	gh run list; gh api repos/Sadami3066/DeepDeep/branches/master/protection	关闭 workflow / 去掉保护	M	human-approve	GL-001
+M1-8	M1	done	文档分层与 ADR	README.md;docs/DEVELOPMENT.md;docs/ARCHITECTURE.md;docs/adr/*	M1-1	新人只读 README+DEVELOPMENT 30 分钟出 APK；无 0.2.2 残留引用	grep -rn '0.2.2' README.md docs/ | wc -l	git revert	M	agent	-
+M1-9	M1	done	合规基线 LICENSE/NOTICE/第三方声明	LICENSE;NOTICE;THIRD_PARTY_NOTICES.md;app/src/main/assets/licenses/*;design/src/main/assets/licenses/*	M1-1	notice 引用文本全部存在；APK 内可见；清单逐条打勾	见 THIRD_PARTY_NOTICES 自检命令	git revert	M	agent	GL-022
 M1-10	M1	pending	首个 agent 试跑全流程	无	M1-2,M1-3,M0	G1/G2/G3 走完；G2 至少产出 1 条反例	按 PLAYBOOK 执行并留档	-	S	agent	-
 M2-1	M2	pending	共享 fake 合一份	app/src/test/**/testing/*	M0	ChatViewModelTest/ScheduleServiceTest 全绿且测试数不减	./gradlew :app:testDebugUnitTest	git revert	M	agent	RT-006
 M2-2	M2	pending	CH-011 三条 characterization	app/src/test/**/ui/chat/*	M2-1	回退对应实现后新测试必红	--tests 指定三条	git revert	S	agent	CH-011
