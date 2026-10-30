@@ -16,11 +16,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdDropdown
@@ -44,8 +45,8 @@ import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
+import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginManager
@@ -56,6 +57,7 @@ import io.github.whywood.deepdeep.plugin.micloud.MiCloudFeatureSection
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun PluginDetailScreen(
@@ -64,20 +66,19 @@ fun PluginDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
-    val state by manager.state.collectAsState()
-    val snapshot = state.snapshot(pluginId)
-    val operation = state.operation?.takeIf { it.pluginId == pluginId }
-    val busy = state.busy || state.interaction != null
+    val scope = rememberCoroutineScope()
+    val holder = remember(manager) { PluginsStateHolder(manager, scope) }
+    val state by holder.state.collectAsStateWithLifecycle()
     var deleteOpen by remember { mutableStateOf(false) }
     var detailRows by remember(pluginId) { mutableStateOf<List<PluginDetailRow>>(emptyList()) }
     var detailRowsFailed by remember(pluginId) { mutableStateOf(false) }
     var detailRefresh by remember(pluginId) { mutableIntStateOf(0) }
+    val snapshot = state.snapshot(pluginId)
 
-    LaunchedEffect(Unit) { manager.refreshIfStale() }
-    LifecycleResumeEffect(Unit) {
+    LaunchedEffect(holder) { holder.load() }
+    LifecycleResumeEffect(holder) {
         detailRefresh += 1
-        manager.refreshIfStale()
+        scope.launch { holder.load() }
         onPauseOrDispose { }
     }
     LaunchedEffect(pluginId, state.plugins, state.loading) {
@@ -98,12 +99,52 @@ fun PluginDetailScreen(
         )
     }
 
-    if (snapshot == null) {
-        return
-    }
+    val current = snapshot ?: return
 
+    PluginDetailContent(
+        state = state,
+        snapshot = current,
+        pluginId = pluginId,
+        detailRows = detailRows,
+        detailRowsFailed = detailRowsFailed,
+        deleteOpen = deleteOpen,
+        onDeleteOpenChange = { deleteOpen = it },
+        onBack = onBack,
+        onRefresh = { scope.launch { holder.refresh() } },
+        onInstall = { scope.launch { holder.install(pluginId) } },
+        onUpdate = { scope.launch { holder.update(pluginId) } },
+        onUninstall = { scope.launch { holder.uninstall(pluginId) } },
+        onRunAction = { actionId -> scope.launch { holder.runAction(pluginId, actionId) } },
+        onSetting = { key, value -> scope.launch { holder.setSetting(pluginId, key, value) } },
+        onRetry = { scope.launch { holder.retry() } },
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun PluginDetailContent(
+    state: PluginsUiState,
+    snapshot: PluginSnapshot,
+    pluginId: String,
+    detailRows: List<PluginDetailRow>,
+    detailRowsFailed: Boolean,
+    deleteOpen: Boolean,
+    onDeleteOpenChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onInstall: () -> Unit,
+    onUpdate: () -> Unit,
+    onUninstall: () -> Unit,
+    onRunAction: (String) -> Unit,
+    onSetting: (String, String) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
     val plugin = snapshot.plugin
     val name = stringResource(plugin.nameRes)
+    val operation = state.operation?.takeIf { it.pluginId == pluginId }
+    val busy = state.busy || state.interaction != null
     val statusLabel = when {
         operation != null -> operation.stage
             ?: operation.progress?.let { stringResource(R.string.plugins_downloading_percent, it) }
@@ -146,7 +187,7 @@ fun PluginDetailScreen(
             }
             DdIconButton(
                 icon = DdIcons.Refresh,
-                onClick = { manager.refresh() },
+                onClick = onRefresh,
                 contentDescription = stringResource(R.string.plugins_refresh),
                 modifier = Modifier.testTag("plugin_detail_refresh"),
                 tint = colors.ink,
@@ -227,7 +268,7 @@ fun PluginDetailScreen(
                         plugin = plugin,
                         settings = snapshot.settings,
                         enabled = !busy && snapshot.enabled,
-                        onSetting = { key, value -> manager.setSetting(plugin.id, key, value) },
+                        onSetting = onSetting,
                     )
                 }
             }
@@ -259,7 +300,7 @@ fun PluginDetailScreen(
                 !snapshot.installed -> {
                     DdPrimaryButton(
                         text = stringResource(R.string.plugins_action_download),
-                        onClick = { manager.install(plugin.id) },
+                        onClick = onInstall,
                         modifier = Modifier.fillMaxWidth().testTag("plugin_detail_download"),
                         enabled = availability is PluginAvailability.Available && !busy,
                     )
@@ -274,9 +315,7 @@ fun PluginDetailScreen(
                                     if (index > 0) DdHairline()
                                     DdListRow(
                                         title = stringResource(action.labelRes),
-                                        onClick = {
-                                            if (!busy) manager.runAction(plugin.id, action.id)
-                                        },
+                                        onClick = { if (!busy) onRunAction(action.id) },
                                         enabled = !busy,
                                         modifier = Modifier.testTag("plugin_action_${action.id}"),
                                     )
@@ -288,7 +327,7 @@ fun PluginDetailScreen(
                     if (snapshot.updateAvailable) {
                         DdPrimaryButton(
                             text = stringResource(R.string.plugins_action_update),
-                            onClick = { manager.update(plugin.id) },
+                            onClick = onUpdate,
                             modifier = Modifier.fillMaxWidth().testTag("plugin_detail_update"),
                             enabled = !busy,
                         )
@@ -297,14 +336,14 @@ fun PluginDetailScreen(
                     SettingsGroup {
                         DdListRow(
                             title = stringResource(R.string.plugins_action_reinstall),
-                            onClick = { if (!busy) manager.update(plugin.id) },
+                            onClick = { if (!busy) onUpdate() },
                             enabled = !busy,
                             modifier = Modifier.testTag("plugin_detail_reinstall"),
                         )
                         DdHairline()
                         DdListRow(
                             title = stringResource(R.string.plugins_action_delete),
-                            onClick = { deleteOpen = true },
+                            onClick = { onDeleteOpenChange(true) },
                             enabled = !busy,
                             modifier = Modifier.testTag("plugin_detail_delete"),
                         )
@@ -314,12 +353,22 @@ fun PluginDetailScreen(
 
             state.error?.let { error ->
                 Spacer(Modifier.height(14.dp))
-                Text(
-                    text = error,
-                    modifier = Modifier.padding(horizontal = 4.dp).testTag("plugin_detail_error"),
-                    style = DdType.bodySmall,
-                    color = colors.danger,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = error,
+                        modifier = Modifier.weight(1f).testTag("plugin_detail_error"),
+                        style = DdType.bodySmall,
+                        color = colors.danger,
+                    )
+                    DdTextAction(
+                        text = stringResource(R.string.assistant_retry),
+                        onClick = onRetry,
+                        modifier = Modifier.testTag("plugin_detail_error_retry"),
+                    )
+                }
             }
             Spacer(Modifier.height(40.dp))
         }
@@ -327,7 +376,7 @@ fun PluginDetailScreen(
 
     if (deleteOpen) {
         DdDialog(
-            onDismissRequest = { deleteOpen = false },
+            onDismissRequest = { onDeleteOpenChange(false) },
             title = stringResource(R.string.plugins_delete_title),
             content = {
                 Text(
@@ -339,14 +388,14 @@ fun PluginDetailScreen(
             actions = {
                 DdTextAction(
                     text = stringResource(R.string.plugins_cancel),
-                    onClick = { deleteOpen = false },
+                    onClick = { onDeleteOpenChange(false) },
                     color = colors.inkSecondary,
                 )
                 DdTextAction(
                     text = stringResource(R.string.plugins_delete_confirm),
                     onClick = {
-                        deleteOpen = false
-                        manager.uninstall(plugin.id)
+                        onDeleteOpenChange(false)
+                        onUninstall()
                     },
                     color = colors.danger,
                 )
