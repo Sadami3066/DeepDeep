@@ -27,7 +27,9 @@ SDK 依赖（`dev.pi:*`）由根项目的 `syncPiSdk` 任务从 pi2kotlin `v0.2.
 ## 日常命令
 
 ```bash
-./scripts/verify.sh                       # 门禁：check（单测+lint+模块边界）+ assembleDebug
+./scripts/gate.sh 3                      # 默认档：文档链接 + check（单测+lint+模块边界）+ assembleDebug
+./scripts/gate.sh 0|1|2|4                  # L0 文档 / L1 编译 / L2 单测 / L4 真机（见 PLAYBOOK §0）
+./scripts/verify.sh                        # 等价于 gate.sh 3（保留兼容）
 ./scripts/gradlew-locked :app:assembleDebug              # 只出 APK
 ./scripts/gradlew-locked :app:testDebugUnitTest          # 只跑 app 单测
 ./scripts/gradlew-locked :runtime:testDebugUnitTest      # 只跑 runtime 单测

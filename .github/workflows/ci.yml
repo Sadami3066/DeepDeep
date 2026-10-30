@@ -1,9 +1,15 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: "full=全量 verify；fast=只编译"
+        type: choice
+        options: ["full", "fast"]
+        default: "full"
   push:
-    branches: [master]
-  pull_request:
+    tags: ["v*"]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -12,12 +18,19 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  DEEPDEEP_GRADLE_WORKERS: "4"
+  DEEPDEEP_GRADLE_JVMARGS: "-Xmx3g -XX:MaxMetaspaceSize=1g"
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+
+      - name: Docs link check
+        run: ./scripts/check-docs.sh
 
       - uses: actions/setup-java@v6
         with:
@@ -37,8 +50,13 @@ jobs:
             "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
           fi
 
-      - name: Verify
-        run: ./scripts/verify.sh
+      - name: Verify (full)
+        if: github.event_name == 'push' || github.event.inputs.level == 'full'
+        run: ./scripts/gate.sh 3
+
+      - name: Compile (fast)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.level == 'fast'
+        run: ./scripts/gate.sh 1
 
       - name: Upload reports
         if: failure()

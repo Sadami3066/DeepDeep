@@ -6,7 +6,7 @@
 
 - 文档总索引：`docs/README.md`
 - 路线图：`docs/dev/refactor/README.md`
-- 可执行任务卡：`docs/dev/refactor/tasks.tsv`（开工前抄 `scope`/`accept`/`verify`）
+- 可执行任务卡：`docs/dev/refactor/tasks.tsv`（只放活跃卡；完成的在 `tasks-archive-*.tsv`。开工前抄 `scope`/`accept`/`verify`）
 - 执行协议、任务简报与 PR 模板：`docs/dev/refactor/PLAYBOOK.md`
 - 基线数字：`docs/dev/refactor/BASELINE.md`
 
@@ -21,14 +21,27 @@ JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。首次：
 日常：
 
 ```bash
-./scripts/verify.sh        # 门禁：编译 + 单测 + lint + 模块边界（带全局锁，串行）
-./scripts/gradlew-locked :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./scripts/gate.sh 3        # 默认档：文档 + 编译 + 单测 + lint + 边界 + APK（约 75s）
+./scripts/gate.sh 4        # 上真机：3 + 覆盖安装
+./scripts/gate.sh ci full  # 需要时才在 GitHub 上跑，不阻塞本地
 ```
 
 - `dev.pi` SDK 由 `syncPiSdk` 从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
 - 离线或调试 SDK 时：`./scripts/gradlew-locked ... -PpiSdkLocalZip=/path/to/pi2kotlin-0.2.4-m2.zip`。
-- **所有 Gradle 调用必须走 `./scripts/gradlew-locked`**（`verify.sh` 已封装）。它用 `flock` 全局串行并默认 `--max-workers=1`：本机内存有限，并发构建已在 2026-10-30 造成整机 OOM 死机。**禁止直接 `./gradlew`**。
+- **所有 Gradle 调用必须走 `./scripts/gradlew-locked`**（`gate.sh` 已封装，`verify.sh` 是 `gate.sh 3` 的别名）。它用 `flock` 全局串行并默认 `--max-workers=1`：本机内存有限，并发构建已在 2026-10-30 造成整机 OOM 死机。**禁止直接 `./gradlew`**。
+
+## 1.5 验证档位（L0–L4，手动选；CI 手动）
+
+| 档 | 命令 | 跑什么 | 本机实测 |
+|---|---|---|---|
+| L0 文档 | `./scripts/gate.sh 0` | 断链检查 | ~1s |
+| L1 编译 | `./scripts/gate.sh 1` | L0 + 五模块编译 | ~5s |
+| L2 单测 | `./scripts/gate.sh 2` | L0 + 单测 | ~5s |
+| L3 全量（默认） | `./scripts/gate.sh 3` | L0 + check（单测/lint/边界）+ APK | ~75s |
+| L4 真机 | `./scripts/gate.sh 4` | L3 + 覆盖安装到真机 | L3 + ~10s |
+| CI | `./scripts/gate.sh ci fast` 或 `ci full` | GitHub 上手动跑，不等它 | 另算 |
+
+口诀：**只改文档 L0；改代码默认 L3；要上真机 L4；发版/改门禁才用 CI。** 流程强度（任务卡 / G2 / 证据）按档位裁剪，见 `docs/dev/refactor/PLAYBOOK.md §0`。
 
 ## 2. 基线（不得下降）
 
@@ -53,7 +66,12 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 `ChatViewModel.kt`(799) ｜ `DeepDeepApp.kt`(644) ｜ `AgentRuntimeHost.kt`(1119，已有 6 场景直接测试) ｜ `PluginSetupSession.kt`(319)
 
-## 5. 交付物（缺一不可）
+## 5. 交付物（按档位取舍）
+
+L0/L1：变更文件清单。
+L2：清单 + 单测输出 + 回滚命令。
+L3：清单 + gate 输出 + 回滚命令（新增行为加测试红绿证据）。
+L4：全部五项都交。
 
 1. 变更文件清单（`git diff --name-only <base>..HEAD`）
 2. `./scripts/verify.sh` 的原始输出
@@ -64,8 +82,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## 6. 提交与 PR
 
 - 标题：`type: 祈使句摘要 [任务ID]`，`type ∈ feat|fix|refactor|perf|docs|test|chore|build|revert`
-- 一个任务一个 squash 提交；body 三行必填：`验收:`、`回滚:`、`不在范围:`
-- 提交标题必须带 backlog ID（任务卡 ID 或 `RT-xxx`），否则无法机器对账
+- 一个任务一个 squash 提交；body 三行必填（`验收:`、`回滚:`、`不在范围:`）——L2–L4 必填，L0/L1 可只写标题
+- 提交标题必须带 backlog ID（任务卡 ID 或 `RT-xxx`），否则无法机器对账；L0/L1 无卡时用 `[L0]`/`[L1]`
 - 回滚必须是 `git revert <sha>` 一行能完成；数据影响要在 PR 里写明
 
 ## 7. 禁止动作

@@ -7,7 +7,7 @@
 | 你是谁 / 想干什么 | 去哪 |
 |---|---|
 | 想用这个 App、想知道它能干什么、边界在哪 | [`user/`](user/GUIDE.md) |
-| 要改代码、要开机、要提交 PR、要验收 | [`dev/DEVELOPMENT.md`](dev/DEVELOPMENT.md) → [`AGENTS.md`](../AGENTS.md) |
+| 要改代码、要开机、要提交 PR、要验收 | [`dev/DEVELOPMENT.md`](dev/DEVELOPMENT.md) → [`AGENTS.md`](../AGENTS.md)（先看 §1.5 分级流程） |
 | 想知道「为什么当初这么设计」 | [`dev/adr/`](dev/adr/README.md) |
 | 想找旧计划、旧验收流水、旧调研 | [`archive/`](archive/README.md) |
 
@@ -42,7 +42,7 @@
 | [`evidence/README.md`](dev/evidence/README.md) | 证据目录规范与压缩入库规则 |
 | [`RELEASING.md`](dev/RELEASING.md) | 发布流程（未启用，发版时才执行） |
 | [`OPEN_SOURCE_CHECKLIST.md`](dev/OPEN_SOURCE_CHECKLIST.md) | 开源/发版前逐项打勾清单 |
-| [`refactor/`](dev/refactor/README.md) | 重构总纲、任务卡、执行协议、基线、测试约定、仓库卫生 |
+| [`refactor/`](dev/refactor/README.md) | 重构总纲、活跃任务卡（完成项在 `tasks-archive-*.tsv`）、T0/T1/T2 分级执行协议、基线、测试约定、仓库卫生 |
 | [`review/`](dev/review/10-30/README.md) | 2026-10-30 的结构化评审快照（`findings.tsv` 是未修项的对账口径） |
 | [`adr/`](dev/adr/README.md) | 7 篇架构决策记录（不要用「顺手优化」推翻） |
 
@@ -59,3 +59,4 @@
 3. **过时先归档再重写**：不直接删除历史文档，移入 `archive/` 并加横幅；保留「当时为什么这么定」。
 4. **一份文档只回答一类问题**：`ARCHITECTURE.md` 只写「现在是什么」，「将要变成什么」写进 `refactor/`，「为什么」写进 `adr/`。
 5. **不写个人环境**：文档里不出现本机绝对路径、密钥、真实账号、未脱敏截图。
+6. **按档位改**：L0 文档（约 1s）/ L1 编译 / L2 单测 / L3 全量（默认，约 75s）/ L4 真机 / CI 手动；命令是 `./scripts/gate.sh <档>`，流程强度见 `dev/refactor/PLAYBOOK.md §0`。

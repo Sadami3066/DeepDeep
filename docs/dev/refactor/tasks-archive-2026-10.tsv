@@ -1,0 +1,56 @@
+id	phase	status	title	scope	depends	accept	verify	rollback	size	owner	source
+M0-1	M0	done	pi2kotlin 从 HEAD 重建并发布 v0.2.4 Release	../pi2kotlin	-	Release 资产存在且 sha256 一致；zip 内含 4 个 aar；产物由 HEAD 6cff93e 重建	gh release view v0.2.4 --json assets; unzip -Z1 <zip> | grep -c '\.aar$'	删除 Release 与 tag；本地 zip 保留	M	human-external	-
+M0-2	M0	done	syncPiSdk 下载并解包 SDK 仓库	settings.gradle.kts;build.gradle.kts;gradle/pi-sdk.sha256	M0-1	空 ~/.m2 下可解析；移除解包目录即 FAILED	./scripts/gradlew-locked syncPiSdk; ./scripts/gradlew-locked :runtime:dependencies -Dmaven.repo.local=/tmp/empty-m2 --refresh-dependencies	git revert	M	agent	GL-004
+M0-3	M0	done	门禁接线：boundary 进 check + scripts/verify.sh	build.gradle.kts;scripts/verify.sh	-	check 任务图含 boundary；verify.sh 绿；违规依赖必红	./scripts/gradlew-locked check --dry-run -q | grep -c verifyModuleBoundaries; ./scripts/verify.sh	git revert	S	agent	GL-001,GL-005
+M0-4	M0	done	wrapper sha256 与 .gitignore 补项	gradle/wrapper/gradle-wrapper.properties;.gitignore	-	gradlew help 正常；keystore.properties 与 .notes 被忽略	./scripts/gradlew-locked help; git status --short	git revert	S	agent	GL-012
+M0-5	M0	done	scripts/dev-setup.sh	scripts/dev-setup.sh;README.md	-	删 local.properties 后跑脚本能出 APK	rm -f local.properties && ./scripts/dev-setup.sh	git revert	S	agent	GL-004
+M0-6	M0	done	基线快照 docs/dev/refactor/BASELINE.md	docs/dev/refactor/BASELINE.md	-	四个数字由命令生成且可复算	见文件内命令	删除文件	S	agent	-
+M0-7	M0	done	verify.sh 全局串行锁（flock）	scripts/verify.sh	M0-3	两个 verify 并发时第二个等待而非并行	同时起两个 verify.sh	git revert	S	agent	-
+M0-8	M0	done	干净 clone 全流程演练	无	M0-2,M0-3,M0-5	/tmp 新目录 clone + 空 m2 + 无 local.properties 全绿	见 README 判据 1	-	S	agent	-
+M1-1	M1	done	docs/dev/refactor 三份文档入库	docs/dev/refactor/*	-	文件存在；tasks.tsv 列齐 12 字段	wc -l docs/dev/refactor/*	git revert	S	agent	-
+M1-2	M1	done	AGENTS.md 规则入口	AGENTS.md	M0	新 agent 只读它能复述正确命令与禁区	人工复述 + 一条试跑	git revert	S	agent	-
+M1-3	M1	done	PR 模板与提交规范	 .github/pull_request_template.md	M0	模板四段齐全；测试数下降的假 PR 会被规则拦下	gh pr view 模板渲染	git revert	S	agent	-
+M1-4	M1	done	findings.tsv 入库 + status 列	docs/dev/review/10-30/findings.tsv	-	grep 能回答 128 条修了哪些；4 个已修条目状态正确	awk -F'\t' 'NR>1{print $NF}' docs/dev/review/10-30/findings.tsv | sort | uniq -c	git revert	S	agent	GL-022
+M1-5	M1	done	真机验收稳定 ID + 证据链	docs/dev/ACCEPTANCE.md;scripts/collect-evidence.sh	M1-1	191 条流水号全部映射到稳定 ID；证据脚本产出 <=10 张 720p/轮	grep -c 'ACC-' docs/dev/ACCEPTANCE.md	git revert	M	agent	-
+M1-6	M1	done	git 卫生：gitattributes/gc/mailmap/assets 处置	.gitattributes;.gitignore;.mailmap	-	.git 体积下降；大图不在 git status；作者身份统一	git count-objects -vH; git status --short	git revert（历史不可回滚，仅文件）	S	agent	GL-011,GL-012,GL-022
+M1-7	M1	done	CI workflow + master 分支保护	.github/workflows/ci.yml	M0-3	首跑 verify 绿；分支保护要求 verify	gh run list; gh api repos/Sadami3066/DeepDeep/branches/master/protection	关闭 workflow / 去掉保护	M	human-approve	GL-001
+M1-8	M1	done	文档分层与 ADR	README.md;docs/dev/DEVELOPMENT.md;docs/dev/ARCHITECTURE.md;docs/dev/adr/*	M1-1	新人只读 README+DEVELOPMENT 30 分钟出 APK；无 0.2.2 残留引用	grep -rn '0.2.2' README.md docs/ | wc -l	git revert	M	agent	-
+M1-9	M1	done	合规基线 LICENSE/NOTICE/第三方声明	LICENSE;NOTICE;THIRD_PARTY_NOTICES.md;app/src/main/assets/licenses/*;design/src/main/assets/licenses/*	M1-1	notice 引用文本全部存在；APK 内可见；清单逐条打勾	见 THIRD_PARTY_NOTICES 自检命令	git revert	M	agent	GL-022
+M1-10	M1	done	首个 agent 试跑全流程	无	M1-2,M1-3,M0	G1/G2/G3 走完；G2 至少产出 1 条反例	按 PLAYBOOK 执行并留档	-	S	agent	-
+M2-1	M2	done	共享 fake 合一份	app/src/test/**/testing/*	M0	ChatViewModelTest/ScheduleServiceTest 全绿且测试数不减	./scripts/gradlew-locked :app:testDebugUnitTest	git revert	M	agent	RT-006
+M2-2	M2	done	CH-011 三条 characterization	app/src/test/**/ui/chat/*	M2-1	回退对应实现后新测试必红	--tests 指定三条	git revert	S	agent	CH-011
+M2-3	M2	done	AppDependencies 接口	app/src/main/**/AppGraph.kt;DeepDeepApp.kt	M1-2	编译 + 测试全绿；Fake 可装配壳层	./scripts/gradlew-locked :app:testDebugUnitTest	git revert	M	agent	AC-011
+M2-4	M2	done	SessionHandle/SessionEngine 接口 + host 6 场景	runtime/src/main/**/session/*	M2-3	6 个新用例覆盖 RT-006 六场景	./scripts/gradlew-locked :runtime:test	git revert	L	agent	RT-006
+M2-5	M2	done	AgentRuntime 角色切分	runtime/src/main/**/RuntimeTypes.kt;app/src/main/**	M2-4	3 个窄调用点改窄接口	编译 + 全量单测	git revert	M	agent	RT-022
+M2-6	M2	done	package boundary 规则	build.gradle.kts;scripts/verify.sh	M0-3	违规 import 必红	加一条违规 import 自测	git revert	M	agent	GL-005
+M2-7	M2	done	PluginManager 拆 3 类	app/src/main/**/plugin/PluginManager.kt	M2-1	PluginManagerTest 全绿；类行数下降	./scripts/gradlew-locked :app:testDebugUnitTest --tests '*PluginManagerTest'	git revert	M	agent	PL-006
+M2-8	M2	done	MiCloudTools 拆 4 文件	app/src/main/**/plugin/micloud/MiCloudTools.kt	M2-1	MiCloudToolsTest/MiCloudParsersTest 全绿	--tests '*MiCloud*'	git revert	M	agent	A-08
+M2-9	M2	done	MarkdownParser 拆 4 文件	app/src/main/**/ui/chat/MarkdownParser.kt	M2-1	435+210 行测试 + 48 篇等价语料不变	--tests '*Markdown*'	git revert	M	agent	-
+M2-10	M2	done	:runtime-api 纯 JVM 契约模块	settings.gradle.kts;runtime-api/*	M2-5	模块编译时看不到 Android/SDK classpath	./scripts/gradlew-locked :runtime-api:build	git revert	M	agent	-
+M3-1	M3	done	路由表抽纯函数 + 单测	app/src/main/**/ui/navigation/*;DeepDeepApp.kt	M2-3	19 路由全覆盖；DApp 降 200 行	--tests '*Navigation*'	git revert	M	agent	AC-004
+M3-2	M3	done	OverlayHost 拆 Sheet/Dialog	app/src/main/**/ui/shell/*;DeepDeepApp.kt	M3-1	手测条目通过；DApp 继续降	真机条目	git revert	M	agent	AC-004
+M3-3	M3	done	intake 子组件，DApp <=500 行	app/src/main/**/ui/shell/*;DeepDeepApp.kt	M3-2	行数 + 条目验收	wc -l DeepDeepApp.kt	git revert	L	agent	AC-004
+M3-4	M3	done	ChatViewModel Step1 ConversationWriteTarget	app/src/main/**/ui/chat/state/*;ChatViewModel.kt	M2-1	指定 3 用例绿；VM 1660→1579	--tests 指定用例	git revert	M	agent	CH-004
+M3-5	M3	done	ChatViewModel Step2 DeltaBatcher	同上	M3-4	指定 2 用例绿；VM 1579→1519	--tests 指定用例	git revert	M	agent	CH-004,CH-005
+M3-6	M3	done	ChatViewModel Step3 AutoRetryController	同上	M3-5	指定 4 用例绿；VM 1519→1398	--tests 指定用例	git revert	M	agent	CH-004
+M3-7	M3	done	ChatViewModel Step4 ConversationCache+SessionDraftStore	同上	M3-6	指定 3 用例绿；VM 1398→1243	--tests 指定用例	git revert	M	agent	CH-004
+M3-8	M3	done	ChatViewModel Step5 SessionOpener	同上	M3-7	指定 4 用例绿；VM 1243→1028	--tests 指定用例	git revert	L	agent	CH-004
+M3-9	M3	done	ChatViewModel Step6 四个 controller	同上	M3-8	指定用例绿；VM 1028→807	--tests 指定用例	git revert	L	agent	CH-004
+M3-10	M3	done	ChatViewModel Step7 单模型收口	ChatUiState.kt;ChatViewModel.kt;ChatScreen.kt	M3-9	VM 807→799；ChatScreen 参数 55→10；56 条 ChatViewModelTest 全绿；conversationState/applyConversation 已删除（grep=0）	--tests '*ui.chat.*'	git revert	L	agent	CH-002,CH-004
+M3-11	M3	done	Skills 屏 state holder	app/src/main/**/ui/skills/*	M2-3	2-3 个 Compose 测试；页面不直连 Store	--tests '*Skills*'	git revert	M	agent	SC-001
+M3-12	M3	done	MCP 屏 state holder	app/src/main/**/ui/mcp/*	M2-3	同上	--tests '*Mcp*'	git revert	M	agent	SC-001
+M3-13	M3	done	Plugins 屏 state holder	app/src/main/**/ui/plugins/*	M2-3	同上	--tests '*Plugin*'	git revert	M	agent	SC-001
+M3-14	M3	done	Schedule 屏 state holder	app/src/main/**/ui/schedules/*	M2-3	同上	--tests '*Schedule*'	git revert	M	agent	SC-001
+M3-15	M3	done	Workshop 屏 state holder	app/src/main/**/ui/workshop/*	M2-3	同上	--tests '*Workshop*'	git revert	M	agent	SC-001
+M3-16	M3	done	design 组件 DdPageScaffold 等	design/src/main/**	M2-3	组件被 2+ 页面复用	编译 + 页面冒烟	git revert	M	agent	SC-002
+M3-17	M3	done	收口验收：并行冲突演练 + 文档数字再生	无	M3-*	判据 3、5 通过	README 判据	-	S	agent	-
+M3-h2	M3	done	AppRoutes 通配 import 清理	app/src/main/.../ui/navigation/AppRoutes.kt	M3-1	通配 import 8→0；verify 绿	./scripts/verify.sh	git revert	S	agent	lint-crash
+M5-1	M5	done	文档结构重组：user/dev/archive 分层 + 总索引	docs/	-	docs/ 下无散落旧文档；docs/README.md 可导航；相对链接 0 断	python3 链接检查；人工抽查索引条目	git revert	L	agent	docs-pass
+M5-2	M5	done	架构与 UI 文档校准	docs/dev/ARCHITECTURE.md;docs/dev/UI.md	M5-1	模块/数据所有权/启动顺序/UI 规范与代码一致，每条改动附源码位置	逐条对照源码路径	git revert	S	agent	docs-pass
+M5-3	M5	done	协作与开发文档校准	AGENTS.md;CONTRIBUTING.md;docs/dev/DEVELOPMENT.md;docs/dev/refactor/PLAYBOOK.md;docs/dev/refactor/TESTING.md;docs/dev/refactor/HYGIENE.md;.github/pull_request_template.md;.github/ISSUE_TEMPLATE/feature_request.yml	M5-1	命令、基线数字、入口路径、回滚约定与仓库现状一致	按文档命令复算数字	git revert	S	agent	docs-pass
+M5-4	M5	done	验收文档校准 + 真机测试历史归档	docs/dev/ACCEPTANCE.md;docs/dev/DEVICE_TESTING.md;docs/dev/evidence/README.md;docs/archive/device-testing-rounds.md;scripts/collect-evidence.sh	M5-1	验收 ID 无失效项；操作步骤可用；历史轮次进 archive	抽 5 条 ACC 条目按步骤执行	git revert	M	agent	docs-pass
+M5-5	M5	done	重构文档与评审 backlog 对账	docs/dev/refactor/README.md;docs/dev/refactor/REPORT.md;docs/dev/refactor/BASELINE.md;docs/dev/refactor/tasks.tsv;docs/dev/review/10-30/;CHANGELOG.md	M5-1	M0-M3 状态与提交对得上；findings.tsv 未修项口径明确；CHANGELOG 覆盖到 m3	git log/tag 对账	git revert	S	agent	docs-pass
+M5-6	M5	done	产品文档校准：对话/命令/调度/工坊 + 模型文本清单	docs/user/GUIDE.md;docs/user/COMMANDS.md;docs/user/SCHEDULING.md;docs/user/WORKSHOP.md;docs/dev/TEXTS.md	M5-1	功能与命令清单与代码一致；TEXTS 条目可按标识定位	逐条 grep 源码标识	git revert	M	agent	docs-pass
+M5-7	M5	done	产品文档校准：接入类能力	docs/user/PLUGINS.md;docs/user/SKILLS.md;docs/user/MCP.md;docs/user/TOOLS.md;docs/user/MICLOUD.md;docs/user/ANDROID_CAPABILITIES.md;docs/user/ANDROID_ASSISTANT.md	M5-1	工具名/插件清单/权限项与代码一致	逐条 grep 工具注册与权限	git revert	M	agent	docs-pass
+M5-8	M5	done	开源发布文档 + assets 说明校准	docs/dev/RELEASING.md;docs/dev/OPEN_SOURCE_CHECKLIST.md;SECURITY.md;CODE_OF_CONDUCT.md;THIRD_PARTY_NOTICES.md;NOTICE;assets/README.md;assets/branding/README.md;assets/mascot/README.md;assets/pi-provider-logos/README.md;assets/vendor-logos/README.md	M5-1	发布/合规步骤可执行；assets 说明无失效路径	按清单抽查资产路径	git revert	S	agent	docs-pass
+M5-9	M5	done	ADR 与调研归档校准	docs/dev/adr/;docs/archive/research/	M5-1	ADR 的推翻条件与现状一致；归档调研注明被哪份 ADR 取代	逐篇对照代码与现行决策	git revert	S	agent	docs-pass

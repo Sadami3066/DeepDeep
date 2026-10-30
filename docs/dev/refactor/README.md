@@ -2,7 +2,7 @@
 
 状态：M0–M3 已完成并合并 `master@706caa3`（PR #1–#4，tag `m0`–`m3`）；M4 不执行；M5 文档基线已完成（2026-10-30，见 §4）。
 分支：`refactor/team-foundation` 已合并，本地与远端均保留（本地 `763c117`，落后 master 5 个 merge commit；实现提交均已进入 master）。
-配套文件：任务清单 `tasks.tsv`（可执行 backlog）｜agent 执行协议 `PLAYBOOK.md`（模板与闸门）
+配套文件：活跃任务卡 `tasks.tsv`（已完成卡归档在 `tasks-archive-2026-10.tsv`）｜agent 执行协议 `PLAYBOOK.md`（T0/T1/T2 分级、模板与闸门）
 
 ## 1. 目标
 
@@ -88,13 +88,17 @@
 | M3-11…M3-16 | 每屏 state holder（Skills/MCP/Plugins/Schedule/Workshop） |
 | M3-17 | 收口验收（判据 3、5） |
 
+### M6 工程效率（按需，不排期）
+
+流程减负与 CI 提速：`scripts/gate.sh` 五档（L0 文档 / L1 编译 / L2 单测 / L3 全量 / L4 真机）+ CI 改手动触发（`gate.sh ci`）。后续按需追加，不设完成判据。
+
 ### M4 开源就绪（**只准备，不发布**；用户点头才执行）
 
 Maven Central 收口（group `io.github.sadami3066`、v0.3）｜正式签名 + tag 驱动 release workflow｜仓库切 public + CONTRIBUTING/CoC/SECURITY + issue 模板｜品牌素材替换决策｜发行验收清单。
 
 ### M5 文档基线（2026-10-30，完成）
 
-文档三层重组：`docs/user/`（产品）、`docs/dev/`（开发）、`docs/archive/`（不再维护），`docs/README.md` 为总索引；逐篇按代码校准事实与路径。共 9 张卡（`tasks.tsv` M5-1…M5-9）。九张卡并行改同一份文档集，按文件无法拆成独立回滚单元，因此落在**一条提交**里，回滚用一次 `git revert`。
+文档三层重组：`docs/user/`（产品）、`docs/dev/`（开发）、`docs/archive/`（不再维护），`docs/README.md` 为总索引；逐篇按代码校准事实与路径。共 9 张卡（`tasks.tsv` M5-1…M5-9）。九张卡并行改同一份文档集，按文件无法拆成独立回滚单元，因此落在**一条提交**里，回滚用一次 `git revert`。M0–M3、M5 的完成卡已归档到 `tasks-archive-2026-10.tsv`，`tasks.tsv` 只留活跃卡。
 
 ## 5. 已定决策
 
@@ -125,3 +129,4 @@ Maven Central 收口（group `io.github.sadami3066`、v0.3）｜正式签名 + t
 | M3 | 完成（2026-10-30，17/17；ChatViewModel 1660→799、ChatScreen 参数 55→10、5 屏 state holder） |
 | M4 | 未开始（不执行） |
 | M5 | 完成（2026-10-30，9/9；文档三层重组 + 逐篇校准，单提交可一次 revert） |
+| M6 | 进行中（按需；M6-1 分级流程与 CI 文档快车道） |
