@@ -34,7 +34,7 @@ M3-4	M3	done	ChatViewModel Step1 ConversationWriteTarget	app/src/main/**/ui/chat
 M3-5	M3	done	ChatViewModel Step2 DeltaBatcher	同上	M3-4	指定 2 用例绿；VM 降 55 行	--tests 指定用例	git revert	M	agent	CH-004,CH-005
 M3-6	M3	done	ChatViewModel Step3 AutoRetryController	同上	M3-5	指定 4 用例绿；VM 降 120 行	--tests 指定用例	git revert	M	agent	CH-004
 M3-7	M3	done	ChatViewModel Step4 ConversationCache+SessionDraftStore	同上	M3-6	指定 3 用例绿；VM 降 160 行	--tests 指定用例	git revert	M	agent	CH-004
-M3-8	M3	pending	ChatViewModel Step5 SessionOpener	同上	M3-7	指定 4 用例绿；VM 降 230 行	--tests 指定用例	git revert	L	agent	CH-004
+M3-8	M3	done	ChatViewModel Step5 SessionOpener	同上	M3-7	指定 4 用例绿；VM 降 230 行	--tests 指定用例	git revert	L	agent	CH-004
 M3-9	M3	pending	ChatViewModel Step6 四个 controller	同上	M3-8	指定用例绿；VM 降 200 行	--tests 指定用例	git revert	L	agent	CH-004
 M3-10	M3	pending	ChatViewModel Step7 单模型收口	ChatUiState.kt;ChatViewModel.kt;ChatScreen.kt	M3-9	VM <=450 行；ChatScreen 参数 55->25	--tests '*ui.chat.*'	git revert	L	agent	CH-002,CH-004
 M3-11	M3	done	Skills 屏 state holder	app/src/main/**/ui/skills/*	M2-3	2-3 个 Compose 测试；页面不直连 Store	--tests '*Skills*'	git revert	M	agent	SC-001
