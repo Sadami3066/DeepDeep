@@ -10,7 +10,7 @@
 - [pieces/](pieces/)：16 张清理后的透明 PNG，文件名可直接用作 Android drawable 名称。
 - [pieces/manifest.json](pieces/manifest.json)：原图摘要、切图配置、每张的来源矩形、尺寸和 SHA-256。
 - [layout.json](layout.json)：4×4 分区、实际行边界与透明度/留白设置。
-- [切图脚本](../../../scripts/split_ui_atlas.py)：Pillow + Python 标准库，无网络请求或模型调用。
+- 切图脚本：Pillow + Python 标准库，无网络请求或模型调用。**脚本未入库**（一次性本地产物），复现依据是 `layout.json` 与 `pieces/manifest.json`。
 - [PROMPT.md](PROMPT.md)：整板的准确提示词、输入图顺序和生成方式。
 
 ## 内容
@@ -24,16 +24,9 @@
 
 ## 重复切分
 
-需要 Python 3 和 Pillow（当前机器已具备）。在项目根目录执行，输出目录可自行指定：
+需要 Python 3 和 Pillow。切图脚本未随仓库保留；`layout.json` 记录了 4×4 分区与实际行边界，`pieces/manifest.json` 记录了每张的来源矩形、尺寸与 SHA-256，可据此重新实现或找回本地脚本。保留原始整板，以后更换命名、留白或导出目录都不需要再次生成图片。
 
-```bash
-python3 scripts/split_ui_atlas.py \
-  assets/ui-kit/whale-flat-v1/atlas.png \
-  --layout assets/ui-kit/whale-flat-v1/layout.json \
-  --output /tmp/deepdeep-ui-kit
-```
-
-默认拒绝覆盖同名文件；确需重新导出到已有目录时加 `--overwrite`。保留原始整板，以后更换命名、留白或导出目录均不需要再次生成图片。
+默认拒绝覆盖同名文件；确需重新导出到已有目录时自行加覆盖开关。
 
 生成图的行距没有严格等分，本批实际行边界为 `0 / 0.39 / 0.63 / 0.77 / 1`。脚本按透明通道找连通形状，再根据重心分配到网格，整块提取；即使发饰跨过分区线也不会被生硬截断。透明度较低的游离杂点会被排除，边缘扩展 2 px 保留原始抗锯齿，成品周围加 12 px 透明留白。
 

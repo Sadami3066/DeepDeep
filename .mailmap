@@ -1,8 +1,8 @@
 # 规范身份：whywood <3066584511@qq.com>
 # 取证：git config user.name/user.email = whywwood / 3066584511@qq.com；
 #       git log --format='%an <%ae>' | sort | uniq -c
-#        107  whywwood <3066584511@qq.com>       （whywwood 是 whywood 的双 w 笔误）
-#          7  whywood <sadarewe3066@gmail.com>  （作者的另一邮箱，同一人）
+#        161  whywwood <3066584511@qq.com>       （whywwood 是 whywood 的双 w 笔误）
+#          7  whywood <sadarewe3066@gmail.com>  （作者的另一邮箱，同一人；合计 168 条）
 # 理由：whywood 是历史中已使用的写法、也是作者对外称呼；两个邮箱都属作者本人。
 #       只归一显示名与邮箱，不新增身份、不改写历史（.mailmap 只影响 git log/blame 显示）。
 whywood <3066584511@qq.com> whywwood <3066584511@qq.com>

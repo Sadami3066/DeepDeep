@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        先看 `docs/GUIDE.md` 的已知边界与 `docs/adr/` 的既有决策；被 ADR 明确否决的方向请先讨论 ADR 的「推翻条件」。
+        先看 `docs/user/GUIDE.md` 的已知边界与 `docs/dev/adr/` 的既有决策；被 ADR 明确否决的方向请先讨论 ADR 的「推翻条件」。
   - type: textarea
     id: problem
     attributes:

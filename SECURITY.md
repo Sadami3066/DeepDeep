@@ -15,7 +15,7 @@
 
 - Linux 环境是 **proot 用户空间，不是安全沙箱**；在 App 内执行 `bash` 属于预期能力（ADR-0002）。
 - 不做工具级权限审批；只有 Linux/root 一个总开关（ADR-0002）。
-- 创意工坊页面运行在独立 origin 的 WebView 中，只能经 bridge 读写自己的数据；能绕过该边界才算漏洞（ADR-0003）。
+- 创意工坊页面运行在独立 origin 的 WebView 中，只能经 bridge 读写自己的数据；能绕过该边界才算漏洞（`docs/dev/ARCHITECTURE.md` §4 不变量 5）。
 - 本地分发使用 debug 证书签名是已记录的取舍（ADR-0001），不视为漏洞。
 
 ## 处置

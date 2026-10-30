@@ -11,22 +11,19 @@
 
 | 字体 | 文件 | 许可 |
 |---|---|---|
-| Instrument Sans | `core/ui/src/main/res/font/instrument_sans_*.ttf` | SIL Open Font License 1.1 |
-| Newsreader | `core/ui/src/main/res/font/newsreader_*.ttf` | SIL Open Font License 1.1 |
+| Lora | `design/src/main/res/font/lora_variable.ttf` | SIL Open Font License 1.1 |
+| Manrope | `design/src/main/res/font/manrope_variable.ttf` | SIL Open Font License 1.1 |
+| Noto Sans SC（子集） | `design/src/main/res/font/noto_sans_sc_subset.ttf` | SIL Open Font License 1.1 |
 
-- 上游：<https://github.com/Instrument/instrument-sans>、<https://github.com/productiontype/Newsreader>
-- 静态实例由官方可变字体生成，未改字形。
-- 许可全文：`core/ui/src/main/assets/licenses/instrument-sans-OFL.txt`、`newsreader-OFL.txt`，随 APK 打包。
+- 上游：<https://github.com/google/fonts/tree/main/ofl/lora>、<https://github.com/google/fonts/tree/main/ofl/manrope>、<https://github.com/google/fonts/tree/main/ofl/notosanssc>
+- Lora 与 Manrope 与上游文件字节一致，未修改；Noto Sans SC 由 `scripts/subset-cjk-font.py` 裁剪为 Modified Version（保留版权与 OFL 声明，未使用保留字体名）。
+- 许可全文：`design/src/main/assets/licenses/lora-OFL.txt`、`design/src/main/assets/licenses/manrope-OFL.txt`、`design/src/main/assets/licenses/noto-sans-sc-OFL.txt`，随 APK 打包。
 
 ## 图标
 
-- 素材库新增[Lucide 通用 App 微调版](../icons/lucide-app-v1/README.md)：64 个候选图标、完整来源与许可、SVG/PNG 和导出脚本。
-
-- Lucide，ISC License。
-- 固定 revision `c29c276f16590cf017126671535ad8c792be64d8`；只转换实际使用的 24×24 线性图标。
-- 上游：<https://github.com/lucide-icons/lucide>
-- 许可全文：`core/ui/src/main/assets/licenses/lucide-ISC.txt`，随 APK 打包。
+- 应用内矢量图标来自 [Tabler Icons](https://github.com/tabler/tabler-icons)（MIT，快照 v3.50.0），转换后位于 `design/src/main/res/drawable/`；许可全文 `design/src/main/assets/licenses/tabler-MIT.txt`，随 APK 打包。
+- 厂商/服务图标素材见 `assets/pi-provider-logos/` 与 `assets/vendor-logos/`，来源、许可与替换说明见各自 README 与仓库根目录 `THIRD_PARTY_NOTICES.md`。
 
 ## 未进入仓库的参考素材
 
-`artifacts/claude-apk/` 仅保存在本地，被 Git 忽略；未复制 Claude 的字体、图标、代码、文案或图片。Claude 拆包只用于理解信息架构与输入入口。
+`artifacts/` 仅保存在本地，被 Git 忽略；未复制 Claude 的字体、图标、代码、文案或图片。Claude 拆包只用于理解信息架构与输入入口。

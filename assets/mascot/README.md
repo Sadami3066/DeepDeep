@@ -37,12 +37,14 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 原图按字节保留。欢迎立绘先生成，其余素材同时参考欢迎立绘和 Q 版原图，以维持角色一致。原作者和使用许可尚未随原图提供；此目录不另行声明 CC、MIT 或商用授权，也不沿用旧占位素材的 CC BY-NC-SA 许可。对外发行时由项目所有者补齐来源/授权记录。
 
+`generated/`、`references/` 下的光栅图按 `.gitignore` 只保留在本地，不入库；入库记录是 `manifest.json`（尺寸、SHA-256、状态）与 `prompts.json`（提示词与输入顺序）。
+
 ## 前端选用
 
-- 当前为候选资产，尚未接入页面或替换启动图标；当前 APK 的白色 d 图标继续由原实现管理。
+- `mascot_welcome.webp` 已导出并用于新会话空态（`app/src/main/kotlin/io/github/whywood/deepdeep/ui/chat/ChatScreen.kt`）；其余候选尚未接入，启动图标继续为自绘白色 d。
 - 页面插画用 `ContentScale.Fit`，保留发饰与尾巴；由页面容器额外留出间距，避免紧贴文字。头像如需圆形裁切，先检查两侧鳍饰和头顶呆毛是否被截断。
 - 此批原始文件较大，整库约 12.4 MiB（含参考图）；不要将原图和全部候选复制到 Android resources。选定后根据实际 dp、密度与包体预算导出 PNG/WebP，优先使用 `drawable-nodpi` 并显式设置布局尺寸。
-- 鲸鱼标记是栅格插画候选；24 dp 工具栏图标仍优先用现有 Lucide。需要正式 launcher 时另做 Android adaptive icon 的前景、安全区和 monochrome 版本。
+- 鲸鱼标记是栅格插画候选；24 dp 工具栏图标仍优先用现有 Tabler 派生矢量图标。需要正式 launcher 时另做 Android adaptive icon 的前景、安全区和 monochrome 版本。
 - 已目视检查角色、姿态、完整轮廓，并检查真实透明通道；细发丝仍有少量蓝色半透明边缘。最终显示尺寸、深色背景边缘和真机观感留给 UI 接入时验收。
 - 图片仅表达状态；操作是否成功继续以工具真实结果和文字为准。纯装饰图不重复朗读，表达状态的图由页面提供本地化无障碍描述。
 

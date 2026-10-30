@@ -1,7 +1,7 @@
 name: Release
 
 # 仅手动触发（M4 准备稿）。正式启用前需要：
-#   - 正式 keystore 与 4 个 Secrets（见 docs/RELEASING.md）
+#   - 正式 keystore 与 4 个 Secrets（见 docs/dev/RELEASING.md）
 #   - app/build.gradle.kts 的 signingConfigs.release 已接好
 # 启用后再把 tag 触发加回来。
 on:
