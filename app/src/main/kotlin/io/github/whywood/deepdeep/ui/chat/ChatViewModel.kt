@@ -1,16 +1,13 @@
 package io.github.whywood.deepdeep.ui.chat
 
-import android.content.ComponentCallbacks2
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.whywood.deepdeep.data.AttachmentImport
-import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.ImageNormalizer
 import io.github.whywood.deepdeep.data.NormalizedImage
-import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -37,11 +34,13 @@ import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.chat.state.AutoRetryController
+import io.github.whywood.deepdeep.ui.chat.state.ConversationCache
 import io.github.whywood.deepdeep.ui.chat.state.applyConversation
 import io.github.whywood.deepdeep.ui.chat.state.conversationState
 import io.github.whywood.deepdeep.ui.chat.state.sessionModel
 import io.github.whywood.deepdeep.ui.chat.state.ConversationWriteTarget
 import io.github.whywood.deepdeep.ui.chat.state.DeltaBatcher
+import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -59,13 +58,6 @@ import kotlinx.coroutines.withContext
 
 private const val BUSY_RECONCILE_DELAY_MS = 500L
 private const val STOP_RECONCILE_DELAY_MS = 500L
-
-private data class SessionDraft(
-    val input: String = "",
-    val quote: QuotedMessage? = null,
-    val attachments: List<AttachmentRef> = emptyList(),
-    val scrollAnchor: ScrollAnchor? = null,
-)
 
 class ChatViewModel(
     private val runtime: AgentRuntime,
@@ -90,13 +82,19 @@ class ChatViewModel(
     private val mutableAvailableSkills = MutableStateFlow<List<SkillSummary>>(emptyList())
     val availableSkills: StateFlow<List<SkillSummary>> = mutableAvailableSkills.asStateFlow()
 
-    private val sessionDrafts = mutableMapOf<String, SessionDraft>()
+    private val sessionDrafts = SessionDraftStore(
+        viewModelScope, ioDispatcher, attachmentStore, normalizeImage,
+        state = { mutableState.value },
+        strings = { uiStrings },
+        updateState = { transform -> mutableState.update(transform) },
+    )
     private val conversationTarget = ConversationWriteTarget(
         activeReader = { mutableState.value.conversationState() },
         activeWriter = { state -> mutableState.update { it.applyConversation(state) } },
         protectedSessionIds = { runtime.busySessionIds.value + listOfNotNull(mutableState.value.conversationId) },
-        onEvict = { sessionId -> sessionDrafts.remove(sessionId) },
+        onEvict = { sessionId -> sessionDrafts.forget(sessionId) },
     )
+    private val conversationCache = ConversationCache(conversationTarget)
     private val deltaBatcher = DeltaBatcher(
         scope = viewModelScope,
         writeTarget = conversationTarget,
@@ -169,9 +167,7 @@ class ChatViewModel(
         viewModelScope.launch { refreshSessions() }
     }
 
-    fun onInputChange(value: String) {
-        mutableState.update { it.copy(input = value, error = null) }
-    }
+    fun onInputChange(value: String) = sessionDrafts.updateInput(value)
 
     fun refreshAvailableSkills() {
         val cwd = mutableState.value.conversationCwd
@@ -187,67 +183,19 @@ class ChatViewModel(
         }
     }
 
-    fun quote(messageId: Long, text: String) {
-        val excerpt = quoteExcerpt(text)
-        if (excerpt.isEmpty()) return
-        mutableState.update { it.copy(quote = QuotedMessage(messageId, excerpt)) }
-    }
+    fun quote(messageId: Long, text: String) = sessionDrafts.setQuote(messageId, text)
 
-    fun clearQuote() {
-        mutableState.update { if (it.quote == null) it else it.copy(quote = null) }
-    }
+    fun clearQuote() = sessionDrafts.clearQuote()
 
-    fun attach(uri: Uri) {
-        val current = mutableState.value
-        if (current.switchingConversation) return
-        val sessionId = current.conversationId ?: return
-        val root = current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
-        if (root == null) {
-            mutableState.update { it.copy(error = uiStrings.preparingSession) }
-            return
-        }
-        if (current.attachments.size >= MAX_ATTACHMENTS) {
-            mutableState.update { it.copy(error = uiStrings.maxAttachments) }
-            return
-        }
-        launchAttachmentImport(sessionId, root) { attachmentStore.import(uri, root) }
-    }
+    fun attach(uri: Uri) = sessionDrafts.attach(uri)
 
     internal fun launchAttachmentImport(
         sessionId: String,
         root: File,
         load: suspend () -> AttachmentImport,
-    ) {
-        viewModelScope.launch {
-            val result = withContext(ioDispatcher) { load() }
-            if (mutableState.value.conversationId != sessionId) {
-                if (result is AttachmentImport.Imported) {
-                    runCatching { attachmentStore.file(result.ref, root).delete() }
-                }
-                return@launch
-            }
-            when (result) {
-                is AttachmentImport.Imported -> mutableState.update {
-                    if (it.attachments.size >= MAX_ATTACHMENTS) {
-                        it.copy(error = uiStrings.maxAttachments)
-                    } else {
-                        it.copy(attachments = it.attachments + result.ref, error = null)
-                    }
-                }
+    ) = sessionDrafts.importAttachment(sessionId, root, load)
 
-                is AttachmentImport.TooLarge -> mutableState.update { it.copy(error = uiStrings.attachmentTooLarge) }
-                is AttachmentImport.InsufficientSpace -> mutableState.update { it.copy(error = uiStrings.insufficientSpace) }
-                is AttachmentImport.UnsupportedImage -> mutableState.update { it.copy(error = uiStrings.unsupportedImage) }
-                is AttachmentImport.Failed -> mutableState.update { it.copy(error = uiStrings.attachmentFailed) }
-            }
-        }
-    }
-
-    fun removeAttachment(id: String) {
-        mutableState.update { state ->
-            state.copy(attachments = state.attachments.filterNot { it.id == id })
-        }
-    }
+    fun removeAttachment(id: String) = sessionDrafts.removeAttachment(id)
 
     fun send() {
         deltaBatcher.flush()
@@ -285,8 +233,8 @@ class ChatViewModel(
             return
         }
         startTurn(
-            prompt = buildPrompt(current.quote, current.attachments, text),
-            imageRefs = imageRefs(current.attachments),
+            prompt = sessionDrafts.buildPrompt(current.quote, current.attachments, text),
+            imageRefs = sessionDrafts.imageRefs(current.attachments),
         )
     }
 
@@ -303,7 +251,7 @@ class ChatViewModel(
         val dropped = runCatching { runtime.clearQueuedInputs(sessionId) }.getOrDefault(emptyList())
         mutableState.update { state ->
             state.copy(
-                input = mergeDroppedInput(state.input, dropped),
+                input = sessionDrafts.mergeDroppedInput(state.input, dropped),
                 queuedInputs = emptyList(),
             )
         }
@@ -327,19 +275,19 @@ class ChatViewModel(
             mutableState.update { it.copy(error = uiStrings.stopBeforeCommand) }
             return
         }
-        val root = attachmentRoot(current)
-        val imageRefs = imageRefs(current.attachments)
+        val root = sessionDrafts.attachmentRoot(current)
+        val imageRefs = sessionDrafts.imageRefs(current.attachments)
         if (imageRefs.isNotEmpty() && root == null) {
             mutableState.update { it.copy(error = uiStrings.preparingSession) }
             return
         }
-        val prompt = buildPrompt(current.quote, current.attachments, text)
+        val prompt = sessionDrafts.buildPrompt(current.quote, current.attachments, text)
         mutableState.update {
             it.copy(input = "", quote = null, attachments = emptyList(), error = null)
         }
         cacheCurrentSession()
         viewModelScope.launch {
-            val images = normalizeAttachments(sessionId, imageRefs, root)
+            val images = sessionDrafts.normalizeImages(sessionId, imageRefs, root)
             try {
                 sessionOpenJobs[sessionId]?.join()
                 when (kind) {
@@ -401,7 +349,7 @@ class ChatViewModel(
     ) {
         val current = mutableState.value
         val sessionId = current.conversationId ?: return
-        val root = attachmentRoot(current)
+        val root = sessionDrafts.attachmentRoot(current)
         if (imageRefs.isNotEmpty() && root == null) {
             mutableState.update { it.copy(error = uiStrings.preparingSession) }
             return
@@ -437,7 +385,7 @@ class ChatViewModel(
         }
         cacheCurrentSession()
         viewModelScope.launch {
-            val images = normalizeAttachments(sessionId, imageRefs, root)
+            val images = sessionDrafts.normalizeImages(sessionId, imageRefs, root)
             try {
                 sessionOpenJobs[sessionId]?.join()
                 runtime.send(sessionId, prompt, images)
@@ -463,9 +411,9 @@ class ChatViewModel(
                 return@launch
             }
             startTurn(
-                prompt = buildPrompt(current.quote, current.attachments, expansion.prompt),
+                prompt = sessionDrafts.buildPrompt(current.quote, current.attachments, expansion.prompt),
                 titleSeed = args.trim().ifBlank { expansion.name },
-                imageRefs = imageRefs(current.attachments),
+                imageRefs = sessionDrafts.imageRefs(current.attachments),
             )
         }
     }
@@ -496,9 +444,9 @@ class ChatViewModel(
                 }
             }
             startTurn(
-                prompt = buildPrompt(current.quote, current.attachments, prompt),
+                prompt = sessionDrafts.buildPrompt(current.quote, current.attachments, prompt),
                 titleSeed = mentions.text.trim().ifBlank { expansions.firstOrNull()?.name.orEmpty() },
-                imageRefs = imageRefs(current.attachments),
+                imageRefs = sessionDrafts.imageRefs(current.attachments),
             )
         }
     }
@@ -510,7 +458,7 @@ class ChatViewModel(
         val dropped = runtime.stop(sessionId)
         mutableState.update { state ->
             state.copy(
-                input = mergeDroppedInput(state.input, dropped),
+                input = sessionDrafts.mergeDroppedInput(state.input, dropped),
                 queuedInputs = emptyList(),
             )
         }
@@ -526,19 +474,12 @@ class ChatViewModel(
         scheduleReconcile(sessionId, 0L)
     }
 
-    fun updateScrollAnchor(sessionId: String, index: Int, offset: Int, atBottom: Boolean = false) {
-        if (index < 0) return
-        sessionDrafts[sessionId] = (sessionDrafts[sessionId] ?: SessionDraft()).copy(
-            scrollAnchor = ScrollAnchor(index, offset.coerceAtLeast(0), atBottom),
-        )
-    }
+    fun updateScrollAnchor(sessionId: String, index: Int, offset: Int, atBottom: Boolean = false) =
+        sessionDrafts.updateAnchor(sessionId, index, offset, atBottom)
 
-    fun scrollAnchorFor(sessionId: String): ScrollAnchor? = sessionDrafts[sessionId]?.scrollAnchor
+    fun scrollAnchorFor(sessionId: String): ScrollAnchor? = sessionDrafts.anchor(sessionId)
 
-    fun onTrimMemory(level: Int) {
-        if (level != ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && level != ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) return
-        conversationTarget.clearUnprotected()
-    }
+    fun onTrimMemory(level: Int) = conversationCache.onTrimMemory(level)
 
     private fun scheduleReconcile(sessionId: String, delayMs: Long) {
         if (reconcileJobs[sessionId]?.isActive == true) return
@@ -662,7 +603,7 @@ class ChatViewModel(
         return try {
             val reopenedId = withContext(ioDispatcher) { runtime.reloadSession(sessionId) }
             if (reopenedId != sessionId) {
-                sessionDrafts.remove(sessionId)?.let { draft -> sessionDrafts[reopenedId] = draft }
+                sessionDrafts.reopen(sessionId, reopenedId)
                 conversationTarget.take(sessionId)?.let { snapshot -> conversationTarget.store(reopenedId, snapshot) }
                 mutableState.update { it.copy(conversationId = reopenedId, error = null, reloading = false) }
                 conversationTarget.setActive(reopenedId)
@@ -894,7 +835,7 @@ class ChatViewModel(
         viewModelScope.launch {
             val wasActive = mutableState.value.conversationId == id
             if (wasActive) deltaBatcher.clear(id)
-            conversationTarget.evict(id)
+            conversationCache.evict(id)
             if (wasActive) runtime.stop(id)
             runCatching { withContext(ioDispatcher) { runtime.deleteSession(id) } }
             if (wasActive) {
@@ -941,7 +882,7 @@ class ChatViewModel(
 
     private fun switchToSummary(summary: ConversationSummary) {
         val cached = conversationTarget.readCached(summary.id)
-        val draft = if (cached == null) null else sessionDrafts[summary.id]
+        val draft = if (cached == null) null else sessionDrafts.restore(summary.id)
         val workspaceId = mutableState.value.workspaces
             .firstOrNull { workspace -> workspace.cwd == summary.cwd }
             ?.id
@@ -1128,28 +1069,8 @@ class ChatViewModel(
 
     private fun cacheCurrentSession() {
         val current = mutableState.value
-        val id = current.conversationId ?: return
-        if (!current.historyLoaded) return
-        deltaBatcher.flush()
-        val loaded = conversationTarget.readCached(id)?.loaded == true
-        conversationTarget.store(
-            id,
-            ConversationState(
-                messages = current.messages,
-                title = current.conversationTitle,
-                sending = current.sending,
-                activity = current.activity,
-                activityStartedAt = current.activityStartedAt,
-                loaded = loaded,
-                usage = current.usage,
-                sessionModel = current.sessionModel(),
-            ),
-        )
-        sessionDrafts[id] = (sessionDrafts[id] ?: SessionDraft()).copy(
-            input = current.input,
-            quote = current.quote,
-            attachments = current.attachments,
-        )
+        val id = conversationCache.rememberCurrent(current) { deltaBatcher.flush() } ?: return
+        sessionDrafts.remember(id, current)
     }
 
     private suspend fun refreshUsage(sessionId: String) {
@@ -1195,7 +1116,7 @@ class ChatViewModel(
             is RuntimeEvent.QueuedInputsDropped -> {
                 if (isActive) {
                     mutableState.update {
-                        it.copy(input = mergeDroppedInput(it.input, event.texts), queuedInputs = emptyList())
+                        it.copy(input = sessionDrafts.mergeDroppedInput(it.input, event.texts), queuedInputs = emptyList())
                     }
                 }
                 return
@@ -1235,8 +1156,7 @@ class ChatViewModel(
         val sessions = withContext(ioDispatcher) { runtime.allSessions() }
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
         val visibleIds = (sessions + archived).map { it.id }.toSet()
-        conversationTarget.retainOnly(visibleIds)
-        sessionDrafts.keys.retainAll(visibleIds)
+        conversationCache.retainOnly(visibleIds)
         mutableState.update {
             val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
             it.copy(
@@ -1250,32 +1170,6 @@ class ChatViewModel(
             )
         }
         cacheCurrentSession()
-    }
-
-    private fun quoteExcerpt(text: String): String {
-        val plain = markdownToPlainText(text.take(4000))
-            .lineSequence()
-            .map { it.replace(Regex("[ \\t]+"), " ").trim() }
-            .filter { it.isNotEmpty() }
-            .take(3)
-            .joinToString("\n")
-        return if (plain.length <= 240) plain else plain.take(240).trimEnd() + "…"
-    }
-
-    private fun buildPrompt(
-        quote: QuotedMessage?,
-        attachments: List<AttachmentRef>,
-        body: String,
-    ): String = buildString {
-        if (quote != null) {
-            append(quote.text.lineSequence().joinToString("\n") { "> $it" })
-            append("\n\n")
-        }
-        if (attachments.isNotEmpty()) {
-            append(encodeAttachmentBlock(attachments))
-            append("\n\n")
-        }
-        append(body)
     }
 
     private fun applySessionModel(model: SessionModelSnapshot?) {
@@ -1339,60 +1233,11 @@ class ChatViewModel(
         return titleFrom(firstUser)
     }
 
-    private fun attachmentRoot(state: ChatUiState): File? =
-        state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
-
-    private fun imageRefs(attachments: List<AttachmentRef>): List<AttachmentRef> =
-        attachments.filter { it.kind == AttachmentKind.IMAGE }
-
-    private suspend fun normalizeAttachments(
-        sessionId: String,
-        refs: List<AttachmentRef>,
-        root: File?,
-    ): List<ImagePart> {
-        if (refs.isEmpty() || root == null) return emptyList()
-        if (mutableState.value.conversationId == sessionId) {
-            mutableState.update { it.copy(importingAttachment = true) }
-        }
-        var failed = false
-        val parts = try {
-            withContext(ioDispatcher) {
-                refs.mapNotNull { ref ->
-                    val normalized = runCatching {
-                        normalizeImage(attachmentStore.file(ref, root), ref.mime)
-                    }.getOrNull()
-                    if (normalized == null) {
-                        failed = true
-                        null
-                    } else {
-                        ImagePart(normalized.data, normalized.mimeType)
-                    }
-                }
-            }
-        } finally {
-            if (mutableState.value.conversationId == sessionId) {
-                mutableState.update { it.copy(importingAttachment = false) }
-            }
-        }
-        if (failed && mutableState.value.conversationId == sessionId) {
-            mutableState.update { it.copy(error = it.error ?: uiStrings.imageFailed) }
-        }
-        return parts
-    }
-
     private fun queueInputs(steering: List<String>, followUp: List<String>): List<QueuedInput> =
         steering.map { QueuedInput(InputQueueKind.STEER, it) } +
             followUp.map { QueuedInput(InputQueueKind.FOLLOW_UP, it) }
 
-    private fun mergeDroppedInput(input: String, dropped: List<String>): String {
-        val texts = dropped.map { it.trim() }.filter { it.isNotEmpty() }
-        if (texts.isEmpty()) return input
-        val merged = texts.joinToString("\n\n")
-        return if (input.isBlank()) merged else input.trimEnd() + "\n\n" + merged
-    }
-
     private companion object {
-        const val MAX_ATTACHMENTS = 20
         const val LEGACY_NEW_TITLE = "新对话"
     }
 }
