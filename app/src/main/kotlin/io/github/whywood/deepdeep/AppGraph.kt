@@ -1,10 +1,8 @@
 package io.github.whywood.deepdeep
 
-import android.content.ComponentName
 import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
-import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -121,7 +119,6 @@ class AppGraph(context: Context) : AppDependencies {
     private val rootEnabledState = MutableStateFlow(false)
     override val rootEnabled: StateFlow<Boolean> = rootEnabledState
     private val rootStatusState = MutableStateFlow(RootStatus.NotRequested)
-    override val rootStatus: StateFlow<RootStatus> = rootStatusState
     val themePreferences = ThemePreferences(appContext)
     override val appPreferences = AppPreferences(appContext)
     override val voicePreferences = VoicePreferences(appContext)
@@ -430,19 +427,12 @@ class AppGraph(context: Context) : AppDependencies {
 
     override suspend fun setRootEnabled(enabled: Boolean) {
         linuxSettings.setRootEnabled(enabled)
-    }
-
-    override suspend fun repairAssistantEntry(): Result<Unit> = runCatching {
-        check(rootEnabledState.value) { "root_disabled" }
-        check(probeRoot() == RootStatus.Granted) { "root_not_granted" }
-        val component = ComponentName(appContext, AssistantOverlayActivity::class.java).flattenToShortString()
-        val result = rootShell.execute("settings put secure assistant $component", 15_000)
-        check(result.exitCode == 0) {
-            result.stderr.trim().ifBlank { "settings exit ${result.exitCode}" }
+        if (enabled && probeRoot() != RootStatus.Granted) {
+            linuxSettings.setRootEnabled(false)
         }
     }
 
-    override suspend fun probeRoot(): RootStatus {
+    private suspend fun probeRoot(): RootStatus {
         val status = rootShell.probe()
         rootStatusState.value = status
         if (status == RootStatus.Granted) host.reconfigure()

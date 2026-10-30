@@ -1,8 +1,5 @@
 package io.github.whywood.deepdeep.ui.assistant
 
-import android.content.ComponentName
-import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,9 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.assistant.AssistantEntry
-import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.assistant.AssistantRole
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -42,28 +38,22 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import kotlinx.coroutines.launch
 
 @Composable
 fun AssistantSettingsScreen(
     onBack: () -> Unit,
-    onRepairEntry: suspend () -> Result<Unit>,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var roleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
-    var currentComponent by remember { mutableStateOf(readAssistantComponent(context)) }
-    var repairFailure by remember { mutableStateOf<String?>(null) }
-    var repairSucceeded by remember { mutableStateOf(false) }
     val powerUnavailableMessage = stringResource(R.string.assistant_settings_power_unavailable)
-    val expectedComponent = remember {
-        ComponentName(context, AssistantOverlayActivity::class.java).flattenToShortString()
-    }
     val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         roleHeld = AssistantRole.isHeld(context)
-        currentComponent = readAssistantComponent(context)
+    }
+    LifecycleResumeEffect(Unit) {
+        roleHeld = AssistantRole.isHeld(context)
+        onPauseOrDispose {}
     }
 
     Column(
@@ -118,39 +108,7 @@ fun AssistantSettingsScreen(
                 DdHairline()
                 DdListRow(
                     icon = DdIcons.Terminal,
-                    title = stringResource(R.string.assistant_settings_component),
-                    value = currentComponent ?: "—",
-                    onClick = null,
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.assistant_settings_expected),
-                    value = expectedComponent,
-                    onClick = null,
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Refresh,
-                    title = stringResource(R.string.assistant_settings_repair),
-                    onClick = {
-                        scope.launch {
-                            val result = onRepairEntry()
-                            repairSucceeded = result.isSuccess
-                            repairFailure = result.exceptionOrNull()?.let { error ->
-                                error.message ?: error.javaClass.simpleName
-                            }
-                            currentComponent = readAssistantComponent(context)
-                        }
-                    },
-                    showChevron = true,
-                    modifier = Modifier.testTag("assistant_repair"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Terminal,
                     title = stringResource(R.string.assistant_settings_power),
-                    subtitle = stringResource(R.string.assistant_settings_power_hint),
                     onClick = {
                         val intent = AssistantEntry.powerSettingsIntent(context)
                         if (intent == null) {
@@ -166,48 +124,8 @@ fun AssistantSettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("assistant_power_settings"),
                 )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.assistant_settings_preview),
-                    onClick = {
-                        context.startActivity(
-                            Intent(context, AssistantOverlayActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    },
-                    showChevron = true,
-                    modifier = Modifier.testTag("assistant_preview"),
-                )
             }
-            if (repairFailure != null) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.assistant_settings_repair_failed, repairFailure.orEmpty()),
-                    style = DdType.bodySmall,
-                    color = colors.danger,
-                )
-            } else if (repairSucceeded) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.assistant_settings_repair_ok),
-                    style = DdType.bodySmall,
-                    color = colors.success,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.assistant_settings_role_note),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
             Spacer(Modifier.height(40.dp))
         }
     }
 }
-
-private fun readAssistantComponent(context: android.content.Context): String? =
-    runCatching {
-        Settings.Secure.getString(context.contentResolver, "assistant")
-    }.getOrNull()?.takeIf { it.isNotBlank() }

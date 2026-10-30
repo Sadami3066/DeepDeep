@@ -130,7 +130,6 @@ internal fun AppRouteContent(
         )
 
         AppDestination.RuntimeSettings -> {
-            val rootStatus by dependencies.rootStatus.collectAsStateWithLifecycle()
             val rootEnabled by dependencies.rootEnabled.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }
             LaunchedEffect(linuxState) { dependencies.devPackageManager.refresh() }
@@ -140,10 +139,8 @@ internal fun AppRouteContent(
                 linuxEnabled = linuxEnabled,
                 sharedStorageEnabled = sharedStorageEnabled,
                 devPackages = devPackages,
-                rootStatus = rootStatus,
                 rootEnabled = rootEnabled,
                 onRootEnabledChange = { enabled -> scope.launch { dependencies.setRootEnabled(enabled) } },
-                onProbeRoot = { scope.launch { dependencies.probeRoot() } },
                 onBack = onBack,
                 onInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
                 onReset = {
@@ -177,7 +174,6 @@ internal fun AppRouteContent(
 
         AppDestination.AssistantSettings -> AssistantSettingsScreen(
             onBack = onBack,
-            onRepairEntry = dependencies::repairAssistantEntry,
         )
 
         AppDestination.Fonts -> FontScreen(

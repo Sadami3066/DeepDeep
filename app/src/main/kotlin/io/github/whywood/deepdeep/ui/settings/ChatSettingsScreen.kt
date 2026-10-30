@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 @Composable
@@ -163,7 +164,12 @@ private fun ChatFontSizeRow(scale: Float, onChange: (Float) -> Unit) {
     val colors = deepDeepColors()
     var sliderValue by remember(scale) { mutableFloatStateOf(normalizeChatFontScale(scale)) }
     val percent = (sliderValue * 100f).roundToInt()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp)) {
+    Column(
+        Modifier.fillMaxWidth().padding(
+            horizontal = LocalDdRowHorizontalPadding.current,
+            vertical = 12.dp,
+        ),
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.chat_font_size_title),
@@ -192,6 +198,7 @@ private fun ChatFontSizeRow(scale: Float, onChange: (Float) -> Unit) {
         )
         Text(
             text = stringResource(R.string.chat_font_size_preview),
+            modifier = Modifier.padding(vertical = 4.dp),
             style = DdType.body.copy(
                 fontSize = (16f * sliderValue).sp,
                 lineHeight = (26f * sliderValue).sp,
