@@ -64,7 +64,7 @@ internal fun ChatInputField(
             onValueChange(next.text)
         },
         modifier = modifier
-            .heightIn(min = 42.dp)
+            .heightIn(min = 38.dp)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .testTag(testTag),
         enabled = enabled,

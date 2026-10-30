@@ -228,7 +228,7 @@ fun ChatScreen(
             layout(placeable.width, placeable.height + inset) { placeable.place(0, 0) }
         }
     }
-    var composerHeightPx by remember { mutableIntStateOf(0) }
+    var overlayHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
@@ -300,7 +300,7 @@ fun ChatScreen(
     }
 
     LaunchedEffect(controller) {
-        snapshotFlow { animatedBottomInset.value to composerHeightPx }.collect {
+        snapshotFlow { animatedBottomInset.value to overlayHeightPx }.collect {
             controller.anchorToBottom()
         }
     }
@@ -370,14 +370,23 @@ fun ChatScreen(
                 EmptyState(
                     loaded = state.historyLoaded,
                     nickname = nickname,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = with(density) { overlayHeightPx.toDp() }),
                 )
             } else {
                 CompositionLocalProvider(LocalDensity provides chatDensity) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 18.dp),
+                        contentPadding = PaddingValues(
+                            start = 18.dp,
+                            end = 18.dp,
+                            top = 6.dp,
+                            bottom = with(chatDensity) {
+                                (overlayHeightPx + 12.dp.roundToPx()).toDp()
+                            },
+                        ),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         items(messages, key = { it.id }) { message ->
@@ -427,154 +436,163 @@ fun ChatScreen(
                     }
                 }
             }
-            if (controller.showJumpToBottom) {
-                JumpToBottomChip(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
-                    onClick = { scope.launch { controller.jumpToBottom(animate = true) } },
-                )
-            }
-        }
-        AnimatedVisibility(
-            visible = state.sending,
-            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 18.dp),
-                contentAlignment = Alignment.TopCenter,
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { overlayHeightPx = it.height },
             ) {
-                WorkingIndicator(
-                    activityText = chatUiStrings.activity(state.activity),
-                    startedAt = state.activityStartedAt,
-                    modifier = Modifier.widthIn(max = 780.dp).fillMaxWidth(),
-                )
-            }
-        }
-        AnimatedVisibility(
-            visible = compacting || state.compacting,
-            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    text = stringResource(R.string.chat_compacting),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                    color = colors.inkTertiary,
-                )
-            }
-        }
-        foreignQuestion?.let { foreign ->
-            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
-                Row(
-                    modifier = Modifier
-                        .widthIn(max = 780.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.raised)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .testTag("chat_foreign_question"),
-                    verticalAlignment = Alignment.CenterVertically,
+                if (controller.showJumpToBottom) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        JumpToBottomChip(
+                            onClick = { scope.launch { controller.jumpToBottom(animate = true) } },
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = state.sending,
+                    enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                    exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
                 ) {
-                    Text(
-                        text = stringResource(R.string.chat_question_other),
-                        modifier = Modifier.weight(1f),
-                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                        color = colors.inkSecondary,
-                    )
-                    DdTextAction(
-                        text = stringResource(R.string.chat_question_other_action),
-                        onClick = { onOpenForeignQuestion(foreign.sessionId) },
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 18.dp),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        WorkingIndicator(
+                            activityText = chatUiStrings.activity(state.activity),
+                            startedAt = state.activityStartedAt,
+                            modifier = Modifier.widthIn(max = 780.dp).fillMaxWidth(),
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = compacting || state.compacting,
+                    enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                    exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_compacting),
+                            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                            color = colors.inkTertiary,
+                        )
+                    }
+                }
+                foreignQuestion?.let { foreign ->
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                        Row(
+                            modifier = Modifier
+                                .widthIn(max = 780.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(colors.raised)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .testTag("chat_foreign_question"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.chat_question_other),
+                                modifier = Modifier.weight(1f),
+                                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                                color = colors.inkSecondary,
+                            )
+                            DdTextAction(
+                                text = stringResource(R.string.chat_question_other_action),
+                                onClick = { onOpenForeignQuestion(foreign.sessionId) },
+                            )
+                        }
+                    }
+                }
+                goal?.let { view ->
+                    GoalBar(
+                        view = view,
+                        onPause = onPauseGoal,
+                        onResume = onResumeGoal,
+                        modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
+                state.error?.let { ErrorRow(it) }
+                val paletteQuery = commandQuery(state.input)
+                var lastPaletteQuery by remember { mutableStateOf("") }
+                LaunchedEffect(paletteQuery) {
+                    if (paletteQuery != null) lastPaletteQuery = paletteQuery
+                }
+                AnimatedVisibility(
+                    visible = paletteQuery != null && !state.sending,
+                    enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                    exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                ) {
+                    SlashPalette(
+                        items = commandItems,
+                        query = paletteQuery ?: lastPaletteQuery,
+                        onPick = { item -> onPickCommand(item) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    )
+                }
+                ChatComposer(
+                    state = ChatComposerState(
+                        value = state.input,
+                        ready = state.ready && state.historyLoaded && !state.switchingConversation,
+                        sending = state.sending,
+                        configured = configured,
+                        modelLabel = if (configured) state.modelLabel else "",
+                        modelId = state.modelId,
+                        models = state.models,
+                        providerId = state.providerId,
+                        providers = providers,
+                        thinkingLevel = state.thinkingLevel,
+                        thinkingLevels = thinkingLevels,
+                        quote = state.quote,
+                        attachments = attachments,
+                        attachmentRoot = attachmentRoot,
+                        queuedInputs = queuedInputs,
+                        importingAttachment = importingAttachment,
+                        modelsOpen = modelsOpen,
+                    ),
+                    actions = ChatComposerActions(
+                        onValueChange = onInputChange,
+                        onSend = {
+                            if (!state.sending) {
+                                keyboard?.hide()
+                                focusManager.clearFocus()
+                                pendingLocalSend = true
+                            }
+                            onSend()
+                        },
+                        onStop = onStop,
+                        onModelChange = onModelChange,
+                        onProviderChange = onProviderChange,
+                        onThinkingLevelChange = onThinkingLevelChange,
+                        onClearQuote = onClearQuote,
+                        onPickAttachment = onPickAttachment,
+                        onRemoveAttachment = onRemoveAttachment,
+                        onOpenAttachment = onOpenAttachment,
+                        onOpenSettings = onOpenSettings,
+                        onFollowUp = onFollowUp,
+                        onClearQueue = onClearQueue,
+                        onVoiceClick = onVoiceClick?.let { openVoice ->
+                            {
+                                keyboard?.hide()
+                                focusManager.clearFocus()
+                                openVoice()
+                            }
+                        },
+                        onModelsOpenChange = onModelsOpenChange,
+                    ),
+                    usage = state.usage,
+                    jobCount = jobCount,
+                    onOpenUsage = onOpenUsage,
+                    onOpenJobs = onOpenJobs,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+                )
             }
         }
-        goal?.let { view ->
-            GoalBar(
-                view = view,
-                onPause = onPauseGoal,
-                onResume = onResumeGoal,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-        }
-        state.error?.let { ErrorRow(it) }
-        val paletteQuery = commandQuery(state.input)
-        var lastPaletteQuery by remember { mutableStateOf("") }
-        LaunchedEffect(paletteQuery) {
-            if (paletteQuery != null) lastPaletteQuery = paletteQuery
-        }
-        AnimatedVisibility(
-            visible = paletteQuery != null && !state.sending,
-            enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-            exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-        ) {
-            SlashPalette(
-                items = commandItems,
-                query = paletteQuery ?: lastPaletteQuery,
-                onPick = { item -> onPickCommand(item) },
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            )
-        }
-        ChatComposer(
-            state = ChatComposerState(
-                value = state.input,
-                ready = state.ready && state.historyLoaded && !state.switchingConversation,
-                sending = state.sending,
-                configured = configured,
-                modelLabel = if (configured) state.modelLabel else "",
-                modelId = state.modelId,
-                models = state.models,
-                providerId = state.providerId,
-                providers = providers,
-                thinkingLevel = state.thinkingLevel,
-                thinkingLevels = thinkingLevels,
-                quote = state.quote,
-                attachments = attachments,
-                attachmentRoot = attachmentRoot,
-                queuedInputs = queuedInputs,
-                importingAttachment = importingAttachment,
-                modelsOpen = modelsOpen,
-            ),
-            actions = ChatComposerActions(
-                onValueChange = onInputChange,
-                onSend = {
-                    if (!state.sending) {
-                        keyboard?.hide()
-                        focusManager.clearFocus()
-                        pendingLocalSend = true
-                    }
-                    onSend()
-                },
-                onStop = onStop,
-                onModelChange = onModelChange,
-                onProviderChange = onProviderChange,
-                onThinkingLevelChange = onThinkingLevelChange,
-                onClearQuote = onClearQuote,
-                onPickAttachment = onPickAttachment,
-                onRemoveAttachment = onRemoveAttachment,
-                onOpenAttachment = onOpenAttachment,
-                onOpenSettings = onOpenSettings,
-                onFollowUp = onFollowUp,
-                onClearQueue = onClearQueue,
-                onVoiceClick = onVoiceClick?.let { openVoice ->
-                    {
-                        keyboard?.hide()
-                        focusManager.clearFocus()
-                        openVoice()
-                    }
-                },
-                onModelsOpenChange = onModelsOpenChange,
-            ),
-            usage = state.usage,
-            jobCount = jobCount,
-            onOpenUsage = onOpenUsage,
-            onOpenJobs = onOpenJobs,
-            modifier = Modifier
-                .onSizeChanged { composerHeightPx = it.height }
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
-        )
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -36,21 +37,25 @@ fun ContextMeter(
     val colors = deepDeepColors()
     val fraction = (usedTokens.toDouble() / windowTokens.toDouble()).coerceIn(0.0, 1.0).toFloat()
     val percent = (fraction * 100f).roundToInt()
-    val trackColor = colors.hairline
+    val trackColor = colors.ink.copy(alpha = 0.12f)
     val progressColor = colors.accent
     val description = stringResource(R.string.usage_meter_description, percent)
     DdPressable(
         onClick = onClick,
-        modifier = modifier.testTag("context_meter"),
+        modifier = modifier
+            .sizeIn(minWidth = 36.dp, minHeight = 36.dp)
+            .testTag("context_meter"),
         shape = RoundedCornerShape(8.dp),
         contentDescription = description,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 3.dp),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(start = 6.dp, end = 6.dp, top = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Canvas(Modifier.size(18.dp)) {
-                val strokeWidth = 2.dp.toPx()
+            Canvas(Modifier.size(20.dp)) {
+                val strokeWidth = 2.5.dp.toPx()
                 val inset = strokeWidth / 2f
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                 drawArc(
@@ -77,8 +82,8 @@ fun ContextMeter(
             Spacer(Modifier.width(6.dp))
             Text(
                 text = stringResource(R.string.usage_meter_percent, percent),
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
-                color = colors.inkTertiary,
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                color = colors.inkSecondary,
                 maxLines = 1,
             )
         }

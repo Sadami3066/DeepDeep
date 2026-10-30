@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -142,6 +145,7 @@ internal fun ChatComposer(
     var showProviders by remember { mutableStateOf(false) }
     var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment
+    val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
     val placeholder = when {
         !configured -> stringResource(R.string.assistant_configure_input)
@@ -161,115 +165,143 @@ internal fun ChatComposer(
 
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
-                if (queuedInputs.isNotEmpty()) {
-                    QueueStrip(
-                        queuedInputs = queuedInputs,
-                        onClear = onClearQueue,
-                        modifier = Modifier.padding(bottom = 10.dp),
+            Column(
+                Modifier
+                    .widthIn(max = 780.dp)
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = shape,
+                        clip = false,
+                        ambientColor = Color(0xFF0B1220),
+                        spotColor = Color(0x3D0B1220),
                     )
-                }
-                if (importingAttachment) {
-                    Text(
-                        text = stringResource(R.string.assistant_importing_image),
-                        modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
-                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                        color = colors.inkTertiary,
-                    )
-                }
-                AnimatedVisibility(
-                    visible = quote != null,
-                    enter = fadeIn(tween(DdMotion.FAST)) +
-                        expandVertically(
-                            animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                            expandFrom = Alignment.Top,
-                        ),
-                    exit = fadeOut(tween(DdMotion.FAST)) +
-                        shrinkVertically(
-                            animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                            shrinkTowards = Alignment.Top,
-                        ),
+                    .clip(shape)
+                    .background(colors.composer)
+                    .then(
+                        if (colors.paper.luminance() < 0.5f) {
+                            Modifier.border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
+                        } else {
+                            Modifier
+                        },
+                    ),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp)
-                            .testTag("assistant_quote_preview"),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(Modifier.weight(1f).height(IntrinsicSize.Min)) {
-                            Box(
-                                Modifier
-                                    .width(2.dp)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(1.dp))
-                                    .background(colors.hairline),
+                    Column {
+                        if (queuedInputs.isNotEmpty()) {
+                            QueueStrip(
+                                queuedInputs = queuedInputs,
+                                onClear = onClearQueue,
+                                modifier = Modifier.padding(bottom = 10.dp),
                             )
+                        }
+                        if (importingAttachment) {
                             Text(
-                                text = (quote ?: lastQuote)?.text.orEmpty(),
-                                modifier = Modifier.padding(start = 10.dp),
-                                style = DdType.bodySmall,
+                                text = stringResource(R.string.assistant_importing_image),
+                                modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
+                                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                                 color = colors.inkTertiary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        DdIconButton(
-                            icon = DdIcons.Close,
-                            onClick = onClearQuote,
-                            contentDescription = stringResource(R.string.assistant_quote_remove),
-                            modifier = Modifier.testTag("assistant_quote_clear"),
-                            size = 30.dp,
-                            iconSize = 14.dp,
-                            tint = colors.inkTertiary,
-                        )
-                    }
-                }
-                if (attachments.isNotEmpty()) {
-                    AttachmentChips(
-                        attachments = attachments,
-                        root = attachmentRoot,
-                        onRemove = onRemoveAttachment,
-                        onOpen = onOpenAttachment,
-                        modifier = Modifier.padding(bottom = 10.dp),
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    ChatInputField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        placeholder = placeholder,
-                        modifier = Modifier.weight(1f),
-                        enabled = configured,
-                        maxLines = 8,
-                        visualTransformation = SlashCommandColor(colors.accent),
-                        onSend = { if (canSend) onSend() },
-                        focusRequester = focusRequester,
-                        testTag = "assistant_input",
-                    )
-                    Row(
-                        modifier = Modifier.padding(start = 8.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        JobsMeter(
-                            count = jobCount,
-                            onClick = onOpenJobs,
-                            modifier = Modifier.padding(end = 4.dp),
-                        )
-                        if (usage != null && usage.contextWindow > 0) {
-                            ContextMeter(
-                                usedTokens = usage.contextTokens,
-                                windowTokens = usage.contextWindow,
-                                onClick = onOpenUsage,
+                        AnimatedVisibility(
+                            visible = quote != null,
+                            enter = fadeIn(tween(DdMotion.FAST)) +
+                                expandVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    expandFrom = Alignment.Top,
+                                ),
+                            exit = fadeOut(tween(DdMotion.FAST)) +
+                                shrinkVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    shrinkTowards = Alignment.Top,
+                                ),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp)
+                                    .testTag("assistant_quote_preview"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(Modifier.weight(1f).height(IntrinsicSize.Min)) {
+                                    Box(
+                                        Modifier
+                                            .width(2.dp)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(1.dp))
+                                            .background(colors.hairline),
+                                    )
+                                    Text(
+                                        text = (quote ?: lastQuote)?.text.orEmpty(),
+                                        modifier = Modifier.padding(start = 10.dp),
+                                        style = DdType.bodySmall,
+                                        color = colors.inkTertiary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                DdIconButton(
+                                    icon = DdIcons.Close,
+                                    onClick = onClearQuote,
+                                    contentDescription = stringResource(R.string.assistant_quote_remove),
+                                    modifier = Modifier.testTag("assistant_quote_clear"),
+                                    size = 30.dp,
+                                    iconSize = 14.dp,
+                                    tint = colors.inkTertiary,
+                                )
+                            }
+                        }
+                        if (attachments.isNotEmpty()) {
+                            AttachmentChips(
+                                attachments = attachments,
+                                root = attachmentRoot,
+                                onRemove = onRemoveAttachment,
+                                onOpen = onOpenAttachment,
+                                modifier = Modifier.padding(bottom = 10.dp),
                             )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            ChatInputField(
+                                value = value,
+                                onValueChange = onValueChange,
+                                placeholder = placeholder,
+                                modifier = Modifier.weight(1f),
+                                enabled = configured,
+                                maxLines = 8,
+                                visualTransformation = SlashCommandColor(colors.accent),
+                                onSend = { if (canSend) onSend() },
+                                focusRequester = focusRequester,
+                                testTag = "assistant_input",
+                            )
+                            Row(
+                                modifier = Modifier.padding(start = 8.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                JobsMeter(
+                                    count = jobCount,
+                                    onClick = onOpenJobs,
+                                    modifier = Modifier.padding(end = 4.dp),
+                                )
+                                if (usage != null && usage.contextWindow > 0) {
+                                    ContextMeter(
+                                        usedTokens = usage.contextTokens,
+                                        windowTokens = usage.contextWindow,
+                                        onClick = onOpenUsage,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     DdIconButton(
