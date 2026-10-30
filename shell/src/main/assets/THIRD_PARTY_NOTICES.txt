@@ -1,34 +1,63 @@
 deepdeep Linux environment third-party notices
 ==============================================
 
+This file covers the Linux environment components shipped in the APK
+(libproot.so, libproot-loader.so, Alpine minirootfs). The authoritative and
+complete third-party notice is THIRD_PARTY_NOTICES.md at the repository root;
+it is packaged at assets/licenses/THIRD_PARTY_NOTICES.md. Full license texts
+are packaged under assets/licenses/.
+
 Alpine Linux minirootfs 3.24.2 (aarch64)
 -----------------------------------------
-Source: https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/aarch64/alpine-minirootfs-3.24.2-aarch64.tar.gz
+File: assets/alpine-minirootfs-3.24.2-aarch64.rootfs
 SHA256: 9bf70a7f18ea44094cbb5f70c58f9af129c8214745743db0e68e5502cc2ce773
-License: Alpine Linux and its packages carry their own licenses. Package
-license metadata is in /lib/apk/db/installed; license files, when shipped,
-are under /usr/share/licenses. Alpine package sources are published by the
-Alpine Linux project. Alpine Linux is not part of deepdeep and is provided
-without warranty.
+Official release and checksum:
+https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/aarch64/
+This file is byte-identical to the official release (verified against the
+official .sha256; 4,028,030 bytes). Alpine Linux and its packages carry
+their own licenses; the per-package license list is in
+THIRD_PARTY_NOTICES.md. Package sources are published by the Alpine Linux
+project (aports tag v3.24.2 and the upstream tarballs referenced by each
+APKBUILD).
+License texts: this rootfs does not contain a /usr/share/licenses directory
+(Alpine runtime packages do not ship license files), so the license texts are
+provided by this app under assets/licenses/.
 
 PRoot
 -----
-Source: https://github.com/OpenMinis/proot at commit 1b444ee1cb2f4896c08166e9a12c905af5416f1c
-This is a fork of Termux PRoot / PRoot, licensed under GNU GPL version 2.
-The full license text is in assets/licenses/PRoot-GPL-2.0.txt.
-Build: Android NDK 28.2.13676358, target aarch64-linux-android26, talloc 2.4.2
-linked statically. The corresponding source is the repository and commit
-above, plus talloc 2.4.2 from https://download.samba.org/pub/talloc/.
-Written offer: the source is available from the public repository above and
-from the deepdeep source distribution that contains this notice.
+File: lib/arm64-v8a/libproot.so
+SHA256: 27c35e02cee0dd6fea9d81566741dc7d5064f2d158208e4b8a1395131c6fda34
+License: GNU GPL version 2 or later. The binary states: Copyright (C) 2015
+STMicroelectronics, licensed under GPL v2 or later. Full license text:
+assets/licenses/GPL-2.0.txt.
+Corresponding source: PRoot (OpenMinis Android fork) at commit
+1b444ee1cb2f4896c08166e9a12c905af5416f1c
+https://github.com/OpenMinis/proot/tree/1b444ee1cb2f4896c08166e9a12c905af5416f1c
+Build script: deps/build_proot.sh in OpenMinis at commit
+b4c0661d5631ebab4d1a2e6f3fd4c805d4030a6c
+https://github.com/OpenMinis/OpenMinis/blob/b4c0661d5631ebab4d1a2e6f3fd4c805d4030a6c/deps/build_proot.sh
+It was built with Android NDK r28c (28.2.13676358), ANDROID_API=26,
+aarch64-linux-android, against the unmodified talloc 2.4.2 source
+https://download.samba.org/pub/talloc/talloc-2.4.2.tar.gz, linked statically.
+talloc is LGPL-3.0-or-later; its license text is assets/licenses/LGPL-3.0.txt.
+The build script notes that artifacts are not byte-identical across NDK/clang
+versions.
+Written offer: for at least three years from the date this APK is distributed,
+the complete corresponding source for the components above (PRoot source,
+build script, talloc 2.4.2 source) is available on request via
+https://github.com/Sadami3066/DeepDeep/issues or from the source distribution
+that contains this notice.
 
 PRoot loader
 ------------
-Source: Termux PRoot / OpenMinis vendored loader; shipped by OpenMinis at
-https://github.com/OpenMinis/OpenMinis/blob/b4c0661d5631ebab4d1a2e6f3fd4c805d4030a6c/src/android/app/src/main/jniLibs/arm64-v8a/libproot-loader.so
+File: lib/arm64-v8a/libproot-loader.so
 SHA256: 44ef39c1e1a18c09f6e4c4b5d6f8bba82d30596598bd155ec162d05c5122ff04
-License: GNU GPL version 2. The loader is a PRoot component; source is the
-PRoot/Termux PRoot projects named above.
+License: GNU GPL version 2 or later (PRoot component). Source: Termux PRoot
+loader https://github.com/termux/proot/tree/master/src/loader. The shipped
+binary is the byte-identical copy vendored by OpenMinis at
+https://github.com/OpenMinis/OpenMinis/blob/b4c0661d5631ebab4d1a2e6f3fd4c805d4030a6c/src/android/app/src/main/jniLibs/arm64-v8a/libproot-loader.so
+and is pinned by this sha256 in the build script above. The same written offer
+covers it.
 
 No root, no kernel, no VM
 -------------------------
