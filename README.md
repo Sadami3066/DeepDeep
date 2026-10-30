@@ -52,6 +52,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 | 真机验收条目 | [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md) |
 | 给 AI agent 的规则 | [`AGENTS.md`](AGENTS.md) |
 | 当前重构计划与任务 | [`docs/refactor/`](docs/refactor/README.md) |
+| 参与贡献 / 行为准则 / 安全问题 | [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · [`SECURITY.md`](SECURITY.md) |
+| 发布流程（未启用）与开源就绪清单 | [`docs/RELEASING.md`](docs/RELEASING.md) · [`docs/OPEN_SOURCE_CHECKLIST.md`](docs/OPEN_SOURCE_CHECKLIST.md) |
+| 变更记录 | [`CHANGELOG.md`](CHANGELOG.md) |
 
 ## 许可
 
