@@ -57,6 +57,8 @@ class AppNavigatorTest {
             AppDestination.Workshop,
             AppDestination.WorkshopDetail("study-board"),
             AppDestination.WorkspaceSettings("workspace-1"),
+            AppDestination.Files("/data/user/0/io.github.whywood.deepdeep/files/home"),
+            AppDestination.AssistantSettings,
         )
         destinations.forEach { destination ->
             assertEquals(destination, AppDestination.fromRouteKey(destination.routeKey))
@@ -65,5 +67,7 @@ class AppNavigatorTest {
         assertEquals(null, AppDestination.fromRouteKey("workshop/"))
         assertEquals(null, AppDestination.fromRouteKey("workshop/UPPER"))
         assertEquals(null, AppDestination.fromRouteKey("workshop/a/b"))
+        assertEquals(null, AppDestination.fromRouteKey("files/"))
+        assertEquals(null, AppDestination.fromRouteKey("files/!!!"))
     }
 }

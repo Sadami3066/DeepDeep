@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="assistant_overlay_title">Hello</string>
+    <string name="assistant_overlay_ai_label">AI generated</string>
+    <string name="assistant_overlay_hint">How can I help?</string>
+    <string name="assistant_overlay_listening">Listening…</string>
+    <string name="assistant_overlay_thinking">Thinking…</string>
+    <string name="assistant_overlay_input_hint">Ask me anything…</string>
+    <string name="assistant_overlay_close">Close</string>
+    <string name="assistant_overlay_send">Send</string>
+    <string name="assistant_overlay_stop">Stop</string>
+    <string name="assistant_overlay_mic">Speak</string>
+    <string name="assistant_overlay_retry">Retry</string>
+    <string name="assistant_overlay_copy">Copy</string>
+    <string name="assistant_overlay_share">Share</string>
+    <string name="assistant_overlay_speak">Read aloud</string>
+    <string name="assistant_overlay_stop_speak">Stop reading</string>
+    <string name="assistant_overlay_open_app">Open in app</string>
+    <string name="assistant_overlay_copied">Copied</string>
+    <string name="assistant_overlay_share_title">Share answer</string>
+    <string name="assistant_overlay_suggestion_weather">What\'s the weather today?</string>
+    <string name="assistant_overlay_suggestion_music">Recommend some music</string>
+    <string name="assistant_overlay_suggestion_places">Where should I visit?</string>
+    <string name="assistant_overlay_error_send">Could not send. Try again.</string>
+    <string name="assistant_overlay_error_mic">Microphone permission is required for voice.</string>
+    <string name="assistant_overlay_voice_unavailable">Speech recognition is unavailable.</string>
+    <string name="assistant_overlay_open_settings">Open settings</string>
+    <string name="assistant_overlay_question">Waiting for your answer</string>
+    <string name="assistant_overlay_question_action">Answer in app</string>
+</resources>

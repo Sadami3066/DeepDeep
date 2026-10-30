@@ -92,6 +92,21 @@
 
 流程减负与 CI 提速：`scripts/gate.sh` 五档（L0 文档 / L1 编译 / L2 单测 / L3 全量 / L4 真机）+ CI 改手动触发（`gate.sh ci`）。后续按需追加，不设完成判据。
 
+### M7 产品迭代（2026-10-30，进行中）
+
+用户点名的 9 项：独立文件页、聊天字号、中文回退系统字体、Composer 浮卡与思考档位下拉、可选 root（`root_shell`）、系统助手浮层与长按电源入口、后台提问通知。任务卡 `tasks.tsv` M7-1…M7-8；决策见 ADR-0008，助手形态见 `docs/user/ANDROID_ASSISTANT.md`。
+
+| 卡 | 内容 | 验收 |
+|---|---|---|
+| M7-1 | 中文字体回退系统字体、删内置 CJK 子集 | `ACC-FONT-03` |
+| M7-2 | 聊天正文字号 85–140% | `ACC-CHATUI-12` |
+| M7-3 | Composer 浮卡 + 思考档位下拉 | `ACC-CHATUI-07/13` |
+| M7-4 | 目录文件独立页面 | `ACC-FILES-05` |
+| M7-5 | 后台提问不终止 + 通知 | `ACC-QUESTION-05` |
+| M7-6 | 可选 root + `root_shell` | `ACC-ROOT-01/02` |
+| M7-7 | 系统助手浮层 + 默认助手 + 长按电源入口 | `ACC-ASSIST-01..04` |
+| M7-8 | ACC/证据/基线/文档收口 | L0 + L4 |
+
 ### M4 开源就绪（**只准备，不发布**；用户点头才执行）
 
 Maven Central 收口（group `io.github.sadami3066`、v0.3）｜正式签名 + tag 驱动 release workflow｜仓库切 public + CONTRIBUTING/CoC/SECURITY + issue 模板｜品牌素材替换决策｜发行验收清单。
@@ -129,4 +144,5 @@ Maven Central 收口（group `io.github.sadami3066`、v0.3）｜正式签名 + t
 | M3 | 完成（2026-10-30，17/17；ChatViewModel 1660→799、ChatScreen 参数 55→10、5 屏 state holder） |
 | M4 | 未开始（不执行） |
 | M5 | 完成（2026-10-30，9/9；文档三层重组 + 逐篇校准，单提交可一次 revert） |
-| M6 | 进行中（按需；M6-1 分级流程与 CI 文档快车道） |
+| M6 | 完成（2026-10-30，M6-1；L0–L4 档位 + CI 手动） |
+| M7 | 完成（2026-10-30，8/8；L3 绿、L4 覆盖安装与 ACC 证据见 `docs/dev/evidence/2026-10-30-*`） |

@@ -77,6 +77,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -168,6 +169,7 @@ fun ChatScreen(
     scrollAnchorFor: (String) -> ScrollAnchor?,
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
+    chatFontScale: Float = 1f,
 ) {
     val (
         onInputChange, onSend, onStop, onOpenDrawer, onOpenSettings, onReload,
@@ -191,6 +193,9 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val controller = rememberChatScrollController(listState)
     val density = LocalDensity.current
+    val chatDensity = remember(density, chatFontScale) {
+        Density(density = density.density, fontScale = density.fontScale * chatFontScale)
+    }
     val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
     val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
     val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
@@ -370,56 +375,58 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                ) {
-                    items(messages, key = { it.id }) { message ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                            Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
-                                ChatTurn(
-                                    message = message,
-                                    onToggleStep = { stepId -> onToggleStep(message.id, stepId) },
-                                    onCopyOutput = ::copyText,
-                                    onQuote = onQuoteMessage,
-                                    onOpenAttachment = onOpenAttachment,
-                                    onOpenFile = onOpenFile,
-                                    onRetry = onRetry,
-                                    attachmentRoot = attachmentRoot,
-                                    autoCollapseProcess = autoCollapseProcess,
-                                    pendingQuestions = stablePendingQuestions,
-                                    onAnswerQuestion = onAnswerQuestion,
-                                    onOpenPresentFile = onOpenPresentFile,
-                                    onSharePresentFile = onSharePresentFile,
-                                    onOpenWorkshop = onOpenWorkshop,
-                                )
-                            }
-                        }
-                    }
-                    stablePendingQuestions
-                        .firstOrNull { pending ->
-                            messages.none { message ->
-                                message.steps.any { step ->
-                                    step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
+                CompositionLocalProvider(LocalDensity provides chatDensity) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        items(messages, key = { it.id }) { message ->
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
+                                    ChatTurn(
+                                        message = message,
+                                        onToggleStep = { stepId -> onToggleStep(message.id, stepId) },
+                                        onCopyOutput = ::copyText,
+                                        onQuote = onQuoteMessage,
+                                        onOpenAttachment = onOpenAttachment,
+                                        onOpenFile = onOpenFile,
+                                        onRetry = onRetry,
+                                        attachmentRoot = attachmentRoot,
+                                        autoCollapseProcess = autoCollapseProcess,
+                                        pendingQuestions = stablePendingQuestions,
+                                        onAnswerQuestion = onAnswerQuestion,
+                                        onOpenPresentFile = onOpenPresentFile,
+                                        onSharePresentFile = onSharePresentFile,
+                                        onOpenWorkshop = onOpenWorkshop,
+                                    )
                                 }
                             }
                         }
-                        ?.let { pending ->
-                            item(key = "pending-question-${pending.requestId}") {
-                                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                                    Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
-                                        AskQuestionCard(
-                                            questions = pending.questions,
-                                            answers = null,
-                                            submitted = false,
-                                            onAnswer = { answers -> onAnswerQuestion(pending, answers) },
-                                        )
+                        stablePendingQuestions
+                            .firstOrNull { pending ->
+                                messages.none { message ->
+                                    message.steps.any { step ->
+                                        step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
                                     }
                                 }
                             }
-                        }
+                            ?.let { pending ->
+                                item(key = "pending-question-${pending.requestId}") {
+                                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                        Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
+                                            AskQuestionCard(
+                                                questions = pending.questions,
+                                                answers = null,
+                                                submitted = false,
+                                                onAnswer = { answers -> onAnswerQuestion(pending, answers) },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                    }
                 }
             }
             if (controller.showJumpToBottom) {

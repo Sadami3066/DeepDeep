@@ -91,6 +91,7 @@ internal fun DeepDeepApp(
     onShareConsumed: () -> Unit = {},
     openVoiceAssistant: Boolean = false,
     onOpenVoiceAssistantConsumed: () -> Unit = {},
+    onActiveSessionChanged: (String?) -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
 ) {
@@ -109,6 +110,9 @@ internal fun DeepDeepApp(
     var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
     ShellChatLifecycle(chatViewModel)
+    LaunchedEffect(state.conversationId) {
+        onActiveSessionChanged(state.conversationId)
+    }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach(chatViewModel::attach)
@@ -167,7 +171,6 @@ internal fun DeepDeepApp(
     var modelsOpen by remember { mutableStateOf(false) }
     var usageSheetOpen by remember { mutableStateOf(false) }
     var jobsSheetOpen by remember { mutableStateOf(false) }
-    var filesSheetOpen by remember { mutableStateOf(false) }
     var selectedJobId by remember { mutableStateOf<String?>(null) }
     var jobOutput by remember { mutableStateOf<String?>(null) }
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
@@ -484,7 +487,7 @@ internal fun DeepDeepApp(
                                                 }
                                             },
                         onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
-                        onOpenFiles = { filesSheetOpen = true },
+                        onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
                         onVoiceClick = { voiceSheetOpen = true },
                         onFollowUp = chatViewModel::followUpNow,
                         onClearQueue = chatViewModel::clearQueuedInputs,
@@ -503,6 +506,7 @@ internal fun DeepDeepApp(
                     ),
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
+                    chatFontScale = uiPreferences.chatFontScale,
                 )
             },
         ) { destination ->
@@ -513,6 +517,8 @@ internal fun DeepDeepApp(
                 defaultModelConfig, configuredProviders, linuxState, linuxEnabled,
                 sharedStorageEnabled, devPackages, personalization, uiPreferences,
                 voiceAutoSpeak, voiceSendAfterRecognition, authKinds, credentialRevision,
+                onOpenFile = openWorkspaceFile,
+                onOpenAssistantSettings = { navigator.push(AppDestination.AssistantSettings) },
             )
         }
 
@@ -543,10 +549,6 @@ internal fun DeepDeepApp(
                 },
                 usage = state.usage?.takeIf { usageSheetOpen }?.let(ShellOverlay::Usage),
                 jobs = ShellOverlay.Jobs(activeJobs, selectedJobId, jobOutput).takeIf { jobsSheetOpen },
-                files = ShellOverlay.Files(
-                    attachmentRoot,
-                    state.workspaces.firstOrNull { it.cwd == state.conversationCwd }?.name ?: attachmentRoot.name,
-                ).takeIf { filesSheetOpen },
                 pluginSetup = pluginsState.interaction?.let(ShellOverlay::PluginSetup),
                 voiceAssistant = ShellOverlay.VoiceAssistant(
                     state.messages
@@ -588,8 +590,6 @@ internal fun DeepDeepApp(
                 onKillJob = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
                 onClearSettledJobs = { graph.jobRegistry.clearSettled() },
                 onDismissJobs = { jobsSheetOpen = false },
-                onOpenFile = openWorkspaceFile,
-                onDismissFiles = { filesSheetOpen = false },
                 onFillVoice = chatViewModel::onInputChange,
                 onSendVoice = { text -> chatViewModel.onInputChange(text); chatViewModel.send() },
                 onDismissVoice = { voiceSheetOpen = false },

@@ -20,7 +20,7 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 | pi2kotlin SDK | MIT | 可闭源使用与再分发 | 保留版权声明与许可全文 |
 | AndroidX / Compose / Kotlin / kotlinx.coroutines / Okio / WebKit | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本；上游如有 NOTICE 文件须一并保留 |
 | DataStore 重打包 proto-lite | BSD-3-Clause | 可闭源使用与再分发 | 保留版权声明与许可全文 |
-| Lora / Manrope / Noto Sans SC（子集） | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；Modified Version 不得使用保留字体名；字体不得单独出售 |
+| Lora / Manrope | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；字体不得单独出售 |
 | Tabler Icons / LobeHub lobe-icons | MIT | 可再分发 | 保留版权声明与许可全文 |
 | Radius 图标、App Store 公开图标、飞书插件图标 | 非开源素材 / 品牌条款 | 仅可作相应服务或厂商的识别性使用；大规模分发或商用前应替换或取得授权 | 商标归属声明；不得暗示授权、合作或隶属关系 |
 | mascot 插画 | 无（AI 生成；参考图权利未明） | 不在本仓库源码许可范围内，亦不适用 Apache-2.0 | 需项目所有者另行决定授权与分发范围 |
@@ -147,13 +147,6 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 来源：Google Fonts `ofl/manrope` <https://github.com/google/fonts/tree/main/ofl/manrope>
 - 文件 sha256：`3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6`，与 Google Fonts `Manrope[wght].ttf` 字节一致，**未修改**。
 
-### 3.3 Noto Sans SC（子集）— `design/src/main/res/font/noto_sans_sc_subset.ttf`
-
-- 版权行：`Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name "Source".`
-- 许可证：SIL Open Font License 1.1（`licenses/noto-sans-sc-OFL.txt`，与 Google Fonts `ofl/notosanssc/OFL.txt` 字节一致）
-- 来源：Google Fonts `ofl/notosanssc` <https://github.com/google/fonts/tree/main/ofl/notosanssc>
-- **Modified Version 声明**：本文件是 Modified Version，由 `scripts/subset-cjk-font.py` 从上游 `NotoSansSC[wght].ttf` 裁剪生成，字符集为 GB2312 一、二级汉字 + CJK 标点 + 全角字符 + 假名 + `U+00B7`；保留 `wght` 可变轴。字体 name 表保留上述版权声明与 OFL 声明（name ID 0/13/14），字体名未使用保留字体名 "Source"，字形未作其他修改。文件 sha256：`71ebf34cfee80007a65360b576468e650bd5a990251e71f2aea700460a9db16a`。
-
 ## 4. 图标与品牌图形
 
 图形仅用于识别对应的服务、厂商或功能，**不表示任何授权、合作或隶属关系**；品牌名称与图形归各权利人所有。
@@ -232,7 +225,6 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt>（与 cyrealtype/Lora-Cyrillic 的 OFL.txt 字节一致） | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
 | `licenses/manrope-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt> | `58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b` |
-| `licenses/noto-sans-sc-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt> | `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9` |
 | `licenses/tabler-MIT.txt` | <https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/LICENSE> | `b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db` |
 | `licenses/PRoot-GPL-2.0.txt` | <https://raw.githubusercontent.com/OpenMinis/proot/1b444ee1cb2f4896c08166e9a12c905af5416f1c/COPYING> | `0ffa6454acbe7e410ac6f0007df83b9b3161fe55484c1f4b87487c0f2d228a6d` |
 
@@ -240,4 +232,4 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 
 ## 8. 变更记录
 
-- 2026-10-30：初版。覆盖 APK 内 PRoot/loader/Alpine、pi2kotlin SDK、AndroidX/Compose/Kotlin/kotlinx/Okio/WebKit、DataStore proto-lite、三款字体、Tabler/LobeHub/Radius 与厂商图标、mascot 插画；补齐 GPL/LGPL/MIT/OFL/Apache/MPL/Zlib/BSD 许可全文。
+- 2026-10-30：初版。覆盖 APK 内 PRoot/loader/Alpine、pi2kotlin SDK、AndroidX/Compose/Kotlin/kotlinx/Okio/WebKit、DataStore proto-lite、两款字体、Tabler/LobeHub/Radius 与厂商图标、mascot 插画；补齐 GPL/LGPL/MIT/OFL/Apache/MPL/Zlib/BSD 许可全文。

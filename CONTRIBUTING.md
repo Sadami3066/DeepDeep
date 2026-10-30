@@ -27,7 +27,7 @@ L2 及以上：建卡 → 短分支 `task/<id>-<slug>` → 跑对应档 → 提�
 
 ## 硬规则
 
-- 门禁基线：1165 单测、0 lint error、156 warning、13 编译警告；数字见 `docs/dev/refactor/BASELINE.md`。
+- 门禁基线：1223 单测、0 lint error、156 warning、13 编译警告；数字见 `docs/dev/refactor/BASELINE.md`。
 - 测试数下降、出现 skip、删断言、无法一条 revert 回滚、跨 >2 模块且无 ADR —— 直接退回。
 - 不新增第三方依赖；不重排无关文件；代码里不留注释；用户可见文案走 `res/values*/strings_*.xml`。
 - 涉及持久化/schema 改动，必须给「旧数据 → 新版本」的真机证据。

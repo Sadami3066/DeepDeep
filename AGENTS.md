@@ -47,7 +47,7 @@ JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。首次：
 
 | 指标 | 基线 |
 |---|---|
-| 单测 | 1165（app 756 / runtime 377 / shell 32），0 失败、0 skip |
+| 单测 | 1223（app 784 / runtime 392 / shell 47），0 失败、0 skip |
 | Lint | 0 error；156 warning |
 | 编译警告 | 13 条 Kotlin `w:` |
 

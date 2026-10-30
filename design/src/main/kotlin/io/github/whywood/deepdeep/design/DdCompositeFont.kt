@@ -9,7 +9,6 @@ import androidx.annotation.FontRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.AndroidFont
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontVariation
@@ -33,12 +32,10 @@ class DdCompositeFont(
 }
 
 internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
-    private val CJK_RES = R.font.noto_sans_sc_subset
     private val CACHE_WEIGHTS = listOf(400, 500, 600)
     private val cache = ConcurrentHashMap<Int, Typeface>()
     private val files = ConcurrentHashMap<Int, File>()
     private val lock = Any()
-    private var cjkFamily: PlatformFontFamily? = null
 
     override fun loadBlocking(context: Context, font: AndroidFont): Typeface? {
         val composite = font as? DdCompositeFont ?: return null
@@ -79,33 +76,10 @@ internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
                 .build(),
         ).build()
         Typeface.CustomFallbackBuilder(latin)
-            .addCustomFallback(cjkFontFamily(context))
             .setSystemFallback("sans-serif")
             .build()
     }.getOrElse {
         Typeface.create("sans-serif", Typeface.NORMAL)
-    }
-
-    private fun cjkFontFamily(context: Context): PlatformFontFamily {
-        cjkFamily?.let { return it }
-        val file = fontFile(context, CJK_RES)
-        val builder = PlatformFontFamily.Builder(
-            PlatformFont.Builder(file)
-                .setWeight(400)
-                .setFontVariationSettings(variation(400))
-                .build(),
-        )
-        CACHE_WEIGHTS.drop(1).forEach { weight ->
-            builder.addFont(
-                PlatformFont.Builder(file)
-                    .setWeight(weight)
-                    .setFontVariationSettings(variation(weight))
-                    .build(),
-            )
-        }
-        val family = builder.build()
-        cjkFamily = family
-        return family
     }
 
     private fun fontFile(context: Context, resId: Int): File {

@@ -33,10 +33,10 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -45,15 +45,32 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val FILE_ROW_MIN_HEIGHT_DP = 52
+private const val FILE_BROWSER_ROW_MIN_HEIGHT_DP = 52
 
-private sealed interface DirectoryListing {
-    data object Loading : DirectoryListing
-    data class Ready(val entries: List<FileEntry>) : DirectoryListing
-    data object Failed : DirectoryListing
+internal object FileBrowserPaths {
+    fun childPath(current: String, name: String): String {
+        val parent = normalize(current)
+        val child = name.trim('/')
+        return when {
+            child.isEmpty() -> parent
+            parent.isEmpty() -> child
+            else -> "$parent/$child"
+        }
+    }
+
+    fun parentPath(current: String): String = normalize(current).substringBeforeLast('/', "")
+
+    private fun normalize(path: String): String =
+        path.split('/').filter { it.isNotEmpty() }.joinToString("/")
 }
 
-private data class FileEntry(
+private sealed interface FileBrowserListing {
+    data object Loading : FileBrowserListing
+    data class Ready(val entries: List<FileBrowserEntry>) : FileBrowserListing
+    data object Failed : FileBrowserListing
+}
+
+private data class FileBrowserEntry(
     val name: String,
     val file: File,
     val directory: Boolean,
@@ -61,78 +78,105 @@ private data class FileEntry(
 )
 
 @Composable
-fun FileBrowserSheet(
+fun FileBrowserScreen(
     root: File,
     rootLabel: String,
     onOpenFile: (String) -> Unit,
-    onDismiss: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val colors = deepDeepColors()
     var relativePath by rememberSaveable(root.absolutePath) { mutableStateOf("") }
     val directory = remember(root, relativePath) {
         if (relativePath.isEmpty()) root else File(root, relativePath)
     }
-    val listing by produceState<DirectoryListing>(
-        initialValue = DirectoryListing.Loading,
+    val listing by produceState<FileBrowserListing>(
+        initialValue = FileBrowserListing.Loading,
         root.absolutePath,
         relativePath,
     ) {
-        value = withContext(Dispatchers.IO) { readDirectory(directory) }
+        value = withContext(Dispatchers.IO) { readFileBrowserDirectory(directory) }
     }
     val canGoUp = relativePath.isNotEmpty()
-    val goUp = {
-        relativePath = relativePath.substringBeforeLast('/', "")
+    val goUp = { relativePath = FileBrowserPaths.parentPath(relativePath) }
+    val label = if (canGoUp) {
+        relativePath
+    } else {
+        rootLabel.ifBlank { root.name.ifBlank { root.absolutePath } }
     }
-    DdSheet(onDismiss = onDismiss) {
+
+    DdPageScaffold(
+        topBar = {
+            DdIconButton(
+                icon = DdIcons.ArrowLeft,
+                onClick = onBack,
+                contentDescription = stringResource(R.string.files_back),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
+        },
+        modifier = modifier,
+    ) {
         BackHandler(enabled = canGoUp, onBack = goUp)
-        DdSheetHeader(
-            title = stringResource(R.string.files_title),
-            onClose = onDismiss,
-        )
-        PathRow(
-            label = if (canGoUp) relativePath else rootLabel.ifBlank { root.name.ifBlank { root.absolutePath } },
-            canGoUp = canGoUp,
-            onUp = goUp,
-        )
-        DdHairline()
         Column(
             Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
         ) {
+            Text(
+                text = stringResource(R.string.files_title),
+                style = DdType.pageTitle,
+                color = colors.ink,
+            )
+            Spacer(Modifier.height(12.dp))
+            PathRow(
+                label = label,
+                canGoUp = canGoUp,
+                onUp = goUp,
+            )
             Spacer(Modifier.height(4.dp))
-            when (val current = listing) {
-                DirectoryListing.Loading -> BrowserLoading()
+            DdHairline()
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Spacer(Modifier.height(4.dp))
+                when (val current = listing) {
+                    FileBrowserListing.Loading -> BrowserLoading()
 
-                DirectoryListing.Failed -> BrowserMessage(
-                    icon = DdIcons.Folder,
-                    text = stringResource(R.string.files_unreadable),
-                )
+                    FileBrowserListing.Failed -> BrowserMessage(
+                        icon = DdIcons.Folder,
+                        text = stringResource(R.string.files_unreadable),
+                    )
 
-                is DirectoryListing.Ready -> {
-                    if (current.entries.isEmpty()) {
-                        BrowserMessage(
-                            icon = DdIcons.Folder,
-                            text = stringResource(R.string.files_empty),
-                        )
-                    } else {
-                        current.entries.forEachIndexed { index, entry ->
-                            if (index > 0) DdHairline()
-                            FileRow(
-                                entry = entry,
-                                onClick = {
-                                    if (entry.directory) {
-                                        relativePath = childPath(relativePath, entry.name)
-                                    } else {
-                                        onOpenFile(entry.file.absolutePath)
-                                    }
-                                },
+                    is FileBrowserListing.Ready -> {
+                        if (current.entries.isEmpty()) {
+                            BrowserMessage(
+                                icon = DdIcons.Folder,
+                                text = stringResource(R.string.files_empty),
                             )
+                        } else {
+                            current.entries.forEachIndexed { index, entry ->
+                                if (index > 0) DdHairline()
+                                FileRow(
+                                    entry = entry,
+                                    onClick = {
+                                        if (entry.directory) {
+                                            relativePath = FileBrowserPaths.childPath(relativePath, entry.name)
+                                        } else {
+                                            onOpenFile(entry.file.absolutePath)
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(24.dp))
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -155,7 +199,7 @@ private fun PathRow(
         contentDescription = if (canGoUp) stringResource(R.string.files_up) else label,
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
@@ -186,7 +230,7 @@ private fun PathRow(
 }
 
 @Composable
-private fun FileRow(entry: FileEntry, onClick: () -> Unit) {
+private fun FileRow(entry: FileBrowserEntry, onClick: () -> Unit) {
     val colors = deepDeepColors()
     DdPressable(
         onClick = onClick,
@@ -199,8 +243,7 @@ private fun FileRow(entry: FileEntry, onClick: () -> Unit) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = FILE_ROW_MIN_HEIGHT_DP.dp)
-                .padding(horizontal = 2.dp),
+                .heightIn(min = FILE_BROWSER_ROW_MIN_HEIGHT_DP.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
@@ -261,19 +304,16 @@ private fun BrowserMessage(icon: DdIcon, text: String) {
     }
 }
 
-private fun readDirectory(directory: File): DirectoryListing {
-    val children = runCatching { directory.listFiles() }.getOrNull() ?: return DirectoryListing.Failed
+private fun readFileBrowserDirectory(directory: File): FileBrowserListing {
+    val children = runCatching { directory.listFiles() }.getOrNull() ?: return FileBrowserListing.Failed
     val visible = children.filter { !it.name.startsWith(".") }
     val directories = visible
         .filter { it.isDirectory }
         .sortedBy { it.name.lowercase(Locale.US) }
-        .map { FileEntry(it.name, it, directory = true, size = 0L) }
+        .map { FileBrowserEntry(it.name, it, directory = true, size = 0L) }
     val files = visible
         .filter { it.isFile }
         .sortedBy { it.name.lowercase(Locale.US) }
-        .map { FileEntry(it.name, it, directory = false, size = it.length()) }
-    return DirectoryListing.Ready(directories + files)
+        .map { FileBrowserEntry(it.name, it, directory = false, size = it.length()) }
+    return FileBrowserListing.Ready(directories + files)
 }
-
-private fun childPath(parent: String, name: String): String =
-    if (parent.isEmpty()) name else "$parent/$name"

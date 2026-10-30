@@ -96,7 +96,6 @@ fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding)
                 when (val outcome = questionCenter.ask(sessionId, toolCallId, questions, signal)) {
                     is QuestionOutcome.Answered -> textResult(answersJson(questions, outcome.answers).toString())
                     QuestionOutcome.Cancelled -> textResult("用户取消了提问", isError = true)
-                    QuestionOutcome.Unavailable -> textResult("用户当前不在前台，无法回答问题", isError = true)
                 }
             } catch (error: RequestAbortedException) {
                 throw error

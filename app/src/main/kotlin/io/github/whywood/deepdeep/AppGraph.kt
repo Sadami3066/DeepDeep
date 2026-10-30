@@ -1,8 +1,10 @@
 package io.github.whywood.deepdeep
 
+import android.content.ComponentName
 import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -51,7 +53,11 @@ import io.github.whywood.deepdeep.runtime.GoalPhase
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.JobStatus
+import io.github.whywood.deepdeep.runtime.RootCommandExecutor
+import io.github.whywood.deepdeep.runtime.RootCommandResult
+import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
+import io.github.whywood.deepdeep.runtime.rootShellTool
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
@@ -75,12 +81,15 @@ import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.RootShell
+import io.github.whywood.deepdeep.shell.RootStatus
 import io.github.whywood.deepdeep.shell.LinuxShellExecutor
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,6 +99,7 @@ class AppGraph(context: Context) : AppDependencies {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
+    val activeSessionId = MutableStateFlow<String?>(null)
     private var questionRecoveryLoaded = false
 
     init {
@@ -107,6 +117,11 @@ class AppGraph(context: Context) : AppDependencies {
     override val modelConfigStore = ModelConfigStore(appContext)
     override val attachmentStore = FileAttachmentStore(appContext, homeDir)
     override val linuxSettings = LinuxSettingsStore(appContext)
+    private val rootShell = RootShell()
+    private val rootEnabledState = MutableStateFlow(false)
+    override val rootEnabled: StateFlow<Boolean> = rootEnabledState
+    private val rootStatusState = MutableStateFlow(RootStatus.NotRequested)
+    override val rootStatus: StateFlow<RootStatus> = rootStatusState
     val themePreferences = ThemePreferences(appContext)
     override val appPreferences = AppPreferences(appContext)
     override val voicePreferences = VoicePreferences(appContext)
@@ -183,7 +198,6 @@ class AppGraph(context: Context) : AppDependencies {
         )
     }
     override val questionCenter = QuestionCenter(
-        isForeground = { AppVisibility.foreground },
         persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
     )
     override val pluginManager: PluginManager by lazy {
@@ -258,7 +272,35 @@ class AppGraph(context: Context) : AppDependencies {
             pluginController = pluginManager,
             pluginTools = { binding -> pluginManager.tools(binding) },
             extraToolFactories = listOf(
-                { _, binding -> listOf(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() }) },
+                { _, binding ->
+                    buildList {
+                        add(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() })
+                        if (rootEnabledState.value) {
+                            add(
+                                rootShellTool(
+                                    executor = RootCommandExecutor { command, timeoutMillis ->
+                                        val result = rootShell.execute(command, timeoutMillis)
+                                        RootCommandResult(
+                                            exitCode = result.exitCode,
+                                            stdout = result.stdout,
+                                            stderr = result.stderr,
+                                            truncated = result.truncated,
+                                        )
+                                    },
+                                    enabled = { rootEnabledState.value },
+                                    foreground = { AppVisibility.foreground },
+                                    userTurn = {
+                                        val sessionId = binding.current()?.sessionId
+                                        sessionId != null && host.activeTurnSource(sessionId).let {
+                                            it == TurnSource.USER || it == TurnSource.RETRY
+                                        }
+                                    },
+                                    status = { rootStatusState.value.toRootToolStatus() },
+                                ),
+                            )
+                        }
+                    }
+                },
             ),
         )
     }
@@ -344,7 +386,9 @@ class AppGraph(context: Context) : AppDependencies {
         },
     )
 
-    val notificationCenter: NotificationCenter by lazy { NotificationCenter(appContext, host) }
+    val notificationCenter: NotificationCenter by lazy {
+        NotificationCenter(appContext, host, questionCenter.pending)
+    }
     override val scheduleService: ScheduleService by lazy {
         ScheduleService(
             host,
@@ -372,6 +416,37 @@ class AppGraph(context: Context) : AppDependencies {
                 }
             }
         }
+    }
+
+    init {
+        scope.launch {
+            linuxSettings.rootEnabled.collect { enabled ->
+                rootEnabledState.value = enabled
+                if (!enabled) rootStatusState.value = RootStatus.NotRequested
+                host.reconfigure()
+            }
+        }
+    }
+
+    override suspend fun setRootEnabled(enabled: Boolean) {
+        linuxSettings.setRootEnabled(enabled)
+    }
+
+    override suspend fun repairAssistantEntry(): Result<Unit> = runCatching {
+        check(rootEnabledState.value) { "root_disabled" }
+        check(probeRoot() == RootStatus.Granted) { "root_not_granted" }
+        val component = ComponentName(appContext, AssistantOverlayActivity::class.java).flattenToShortString()
+        val result = rootShell.execute("settings put secure assistant $component", 15_000)
+        check(result.exitCode == 0) {
+            result.stderr.trim().ifBlank { "settings exit ${result.exitCode}" }
+        }
+    }
+
+    override suspend fun probeRoot(): RootStatus {
+        val status = rootShell.probe()
+        rootStatusState.value = status
+        if (status == RootStatus.Granted) host.reconfigure()
+        return status
     }
 
     override suspend fun prepare() {
@@ -403,3 +478,12 @@ class AppGraph(context: Context) : AppDependencies {
 }
 
 internal const val PLUGIN_REFRESH_MIN_INTERVAL_MS = 15_000L
+
+private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
+    RootStatus.Unsupported -> RootToolStatus.Unsupported
+    RootStatus.NotRequested -> RootToolStatus.NotRequested
+    RootStatus.Granted -> RootToolStatus.Granted
+    RootStatus.Denied -> RootToolStatus.Denied
+    RootStatus.Timeout -> RootToolStatus.Timeout
+    RootStatus.Error -> RootToolStatus.Error
+}

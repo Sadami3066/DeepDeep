@@ -13,6 +13,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayHostTest {
+    private val workspaceCreate = ShellOverlay.WorkspaceCreate(listOf("home"))
+    private val workspaceRename = ShellOverlay.WorkspaceRename("w1", "home", listOf("home"))
+    private val workspaceDelete = ShellOverlay.WorkspaceDelete("w1", "home", 2)
     private val attachment = ShellOverlay.AttachmentPreview(
         AttachmentRef("a1", "a.png", "image/png", 1L, "a.png", AttachmentKind.IMAGE), File("a.png"),
     )
@@ -20,14 +23,17 @@ class OverlayHostTest {
     private val jobs = ShellOverlay.Jobs(
         listOf(JobSnapshot("j1", "s1", "label", "cmd", JobStatus.RUNNING, 0L)), "j1", "out",
     )
-    private val files = ShellOverlay.Files(File("root"), "root")
     private val pluginSetup = ShellOverlay.PluginSetup(PluginInteraction("p1", "title", "stage"))
     private val voice = ShellOverlay.VoiceAssistant("answer", false, false, false)
     private val all = ShellOverlayState(
-        ShellOverlay.WorkspaceCreate(listOf("home")),
-        ShellOverlay.WorkspaceRename("w1", "home", listOf("home")),
-        ShellOverlay.WorkspaceDelete("w1", "home", 2),
-        attachment, usage, jobs, files, pluginSetup, voice,
+        workspaceCreate = workspaceCreate,
+        workspaceRename = workspaceRename,
+        workspaceDelete = workspaceDelete,
+        attachmentPreview = attachment,
+        usage = usage,
+        jobs = jobs,
+        pluginSetup = pluginSetup,
+        voiceAssistant = voice,
     )
 
     @Test
@@ -39,8 +45,8 @@ class OverlayHostTest {
     @Test
     fun allOverlaysResolveInCompositionOrder() {
         val expected = listOf(
-            all.workspaceCreate, all.workspaceRename, all.workspaceDelete,
-            attachment, usage, jobs, files, pluginSetup, voice,
+            workspaceCreate, workspaceRename, workspaceDelete,
+            attachment, usage, jobs, pluginSetup, voice,
         )
         assertEquals(expected, resolveOverlays(all))
     }
@@ -49,7 +55,7 @@ class OverlayHostTest {
     fun topmostOverlayIsLastResolved() {
         assertEquals(voice, resolveOverlay(all))
         assertEquals(pluginSetup, resolveOverlay(all.copy(voiceAssistant = null)))
-        assertEquals(files, resolveOverlay(all.copy(voiceAssistant = null, pluginSetup = null)))
+        assertEquals(jobs, resolveOverlay(all.copy(voiceAssistant = null, pluginSetup = null)))
     }
 
     @Test
@@ -61,7 +67,7 @@ class OverlayHostTest {
 
     @Test
     fun lowerPriorityOverlaysStayRenderedUnderTopmost() {
-        val state = ShellOverlayState(ShellOverlay.WorkspaceCreate(emptyList()), usage = usage)
+        val state = ShellOverlayState(workspaceCreate = ShellOverlay.WorkspaceCreate(emptyList()), usage = usage)
         assertEquals(listOf(ShellOverlay.WorkspaceCreate(emptyList()), usage), resolveOverlays(state))
         assertEquals(usage, resolveOverlay(state))
     }

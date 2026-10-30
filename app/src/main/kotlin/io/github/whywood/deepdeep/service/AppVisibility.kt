@@ -3,13 +3,23 @@ package io.github.whywood.deepdeep.service
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import java.util.concurrent.atomic.AtomicInteger
 
 object AppVisibility {
-    @Volatile
-    var foreground: Boolean = false
+    private val startedActivities = AtomicInteger(0)
+
+    val foreground: Boolean get() = startedActivities.get() > 0
 
     @Volatile
     var taskId: Int? = null
+
+    fun activityStarted() {
+        startedActivities.incrementAndGet()
+    }
+
+    fun activityStopped() {
+        startedActivities.updateAndGet { count -> if (count > 0) count - 1 else 0 }
+    }
 
     @Suppress("DEPRECATION")
     fun bringToFront(context: Context) {

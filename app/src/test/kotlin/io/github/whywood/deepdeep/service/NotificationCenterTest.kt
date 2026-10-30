@@ -2,9 +2,12 @@ package io.github.whywood.deepdeep.service
 
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InterruptedRun
+import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.TurnSource
+import io.github.whywood.deepdeep.runtime.UserQuestion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NotificationCenterTest {
@@ -42,4 +45,36 @@ class NotificationCenterTest {
         startedAt = startedAt,
         source = TurnSource.USER,
     )
+}
+
+class QuestionNotificationTest {
+    @Test
+    fun bodyUsesHeaderAndQuestion() {
+        val pending = PendingQuestion(
+            requestId = "req",
+            sessionId = "session-a",
+            toolCallId = "call",
+            questions = listOf(UserQuestion(id = "q1", header = "确认", question = "要覆盖吗？")),
+        )
+        assertEquals("确认 · 要覆盖吗？", questionNotificationBody(pending))
+    }
+
+    @Test
+    fun bodyTruncatesLongQuestions() {
+        val pending = PendingQuestion(
+            requestId = "req",
+            sessionId = "session-a",
+            toolCallId = "call",
+            questions = listOf(UserQuestion(id = "q1", header = null, question = "长".repeat(300))),
+        )
+        val body = questionNotificationBody(pending)
+        assertTrue(body.endsWith("…"))
+        assertEquals(161, body.length)
+    }
+
+    @Test
+    fun bodyToleratesMissingQuestions() {
+        val pending = PendingQuestion("req", "session-a", "call", emptyList())
+        assertEquals("", questionNotificationBody(pending))
+    }
 }

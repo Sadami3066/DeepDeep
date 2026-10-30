@@ -13,15 +13,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MAX
+import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MIN
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
+import io.github.whywood.deepdeep.data.normalizeChatFontScale
+import kotlin.math.roundToInt
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
@@ -40,6 +52,7 @@ fun ChatSettingsScreen(
     onVoiceAutoSpeakChange: (Boolean) -> Unit = {},
     voiceSendAfterRecognition: Boolean = false,
     onVoiceSendAfterRecognitionChange: (Boolean) -> Unit = {},
+    onChatFontScaleChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -75,6 +88,11 @@ fun ChatSettingsScreen(
             )
             Spacer(Modifier.height(20.dp))
             SettingsGroup {
+                ChatFontSizeRow(
+                    scale = preferences.chatFontScale,
+                    onChange = onChatFontScaleChange,
+                )
+                DdHairline()
                 SwitchRow(
                     icon = DdIcons.ChevronDown,
                     title = R.string.settings_auto_collapse_process,
@@ -137,4 +155,48 @@ private fun SwitchRow(
             )
         },
     )
+}
+
+
+@Composable
+private fun ChatFontSizeRow(scale: Float, onChange: (Float) -> Unit) {
+    val colors = deepDeepColors()
+    var sliderValue by remember(scale) { mutableFloatStateOf(normalizeChatFontScale(scale)) }
+    val percent = (sliderValue * 100f).roundToInt()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.chat_font_size_title),
+                modifier = Modifier.weight(1f),
+                style = DdType.body,
+                color = colors.ink,
+            )
+            Text(
+                text = stringResource(R.string.chat_font_size_value, percent),
+                style = DdType.numeric,
+                color = colors.inkSecondary,
+            )
+        }
+        Slider(
+            value = sliderValue,
+            onValueChange = { sliderValue = normalizeChatFontScale(it) },
+            onValueChangeFinished = { onChange(sliderValue) },
+            valueRange = CHAT_FONT_SCALE_MIN..CHAT_FONT_SCALE_MAX,
+            steps = 10,
+            colors = SliderDefaults.colors(
+                thumbColor = colors.accent,
+                activeTrackColor = colors.accent,
+                inactiveTrackColor = colors.wash,
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("chat_font_size_slider"),
+        )
+        Text(
+            text = stringResource(R.string.chat_font_size_preview),
+            style = DdType.body.copy(
+                fontSize = (16f * sliderValue).sp,
+                lineHeight = (26f * sliderValue).sp,
+            ),
+            color = colors.inkSecondary,
+        )
+    }
 }

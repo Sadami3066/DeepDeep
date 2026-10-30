@@ -13,11 +13,10 @@
 |---|---|---|
 | Lora | `design/src/main/res/font/lora_variable.ttf` | SIL Open Font License 1.1 |
 | Manrope | `design/src/main/res/font/manrope_variable.ttf` | SIL Open Font License 1.1 |
-| Noto Sans SC（子集） | `design/src/main/res/font/noto_sans_sc_subset.ttf` | SIL Open Font License 1.1 |
 
-- 上游：<https://github.com/google/fonts/tree/main/ofl/lora>、<https://github.com/google/fonts/tree/main/ofl/manrope>、<https://github.com/google/fonts/tree/main/ofl/notosanssc>
-- Lora 与 Manrope 与上游文件字节一致，未修改；Noto Sans SC 由 `scripts/subset-cjk-font.py` 裁剪为 Modified Version（保留版权与 OFL 声明，未使用保留字体名）。
-- 许可全文：`design/src/main/assets/licenses/lora-OFL.txt`、`design/src/main/assets/licenses/manrope-OFL.txt`、`design/src/main/assets/licenses/noto-sans-sc-OFL.txt`，随 APK 打包。
+- 上游：<https://github.com/google/fonts/tree/main/ofl/lora>、<https://github.com/google/fonts/tree/main/ofl/manrope>
+- Lora 与 Manrope 与上游文件字节一致，未修改；中文使用系统字体，不随包分发 CJK 字体。
+- 许可全文：`design/src/main/assets/licenses/lora-OFL.txt`、`design/src/main/assets/licenses/manrope-OFL.txt`，随 APK 打包。
 
 ## 图标
 

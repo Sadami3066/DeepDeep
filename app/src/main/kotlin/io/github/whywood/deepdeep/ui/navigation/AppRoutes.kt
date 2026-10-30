@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.core.AppDependencies
@@ -17,7 +19,9 @@ import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ProviderAuthKind
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.assistant.AssistantSettingsScreen
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
+import io.github.whywood.deepdeep.ui.files.FileBrowserScreen
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
@@ -36,6 +40,7 @@ import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -81,9 +86,19 @@ internal fun AppRouteContent(
     devPackages: DevPackagesState, personalization: PersonalizationUi, uiPreferences: UiPreferences,
     voiceAutoSpeak: Boolean, voiceSendAfterRecognition: Boolean,
     authKinds: Map<String, ProviderAuthKind>, credentialRevision: Long,
+    onOpenFile: (String) -> Unit = {},
+    onOpenAssistantSettings: () -> Unit = {},
 ) {
     when (destination) {
         AppDestination.Chat -> Box(Modifier.fillMaxSize())
+
+        is AppDestination.Files -> FileBrowserScreen(
+            root = File(destination.rootPath),
+            rootLabel = state.workspaces.firstOrNull { it.cwd == destination.rootPath }?.name
+                ?: File(destination.rootPath).name.ifBlank { destination.rootPath },
+            onOpenFile = onOpenFile,
+            onBack = onBack,
+        )
 
         AppDestination.Settings -> SettingsScreen(
             nickname = nickname,
@@ -97,6 +112,7 @@ internal fun AppRouteContent(
             onBack = onBack,
             onThemeModeChange = onThemeChange,
             onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
+            onOpenAssistant = onOpenAssistantSettings,
             onOpenProviders = { navigator.push(AppDestination.Providers) },
             onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
             onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
@@ -114,6 +130,8 @@ internal fun AppRouteContent(
         )
 
         AppDestination.RuntimeSettings -> {
+            val rootStatus by dependencies.rootStatus.collectAsStateWithLifecycle()
+            val rootEnabled by dependencies.rootEnabled.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }
             LaunchedEffect(linuxState) { dependencies.devPackageManager.refresh() }
             RuntimeSettingsScreen(
@@ -122,6 +140,10 @@ internal fun AppRouteContent(
                 linuxEnabled = linuxEnabled,
                 sharedStorageEnabled = sharedStorageEnabled,
                 devPackages = devPackages,
+                rootStatus = rootStatus,
+                rootEnabled = rootEnabled,
+                onRootEnabledChange = { enabled -> scope.launch { dependencies.setRootEnabled(enabled) } },
+                onProbeRoot = { scope.launch { dependencies.probeRoot() } },
                 onBack = onBack,
                 onInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
                 onReset = {
@@ -153,6 +175,11 @@ internal fun AppRouteContent(
 
         AppDestination.Privacy -> PrivacyScreen(onBack = onBack)
 
+        AppDestination.AssistantSettings -> AssistantSettingsScreen(
+            onBack = onBack,
+            onRepairEntry = dependencies::repairAssistantEntry,
+        )
+
         AppDestination.Fonts -> FontScreen(
             current = fontStyle,
             onBack = onBack,
@@ -172,6 +199,9 @@ internal fun AppRouteContent(
             voiceSendAfterRecognition = voiceSendAfterRecognition,
             onVoiceSendAfterRecognitionChange = { enabled ->
                 scope.launch { dependencies.voicePreferences.setSendAfterRecognition(enabled) }
+            },
+            onChatFontScaleChange = { value ->
+                scope.launch { dependencies.appPreferences.setChatFontScale(value) }
             },
         )
 

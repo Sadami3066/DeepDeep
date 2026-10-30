@@ -19,20 +19,24 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InterruptedRun
+import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class NotificationCenter(
     private val context: Context,
     private val runtime: ConversationQueries,
+    private val pendingQuestions: StateFlow<List<PendingQuestion>>,
 ) {
     private data class ActiveRun(
         val sessionId: String,
@@ -44,7 +48,9 @@ class NotificationCenter(
     private val manager = NotificationManagerCompat.from(context)
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val active = LinkedHashMap<String, ActiveRun>()
+    private val postedQuestionSessions = ConcurrentHashMap.newKeySet<String>()
     private var collector: Job? = null
+    private var questionCollector: Job? = null
     @Volatile
     private var foregroundStarted = false
 
@@ -54,11 +60,17 @@ class NotificationCenter(
         collector = scope.launch {
             runtime.events.collect(::onEvent)
         }
+        questionCollector = scope.launch {
+            pendingQuestions.collect(::onPendingQuestions)
+        }
     }
 
     fun stop() {
         collector?.cancel()
         collector = null
+        questionCollector?.cancel()
+        questionCollector = null
+        clearQuestionNotifications()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         foregroundStarted = false
@@ -69,6 +81,61 @@ class NotificationCenter(
     fun onForegroundStarted() {
         foregroundStarted = true
         updateForeground()
+    }
+
+    fun refreshQuestionNotifications() {
+        scope.launch { onPendingQuestions(pendingQuestions.value) }
+    }
+
+    fun clearQuestionNotifications() {
+        postedQuestionSessions.toList().forEach { sessionId ->
+            manager.cancel(questionId(sessionId))
+        }
+        postedQuestionSessions.clear()
+    }
+
+    private suspend fun onPendingQuestions(pending: List<PendingQuestion>) {
+        if (AppVisibility.foreground || pending.isEmpty()) {
+            clearQuestionNotifications()
+            return
+        }
+        val grouped = pending.groupBy { it.sessionId }
+        val stale = postedQuestionSessions - grouped.keys
+        stale.forEach { sessionId ->
+            manager.cancel(questionId(sessionId))
+            postedQuestionSessions -= sessionId
+        }
+        grouped.forEach { (sessionId, questions) ->
+            postQuestion(sessionId, questions)
+        }
+    }
+
+    private suspend fun postQuestion(sessionId: String, questions: List<PendingQuestion>) {
+        val title = runCatching { runtime.sessionTitle(sessionId) }.getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.app_name)
+        val body = questionNotificationBody(questions.first())
+        val builder = NotificationCompat.Builder(context, CHANNEL_QUESTIONS)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.notification_question_title, title))
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(openAppIntent(sessionId))
+            .setAutoCancel(true)
+            .setGroup(GROUP_SESSIONS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(
+                0,
+                context.getString(R.string.notification_question_action),
+                openAppIntent(sessionId),
+            )
+            .addAction(
+                0,
+                context.getString(R.string.notification_action_stop),
+                stopSessionIntent(sessionId),
+            )
+        post(questionId(sessionId), builder.build())
+        postedQuestionSessions += sessionId
     }
 
     fun foregroundNotification(): android.app.Notification {        val latest = active.values.maxByOrNull { it.startedAt }
@@ -345,6 +412,15 @@ class NotificationCenter(
         )
         manager.createNotificationChannel(
             NotificationChannel(
+                CHANNEL_QUESTIONS,
+                context.getString(R.string.notification_channel_questions),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.notification_channel_questions_desc)
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
                 CHANNEL_DOWNLOADS,
                 context.getString(R.string.notification_channel_downloads),
                 NotificationManager.IMPORTANCE_LOW,
@@ -359,13 +435,17 @@ class NotificationCenter(
         const val EXTRA_SESSION_ID = "io.github.whywood.deepdeep.extra.SESSION_ID"
         private const val CHANNEL_RUNTIME = "agent_runtime"
         private const val CHANNEL_RESULTS = "session_results"
+        private const val CHANNEL_QUESTIONS = "agent_questions"
         private const val CHANNEL_DOWNLOADS = "downloads"
         private const val FOREGROUND_ID = 1
         private const val INSTALL_ID = 200
         private const val INSTALL_RESULT_ID = 201
         private const val ACCESSIBILITY_ID = 300
         private const val INTERRUPTED_ID = 400
+        private const val QUESTION_ID_BASE = 500
         private const val GROUP_SESSIONS = "deepdeep_sessions"
+
+        private fun questionId(sessionId: String): Int = QUESTION_ID_BASE + (sessionId.hashCode() and 0x3FFFF)
 
         fun areNotificationsEnabled(context: Context): Boolean =
             NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -389,4 +469,12 @@ internal fun interruptedNotificationTarget(
         question.createdAt <= run.startedAt -> question.sessionId
         else -> run.sessionId
     }
+}
+
+internal fun questionNotificationBody(question: PendingQuestion): String {
+    val first = question.questions.firstOrNull() ?: return ""
+    val header = first.header?.takeIf { it.isNotBlank() }
+    val text = first.question.trim()
+    val line = if (header == null) text else "$header · $text"
+    return if (line.length <= 160) line else line.take(160).trimEnd() + "…"
 }

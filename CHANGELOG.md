@@ -27,5 +27,9 @@
 - docs: refresh baseline and hotspot sizes after M3 completion [M3-17]
 - docs: regenerate changelog from m2..HEAD [M3-17]
 - docs: add the M0-M3 refactor report [M3-17]
+- docs: 文档基线整理：三层重组并逐篇按代码校准 [M5]
+- build: 五档验证脚本 gate.sh + CI 改手动触发 [M6-1]
+- docs: 验证档位 L0–L4 写入协作规则，完成卡归档 [M6-1]
+- feat: M7 产品迭代（文件页/字号/系统字体/思考下拉/root/助手浮层/后台提问） [M7]
 
 生成命令：`./scripts/changelog.sh <from-tag> <to-tag>`（不手写流水账）

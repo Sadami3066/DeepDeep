@@ -131,4 +131,7 @@
     <string name="chat_error_image_failed">图片处理失败，已按文件发送</string>
     <string name="chat_error_session_missing">会话不存在或已被删除</string>
     <string name="chat_share_import_timeout">分享导入超时，请重试</string>
+    <string name="chat_font_size_title">正文字号</string>
+    <string name="chat_font_size_value">%1$d%%</string>
+    <string name="chat_font_size_preview">这是一段示例正文，字号会应用到聊天内容。</string>
 </resources>

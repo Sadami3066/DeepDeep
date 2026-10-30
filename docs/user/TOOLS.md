@@ -7,7 +7,7 @@
 | 类别 | 运行位置 | 当前 |
 |---|---|---|
 | pi 原生 | app 进程 / PRoot | `read`、`write`、`edit`、`ls`、`grep`、`find`、`bash`（前台阻塞） |
-| App 核心 | app 进程 | `ask_user_question`、`plugin_setup`、`present`；不随插件开关变化 |
+| App 核心 | app 进程 | `ask_user_question`、`plugin_setup`、`present`；root 开关打开时追加 `root_shell`（前台可用）；不随插件开关变化 |
 | 内部插件 | app 进程 | 目标：`get_goal`/`create_goal`/`update_goal`；后台任务：`job_start`/`job_output`/`job_list`/`job_kill`；定时任务：`schedule_create/list/update/delete`；创意工坊：`workshop_create`/`workshop_load`/`workshop_list`/`workshop_edit`；网络搜索：`web_search`/`web_fetch`；GUI 操作：`gui_observe`/`gui_find`/`gui_tap`/`gui_set_text`/`gui_scroll`/`gui_global`/`gui_wait`/`gui_screenshot`；安排：`arrange_calendar` |
 | 外部插件 | app 进程 | 已安装且已启用时注入：`mi_cloud_*`（小米云）；飞书、企业微信只贡献技能与提示，不贡献工具 |
 | MCP | app 进程 | 外部 MCP server 的工具/资源；deferred 工具先经 `tool_search` 加载，名为 `mcp__<server>__<tool>` |
@@ -58,10 +58,14 @@ defaultCodingTools(...)
 - 无选项时由用户填写自定义答案。
 - 返回 `{"answers":[{"id":"confirm","selected":["覆盖 (Recommended)"],"custom":"…"}]}`；没有自定义时省略 `custom`。
 - 用户跳过：`selected = []` 且无 `custom`。
-- 用户取消或 App 不在前台：工具返回错误，不继续等待。
-- 等待队列只在内存中；进程退出后不恢复。
+- 用户取消：工具返回错误；App 在后台时**继续等待**，并发「需要回答」通知，点通知回到会话回答后 agent 继续。
+- 待答问题写入 `files/questions/pending.json`；进程被杀后下次启动转为「提问中断」提示，不会继续等待。
 - UI 内联在聊天消息里：一次一题、进度、选项、多选、自定义答案、跳过/上一题/下一题/提交；`(Recommended)` 显示为「推荐」标签，回传仍保留原始 label。提交后工具结果到达即折叠为只读问答摘要。
 - 服务端按 `sessionId` 记录待答问题；已在历史中的工具调用只显示参数/结果，不重新变成可交互问题。
+
+## root_shell
+
+由设置 → 运行环境 →「Root 能力」控制，默认关闭；仅 App 前台的主聊天会话可用，创意工坊页面/后台任务/定时任务不注入。参数 `command`（必填）、`timeout_ms`（可选，默认 15000，上限 120000）。返回 `{"exitCode","stdout","stderr","truncated"}`；未授权/无 su/非前台分别返回 `root_denied` / `root_unavailable` / `root_foreground_required`。设计与风险见 `docs/dev/adr/0008-root-capability.md`。
 
 ## plugin_setup
 

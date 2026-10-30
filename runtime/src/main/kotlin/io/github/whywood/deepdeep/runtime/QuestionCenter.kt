@@ -30,12 +30,9 @@ sealed interface QuestionOutcome {
     data class Answered(val answers: List<QuestionAnswer>) : QuestionOutcome
 
     data object Cancelled : QuestionOutcome
-
-    data object Unavailable : QuestionOutcome
 }
 
 class QuestionCenter(
-    private val isForeground: () -> Boolean,
     private val persistence: QuestionPersistence? = null,
     private val persistScope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1)),
@@ -68,12 +65,10 @@ class QuestionCenter(
         questions: List<UserQuestion>,
         signal: RunSignal? = null,
     ): QuestionOutcome {
-        if (!isForeground()) return QuestionOutcome.Unavailable
         val requestId = UUID.randomUUID().toString()
         val createdAt = System.currentTimeMillis()
         val deferred = CompletableDeferred<QuestionOutcome>()
         synchronized(lock) {
-            if (!isForeground()) return QuestionOutcome.Unavailable
             waiters[requestId] = deferred
             pendingState.value = pendingState.value + PendingQuestion(
                 requestId = requestId,

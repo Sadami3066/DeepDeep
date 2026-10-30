@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlin.math.roundToInt
 
 private val Context.appPreferencesDataStore by preferencesDataStore(name = "app_preferences")
 
@@ -18,7 +20,23 @@ data class UiPreferences(
     val autoRetry: Boolean = true,
     val backgroundJobWake: Boolean = true,
     val pinnedWorkspaceIds: Set<String> = emptySet(),
+    val chatFontScale: Float = CHAT_FONT_SCALE_DEFAULT,
 )
+
+const val CHAT_FONT_SCALE_MIN = 0.85f
+const val CHAT_FONT_SCALE_MAX = 1.4f
+const val CHAT_FONT_SCALE_STEP = 0.05f
+const val CHAT_FONT_SCALE_DEFAULT = 1f
+
+internal fun normalizeChatFontScale(value: Float): Float {
+    if (!value.isFinite()) return CHAT_FONT_SCALE_DEFAULT
+    val percent = (value * 100f).roundToInt().coerceIn(
+        (CHAT_FONT_SCALE_MIN * 100f).roundToInt(),
+        (CHAT_FONT_SCALE_MAX * 100f).roundToInt(),
+    )
+    val roundedPercent = (percent / (CHAT_FONT_SCALE_STEP * 100f)).roundToInt() * (CHAT_FONT_SCALE_STEP * 100f).roundToInt()
+    return roundedPercent / 100f
+}
 
 enum class UiToggle {
     AUTO_COLLAPSE_PROCESS,
@@ -32,6 +50,7 @@ class AppPreferences(context: Context) {
     private val autoRetryKey = booleanPreferencesKey("auto_retry")
     private val backgroundJobWakeKey = booleanPreferencesKey("background_job_wake")
     private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
+    private val chatFontScaleKey = floatPreferencesKey("chat_font_scale")
 
     val preferences: Flow<UiPreferences> = store.data
         .map { values ->
@@ -40,6 +59,7 @@ class AppPreferences(context: Context) {
                 autoRetry = values[autoRetryKey] ?: true,
                 backgroundJobWake = values[backgroundJobWakeKey] ?: true,
                 pinnedWorkspaceIds = values[pinnedWorkspacesKey] ?: emptySet(),
+                chatFontScale = normalizeChatFontScale(values[chatFontScaleKey] ?: CHAT_FONT_SCALE_DEFAULT),
             )
         }
         .catch { error ->
@@ -56,6 +76,10 @@ class AppPreferences(context: Context) {
                 UiToggle.BACKGROUND_JOB_WAKE -> values[backgroundJobWakeKey] = enabled
             }
         }
+    }
+
+    suspend fun setChatFontScale(value: Float) {
+        store.edit { it[chatFontScaleKey] = normalizeChatFontScale(value) }
     }
 
     suspend fun setWorkspacePinned(workspaceId: String, pinned: Boolean) {

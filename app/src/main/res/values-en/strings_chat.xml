@@ -131,4 +131,7 @@
     <string name="chat_error_image_failed">Could not process the image; sending it as a file</string>
     <string name="chat_error_session_missing">Session does not exist or has been deleted</string>
     <string name="chat_share_import_timeout">Share import timed out. Try again.</string>
+    <string name="chat_font_size_title">Text size</string>
+    <string name="chat_font_size_value">%1$d%%</string>
+    <string name="chat_font_size_preview">This is sample text; the size applies to chat content.</string>
 </resources>

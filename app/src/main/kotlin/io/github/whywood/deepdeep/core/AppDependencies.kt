@@ -26,13 +26,30 @@ import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.RootStatus
 import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 interface AppDependencies :
     RuntimeDependencies,
     StorageDependencies,
     FeatureDependencies,
-    ServiceDependencies
+    ServiceDependencies,
+    AdvancedDependencies
+
+interface AdvancedDependencies {
+    val rootStatus: StateFlow<RootStatus> get() = MutableStateFlow(RootStatus.Unsupported)
+
+    val rootEnabled: StateFlow<Boolean> get() = MutableStateFlow(false)
+
+    suspend fun setRootEnabled(enabled: Boolean) = Unit
+
+    suspend fun probeRoot(): RootStatus = RootStatus.Unsupported
+
+    suspend fun repairAssistantEntry(): Result<Unit> =
+        Result.failure(IllegalStateException("root is not available"))
+}
 
 interface RuntimeDependencies {
     val host: AgentRuntimeHost

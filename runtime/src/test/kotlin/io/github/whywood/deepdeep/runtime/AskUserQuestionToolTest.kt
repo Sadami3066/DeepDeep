@@ -49,7 +49,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun toolExposesDshQuestionSchema() {
-        val tool = askUserQuestionTool(QuestionCenter(isForeground = { false }), boundBinding())
+        val tool = askUserQuestionTool(QuestionCenter(), boundBinding())
         assertEquals("ask_user_question", tool.name)
         val properties = tool.parameters.getValue("properties").jsonObject
         val questions = properties.getValue("questions").jsonObject
@@ -61,8 +61,36 @@ class AskUserQuestionToolTest {
     }
 
     @Test
+    fun questionStaysPendingWithoutForegroundSignal() = runTest {
+        val center = QuestionCenter()
+        val tool = askUserQuestionTool(center, boundBinding())
+        var result: AgentToolResult? = null
+        val job = launch {
+            result = tool.execute(
+                "call-background",
+                questionsArgs(
+                    {
+                        put("id", "q1")
+                        put("question", "Still there?")
+                    },
+                ),
+                null,
+                null,
+            )
+        }
+        runCurrent()
+        assertEquals(1, center.pending.value.size)
+        center.cancel(center.pending.value.single().requestId)
+        job.join()
+        val toolResult = requireNotNull(result)
+        assertEquals(true, toolResult.isError)
+        assertEquals("用户取消了提问", resultText(toolResult))
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
     fun invalidArgumentsReturnErrorText() = runTest {
-        val tool = askUserQuestionTool(QuestionCenter(isForeground = { false }), boundBinding())
+        val tool = askUserQuestionTool(QuestionCenter(), boundBinding())
         val result = tool.execute(
             "call-invalid",
             buildJsonObject { putJsonArray("questions") {} },
@@ -75,7 +103,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun unboundSessionReturnsErrorText() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val tool = askUserQuestionTool(center, SessionBinding())
         val result = tool.execute(
             "call-unbound",
@@ -95,7 +123,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun answersAreSerializedForTheModel() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(
@@ -150,7 +178,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun customTextAndCamelCaseMultiSelectFallbackAreSupported() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(
@@ -178,7 +206,7 @@ class AskUserQuestionToolTest {
 
     @Test
     fun skippedQuestionsAreOmitted() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val tool = askUserQuestionTool(center, boundBinding())
         var result: AgentToolResult? = null
         val args = questionsArgs(

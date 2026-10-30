@@ -1,8 +1,18 @@
 # Android 系统级语音助手与悬浮 UI 调研
 
-状态：**研究，不实现**。本文只记录平台能力、本机证据与取舍，不涉及代码改动与实施计划。
+状态：**已实现**（2026-10-30，M7-7）。当前形态见 §0；其余章节保留平台能力、本机证据与历史取舍。
 
 调研时间 2026-10-25；对象为 DeepDeep（`io.github.whywood.deepdeep`，minSdk 29）与本机 Redmi Note 12 Pro+（`22101316UCP` / Android 13 API 33 / MIUI 14 V140，已 root，环境详见 [Root 与高级能力](../archive/ROOT.md)）。App 内语音助手现状见 [Android 能力](ANDROID_CAPABILITIES.md)「语音助手」一节。
+
+## 0. 已实现形态（2026-10-30）
+
+- 默认助手：App 持有 `ROLE_ASSISTANT`，`ACTION_ASSIST` 由 `AssistantOverlayActivity` 接收（透明窗口、独立任务、不进最近任务），浮在当前 App 之上，不申请悬浮窗权限。
+- 入口：系统助手手势/长按电源（需系统「按住电源按钮」页开启数字助理）；设置 → 系统助手 →「预览助手浮层」可直接打开。
+- 界面：顶部浮卡（圆角 28dp、阴影）+ 底部浮动输入条；语音自动聆听，识别后直接发送；回答流式 Markdown，可复制/分享/朗读/重试/在 App 中打开；关闭回到原 App。
+- 会话：沿用当前/最近会话；运行中只观察不重复发送；待答问题卡内提示「打开 App 回答」。
+- 设置 → 系统助手：角色状态、设为默认助手、当前/期望助手组件、修复入口（需 root）、「长按电源键行为」直达系统隐藏页 `android.settings.ACTION_POWER_MENU_SETTINGS`（本机实测存在，页面「按住电源按钮」）、预览浮层。
+- 生命周期：浮层运行中按 Home 不会结束任务（浮层留在后台任务栈）；关闭浮层（X/返回）会停止当前回答。`root_shell` 在浮层内不可用（root 仅主聊天前台可用，见 ADR-0008）。
+- 不做的：常驻悬浮球、唤醒词、后台常听、自建 RecognitionService、完整 `VoiceInteractionService`/Session（仍以透明 Activity + 默认助手为主）。
 
 ## 结论摘要
 

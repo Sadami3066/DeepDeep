@@ -95,9 +95,12 @@ class FakeAgentRuntime : AgentRuntime {
 
     override suspend fun reloadSession(sessionId: String): String = sessionId
 
+    var onSend: (suspend (sessionId: String, text: String) -> Unit)? = null
+
     override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
         sent += text
         sentImages += images
+        onSend?.invoke(sessionId, text)
     }
 
     override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {

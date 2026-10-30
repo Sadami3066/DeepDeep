@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -74,7 +75,6 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -144,6 +144,7 @@ internal fun ChatComposer(
     ) = actions
     val colors = deepDeepColors()
     var showProviders by remember { mutableStateOf(false) }
+    var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment
     val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
@@ -171,12 +172,13 @@ internal fun ChatComposer(
         }
     }
 
-    Column(modifier.fillMaxWidth()) {
+    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier
                     .widthIn(max = 780.dp)
                     .fillMaxWidth()
+                    .shadow(10.dp, shape, clip = false)
                     .clip(shape)
                     .background(colors.composer),
             ) {
@@ -464,6 +466,52 @@ internal fun ChatComposer(
                     }
                     DdHairline()
                 }
+
+                if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
+                    DdDropdown(
+                        expanded = showThinking,
+                        onDismissRequest = { showThinking = false },
+                        anchor = {
+                            DdListRow(
+                                title = stringResource(R.string.assistant_thinking_sheet),
+                                trailing = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = thinkingLabel(thinkingLevel),
+                                            style = DdType.bodySmall,
+                                            color = colors.inkTertiary,
+                                            maxLines = 1,
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
+                                    }
+                                },
+                                onClick = { showThinking = true },
+                                modifier = Modifier.testTag("assistant_thinking_row"),
+                            )
+                        },
+                    ) {
+                        thinkingLevels.forEach { level ->
+                            DdMenuItem(
+                                text = thinkingLabel(level),
+                                onClick = {
+                                    showThinking = false
+                                    onModelsOpenChange(false)
+                                    onThinkingLevelChange(level)
+                                },
+                                selected = level == thinkingLevel,
+                                trailing = if (level == thinkingLevel) {
+                                    {
+                                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
+                                    }
+                                } else {
+                                    null
+                                },
+                                testTag = "assistant_thinking_${level.name.lowercase()}",
+                            )
+                        }
+                    }
+                }
                 if (models.isEmpty()) {
                     DdListRow(
                         title = stringResource(R.string.assistant_model_unconfigured),
@@ -494,26 +542,6 @@ internal fun ChatComposer(
                             },
                         )
                         if (index != models.lastIndex) DdHairline()
-                    }
-                }
-                if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
-                    Spacer(Modifier.height(20.dp))
-                    DdSectionLabel(stringResource(R.string.assistant_thinking_sheet))
-                    Spacer(Modifier.height(4.dp))
-                    thinkingLevels.forEachIndexed { index, level ->
-                        DdListRow(
-                            title = thinkingLabel(level),
-                            onClick = {
-                                onModelsOpenChange(false)
-                                onThinkingLevelChange(level)
-                            },
-                            trailing = {
-                                if (level == thinkingLevel) {
-                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 20.dp)
-                                }
-                            },
-                        )
-                        if (index != thinkingLevels.lastIndex) DdHairline()
                     }
                 }
                 Spacer(Modifier.height(28.dp))

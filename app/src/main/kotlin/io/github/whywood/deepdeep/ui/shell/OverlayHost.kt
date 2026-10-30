@@ -39,7 +39,6 @@ import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.UsageSheet
-import io.github.whywood.deepdeep.ui.files.FileBrowserSheet
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.voice.VoiceAssistantSheet
@@ -55,7 +54,6 @@ sealed interface ShellOverlay {
     data class AttachmentPreview(val attachment: AttachmentRef, val file: File) : ShellOverlay
     data class Usage(val usage: SessionUsage) : ShellOverlay
     data class Jobs(val jobs: List<JobSnapshot>, val selectedJobId: String?, val output: String?) : ShellOverlay
-    data class Files(val root: File, val label: String) : ShellOverlay
     data class PluginSetup(val interaction: PluginInteraction) : ShellOverlay
     data class VoiceAssistant(
         val answer: String, val streaming: Boolean, val autoSpeak: Boolean, val sendAfterRecognition: Boolean,
@@ -69,7 +67,6 @@ data class ShellOverlayState(
     val attachmentPreview: ShellOverlay.AttachmentPreview? = null,
     val usage: ShellOverlay.Usage? = null,
     val jobs: ShellOverlay.Jobs? = null,
-    val files: ShellOverlay.Files? = null,
     val pluginSetup: ShellOverlay.PluginSetup? = null, val voiceAssistant: ShellOverlay.VoiceAssistant? = null,
 )
 
@@ -81,7 +78,6 @@ data class ShellOverlayActions(
     val onDismissUsage: () -> Unit, val onSelectJob: (String) -> Unit,
     val onCloseJobOutput: () -> Unit, val onKillJob: (String) -> Unit,
     val onClearSettledJobs: () -> Unit, val onDismissJobs: () -> Unit,
-    val onOpenFile: (String) -> Unit, val onDismissFiles: () -> Unit,
     val onFillVoice: (String) -> Unit, val onSendVoice: (String) -> Unit,
     val onDismissVoice: () -> Unit,
 )
@@ -111,7 +107,6 @@ fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
     state.attachmentPreview?.let(::add)
     state.usage?.let(::add)
     state.jobs?.let(::add)
-    state.files?.let(::add)
     state.pluginSetup?.let(::add)
     state.voiceAssistant?.let(::add)
 }
@@ -163,12 +158,6 @@ internal fun OverlayHost(
                     onKill = overlayActions.onKillJob,
                     onClearSettled = overlayActions.onClearSettledJobs,
                     onDismiss = overlayActions.onDismissJobs,
-                )
-
-                is ShellOverlay.Files -> FileBrowserSheet(
-                    overlay.root, overlay.label,
-                    onOpenFile = overlayActions.onOpenFile,
-                    onDismiss = overlayActions.onDismissFiles,
                 )
 
                 is ShellOverlay.PluginSetup -> pluginSetupContent(overlay.interaction)

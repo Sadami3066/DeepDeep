@@ -19,14 +19,22 @@ class LinuxSettingsStore(context: Context) {
     private val store = context.applicationContext.linuxSettingsDataStore
     private val enabledKey = booleanPreferencesKey("assistant_enabled")
     private val sharedStorageKey = booleanPreferencesKey("shared_storage_enabled")
+    private val rootEnabledKey = booleanPreferencesKey("root_enabled")
 
     val enabled: Flow<Boolean> = flag(enabledKey)
     val sharedStorageEnabled: Flow<Boolean> = flag(sharedStorageKey)
+    val rootEnabled: Flow<Boolean> = flag(rootEnabledKey)
 
     suspend fun isEnabled(): Boolean = enabled.first()
 
     suspend fun setEnabled(value: Boolean) {
         store.edit { it[enabledKey] = value }
+    }
+
+    suspend fun isRootEnabled(): Boolean = rootEnabled.first()
+
+    suspend fun setRootEnabled(value: Boolean) {
+        store.edit { it[rootEnabledKey] = value }
     }
 
     suspend fun isSharedStorageEnabled(): Boolean = sharedStorageEnabled.first()

@@ -1,6 +1,6 @@
 # DeepDeep
 
-Android 上的个人 agent：pi2kotlin agent 运行时 + proot Linux + 插件 + 创意工坊，**不需要 root**。
+Android 上的个人 agent：pi2kotlin agent 运行时 + proot Linux + 插件 + 创意工坊。**基本功能不需要 root**；已 root 设备可选开启前台 `root_shell` 能力。
 
 当前状态：个人项目、开发中。仓库暂为私有，但按开源标准维护（见 `CONTRIBUTING.md`）。
 
@@ -31,11 +31,11 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./scripts/verify.sh      # 编译 + 单测 + lint + 模块边界（带全局锁，串行）
 ```
 
-基线见 [`docs/dev/refactor/BASELINE.md`](docs/dev/refactor/BASELINE.md)：1165 单测、0 lint error、13 编译警告。
+基线见 [`docs/dev/refactor/BASELINE.md`](docs/dev/refactor/BASELINE.md)：1223 单测、0 lint error、13 编译警告。
 
 ## 边界
 
-- 不做权限/审批系统，只有 Linux/root 总开关（[ADR-0002](docs/dev/adr/0002-no-permission-approval.md)）
+- 不做权限/审批系统；Linux 运行环境与可选 root 各一个总开关（[ADR-0002](docs/dev/adr/0002-no-permission-approval.md)、[ADR-0008](docs/dev/adr/0008-root-capability.md)）
 - Linux 是 proot 用户空间，**不是安全沙箱**
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据
 - 创意工坊页面只能通过 bridge 读写自己的数据，不能调用 App 内部函数、执行 shell 或读取其他数据

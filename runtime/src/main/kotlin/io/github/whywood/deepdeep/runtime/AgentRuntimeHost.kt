@@ -418,6 +418,9 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun activeRunId(sessionId: String): String? = activeRunState.value[sessionId]?.runId
 
+    fun activeTurnSource(sessionId: String): TurnSource? =
+        if (activeRunState.value[sessionId] == null) null else commands.snapshot(sessionId)?.turnSource
+
     private suspend fun handleFor(sessionId: String): Handle {
         mutex.withLock { handles[sessionId] }?.let { handle ->
             handle.touch()

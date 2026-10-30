@@ -64,7 +64,6 @@ private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
 private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
 private const val MANROPE_URL = "https://fonts.google.com/specimen/Manrope"
 private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
-private const val NOTO_SANS_SC_URL = "https://fonts.google.com/specimen/Noto+Sans+SC"
 
 @Composable
 fun SettingsScreen(
@@ -79,6 +78,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onOpenChatSettings: () -> Unit,
+    onOpenAssistant: () -> Unit = {},
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
     onOpenPersonalization: () -> Unit,
@@ -176,6 +176,14 @@ fun SettingsScreen(
                     onClick = onOpenRuntime,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_environment"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Mic,
+                    title = stringResource(R.string.settings_assistant),
+                    onClick = onOpenAssistant,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_assistant"),
                 )
             }
 
@@ -496,12 +504,6 @@ private fun LicenseSheet(onClose: () -> Unit) {
                 title = stringResource(R.string.settings_license_lora),
                 subtitle = stringResource(R.string.settings_license_ofl),
                 onClick = { uriHandler.openUri(LORA_URL) },
-            )
-            DdHairline()
-            LicenseRow(
-                title = stringResource(R.string.settings_license_cjk),
-                subtitle = stringResource(R.string.settings_license_cjk_body),
-                onClick = { uriHandler.openUri(NOTO_SANS_SC_URL) },
             )
             DdHairline()
             LicenseRow(

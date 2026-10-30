@@ -1,16 +1,16 @@
 # 基线快照（M0-6）
 
-采集于 2026-10-30，M0–M3 全部落地并合并 `master@706caa3` 后（分支已合并）。
+采集于 2026-10-30，M0–M3 全部落地并合并且 M7 产品迭代落地后（master + 工作区改动）。
 所有数字均由命令生成；**命令输出优先于本文**。数字漂移时先改文档再改代码。
 
 ## 基线
 
 | 指标 | 基线值 | 阈值规则 |
 |---|---|---|
-| 单元测试 | **1165**（app 756 / runtime 377 / shell 32） | 不得下降；`failures=0`、`skipped=0` |
+| 单元测试 | **1223**（app 784 / runtime 392 / shell 47） | 不得下降；`failures=0`、`skipped=0` |
 | Lint | **0 error / 156 warning**（app 150、runtime 1、shell 1、design 4） | error 必须为 0；warning 不得增加，增加需在 PR 说明 |
 | 编译警告 | **13 条** Kotlin `w:` | 不得增加 |
-| `verify.sh` 耗时 | 单实例 `--max-workers=1` 全量 1m18s（本机 2026-10-30 实测；复跑 1m17–1m26s 随负载波动）；CI 4 核约 3–5 分钟 | 仅记录，不作门禁；构建必须串行 |
+| `verify.sh` 耗时 | 单实例 `--max-workers=1` 全量 1m18s（M7 后复跑 1m03–1m32s 随负载波动）；CI 4 核约 3–5 分钟 | 仅记录，不作门禁；构建必须串行 |
 | release APK | 未纳入门禁（本地分发取舍，见 `docs/dev/adr/0001-local-distribution-and-signing.md`） | — |
 
 ## 复算命令

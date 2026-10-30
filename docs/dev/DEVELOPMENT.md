@@ -37,7 +37,7 @@ SDK 依赖（`dev.pi:*`）由根项目的 `syncPiSdk` 任务从 pi2kotlin `v0.2.
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-`verify.sh` 的基线（不得下降）：1165 单测 / 0 失败 / 0 skip、0 lint error、156 warning、13 编译警告。复算见 `docs/dev/refactor/BASELINE.md`。
+`verify.sh` 的基线（不得下降）：1223 单测 / 0 失败 / 0 skip、0 lint error、156 warning、13 编译警告。复算见 `docs/dev/refactor/BASELINE.md`。
 
 ## 模块
 

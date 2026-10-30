@@ -12,7 +12,7 @@
 - 随 APK 分发的第三方组件（可取证）：
   - **PRoot**：`shell/src/main/jniLibs/arm64-v8a/libproot.so`（GPL-2.0-or-later）、`libproot-loader.so`（GPL-2.0-or-later），构建时静态链接 talloc 2.4.2（LGPL-3.0-or-later）。许可全文 `shell/src/main/assets/licenses/PRoot-GPL-2.0.txt`，GPL/LGPL 文本在 `app/src/main/assets/licenses/`；完整对应源码、构建脚本、talloc 源码与书面要约见 `THIRD_PARTY_NOTICES.md §1.1-1.4`。
   - **Alpine minirootfs 3.24.2**：`shell/src/main/assets/alpine-minirootfs-3.24.2-aarch64.rootfs`（sha256 `9bf70a…`，与官方一致、未修改），16 个软件包含 GPL-2.0-only/MIT/Apache-2.0/MPL-2.0/Zlib/BSD 等；逐包许可表与 aports 源码指引见 `THIRD_PARTY_NOTICES.md §1.3`。
-  - **pi2kotlin SDK**（MIT）、AndroidX/Compose/Kotlin/kotlinx/Okio/WebKit（Apache-2.0）、DataStore proto-lite（BSD-3-Clause）、三款字体（OFL-1.1）、Tabler/LobeHub 图标（MIT）见 `THIRD_PARTY_NOTICES.md §2-4`。
+  - **pi2kotlin SDK**（MIT）、AndroidX/Compose/Kotlin/kotlinx/Okio/WebKit（Apache-2.0）、DataStore proto-lite（BSD-3-Clause）、两款字体（Lora/Manrope，OFL-1.1）、Tabler/LobeHub 图标（MIT）见 `THIRD_PARTY_NOTICES.md §2-4`。
   - **非开源/商标素材**：Radius 图标（Earendil 品牌条款）、飞书/企业微信/微信图标（Apple App Store 公开图标，非开源）、`ic_plugin_feishu.png`（来源未记录）；42 个 provider 图标里 41 个 LobeHub MIT、10 个 vendor 图标中 6 个 Tabler MIT + 小米 Wikimedia PD。
   - **mascot**：`app/src/main/res/drawable-nodpi/mascot_welcome.webp`（AI 生成，参考图权利未明），不在 Apache-2.0 范围（`THIRD_PARTY_NOTICES.md §5`）。
 - 代码事实（聚合论证的事实基础）：`:app` 只 import `:shell` 的 4 个类型（`LinuxEnvironment`/`LinuxInstallState`/`LinuxResult`/`LinuxShellExecutor`，共 17 处 import）；GPL 二进制不在 JVM 类路径，调用方式是 `ProcessBuilder` fork/exec（`shell/src/main/kotlin/io/github/whywood/deepdeep/shell/PRootExecutor.kt:184`、`:263`）；两个 `.so` 是独立可执行 ELF，rootfs 是数据 tarball。
@@ -70,3 +70,4 @@
 ## 修订记录
 
 - 2026-10-30 · M5-9 校准：`:app` 引用 `:shell` 的 import 处数随 M2/M3 重构更新为 17；构建脚本标明上游仓库；未改决定。
+- 2026-10-30 · M7-1 校准：随包字体由三款改为两款（Lora/Manrope），移除 Noto Sans SC 子集与 `scripts/subset-cjk-font.py`，中文改用系统字体；未改决定。

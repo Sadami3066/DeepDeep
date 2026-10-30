@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.ui.navigation
 
+import java.util.Base64
+
 sealed interface AppDestination {
     val routeKey: String
     val depth: Int
@@ -49,6 +51,11 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data object AssistantSettings : AppDestination {
+        override val routeKey: String = "settings/assistant"
+        override val depth: Int = 2
+    }
+
     data object ChatSettings : AppDestination {
         override val routeKey: String = "settings/chat"
         override val depth: Int = 2
@@ -61,6 +68,11 @@ sealed interface AppDestination {
 
     data object Search : AppDestination {
         override val routeKey: String = "search"
+        override val depth: Int = 1
+    }
+
+    data class Files(val rootPath: String) : AppDestination {
+        override val routeKey: String = FILES_PREFIX + encodeRoutePath(rootPath)
         override val depth: Int = 1
     }
 
@@ -100,12 +112,20 @@ sealed interface AppDestination {
     }
 
     companion object {
+        private const val FILES_PREFIX = "files/"
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
         private const val PLUGIN_DETAIL_PREFIX = "plugins/"
         private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
         private val WORKSHOP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
+
+        fun encodeRoutePath(path: String): String =
+            Base64.getUrlEncoder().withoutPadding().encodeToString(path.toByteArray(Charsets.UTF_8))
+
+        fun decodeRoutePath(value: String): String? = runCatching {
+            String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
 
         fun fromRouteKey(routeKey: String): AppDestination? = when {
             routeKey == Chat.routeKey -> Chat
@@ -116,6 +136,7 @@ sealed interface AppDestination {
             routeKey == Personalization.routeKey -> Personalization
             routeKey == Fonts.routeKey -> Fonts
             routeKey == ChatSettings.routeKey -> ChatSettings
+            routeKey == AssistantSettings.routeKey -> AssistantSettings
             routeKey == Privacy.routeKey -> Privacy
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
@@ -132,6 +153,8 @@ sealed interface AppDestination {
                 PluginDetail(routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)).takeIf {
                     it.id.isNotBlank() && !it.id.contains('/')
                 }
+
+            routeKey.startsWith(FILES_PREFIX) -> decodeRoutePath(routeKey.removePrefix(FILES_PREFIX))?.let(::Files)
 
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))

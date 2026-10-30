@@ -27,7 +27,7 @@ class QuestionCenterTest {
 
     @Test
     fun answerCompletesTheSuspendedAsk() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         var outcome: QuestionOutcome? = null
         val job = launch {
             outcome = center.ask("session-1", "call-1", listOf(question("q1")))
@@ -50,7 +50,7 @@ class QuestionCenterTest {
 
     @Test
     fun cancelCompletesTheSuspendedAsk() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         var outcome: QuestionOutcome? = null
         val job = launch {
             outcome = center.ask("session-1", "call-1", listOf(question("q1")))
@@ -63,9 +63,20 @@ class QuestionCenterTest {
     }
 
     @Test
-    fun askReturnsUnavailableWhenNotForeground() = runTest {
-        val center = QuestionCenter(isForeground = { false })
-        assertSame(QuestionOutcome.Unavailable, center.ask("session-1", "call-1", listOf(question("q1"))))
+    fun backgroundQuestionsStayPendingUntilAnswered() = runTest {
+        val center = QuestionCenter()
+        var outcome: QuestionOutcome? = null
+        val job = launch {
+            outcome = center.ask("session-1", "call-1", listOf(question("q1")))
+        }
+        runCurrent()
+        assertEquals(1, center.pending.value.size)
+        center.answer(
+            center.pending.value.single().requestId,
+            listOf(QuestionAnswer(questionId = "q1", selected = listOf("A"))),
+        )
+        job.join()
+        assertEquals("A", (outcome as QuestionOutcome.Answered).answers.single().selected.single())
         assertTrue(center.pending.value.isEmpty())
     }
 
@@ -73,7 +84,7 @@ class QuestionCenterTest {
     fun loadPersistedTurnsPendingQuestionsIntoInterruptedOnes() = runTest {
         val directory = Files.createTempDirectory("deepdeep-questions").toFile()
         try {
-            val first = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
+            val first = QuestionCenter(QuestionPersistence(directory), backgroundScope)
             backgroundScope.launch {
                 first.ask("session-1", "call-1", listOf(question("q1")))
             }
@@ -84,7 +95,7 @@ class QuestionCenterTest {
             runCurrent()
             assertEquals(2, first.pending.value.size)
 
-            val second = QuestionCenter({ true }, QuestionPersistence(directory))
+            val second = QuestionCenter(QuestionPersistence(directory))
             second.loadPersisted()
             assertEquals(2, second.interrupted.value.size)
             val interrupted = second.interrupted.value.first { it.sessionId == "session-1" }
@@ -104,7 +115,7 @@ class QuestionCenterTest {
     fun answeredQuestionsDoNotBecomeInterrupted() = runTest {
         val directory = Files.createTempDirectory("deepdeep-questions").toFile()
         try {
-            val center = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
+            val center = QuestionCenter(QuestionPersistence(directory), backgroundScope)
             var outcome: QuestionOutcome? = null
             val job = launch {
                 outcome = center.ask("session-1", "call-1", listOf(question("q1")))
@@ -115,7 +126,7 @@ class QuestionCenterTest {
             job.join()
 
             assertTrue(center.interrupted.value.isEmpty())
-            val restarted = QuestionCenter({ true }, QuestionPersistence(directory))
+            val restarted = QuestionCenter(QuestionPersistence(directory))
             restarted.loadPersisted()
             assertTrue(restarted.interrupted.value.isEmpty())
             assertTrue(outcome is QuestionOutcome.Answered)
@@ -128,7 +139,7 @@ class QuestionCenterTest {
     fun answerDefersPersistenceRemovalToPersistScope() = runTest {
         val directory = Files.createTempDirectory("deepdeep-questions").toFile()
         try {
-            val center = QuestionCenter({ true }, QuestionPersistence(directory), backgroundScope)
+            val center = QuestionCenter(QuestionPersistence(directory), backgroundScope)
             var outcome: QuestionOutcome? = null
             val job = launch {
                 outcome = center.ask("session-1", "call-1", listOf(question("q1")))
@@ -156,7 +167,7 @@ class QuestionCenterTest {
 
     @Test
     fun abortSignalCancelsThePendingQuestion() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val signal = RunSignal()
         var outcome: QuestionOutcome? = null
         val job = launch {
@@ -174,7 +185,7 @@ class QuestionCenterTest {
 
     @Test
     fun sameSessionQuestionsStayPendingTogether() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         var first: QuestionOutcome? = null
         var second: QuestionOutcome? = null
         val firstJob = launch {
@@ -205,7 +216,7 @@ class QuestionCenterTest {
 
     @Test
     fun cancelRemovesOnlyTheTargetQuestion() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         var first: QuestionOutcome? = null
         var second: QuestionOutcome? = null
         val firstJob = launch {
@@ -233,7 +244,7 @@ class QuestionCenterTest {
 
     @Test
     fun abortCancelsEveryQuestionSharingTheSignal() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val signal = RunSignal()
         var first: QuestionOutcome? = null
         var second: QuestionOutcome? = null
@@ -258,7 +269,7 @@ class QuestionCenterTest {
 
     @Test
     fun differentSessionsRunInParallel() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         var first: QuestionOutcome? = null
         var second: QuestionOutcome? = null
         val firstJob = launch {
@@ -284,7 +295,7 @@ class QuestionCenterTest {
 
     @Test
     fun unknownRequestIdsAreIgnored() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         center.answer("unknown", emptyList())
         center.cancel("unknown")
         assertTrue(center.pending.value.isEmpty())
@@ -292,7 +303,7 @@ class QuestionCenterTest {
 
     @Test
     fun skippedAnswersAreKeptInTheOutcome() = runTest {
-        val center = QuestionCenter(isForeground = { true })
+        val center = QuestionCenter()
         val questions = listOf(question("q1"), question("q2"))
         var outcome: QuestionOutcome? = null
         val job = launch {

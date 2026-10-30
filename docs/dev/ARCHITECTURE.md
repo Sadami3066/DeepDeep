@@ -56,6 +56,7 @@
 | 3 | `AgentService.onCreate` | 通知中心启动/前台通知 → `host.ensureStarted()` → `ScheduleService.start()`（恢复待投递提醒） |
 | 4 | `ChatViewModel.init` | `prepareRuntime()` + `ensureStarted()`（IO）→ 模型配置回写 → 恢复初始会话 |
 | 5 | `DeepDeepApp` | ready 后渲染；处理待消费的分享/深链 |
+| 6 | `AssistantOverlayActivity` | 默认助手收到 `ACTION_ASSIST` 时独立启动（透明窗口、独立任务）；`graph.prepare()` + controller 冷启动 + 可选挂到运行中 run |
 
 已知问题：顺序靠源码与协程时序隐式保证（findings AC-002，仍 open）、存储迁移仍在 `AppGraph.init` 里异步 launch，与首个会话恢复并发（findings AC-001，仍 open）。目标形态是显式 `bootstrap()` 阶段串行，重构路线尚未排期；改之前不要依赖当前时序。
 
@@ -68,6 +69,9 @@
 5. **工坊是安全边界**：独立 origin + PathHandler + document-start bridge + 主框架/origin 校验 + 工具白名单 + `ScopedFileSystem`。
 6. **会话 JSONL 是唯一权威**；本地元数据（置顶/归档/标题）不得反向改写会话正文。
 7. **本地分发用 debug 证书**（ADR-0001）；换签名等于强制卸载，先读 ADR。
+8. **root 只是可选增强**：仅 App 前台的主聊天会话可用 `root_shell`；关闭开关或未授权时工具不注入；工坊/后台/定时路径不得获得 root（ADR-0008）。
+9. **浮层不是 root 前台**：`AssistantOverlayActivity` 不参与 `AppVisibility` 计数（root 工具只在主聊天前台可用）；浮层运行中按 Home 不结束任务，关闭浮层才结束当前回答。
+10. **助手入口只有一个组件**：`ACTION_ASSIST` 由 `assistant.AssistantOverlayActivity` 接收；`Settings.Secure.ASSISTANT` 与角色不一致时由设置页「修复助手入口」用 root 校正，非 root 设备依赖系统重启后重算。
 
 ## 5. 下一步
 

@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                     onShareConsumed = { pendingShare.value = null },
                     openVoiceAssistant = openVoiceAssistant.value,
                     onOpenVoiceAssistantConsumed = { openVoiceAssistant.value = false },
+                    onActiveSessionChanged = { graph.activeSessionId.value = it },
                     onFontStyleChange = { style ->
                         graph.fontPreferences.save(style)
                         recreate()
@@ -98,15 +99,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        AppVisibility.foreground = true
+        AppVisibility.activityStarted()
         AppVisibility.taskId = taskId
+        graph.notificationCenter.clearQuestionNotifications()
         graph.pluginManager.onAppForeground()
         graph.pluginManager.refreshIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
         lifecycleScope.launch { runCatching { graph.skillRepository.syncIfChanged() } }
     }
 
     override fun onStop() {
-        AppVisibility.foreground = false
+        AppVisibility.activityStopped()
+        graph.notificationCenter.refreshQuestionNotifications()
         super.onStop()
     }
 
