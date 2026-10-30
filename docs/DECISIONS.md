@@ -16,3 +16,5 @@
 12. **会话状态只有一个所有者**：`SessionCommandPlane` 用每会话锁与单调 epoch 管理 busy/stop/retry；只有当前 run 能清除 busy，迟到事件按 runId 隔离。
 13. **状态与事件分工**：运行状态以 `activeRuns` 为准；事件保持多订阅者广播，UI 从运行快照与历史对账，结构事件不得被流式 delta 挤出顺序。
 14. **能力重配置走安全点**：插件能力变化经 `host.reconfigure()`；忙碌会话在本轮结束的安全点应用，不提前关闭正在使用的会话。
+15. **会话实时状态是运行时事件的纯投影**：主聊天页、系统助手浮层等任何 surface 都用同一个 `reduce` 与 `SessionProjection` 从 `runtime.events` 还原当前会话；`RunStarted` 对用户轮次携带原文 prompt，界面不得假设「这一轮由自己发起」。界面外壳只保留输入、滚动、可见性等本地状态；消息/过程/工具渲染共用同一套组件。
+16. **shell 工具统一执行管线**：proot Alpine 与 Android root 是两个命名空间，不合并运行环境；但 `root_shell` 复用 SDK `bash` 工具的执行、截断与格式化管线，两者输出契约一致（截断提示 + 退出码）。
