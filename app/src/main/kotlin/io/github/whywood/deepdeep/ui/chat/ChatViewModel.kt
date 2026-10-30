@@ -526,9 +526,7 @@ class ChatViewModel(
                 activity = RuntimeActivity.Thinking,
                 activityStartedAt = now,
                 error = null,
-                conversationTitle = if (
-                    it.conversationTitle.isBlank() || it.conversationTitle == uiStrings.newChatTitle
-                ) {
+                conversationTitle = if (isDefaultChatTitle(it.conversationTitle)) {
                     titleFrom(titleSeed)
                 } else {
                     it.conversationTitle
@@ -1579,7 +1577,13 @@ class ChatViewModel(
     }
 
     private fun localizedTitle(title: String): String =
-        if (title.isBlank() || title == LEGACY_NEW_TITLE) uiStrings.newChatTitle else title
+        if (isDefaultChatTitle(title)) uiStrings.newChatTitle else title
+
+    private fun isDefaultChatTitle(title: String): Boolean =
+        title.isBlank() ||
+            title == LEGACY_NEW_TITLE ||
+            title == uiStrings.newChatTitle ||
+            title == ChatUiStrings.fallback().newChatTitle
 
     private fun titleFrom(messages: List<AssistantMessage>): String {
         val firstUser = messages.firstOrNull { it.role == AssistantRole.USER }?.text ?: return uiStrings.newChatTitle

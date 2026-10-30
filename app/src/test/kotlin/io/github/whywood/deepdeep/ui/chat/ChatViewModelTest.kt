@@ -115,6 +115,19 @@ class ChatViewModelTest {
     )
 
     @Test
+    fun defaultTitleIsReplacedAfterLanguageSwitch() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        viewModel.updateUiStrings(ChatUiStrings.fallback().copy(newChatTitle = "新对话"))
+        viewModel.onInputChange("hello")
+        viewModel.send()
+
+        assertEquals("hello", viewModel.state.value.conversationTitle)
+    }
+
+    @Test
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
         val runtime = FakeRuntime()
         val viewModel = viewModel(runtime)

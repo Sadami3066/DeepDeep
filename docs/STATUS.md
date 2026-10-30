@@ -21,7 +21,7 @@
 - 切换语言后聊天页状态（思考中/压缩/重试/运行工具）随当前语言刷新；通知指向已删除会话时给出提示并结束等待；分享导入超时提示。
 
 **验证**
-- 1018 unit tests 全绿（app 621 / runtime 365 / shell 32）；lint 0 errors / 152 warnings / 6 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 1020 unit tests 全绿（app 623 / runtime 365 / shell 32）；lint 0 errors / 152 warnings / 6 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
 - 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：语言中→英→中切换后新运行状态分别为 Thinking / 思考中；旋转后 MCP 草稿仍在；伪造损坏的 `plugins.json` 与 `schedules.json` 后重启：备份文件生成、App 不崩、页面显示插件记录重建提示、原数据已恢复；证据 `artifacts/validation/round43/`。
 - 已知限制/未真机验证：日历回滚仅有单测（需系统日历写入失败才能触发）；上翻不被拉底、PresentCard 渲染崩溃、草稿在进程死亡后的恢复未构造真机场景；小米云「服务端已失效但本地 cookie 仍在」会显示已登录，直到工具 401。
 
