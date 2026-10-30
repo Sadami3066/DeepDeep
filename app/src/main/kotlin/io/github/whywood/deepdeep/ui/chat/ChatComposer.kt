@@ -28,9 +28,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,11 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -55,12 +49,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -84,6 +75,7 @@ import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
@@ -130,6 +122,10 @@ data class ChatComposerActions(
 internal fun ChatComposer(
     state: ChatComposerState,
     actions: ChatComposerActions,
+    usage: SessionUsage?,
+    jobCount: Int,
+    onOpenUsage: () -> Unit,
+    onOpenJobs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (
@@ -146,7 +142,6 @@ internal fun ChatComposer(
     var showProviders by remember { mutableStateOf(false) }
     var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment
-    val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
     val placeholder = when {
         !configured -> stringResource(R.string.assistant_configure_input)
@@ -155,14 +150,6 @@ internal fun ChatComposer(
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var lastQuote by remember { mutableStateOf<QuotedMessage?>(null) }
-    var textFieldValue by remember {
-        mutableStateOf(TextFieldValue(value, TextRange(value.length)))
-    }
-    LaunchedEffect(value) {
-        if (textFieldValue.text != value) {
-            textFieldValue = TextFieldValue(value, TextRange(value.length))
-        }
-    }
 
     LaunchedEffect(quote) {
         if (quote != null) {
@@ -174,135 +161,119 @@ internal fun ChatComposer(
 
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Column(
-                Modifier
-                    .widthIn(max = 780.dp)
-                    .fillMaxWidth()
-                    .shadow(10.dp, shape, clip = false)
-                    .clip(shape)
-                    .background(colors.composer),
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 2.dp),
+            Column(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
+                if (queuedInputs.isNotEmpty()) {
+                    QueueStrip(
+                        queuedInputs = queuedInputs,
+                        onClear = onClearQueue,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+                if (importingAttachment) {
+                    Text(
+                        text = stringResource(R.string.assistant_importing_image),
+                        modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                        color = colors.inkTertiary,
+                    )
+                }
+                AnimatedVisibility(
+                    visible = quote != null,
+                    enter = fadeIn(tween(DdMotion.FAST)) +
+                        expandVertically(
+                            animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                            expandFrom = Alignment.Top,
+                        ),
+                    exit = fadeOut(tween(DdMotion.FAST)) +
+                        shrinkVertically(
+                            animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                            shrinkTowards = Alignment.Top,
+                        ),
                 ) {
-                    Column {
-                        if (queuedInputs.isNotEmpty()) {
-                            QueueStrip(
-                                queuedInputs = queuedInputs,
-                                onClear = onClearQueue,
-                                modifier = Modifier.padding(bottom = 10.dp),
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .testTag("assistant_quote_preview"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(Modifier.weight(1f).height(IntrinsicSize.Min)) {
+                            Box(
+                                Modifier
+                                    .width(2.dp)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(1.dp))
+                                    .background(colors.hairline),
                             )
-                        }
-                        if (importingAttachment) {
                             Text(
-                                text = stringResource(R.string.assistant_importing_image),
-                                modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
-                                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                                text = (quote ?: lastQuote)?.text.orEmpty(),
+                                modifier = Modifier.padding(start = 10.dp),
+                                style = DdType.bodySmall,
                                 color = colors.inkTertiary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        AnimatedVisibility(
-                            visible = quote != null,
-                            enter = fadeIn(tween(DdMotion.FAST)) +
-                                expandVertically(
-                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                                    expandFrom = Alignment.Top,
-                                ),
-                            exit = fadeOut(tween(DdMotion.FAST)) +
-                                shrinkVertically(
-                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                                    shrinkTowards = Alignment.Top,
-                                ),
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp)
-                                    .testTag("assistant_quote_preview"),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Row(Modifier.weight(1f).height(IntrinsicSize.Min)) {
-                                    Box(
-                                        Modifier
-                                            .width(2.dp)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(1.dp))
-                                            .background(colors.hairline),
-                                    )
-                                    Text(
-                                        text = (quote ?: lastQuote)?.text.orEmpty(),
-                                        modifier = Modifier.padding(start = 10.dp),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkTertiary,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                DdIconButton(
-                                    icon = DdIcons.Close,
-                                    onClick = onClearQuote,
-                                    contentDescription = stringResource(R.string.assistant_quote_remove),
-                                    modifier = Modifier.testTag("assistant_quote_clear"),
-                                    size = 30.dp,
-                                    iconSize = 14.dp,
-                                    tint = colors.inkTertiary,
-                                )
-                            }
-                        }
-                        if (attachments.isNotEmpty()) {
-                            AttachmentChips(
-                                attachments = attachments,
-                                root = attachmentRoot,
-                                onRemove = onRemoveAttachment,
-                                onOpen = onOpenAttachment,
-                                modifier = Modifier.padding(bottom = 10.dp),
-                            )
-                        }
-                        BasicTextField(
-                            value = textFieldValue,
-                            onValueChange = { next ->
-                                textFieldValue = next
-                                onValueChange(next.text)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 42.dp)
-                                .focusRequester(focusRequester)
-                                .testTag("assistant_input"),
-                            enabled = configured,
-                            textStyle = DdType.body.copy(
-                                fontSize = 16.sp,
-                                lineHeight = 25.sp,
-                                color = if (configured) colors.ink else colors.inkTertiary,
-                            ),
-                            cursorBrush = SolidColor(colors.accent),
-                            visualTransformation = SlashCommandColor(colors.accent),
-                            maxLines = 8,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
-                            decorationBox = { inner ->
-                                Box {
-                                    if (textFieldValue.text.isEmpty()) {
-                                        Text(
-                                            text = placeholder,
-                                            style = DdType.body.copy(fontSize = 16.sp, lineHeight = 25.sp),
-                                            color = colors.inkTertiary,
-                                        )
-                                    }
-                                    inner()
-                                }
-                            },
+                        DdIconButton(
+                            icon = DdIcons.Close,
+                            onClick = onClearQuote,
+                            contentDescription = stringResource(R.string.assistant_quote_remove),
+                            modifier = Modifier.testTag("assistant_quote_clear"),
+                            size = 30.dp,
+                            iconSize = 14.dp,
+                            tint = colors.inkTertiary,
                         )
                     }
                 }
+                if (attachments.isNotEmpty()) {
+                    AttachmentChips(
+                        attachments = attachments,
+                        root = attachmentRoot,
+                        onRemove = onRemoveAttachment,
+                        onOpen = onOpenAttachment,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    ChatInputField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        placeholder = placeholder,
+                        modifier = Modifier.weight(1f),
+                        enabled = configured,
+                        maxLines = 8,
+                        visualTransformation = SlashCommandColor(colors.accent),
+                        onSend = { if (canSend) onSend() },
+                        focusRequester = focusRequester,
+                        testTag = "assistant_input",
+                    )
+                    Row(
+                        modifier = Modifier.padding(start = 8.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        JobsMeter(
+                            count = jobCount,
+                            onClick = onOpenJobs,
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                        if (usage != null && usage.contextWindow > 0) {
+                            ContextMeter(
+                                usedTokens = usage.contextTokens,
+                                windowTokens = usage.contextWindow,
+                                onClick = onOpenUsage,
+                            )
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     DdIconButton(
-                        icon = DdIcons.Paperclip,
+                        icon = DdIcons.Plus,
                         onClick = onPickAttachment,
                         contentDescription = stringResource(R.string.assistant_attach_add),
                         modifier = Modifier.testTag("assistant_attach"),

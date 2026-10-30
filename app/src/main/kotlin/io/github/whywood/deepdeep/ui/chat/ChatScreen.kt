@@ -97,7 +97,6 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
-import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
@@ -181,7 +180,6 @@ fun ChatScreen(
         onOpenWorkshop, onOpenFiles, onVoiceClick, onFollowUp, onClearQueue, onScrollAnchorChange,
     ) = actions
     val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
-    val usage = state.usage
     val attachments = state.attachments
     val queuedInputs = state.queuedInputs
     val importingAttachment = state.importingAttachment
@@ -519,30 +517,6 @@ fun ChatScreen(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
-        val currentUsage = usage ?: state.usage
-        val showUsageMeter = currentUsage != null && currentUsage.contextWindow > 0
-        if (showUsageMeter || jobCount > 0) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 2.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                JobsMeter(
-                    count = jobCount,
-                    onClick = onOpenJobs,
-                    modifier = Modifier.padding(end = 10.dp),
-                )
-                if (currentUsage != null && currentUsage.contextWindow > 0) {
-                    ContextMeter(
-                        usedTokens = currentUsage.contextTokens,
-                        windowTokens = currentUsage.contextWindow,
-                        onClick = onOpenUsage,
-                    )
-                }
-            }
-        }
         ChatComposer(
             state = ChatComposerState(
                 value = state.input,
@@ -593,6 +567,10 @@ fun ChatScreen(
                 },
                 onModelsOpenChange = onModelsOpenChange,
             ),
+            usage = state.usage,
+            jobCount = jobCount,
+            onOpenUsage = onOpenUsage,
+            onOpenJobs = onOpenJobs,
             modifier = Modifier
                 .onSizeChanged { composerHeightPx = it.height }
                 .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
