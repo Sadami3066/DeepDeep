@@ -2,7 +2,7 @@
 
 状态：M0–M3 已完成并合并 `master@706caa3`（PR #1–#4，tag `m0`–`m3`）；M4 不执行；M5 文档基线已完成（2026-10-30，见 §4）。
 分支：`refactor/team-foundation` 已合并，本地与远端均保留（本地 `763c117`，落后 master 5 个 merge commit；实现提交均已进入 master）。
-配套文件：活跃任务卡 `tasks.tsv`（已完成卡归档在 `tasks-archive-2026-10.tsv`）｜agent 执行协议 `PLAYBOOK.md`（T0/T1/T2 分级、模板与闸门）
+配套文件：活跃任务卡 `tasks.tsv`（已完成卡归档在 `tasks-archive-2026-10.tsv`）｜agent 执行协议 `PLAYBOOK.md`（L0–L4 档位、模板与闸门）
 
 ## 1. 目标
 
@@ -90,7 +90,9 @@
 
 ### M6 工程效率（按需，不排期）
 
-流程减负与 CI 提速：`scripts/gate.sh` 五档（L0 文档 / L1 编译 / L2 单测 / L3 全量 / L4 真机）+ CI 改手动触发（`gate.sh ci`）。后续按需追加，不设完成判据。
+流程减负与 CI 提速：`scripts/gate.sh` 五档（L0 文档 / L1 编译 / L2 单测 / L3 全量 / L4 真机）+ CI 改手动触发（`gate.sh ci`）。
+
+规则瘦身（M6-2）：常驻规则从「开工先读 6 份、22,455 字符」改成「只常驻 `AGENTS.md`（2,931 字符）+ 按需查表」；规则分〔必须〕/〔应该〕两档；新增 **UI 轻量模式**（改界面免任务卡、免单测、编译过 + 一张截图即验收）；`PLAYBOOK`/`CONTRIBUTING`/PR 模板同步去重。后续按需追加，不设完成判据。
 
 ### M7 产品迭代（2026-10-30，进行中）
 

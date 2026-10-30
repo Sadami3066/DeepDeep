@@ -1,10 +1,23 @@
-# agent 执行协议（DeepDeep 重构期）
+# agent 执行协议（DeepDeep）
 
 读者：执行任务的人类或 AI agent。规则优先于任何文档里的数字；命令输出优先于文档。
+
+## 读法
+
+**本文按需读，不是开工必读。** 日常看 `AGENTS.md`（§1 任务类型表 + §6 UI 轻量模式）就够了；只有这些情况才往下读：
+
+- 要写 / 改任务卡 → §1、§1.1、§1.2
+- 要判「这改动要不要证伪 / 要不要真机证据」→ §2
+- 交 PR、要完整模板 → §8、§9
+- 要查「照做会变糟」的 15 条 → §6
+- 要判「这活能不能交给 agent」→ §7
+- 回滚演练 → §11
 
 ## 0. 验证档位（L0–L4 + 手动 CI）
 
 **CI 不再自动跑；每次改动由你或 Lead 选一档，跑对应命令。** 对话里说「L0 / L1 / L2 / L3 / L4 / 用 CI」即可切换。
+
+任务类型 → 档位 / 要不要卡 的速查表在 `AGENTS.md §1`；本节只说明每档具体跑什么、要求什么。
 
 | 档 | 名字 | 命令 | 跑什么 | 本机实测 | 典型场景 |
 |---|---|---|---|---|---|
@@ -73,7 +86,7 @@
 1. **目标句必须可判定**：能对应一条命令、一个计数或一个可见现象；「不要再频繁读盘」这种句子不合格，要写成「注入 50 个 TextDelta 后 storeReadCount 不变」。
 2. **目标句不得与「不在范围」矛盾**：如果达成目标必须动白名单外的文件，说明卡写错了，先改卡再开工，不要让执行 agent 自行扩张。
 3. **写明验收 seam**：允许新增 `internal` 计数/测试替身，还是禁止改生产代码接口。不写清楚，执行 agent 会在「无法测」处卡住或偷偷加测试钩子。
-4. **指定 G2 执行者**：T2 必须由 Lead 指定另一个只读 agent 做，执行者不许自己给自己证伪；T1 由 Lead 抽检；T0 不做。
+4. **指定 G2 执行者**：L4 必须由 Lead 指定另一个只读 agent 做，执行者不许自己给自己证伪；L3 由 Lead 抽检；L0–L2 不做。
 
 ## 2. 三道闸门
 
@@ -153,43 +166,7 @@ git diff --stat          # 对照预算
 
 ## 8. PR 模板
 
-```markdown
-## 这是什么
-（三行内人话；第一条写用户会看到什么变化）
-
-## 关联
-id: M0-3   类型: feat/fix/refactor/perf/docs/test/chore/build
-
-## 变更面（自动填）
-git diff --name-only <base>..HEAD
-文件数 __ / 净增删 __ 行 / 涉及模块 __
-是否 ⊆ 白名单：是 / 否（否 → 说明理由）
-
-## G1 机器闸门（贴原始输出，不许概括）
-- [ ] 编译通过
-- [ ] 单测 __ 条全绿（基线 __，不得下降）
-- [ ] lint 0 error（警告 __，基线 __）
-- [ ] verifyModuleBoundaries 通过
-- [ ] 新增行为测试：回退修复后必红（贴红输出）
-
-## G2 证伪结论（第二个只读 agent 填）
-- 最可能在哪类设备/状态下崩：
-- 哪些测试其实没覆盖：
-- 哪部分照做会变糟：
-- 判定：成立 / 部分成立 / 不成立（不成立必须写理由）
-
-## G3 作者验收
-- [ ] 真机覆盖安装（不卸载）
-- [ ] 验收条目：#___ ～ #___，逐条打勾，截图在 docs/dev/evidence/
-- [ ] 回滚演练通过
-- [ ] 未覆盖风险：
-
-## 回滚
-git revert <sha> / adb install -r <上一 tag APK>
-数据影响：无 / 涉及文件 ___ / 升级验证条目 #___
-```
-
-L0/L1 只填「这是什么」与「回滚」；L2/L3 免 G2 段（涉 UI 时填 G3）；L4 全填。
+唯一来源是 `.github/pull_request_template.md`（按档位删减填写）。正文别在两处维护。
 
 ## 9. 提交规范
 
@@ -198,32 +175,9 @@ L0/L1 只填「这是什么」与「回滚」；L2/L3 免 G2 段（涉 UI 时填
 - body 三行（`验收:`、`回滚:`、`不在范围:`）——L2–L4 必填；L0/L1 可只写标题
 - 提交标题必须带 backlog ID——这是「128 条 findings 修了哪些」唯一可机器对账的入口；L0/L1 无卡时用 `[L0]`/`[L1]`
 
-## 10. AGENTS.md 骨架（M1-2 落地，≤120 行；已按 M3 现状同步模块依赖与热点文件）
+## 10. 规则入口
 
-```markdown
-# AGENTS.md — DeepDeep 仓库工作规则
-
-## 事实源
-本文件命令与数字优先于 README/docs。文档数字会漂，一律以命令输出为准。
-
-## 环境与命令（照抄）
-./scripts/verify.sh
-./scripts/gradlew-locked :app:assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk
-基线见 docs/dev/refactor/BASELINE.md。
-
-## 硬性边界
-- 模块依赖只允许 :app → {:runtime,:shell,:design}、:runtime → :runtime-api
-- 不改：settings.gradle.kts、签名配置、.gitignore、libs.versions.toml（新增依赖须批准）
-- 不碰：artifacts/、字体 ttf、rootfs、任何 4MB 以上文件
-- 只改任务卡白名单里的文件；需要额外文件先停下要授权
-- 代码文件里不留注释；用户可见文案走 res/values*/strings_*.xml
-
-## 已知热点（改它要单独任务 + 新增测试）
-ChatViewModel.kt / DeepDeepApp.kt / AgentRuntimeHost.kt / PluginSetupSession.kt
-
-## 交付物（缺一不可）
-变更文件清单 / 三条命令原始输出 / 红绿测试证据 / 回滚命令 / 真机条目与截图
-```
+常驻规则只有 `AGENTS.md` 一处，本文不复制它的内容。
 
 ## 11. 回滚演练（L3/L4 每卡一次；L0–L2 不适用）
 

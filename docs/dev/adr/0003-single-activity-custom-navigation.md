@@ -39,7 +39,7 @@
 - **没有现成的 deep link 框架**：URI 解析、参数校验、`routeKey` 序列化、补父页逻辑全部自研，19 个目的地、4 类带参路由都要手工维护（`AppDestination.kt:110-147`、`app/src/main/kotlin/io/github/whywood/deepdeep/deeplink/DeepLink.kt`）。
 - **没有现成的 back stack 框架**：栈、截断、进程恢复、`pop` 失败清理、手势取消回弹都由 `AppNavigator` 与 `AnimatedScreenHost` 自己保证；预测返回与常规转场两段状态机（`AppScreenTransition.kt:94-173`）是热点。
 - **没有 Material sharedElement**：`sharedElement/sharedBounds` 需要 `AnimatedVisibilityScope`（由 `AnimatedContent`/`NavHost` 提供），自研 host 不提供（`docs/archive/research/NAVIGATION_MOTION.md`（已归档）:170）。当前只有 shared-axis 位移，不是真正的共享元素转场；要做共享元素必须重新评估（见推翻条件）。
-- **无障碍/命中测试/语义/RTL/快速连点/进程恢复都要自己保证**：这些是 `docs/archive/research/NAVIGATION_MOTION.md`（已归档）:70 对方案 C 明列的风险；壳层 `DeepDeepApp.kt` 现为 644 行（`AGENTS.md §4` 热点列表），导航改动只能靠真机证据（ADR-0005），没有 Compose UI 测试网。
+- **无障碍/命中测试/语义/RTL/快速连点/进程恢复都要自己保证**：这些是 `docs/archive/research/NAVIGATION_MOTION.md`（已归档）:70 对方案 C 明列的风险；壳层 `DeepDeepApp.kt` 现为 644 行（`AGENTS.md §5` 热点列表），导航改动只能靠真机证据（ADR-0005），没有 Compose UI 测试网。
 - **放弃库生态的收益**：类型安全路由、嵌套图、测试库、官方文档与升级路径都没有；这些收益需要**在测试网补齐后**才值得交换。
 
 ## 被否决的方案
