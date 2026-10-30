@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
@@ -31,6 +32,7 @@ import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.UserQuestion
+import io.github.whywood.deepdeep.ui.chat.testing.DelayedOpenRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_ID
@@ -42,6 +44,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -66,7 +69,7 @@ class ChatViewModelTest {
     }
 
     private fun viewModel(
-        runtime: FakeAgentRuntime,
+        runtime: AgentRuntime,
         autoRetry: Boolean = false,
         skillExpander: SkillExpander? = null,
         settings: FakeSettings = FakeSettings(),
@@ -1465,6 +1468,107 @@ class ChatViewModelTest {
             listCalls += cwd
             return available
         }
+    }
+
+    @Test
+    fun openSessionKeepsDeltasArrivingBeforeHistoryLands() = runTest(dispatcher) {
+        val sessionA = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val sessionB = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val streaming = AssistantMessage(
+            id = 0,
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            streaming = true,
+            status = MessageStatus.RUNNING,
+            startedAt = 1L,
+            runId = "run-live",
+        )
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(sessionA, sessionB)
+            histories = mapOf("session-b" to listOf(streaming))
+        }
+        val delayed = DelayedOpenRuntime(runtime)
+        val viewModel = viewModel(delayed)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+
+        delayed.gate = CompletableDeferred()
+        viewModel.openConversation("session-b")
+        runCurrent()
+        assertEquals("session-b", viewModel.state.value.conversationId)
+        assertTrue(viewModel.state.value.switchingConversation)
+
+        runtime.emitFor("session-b", RuntimeEvent.TextDelta("run-live", "late delta"))
+        runCurrent()
+        assertTrue(viewModel.state.value.messages.isEmpty())
+
+        delayed.gate?.complete(Unit)
+        runCurrent()
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        val streamed = viewModel.state.value.messages.single()
+        assertEquals(
+            "late delta",
+            streamed.steps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text },
+        )
+    }
+
+    @Test
+    fun autoRetryCountdownSurvivesSwitchingAwayAndBack() = runTest(dispatcher) {
+        val sessionA = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val sessionB = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(sessionA, sessionB)
+        }
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        runtime.emitFor("session-a", RuntimeEvent.RunStarted(runtime.runId, 1_000L))
+        runtime.emitFor("session-a", RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        advanceTimeBy(1L)
+        assertTrue(viewModel.state.value.sending)
+        assertEquals(0, runtime.retried)
+
+        viewModel.openConversation("session-b")
+        runCurrent()
+        assertEquals("session-b", viewModel.state.value.conversationId)
+        viewModel.openConversation("session-a")
+        runCurrent()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals(0, runtime.retried)
+
+        advanceTimeBy(2_500L)
+        advanceUntilIdle()
+
+        assertEquals(1, runtime.retried)
+        assertTrue(viewModel.state.value.sending)
+    }
+
+    @Test
+    fun droppedQueuedInputsMergeInOrderWithExistingDraft() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
+
+        viewModel.onInputChange("draft text")
+        runtime.emitFor(
+            sessionId,
+            RuntimeEvent.QueueChanged(runtime.runId, steering = listOf("s1", "s2"), followUp = listOf("f1")),
+        )
+        advanceUntilIdle()
+        assertEquals(3, viewModel.state.value.queuedInputs.size)
+
+        runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("first", "second"), runtime.runId))
+        runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("third"), runtime.runId))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
+        assertEquals("draft text\n\nfirst\n\nsecond\n\nthird", viewModel.state.value.input)
     }
 
     private class FakeProviders(
