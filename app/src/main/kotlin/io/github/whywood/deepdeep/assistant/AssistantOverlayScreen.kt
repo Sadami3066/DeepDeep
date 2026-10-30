@@ -13,6 +13,12 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,46 +26,51 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -70,57 +81,96 @@ import io.github.whywood.deepdeep.design.DdChip
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.DdTypingDots
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.chat.ChatMarkdown
+import io.github.whywood.deepdeep.runtime.AssistantRole
+import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.ui.chat.ChatInputField
+import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.ui.chat.ChatTurn
+import io.github.whywood.deepdeep.ui.chat.WorkingIndicator
+import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.voice.SpeechError
 import io.github.whywood.deepdeep.voice.SpeechEvent
 import io.github.whywood.deepdeep.voice.SpeechRecognizerController
 import io.github.whywood.deepdeep.voice.TextSpeaker
 import io.github.whywood.deepdeep.voice.VoiceLanguage
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AssistantOverlayScreen(
     state: AssistantOverlayState,
+    chatUiStrings: ChatUiStrings,
     autoSpeak: Boolean,
+    sendAfterRecognition: Boolean,
+    autoCollapseProcess: Boolean,
+    chatFontScale: Float,
     language: AppLanguage,
-    restartListening: Int,
+    attachmentRoot: File,
     pendingQuestion: Boolean,
     onOpenQuestion: () -> Unit,
     onDismiss: () -> Unit,
     onOpenInApp: (String) -> Unit,
-    onAsk: (String) -> Unit,
+    onAsk: (String) -> Boolean,
     onStop: () -> Unit,
+    onRetry: (Long) -> Unit,
+    onToggleStep: (Long, Long) -> Unit,
+    onRetryStart: () -> Unit,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     val copiedMessage = stringResource(R.string.assistant_overlay_copied)
-    val shareTitle = stringResource(R.string.assistant_overlay_share_title)
+    val openInAppMessage = stringResource(R.string.assistant_overlay_open_in_app_file)
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
     val speaker = remember(context) { TextSpeaker(context) }
     val recognizer = remember(context) { SpeechRecognizerController(context) }
     val activity = remember(context) { context.findActivity() }
     val shape = RoundedCornerShape(28.dp)
+    val density = LocalDensity.current
+    val chatDensity = remember(density, chatFontScale) {
+        Density(density = density.density, fontScale = density.fontScale * chatFontScale)
+    }
+    val listState = rememberLazyListState()
+    val scroll = rememberChatScrollController(listState)
     var input by remember { mutableStateOf("") }
     var transcript by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
     var voiceFailure by remember { mutableStateOf<SpeechError?>(null) }
     var permissionPermanentlyDenied by remember { mutableStateOf(false) }
-    var lastPrompt by remember { mutableStateOf<String?>(null) }
-    val listenJob = remember { mutableStateOf<Job?>(null) }
-    val busy = state.phase == AssistantOverlayPhase.Thinking ||
-        state.phase == AssistantOverlayPhase.Streaming
+    var listenJob by remember { mutableStateOf<Job?>(null) }
+    var wasSending by remember { mutableStateOf(state.conversation.sending) }
+    val messages = state.conversation.messages
+    val busy = state.conversation.sending
+    val latestMessages by rememberUpdatedState(messages)
 
     fun stopListening() {
-        listenJob.value?.cancel()
-        listenJob.value = null
+        listenJob?.cancel()
+        listenJob = null
         listening = false
+    }
+
+    fun dismiss() {
+        stopListening()
+        speaker.stop()
+        onDismiss()
+    }
+
+    val send: (String) -> Unit = { raw ->
+        val text = raw.trim()
+        if (text.isNotEmpty()) {
+            stopListening()
+            speaker.stop()
+            voiceFailure = null
+            keyboard?.hide()
+            if (onAsk(text)) input = ""
+        }
     }
 
     fun beginListening() {
@@ -129,23 +179,40 @@ internal fun AssistantOverlayScreen(
         transcript = ""
         voiceFailure = null
         listening = true
-        listenJob.value = scope.launch {
+        listenJob = scope.launch {
             recognizer.listen(VoiceLanguage.recognitionTag(language)).collect { event ->
                 when (event) {
                     is SpeechEvent.Partial -> transcript = event.text
                     is SpeechEvent.Volume -> Unit
                     is SpeechEvent.Final -> {
-                        transcript = event.text
-                        input = ""
-                        lastPrompt = event.text
-                        onAsk(event.text)
+                        listening = false
+                        listenJob = null
+                        transcript = ""
+                        val text = event.text.trim()
+                        if (text.isEmpty()) {
+                            voiceFailure = SpeechError.NO_MATCH
+                        } else if (sendAfterRecognition && input.isBlank() && onAsk(text)) {
+                            input = ""
+                        } else {
+                            input = if (input.isBlank()) text else input.trimEnd() + " " + text
+                        }
                     }
 
-                    is SpeechEvent.Failed -> voiceFailure = event.error
-                    SpeechEvent.Timeout -> voiceFailure = SpeechError.SPEECH_TIMEOUT
+                    is SpeechEvent.Failed -> {
+                        listening = false
+                        listenJob = null
+                        voiceFailure = event.error
+                    }
+
+                    SpeechEvent.Timeout -> {
+                        listening = false
+                        listenJob = null
+                        voiceFailure = SpeechError.SPEECH_TIMEOUT
+                    }
                 }
             }
             listening = false
+            listenJob = null
         }
     }
 
@@ -174,46 +241,48 @@ internal fun AssistantOverlayScreen(
         }
     }
 
-    LaunchedEffect(Unit) { requestListening() }
-    LaunchedEffect(restartListening) { if (restartListening > 0) requestListening() }
+    val toggleListening: () -> Unit = {
+        if (listening) {
+            stopListening()
+        } else {
+            requestListening()
+        }
+    }
 
     DisposableEffect(speaker) {
         onDispose {
-            listenJob.value?.cancel()
-            listenJob.value = null
+            listenJob?.cancel()
+            listenJob = null
             speaker.stop()
             speaker.release()
         }
     }
 
-    LaunchedEffect(state.phase, state.answer) {
-        if (state.answer.isNotBlank() ||
-            state.phase == AssistantOverlayPhase.Thinking ||
-            state.phase == AssistantOverlayPhase.Streaming ||
-            state.phase == AssistantOverlayPhase.Done
-        ) {
-            stopListening()
-            voiceFailure = null
+    LaunchedEffect(state.sessionId, state.conversation.loaded) {
+        if (state.conversation.loaded) {
+            scroll.jumpToBottom(animate = false)
         }
     }
 
-    LaunchedEffect(autoSpeak, language, state.phase, state.answer) {
-        if (!autoSpeak || state.phase != AssistantOverlayPhase.Done) return@LaunchedEffect
-        if (state.answer.isBlank()) return@LaunchedEffect
-        speaker.speak(state.answer, language)
+    LaunchedEffect(scroll) {
+        snapshotFlow { latestMessages }.collect {
+            scroll.followContent()
+        }
     }
 
-    val send: (String) -> Unit = { raw ->
-        val text = raw.trim()
-        if (text.isNotEmpty()) {
-            stopListening()
-            speaker.stop()
-            voiceFailure = null
-            input = ""
-            transcript = ""
-            lastPrompt = text
-            keyboard?.hide()
-            onAsk(text)
+    LaunchedEffect(state.conversation.sending) {
+        if (state.conversation.sending) {
+            wasSending = true
+            return@LaunchedEffect
+        }
+        if (!wasSending) return@LaunchedEffect
+        wasSending = false
+        if (!autoSpeak) return@LaunchedEffect
+        val answer = messages.lastOrNull()
+            ?.takeIf { it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.DONE }
+            ?.text
+        if (!answer.isNullOrBlank()) {
+            speaker.speak(answer, language)
         }
     }
 
@@ -226,348 +295,261 @@ internal fun AssistantOverlayScreen(
         )
     }
 
-    val copyAnswer: () -> Unit = {
+    val copyOutput: (String) -> Unit = { text ->
         val clipboard = context.getSystemService(ClipboardManager::class.java)
-        clipboard?.setPrimaryClip(ClipData.newPlainText("deepdeep-assistant", state.answer))
-        Toast.makeText(
-            context,
-            copiedMessage,
-            Toast.LENGTH_SHORT,
-        ).show()
+        clipboard?.setPrimaryClip(ClipData.newPlainText("deepdeep-assistant", text))
+        Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
     }
 
-    val shareAnswer: () -> Unit = {
-        val share = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, state.answer)
-        }
-        context.startActivity(
-            Intent.createChooser(
-                share,
-                shareTitle,
-            ),
-        )
+    val openInAppNotice: (String) -> Unit = {
+        Toast.makeText(context, openInAppMessage, Toast.LENGTH_SHORT).show()
     }
 
-    val toggleSpeak: () -> Unit = {
-        if (speaker.speaking) speaker.stop() else speaker.speak(state.answer, language)
+    val quote: (Long, String) -> Unit = { _, text ->
+        val quoted = text.trim().lineSequence().joinToString("\n") { line -> "> $line" }
+        input = if (input.isBlank()) "$quoted\n\n" else "$quoted\n\n$input"
     }
 
     Box(Modifier.fillMaxSize().testTag("assistant_overlay")) {
         Box(
             Modifier
                 .matchParentSize()
-                .background(colors.ink.copy(alpha = 0.04f))
+                .background(colors.scrim)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onDismiss,
+                    onClick = ::dismiss,
                 ),
         )
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
             Column(
                 Modifier
+                    .widthIn(max = 760.dp)
                     .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxHeight()
+                    .align(Alignment.CenterHorizontally)
+                    .clip(shape)
+                    .background(colors.paper)
                     .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .pointerInput(Unit) { detectTapGestures { } },
             ) {
-                Column(
-                    Modifier
+                Row(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(12.dp, shape, clip = false)
-                        .clip(shape)
-                        .background(colors.surface)
-                        .pointerInput(Unit) { detectTapGestures { } }
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                        .padding(start = 10.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    DdIconButton(
+                        icon = DdIcons.Close,
+                        onClick = ::dismiss,
+                        contentDescription = stringResource(R.string.assistant_overlay_close),
+                        modifier = Modifier.testTag("assistant_overlay_close"),
+                        size = 38.dp,
+                        iconSize = 18.dp,
+                        tint = colors.inkSecondary,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.assistant_overlay_title),
+                        modifier = Modifier.weight(1f),
+                        style = DdType.heading,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val sessionId = state.sessionId
+                    if (sessionId != null) {
+                        DdTextAction(
+                            text = stringResource(R.string.assistant_overlay_open_app),
+                            onClick = { onOpenInApp(sessionId) },
+                            modifier = Modifier.testTag("assistant_overlay_open_app"),
+                        )
+                    }
+                }
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when {
+                        !state.conversation.loaded -> {
+                            if (state.error == null) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = stringResource(R.string.assistant_loading),
+                                        style = DdType.body,
+                                        color = colors.inkTertiary,
+                                    )
+                                }
+                            }
+                        }
+
+                        messages.isEmpty() -> OverlayGreeting(
+                            modifier = Modifier.fillMaxSize(),
+                            onSuggestion = send,
+                        )
+
+                        else -> CompositionLocalProvider(LocalDensity provides chatDensity) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 8.dp,
+                                    bottom = 16.dp,
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                            ) {
+                                items(messages, key = { it.id }) { message ->
+                                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                        Box(Modifier.widthIn(max = 760.dp).fillMaxWidth()) {
+                                            ChatTurn(
+                                                message = message,
+                                                onToggleStep = { stepId ->
+                                                    onToggleStep(message.id, stepId)
+                                                },
+                                                onCopyOutput = copyOutput,
+                                                onQuote = quote,
+                                                onOpenAttachment = { attachment -> openInAppNotice(attachment.path) },
+                                                onOpenFile = openInAppNotice,
+                                                onRetry = onRetry,
+                                                attachmentRoot = attachmentRoot,
+                                                autoCollapseProcess = autoCollapseProcess,
+                                                onOpenPresentFile = openInAppNotice,
+                                                onSharePresentFile = openInAppNotice,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (pendingQuestion) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .testTag("assistant_overlay_pending_question"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.assistant_overlay_title),
-                            style = DdType.heading,
-                            color = colors.ink,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.assistant_overlay_ai_label),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(colors.accentSoft)
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = DdType.micro.copy(letterSpacing = 0.2.sp),
-                            color = colors.accent,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        DdIconButton(
-                            icon = DdIcons.Close,
-                            onClick = onDismiss,
-                            contentDescription = stringResource(R.string.assistant_overlay_close),
-                            modifier = Modifier.testTag("assistant_overlay_close"),
-                            size = 34.dp,
-                            iconSize = 18.dp,
-                            tint = colors.inkSecondary,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    when {
-                        state.answer.isNotBlank() -> {
-                            OverlayAnswer(
-                                answer = state.answer,
-                                live = state.phase == AssistantOverlayPhase.Streaming,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                        }
-
-                        busy -> OverlayThinking()
-                        listening -> OverlayListening(transcript)
-                        state.phase == AssistantOverlayPhase.Error || voiceFailure != null -> Unit
-                        else -> OverlayGreeting(onSuggestion = send)
-                    }
-                    if (!listening && state.phase == AssistantOverlayPhase.Error) {
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = stringResource(R.string.assistant_overlay_error_send),
-                            modifier = Modifier.testTag("assistant_overlay_error"),
+                            text = stringResource(R.string.assistant_overlay_question),
+                            modifier = Modifier.weight(1f),
                             style = DdType.bodySmall,
-                            color = colors.danger,
+                            color = colors.inkSecondary,
                         )
-                        if (lastPrompt != null) {
-                            Spacer(Modifier.height(2.dp))
-                            DdTextAction(
-                                text = stringResource(R.string.assistant_overlay_retry),
-                                onClick = { lastPrompt?.let(send) },
-                                modifier = Modifier.testTag("assistant_overlay_retry"),
-                            )
-                        }
-                    }
-                    if (pendingQuestion) {
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("assistant_overlay_pending_question"),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.assistant_overlay_question),
-                                modifier = Modifier.weight(1f),
-                                style = DdType.bodySmall,
-                                color = colors.inkSecondary,
-                            )
-                            DdTextAction(
-                                text = stringResource(R.string.assistant_overlay_question_action),
-                                onClick = onOpenQuestion,
-                                modifier = Modifier.testTag("assistant_overlay_open_question"),
-                            )
-                        }
-                    }
-                    val failure = voiceFailure.takeIf {
-                        state.answer.isBlank() &&
-                            state.phase != AssistantOverlayPhase.Thinking &&
-                            state.phase != AssistantOverlayPhase.Streaming &&
-                            state.phase != AssistantOverlayPhase.Done
-                    }
-                    if (failure != null) {
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = voiceErrorMessage(failure),
-                            modifier = Modifier.testTag("assistant_overlay_voice_error"),
-                            style = DdType.bodySmall,
-                            color = colors.danger,
+                        DdTextAction(
+                            text = stringResource(R.string.assistant_overlay_question_action),
+                            onClick = onOpenQuestion,
+                            modifier = Modifier.testTag("assistant_overlay_open_question"),
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            DdTextAction(
-                                text = stringResource(R.string.assistant_overlay_retry),
-                                onClick = requestListening,
-                                modifier = Modifier.testTag("assistant_overlay_voice_retry"),
-                            )
-                            if (needsPermissionSettings(failure, permissionPermanentlyDenied)) {
-                                Spacer(Modifier.width(16.dp))
-                                DdTextAction(
-                                    text = stringResource(R.string.assistant_overlay_open_settings),
-                                    onClick = openPermissionSettings,
-                                    modifier = Modifier.testTag("assistant_overlay_open_settings"),
-                                )
-                            }
-                        }
-                    }
-                    if (state.answer.isNotBlank() || state.sessionId != null) {
-                        Spacer(Modifier.height(2.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (lastPrompt != null) {
-                                DdIconButton(
-                                    icon = DdIcons.Refresh,
-                                    onClick = { lastPrompt?.let(send) },
-                                    contentDescription = stringResource(R.string.assistant_overlay_retry),
-                                    modifier = Modifier.testTag("assistant_overlay_retry_action"),
-                                    size = 36.dp,
-                                    iconSize = 17.dp,
-                                    tint = colors.inkSecondary,
-                                )
-                            }
-                            if (state.answer.isNotBlank()) {
-                                DdIconButton(
-                                    icon = DdIcons.Copy,
-                                    onClick = copyAnswer,
-                                    contentDescription = stringResource(R.string.assistant_overlay_copy),
-                                    modifier = Modifier.testTag("assistant_overlay_copy"),
-                                    size = 36.dp,
-                                    iconSize = 17.dp,
-                                    tint = colors.inkSecondary,
-                                )
-                                DdIconButton(
-                                    icon = DdIcons.Share,
-                                    onClick = shareAnswer,
-                                    contentDescription = stringResource(R.string.assistant_overlay_share),
-                                    modifier = Modifier.testTag("assistant_overlay_share"),
-                                    size = 36.dp,
-                                    iconSize = 17.dp,
-                                    tint = colors.inkSecondary,
-                                )
-                                DdIconButton(
-                                    icon = if (speaker.speaking) DdIcons.VolumeX else DdIcons.Volume,
-                                    onClick = toggleSpeak,
-                                    contentDescription = stringResource(
-                                        if (speaker.speaking) R.string.assistant_overlay_stop_speak
-                                        else R.string.assistant_overlay_speak,
-                                    ),
-                                    modifier = Modifier.testTag("assistant_overlay_speak"),
-                                    size = 36.dp,
-                                    iconSize = 17.dp,
-                                    tint = if (speaker.speaking) colors.accent else colors.inkSecondary,
-                                )
-                            }
-                            Spacer(Modifier.weight(1f))
-                            val sessionId = state.sessionId
-                            if (sessionId != null) {
-                                DdTextAction(
-                                    text = stringResource(R.string.assistant_overlay_open_app),
-                                    onClick = { onOpenInApp(sessionId) },
-                                    modifier = Modifier.testTag("assistant_overlay_open_app"),
-                                )
-                            }
-                        }
                     }
                 }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
-                    .shadow(12.dp, shape, clip = false)
-                    .clip(shape)
-                    .background(colors.composer)
-                    .pointerInput(Unit) { detectTapGestures { } }
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdPressable(
-                    onClick = requestListening,
-                    modifier = Modifier.size(40.dp).testTag("assistant_overlay_mic"),
-                    shape = CircleShape,
-                    background = if (listening) colors.accentSoft else colors.wash,
-                    enabled = !busy,
-                    contentDescription = stringResource(R.string.assistant_overlay_mic),
+                AnimatedVisibility(
+                    visible = busy,
+                    enter = fadeIn(tween(DdMotion.FAST)) +
+                        expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
+                    exit = fadeOut(tween(DdMotion.FAST)) +
+                        shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
                 ) {
-                    DdIcon(
-                        icon = DdIcons.Mic,
-                        tint = if (listening) colors.accent else colors.inkSecondary,
-                        size = 20.dp,
+                    WorkingIndicator(
+                        activityText = chatUiStrings.activity(state.conversation.activity),
+                        startedAt = state.conversation.activityStartedAt,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     )
                 }
-                Spacer(Modifier.width(6.dp))
-                Box(Modifier.weight(1f).padding(horizontal = 6.dp)) {
-                    if (listening) {
-                        Text(
-                            text = transcript.ifEmpty {
-                                stringResource(R.string.assistant_overlay_listening)
-                            },
-                            modifier = Modifier
-                                .heightIn(min = 42.dp)
-                                .testTag("assistant_overlay_input_transcript"),
-                            style = DdType.body.copy(fontSize = 16.sp, lineHeight = 24.sp),
-                            color = if (transcript.isEmpty()) colors.inkTertiary else colors.ink,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
+                if (listening) {
+                    OverlayListening(transcript)
+                }
+                voiceFailure?.let { failure ->
+                    OverlayVoiceFailure(
+                        failure = failure,
+                        showSettings = needsPermissionSettings(failure, permissionPermanentlyDenied),
+                        onRetry = requestListening,
+                        onOpenSettings = openPermissionSettings,
+                    )
+                }
+                state.error?.let { error ->
+                    OverlaySendError(
+                        error = error,
+                        onRetry = onRetryStart,
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DdPressable(
+                        onClick = toggleListening,
+                        modifier = Modifier.size(40.dp).testTag("assistant_overlay_mic"),
+                        shape = CircleShape,
+                        background = if (listening) colors.accentSoft else colors.wash,
+                        contentDescription = stringResource(R.string.assistant_overlay_mic),
+                    ) {
+                        DdIcon(
+                            icon = if (listening) DdIcons.AudioLines else DdIcons.Mic,
+                            tint = if (listening) colors.accent else colors.inkSecondary,
+                            size = 20.dp,
                         )
-                    } else {
-                        BasicTextField(
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.weight(1f)) {
+                        ChatInputField(
                             value = input,
                             onValueChange = { next ->
                                 input = next
-                                if (next.isNotEmpty() && listening) stopListening()
                                 if (next.isNotEmpty()) voiceFailure = null
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 42.dp)
-                                .testTag("assistant_overlay_input"),
-                            textStyle = DdType.body.copy(
-                                fontSize = 16.sp,
-                                lineHeight = 24.sp,
-                                color = colors.ink,
-                            ),
-                            cursorBrush = SolidColor(colors.accent),
-                            maxLines = 3,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { send(input) }),
-                            decorationBox = { inner ->
-                                Box {
-                                    if (input.isEmpty()) {
-                                        Text(
-                                            text = stringResource(R.string.assistant_overlay_input_hint),
-                                            style = DdType.body.copy(
-                                                fontSize = 16.sp,
-                                                lineHeight = 24.sp,
-                                            ),
-                                            color = colors.inkTertiary,
-                                        )
-                                    }
-                                    inner()
-                                }
+                            placeholder = stringResource(R.string.assistant_overlay_input_hint),
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholderAlign = Alignment.CenterHorizontally,
+                            maxLines = 5,
+                            onSend = { send(input) },
+                            testTag = "assistant_overlay_input",
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    if (busy) {
+                        DdPressable(
+                            onClick = {
+                                stopListening()
+                                speaker.stop()
+                                onStop()
                             },
-                        )
-                    }
-                }
-                if (busy) {
-                    DdPressable(
-                        onClick = onStop,
-                        modifier = Modifier.size(40.dp).testTag("assistant_overlay_stop"),
-                        shape = CircleShape,
-                        background = colors.wash,
-                        contentDescription = stringResource(R.string.assistant_overlay_stop),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(colors.danger),
-                        )
-                    }
-                } else {
-                    val canSend = input.isNotBlank()
-                    DdPressable(
-                        onClick = { send(input) },
-                        modifier = Modifier.size(40.dp).testTag("assistant_overlay_send"),
-                        shape = CircleShape,
-                        background = if (canSend) colors.accent else colors.wash,
-                        enabled = canSend,
-                        contentDescription = stringResource(R.string.assistant_overlay_send),
-                    ) {
-                        DdIcon(
-                            icon = DdIcons.ArrowUp,
-                            tint = if (canSend) colors.onAccent else colors.inkTertiary,
-                            size = 19.dp,
-                        )
+                            modifier = Modifier.size(40.dp).testTag("assistant_overlay_stop"),
+                            shape = CircleShape,
+                            background = colors.wash,
+                            contentDescription = stringResource(R.string.assistant_overlay_stop),
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(12.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(colors.danger),
+                            )
+                        }
+                    } else {
+                        val canSend = input.isNotBlank()
+                        DdPressable(
+                            onClick = { send(input) },
+                            modifier = Modifier.size(40.dp).testTag("assistant_overlay_send"),
+                            shape = CircleShape,
+                            background = if (canSend) colors.accent else colors.wash,
+                            enabled = canSend,
+                            contentDescription = stringResource(R.string.assistant_overlay_send),
+                        ) {
+                            DdIcon(
+                                icon = DdIcons.ArrowUp,
+                                tint = if (canSend) colors.onAccent else colors.inkTertiary,
+                                size = 19.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -575,37 +557,40 @@ internal fun AssistantOverlayScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OverlayAnswer(answer: String, live: Boolean) {
-    val scroll = rememberScrollState()
-    LaunchedEffect(answer) {
-        scroll.scrollTo(scroll.maxValue)
-    }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(max = 320.dp)
-            .verticalScroll(scroll)
-            .testTag("assistant_overlay_answer"),
-    ) {
-        ChatMarkdown(answer, live = live)
-    }
-}
-
-@Composable
-private fun OverlayThinking() {
+private fun OverlayGreeting(
+    modifier: Modifier = Modifier,
+    onSuggestion: (String) -> Unit,
+) {
     val colors = deepDeepColors()
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 26.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DdTypingDots(color = colors.inkTertiary)
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = stringResource(R.string.assistant_overlay_thinking),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-        )
+    val suggestions = listOf(
+        stringResource(R.string.assistant_overlay_suggestion_weather),
+        stringResource(R.string.assistant_overlay_suggestion_music),
+        stringResource(R.string.assistant_overlay_suggestion_places),
+    )
+    Box(modifier.padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(R.string.assistant_overlay_hint),
+                style = DdType.body,
+                color = colors.inkSecondary,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                suggestions.forEach { suggestion ->
+                    DdChip(
+                        text = suggestion,
+                        onClick = { onSuggestion(suggestion) },
+                        modifier = Modifier.testTag("assistant_overlay_suggestion"),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -613,45 +598,90 @@ private fun OverlayThinking() {
 private fun OverlayListening(transcript: String) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 26.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DdIcon(icon = DdIcons.AudioLines, tint = colors.accent, size = 18.dp)
-        Spacer(Modifier.width(10.dp))
+        DdIcon(icon = DdIcons.AudioLines, tint = colors.accent, size = 16.dp)
+        Spacer(Modifier.width(8.dp))
         Text(
             text = transcript.ifEmpty { stringResource(R.string.assistant_overlay_listening) },
             modifier = Modifier.weight(1f).testTag("assistant_overlay_transcript"),
-            style = DdType.body,
+            style = DdType.bodySmall,
             color = if (transcript.isEmpty()) colors.inkTertiary else colors.ink,
-            maxLines = 3,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
 @Composable
-private fun OverlayGreeting(onSuggestion: (String) -> Unit) {
+private fun OverlayVoiceFailure(
+    failure: SpeechError,
+    showSettings: Boolean,
+    onRetry: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val colors = deepDeepColors()
-    val suggestions = listOf(
-        stringResource(R.string.assistant_overlay_suggestion_weather),
-        stringResource(R.string.assistant_overlay_suggestion_music),
-        stringResource(R.string.assistant_overlay_suggestion_places),
-    )
-    Text(
-        text = stringResource(R.string.assistant_overlay_hint),
-        style = DdType.body,
-        color = colors.inkSecondary,
-    )
-    Spacer(Modifier.height(12.dp))
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.Start,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        suggestions.forEach { suggestion ->
-            DdChip(
-                text = suggestion,
-                onClick = { onSuggestion(suggestion) },
-                modifier = Modifier.testTag("assistant_overlay_suggestion"),
+        Text(
+            text = voiceErrorMessage(failure),
+            modifier = Modifier.weight(1f).testTag("assistant_overlay_voice_error"),
+            style = DdType.bodySmall,
+            color = colors.danger,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        DdTextAction(
+            text = stringResource(R.string.assistant_overlay_retry),
+            onClick = onRetry,
+            modifier = Modifier.testTag("assistant_overlay_voice_retry"),
+        )
+        if (showSettings) {
+            Spacer(Modifier.width(8.dp))
+            DdTextAction(
+                text = stringResource(R.string.assistant_overlay_open_settings),
+                onClick = onOpenSettings,
+                modifier = Modifier.testTag("assistant_overlay_open_settings"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverlaySendError(
+    error: AssistantOverlayError,
+    onRetry: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(
+                when (error) {
+                    AssistantOverlayError.Busy -> R.string.assistant_overlay_error_busy
+                    AssistantOverlayError.SendFailed -> R.string.assistant_overlay_error_send
+                },
+            ),
+            modifier = Modifier.weight(1f).testTag("assistant_overlay_error"),
+            style = DdType.bodySmall,
+            color = colors.danger,
+        )
+        if (error == AssistantOverlayError.SendFailed) {
+            DdTextAction(
+                text = stringResource(R.string.assistant_overlay_retry),
+                onClick = onRetry,
+                modifier = Modifier.testTag("assistant_overlay_retry"),
             )
         }
     }

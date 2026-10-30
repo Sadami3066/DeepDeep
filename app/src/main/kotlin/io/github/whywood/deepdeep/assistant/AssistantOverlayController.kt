@@ -2,25 +2,24 @@ package io.github.whywood.deepdeep.assistant
 
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantRole
-import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import kotlinx.coroutines.CancellationException
+import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.ui.chat.state.SessionProjection
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
-
-enum class AssistantOverlayPhase { Idle, Thinking, Streaming, Done, Error }
 
 enum class AssistantOverlayError { Busy, SendFailed }
 
 data class AssistantOverlayState(
-    val phase: AssistantOverlayPhase = AssistantOverlayPhase.Idle,
+    val conversation: ConversationState = ConversationState(),
     val sessionId: String? = null,
-    val answer: String = "",
     val error: AssistantOverlayError? = null,
 )
 
@@ -29,158 +28,101 @@ class AssistantOverlayController(
     private val activeSessionId: () -> String?,
     private val homeWorkspaceId: String,
     private val scope: CoroutineScope,
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
 ) {
     private val mutableState = MutableStateFlow(AssistantOverlayState())
     val state: StateFlow<AssistantOverlayState> = mutableState.asStateFlow()
+    private val projection = SessionProjection(runtime, scope, ioDispatcher, strings)
 
-    private var sendJob: Job? = null
-    private var eventJob: Job? = null
-    private var currentRunId: String? = null
+    private var startJob: Job? = null
+    private var stateJob: Job? = null
 
-    fun ask(text: String) {
-        val prompt = text.trim()
-        if (prompt.isEmpty()) return
-        if (mutableState.value.phase == AssistantOverlayPhase.Thinking) return
-        if (mutableState.value.phase == AssistantOverlayPhase.Streaming) return
-        cancelJobs()
-        currentRunId = null
-        mutableState.value = AssistantOverlayState(phase = AssistantOverlayPhase.Thinking)
-        sendJob = scope.launch {
+    fun start() {
+        if (startJob != null) return
+        startJob = scope.launch {
             runCatching { runtime.ensureStarted() }
-            val sessionId = resolveSession(create = true) ?: run {
-                mutableState.value = AssistantOverlayState(phase = AssistantOverlayPhase.Error, error = AssistantOverlayError.SendFailed)
+            val sessionId = resolveSession()
+            if (sessionId == null) {
+                mutableState.value = AssistantOverlayState(error = AssistantOverlayError.SendFailed)
+                startJob = null
                 return@launch
             }
-            mutableState.value = mutableState.value.copy(sessionId = sessionId)
-            val running = runtime.activeRuns.value[sessionId]
-            if (running != null) {
-                attach(sessionId, running.runId)
-                yield()
-                try {
-                    runtime.followUp(sessionId, prompt)
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    mutableState.value = mutableState.value.copy(
-                        phase = AssistantOverlayPhase.Error,
-                        error = AssistantOverlayError.Busy,
-                    )
-                }
+            val opened = runCatching { projection.open(sessionId) }.isSuccess
+            if (!opened) {
+                mutableState.value = AssistantOverlayState(error = AssistantOverlayError.SendFailed)
+                startJob = null
                 return@launch
             }
-            eventJob = listen(sessionId)
-            yield()
-            try {
-                runtime.send(sessionId, prompt)
-                finishFromHistory(sessionId)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                if (mutableState.value.phase == AssistantOverlayPhase.Thinking ||
-                    mutableState.value.phase == AssistantOverlayPhase.Streaming
-                ) {
-                    mutableState.value = mutableState.value.copy(
-                        phase = AssistantOverlayPhase.Error,
-                        error = AssistantOverlayError.SendFailed,
+            mutableState.value = AssistantOverlayState(
+                conversation = projection.state.value,
+                sessionId = sessionId,
+            )
+            stateJob?.cancel()
+            stateJob = scope.launch {
+                projection.state.collect { conversation ->
+                    val current = mutableState.value
+                    mutableState.value = current.copy(
+                        conversation = conversation,
+                        error = if (!conversation.sending && current.error == AssistantOverlayError.Busy) {
+                            null
+                        } else {
+                            current.error
+                        },
                     )
                 }
             }
         }
     }
 
-    fun attachRunning() {
-        scope.launch {
-            runCatching { runtime.ensureStarted() }
-            val sessionId = resolveSession(create = false) ?: return@launch
-            val running = runtime.activeRuns.value[sessionId] ?: return@launch
-            cancelJobs()
-            mutableState.value = AssistantOverlayState(phase = AssistantOverlayPhase.Thinking, sessionId = sessionId)
-            attach(sessionId, running.runId)
-            yield()
-            if (runtime.activeRuns.value[sessionId] == null) finishFromHistory(sessionId)
+    fun ask(text: String): Boolean {
+        val prompt = text.trim()
+        if (prompt.isEmpty()) return false
+        val current = mutableState.value
+        val sessionId = current.sessionId ?: return false
+        if (current.conversation.sending || runtime.activeRuns.value.containsKey(sessionId)) {
+            mutableState.value = current.copy(error = AssistantOverlayError.Busy)
+            return false
         }
+        mutableState.value = current.copy(error = null)
+        projection.ask(prompt)
+        return true
     }
 
     fun stop() {
         val sessionId = mutableState.value.sessionId ?: return
         runtime.stop(sessionId)
-        cancelJobs()
-        mutableState.value = mutableState.value.copy(phase = AssistantOverlayPhase.Done, error = null)
+    }
+
+    fun retry(messageId: Long) {
+        val tail = mutableState.value.conversation.messages.lastOrNull() ?: return
+        if (tail.id != messageId) return
+        if (tail.role != AssistantRole.ASSISTANT || tail.status != MessageStatus.FAILED) return
+        projection.retryLast()
+    }
+
+    fun toggleStep(messageId: Long, stepId: Long) {
+        projection.toggleStep(messageId, stepId)
     }
 
     fun reset() {
-        cancelJobs()
-        currentRunId = null
+        startJob?.cancel()
+        startJob = null
+        stateJob?.cancel()
+        stateJob = null
+        projection.close()
         mutableState.value = AssistantOverlayState()
     }
 
-    private fun attach(sessionId: String, runId: String) {
-        currentRunId = runId
-        eventJob = listen(sessionId)
-    }
-
-    private fun listen(sessionId: String): Job = scope.launch {
-        runtime.events.filter { it.sessionId == sessionId }.collect { sessionEvent ->
-            when (val event = sessionEvent.event) {
-                is RuntimeEvent.RunStarted -> if (currentRunId == null) currentRunId = event.runId
-                is RuntimeEvent.TextDelta -> if (matches(event.runId)) {
-                    mutableState.value = mutableState.value.copy(
-                        phase = AssistantOverlayPhase.Streaming,
-                        answer = mutableState.value.answer + event.text,
-                        error = null,
-                    )
-                }
-
-                is RuntimeEvent.RunFinished -> if (matches(event.runId)) {
-                    val text = event.text.ifBlank { mutableState.value.answer }
-                    mutableState.value = mutableState.value.copy(
-                        phase = AssistantOverlayPhase.Done,
-                        answer = text,
-                        error = null,
-                    )
-                }
-
-                is RuntimeEvent.RunFailed -> if (matches(event.runId)) {
-                    mutableState.value = mutableState.value.copy(
-                        phase = AssistantOverlayPhase.Error,
-                        error = AssistantOverlayError.SendFailed,
-                    )
-                }
-
-                else -> Unit
-            }
-        }
-    }
-
-    private fun matches(runId: String): Boolean = currentRunId == null || currentRunId == runId
-
-    private suspend fun finishFromHistory(sessionId: String) {
-        if (mutableState.value.phase != AssistantOverlayPhase.Thinking) return
-        val text = runCatching {
-            runtime.history(sessionId).lastOrNull { it.role == AssistantRole.ASSISTANT }?.text
-        }.getOrNull()
-        if (!text.isNullOrBlank()) {
-            mutableState.value = mutableState.value.copy(phase = AssistantOverlayPhase.Done, answer = text)
-        } else {
-            mutableState.value = mutableState.value.copy(
-                phase = AssistantOverlayPhase.Error,
-                error = AssistantOverlayError.SendFailed,
-            )
-        }
-    }
-
-    private suspend fun resolveSession(create: Boolean): String? {
+    private suspend fun resolveSession(): String? {
         activeSessionId()?.takeIf { it.isNotBlank() }?.let { return it }
-        val sessions = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
-        sessions.maxByOrNull { it.updatedAt }?.let { return it.id }
-        if (!create) return null
+        val latest = runCatching { runtime.allSessions() }.getOrNull()
+            ?.maxByOrNull { it.updatedAt }
+        if (latest != null) {
+            runCatching { runtime.openSession(latest.filePath, latest.cwd) }
+                .getOrNull()
+                ?.let { return it.sessionId }
+        }
         return runCatching { runtime.newSession(homeWorkspaceId).sessionId }.getOrNull()
-    }
-
-    private fun cancelJobs() {
-        eventJob?.cancel()
-        eventJob = null
-        sendJob?.cancel()
-        sendJob = null
     }
 }
