@@ -3,10 +3,10 @@ M0-1	M0	done	pi2kotlin 从 HEAD 重建并发布 v0.2.4 Release	../pi2kotlin	-	Re
 M0-2	M0	done	syncPiSdk 下载并解包 SDK 仓库	settings.gradle.kts;build.gradle.kts;gradle/pi-sdk.sha256	M0-1	空 ~/.m2 下可解析；移除解包目录即 FAILED	./gradlew syncPiSdk; ./gradlew :runtime:dependencies -Dmaven.repo.local=/tmp/empty-m2 --refresh-dependencies	git revert	M	agent	GL-004
 M0-3	M0	done	门禁接线：boundary 进 check + scripts/verify.sh	build.gradle.kts;scripts/verify.sh	-	check 任务图含 boundary；verify.sh 绿；违规依赖必红	./gradlew check --dry-run -q | grep -c verifyModuleBoundaries; ./scripts/verify.sh	git revert	S	agent	GL-001,GL-005
 M0-4	M0	done	wrapper sha256 与 .gitignore 补项	gradle/wrapper/gradle-wrapper.properties;.gitignore	-	gradlew help 正常；keystore.properties 与 .notes 被忽略	./gradlew help; git status --short	git revert	S	agent	GL-012
-M0-5	M0	pending	scripts/dev-setup.sh	scripts/dev-setup.sh;README.md	-	删 local.properties 后跑脚本能出 APK	rm -f local.properties && ./scripts/dev-setup.sh	git revert	S	agent	GL-004
+M0-5	M0	done	scripts/dev-setup.sh	scripts/dev-setup.sh;README.md	-	删 local.properties 后跑脚本能出 APK	rm -f local.properties && ./scripts/dev-setup.sh	git revert	S	agent	GL-004
 M0-6	M0	done	基线快照 docs/refactor/BASELINE.md	docs/refactor/BASELINE.md	-	四个数字由命令生成且可复算	见文件内命令	删除文件	S	agent	-
-M0-7	M0	pending	verify.sh 全局串行锁（flock）	scripts/verify.sh	M0-3	两个 verify 并发时第二个等待而非并行	同时起两个 verify.sh	git revert	S	agent	-
-M0-8	M0	pending	干净 clone 全流程演练	无	M0-2,M0-3,M0-5	/tmp 新目录 clone + 空 m2 + 无 local.properties 全绿	见 README 判据 1	-	S	agent	-
+M0-7	M0	done	verify.sh 全局串行锁（flock）	scripts/verify.sh	M0-3	两个 verify 并发时第二个等待而非并行	同时起两个 verify.sh	git revert	S	agent	-
+M0-8	M0	done	干净 clone 全流程演练	无	M0-2,M0-3,M0-5	/tmp 新目录 clone + 空 m2 + 无 local.properties 全绿	见 README 判据 1	-	S	agent	-
 M1-1	M1	pending	docs/refactor 三份文档入库	docs/refactor/*	-	文件存在；tasks.tsv 列齐 12 字段	wc -l docs/refactor/*	git revert	S	agent	-
 M1-2	M1	pending	AGENTS.md 规则入口	AGENTS.md	M0	新 agent 只读它能复述正确命令与禁区	人工复述 + 一条试跑	git revert	S	agent	-
 M1-3	M1	pending	PR 模板与提交规范	 .github/pull_request_template.md	M0	模板四段齐全；测试数下降的假 PR 会被规则拦下	gh pr view 模板渲染	git revert	S	agent	-
