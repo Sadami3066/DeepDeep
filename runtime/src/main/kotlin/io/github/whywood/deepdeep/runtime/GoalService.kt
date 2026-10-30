@@ -3,20 +3,17 @@ package io.github.whywood.deepdeep.runtime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 class GoalService(
-    private val store: GoalStore,
     scope: CoroutineScope,
 ) : GoalController, GoalDriver {
     private val mutex = Mutex()
-    private val persisted: MutableMap<String, Goal> = store.read().toMutableMap()
+    private val persisted: MutableMap<String, Goal> = mutableMapOf()
     private val armedSessions = mutableSetOf<String>()
     private val turnSources = ConcurrentHashMap<String, TurnSource>()
     private val goalsState = MutableStateFlow(views())
@@ -38,7 +35,7 @@ class GoalService(
             updatedAt = now,
         )
         armedSessions += sessionId
-        persist()
+        goalsState.value = views()
         goalsState.value[sessionId]
     }
 
@@ -50,7 +47,7 @@ class GoalService(
         val trimmed = objective?.trim()
         if (objective != null && trimmed.isNullOrEmpty()) return@withLock null
         if (trimmed == null && maxRounds == null) return@withLock null
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 objective = trimmed ?: goal.objective,
@@ -64,7 +61,7 @@ class GoalService(
     override suspend fun pause(sessionId: String): GoalView? = mutex.withLock {
         val goal = persisted[sessionId] ?: return@withLock null
         armedSessions -= sessionId
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 phase = GoalPhase.PAUSED,
@@ -80,7 +77,7 @@ class GoalService(
         if (goal.phase == GoalPhase.ACTIVE && sessionId in armedSessions) return@withLock null
         if (goal.maxRounds > 0 && goal.roundsStarted >= goal.maxRounds) return@withLock null
         armedSessions += sessionId
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 phase = GoalPhase.ACTIVE,
@@ -95,7 +92,7 @@ class GoalService(
         val goal = persisted[sessionId] ?: return@withLock null
         if (goal.phase == GoalPhase.COMPLETE) return@withLock null
         armedSessions -= sessionId
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 phase = GoalPhase.COMPLETE,
@@ -107,7 +104,7 @@ class GoalService(
 
     override suspend fun clear(sessionId: String) = mutex.withLock {
         armedSessions -= sessionId
-        if (persisted.remove(sessionId) != null) persist()
+        if (persisted.remove(sessionId) != null) goalsState.value = views()
     }
 
     suspend fun block(sessionId: String, reason: String): GoalView? = mutex.withLock {
@@ -117,7 +114,7 @@ class GoalService(
         val trimmed = reason.trim()
         if (trimmed.isEmpty()) return@withLock null
         armedSessions -= sessionId
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 phase = GoalPhase.BLOCKED,
@@ -141,7 +138,7 @@ class GoalService(
             if (!succeeded) {
                 if (source == TurnSource.GOAL) {
                     armedSessions -= sessionId
-                    persistGoal(
+                    updateGoal(
                         sessionId,
                         goal.copy(
                             phase = GoalPhase.PAUSED,
@@ -174,7 +171,7 @@ class GoalService(
                 revision = goal.revision + 1,
                 updatedAt = System.currentTimeMillis(),
             )
-            persistGoal(sessionId, updated)
+            updateGoal(sessionId, updated)
             GoalRound(
                 round = round,
                 maxRounds = updated.maxRounds,
@@ -197,9 +194,9 @@ class GoalService(
         )
     }
 
-    private suspend fun blockOnRoundLimit(sessionId: String, goal: Goal) {
+    private fun blockOnRoundLimit(sessionId: String, goal: Goal) {
         armedSessions -= sessionId
-        persistGoal(
+        updateGoal(
             sessionId,
             goal.copy(
                 phase = GoalPhase.BLOCKED,
@@ -215,7 +212,7 @@ class GoalService(
             val goal = persisted[sessionId] ?: return@withLock
             if (goal.phase != GoalPhase.ACTIVE) return@withLock
             armedSessions -= sessionId
-            persistGoal(
+            updateGoal(
                 sessionId,
                 goal.copy(
                     phase = GoalPhase.PAUSED,
@@ -230,19 +227,14 @@ class GoalService(
         mutex.withLock {
             armedSessions -= sessionId
             turnSources.remove(sessionId)
-            if (persisted.remove(sessionId) != null) persist()
+            if (persisted.remove(sessionId) != null) goalsState.value = views()
         }
     }
 
-    private suspend fun persistGoal(sessionId: String, goal: Goal): GoalView {
+    private fun updateGoal(sessionId: String, goal: Goal): GoalView {
         persisted[sessionId] = goal
-        persist()
-        return goalsState.value.getValue(sessionId)
-    }
-
-    private suspend fun persist() {
-        withContext(Dispatchers.IO) { store.replace(persisted.toMap()) }
         goalsState.value = views()
+        return goalsState.value.getValue(sessionId)
     }
 
     private fun views(): Map<String, GoalView> = persisted.entries.associate { (sessionId, goal) ->

@@ -24,11 +24,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,8 +60,8 @@ fun ProviderDetailScreen(
     oauthService: ProviderOAuthService? = null,
     onAuthChanged: () -> Unit = {},
     onBack: () -> Unit,
-    onSaveApiKey: (String) -> Unit,
-    onClearApiKey: () -> Unit,
+    onSaveApiKey: suspend (String) -> Result<Unit>,
+    onClearApiKey: suspend () -> Result<Unit>,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -263,27 +265,59 @@ private fun ProviderOverview(
     }
 }
 
+private enum class ApiKeyOutcome { SAVED, SAVE_FAILED, CLEAR_FAILED }
+
 @Composable
 private fun ApiKeySection(
     configured: Boolean,
     savedApiKey: String?,
     oauthSignedIn: Boolean,
-    onSave: (String) -> Unit,
-    onClear: () -> Unit,
+    onSave: suspend (String) -> Result<Unit>,
+    onClear: suspend () -> Result<Unit>,
 ) {
     val colors = deepDeepColors()
-    var draft by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var draft by rememberSaveable { mutableStateOf("") }
     var showRequired by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var outcome by remember { mutableStateOf<ApiKeyOutcome?>(null) }
 
     fun submit() {
+        if (saving) return
         val key = draft.trim()
         if (key.isEmpty()) {
             showRequired = !configured
             return
         }
         showRequired = false
-        draft = ""
-        onSave(key)
+        outcome = null
+        saving = true
+        scope.launch {
+            val result = onSave(key)
+            saving = false
+            if (result.isSuccess) {
+                draft = ""
+                outcome = ApiKeyOutcome.SAVED
+            } else {
+                outcome = ApiKeyOutcome.SAVE_FAILED
+            }
+        }
+    }
+
+    fun clear() {
+        if (saving) return
+        showRequired = false
+        outcome = null
+        saving = true
+        scope.launch {
+            val result = onClear()
+            saving = false
+            if (result.isSuccess) {
+                draft = ""
+            } else {
+                outcome = ApiKeyOutcome.CLEAR_FAILED
+            }
+        }
     }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -306,6 +340,7 @@ private fun ApiKeySection(
             onValueChange = {
                 draft = it
                 showRequired = false
+                outcome = null
             },
             placeholder = if (configured) {
                 maskApiKey(savedApiKey)
@@ -327,23 +362,35 @@ private fun ApiKeySection(
                 color = colors.inkSecondary,
             )
         }
+        outcome?.let { current ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(
+                    when (current) {
+                        ApiKeyOutcome.SAVED -> R.string.settings_provider_api_key_saved
+                        ApiKeyOutcome.SAVE_FAILED -> R.string.settings_provider_api_key_save_failed
+                        ApiKeyOutcome.CLEAR_FAILED -> R.string.settings_provider_api_key_clear_failed
+                    },
+                ),
+                modifier = Modifier.testTag("provider_api_key_feedback"),
+                style = DdType.bodySmall,
+                color = if (current == ApiKeyOutcome.SAVED) colors.accent else colors.danger,
+            )
+        }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             DdTextAction(
                 text = stringResource(R.string.settings_provider_api_key_save),
                 onClick = { submit() },
-                enabled = draft.isNotBlank(),
+                enabled = draft.isNotBlank() && !saving,
             )
             Spacer(Modifier.weight(1f))
             if (configured) {
                 DdTextAction(
                     text = stringResource(R.string.settings_provider_api_key_clear),
-                    onClick = {
-                        draft = ""
-                        showRequired = false
-                        onClear()
-                    },
+                    onClick = { clear() },
                     color = colors.inkTertiary,
+                    enabled = !saving,
                 )
             }
         }

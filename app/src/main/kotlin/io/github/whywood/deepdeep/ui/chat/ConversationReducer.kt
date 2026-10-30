@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.BackgroundTurnStarted
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.NoticeEvent
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
@@ -19,7 +20,7 @@ internal data class ConversationState(
     val messages: List<AssistantMessage> = emptyList(),
     val title: String = "",
     val sending: Boolean = false,
-    val activity: String? = null,
+    val activity: RuntimeActivity? = null,
     val activityStartedAt: Long? = null,
     val loaded: Boolean = false,
     val usage: SessionUsage? = null,
@@ -47,7 +48,7 @@ internal fun reduce(
                         runId = event.runId,
                     ),
                     sending = true,
-                    activity = strings.thinking,
+                    activity = RuntimeActivity.Thinking,
                     activityStartedAt = event.startedAt,
                 )
             } else {
@@ -59,17 +60,16 @@ internal fun reduce(
                     if (it.id == target.id) it.copy(runId = event.runId) else it
                 },
                 sending = true,
-                activity = strings.thinking,
+                activity = RuntimeActivity.Thinking,
                 activityStartedAt = event.startedAt,
             )
         }
     }
 
     is RuntimeEvent.ActivityChanged -> state.onRun(event.runId) {
-        val label = strings.activity(event.activity)
         copy(
-            activity = label,
-            activityStartedAt = if (label == null) null else activityStartedAt ?: now,
+            activity = event.activity,
+            activityStartedAt = if (event.activity == null) null else activityStartedAt ?: now,
         )
     }
 
@@ -133,15 +133,15 @@ internal fun reduce(
         now = now,
     )
 
-    is RuntimeEvent.TurnInjected -> state.injectTurn(event, strings, now)
+    is RuntimeEvent.TurnInjected -> state.injectTurn(event, now)
 
-    is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, strings, now)
+    is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, now)
 
     is RuntimeEvent.QueueChanged -> state
     is RuntimeEvent.QueuedInputsDropped -> state
 
     is NoticeEvent -> state.appendNotice(event.notice, now)
-    is BackgroundTurnStarted -> state.startBackgroundTurn(event, strings, now)
+    is BackgroundTurnStarted -> state.startBackgroundTurn(event, now)
     is UsageChanged -> state.copy(usage = event.usage)
 
     is RuntimeEvent.SessionListChanged -> state
@@ -152,7 +152,6 @@ internal fun reduce(
 internal fun ConversationState.admitUserInput(
     text: String,
     runId: String,
-    strings: ChatUiStrings,
     now: Long,
 ): ConversationState {
     if (runId.isNotBlank() && messages.none { it.runId == runId }) return this
@@ -188,7 +187,7 @@ internal fun ConversationState.admitUserInput(
     return copy(
         messages = settled,
         sending = true,
-        activity = strings.thinking,
+        activity = RuntimeActivity.Thinking,
         activityStartedAt = now,
     )
 }
@@ -297,7 +296,7 @@ internal fun ConversationState.matchesRun(runId: String): Boolean =
 
 internal fun ConversationState.adoptActiveRun(
     runId: String,
-    activity: String,
+    activity: RuntimeActivity,
     now: Long,
 ): ConversationState {
     val index = messages.indexOfLast { it.role == AssistantRole.ASSISTANT }
@@ -414,7 +413,6 @@ private fun failRunningTools(steps: List<AssistantStep>): List<AssistantStep> = 
 
 private fun ConversationState.injectTurn(
     event: RuntimeEvent.TurnInjected,
-    strings: ChatUiStrings,
     now: Long,
 ): ConversationState {
     val display = reminderDisplayText(event.text)
@@ -441,7 +439,7 @@ private fun ConversationState.injectTurn(
     return copy(
         messages = messages + user + assistant,
         sending = true,
-        activity = strings.thinking,
+        activity = RuntimeActivity.Thinking,
         activityStartedAt = activityStartedAt ?: now,
     )
 }
@@ -464,7 +462,6 @@ internal fun ConversationState.appendNotice(
 
 private fun ConversationState.startBackgroundTurn(
     event: BackgroundTurnStarted,
-    strings: ChatUiStrings,
     now: Long,
 ): ConversationState {
     val added = event.notice?.let { notice ->
@@ -491,7 +488,7 @@ private fun ConversationState.startBackgroundTurn(
     return copy(
         messages = messages + listOfNotNull(added, assistant),
         sending = true,
-        activity = strings.thinking,
+        activity = RuntimeActivity.Thinking,
         activityStartedAt = activityStartedAt ?: now,
     )
 }

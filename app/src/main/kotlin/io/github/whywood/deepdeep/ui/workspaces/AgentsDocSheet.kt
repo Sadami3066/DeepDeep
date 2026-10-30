@@ -17,6 +17,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +53,8 @@ fun AgentsDocSheet(
     var hasDoc by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
     var initial by remember { mutableStateOf("") }
-    var draft by remember { mutableStateOf("") }
+    var draft by rememberSaveable(workspace.cwd) { mutableStateOf("") }
+    var draftRestored by rememberSaveable(workspace.cwd) { mutableStateOf(false) }
     var errorRes by remember { mutableStateOf<Int?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var discardedFromOutside by remember { mutableStateOf(false) }
@@ -65,7 +67,10 @@ fun AgentsDocSheet(
         hasDoc = doc != null
         fileName = doc?.fileName ?: defaultFileName
         initial = doc?.content.orEmpty()
-        draft = initial
+        if (!draftRestored) {
+            draft = initial
+            draftRestored = true
+        }
         loading = false
     }
 

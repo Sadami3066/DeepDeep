@@ -214,6 +214,7 @@ internal fun arrangeEventForInstance(
 class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
     private val context: Context = context.applicationContext
     private val resolver: ContentResolver = this.context.contentResolver
+    private val writer = ArrangeCalendarWriter(ResolverEventStore())
 
     override fun hasReadPermission(): Boolean = hasPermission(Manifest.permission.READ_CALENDAR)
 
@@ -299,27 +300,7 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
         val calendarId = draft.calendarId ?: defaultWritableCalendarId()
         requireWritableCalendar(calendarId)
         val range = resolveEventRange(draft.startMillis, draft.endMillis, draft.allDay)
-        val values = ContentValues().apply {
-            put(CalendarContract.Events.CALENDAR_ID, calendarId)
-            put(CalendarContract.Events.TITLE, title)
-            put(CalendarContract.Events.DTSTART, range.first)
-            put(CalendarContract.Events.DTEND, range.second)
-            put(CalendarContract.Events.ALL_DAY, if (draft.allDay) 1 else 0)
-            put(CalendarContract.Events.EVENT_TIMEZONE, eventTimezone(draft.allDay))
-            if (draft.allDay) put(CalendarContract.Events.EVENT_END_TIMEZONE, UTC_TIMEZONE)
-            put(CalendarContract.Events.HAS_ALARM, if (reminders.isEmpty()) 0 else 1)
-            draft.location?.takeIf { it.isNotEmpty() }?.let {
-                put(CalendarContract.Events.EVENT_LOCATION, it)
-            }
-            draft.description?.takeIf { it.isNotEmpty() }?.let {
-                put(CalendarContract.Events.DESCRIPTION, it)
-            }
-        }
-        val uri = resolver.insert(CalendarContract.Events.CONTENT_URI, values)
-            ?: throw IllegalStateException("创建日历事件失败：系统日历未返回事件地址")
-        val eventId = ContentUris.parseId(uri)
-        replaceReminders(eventId, reminders)
-        return get(eventId) ?: throw IllegalStateException("事件已写入但无法读取，请稍后重试")
+        return writer.create(draft.copy(title = title), calendarId, range, reminders)
     }
 
     override fun update(id: Long, patch: ArrangeEventPatch): ArrangeCalendarEvent? {
@@ -327,33 +308,128 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
         val current = get(id) ?: return null
         val update = mergeEventPatch(current, patch)
         update.calendarId?.let { requireWritableCalendar(it) }
-        val values = ContentValues()
-        update.title?.let { values.put(CalendarContract.Events.TITLE, it.ifEmpty { null }) }
-        update.location?.let { values.put(CalendarContract.Events.EVENT_LOCATION, it.ifEmpty { null }) }
-        update.description?.let { values.put(CalendarContract.Events.DESCRIPTION, it.ifEmpty { null }) }
-        if (update.timesChanged) {
-            values.put(CalendarContract.Events.DTSTART, update.startMillis)
-            values.put(CalendarContract.Events.DTEND, update.endMillis)
-            values.put(CalendarContract.Events.ALL_DAY, if (update.allDay) 1 else 0)
-            values.put(CalendarContract.Events.EVENT_TIMEZONE, eventTimezone(update.allDay))
-            if (update.allDay) values.put(CalendarContract.Events.EVENT_END_TIMEZONE, UTC_TIMEZONE)
-        }
-        update.calendarId?.let { values.put(CalendarContract.Events.CALENDAR_ID, it) }
-        val reminders = update.reminderMinutes
-        if (reminders != null) {
-            values.put(CalendarContract.Events.HAS_ALARM, if (reminders.isEmpty()) 0 else 1)
-        }
-        if (values.size() > 0) {
-            resolver.update(ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id), values, null, null)
-        }
-        if (reminders != null) replaceReminders(id, reminders)
-        return get(id)
+        return writer.update(id, update)
     }
 
     override fun delete(id: Long): Boolean {
         requireWritePermission()
         val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id)
         return resolver.delete(uri, null, null) > 0
+    }
+
+    private inner class ResolverEventStore : ArrangeEventStore {
+        override fun insertEvent(
+            draft: ArrangeEventDraft,
+            calendarId: Long,
+            range: Pair<Long, Long>,
+            hasAlarm: Boolean,
+        ): Long {
+            val values = ContentValues().apply {
+                put(CalendarContract.Events.CALENDAR_ID, calendarId)
+                put(CalendarContract.Events.TITLE, draft.title)
+                put(CalendarContract.Events.DTSTART, range.first)
+                put(CalendarContract.Events.DTEND, range.second)
+                put(CalendarContract.Events.ALL_DAY, if (draft.allDay) 1 else 0)
+                put(CalendarContract.Events.EVENT_TIMEZONE, eventTimezone(draft.allDay))
+                if (draft.allDay) put(CalendarContract.Events.EVENT_END_TIMEZONE, UTC_TIMEZONE)
+                put(CalendarContract.Events.HAS_ALARM, if (hasAlarm) 1 else 0)
+                draft.location?.takeIf { it.isNotEmpty() }?.let {
+                    put(CalendarContract.Events.EVENT_LOCATION, it)
+                }
+                draft.description?.takeIf { it.isNotEmpty() }?.let {
+                    put(CalendarContract.Events.DESCRIPTION, it)
+                }
+            }
+            val uri = resolver.insert(CalendarContract.Events.CONTENT_URI, values)
+                ?: throw IllegalStateException("创建日历事件失败：系统日历未返回事件地址")
+            return ContentUris.parseId(uri)
+        }
+
+        override fun updateEvent(id: Long, update: ArrangeEventUpdate) {
+            val values = ContentValues()
+            update.title?.let { values.put(CalendarContract.Events.TITLE, it.ifEmpty { null }) }
+            update.location?.let { values.put(CalendarContract.Events.EVENT_LOCATION, it.ifEmpty { null }) }
+            update.description?.let { values.put(CalendarContract.Events.DESCRIPTION, it.ifEmpty { null }) }
+            if (update.timesChanged) {
+                values.put(CalendarContract.Events.DTSTART, update.startMillis)
+                values.put(CalendarContract.Events.DTEND, update.endMillis)
+                values.put(CalendarContract.Events.ALL_DAY, if (update.allDay) 1 else 0)
+                values.put(CalendarContract.Events.EVENT_TIMEZONE, eventTimezone(update.allDay))
+                if (update.allDay) values.put(CalendarContract.Events.EVENT_END_TIMEZONE, UTC_TIMEZONE)
+            }
+            update.calendarId?.let { values.put(CalendarContract.Events.CALENDAR_ID, it) }
+            val reminders = update.reminderMinutes
+            if (reminders != null) {
+                values.put(CalendarContract.Events.HAS_ALARM, if (reminders.isEmpty()) 0 else 1)
+            }
+            if (values.size() > 0) {
+                resolver.update(
+                    ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id),
+                    values,
+                    null,
+                    null,
+                )
+            }
+        }
+
+        override fun deleteEvent(id: Long) {
+            resolver.delete(ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id), null, null)
+        }
+
+        override fun loadEvent(id: Long): ArrangeCalendarEvent? = get(id)
+
+        override fun loadReminders(id: Long): List<ArrangeReminderSnapshot> {
+            val snapshot = mutableListOf<ArrangeReminderSnapshot>()
+            resolver.query(
+                CalendarContract.Reminders.CONTENT_URI,
+                REMINDER_PROJECTION,
+                "${CalendarContract.Reminders.EVENT_ID} = ?",
+                arrayOf(id.toString()),
+                null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    snapshot += ArrangeReminderSnapshot(
+                        id = cursor.long(CalendarContract.Reminders._ID),
+                        minutes = cursor.int(CalendarContract.Reminders.MINUTES),
+                        method = cursor.int(CalendarContract.Reminders.METHOD),
+                    )
+                }
+            }
+            return snapshot
+        }
+
+        override fun replaceReminders(id: Long, minutes: List<Int>) {
+            resolver.delete(
+                CalendarContract.Reminders.CONTENT_URI,
+                "${CalendarContract.Reminders.EVENT_ID} = ?",
+                arrayOf(id.toString()),
+            )
+            minutes.forEach { minute ->
+                val values = ContentValues().apply {
+                    put(CalendarContract.Reminders.EVENT_ID, id)
+                    put(CalendarContract.Reminders.MINUTES, minute)
+                    put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
+                }
+                resolver.insert(CalendarContract.Reminders.CONTENT_URI, values)
+                    ?: throw IllegalStateException("写入事件提醒失败")
+            }
+        }
+
+        override fun restoreReminders(id: Long, snapshot: List<ArrangeReminderSnapshot>) {
+            resolver.delete(
+                CalendarContract.Reminders.CONTENT_URI,
+                "${CalendarContract.Reminders.EVENT_ID} = ?",
+                arrayOf(id.toString()),
+            )
+            snapshot.sortedBy { it.id }.forEach { reminder ->
+                val values = ContentValues().apply {
+                    put(CalendarContract.Reminders.EVENT_ID, id)
+                    put(CalendarContract.Reminders.MINUTES, reminder.minutes)
+                    put(CalendarContract.Reminders.METHOD, reminder.method)
+                }
+                resolver.insert(CalendarContract.Reminders.CONTENT_URI, values)
+            }
+        }
     }
 
     fun defaultWritableCalendarId(): Long {
@@ -447,23 +523,6 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
         return recurring
     }
 
-    private fun replaceReminders(eventId: Long, minutes: List<Int>) {
-        resolver.delete(
-            CalendarContract.Reminders.CONTENT_URI,
-            "${CalendarContract.Reminders.EVENT_ID} = ?",
-            arrayOf(eventId.toString()),
-        )
-        minutes.forEach { minute ->
-            val values = ContentValues().apply {
-                put(CalendarContract.Reminders.EVENT_ID, eventId)
-                put(CalendarContract.Reminders.MINUTES, minute)
-                put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
-            }
-            resolver.insert(CalendarContract.Reminders.CONTENT_URI, values)
-                ?: throw IllegalStateException("写入事件提醒失败")
-        }
-    }
-
     private companion object {
         val CALENDAR_PROJECTION = arrayOf(
             CalendarContract.Calendars._ID,
@@ -498,6 +557,12 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
             CalendarContract.Events.DESCRIPTION,
             CalendarContract.Events.EVENT_TIMEZONE,
             CalendarContract.Events.RRULE,
+        )
+
+        val REMINDER_PROJECTION = arrayOf(
+            CalendarContract.Reminders._ID,
+            CalendarContract.Reminders.MINUTES,
+            CalendarContract.Reminders.METHOD,
         )
     }
 }

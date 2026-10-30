@@ -405,52 +405,78 @@ class ScheduleStoreTest {
     }
 
     @Test
-    fun legacySchemaIsDiscardedAndRewrittenAsEmptyV2() = runTest {
+    fun legacySchemaIsBackedUpAndRewrittenAsEmptyV2() = runTest {
         val file = File(directory, "schedules.json")
-        file.writeText(
-            "{\"schemaVersion\":1,\"schedules\":[{\"id\":\"old\",\"name\":\"Old\",\"workspaceId\":\"home\",\"prompt\":\"x\",\"trigger\":{\"type\":\"daily\",\"time\":\"08:00\"},\"enabled\":true,\"notify\":true,\"nextRunAt\":null,\"lastRunAt\":null,\"lastStatus\":null,\"lastSessionId\":null,\"lastError\":null,\"createdAt\":1,\"updatedAt\":2}]}",
-        )
+        val legacy =
+            "{\"schemaVersion\":1,\"schedules\":[{\"id\":\"old\",\"name\":\"Old\",\"workspaceId\":\"home\",\"prompt\":\"x\",\"trigger\":{\"type\":\"daily\",\"time\":\"08:00\"},\"enabled\":true,\"notify\":true,\"nextRunAt\":null,\"lastRunAt\":null,\"lastStatus\":null,\"lastSessionId\":null,\"lastError\":null,\"createdAt\":1,\"updatedAt\":2}]}"
+        file.writeText(legacy)
         val store = store()
         assertTrue(store.list().isEmpty())
+        assertEquals(legacy, File(directory, "schedules.v1.bak").readText())
         val migrated = file.readText()
         assertTrue(migrated.contains("\"schemaVersion\":2"))
         assertTrue(migrated.contains("\"schedules\":[]"))
     }
 
     @Test
-    fun corruptFileIsPreservedAndThrows() = runTest {
+    fun corruptFileIsBackedUpAndReplacedWithEmpty() = runTest {
         val file = File(directory, "schedules.json")
         val corrupt = "{ this is not json"
         file.writeText(corrupt)
         val store = store()
 
-        val listError = runCatching { store.list() }.exceptionOrNull()
-        assertTrue(listError is CorruptScheduleDataException)
-        assertEquals(corrupt, file.readText())
+        assertTrue(store.list().isEmpty())
+        assertEquals(corrupt, File(directory, "schedules.json.corrupt").readText())
+        assertTrue(file.readText().contains("\"schemaVersion\":2"))
+        assertTrue(file.readText().contains("\"schedules\":[]"))
 
-        val createError = runCatching { store.create(newSchedule()) }.exceptionOrNull()
-        assertTrue(createError is CorruptScheduleDataException)
-        assertEquals(corrupt, file.readText())
+        val created = store.create(newSchedule())
+        assertEquals(listOf(created), store.list())
+        assertEquals(corrupt, File(directory, "schedules.json.corrupt").readText())
     }
 
     @Test
-    fun unsupportedSchemaVersionThrows() = runTest {
+    fun corruptBackupIsNotOverwritten() = runTest {
+        val file = File(directory, "schedules.json")
+        val backup = File(directory, "schedules.json.corrupt")
+        file.writeText("{ first")
+        store().list()
+        file.writeText("{ second")
+
+        assertTrue(store().list().isEmpty())
+        assertEquals("{ first", backup.readText())
+    }
+
+    @Test
+    fun unsupportedSchemaVersionIsBackedUpAndReplaced() = runTest {
         val file = File(directory, "schedules.json")
         val versionThree = "{\"schemaVersion\":3,\"schedules\":[]}"
         file.writeText(versionThree)
-        val error = runCatching { store().list() }.exceptionOrNull()
-        assertTrue(error is CorruptScheduleDataException)
-        assertEquals(versionThree, file.readText())
+
+        assertTrue(store().list().isEmpty())
+        assertEquals(versionThree, File(directory, "schedules.json.corrupt").readText())
+        assertTrue(file.readText().contains("\"schemaVersion\":2"))
     }
 
     @Test
-    fun corruptEntryThrows() = runTest {
+    fun missingSchemaVersionIsBackedUpAndReplaced() = runTest {
+        val file = File(directory, "schedules.json")
+        val noVersion = "{\"schedules\":[]}"
+        file.writeText(noVersion)
+
+        assertTrue(store().list().isEmpty())
+        assertEquals(noVersion, File(directory, "schedules.json.corrupt").readText())
+    }
+
+    @Test
+    fun corruptEntryIsBackedUpAndReplaced() = runTest {
         val file = File(directory, "schedules.json")
         val corruptEntry = "{\"schemaVersion\":2,\"schedules\":[{\"id\":\"x\"}]}"
         file.writeText(corruptEntry)
-        val error = runCatching { store().list() }.exceptionOrNull()
-        assertTrue(error is CorruptScheduleDataException)
-        assertEquals(corruptEntry, file.readText())
+
+        assertTrue(store().list().isEmpty())
+        assertEquals(corruptEntry, File(directory, "schedules.json.corrupt").readText())
+        assertTrue(file.readText().contains("\"schedules\":[]"))
     }
 
     @Test

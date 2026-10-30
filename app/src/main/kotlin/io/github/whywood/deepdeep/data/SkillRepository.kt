@@ -41,13 +41,13 @@ class SkillRepository(
 
     val changes: StateFlow<Long> = _changes.asStateFlow()
 
-    suspend fun list(): List<InstalledSkill> = locked {
+    suspend fun list(): Result<List<InstalledSkill>> = locked {
         try {
-            installedSkills()
+            Result.success(installedSkills())
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            emptyList()
+            Result.failure(error)
         }
     }
 

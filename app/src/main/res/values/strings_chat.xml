@@ -129,4 +129,6 @@
     <string name="chat_error_insufficient_space">存储空间不足，无法添加附件</string>
     <string name="chat_error_unsupported_image">不支持该图片格式</string>
     <string name="chat_error_image_failed">图片处理失败，已按文件发送</string>
+    <string name="chat_error_session_missing">会话不存在或已被删除</string>
+    <string name="chat_share_import_timeout">分享导入超时，请重试</string>
 </resources>

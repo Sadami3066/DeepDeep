@@ -94,6 +94,7 @@ fun SkillsScreen(
     val installSuccessTemplate = stringResource(R.string.skills_install_success)
     val scope = rememberCoroutineScope()
     var skills by remember { mutableStateOf<List<InstalledSkill>>(emptyList()) }
+    var listFailed by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var installing by remember { mutableStateOf(false) }
     var busyId by remember { mutableStateOf<String?>(null) }
@@ -105,23 +106,33 @@ fun SkillsScreen(
 
     val visibleSkills = remember(skills, query) { filterSkills(skills, query) }
 
+    suspend fun reloadSkills() {
+        repository.list().fold(
+            onSuccess = {
+                skills = it
+                listFailed = false
+            },
+            onFailure = { listFailed = true },
+        )
+    }
+
     LaunchedEffect(refreshKey) {
         loading = true
         repository.syncActiveSkills()
-        skills = repository.list()
+        reloadSkills()
         loading = false
     }
 
     LaunchedEffect(Unit) {
         repository.changes.collect {
-            skills = repository.list()
+            reloadSkills()
         }
     }
 
     LifecycleResumeEffect(Unit) {
         scope.launch {
             repository.syncIfChanged()
-            skills = repository.list()
+            reloadSkills()
         }
         onPauseOrDispose { }
     }
@@ -132,7 +143,7 @@ fun SkillsScreen(
         scope.launch {
             try {
                 val ok = repository.setGlobalEnabled(skill.id, enabled)
-                skills = repository.list()
+                reloadSkills()
                 if (!ok) {
                     error = SkillError(R.string.skills_error_title, R.string.skills_error_io)
                 }
@@ -260,6 +271,13 @@ fun SkillsScreen(
                     DdSpinner(size = 22.dp)
                 }
 
+                listFailed && skills.isEmpty() -> Box(
+                    Modifier.fillMaxWidth().padding(top = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SkillLoadError(onRetry = { refreshKey++ })
+                }
+
                 skills.isEmpty() -> EmptySkills(onInstall = openPicker)
 
                 visibleSkills.isEmpty() -> Box(
@@ -274,6 +292,12 @@ fun SkillsScreen(
                 }
 
                 else -> {
+                    if (listFailed) {
+                        SkillLoadError(
+                            onRetry = { refreshKey++ },
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     SkillsGroup(
                         skills = visibleSkills,
@@ -347,6 +371,30 @@ fun SkillsScreen(
                     modifier = Modifier.testTag("skills_error_close"),
                 )
             },
+        )
+    }
+}
+
+@Composable
+private fun SkillLoadError(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.skills_error_io),
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall,
+            color = colors.danger,
+        )
+        DdTextAction(
+            text = stringResource(R.string.skills_retry),
+            onClick = onRetry,
+            modifier = Modifier.testTag("skills_list_retry"),
         )
     }
 }

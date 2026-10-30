@@ -98,7 +98,7 @@ defaultCodingTools(...)
 | `create_goal` | `objective`, `max_goal_rounds?` | 仅用户直接回合可创建；不传时用插件设置「目标轮数上限」（默认 0 表示不限），显式传入 1–50 时以参数为准 |
 | `update_goal` | `goal_id`, `revision`, `action=edit/pause/resume/complete/blocked`, `objective?`, `max_goal_rounds?`, `blocked_reason?` | 编辑/暂停/继续仅用户回合；完成允许用户或目标轮；阻塞仅目标轮且已进行 ≥3 轮；编辑不传 `max_goal_rounds` 时保持原轮数上限 |
 
-- 目标按会话持久化在 `files/goals/goals.json`；`revision` 每次变更 +1，调用必须带最新 revision。
+- 目标按会话保存在进程内存（不写磁盘，进程重启后清空）；`revision` 每次变更 +1，调用必须带最新 revision。
 - 目标处于 ACTIVE 时，每轮成功结束由宿主自动投递下一轮 `<goal_round>`；轮数上限为 0（不限，默认）或来自插件设置/显式参数，达到上限时置 BLOCKED(`round-limit`)；目标轮失败或用户停止则暂停。
 - 进程重启后目标保留但为暂停态，需要用户点继续。
 

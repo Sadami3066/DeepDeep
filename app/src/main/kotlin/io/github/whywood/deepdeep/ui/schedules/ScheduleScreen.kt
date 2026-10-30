@@ -49,7 +49,8 @@ fun ScheduleScreen(
     val schedules by service.schedules.collectAsStateWithLifecycle()
     var titles by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
     var conversations by remember { mutableStateOf<List<ConversationSummary>>(emptyList()) }
-    var editorDraft by remember { mutableStateOf<ScheduleDraft?>(null) }
+    var editorOpen by rememberSaveable { mutableStateOf(false) }
+    var editorDraft by rememberSaveable(stateSaver = ScheduleDraftSaver) { mutableStateOf(ScheduleDraft()) }
     var saving by remember { mutableStateOf(false) }
     var errorRes by remember { mutableStateOf<Int?>(null) }
     var loaded by remember { mutableStateOf(false) }
@@ -78,11 +79,13 @@ fun ScheduleScreen(
             cwd = conversation?.cwd.orEmpty(),
             conversationTitle = conversation?.title.orEmpty(),
         )
+        editorOpen = true
     }
 
     fun openExisting(schedule: Schedule) {
         errorRes = null
         editorDraft = ScheduleDraft.from(schedule, titles[schedule.sessionId].orEmpty())
+        editorOpen = true
     }
 
     fun saveDraft(draft: ScheduleDraft) {
@@ -107,12 +110,13 @@ fun ScheduleScreen(
                 }
             }
             saving = false
-            if (result.isSuccess) editorDraft = null else errorRes = R.string.schedule_error_save_failed
+            if (result.isSuccess) editorOpen = false else errorRes = R.string.schedule_error_save_failed
         }
     }
 
     fun runEditorNow() {
-        val draft = editorDraft ?: return
+        if (!editorOpen) return
+        val draft = editorDraft
         val id = draft.id ?: return
         scope.launch {
             saving = true
@@ -120,7 +124,7 @@ fun ScheduleScreen(
             val result = service.runNow(id)
             saving = false
             if (result.isSuccess) {
-                editorDraft = null
+                editorOpen = false
                 if (draft.sessionId.isNotBlank()) onOpenConversation(draft.sessionId)
             } else {
                 errorRes = deliveryErrorRes((result.exceptionOrNull() as? ScheduleDeliveryException)?.error)
@@ -143,7 +147,7 @@ fun ScheduleScreen(
             errorRes = null
             val result = runCatching { service.delete(id) }
             saving = false
-            if (result.isSuccess) editorDraft = null else errorRes = R.string.schedule_error_delete_failed
+            if (result.isSuccess) editorOpen = false else errorRes = R.string.schedule_error_delete_failed
         }
     }
 
@@ -203,17 +207,17 @@ fun ScheduleScreen(
         }
     }
 
-    editorDraft?.let { draft ->
+    if (editorOpen) {
         ScheduleEditor(
-            initialDraft = draft,
-            isEditing = draft.id != null,
+            initialDraft = editorDraft,
+            isEditing = editorDraft.id != null,
             externalError = errorRes?.let { stringResource(it) },
             saving = saving,
             runtime = runtime,
-            onDismiss = { editorDraft = null; errorRes = null },
+            onDismiss = { editorOpen = false; errorRes = null },
             onSave = ::saveDraft,
             onRunNow = ::runEditorNow,
-            onDelete = { deleteDraft(draft) },
+            onDelete = { deleteDraft(editorDraft) },
             onOpenConversation = onOpenConversation,
         )
     }

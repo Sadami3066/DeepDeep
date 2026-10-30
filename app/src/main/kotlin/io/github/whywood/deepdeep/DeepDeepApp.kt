@@ -140,6 +140,8 @@ internal fun DeepDeepApp(
     val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
     val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
     val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
+    val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
+    val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
     val chatUiStrings = ChatUiStrings(
         thinking = stringResource(R.string.chat_status_thinking),
         retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
@@ -214,6 +216,10 @@ internal fun DeepDeepApp(
             }
         },
     )
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current
+    LaunchedEffect(locale) {
+        chatViewModel.updateUiStrings(chatUiStrings)
+    }
     val stateHolder = chatViewModel.state.collectAsStateWithLifecycle()
     val state by stateHolder
     val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
@@ -314,8 +320,11 @@ internal fun DeepDeepApp(
     var expandedWorkspaceIds by rememberSaveable(stateSaver = expandedWorkspacesSaver) {
         mutableStateOf(emptySet<String>())
     }
-    var workspaceCreateOpen by remember { mutableStateOf(false) }
-    var workspaceRenameTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
+    var workspaceCreateOpen by rememberSaveable { mutableStateOf(false) }
+    var workspaceRenameId by rememberSaveable { mutableStateOf<String?>(null) }
+    val workspaceRenameTarget = workspaceRenameId?.let { id ->
+        state.workspaces.firstOrNull { it.id == id }
+    }
     var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteCount by remember { mutableIntStateOf(0) }
     val drawerTransition = updateTransition(drawerOpen, label = "drawer")
@@ -339,10 +348,25 @@ internal fun DeepDeepApp(
         voiceSheetOpen = true
         onOpenVoiceAssistantConsumed()
     }
-    LaunchedEffect(pendingShare, state.ready, state.historyLoaded, state.sending, state.switchingConversation, state.conversationCwd) {
+    LaunchedEffect(
+        pendingShare,
+        state.ready,
+        state.historyLoaded,
+        state.sending,
+        state.switchingConversation,
+        state.conversationCwd,
+        state.conversationId,
+    ) {
         val payload = pendingShare ?: return@LaunchedEffect
-        if (!state.ready || !state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
-        if (state.conversationId == null || state.conversationCwd.isBlank()) return@LaunchedEffect
+        if (!state.ready) return@LaunchedEffect
+        if (state.conversationId == null) {
+            delay(SHARE_IMPORT_TIMEOUT_MS)
+            Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
+            onShareConsumed()
+            return@LaunchedEffect
+        }
+        if (!state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
+        if (state.conversationCwd.isBlank()) return@LaunchedEffect
         val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
         staged.files.forEach { stagedFile ->
             graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
@@ -514,7 +538,17 @@ internal fun DeepDeepApp(
         if (!state.ready) return@LaunchedEffect
         val found = state.conversations.any { it.id == sessionId } ||
             state.archivedConversations.any { it.id == sessionId }
-        if (!found) return@LaunchedEffect
+        if (!found) {
+            delay(SESSION_LOOKUP_GRACE_MS)
+            val latest = chatViewModel.state.value
+            val appearsLater = latest.conversations.any { it.id == sessionId } ||
+                latest.archivedConversations.any { it.id == sessionId }
+            if (!appearsLater) {
+                Toast.makeText(context, sessionMissingMessage, Toast.LENGTH_SHORT).show()
+                onOpenSessionConsumed()
+            }
+            return@LaunchedEffect
+        }
         drawerOpen = false
         navigator.reset(AppDestination.Chat)
         chatViewModel.openConversation(sessionId)
@@ -561,6 +595,7 @@ internal fun DeepDeepApp(
                         frozenState.copy(configured = frozenState.providerId in configuredProviders)
                     },
                     nickname = nickname,
+                    chatUiStrings = chatUiStrings,
                     onInputChange = chatViewModel::onInputChange,
                     onSend = ::submitChatInput,
                     onStop = chatViewModel::stop,
@@ -787,13 +822,15 @@ internal fun DeepDeepApp(
                             onAuthChanged = {},
                             onBack = ::back,
                             onSaveApiKey = { key ->
-                                scope.launch {
+                                runCatching {
                                     graph.credentials.writeApiKey(provider.id, key, null)
+                                    graph.credentials.awaitCommit(provider.id)
                                 }
                             },
                             onClearApiKey = {
-                                scope.launch {
+                                runCatching {
                                     graph.credentials.delete(provider.id)
+                                    graph.credentials.awaitCommit(provider.id)
                                 }
                             },
                         )
@@ -969,7 +1006,7 @@ internal fun DeepDeepApp(
                     },
                     onRenameWorkspace = { workspaceId ->
                         drawerOpen = false
-                        workspaceRenameTarget = state.workspaces.firstOrNull { it.id == workspaceId }
+                        workspaceRenameId = workspaceId
                     },
                     onDeleteWorkspace = { workspaceId ->
                         drawerOpen = false
@@ -1010,10 +1047,10 @@ internal fun DeepDeepApp(
                 initial = target.name,
                 existingNames = state.workspaces.filterNot { it.id == target.id }.map { it.name },
                 onConfirm = { name ->
-                    workspaceRenameTarget = null
+                    workspaceRenameId = null
                     chatViewModel.renameWorkspace(target.id, name)
                 },
-                onDismiss = { workspaceRenameTarget = null },
+                onDismiss = { workspaceRenameId = null },
             )
         }
         workspaceDeleteTarget?.let { target ->
@@ -1157,3 +1194,5 @@ private fun rememberFrozenChatState(live: ChatUiState, frozen: Boolean): ChatUiS
 }
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
+private const val SHARE_IMPORT_TIMEOUT_MS = 8_000L
+private const val SESSION_LOOKUP_GRACE_MS = 1_500L

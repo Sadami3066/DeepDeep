@@ -42,6 +42,15 @@ class PluginRecordStore(
 
     suspend fun load(): PluginRecords = mutex.withLock { withContext(ioDispatcher) { loadLocked() } }
 
+    suspend fun backupCorrupt(): Boolean = mutex.withLock {
+        withContext(ioDispatcher) {
+            val backup = File(file.parentFile, "${file.name}.corrupt")
+            backup.isFile || (
+                file.isFile && runCatching { file.copyTo(backup, overwrite = false) }.isSuccess
+            )
+        }
+    }
+
     suspend fun upsert(record: PluginRecord) = mutex.withLock {
         withContext(ioDispatcher) {
             val current = loadLocked()

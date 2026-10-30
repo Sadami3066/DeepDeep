@@ -3,11 +3,8 @@
     <string name="plugin_micloud_summary">Read notes, to-dos, photos, SMS, contacts and recordings from Xiaomi Cloud services</string>
     <string name="plugin_micloud_size">Built-in</string>
 
-    <string name="plugin_micloud_status_ready">Signed in: %1$s</string>
     <string name="plugin_micloud_status_ready_unknown">Signed in</string>
     <string name="plugin_micloud_status_not_logged_in">Not signed in</string>
-    <string name="plugin_micloud_status_expired">Session expired</string>
-    <string name="plugin_micloud_status_network_error">Network error: %1$s</string>
 
     <string name="plugin_micloud_action_login">Sign in</string>
     <string name="plugin_micloud_action_relogin">Sign in again</string>
@@ -27,6 +24,7 @@
     <string name="plugin_micloud_login_title">Sign in to Xiaomi</string>
     <string name="plugin_micloud_login_checking">Verifying sign-in…</string>
     <string name="plugin_micloud_login_page_error">Page failed to load, check your network and retry</string>
+    <string name="plugin_micloud_login_renderer_error">The sign-in page was reset, please retry</string>
     <string name="plugin_micloud_login_verify_error">Sign-in verification failed, please retry</string>
     <string name="plugin_micloud_login_retry">Retry</string>
     <string name="plugin_micloud_login_close">Close</string>

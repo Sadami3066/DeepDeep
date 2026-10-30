@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -189,9 +190,31 @@ class MiCloudWebWriter(
                     )
                 }
             }
+
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+                if (webView === view) handleRendererGone()
+                return true
+            }
         }
         restoreCookies(cookie)
         return view
+    }
+
+    private fun handleRendererGone() {
+        val gate = loadGate
+        loadGate = null
+        loadReady = false
+        gate?.completeExceptionally(IOException("i.mi.com renderer crashed"))
+        val waiting = pending
+        pending = null
+        waiting?.second?.completeExceptionally(IOException("i.mi.com renderer crashed"))
+        val dead = webView
+        webView = null
+        dead?.let { view ->
+            runCatching { view.stopLoading() }
+            runCatching { view.removeAllViews() }
+            runCatching { view.destroy() }
+        }
     }
 
     private fun restoreCookies(cookie: String?) {

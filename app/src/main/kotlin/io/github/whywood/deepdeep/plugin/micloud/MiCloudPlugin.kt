@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.micloud
 
 import android.content.Context
 import android.content.Intent
-import android.webkit.CookieManager
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
@@ -17,25 +16,17 @@ import io.github.whywood.deepdeep.plugin.PluginSkill
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.PluginUi
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 class MiCloudPlugin(
     private val context: Context,
     private val onCapabilitiesChanged: () -> Unit = {},
-    private val onSessionRestored: () -> Unit = {},
 ) : OfficialPlugin {
     private val cookieStore by lazy { MiCloudCookieStore(context) }
     private val client by lazy { MiCloudClient(cookieStore) }
-    private val recoveryScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    private val webViewRecoveryRequested = AtomicBoolean(false)
     @Volatile private var writer: MiCloudWebWriter? = null
 
     val preferences: MiCloudPreferences by lazy { MiCloudPreferences(context, onCapabilitiesChanged) }
@@ -53,7 +44,6 @@ class MiCloudPlugin(
 
     override suspend fun uninstall() {
         cookieStore.clear()
-        cookieStore.unblockSilentRecovery()
         preferences.clear()
         withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
         writer?.destroy()
@@ -62,52 +52,28 @@ class MiCloudPlugin(
 
     override suspend fun recover() = Unit
 
-    override suspend fun status(): PluginStatus {
-        var session = resolveSessionState()
-        if (session.needsRecovery() && !cookieStore.silentRecoveryBlocked()) {
-            if (recoverFromCookieJar()) session = resolveSessionState()
-            if (session.needsRecovery()) scheduleWebViewRecovery()
-        }
-        val current = session
-        return when (current) {
-            MiCloudSessionState.NotLoggedIn -> PluginStatus.NotReady(string(R.string.plugin_micloud_status_not_logged_in))
-            MiCloudSessionState.Expired -> PluginStatus.NotReady(string(R.string.plugin_micloud_status_expired))
-            is MiCloudSessionState.NetworkError -> PluginStatus.Failed(
-                context.getString(R.string.plugin_micloud_status_network_error, current.detail),
-            )
-            is MiCloudSessionState.Ready -> {
-                val nickname = current.nickname?.takeIf { it.isNotBlank() }
-                if (nickname == null) {
-                    PluginStatus.Ready(string(R.string.plugin_micloud_status_ready_unknown))
-                } else {
-                    PluginStatus.Ready(
-                        context.getString(R.string.plugin_micloud_status_ready, nickname),
-                        nickname,
-                    )
-                }
-            }
-        }
+    override suspend fun status(): PluginStatus = if (cookieStore.read().isNullOrBlank()) {
+        PluginStatus.NotReady(string(R.string.plugin_micloud_status_not_logged_in))
+    } else {
+        PluginStatus.Ready(string(R.string.plugin_micloud_status_ready_unknown))
     }
 
     override suspend fun setup(ui: PluginUi) {
         val before = cookieStore.read()
-        ui.stage(R.string.plugin_micloud_stage_verifying)
-        if (!ui.cancelled() && recoverSession()) {
-            ui.progress(null, R.string.plugin_micloud_stage_signed_in)
-            return
-        }
         ui.stage(R.string.plugin_micloud_stage_login, messageRes = R.string.plugin_micloud_hint_login)
         context.startActivity(
             Intent(context, MiCloudLoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+        var checked: String? = null
         val deadline = System.currentTimeMillis() + LOGIN_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
             if (ui.cancelled()) throw CancellationException("micloud login cancelled")
             delay(LOGIN_POLL_INTERVAL_MS)
             val cookie = cookieStore.read()
-            if (cookie == null || cookie == before) continue
+            if (cookie == null || cookie == before || cookie == checked) continue
+            checked = cookie
             ui.stage(R.string.plugin_micloud_stage_verifying)
-            if (status() is PluginStatus.Ready) {
+            if (verifySession()) {
                 ui.progress(null, R.string.plugin_micloud_stage_signed_in)
                 return
             }
@@ -140,7 +106,6 @@ class MiCloudPlugin(
             ACTION_LOGOUT -> {
                 ui.progress(null, R.string.plugin_micloud_stage_logging_out)
                 cookieStore.clear()
-                cookieStore.blockSilentRecovery()
                 withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
             }
         }
@@ -196,66 +161,8 @@ class MiCloudPlugin(
     private fun webWriter(): MiCloudWebWriter =
         writer ?: MiCloudWebWriter(context, cookieStore).also { writer = it }
 
-    private val keeper: MiCloudSessionKeeper by lazy {
-        MiCloudSessionKeeper(
-            readSnapshot = { cookieStore.read() },
-            readJarCookie = { readWebViewCookie() },
-            verifyCookie = { cookie -> verifyCookie(cookie) },
-            saveCookie = { cookie -> saveRecoveredCookie(cookie) },
-            webCookieProbe = OffscreenMiCloudWebCookieProbe(context),
-            readRecoveryBlocked = { cookieStore.silentRecoveryBlocked() },
-        )
-    }
-
-    private suspend fun resolveSessionState(): MiCloudSessionState = resolveMiCloudSessionState(
-        readCookie = { cookieStore.read() },
-        profile = { client.profile() },
-    )
-
-    private suspend fun recoverFromCookieJar(): Boolean =
-        withTimeoutOrNull(JAR_RECOVERY_TIMEOUT_MS) { keeper.recoverFromJar() } ?: false
-
-    private suspend fun recoverSession(): Boolean = try {
-        keeper.recover()
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (_: Exception) {
-        false
-    }
-
-    private fun scheduleWebViewRecovery() {
-        if (!keeper.canAttemptWebView()) return
-        if (!webViewRecoveryRequested.compareAndSet(false, true)) return
-        recoveryScope.launch {
-            try {
-                delay(WEBVIEW_RECOVERY_DELAY_MS)
-                if (keeper.recoverFromWebView()) onSessionRestored()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-            } finally {
-                webViewRecoveryRequested.set(false)
-            }
-        }
-    }
-
-    private suspend fun readWebViewCookie(): String? = withContext(Dispatchers.Main) {
-        runCatching { CookieManager.getInstance().getCookie(MICLOUD_ORIGIN) }.getOrNull()
-    }
-
-    private suspend fun saveRecoveredCookie(cookie: String) {
-        cookieStore.save(cookie)
-        withContext(Dispatchers.Main) {
-            runCatching { CookieManager.getInstance().flush() }
-        }
-    }
-
-    private suspend fun verifyCookie(cookie: String): Boolean = try {
-        MiCloudClient(
-            cookieProvider = { cookie },
-            connectTimeoutMs = VERIFY_CONNECT_TIMEOUT_MS,
-            readTimeoutMs = VERIFY_READ_TIMEOUT_MS,
-        ).profile()
+    private suspend fun verifySession(): Boolean = try {
+        client.profile()
         true
     } catch (cancelled: CancellationException) {
         throw cancelled
@@ -263,19 +170,12 @@ class MiCloudPlugin(
         false
     }
 
-    private fun MiCloudSessionState.needsRecovery(): Boolean =
-        this is MiCloudSessionState.NotLoggedIn || this is MiCloudSessionState.Expired
-
     private companion object {
         const val ACTION_LOGIN = "login"
         const val ACTION_RELOGIN = "relogin"
         const val ACTION_LOGOUT = "logout"
         const val LOGIN_TIMEOUT_MS = 5 * 60_000L
         const val LOGIN_POLL_INTERVAL_MS = 1_500L
-        const val JAR_RECOVERY_TIMEOUT_MS = 3_000L
-        const val WEBVIEW_RECOVERY_DELAY_MS = 1_500L
-        const val VERIFY_CONNECT_TIMEOUT_MS = 1_000
-        const val VERIFY_READ_TIMEOUT_MS = 1_500
         const val SKILL_ID = "deepdeep-micloud"
 
         val SKILL_MARKDOWN = """
@@ -327,32 +227,6 @@ class MiCloudPlugin(
             if (capabilities.galleryRead) add("相册读取")
             if (capabilities.recordingsRead) add("录音读取")
         }
-    }
-}
-
-internal sealed interface MiCloudSessionState {
-    data object NotLoggedIn : MiCloudSessionState
-
-    data object Expired : MiCloudSessionState
-
-    data class NetworkError(val detail: String) : MiCloudSessionState
-
-    data class Ready(val nickname: String?) : MiCloudSessionState
-}
-
-internal suspend fun resolveMiCloudSessionState(
-    readCookie: suspend () -> String?,
-    profile: suspend () -> MiCloudProfile,
-): MiCloudSessionState {
-    if (readCookie().isNullOrBlank()) return MiCloudSessionState.NotLoggedIn
-    return try {
-        MiCloudSessionState.Ready(profile().nickname)
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (expired: MiCloudAuthException) {
-        MiCloudSessionState.Expired
-    } catch (error: Exception) {
-        MiCloudSessionState.NetworkError(error.message ?: error.javaClass.simpleName)
     }
 }
 

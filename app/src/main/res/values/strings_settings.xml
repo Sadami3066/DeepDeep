@@ -89,6 +89,8 @@
     <string name="settings_oauth_api_key_notice">当前使用 OAuth 登录；保存 API Key 会切换认证方式。</string>
     <string name="settings_provider_api_key">API Key</string>
     <string name="settings_provider_api_key_saved">已保存，输入新 Key 可替换</string>
+    <string name="settings_provider_api_key_save_failed">保存失败，请重试。</string>
+    <string name="settings_provider_api_key_clear_failed">清除失败，请重试。</string>
     <string name="settings_provider_api_key_hint">输入 API Key</string>
     <string name="settings_provider_api_key_required">请输入 API Key</string>
     <string name="settings_provider_api_key_save">保存</string>

@@ -4,6 +4,7 @@
     <string name="workspace_settings_skills">项目技能</string>
     <string name="workspace_settings_skills_count">%1$d 个</string>
     <string name="workspace_settings_skills_none">未启用</string>
+    <string name="workspace_settings_skills_failed">读取失败</string>
     <string name="workspace_settings_agents_doc">AGENTS.md</string>
     <string name="workspace_settings_agents_set">已设置</string>
     <string name="workspace_settings_agents_unset">未设置</string>
@@ -13,6 +14,7 @@
     <string name="project_skills_note">保存后，新会话生效。</string>
     <string name="project_skills_save">保存</string>
     <string name="project_skills_save_failed">保存失败，请重试。</string>
+    <string name="project_skills_load_failed">读取技能失败。</string>
     <string name="project_skills_empty_title">还没有可用的技能</string>
     <string name="project_skills_empty_hint">先安装技能，再为这个工作区选择要启用的项目技能。</string>
     <string name="project_skills_empty_action">去安装技能</string>

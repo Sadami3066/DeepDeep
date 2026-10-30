@@ -434,6 +434,38 @@ class PluginManagerTest {
     }
 
     @Test
+    fun startBacksUpCorruptRecordsAndRebuildsInternalRecords() = runTest {
+        val file = recordsFile()
+        file.parentFile.mkdirs()
+        file.writeText("{not json")
+        val plugin = FakeInternalPlugin()
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val backup = File(file.parentFile, "plugins.json.corrupt")
+        assertTrue(backup.isFile)
+        assertEquals("{not json", backup.readText())
+        assertNotNull(PluginRecordStore(file).load().records[plugin.id])
+        assertTrue(manager.state.value.error?.isNotEmpty() == true)
+    }
+
+    @Test
+    fun startKeepsExistingCorruptBackup() = runTest {
+        val file = recordsFile()
+        file.parentFile.mkdirs()
+        file.writeText("{not json")
+        val backup = File(file.parentFile, "plugins.json.corrupt")
+        backup.writeText("previous")
+        val manager = newManager(this, FakeInternalPlugin())
+        manager.start()
+        advanceUntilIdle()
+
+        assertEquals("previous", backup.readText())
+        assertTrue(manager.state.value.error?.isNotEmpty() == true)
+    }
+
+    @Test
     fun setSettingPersistsAndNotifiesPlugin() = runTest {
         var contributions = 0
         val plugin = FakeInternalPlugin()

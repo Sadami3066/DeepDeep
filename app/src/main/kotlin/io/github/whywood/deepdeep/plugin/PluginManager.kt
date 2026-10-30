@@ -47,7 +47,15 @@ class PluginManager(
 
     suspend fun start() {
         _state.update { it.copy(loading = true) }
-        val records = recordStore.load().records.toMutableMap()
+        val loaded = recordStore.load()
+        val recordsBackedUp = loaded.error == null ||
+            runCatching { recordStore.backupCorrupt() }.getOrDefault(false)
+        val records = loaded.records.toMutableMap()
+        if (!recordsBackedUp) {
+            refreshStatuses()
+            _state.update { it.copy(error = strings.get(R.string.plugins_error_records_corrupt)) }
+            return
+        }
         plugins.values.forEach { plugin ->
             runCatching { plugin.recover() }
             if (plugin.kind == PluginKind.INTERNAL && plugin.id !in records) {
@@ -73,6 +81,9 @@ class PluginManager(
             }
         }
         refreshStatuses()
+        if (recordsBackedUp) {
+            _state.update { it.copy(error = strings.get(R.string.plugins_error_records_corrupt)) }
+        }
     }
 
     fun refresh() {

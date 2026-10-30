@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -30,8 +31,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -64,6 +68,7 @@ import kotlinx.coroutines.launch
 class MiCloudLoginActivity : ComponentActivity() {
     private val cookieStore by lazy { MiCloudCookieStore(applicationContext) }
     private val state = MutableStateFlow<LoginUiState>(LoginUiState.Loading)
+    private var renderCrashKey by mutableIntStateOf(0)
     private var webView: WebView? = null
     private var watchJob: Job? = null
     private var ignoredCookie: String? = null
@@ -206,19 +211,21 @@ class MiCloudLoginActivity : ComponentActivity() {
                 )
             }
             Box(Modifier.fillMaxWidth().weight(1f)) {
-                AndroidView(
-                    factory = { viewContext ->
-                        createWebView(viewContext).also { created -> webView = created }
-                    },
-                    modifier = Modifier.fillMaxSize().testTag("micloud_login_webview"),
-                    onRelease = { released ->
-                        if (webView === released) {
-                            webView = null
-                            released.removeAllViews()
-                            released.destroy()
-                        }
-                    },
-                )
+                key(renderCrashKey) {
+                    AndroidView(
+                        factory = { viewContext ->
+                            createWebView(viewContext).also { created -> webView = created }
+                        },
+                        modifier = Modifier.fillMaxSize().testTag("micloud_login_webview"),
+                        onRelease = { released ->
+                            if (webView === released) {
+                                webView = null
+                                runCatching { released.removeAllViews() }
+                                runCatching { released.destroy() }
+                            }
+                        },
+                    )
+                }
                 when (uiState) {
                     LoginUiState.Loading -> Unit
 
@@ -300,6 +307,11 @@ class MiCloudLoginActivity : ComponentActivity() {
                 if (!request.isForMainFrame) return
                 state.value = LoginUiState.Error(getString(R.string.plugin_micloud_login_page_error))
             }
+
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+                if (webView === view) handleRendererCrash()
+                return true
+            }
         }
         view.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
             private var started = false
@@ -322,6 +334,11 @@ class MiCloudLoginActivity : ComponentActivity() {
             }
         })
         return view
+    }
+
+    private fun handleRendererCrash() {
+        state.value = LoginUiState.Error(getString(R.string.plugin_micloud_login_renderer_error))
+        renderCrashKey++
     }
 
     private sealed interface LoginUiState {

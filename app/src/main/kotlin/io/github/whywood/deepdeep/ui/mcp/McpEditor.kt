@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +74,8 @@ internal fun McpEditorSheet(
 ) {
     val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
-    var text by remember(target.name) { mutableStateOf<String?>(null) }
+    var text by rememberSaveable(target.name) { mutableStateOf("") }
+    var loaded by rememberSaveable(target.name) { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
@@ -81,19 +83,28 @@ internal fun McpEditorSheet(
     var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(target.name) {
-        text = store.entryJson(target.name)
-        if (text == null) error = "服务器配置不存在"
+        if (!loaded) {
+            val stored = store.entryJson(target.name)
+            if (stored == null) {
+                error = "服务器配置不存在"
+            } else {
+                text = stored
+            }
+            loaded = true
+        }
     }
 
-    val parsed = text?.let { value ->
-        runCatching { parseMcpEntries(value).singleOrNull() }.getOrNull()
+    val parsed = if (loaded) {
+        runCatching { parseMcpEntries(text).singleOrNull() }.getOrNull()
+    } else {
+        null
     }
     val http = parsed?.config as? McpServerConfig.Http
     val hasAuthorization = http?.headers?.keys?.any { it.equals("Authorization", ignoreCase = true) } == true
 
     fun save() {
-        val body = text ?: return
-        if (saving) return
+        if (saving || !loaded) return
+        val body = text
         error = null
         saving = true
         scope.launch {
@@ -159,11 +170,11 @@ internal fun McpEditorSheet(
                     .padding(horizontal = 24.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                if (text == null) {
+                if (!loaded) {
                     DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 } else {
                     DdTextArea(
-                        value = text.orEmpty(),
+                        value = text,
                         onValueChange = {
                             text = it
                             error = null
@@ -211,7 +222,7 @@ internal fun McpEditorSheet(
                         text = stringResource(R.string.mcp_test),
                         onClick = { test() },
                         modifier = Modifier.testTag("mcp_test"),
-                        enabled = !testing && !saving && text != null,
+                        enabled = !testing && !saving && loaded,
                     )
                     if (testing) {
                         Spacer(Modifier.width(8.dp))
@@ -231,7 +242,7 @@ internal fun McpEditorSheet(
                     text = stringResource(R.string.mcp_save),
                     onClick = { save() },
                     modifier = Modifier.fillMaxWidth().testTag("mcp_save"),
-                    enabled = !saving && text != null,
+                    enabled = !saving && loaded,
                 )
             }
         }

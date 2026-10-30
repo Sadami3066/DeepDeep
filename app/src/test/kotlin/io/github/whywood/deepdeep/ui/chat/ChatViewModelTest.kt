@@ -23,6 +23,7 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -124,7 +125,7 @@ class ChatViewModelTest {
 
         val sending = viewModel.state.value
         assertTrue(sending.sending)
-        assertEquals(ChatUiStrings.fallback().thinking, sending.activity)
+        assertEquals(RuntimeActivity.Thinking, sending.activity)
         assertEquals(2, sending.messages.size)
         assertEquals(MessageStatus.RUNNING, sending.messages.last().status)
         assertTrue(sending.conversationTitle.isNotBlank())
@@ -138,6 +139,23 @@ class ChatViewModelTest {
         assertFalse(finished.sending)
         assertEquals("hi", finished.messages.last().text)
         assertEquals(MessageStatus.DONE, finished.messages.last().status)
+    }
+
+    @Test
+    fun updateUiStringsLocalizesSubsequentEvents() = runTest(dispatcher) {
+        val runtime = FakeRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        viewModel.updateUiStrings(ChatUiStrings.fallback().copy(requestFailed = "localized failure"))
+
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "unexpected"))
+        advanceUntilIdle()
+
+        assertEquals("localized failure", viewModel.state.value.messages.last().error)
     }
 
     @Test
@@ -759,14 +777,14 @@ class ChatViewModelTest {
 
         val retrying = viewModel.state.value
         assertTrue(retrying.sending)
-        assertEquals(ChatUiStrings.fallback().autoRetrying(1, 5), retrying.activity)
+        assertEquals(RuntimeActivity.Retrying(1), retrying.activity)
         assertEquals(0, runtime.retried)
 
         advanceTimeBy(2_500L)
         advanceUntilIdle()
 
         assertEquals(1, runtime.retried)
-        assertEquals(ChatUiStrings.fallback().thinking, viewModel.state.value.activity)
+        assertEquals(RuntimeActivity.Thinking, viewModel.state.value.activity)
     }
 
     @Test

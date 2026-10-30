@@ -399,6 +399,27 @@ class ScheduleServiceTest {
     }
 
     @Test
+    fun startSurvivesCorruptScheduleData() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val file = File(fixture.directory, "schedules.json")
+            file.writeText("{not json")
+            fixture.service.start()
+            awaitStoreIo {
+                File(fixture.directory, "schedules.json.corrupt").isFile &&
+                    file.readText().contains("\"schemaVersion\":2")
+            }
+            fixture.service.stop()
+
+            assertTrue(fixture.runtime.deliveries.isEmpty())
+            assertTrue(fixture.service.schedules.value.isEmpty())
+            assertEquals("{not json", File(fixture.directory, "schedules.json.corrupt").readText())
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun recoversInterruptedDeliveryExactlyOnce() = runTest {
         val fixture = Fixture(backgroundScope)
         try {

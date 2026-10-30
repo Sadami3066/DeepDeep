@@ -80,8 +80,9 @@ fun McpScreen(
     var probing by remember { mutableStateOf(false) }
     var busyName by remember { mutableStateOf<String?>(null) }
     var failureRes by remember { mutableStateOf<Int?>(null) }
-    var editor by remember { mutableStateOf<McpEditorTarget?>(null) }
-    var importing by remember { mutableStateOf(false) }
+    var editorOpen by rememberSaveable { mutableStateOf(false) }
+    var editorName by rememberSaveable { mutableStateOf("") }
+    var importing by rememberSaveable { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var forceProbe by remember { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -257,7 +258,10 @@ fun McpScreen(
                             entry = entry,
                             probeResult = probes[entry.name],
                             switchEnabled = busyName == null,
-                            onOpen = { editor = McpEditorTarget(entry.name) },
+                            onOpen = {
+                                editorName = entry.name
+                                editorOpen = true
+                            },
                             onToggle = { toggle(entry, it) },
                         )
                     }
@@ -268,17 +272,17 @@ fun McpScreen(
         }
     }
 
-    editor?.let { target ->
+    if (editorOpen) {
         McpEditorSheet(
-            target = target,
+            target = McpEditorTarget(editorName),
             store = store,
             probe = probe,
             oauth = oauth,
-            onDismiss = { editor = null },
+            onDismiss = { editorOpen = false },
             onReloadSessions = onReloadSessions,
             onReconnect = onReconnect,
             onCommitted = {
-                mcpProbeCache.invalidate(target.name)
+                mcpProbeCache.invalidate(editorName)
                 refreshKey++
             },
         )

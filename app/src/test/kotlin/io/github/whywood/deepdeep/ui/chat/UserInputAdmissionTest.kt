@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import org.junit.Assert.assertEquals
@@ -21,7 +22,7 @@ class UserInputAdmissionTest {
                 AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, status = MessageStatus.RUNNING, runId = "run-1"),
             ),
             sending = true,
-            activity = strings.thinking,
+            activity = RuntimeActivity.Thinking,
         )
         val reduced = reduce(
             state,

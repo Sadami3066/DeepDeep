@@ -23,6 +23,7 @@
     <string name="plugins_error_foreground">Return to DeepDeep to continue</string>
     <string name="plugins_error_disabled">Plugin is disabled</string>
     <string name="plugins_error_busy">Another plugin operation is running</string>
+    <string name="plugins_error_records_corrupt">Plugin records were corrupted; the original file was backed up as plugins.json.corrupt and rebuilt</string>
     <string name="plugins_error_title">Operation failed</string>
     <string name="plugins_close">Close</string>
     <string name="plugins_retry">Retry</string>

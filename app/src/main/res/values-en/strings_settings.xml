@@ -82,6 +82,8 @@
     <string name="settings_oauth_api_key_notice">Signed in with OAuth. Saving an API key will switch the sign-in method.</string>
     <string name="settings_provider_api_key">API key</string>
     <string name="settings_provider_api_key_saved">Saved. Enter a new key to replace it.</string>
+    <string name="settings_provider_api_key_save_failed">Save failed. Try again.</string>
+    <string name="settings_provider_api_key_clear_failed">Clear failed. Try again.</string>
     <string name="settings_provider_api_key_hint">Enter API key</string>
     <string name="settings_provider_api_key_required">Enter an API key</string>
     <string name="settings_provider_api_key_save">Save</string>

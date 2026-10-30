@@ -1,5 +1,30 @@
 # Status
 
+## Done: round43 数据安全、插件精简与体验修复
+
+**数据安全（低概率高后果）**
+- `goals.json` / `schedules.json` 损坏不再打崩启动：定时任务数据损坏时备份为 `schedules.json.corrupt`（仅首次）、记录日志并重建空文件；legacy v1 先备份 `schedules.v1.bak` 再清空；`ScheduleService.start()` 初始化段局部兜底。
+- `plugins.json` 损坏时先备份为 `plugins.json.corrupt`，再重建内部插件记录并写合法文件，页面显示「已损坏并重建」；外部插件记录仍可从备份人工恢复，不再静默覆盖。
+- 日历创建/更新改为事务补偿：提醒写入失败时删除刚插入的事件；更新失败时按旧提醒快照恢复，避免模型重试产生重复事件。
+
+**持久化精简（按要求）**
+- 目标（goal）与后台任务（job）改为仅内存保留：删除 `GoalStore`、`JobPersistence` 及恢复逻辑；进程重启后目标与任务列表清空，不再生成 `interrupted` 任务。运行台账（`tasks/runs.json`）与待答问题持久化保持不变。
+
+**插件**
+- 小米云去掉后台探测与静默续期：`status()` 只读本地 cookie，不联网、不建离屏 WebView；仅用户主动登录时在登录页做一次校验；删除 `MiCloudSessionKeeper`。插件状态改为页面进入/回前台/一轮运行结束按 15 秒去抖刷新（TTL 120 秒）。
+- 三处 WebView（交付卡、小米云登录、小米云写入）补 `onRenderProcessGone`：渲染进程崩溃后重建或显示错误页，不再白屏/崩溃。
+
+**体验**
+- 聊天页上翻阅读时，新消息不再强制拉回底部；仅「已在底部」或「本人发送」时自动跟底。
+- 失败不再被吞成空数据：技能列表/工坊扫描与删除/插件详情/API Key 保存改为显示错误行与重试，API Key 失败保留草稿并等待真实落盘结果。
+- 旋转/分屏不再丢未保存草稿：AGENTS 正文、MCP JSON、定时任务表单、API Key、工作区名等改用可保存状态。
+- 切换语言后聊天页状态（思考中/压缩/重试/运行工具）随当前语言刷新；通知指向已删除会话时给出提示并结束等待；分享导入超时提示。
+
+**验证**
+- 1018 unit tests 全绿（app 621 / runtime 365 / shell 32）；lint 0 errors / 152 warnings / 6 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：语言中→英→中切换后新运行状态分别为 Thinking / 思考中；旋转后 MCP 草稿仍在；伪造损坏的 `plugins.json` 与 `schedules.json` 后重启：备份文件生成、App 不崩、页面显示插件记录重建提示、原数据已恢复；证据 `artifacts/validation/round43/`。
+- 已知限制/未真机验证：日历回滚仅有单测（需系统日历写入失败才能触发）；上翻不被拉底、PresentCard 渲染崩溃、草稿在进程死亡后的恢复未构造真机场景；小米云「服务端已失效但本地 cookie 仍在」会显示已登录，直到工具 401。
+
 ## Done: 页面转场重做、页面状态持久化与生产级实践调研
 
 **页面转场**

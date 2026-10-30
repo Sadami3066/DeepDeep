@@ -6,8 +6,6 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.PluginStatus
-import java.io.IOException
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,42 +61,6 @@ class MiCloudPluginTest {
             "确认",
             "serviceToken",
         ).forEach { expected -> assertTrue(expected, skill.markdown.contains(expected)) }
-    }
-
-    @Test
-    fun missingCookieMeansSignedOut() = runTest {
-        val state = resolveMiCloudSessionState(
-            readCookie = { null },
-            profile = { error("profile must not be called") },
-        )
-        assertEquals(MiCloudSessionState.NotLoggedIn, state)
-    }
-
-    @Test
-    fun authExceptionMeansExpired() = runTest {
-        val state = resolveMiCloudSessionState(
-            readCookie = { "serviceToken=token; userId=1" },
-            profile = { throw MiCloudAuthException("expired") },
-        )
-        assertEquals(MiCloudSessionState.Expired, state)
-    }
-
-    @Test
-    fun otherFailureMeansNetworkError() = runTest {
-        val state = resolveMiCloudSessionState(
-            readCookie = { "serviceToken=token; userId=1" },
-            profile = { throw IOException("HTTP 502") },
-        )
-        assertEquals(MiCloudSessionState.NetworkError("HTTP 502"), state)
-    }
-
-    @Test
-    fun validProfileMeansReady() = runTest {
-        val state = resolveMiCloudSessionState(
-            readCookie = { "serviceToken=token; userId=1" },
-            profile = { MiCloudProfile("小明", "1", null) },
-        )
-        assertEquals(MiCloudSessionState.Ready("小明"), state)
     }
 
     @Test

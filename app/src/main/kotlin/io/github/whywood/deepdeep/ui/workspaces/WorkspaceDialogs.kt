@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -36,7 +37,7 @@ fun WorkspaceNameDialog(
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    var name by remember(initial) { mutableStateOf(initial) }
+    var name by rememberSaveable(initial) { mutableStateOf(initial) }
     var submitted by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val trimmed = name.trim()

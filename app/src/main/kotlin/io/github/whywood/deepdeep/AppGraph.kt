@@ -48,8 +48,6 @@ import okio.Path.Companion.toPath
 import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.GoalPhase
 import io.github.whywood.deepdeep.runtime.GoalService
-import io.github.whywood.deepdeep.runtime.GoalStore
-import io.github.whywood.deepdeep.runtime.JobPersistence
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -171,7 +169,7 @@ class AppGraph(context: Context) {
     val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(appContext)
-    val goalService: GoalService by lazy { GoalService(GoalStore(File(appContext.filesDir, "goals")), scope) }
+    val goalService: GoalService by lazy { GoalService(scope) }
     val jobRegistry: JobRegistry by lazy {
         JobRegistry(
             scope = scope,
@@ -180,7 +178,6 @@ class AppGraph(context: Context) {
             },
             wakeEnabled = { jobWake.value },
             runnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
-            persistence = JobPersistence(File(appContext.filesDir, "jobs")),
             maxRunningPerSession = { pluginSettingsStore.cachedInt("jobs", "max_running", 10) },
         )
     }
@@ -218,7 +215,6 @@ class AppGraph(context: Context) {
                     onCapabilitiesChanged = {
                         scope.launch { host.reconfigure() }
                     },
-                    onSessionRestored = { pluginManager.refresh() },
                 ),
                 WecomPlugin(
                     context = appContext,
@@ -366,8 +362,11 @@ class AppGraph(context: Context) {
         scope.launch {
             host.events.collect { event ->
                 when (event.event) {
-                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed ->
+                    is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
                         runCatching { skillRepository.syncIfChanged() }
+                        runCatching { pluginManager.refreshIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS) }
+                    }
+
                     else -> Unit
                 }
             }
@@ -401,3 +400,5 @@ class AppGraph(context: Context) {
         directory.delete()
     }
 }
+
+internal const val PLUGIN_REFRESH_MIN_INTERVAL_MS = 15_000L

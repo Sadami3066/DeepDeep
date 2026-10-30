@@ -26,7 +26,7 @@ class ConversationReducerTest {
         val reduced = reduce(state, RuntimeEvent.RunStarted("run-1", 1000L), strings, now = 2000L)
         assertEquals("run-1", reduced.messages.single().runId)
         assertTrue(reduced.sending)
-        assertEquals(strings.thinking, reduced.activity)
+        assertEquals(RuntimeActivity.Thinking, reduced.activity)
         assertEquals(1000L, reduced.activityStartedAt)
     }
 
@@ -79,7 +79,7 @@ class ConversationReducerTest {
     }
 
     @Test
-    fun activityChangedUsesLocalizedLabel() {
+    fun activityChangedStoresRuntimeActivity() {
         val state = ConversationState(
             messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
         )
@@ -89,7 +89,7 @@ class ConversationReducerTest {
             strings,
             now = 9000L,
         )
-        assertEquals(strings.runningTool("bash"), reduced.activity)
+        assertEquals(RuntimeActivity.RunningTool("bash"), reduced.activity)
         assertEquals(9000L, reduced.activityStartedAt)
     }
 
@@ -112,7 +112,7 @@ class ConversationReducerTest {
         assertTrue(assistant.streaming)
         assertEquals("run-9", assistant.runId)
         assertTrue(reduced.sending)
-        assertEquals(strings.thinking, reduced.activity)
+        assertEquals(RuntimeActivity.Thinking, reduced.activity)
         assertEquals(5000L, reduced.activityStartedAt)
     }
 
@@ -136,7 +136,7 @@ class ConversationReducerTest {
                 AssistantMessage(2, AssistantRole.ASSISTANT, "answer", status = MessageStatus.DONE),
             ),
         )
-        val adopted = state.adoptActiveRun("run-live", strings.thinking, now = 7000L)
+        val adopted = state.adoptActiveRun("run-live", RuntimeActivity.Thinking, now = 7000L)
         val tail = adopted.messages.last()
         assertTrue(tail.streaming)
         assertEquals(MessageStatus.RUNNING, tail.status)
@@ -153,7 +153,7 @@ class ConversationReducerTest {
                 AssistantMessage(2, AssistantRole.USER, "reminder"),
             ),
         )
-        val adopted = state.adoptActiveRun("run-live", strings.thinking, now = 7000L)
+        val adopted = state.adoptActiveRun("run-live", RuntimeActivity.Thinking, now = 7000L)
         assertEquals(3, adopted.messages.size)
         assertTrue(adopted.messages.last().streaming)
         assertEquals("run-live", adopted.messages.last().runId)
@@ -174,7 +174,7 @@ class ConversationReducerTest {
         val state = ConversationState(
             messages = listOf(AssistantMessage(1, AssistantRole.USER, "hi")),
             sending = true,
-            activity = strings.thinking,
+            activity = RuntimeActivity.Thinking,
         )
         val reduced = reduce(state, RuntimeEvent.RunStarted("run-9", 4200L), strings)
         assertEquals(2, reduced.messages.size)
@@ -202,7 +202,7 @@ class ConversationReducerTest {
                 ),
             ),
             sending = true,
-            activity = strings.thinking,
+            activity = RuntimeActivity.Thinking,
             activityStartedAt = 1000L,
         )
         val reduced = reduce(

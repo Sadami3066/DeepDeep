@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -43,7 +44,7 @@ internal fun ScheduleEditor(
     val instantFormatter = remember(locale) {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(locale)
     }
-    var draft by remember(initialDraft) { mutableStateOf(initialDraft) }
+    var draft by rememberSaveable(initialDraft, stateSaver = ScheduleDraftSaver) { mutableStateOf(initialDraft) }
     var validationError by remember { mutableStateOf<Int?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }

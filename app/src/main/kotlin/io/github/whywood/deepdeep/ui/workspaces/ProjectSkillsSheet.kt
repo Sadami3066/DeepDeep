@@ -33,6 +33,7 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
@@ -51,14 +52,23 @@ fun ProjectSkillsSheet(
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var loadFailed by remember { mutableStateOf(false) }
+    var reloadKey by remember { mutableStateOf(0) }
     var skills by remember { mutableStateOf<List<InstalledSkill>>(emptyList()) }
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    LaunchedEffect(workspace.cwd) {
+    LaunchedEffect(workspace.cwd, reloadKey) {
+        loading = true
+        loadFailed = false
         val installed = skillRepository.list()
         val enabled = skillRepository.projectEnabledIds(workspace.cwd)
-        skills = installed
-        selected = enabled intersect installed.map { it.id }.toSet()
+        installed.fold(
+            onSuccess = { list ->
+                skills = list
+                selected = enabled intersect list.map { it.id }.toSet()
+            },
+            onFailure = { loadFailed = true },
+        )
         loading = false
     }
 
@@ -101,6 +111,27 @@ fun ProjectSkillsSheet(
                         contentAlignment = Alignment.Center,
                     ) {
                         DdSpinner(size = 22.dp, strokeWidth = 2.dp)
+                    }
+                }
+
+                loadFailed -> {
+                    Box(
+                        Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.project_skills_load_failed),
+                                style = DdType.bodySmall,
+                                color = colors.danger,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            DdTextAction(
+                                text = stringResource(R.string.skills_retry),
+                                onClick = { reloadKey += 1 },
+                                modifier = Modifier.testTag("project_skills_retry"),
+                            )
+                        }
                     }
                 }
 
@@ -168,7 +199,7 @@ fun ProjectSkillsSheet(
                     text = stringResource(R.string.project_skills_save),
                     onClick = save,
                     modifier = Modifier.fillMaxWidth().testTag("project_skills_save"),
-                    enabled = !loading && !saving,
+                    enabled = !loading && !saving && !loadFailed,
                 )
                 Spacer(Modifier.height(16.dp))
             }

@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
         AppVisibility.foreground = true
         AppVisibility.taskId = taskId
         graph.pluginManager.onAppForeground()
+        graph.pluginManager.refreshIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
         lifecycleScope.launch { runCatching { graph.skillRepository.syncIfChanged() } }
     }
 

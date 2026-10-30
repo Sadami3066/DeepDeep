@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.QueuedInput
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -22,7 +23,7 @@ data class ChatUiState(
     val quote: QuotedMessage? = null,
     val attachments: List<AttachmentRef> = emptyList(),
     val sending: Boolean = false,
-    val activity: String? = null,
+    val activity: RuntimeActivity? = null,
     val activityStartedAt: Long? = null,
     val error: String? = null,
     val providerId: String = "",

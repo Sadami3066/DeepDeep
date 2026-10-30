@@ -4,21 +4,14 @@ import io.github.whywood.deepdeep.plugin.PluginKind
 import io.github.whywood.deepdeep.plugin.PluginSettingSpec
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.runtime.GoalService
-import io.github.whywood.deepdeep.runtime.GoalStore
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.SessionBinding
-import java.io.File
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 
 class InternalPluginsTest {
-    @get:Rule
-    val temporaryFolder = TemporaryFolder()
-
     private val strings = object : PluginStrings {
         override fun get(id: Int): String = "res:$id"
 
@@ -27,7 +20,7 @@ class InternalPluginsTest {
 
     @Test
     fun goalPluginExposesGoalToolsAndRoundsSetting() = runTest {
-        val plugin = GoalPlugin(GoalService(GoalStore(File(temporaryFolder.root, "goals")), this), strings)
+        val plugin = GoalPlugin(GoalService(this), strings)
 
         assertEquals(PluginKind.INTERNAL, plugin.kind)
         assertEquals("goal", plugin.id)

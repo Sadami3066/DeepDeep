@@ -17,4 +17,7 @@
     <string name="workshop_reason_entry_missing">Entry point missing</string>
     <string name="workshop_reason_id_mismatch">ID does not match folder</string>
     <string name="workshop_search_placeholder">Search creations</string>
+    <string name="workshop_retry">Retry</string>
+    <string name="workshop_error_scan_failed">Scan failed. Try again.</string>
+    <string name="workshop_error_delete_failed">Delete failed. Try again.</string>
 </resources>

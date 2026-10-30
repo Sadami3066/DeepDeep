@@ -1,15 +1,10 @@
 package io.github.whywood.deepdeep.runtime
 
-import java.io.File
-import java.nio.file.Files
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -219,87 +214,16 @@ class JobRegistryTest {
     }
 
     @Test
-    fun restoresRunningJobsAsInterrupted() = runTest {
-        val directory = Files.createTempDirectory("deepdeep-jobs").toFile()
-        try {
-            val first = JobRegistry(
-                backgroundScope,
-                FakeRunner(),
-                notifier = { _, _, _ -> },
-                persistence = JobPersistence(directory, Dispatchers.Unconfined),
-            )
-            val id = first.start("session-1", "sleep 100", "sleep").id!!
-            runCurrent()
+    fun newRegistryDoesNotRestoreJobs() = runTest {
+        val first = JobRegistry(backgroundScope, FakeRunner(), notifier = { _, _, _ -> })
+        first.start("session-1", "sleep 100", "sleep")
+        runCurrent()
 
-            val second = JobRegistry(
-                backgroundScope,
-                FakeRunner(),
-                notifier = { _, _, _ -> },
-                persistence = JobPersistence(directory, Dispatchers.Unconfined),
-            )
-            val snapshot = second.jobs.value.single { it.id == id }
-            assertEquals(JobStatus.INTERRUPTED, snapshot.status)
-            val read = second.read(id)
-            assertEquals(JobStatus.INTERRUPTED, read.status)
-            assertTrue(read.output.contains("上次运行被中断，结果未知"))
-            assertTrue(second.readIncremental(id).output.contains("上次运行被中断，结果未知"))
+        val second = JobRegistry(backgroundScope, FakeRunner(), notifier = { _, _, _ -> })
+        assertTrue(second.jobs.value.isEmpty())
 
-            first.kill(id, "test cleanup")
-            runCurrent()
-        } finally {
-            directory.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun keepsAtMostFiftyPersistedJobs() = runTest {
-        val directory = Files.createTempDirectory("deepdeep-jobs").toFile()
-        try {
-            val runner = FakeRunner()
-            val persistence = JobPersistence(directory, Dispatchers.Unconfined)
-            val first = JobRegistry(backgroundScope, runner, notifier = { _, _, _ -> }, persistence = persistence)
-            val ids = (0 until 55).map { index ->
-                val id = first.start("session-$index", "cmd-$index", "job-$index").id!!
-                runCurrent()
-                runner.calls.last { it.command == "cmd-$index" }.exit.complete(0)
-                runCurrent()
-                id
-            }
-            runCurrent()
-
-            val second = JobRegistry(backgroundScope, FakeRunner(), notifier = { _, _, _ -> }, persistence = persistence)
-            assertEquals(ids.takeLast(50), second.jobs.value.map { it.id })
-        } finally {
-            directory.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun corruptPersistenceFileIsRebuiltWithoutCrash() = runTest {
-        val directory = Files.createTempDirectory("deepdeep-jobs").toFile()
-        try {
-            val file = File(directory, "jobs.json")
-            file.writeText("{not json")
-            val runner = FakeRunner()
-            val registry = JobRegistry(
-                backgroundScope,
-                runner,
-                notifier = { _, _, _ -> },
-                persistence = JobPersistence(directory, Dispatchers.Unconfined),
-            )
-            assertTrue(registry.jobs.value.isEmpty())
-
-            val id = registry.start("session-1", "echo hi", "echo").id!!
-            runCurrent()
-            runner.calls.single().exit.complete(0)
-            runCurrent()
-
-            val root = Json.parseToJsonElement(file.readText()) as JsonObject
-            assertEquals("1", root["schemaVersion"].toString())
-            assertEquals(JobStatus.DONE, registry.read(id).status)
-        } finally {
-            directory.deleteRecursively()
-        }
+        first.clearSession("session-1")
+        runCurrent()
     }
 
     private class FakeRunner : BackgroundCommandRunner {

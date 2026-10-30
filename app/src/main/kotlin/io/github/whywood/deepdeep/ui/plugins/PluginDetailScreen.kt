@@ -71,6 +71,7 @@ fun PluginDetailScreen(
     val busy = state.busy || state.interaction != null
     var deleteOpen by remember { mutableStateOf(false) }
     var detailRows by remember(pluginId) { mutableStateOf<List<PluginDetailRow>>(emptyList()) }
+    var detailRowsFailed by remember(pluginId) { mutableStateOf(false) }
     var detailRefresh by remember(pluginId) { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { manager.refreshIfStale() }
@@ -88,7 +89,13 @@ fun PluginDetailScreen(
     LaunchedEffect(snapshot?.status, snapshot?.installedVersion, detailRefresh) {
         val current = snapshot ?: return@LaunchedEffect
         val status = current.status ?: return@LaunchedEffect
-        detailRows = runCatching { current.plugin.detailRows(status) }.getOrDefault(emptyList())
+        runCatching { current.plugin.detailRows(status) }.fold(
+            onSuccess = {
+                detailRows = it
+                detailRowsFailed = false
+            },
+            onFailure = { detailRowsFailed = true },
+        )
     }
 
     if (snapshot == null) {
@@ -194,6 +201,16 @@ fun PluginDetailScreen(
                         ),
                     )
                 }
+            }
+
+            if (detailRowsFailed) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.plugins_error_title),
+                    modifier = Modifier.padding(horizontal = 4.dp).testTag("plugin_detail_rows_error"),
+                    style = DdType.bodySmall,
+                    color = colors.danger,
+                )
             }
 
             if (snapshot.installed && plugin.settings().isNotEmpty()) {

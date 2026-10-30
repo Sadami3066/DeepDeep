@@ -7,7 +7,7 @@
 - 插件详情页「登录小米账号」打开 App 内 WebView，加载 `https://i.mi.com`；用户在页面完成登录。
 - 登录成功后读取 `CookieManager` 的 i.mi.com cookie，先用 `/status/lite/profile` 校验，再整串加密存入 `EncryptedSecretStore`（前缀 `micloud.`）。
 - 不保存账号密码；不显示、不记录、不回传 `serviceToken`。
-- cookie 失效（401）时状态变为「登录已失效」，需要重新登录；退出登录会清除加密 cookie 与 WebView cookie。
+- 插件状态只按本地是否存在 cookie 判断（未登录/已登录），不做后台校验、不发网络请求、不静默续期；cookie 在服务端失效时，工具调用返回 401/403 并提示重新登录。退出登录会清除加密 cookie 与 WebView cookie。
 
 ### 登录方式评估
 

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.webkit.ConsoleMessage
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -30,6 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -391,24 +394,44 @@ private fun HtmlSurface(
     modifier: Modifier,
     onActivate: (() -> Unit)? = null,
 ) {
+    val colors = deepDeepColors()
     val holder = remember(path) { HtmlWebViewHolder() }
+    var crashKey by remember(path) { mutableIntStateOf(0) }
+    var renderFailed by remember(path) { mutableStateOf(false) }
     DisposableEffect(path) {
         onDispose { holder.release() }
     }
     Box(modifier) {
-        AndroidView(
-            factory = { context -> createHtmlWebView(context, path).also(holder::attach) },
-            modifier = Modifier.fillMaxSize(),
-            onRelease = { holder.release() },
-        )
-        if (onActivate != null) {
+        if (renderFailed) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.present_failed),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+            }
+        } else {
+            key(crashKey) {
+                AndroidView(
+                    factory = { context ->
+                        createHtmlWebView(context, path) {
+                            holder.release()
+                            if (crashKey == 0) crashKey++ else renderFailed = true
+                        }.also(holder::attach)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    onRelease = { holder.release() },
+                )
+            }
+        }
+        if (onActivate != null && !renderFailed) {
             Box(Modifier.matchParentSize().clickable(onClick = onActivate))
         }
     }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
-private fun createHtmlWebView(context: Context, path: String): WebView = WebView(context).apply {
+private fun createHtmlWebView(context: Context, path: String, onRenderCrash: () -> Unit): WebView = WebView(context).apply {
     setBackgroundColor(AndroidColor.TRANSPARENT)
     settings.apply {
         javaScriptEnabled = true
@@ -435,6 +458,11 @@ private fun createHtmlWebView(context: Context, path: String): WebView = WebView
             }
             val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             runCatching { context.startActivity(intent) }
+            return true
+        }
+
+        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
+            onRenderCrash()
             return true
         }
     }

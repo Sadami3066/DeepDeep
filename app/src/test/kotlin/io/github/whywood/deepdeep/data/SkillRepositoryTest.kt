@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.data
 
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,7 +72,7 @@ class SkillRepositoryTest {
         assertTrue(result is SkillArchiveResult.Success)
         assertTrue(File(repoDir, "alpha/SKILL.md").isFile)
         assertTrue(File(repoDir, "alpha/references/notes.md").isFile)
-        val skills = repository.list()
+        val skills = repository.list().getOrThrow()
         assertEquals(1, skills.size)
         val skill = skills.single()
         assertEquals("alpha", skill.id)
@@ -87,7 +88,7 @@ class SkillRepositoryTest {
         val result = repository.install(byteArrayOf(1, 2, 3, 4), "bad.zip")
         assertTrue(result is SkillArchiveResult.Failure)
         assertEquals(SkillArchiveError.NotZip, (result as SkillArchiveResult.Failure).error)
-        assertTrue(repository.list().isEmpty())
+        assertTrue(repository.list().getOrThrow().isEmpty())
     }
 
     @Test
@@ -96,7 +97,7 @@ class SkillRepositoryTest {
         assertTrue(repository.setGlobalEnabled("alpha", true))
         val updated = repository.install(skillZip("Second"), "alpha.zip")
         assertTrue(updated is SkillArchiveResult.Success)
-        assertEquals("Second", repository.list().single().description)
+        assertEquals("Second", repository.list().getOrThrow().single().description)
         assertTrue(globalFile().readText().contains("Second"))
     }
 
@@ -111,10 +112,10 @@ class SkillRepositoryTest {
         assertTrue(globalFile().isFile)
         assertFalse(homeProjectFile().exists())
         assertFalse(workspaceProjectFile().exists())
-        assertTrue(repository.list().single().globalEnabled)
+        assertTrue(repository.list().getOrThrow().single().globalEnabled)
         assertTrue(repository.setGlobalEnabled("alpha", false))
         assertFalse(globalFile().exists())
-        assertFalse(repository.list().single().globalEnabled)
+        assertFalse(repository.list().getOrThrow().single().globalEnabled)
     }
 
     @Test
@@ -138,7 +139,7 @@ class SkillRepositoryTest {
         assertFalse(File(repoDir, "alpha").exists())
         assertFalse(globalFile().exists())
         assertFalse(workspaceProjectFile().exists())
-        assertTrue(repository.list().isEmpty())
+        assertTrue(repository.list().getOrThrow().isEmpty())
         assertNull(repository.readContent("alpha"))
     }
 
@@ -150,7 +151,7 @@ class SkillRepositoryTest {
 
         assertEquals(3, repository.syncActiveSkills())
 
-        val skills = repository.list().associateBy { it.id }
+        val skills = repository.list().getOrThrow().associateBy { it.id }
         assertEquals(setOf("agent-skill", "home-skill", "workspace-skill"), skills.keys)
         assertTrue(File(repoDir, "agent-skill/SKILL.md").isFile)
         assertTrue(File(repoDir, "home-skill/SKILL.md").isFile)
@@ -167,7 +168,7 @@ class SkillRepositoryTest {
 
         assertEquals(1, repository.syncActiveSkills())
         assertTrue(File(repoDir, "shared/SKILL.md").readText().contains("Agent copy"))
-        assertEquals("Agent copy", repository.list().single().description)
+        assertEquals("Agent copy", repository.list().getOrThrow().single().description)
         assertEquals(0, repository.syncActiveSkills())
         assertEquals(1L, repository.changes.value)
     }
@@ -179,7 +180,7 @@ class SkillRepositoryTest {
 
         assertEquals(0, repository.syncActiveSkills())
         assertFalse(File(repoDir, "deepdeep-feishu").exists())
-        assertTrue(repository.list().isEmpty())
+        assertTrue(repository.list().getOrThrow().isEmpty())
         assertEquals(0L, repository.changes.value)
     }
 
@@ -195,7 +196,7 @@ class SkillRepositoryTest {
         writeActiveSkill(agentSkillsDir(), ".hidden", "Hidden")
 
         assertEquals(1, repository.syncActiveSkills())
-        assertEquals(listOf("valid"), repository.list().map { it.id })
+        assertEquals(listOf("valid"), repository.list().getOrThrow().map { it.id })
     }
 
     @Test
@@ -209,7 +210,7 @@ class SkillRepositoryTest {
 
         assertEquals(1, repository.syncIfChanged())
         assertEquals(0, repository.syncIfChanged())
-        assertEquals(listOf("first", "second"), repository.list().map { it.id })
+        assertEquals(listOf("first", "second"), repository.list().getOrThrow().map { it.id })
         assertEquals(2L, repository.changes.value)
     }
 
@@ -231,6 +232,20 @@ class SkillRepositoryTest {
 
         assertTrue(repository.delete("alpha"))
         assertEquals(4L, repository.changes.value)
+    }
+
+    @Test
+    fun listReportsFailureInsteadOfEmptyList() = runTest {
+        val failingRepository = SkillRepository(
+            repoDir = object : File(repoDir.path) {
+                override fun listFiles(): Array<File>? = throw IOException("boom")
+            },
+            agentDir = agentDir,
+            homeDir = homeDir,
+            workspacesDir = workspacesDir,
+        )
+        val result = failingRepository.list()
+        assertTrue(result.isFailure)
     }
 
     @Test

@@ -43,7 +43,7 @@ internal fun formatElapsed(
 
 @Composable
 internal fun WorkingIndicator(
-    activity: String?,
+    activityText: String?,
     startedAt: Long?,
     modifier: Modifier = Modifier,
 ) {
@@ -64,7 +64,7 @@ internal fun WorkingIndicator(
         DdTypingDots(color = colors.inkTertiary)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = activity ?: stringResource(R.string.assistant_working),
+            text = activityText ?: stringResource(R.string.assistant_working),
             modifier = Modifier.weight(1f, fill = false),
             style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
             color = colors.inkSecondary,

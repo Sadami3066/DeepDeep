@@ -80,13 +80,13 @@ Compose ChatScreen
 - 插件分两类（`PluginKind`，默认 `EXTERNAL`）：
   - 外部插件：需要下载安装，有下载/更新/重新安装/删除入口；安装/卸载是事务，失败只清理暂存，不清除旧版本、记录与技能。
   - 内部插件：随 App 提供，`PluginManager.start()` 为没有记录的内部插件补建安装记录（已安装、默认启用、version/skillIds 来自插件），安装/卸载为空操作，不参与更新检查，详情页不显示下载/更新/删除入口；停用后列表与详情页入口保留，只是不再贡献工具/技能/提示，重新开启恢复。当前：`goal`（目标）、`jobs`（后台任务）、`schedule`（定时任务）、`workshop`（创意工坊）。
-- `PluginManager` 负责安装记录与启用状态（`files/plugins/plugins.json`，schemaVersion 2，原子写）、插件设置（`files/plugins/settings.json`，schemaVersion 1）、全局互斥、安装/卸载/更新/启停、状态探测与缓存（60 秒 TTL，显式刷新强制）、技能同步（仓库 `files/skills` + 生效 `files/agent/skills`，`.deepdeep-plugin` 标记）、工具收集、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
+- `PluginManager` 负责安装记录与启用状态（`files/plugins/plugins.json`，schemaVersion 2，原子写；损坏时先备份为 `plugins.json.corrupt` 再重建内部记录）、插件设置（`files/plugins/settings.json`，schemaVersion 1）、全局互斥、安装/卸载/更新/启停、状态探测与缓存（120 秒 TTL，显式刷新强制；页面进入、App 回前台、一轮运行结束按 15 秒去抖刷新）、技能同步（仓库 `files/skills` + 生效 `files/agent/skills`，`.deepdeep-plugin` 标记）、工具收集、进度通知与系统提示拼接；它不依赖 shell，也不引用具体插件。
 - 设置：`PluginSettingSpec` 分 Toggle / Choice / Number，声明 key、标题、默认值与取值范围；缺失值取声明默认值，设置文件缺失或损坏按全部默认值运行。`PluginManager.setSetting` 校验（Number 夹到区间、Choice 校验选项）后落盘、调用 `plugin.onSettingsChanged(含默认值的完整映射)`、重新同步技能并触发 `host.reconfigure()`。运行时直接消费的设置由 `AppGraph` 注入默认参数 lambda：目标 `max_rounds`（0 不限）→ `goalTools(defaultMaxRounds = …)`；后台任务 `max_running`（1–20，默认 10）→ `JobRegistry(maxRunningPerSession = …)`；创意工坊 `max_turns`（1–32，默认 16）→ `WorkshopAgentService(defaultMaxTurns = …)`；`skill_enabled` 控制工坊技能是否贡献。
 - 插件贡献：`promptBody`（每轮系统提示）、`skills`（技能，支持多文件）、`tools`（`CodingTool`）、`settings`（设置项）。只有已安装且已启用的插件参与；启停、安装、设置变更、MCP 配置变化后调用 `host.reconfigure()`，由宿主的会话命令面在安全点更新能力快照（忙碌会话排到本轮结束，不会被提前关闭）。
 - 工具注入：外部插件实现 `tools()`，内部插件实现 `tools(binding: SessionBinding)` 以取得会话绑定；`PluginManager.tools(binding)` 按 kind 分派并按工具名去重。定时任务 `schedule_*`、目标 `goal_*`、后台任务 `job_*` 都由对应内部插件贡献，不再由 `appTools` 直接注入；`present` 仍由 `AppGraph` 的 `extraToolFactories` 提供。
 - 技能安装：`PluginSkill` 携带 `markdown`（`SKILL.md` 正文）与可选 `files: List<PluginSkillFile>`（相对路径 + 文本内容）；写入时先在临时目录写全 `SKILL.md`、随附文件与标记，再整体替换目标目录，路径拒绝绝对路径、`..`、空段、保留名与重复项。同名无标记目录按规则认领：普通插件技能要求 `SKILL.md` 内容一致才整体替换，不一致保留用户版本并跳过该技能；`legacyOwned` 技能直接整体替换。创意工坊技能即 `legacyOwned` 多文件技能，升级设备上旧的 BuiltinSkills 目录会被整体替换。
 - 安装/登录态的判定属于插件个体：飞书插件自己执行 `lark-cli auth status --json` 并映射为 `Ready`/`NotReady`/`Failed`；框架只显示它返回的文案。
-- Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会按 60 秒 TTL 刷新状态缓存；App 回前台时若 setup 已就绪会完成等待并关闭 sheet。
+- Agent 入口是 `plugin_setup`（runtime `PluginTools.kt` → `PluginController` → App 的 `PluginManager.setup`）；UI 与 Agent 共用同一份 `PluginsUiState` 与同一个全局 setup sheet。Agent 直接用 bash 操作插件命令后，插件页进入/App 恢复/一轮运行结束会按 120 秒 TTL（15 秒去抖）刷新状态缓存；App 回前台时若 setup 已就绪会完成等待并关闭 sheet。
 - `PiSessionEngine` 增加 `pluginPromptBody` 参数，在 hooks 中每轮注入 `official_plugins` section；`AppToolContext.pluginTools(binding)` 在会话创建时收集插件工具，内部插件拿到 binding，工具执行时读取已绑定的会话。
 - 飞书插件安装官方 CLI 到 guest `/usr/local/bin/lark-cli`，凭证留在 CLI 自己的 `/root/.lark-cli` 与 `/root/.local/share/lark-cli`；不上报运行环境包列表。网络搜索插件不依赖 Linux，复用 DeepSeek provider 的 API Key 调 Search/Fetch API。
 
@@ -118,8 +118,8 @@ Compose ChatScreen
 - `SessionBinding` 在会话创建后绑定 `AgentSession`（sessionId/sessionFile/cwd）；内部插件的 schedule/goal/job 工具据此把数据绑定到调用它的会话。
 - `ScheduleStore` 保存 `files/schedules/schedules.json`（schemaVersion 2）；`ScheduleService` 负责计时、批量与投递，工具与任务页都经它读写。
 - 到点提醒投递回原对话：`ScheduleService` 打开绑定会话并调用 `AgentRuntime.deliverReminder`，由宿主注入 `[定时提醒]` 消息并开始一次运行；不新建会话、不另开工作区。投递前先写 `files/schedules/delivery-intents.json`（intent 含 `scheduleId@nextRunAt` 去重键），成功后标记已投递再删 intent；进程在投递中死亡则下次启动 `recoverPending()` 补投一次，已投递的不重复投。
-- `GoalStore` 保存 `files/goals/goals.json`（按会话），`GoalService` 同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。轮次上限来自目标内部插件设置 `max_rounds`（默认 0 表示不限），作为 `create_goal` 未传 `max_goal_rounds` 时的默认值；加载后目标为未激活（显示暂停），需用户继续。
-- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话运行中任务上限（默认 10，由后台任务内部插件设置 `max_running` 控制，范围 1–20）、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。任务记录同时写入 `files/jobs/jobs.json`（最多 50 条、输出只留尾部 16KB）；进程重启后上次仍在运行的 job 显示为 `interrupted`（结果未知）并保留输出尾巴，不会静默消失。输出触发快照发布按 100ms 合并（最多 10 次/秒，末次最新），开始/结束/停止等状态变化仍立即发布。
+- `GoalService` 只在进程内存中保存目标（按会话，不写磁盘；进程重启后清空），它同时实现 `GoalController`（UI 读/建/暂停/继续/完成/清除）与 `GoalDriver`（宿主每轮记录 `TurnSource`、成功后取下一轮 prompt、停止时暂停）；目标轮由宿主以 `BackgroundTurnStarted` 事件开新的一轮，`TurnNotice.GoalRound` 带 objective，UI 渲染成带图标的目标轮提示。轮次上限来自目标内部插件设置 `max_rounds`（默认 0 表示不限），作为 `create_goal` 未传 `max_goal_rounds` 时的默认值；加载后目标为未激活（显示暂停），需用户继续。
+- `JobRegistry` 保存进程内后台任务：环形输出（运行中 256KB / 结束后 16KB）、模型增量游标、每会话运行中任务上限（默认 10，由后台任务内部插件设置 `max_running` 控制，范围 1–20）、等待上限 600s；`job_start` 创建任务，`job_output`/`job_list`/`job_kill` 读取与停止；`LinuxJobRunner` 走会话 cwd 对应的 `LinuxEnvironment.executeStreaming`；任务完成按聊天设置决定是否唤醒模型，唤醒轮在聊天流里只留一行极简任务标记；会话归档/删除时清理。任务记录只保存在进程内存（不写磁盘）；进程重启后任务列表清空，不再生成 `interrupted` 状态。输出触发快照发布按 100ms 合并（最多 10 次/秒，末次最新），开始/结束/停止等状态变化仍立即发布。
 - `present` 交付 v2：`items`（1–4 项）显式指定 `file|image|html|creative`；文件/图片/网页按 cwd 解析并校验存在性，创意经注入的 `WorkshopStore` 查询清单后返回 id/name/icon/version。聊天里图片内联预览、HTML 用内联 WebView 渲染并可全屏、文件为行卡、创意为入口卡；旧 `files` 输出与旧工坊入口卡保持兼容。
 - 设备短信工具已移除；短信与通话改由「小米云服务」插件读取（`mi_cloud_sms`），不申请 `READ_SMS`。
 - GUI 插件（官方插件 `gui`）通过 App 自己的 `AccessibilityService` 暴露 `gui_observe/find/tap/set_text/scroll/global/wait/screenshot`；无障碍服务需用户在系统设置手动开启，未开启时插件状态为未就绪、工具返回明确错误。截图保存到 `files/gui/screenshots/`，PRoot 固定挂载为 `/gui`。
@@ -228,8 +228,8 @@ filesDir/
   plugins/          plugins.json（插件安装记录与启用状态）、settings.json（插件设置，schemaVersion 1）
   skills/<id>/      技能仓库（SDK 不扫描；插件技能仓库副本也在这里）
   schedules/        schedules.json（提醒绑定到对话）、delivery-intents.json（投递中 intent）
-  goals/            goals.json（按会话的目标与轮次）
-  jobs/             jobs.json（后台任务记录，最多 50 条，重启后显示中断/未知）
+  goals/            旧版本的 goals.json；当前目标只存进程内存，不再读写
+  jobs/             旧版本的 jobs.json；当前后台任务只存进程内存，不再读写
   questions/        pending.json（等待中的提问，正常结束即删除）
   tasks/            runs.json（进行中的运行记录，重启后残留转“运行被中断”）
   workshop/apps/<id>/   创意页面（manifest.json、entry、静态资源）
@@ -249,7 +249,7 @@ filesDir/
 - 语音助手：系统 `SpeechRecognizer` 做语音输入（`RECORD_AUDIO` + `RecognitionService` queries），`TextSpeaker` 用系统 TTS 朗读回答；`AssistantRole` 通过 `RoleManager.ROLE_ASSISTANT` 申请系统助手角色，`MainActivity` 接收 `ACTION_ASSIST` 后打开语音面板。composer 麦克风按钮与系统助手入口共用同一面板；设置页不再单独提供语音助手行；后台常听/唤醒词不做。
 - 接收分享：Manifest 声明 `ACTION_SEND`/`ACTION_SEND_MULTIPLE`，MainActivity 解析 stream/clip/text，`ShareStaging` 先复制到 cache，`DeepDeepApp` 在会话就绪且不在发送/切换时经现有 `ChatViewModel.attach` 插入附件，纯文本预填输入框；App 自身分享时 chooser 排除自己。
 - 安排：官方插件 `arrange` 用 `CalendarContract` Provider 直接增删改查系统日历；只保留日历，不管理闹钟，也不需要精确闹钟权限。
-- 小米云服务：官方插件 `micloud`，WebView 登录 i.mi.com；读走 HTTP，写走同源 WebView；功能开关与覆盖范围见 `docs/MICLOUD.md`。录音下载到 `files/micloud/recordings/`，PRoot 固定挂载为 `/micloud`。
+- 小米云服务：官方插件 `micloud`，WebView 登录 i.mi.com；状态只按本地 cookie 判断、不做后台探测或静默续期；读走 HTTP，写走同源 WebView；功能开关与覆盖范围见 `docs/MICLOUD.md`。录音下载到 `files/micloud/recordings/`，PRoot 固定挂载为 `/micloud`。
 - 系统助手/悬浮 UI 与 root 只做调研：`docs/ANDROID_ASSISTANT.md`、`docs/ROOT.md`，不注册工具。
 
 ## 设计中的系统

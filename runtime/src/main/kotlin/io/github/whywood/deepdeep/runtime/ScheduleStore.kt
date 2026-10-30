@@ -245,28 +245,43 @@ class ScheduleStore(
 
     private fun load(): List<Schedule> {
         if (!file.exists()) return emptyList()
-        val text = try {
-            file.readText()
-        } catch (error: Exception) {
-            throw CorruptScheduleDataException("无法读取定时任务数据", error)
+        val text: String = runCatching { file.readText() }.getOrElse { error ->
+            return discardCorrupt("定时任务数据读取失败", error)
         }
         if (text.isBlank()) return emptyList()
         val root = runCatching { Json.parseToJsonElement(text) }.getOrNull() as? JsonObject
-            ?: throw CorruptScheduleDataException("定时任务数据不是有效 JSON 对象")
+            ?: return discardCorrupt("定时任务数据不是有效 JSON 对象")
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
-            ?: throw CorruptScheduleDataException("定时任务数据缺少 schemaVersion")
+            ?: return discardCorrupt("定时任务数据缺少 schemaVersion")
         if (version == LEGACY_SCHEMA_VERSION) {
-            persist(emptyList())
+            if (backup(LEGACY_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) }
             return emptyList()
         }
         if (version != SCHEMA_VERSION) {
-            throw CorruptScheduleDataException("不支持的 schemaVersion：$version")
+            return discardCorrupt("不支持的 schemaVersion：$version")
         }
         val entries = root["schedules"] as? JsonArray
-            ?: throw CorruptScheduleDataException("定时任务数据缺少 schedules")
-        return entries.map { element ->
-            scheduleFromJsonObject(element as? JsonObject ?: throw CorruptScheduleDataException("定时任务条目不是对象"))
-        }
+            ?: return discardCorrupt("定时任务数据缺少 schedules")
+        val schedules: List<Schedule> = runCatching {
+            entries.map { element ->
+                scheduleFromJsonObject(
+                    element as? JsonObject ?: throw CorruptScheduleDataException("定时任务条目不是对象"),
+                )
+            }
+        }.getOrElse { error -> return discardCorrupt("定时任务条目损坏", error) }
+        return schedules
+    }
+
+    private fun discardCorrupt(message: String, error: Throwable? = null): List<Schedule> {
+        logWarn(TAG, message, error)
+        if (backup(CORRUPT_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) }
+        return emptyList()
+    }
+
+    private fun backup(name: String): Boolean {
+        val backup = File(directory, name)
+        if (backup.exists()) return true
+        return runCatching { file.copyTo(backup, overwrite = false) }.isSuccess
     }
 
     private fun persist(schedules: List<Schedule>) {
@@ -295,6 +310,9 @@ class ScheduleStore(
     companion object {
         const val SCHEMA_VERSION = 2
         private const val LEGACY_SCHEMA_VERSION = 1
+        private const val LEGACY_BACKUP_FILE_NAME = "schedules.v1.bak"
+        private const val CORRUPT_BACKUP_FILE_NAME = "schedules.json.corrupt"
         private const val FILE_NAME = "schedules.json"
+        private const val TAG = "ScheduleStore"
     }
 }

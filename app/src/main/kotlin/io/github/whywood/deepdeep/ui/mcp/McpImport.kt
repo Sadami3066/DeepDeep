@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -40,7 +41,7 @@ internal fun McpImportSheet(
     val scope = rememberCoroutineScope()
     val template = stringResource(R.string.mcp_import_template)
     val fallbackError = stringResource(R.string.mcp_import_error)
-    var text by remember { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var importing by remember { mutableStateOf(false) }
 

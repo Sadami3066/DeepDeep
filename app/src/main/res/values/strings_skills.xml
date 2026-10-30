@@ -20,6 +20,7 @@
     <string name="skills_error_missing_description">SKILL.md 缺少 description</string>
     <string name="skills_error_unsafe_path">技能包包含不安全的路径</string>
     <string name="skills_error_io">读取或写入失败</string>
+    <string name="skills_retry">重试</string>
     <string name="skills_delete_title">删除技能</string>
     <string name="skills_delete_message">「%1$s」将被删除，且无法恢复。</string>
     <string name="skills_delete_confirm">删除</string>

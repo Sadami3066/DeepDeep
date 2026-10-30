@@ -130,6 +130,7 @@ fun ChatScreen(
     onOpenAttachment: (AttachmentRef) -> Unit,
     onOpenFile: (String) -> Unit,
     attachmentRoot: File,
+    chatUiStrings: ChatUiStrings,
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
     reminderCount: Int,
@@ -230,6 +231,7 @@ fun ChatScreen(
 
     var knownCount by remember { mutableIntStateOf(state.messages.size) }
     var knownSessionId by remember { mutableStateOf(state.conversationId) }
+    var pendingLocalSend by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.conversationId, state.historyLoaded) {
         val sessionId = state.conversationId ?: return@LaunchedEffect
@@ -257,7 +259,9 @@ fun ChatScreen(
 
     LaunchedEffect(state.conversationId, state.messages.size) {
         val size = state.messages.size
-        if (state.conversationId == knownSessionId && size > knownCount) controller.jumpToBottom(animate = false)
+        val grew = state.conversationId == knownSessionId && size > knownCount
+        if (grew && (controller.following || pendingLocalSend)) controller.jumpToBottom(animate = false)
+        pendingLocalSend = false
         knownCount = size
         knownSessionId = state.conversationId
     }
@@ -404,7 +408,7 @@ fun ChatScreen(
                 contentAlignment = Alignment.TopCenter,
             ) {
                 WorkingIndicator(
-                    activity = state.activity,
+                    activityText = chatUiStrings.activity(state.activity),
                     startedAt = state.activityStartedAt,
                     modifier = Modifier.widthIn(max = 780.dp).fillMaxWidth(),
                 )
@@ -521,6 +525,7 @@ fun ChatScreen(
                 if (!state.sending) {
                     keyboard?.hide()
                     focusManager.clearFocus()
+                    pendingLocalSend = true
                 }
                 onSend()
             },

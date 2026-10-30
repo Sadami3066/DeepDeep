@@ -28,6 +28,7 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
@@ -69,7 +70,7 @@ class ChatViewModel(
     private val attachmentStore: AttachmentStore,
     private val prepareRuntime: suspend () -> Unit,
     private val autoRetry: Flow<Boolean> = flowOf(false),
-    private val uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
+    @Volatile private var uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
     private val skillExpander: SkillExpander? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
@@ -141,6 +142,10 @@ class ChatViewModel(
                 }
             }
         }
+    }
+
+    fun updateUiStrings(strings: ChatUiStrings) {
+        uiStrings = strings
     }
 
     fun onInputChange(value: String) {
@@ -351,7 +356,7 @@ class ChatViewModel(
                 state.copy(
                     messages = markRetryingTail(state.messages, now),
                     sending = true,
-                    activity = uiStrings.thinking,
+                    activity = RuntimeActivity.Thinking,
                     activityStartedAt = now,
                     error = null,
                 )
@@ -364,7 +369,7 @@ class ChatViewModel(
                 cached.copy(
                     messages = markRetryingTail(cached.messages, now),
                     sending = true,
-                    activity = uiStrings.thinking,
+                    activity = RuntimeActivity.Thinking,
                     activityStartedAt = now,
                 ),
             )
@@ -421,10 +426,13 @@ class ChatViewModel(
         val token = Any()
         autoRetryTokens[sessionId] = token
         autoRetryJobs[sessionId] = viewModelScope.launch {
-            val label = uiStrings.autoRetrying(attempt, MAX_AUTO_RETRIES)
             if (mutableState.value.conversationId == sessionId) {
                 mutableState.update {
-                    it.copy(sending = true, activity = label, activityStartedAt = System.currentTimeMillis())
+                    it.copy(
+                        sending = true,
+                        activity = RuntimeActivity.Retrying(attempt),
+                        activityStartedAt = System.currentTimeMillis(),
+                    )
                 }
             } else {
                 conversationCache[sessionId]?.let { cached ->
@@ -432,7 +440,7 @@ class ChatViewModel(
                         sessionId,
                         cached.copy(
                             sending = true,
-                            activity = label,
+                            activity = RuntimeActivity.Retrying(attempt),
                             activityStartedAt = System.currentTimeMillis(),
                         ),
                     )
@@ -515,7 +523,7 @@ class ChatViewModel(
                 quote = null,
                 attachments = emptyList(),
                 sending = true,
-                activity = uiStrings.thinking,
+                activity = RuntimeActivity.Thinking,
                 activityStartedAt = now,
                 error = null,
                 conversationTitle = if (
@@ -666,7 +674,7 @@ class ChatViewModel(
             if (current.conversationId != sessionId || !current.sending) return
             val conversation = current.conversationState()
             if (conversation.messages.any { it.runId == active.runId }) return
-            val adopted = conversation.adoptActiveRun(active.runId, uiStrings.thinking, active.startedAt)
+            val adopted = conversation.adoptActiveRun(active.runId, RuntimeActivity.Thinking, active.startedAt)
             mutableState.update { it.applyConversation(adopted) }
             cacheCurrentSession()
             return
@@ -1160,7 +1168,7 @@ class ChatViewModel(
                 val snapshot = if (activeRun == null) {
                     base
                 } else {
-                    base.adoptActiveRun(activeRun.runId, uiStrings.thinking, activeRun.startedAt)
+                    base.adoptActiveRun(activeRun.runId, RuntimeActivity.Thinking, activeRun.startedAt)
                 }
                 val resolved = snapshot.withCachedInterruptedNotices(summary.id)
                     .withInterruptedNotice(summary.id, interruptedQuestionNoticeSessions) {

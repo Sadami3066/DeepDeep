@@ -48,9 +48,9 @@ class ScheduleService(
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
-            recoverPending()
-            refresh()
-            deliverDue()
+            guard("recover pending schedules failed") { recoverPending() }
+            guard("refresh schedules failed") { refresh() }
+            guard("deliver due schedules failed") { deliverDue() }
             launch {
                 store.changes.collect {
                     refresh()
@@ -64,6 +64,16 @@ class ScheduleService(
                 }
             }
             launch { timerLoop() }
+        }
+    }
+
+    private suspend fun guard(message: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logError(TAG, message, error)
         }
     }
 
@@ -337,6 +347,7 @@ class ScheduleService(
         const val MAX_TIMER_WAIT_MS = 15 * 60 * 1000L
         const val INTENT_SCHEMA_VERSION = 1
         const val FILE_NAME = "delivery-intents.json"
+        const val TAG = "ScheduleService"
     }
 }
 

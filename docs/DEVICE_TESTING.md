@@ -208,7 +208,7 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 ## round38（可靠性收尾）验收
 
 145. 提醒投递补投：创建一条 1 分钟内提醒后立即杀进程，重开 App → 到点只补投一次（不丢不重复）；`files/schedules/delivery-intents.json` 不残留已投递 intent。
-146. Job 中断可见：让 Agent `job_start` 一个长任务（如 `sleep 90`）→ `files/jobs/jobs.json` 出现 RUNNING 记录 → 杀进程重开 → `job_list` 显示该 job 为 `interrupted`（结果未知），`job_output` 能读到中断说明；新任务可正常继续。
+146. Job 中断可见（round43 起已取消：后台任务改为仅内存，重启后列表清空，不再产生 `interrupted`）。历史验收记录保留。
 147. 待答问题中断：`ask_user_question` 等待时杀进程重开 → `files/questions/pending.json` 清空，打开该会话出现「上次提问已中断」灰字提示，通知栏出现汇总通知；发一条消息后提示清除。
 148. 自动重试状态行：断网发送 → 状态行出现 `自动重试 n/5`（英文 `Retrying n/5`）并且 5 次内可持续看到；停止后消失且不再重试。
 149. 插件升级失败（真机断网）：已安装飞书后断网点「重新安装」→ 失败提示，`lark-cli` 文件仍在且 md5 不变、详情页仍已连接、`lark-cli --version` 仍旧版本；技能与安装记录完好。
@@ -234,7 +234,7 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 162. 内部插件设置：目标详情把「目标轮数上限」从 0 调到 3 并保存 → `files/plugins/settings.json` 出现 `goal.max_rounds=3`；创建目标时未显式指定轮数会按 3 封顶，`update_goal` 只改 objective 不影响轮数；改回 0 恢复不限。后台任务改 `max_running` 后同会话超限报错符合；创意工坊关 `skill_enabled` 后 `/skill:workshop` 不可用、开启恢复，改 `max_turns` 后页面 Agent 默认轮数变化。
 163. 停用内部插件：停用「目标」后新会话（或重新进入会话）工具列表里没有 `get_goal`/`create_goal`/`update_goal`；重新启用后恢复且目标数据仍在。停用「创意工坊」后 `workshop_*` 工具与 workshop 技能消失，重新启用后 `files/agent/skills/workshop` 恢复多文件结构（SKILL.md + references + examples + marker）。
 164. workshop_edit：让 Agent 对一个已上架创意分别执行 get / set / delete / keys；set 后页面重开读到新值；get 不存在的 key 返回 null；delete 后读不到；keys 返回排序列表；不调用 `workshop_load`、不改页面文件。
-165. 小米云静默续期：正常登录小米云后 `am force-stop`，备份并删除 `files/datastore/secrets.preferences_pb`（同时会丢 API Key，测试后恢复），重启 App 打开插件页 → 数秒内自动回到「已登录」，无需手动操作；点「退出登录」后杀进程重启 → 保持「未登录」，且不会偷偷恢复；点「登录」正常打开登录页。
+165. 小米云静默续期（round43 起已取消：插件状态只读本地 cookie，不做后台校验或静默续期）。历史验收记录保留；现行行为见 round43 第 188 条。
 166. 插件页缓存：进入插件页先显示上次状态、后台再刷新；手动刷新图标强制探测；已停用/未连接状态显示正确；连续进出插件页 5 次不重复长时间转圈。
 167. MCP 探测缓存：配置 ≥2 个启用的 HTTP MCP 时进入 MCP 页，60s 内再次进入不重复发起完整握手（标题栏 spinner 不常驻）；手动刷新强制探测；编辑/启停 server 后结果更新。
 168. 冷启动与性能：`am start -W` 冷启动 TotalTime 相比基线（967ms）下降；输入 20 字符、抽屉开合 ×5、长会话打开首屏的 gfxinfo jank 不高于基线；设置页停留 10s（后台流式）时帧数明显下降、jank 不再高于聊天页；`dumpsys meminfo` 无 WebView 泄漏，线程数随会话开关不再无界增长。
@@ -258,3 +258,15 @@ adb logcat -s DeepDeepRuntime DeepDeepChat
 180. 跟手返回：支持的设备（原生 Android 13+ 且开启预测动画）从页面边缘慢拖 → 页面跟手位移/淡出、目标页在下方淡入，中途松手回弹、拖过阈值完成并直接落位；不支持的设备/按钮返回 → 常规 shared-axis 动画，不重复 pop。
 181. 深链接：`adb shell am start -a android.intent.action.VIEW -d "deepdeep://chat/<真实id>"` 直达会话；`deepdeep://settings`、`deepdeep://plugins/feishu` 直达页面且返回一次落父页/聊天；`deepdeep://oauth/callback?code=x` 只回前台不导航；冷启动与热启动各测一次。
 182. 动效回归：push/pop 为 25% 位移+淡入淡出，聊天页在下方静止；快速连点返回不叠页不崩；RTL（阿语）方向取反；`adb logcat` 无 `FATAL EXCEPTION`。
+
+## round43（数据安全 / 插件精简 / 体验）验收
+
+183. 语言与聊天状态：设置 → 语言切 English → 发一条消息，状态行显示「Thinking」；切回简体中文（Activity 重建）后发消息，状态行显示「思考中」；设置、抽屉、工坊等界面文字同步切换，无残留旧语言。
+184. 插件记录损坏恢复：`run-as` 将 `files/plugins/plugins.json` 写成非 JSON → 重启 App → 不崩溃；`files/plugins/plugins.json.corrupt` 为原始损坏内容；`plugins.json` 重建为合法文件且内部插件记录存在；插件页显示「已损坏并重建」提示；恢复原文件后外部插件（飞书/小米云/企业微信）记录回来。
+185. 定时任务数据损坏：`run-as` 将 `files/schedules/schedules.json` 写成非 JSON → 重启 App → 不崩溃；生成 `schedules.json.corrupt`；`schedules.json` 重写为 `schemaVersion:2, schedules:[]`；logcat 有 `ScheduleStore` 警告；恢复原文件后提醒仍在。
+186. 草稿旋转：MCP 服务器编辑器输入一段 JSON → 旋转横屏 → 旋转回竖屏 → 输入内容仍在且编辑器未关闭；AGENTS 正文、定时任务表单、API Key 输入框同理。
+187. 目标与后台任务内存化：新建目标、跑一个后台任务 → 杀进程重启 → 目标与任务列表为空（不再出现 `interrupted` 任务）；`files/goals`、`files/jobs` 不再产生新写入。
+188. 小米云状态：未登录时插件页显示未登录；登录后显示已登录；杀进程后重开不触发任何网络请求或离屏 WebView（`logcat` 无 WebView/provider 初始化）；退出登录后保持未登录。
+189. 上翻阅读：在一个长会话中向上滚动到中部 → 等待定时提醒/后台任务/后台轮次追加消息 → 视图停留在原阅读位置并出现「回到底部」提示；点提示或自己发送消息时才回到底部。
+190. 网页崩溃兜底：开发者选项/`adb shell am crash` 触发 WebView 渲染进程崩溃（或模拟 `onRenderProcessGone`）→ 交付卡/小米云登录/写入不白屏、App 不崩溃，显示错误或重建后的页面。
+191. 回归：发消息/停止/工具调用、插件安装与状态刷新、提醒投递、日历工具、MCP、创意工坊、深链接与返回转场正常；`adb logcat` 无 `FATAL EXCEPTION`。

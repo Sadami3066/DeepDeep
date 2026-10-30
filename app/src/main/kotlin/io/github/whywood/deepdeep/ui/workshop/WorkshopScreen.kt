@@ -45,6 +45,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.WorkshopCreation
@@ -70,6 +71,8 @@ fun WorkshopScreen(
     var creations by remember { mutableStateOf<List<WorkshopCreation>>(emptyList()) }
     var invalid by remember { mutableStateOf<List<WorkshopInvalid>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var scanFailed by remember { mutableStateOf(false) }
+    var deleteFailed by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var invalidTarget by remember { mutableStateOf<WorkshopInvalid?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -78,19 +81,28 @@ fun WorkshopScreen(
 
     LaunchedEffect(refreshKey) {
         loading = true
-        val scan = withContext(Dispatchers.IO) { runCatching { store.scan() }.getOrNull() }
-        if (scan != null) {
-            creations = scan.creations
-            invalid = scan.invalid
-        }
+        scanFailed = false
+        deleteFailed = false
+        withContext(Dispatchers.IO) { runCatching { store.scan() } }.fold(
+            onSuccess = { scan ->
+                creations = scan.creations
+                invalid = scan.invalid
+            },
+            onFailure = { scanFailed = true },
+        )
         loading = false
     }
 
     fun delete(target: WorkshopInvalid) {
         invalidTarget = null
+        deleteFailed = false
         scope.launch {
-            withContext(Dispatchers.IO) { runCatching { store.delete(target.id) } }
-            refreshKey++
+            val result = withContext(Dispatchers.IO) { runCatching { store.delete(target.id) } }
+            if (result.isSuccess) {
+                refreshKey++
+            } else {
+                deleteFailed = true
+            }
         }
     }
 
@@ -159,6 +171,15 @@ fun WorkshopScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
+            if (scanFailed) {
+                WorkshopErrorRow(
+                    text = stringResource(R.string.workshop_error_scan_failed),
+                    onRetry = { refreshKey++ },
+                )
+            }
+            if (deleteFailed) {
+                WorkshopErrorRow(text = stringResource(R.string.workshop_error_delete_failed))
+            }
             when {
                 loading && creations.isEmpty() && invalid.isEmpty() -> Box(
                     Modifier
@@ -169,6 +190,8 @@ fun WorkshopScreen(
                 ) {
                     DdSpinner(size = 22.dp)
                 }
+
+                scanFailed && creations.isEmpty() && invalid.isEmpty() -> Unit
 
                 creations.isEmpty() && invalid.isEmpty() -> WorkshopEmpty()
 
@@ -220,6 +243,32 @@ fun WorkshopScreen(
             onDismiss = { invalidTarget = null },
             onDelete = { delete(target) },
         )
+    }
+}
+
+@Composable
+private fun WorkshopErrorRow(
+    text: String,
+    onRetry: (() -> Unit)? = null,
+) {
+    val colors = deepDeepColors()
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall,
+            color = colors.danger,
+        )
+        if (onRetry != null) {
+            DdTextAction(
+                text = stringResource(R.string.workshop_retry),
+                onClick = onRetry,
+                modifier = Modifier.testTag("workshop_retry"),
+            )
+        }
     }
 }
 

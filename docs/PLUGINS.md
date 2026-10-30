@@ -66,7 +66,7 @@ interface OfficialPlugin {
 - 设置项由 `PluginSettingSpec` 声明，分三种：`Toggle`（key/标题/默认布尔）、`Choice`（固定选项）、`Number`（标题/min/max/默认值）。读取时缺失键取声明默认值；设置文件缺失或损坏时按全部默认值运行，下一次写入会重写为合法文件。
 - 修改设置：UI 立即更新本地状态 → 写入 store → 调用插件 `onSettingsChanged(解析后的完整值)` → 重新同步技能 → `host.reconfigure()`；忙碌会话在本轮结束的安全点重建工具。
 - 运行时直接消费的设置：目标 `max_rounds`（0 表示不限）是 `create_goal` 未传 `max_goal_rounds` 时的默认轮数上限；后台任务 `max_running`（1–20）是每会话运行中任务上限；创意工坊 `max_turns`（1–32）是工坊 Agent 未显式指定 `maxTurns` 时的回合上限；`skill_enabled` 控制工坊技能是否贡献。
-- 状态缓存：插件 `status()` 的探测结果按 60 秒 TTL 复用；进入列表页/详情页先展示缓存并后台按需探测，标题栏刷新按钮强制立即重新探测。设置变更不会触发状态重新探测。
+- 状态缓存：插件 `status()` 的探测结果按 120 秒 TTL 复用；进入列表页/详情页先展示缓存并后台按需探测，标题栏刷新按钮强制立即重新探测。设置变更不会触发状态重新探测。
 
 ### 技能与迁移
 
@@ -102,7 +102,7 @@ interface OfficialPlugin {
 
 | 路径 | 内容 |
 |---|---|
-| `files/plugins/plugins.json` | 安装记录与启用状态，原子写；损坏时保留原文件并报错 |
+| `files/plugins/plugins.json` | 安装记录与启用状态，原子写；损坏时先备份为 `plugins.json.corrupt` 再重建内部记录，页面提示 |
 | `files/plugins/settings.json` | 插件设置（schemaVersion 1）；缺失或损坏时按默认值运行，下次写入重写 |
 | `files/skills/<skill-id>/` | 插件技能的仓库副本（`SKILL.md` + 随附文件）；技能页可见，`.deepdeep-plugin` 标记归属 |
 | `files/agent/skills/<skill-id>/` | 插件技能的生效副本；仅插件启用且技能开启时存在 |
@@ -127,7 +127,7 @@ interface OfficialPlugin {
 - 设置分组按 `PluginSettingSpec` 渲染：Toggle 为开关行，Number 为「− 数值 +」步进行（到上下限禁用），Choice 为下拉选项行；修改立即生效。插件停用时设置行只读。
 - 安装或插件的准备流程进行中时，列表与详情页的操作会禁用；进度同时显示在行内与通知里。
 - 全局 setup sheet：通用确认安装、进度、授权链接、「打开浏览器」、等待提示、取消。授权完成后 sheet 自动关闭；App 会尝试回到前台。
-- 状态探测结果缓存 60 秒：进入页面先显示缓存，后台按需刷新；标题右侧刷新按钮强制立即重新探测。
+- 状态探测结果缓存 120 秒：进入页面先显示缓存，后台按需刷新；标题右侧刷新按钮强制立即重新探测。
 - 卸载会删除二进制、插件配置、CLI 凭证、仓库/生效技能与安装记录；重新安装从零开始。内部插件不能卸载。
 
 ## 飞书插件
@@ -201,7 +201,7 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 官方插件（id `micloud`），不依赖 Linux；通过 App 内 WebView 登录 i.mi.com，读取与写入小米云个人数据：
 
-- 登录：WebView 登录后加密保存 cookie；未登录、失效、网络错误都有状态；动作支持登录/重新登录/退出登录。
+- 登录：WebView 登录后加密保存 cookie；插件状态只按本地 cookie 是否存在显示「未登录/已登录」，不做后台校验、不静默续期；动作支持登录/重新登录/退出登录，登录页内做一次校验。
 - 登录方式：浏览器 cookie 与 App 隔离、系统账号 token 受签名权限保护，均无法读取云数据；WebView 是唯一可行路径。登录页曾因 WebView 视口高度为 0 而空白，现在等待非零布局后加载并注入最小高度修正；i.mi.com 与 account.xiaomi.com 已真机验证可见可输入。详见 `docs/MICLOUD.md`。
 - 功能开关：账号、笔记、待办、短信与通话、联系人、相册、录音各一个开关，默认全部关闭；笔记/待办开关同时包含读取与写入，其他开关只读。只有开启的功能才会注入对应 `mi_cloud_*` 工具。
 - 工具：`mi_cloud_account`、`mi_cloud_notes`、`mi_cloud_todo`、`mi_cloud_sms`、`mi_cloud_contacts`、`mi_cloud_gallery`、`mi_cloud_recordings`，见 `docs/TOOLS.md`。
@@ -222,9 +222,9 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 
 - 单一状态源：`PluginManager.state: StateFlow<PluginsUiState>`，列表页、详情页、setup sheet 都只订阅它。
 - Agent 调用 `plugin_setup` 时走同一个 `PluginManager.setup()`，sheet 是状态的视图；用户取消会取消协程并杀掉 PRoot 进程，工具返回取消结果。
-- Agent 直接用 bash 操作 CLI 是允许的；插件页进入、App 恢复、一轮运行结束会按 60 秒 TTL 刷新状态缓存，显式刷新立即重新探测，界面与下一轮提示词随之更新。
+- Agent 直接用 bash 操作 CLI 是允许的；插件页进入、App 恢复、一轮运行结束会按 120 秒 TTL（15 秒去抖）刷新状态缓存，显式刷新立即重新探测，界面与下一轮提示词随之更新。
 - Agent 回前台时如果 setup 仍在等待而插件已就绪，会完成等待并关闭 sheet。
-- 连接状态永远来自插件自己的 `status()`，不写入安装记录；UI 只在 60 秒内复用上一次探测结果。设置变更即时落盘，并重建会话的工具与提示。
+- 连接状态永远来自插件自己的 `status()`，不写入安装记录；UI 只在 120 秒内复用上一次探测结果。设置变更即时落盘，并重建会话的工具与提示。
 
 ## 失败处理
 
@@ -238,7 +238,7 @@ LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 lark-cli a
 | 建应用/授权超时或拒绝 | 结束 setup，显示插件返回的错误 |
 | 授权成功但部分 scope 缺失 | 登录仍成功；状态与详情显示缺失权限，不重复要求授权 |
 | 用户取消 | 取消协程 → 杀 PRoot 进程，工具返回 cancelled |
-| 安装记录损坏 | 保留原文件，页面显示错误 |
+| 安装记录损坏 | 备份为 `plugins.json.corrupt`，重建内部插件记录，页面显示提示 |
 | 插件设置文件损坏 | 按各设置项默认值运行，下一次修改时重写为合法文件 |
 | 卸载清理失败 | 保留记录与错误，允许重试 |
 | 插件被关闭时调用 setup/action | 返回「插件已停用」 |

@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,16 +49,19 @@ fun WorkspaceSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var showProjectSkills by remember(workspace.id) { mutableStateOf(false) }
-    var showAgentsDoc by remember(workspace.id) { mutableStateOf(false) }
+    var showProjectSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showAgentsDoc by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var reloadKey by remember(workspace.id) { mutableStateOf(0) }
     var projectSkillCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
+    var skillsLoadFailed by remember(workspace.id) { mutableStateOf(false) }
     var agentsDocSet by remember(workspace.id) { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(workspace.id, reloadKey) {
+        skillsLoadFailed = false
         val skills = skillRepository.list()
         val enabledIds = skillRepository.projectEnabledIds(workspace.cwd)
-        projectSkillCount = skills.count { it.globalEnabled || it.id in enabledIds }
+        skillsLoadFailed = skills.isFailure
+        projectSkillCount = skills.getOrNull()?.count { it.globalEnabled || it.id in enabledIds }
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
     }
 
@@ -98,14 +102,16 @@ fun WorkspaceSettingsScreen(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(20.dp))
+            val skillCount = projectSkillCount
             SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Sparkles,
                     title = stringResource(R.string.workspace_settings_skills),
-                    value = when (val count = projectSkillCount) {
-                        null -> stringResource(R.string.workspace_settings_loading)
-                        0 -> stringResource(R.string.workspace_settings_skills_none)
-                        else -> stringResource(R.string.workspace_settings_skills_count, count)
+                    value = when {
+                        skillsLoadFailed -> stringResource(R.string.workspace_settings_skills_failed)
+                        skillCount == null -> stringResource(R.string.workspace_settings_loading)
+                        skillCount == 0 -> stringResource(R.string.workspace_settings_skills_none)
+                        else -> stringResource(R.string.workspace_settings_skills_count, skillCount)
                     },
                     onClick = { showProjectSkills = true },
                     showChevron = true,

@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.ui.schedules
 
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import io.github.whywood.deepdeep.runtime.Schedule
 import io.github.whywood.deepdeep.runtime.ScheduleTrigger
 import io.github.whywood.deepdeep.runtime.nextRun
@@ -99,3 +101,38 @@ data class ScheduleDraft(
         }
     }
 }
+
+internal val ScheduleDraftSaver: Saver<ScheduleDraft, Any> = listSaver<ScheduleDraft, Any>(
+    save = { draft ->
+        listOf(
+            draft.id.orEmpty(),
+            draft.name,
+            draft.prompt,
+            draft.repeat,
+            draft.date.toString(),
+            draft.time.toString(),
+            draft.cronExpression,
+            draft.sessionId,
+            draft.sessionFile,
+            draft.cwd,
+            draft.conversationTitle,
+            draft.enabled,
+        )
+    },
+    restore = { values ->
+        ScheduleDraft(
+            id = (values[0] as String).ifEmpty { null },
+            name = values[1] as String,
+            prompt = values[2] as String,
+            repeat = values[3] as Boolean,
+            date = LocalDate.parse(values[4] as String),
+            time = LocalTime.parse(values[5] as String),
+            cronExpression = values[6] as String,
+            sessionId = values[7] as String,
+            sessionFile = values[8] as String,
+            cwd = values[9] as String,
+            conversationTitle = values[10] as String,
+            enabled = values[11] as Boolean,
+        )
+    },
+)

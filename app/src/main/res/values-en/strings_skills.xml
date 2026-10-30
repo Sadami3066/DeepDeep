@@ -20,6 +20,7 @@
     <string name="skills_error_missing_description">SKILL.md is missing a description</string>
     <string name="skills_error_unsafe_path">The skill pack contains unsafe paths</string>
     <string name="skills_error_io">Could not read or write files</string>
+    <string name="skills_retry">Retry</string>
     <string name="skills_delete_title">Delete skill</string>
     <string name="skills_delete_message">"%1$s" will be deleted and cannot be recovered.</string>
     <string name="skills_delete_confirm">Delete</string>
