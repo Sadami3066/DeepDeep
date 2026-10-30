@@ -46,14 +46,17 @@ Android 上的 personal agent，运行时使用 [pi2kotlin](../pi2kotlin) 的 `p
 ## 环境
 
 - JDK 17+
-- Android SDK Platform 36
-- `pi2kotlin 0.2.2` 已发布到 mavenLocal：在 `../pi2kotlin` 执行 `./gradlew publishToMavenLocal`
+- Android SDK Platform 36 + build-tools 36.0.0
+- `dev.pi` SDK 由 Gradle 任务 `syncPiSdk` 自动从 pi2kotlin `v0.2.4` Release 拉取并校验 sha256，不再依赖本机 `~/.m2`
 
 ## 构建
 
 ```bash
-./gradlew :app:assembleDebug
+./scripts/dev-setup.sh          # 校验 JDK/SDK、写 local.properties、拉 SDK、出 debug APK
+./scripts/verify.sh             # 门禁：编译 + 单测 + lint + 模块边界
 ```
+
+两个脚本都用全局锁串行构建（本机内存有限，禁止并发跑 Gradle）。
 
 ## 边界
 

@@ -14,6 +14,13 @@ dependencyResolutionManagement {
                 includeGroup("dev.pi")
             }
         }
+        maven {
+            name = "piSdkLocal"
+            url = uri(rootDir.resolve("build/pi-sdk-m2"))
+            content {
+                includeGroup("dev.pi")
+            }
+        }
         google()
         mavenCentral()
     }

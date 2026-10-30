@@ -9,3 +9,6 @@ captures/
 .cxx/
 artifacts/validation/
 .kotlin/
+
+keystore.properties
+.notes/
