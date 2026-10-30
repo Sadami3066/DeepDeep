@@ -1,18 +1,20 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentToolResult
+import dev.pi.ai.RequestAbortedException
+import dev.pi.ai.RunSignal
 import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.ShellResult
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,13 +30,12 @@ class RootShellToolTest {
     private fun resultText(result: AgentToolResult): String =
         result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
 
-    private fun resultJson(result: AgentToolResult): JsonObject =
-        Json.parseToJsonElement(resultText(result)).jsonObject
-
     private fun args(command: String? = null, timeoutMillis: Long? = null): JsonObject = buildJsonObject {
         if (command != null) put("command", command)
         if (timeoutMillis != null) put("timeout_ms", timeoutMillis)
     }
+
+    private fun adapter(executor: RootCommandExecutor): RootShellAdapter = RootShellAdapter(executor)
 
     @Test
     fun toolExposesRootShellSchema() {
@@ -120,8 +121,8 @@ class RootShellToolTest {
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertTrue(called)
-        assertNull(result.isError)
-        assertTrue(resultText(result).contains("\"exitCode\":1"))
+        assertEquals(true, result.isError)
+        assertEquals("permission denied\n\nCommand exited with code 1", resultText(result))
     }
 
     @Test
@@ -139,6 +140,7 @@ class RootShellToolTest {
 
         assertTrue(called)
         assertNull(result.isError)
+        assertEquals("ok", resultText(result))
     }
 
     @Test
@@ -156,10 +158,11 @@ class RootShellToolTest {
 
         assertTrue(called)
         assertNull(result.isError)
+        assertEquals("(no output)", resultText(result))
     }
 
     @Test
-    fun successReturnsResultJson() = runBlocking {
+    fun successReturnsBashStyleText() = runBlocking {
         var seenCommand: String? = null
         var seenTimeout = 0L
         val tool = tool(
@@ -174,12 +177,18 @@ class RootShellToolTest {
 
         assertEquals("id /data", seenCommand)
         assertEquals(15_000L, seenTimeout)
+        assertEquals(true, result.isError)
+        assertEquals("out\nerr\n\n[Output truncated]\n\nCommand exited with code 3", resultText(result))
+    }
+
+    @Test
+    fun zeroExitOutputHasNoExitCodeLine() = runBlocking {
+        val tool = tool(executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "out", "err", false) })
+
+        val result = tool.execute("call-1", args("id"), null, null)
+
         assertNull(result.isError)
-        val body = resultJson(result)
-        assertEquals(3, (body.getValue("exitCode") as JsonPrimitive).content.toInt())
-        assertEquals("out", (body.getValue("stdout") as JsonPrimitive).content)
-        assertEquals("err", (body.getValue("stderr") as JsonPrimitive).content)
-        assertEquals(true, (body.getValue("truncated") as JsonPrimitive).content.toBoolean())
+        assertEquals("out\nerr", resultText(result))
     }
 
     @Test
@@ -196,21 +205,34 @@ class RootShellToolTest {
         assertEquals(120_000L, seenTimeout)
 
         tool.execute("call-2", args("id", 0), null, null)
-        assertEquals(1L, seenTimeout)
+        assertEquals(1_000L, seenTimeout)
     }
 
     @Test
-    fun executionTimeoutIsReportedInJson() = runBlocking {
+    fun timeoutIsRoundedUpToWholeSeconds() = runBlocking {
+        var seenTimeout = 0L
+        val tool = tool(
+            executor = RootCommandExecutor { _, timeout ->
+                seenTimeout = timeout
+                RootCommandResult(0, "", "", false)
+            },
+        )
+
+        tool.execute("call-1", args("id", 2_500), null, null)
+
+        assertEquals(3_000L, seenTimeout)
+    }
+
+    @Test
+    fun executionTimeoutIsReportedAsMinusOneExitCode() = runBlocking {
         val tool = tool(
             executor = RootCommandExecutor { _, _ -> RootCommandResult(-1, "partial", "", false) },
         )
 
         val result = tool.execute("call-1", args("sleep 60"), null, null)
 
-        assertNull(result.isError)
-        val body = resultJson(result)
-        assertEquals(-1, (body.getValue("exitCode") as JsonPrimitive).content.toInt())
-        assertEquals("partial", (body.getValue("stdout") as JsonPrimitive).content)
+        assertEquals(true, result.isError)
+        assertEquals("partial\n\nCommand exited with code -1", resultText(result))
     }
 
     @Test
@@ -226,7 +248,7 @@ class RootShellToolTest {
         )
 
         assertEquals(true, result.isError)
-        assertTrue(resultText(result).isNotBlank())
+        assertEquals("timeout_ms 必须是整数", resultText(result))
     }
 
     @Test
@@ -234,7 +256,7 @@ class RootShellToolTest {
         val result = tool().execute("call-1", args("   "), null, null)
 
         assertEquals(true, result.isError)
-        assertTrue(resultText(result).isNotBlank())
+        assertEquals("command 不能为空", resultText(result))
     }
 
     @Test
@@ -245,5 +267,109 @@ class RootShellToolTest {
 
         assertEquals(true, result.isError)
         assertEquals("su crashed", resultText(result))
+    }
+
+    @Test
+    fun abortedSignalPropagatesAbortWithoutExecution() {
+        var called = false
+        val tool = tool(
+            executor = RootCommandExecutor { _, _ ->
+                called = true
+                RootCommandResult(0, "", "", false)
+            },
+        )
+        val signal = RunSignal().apply { abort("stop") }
+
+        assertThrows(RequestAbortedException::class.java) {
+            runBlocking { tool.execute("call-1", args("id"), signal, null) }
+        }
+        assertFalse(called)
+    }
+
+    @Test
+    fun adapterMergesStdoutAndStderrAndPassesTimeout() = runBlocking {
+        var seenCommand: String? = null
+        var seenTimeout = 0L
+        val adapter = adapter(
+            RootCommandExecutor { command, timeout ->
+                seenCommand = command
+                seenTimeout = timeout
+                RootCommandResult(0, "out", "err", false)
+            },
+        )
+
+        val result = adapter.run("id", 5, null)
+
+        assertEquals("id", seenCommand)
+        assertEquals(5_000L, seenTimeout)
+        assertEquals(ShellResult(output = "out\nerr", exitCode = 0, truncated = false), result)
+    }
+
+    @Test
+    fun adapterSkipsEmptyStdoutAndStderr() = runBlocking {
+        val withEmptyStderr = adapter(RootCommandExecutor { _, _ -> RootCommandResult(0, "out", "", false) })
+        assertEquals("out", withEmptyStderr.run("id", 1, null).output)
+
+        val withEmptyStdout = adapter(RootCommandExecutor { _, _ -> RootCommandResult(0, "", "err", false) })
+        assertEquals("err", withEmptyStdout.run("id", 1, null).output)
+
+        val withEmptyOutput = adapter(RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) })
+        assertEquals("", withEmptyOutput.run("id", 1, null).output)
+    }
+
+    @Test
+    fun adapterDefaultsTimeoutToFifteenSeconds() = runBlocking {
+        var seenTimeout = 0L
+        val adapter = adapter(
+            RootCommandExecutor { _, timeout ->
+                seenTimeout = timeout
+                RootCommandResult(0, "", "", false)
+            },
+        )
+
+        adapter.run("id", null, null)
+
+        assertEquals(15_000L, seenTimeout)
+    }
+
+    @Test
+    fun adapterClampsTimeoutSeconds() = runBlocking {
+        var seenTimeout = 0L
+        val adapter = adapter(
+            RootCommandExecutor { _, timeout ->
+                seenTimeout = timeout
+                RootCommandResult(0, "", "", false)
+            },
+        )
+
+        adapter.run("id", 0, null)
+        assertEquals(1_000L, seenTimeout)
+
+        adapter.run("id", 500, null)
+        assertEquals(120_000L, seenTimeout)
+    }
+
+    @Test
+    fun adapterPassesExitCodeAndTruncation() = runBlocking {
+        val adapter = adapter(RootCommandExecutor { _, _ -> RootCommandResult(-1, "partial", "", true) })
+
+        assertEquals(ShellResult(output = "partial", exitCode = -1, truncated = true), adapter.run("id", 5, null))
+    }
+
+    @Test
+    fun adapterThrowsWhenSignalAlreadyAborted() {
+        var called = false
+        val adapter = adapter(
+            RootCommandExecutor { _, _ ->
+                called = true
+                RootCommandResult(0, "", "", false)
+            },
+        )
+        val signal = RunSignal().apply { abort("stop") }
+
+        assertThrows(RequestAbortedException::class.java) {
+            runBlocking { adapter.run("id", 5, signal) }
+        }
+        assertFalse(called)
     }
 }
