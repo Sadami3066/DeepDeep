@@ -16,7 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.runtime.AgentRuntime
+import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 
 class NotificationCenter(
     private val context: Context,
-    private val runtime: AgentRuntime,
+    private val runtime: ConversationQueries,
 ) {
     private data class ActiveRun(
         val sessionId: String,

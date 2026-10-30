@@ -28,4 +28,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "deepdeep"
 
-include(":app", ":runtime", ":shell", ":design")
+include(":app", ":runtime", ":runtime-api", ":shell", ":design")

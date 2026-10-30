@@ -12,19 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class QuestionOption(
-    val label: String,
-    val description: String? = null,
-)
-
-data class UserQuestion(
-    val id: String,
-    val header: String? = null,
-    val question: String,
-    val options: List<QuestionOption> = emptyList(),
-    val multiSelect: Boolean = false,
-)
-
 data class QuestionAnswer(
     val questionId: String,
     val selected: List<String> = emptyList(),

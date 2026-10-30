@@ -38,7 +38,7 @@ private val NEXT_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M
 @Composable
 fun ScheduleScreen(
     service: ScheduleService,
-    runtime: AgentRuntime,
+    runtime: ConversationQueries,
     initialConversationId: String?,
     onBack: () -> Unit,
     onOpenConversation: (String) -> Unit,

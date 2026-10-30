@@ -288,20 +288,6 @@ sealed interface RuntimeEvent {
     ) : RuntimeEvent
 }
 
-interface ProviderDirectory {
-    val summaries: List<ProviderSummary>
-
-    fun summary(providerId: String): ProviderSummary?
-
-    fun models(providerId: String): List<ModelOption>
-
-    fun resolveConfig(config: ModelConfig): ModelConfig
-
-    fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model?
-
-    fun modelReference(providerId: String, modelId: String): String
-}
-
 interface ModelSettings {
     val config: kotlinx.coroutines.flow.Flow<ModelConfig>
 
@@ -310,30 +296,7 @@ interface ModelSettings {
     suspend fun save(config: ModelConfig)
 }
 
-interface AgentRuntime {
-    val events: SharedFlow<SessionRuntimeEvent>
-    val busySessionIds: kotlinx.coroutines.flow.StateFlow<Set<String>>
-    val activeRuns: kotlinx.coroutines.flow.StateFlow<Map<String, ActiveRunSnapshot>>
-    val interruptedRuns: kotlinx.coroutines.flow.StateFlow<List<InterruptedRun>>
-
-    suspend fun dismissInterruptedRun(sessionId: String)
-
-    suspend fun start()
-
-    suspend fun ensureStarted()
-
-    suspend fun workspaces(): List<RuntimeWorkspace>
-
-    suspend fun createWorkspace(name: String): RuntimeWorkspace
-
-    suspend fun renameWorkspace(id: String, name: String)
-
-    suspend fun deleteWorkspace(id: String)
-
-    suspend fun allSessions(): List<ConversationSummary>
-
-    suspend fun workspaceSessionCount(workspaceId: String): Int
-
+interface SessionCommands {
     suspend fun newSession(workspaceId: String): OpenedSession
 
     suspend fun openSession(filePath: String, cwd: String): OpenedSession
@@ -359,14 +322,60 @@ interface AgentRuntime {
     suspend fun activeRunId(sessionId: String): String?
 
     fun stop(sessionId: String): List<String>
+}
+
+interface ConversationQueries {
+    val events: SharedFlow<SessionRuntimeEvent>
+
+    val busySessionIds: kotlinx.coroutines.flow.StateFlow<Set<String>>
+
+    val activeRuns: kotlinx.coroutines.flow.StateFlow<Map<String, ActiveRunSnapshot>>
+
+    val interruptedRuns: kotlinx.coroutines.flow.StateFlow<List<InterruptedRun>>
+
+    suspend fun workspaces(): List<RuntimeWorkspace>
+
+    suspend fun allSessions(): List<ConversationSummary>
+
+    suspend fun sessions(workspaceId: String): List<ConversationSummary>
+
+    suspend fun archivedSessions(): List<ConversationSummary>
 
     suspend fun history(sessionId: String): List<AssistantMessage>
 
     suspend fun sessionTitle(sessionId: String): String?
 
-    suspend fun sessions(workspaceId: String): List<ConversationSummary>
+    suspend fun sessionModel(sessionId: String): SessionModelSnapshot?
 
-    suspend fun archivedSessions(): List<ConversationSummary>
+    suspend fun usage(sessionId: String): SessionUsage? = null
+}
+
+interface WorkspaceAdmin {
+    suspend fun createWorkspace(name: String): RuntimeWorkspace
+
+    suspend fun renameWorkspace(id: String, name: String)
+
+    suspend fun deleteWorkspace(id: String)
+
+    suspend fun workspaceSessionCount(workspaceId: String): Int
+}
+
+interface ModelControl {
+    suspend fun setSessionModel(sessionId: String, providerId: String, modelId: String, thinkingLevel: ThinkingLevel)
+
+    suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel)
+
+    suspend fun currentConfig(): ModelConfig
+}
+
+interface Maintenance {
+    suspend fun start()
+
+    suspend fun ensureStarted()
+
+    suspend fun dismissInterruptedRun(sessionId: String)
+
+    suspend fun compact(sessionId: String): CompactionOutcome = CompactionOutcome.Unavailable
 
     suspend fun renameSession(id: String, title: String)
 
@@ -375,16 +384,6 @@ interface AgentRuntime {
     suspend fun setSessionArchived(id: String, archived: Boolean)
 
     suspend fun deleteSession(id: String)
-
-    suspend fun sessionModel(sessionId: String): SessionModelSnapshot?
-
-    suspend fun setSessionModel(sessionId: String, providerId: String, modelId: String, thinkingLevel: ThinkingLevel)
-
-    suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel)
-
-    suspend fun currentConfig(): ModelConfig
-
-    suspend fun usage(sessionId: String): SessionUsage? = null
-
-    suspend fun compact(sessionId: String): CompactionOutcome = CompactionOutcome.Unavailable
 }
+
+interface AgentRuntime : SessionCommands, ConversationQueries, WorkspaceAdmin, ModelControl, Maintenance

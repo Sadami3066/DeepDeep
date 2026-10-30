@@ -6,13 +6,11 @@ import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
-import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InterruptedRun
@@ -20,15 +18,12 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ModelSettings
-import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
-import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
@@ -37,17 +32,19 @@ import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.UserQuestion
+import io.github.whywood.deepdeep.ui.chat.testing.DelayedOpenRuntime
+import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
+import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
+import io.github.whywood.deepdeep.ui.chat.testing.HOME_ID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -72,7 +69,7 @@ class ChatViewModelTest {
     }
 
     private fun viewModel(
-        runtime: FakeRuntime,
+        runtime: AgentRuntime,
         autoRetry: Boolean = false,
         skillExpander: SkillExpander? = null,
         settings: FakeSettings = FakeSettings(),
@@ -116,7 +113,7 @@ class ChatViewModelTest {
 
     @Test
     fun defaultTitleIsReplacedAfterLanguageSwitch() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
@@ -129,7 +126,7 @@ class ChatViewModelTest {
 
     @Test
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
@@ -156,7 +153,7 @@ class ChatViewModelTest {
 
     @Test
     fun updateUiStringsLocalizesSubsequentEvents() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.updateUiStrings(ChatUiStrings.fallback().copy(requestFailed = "localized failure"))
@@ -173,7 +170,7 @@ class ChatViewModelTest {
 
     @Test
     fun ignoresStaleRunEvents() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -189,7 +186,7 @@ class ChatViewModelTest {
 
     @Test
     fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("do it")
@@ -234,7 +231,7 @@ class ChatViewModelTest {
     fun switchingBackShowsCachedMessagesBeforeSessionOpens() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
@@ -262,7 +259,7 @@ class ChatViewModelTest {
     @Test
     fun insertsInterruptedQuestionNoticeAfterOpeningSession() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -286,7 +283,7 @@ class ChatViewModelTest {
     fun keepsInterruptedQuestionNoticeAcrossConversationSwitches() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
@@ -317,7 +314,7 @@ class ChatViewModelTest {
     @Test
     fun dismissesInterruptedQuestionsOnNextMessage() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -343,7 +340,7 @@ class ChatViewModelTest {
     @Test
     fun insertsInterruptedRunNoticeAfterOpeningSession() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -367,7 +364,7 @@ class ChatViewModelTest {
     fun keepsInterruptedRunNoticeAcrossConversationSwitches() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
@@ -398,7 +395,7 @@ class ChatViewModelTest {
     @Test
     fun dismissesInterruptedRunOnNextMessage() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -424,7 +421,7 @@ class ChatViewModelTest {
     @Test
     fun removesBothInterruptedNoticesAfterSendingMessage() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -453,7 +450,7 @@ class ChatViewModelTest {
     fun doesNotRestoreInterruptedRunNoticeAfterSwitchingBack() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
@@ -489,7 +486,7 @@ class ChatViewModelTest {
     @Test
     fun insertsInterruptedQuestionAndRunNoticesTogether() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(session)
             histories = mapOf("session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "hello")))
         }
@@ -510,7 +507,7 @@ class ChatViewModelTest {
     fun backgroundRunKeepsStreamingAfterSwitchingAway() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to emptyList(),
@@ -549,7 +546,7 @@ class ChatViewModelTest {
     fun attachmentImportedAfterSwitchingSessionIsDiscarded() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
         }
@@ -587,7 +584,7 @@ class ChatViewModelTest {
 
     @Test
     fun newSessionCanStartWhilePreviousSessionIsRunning() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -617,7 +614,7 @@ class ChatViewModelTest {
 
     @Test
     fun batchesRapidDeltasWithoutLosingText() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("stream")
@@ -639,7 +636,7 @@ class ChatViewModelTest {
 
     @Test
     fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
@@ -659,7 +656,7 @@ class ChatViewModelTest {
     @Test
     fun blankCachedConversationAlwaysReloadsHistory() = runTest(dispatcher) {
         val existing = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(existing)
             histories = mapOf("session-a" to emptyList())
         }
@@ -687,7 +684,7 @@ class ChatViewModelTest {
     @Test
     fun turnInjectedCreatesPlaceholderAndStreams() = runTest(dispatcher) {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply { sessions = listOf(session) }
+        val runtime = FakeAgentRuntime().apply { sessions = listOf(session) }
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         val sessionId = viewModel.state.value.conversationId!!
@@ -717,7 +714,7 @@ class ChatViewModelTest {
 
     @Test
     fun retryRegeneratesReplyWithoutResendingUserText() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -755,7 +752,7 @@ class ChatViewModelTest {
 
     @Test
     fun autoRetryRegeneratesAfterTransientFailure() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -775,7 +772,7 @@ class ChatViewModelTest {
 
     @Test
     fun autoRetryLabelSurvivesHostTerminalActivityClear() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -802,7 +799,7 @@ class ChatViewModelTest {
 
     @Test
     fun stopCancelsPendingAutoRetry() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -826,7 +823,7 @@ class ChatViewModelTest {
 
     @Test
     fun autoRetrySkipsTimeouts() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -845,7 +842,7 @@ class ChatViewModelTest {
     fun eachConversationKeepsItsOwnModel() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
             sessionModels = mutableMapOf(
@@ -878,7 +875,7 @@ class ChatViewModelTest {
 
     @Test
     fun lostTerminalReconcilesAfterBusyDisappears() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -909,7 +906,7 @@ class ChatViewModelTest {
 
     @Test
     fun foregroundReconcilesStuckSending() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -936,7 +933,7 @@ class ChatViewModelTest {
 
     @Test
     fun stopWithoutActiveRunReconcilesInsteadOfHanging() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("hello")
@@ -970,7 +967,7 @@ class ChatViewModelTest {
 
     @Test
     fun workshopSkillExpandsPromptBeforeSending() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -989,7 +986,7 @@ class ChatViewModelTest {
 
     @Test
     fun workshopSkillWithoutArgsUsesSkillNameAsTitle() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -1005,7 +1002,7 @@ class ChatViewModelTest {
 
     @Test
     fun skillNamespaceExpandsNamedSkill() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("pdf-tools", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -1020,7 +1017,7 @@ class ChatViewModelTest {
 
     @Test
     fun trailingSkillMentionExpandsInlineBeforeSending() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -1037,7 +1034,7 @@ class ChatViewModelTest {
 
     @Test
     fun trailingUnknownSkillShowsErrorWithoutSending() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(null)
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -1054,7 +1051,7 @@ class ChatViewModelTest {
 
     @Test
     fun refreshAvailableSkillsLoadsCwdSkills() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(
             result = null,
             available = listOf(SkillSummary("foo", "Foo helper")),
@@ -1071,7 +1068,7 @@ class ChatViewModelTest {
 
     @Test
     fun missingSkillExpanderShowsError() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
@@ -1087,7 +1084,7 @@ class ChatViewModelTest {
 
     @Test
     fun unknownSkillShowsErrorWithoutSending() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(null)
         val viewModel = viewModel(runtime, skillExpander = expander)
         advanceUntilIdle()
@@ -1104,7 +1101,7 @@ class ChatViewModelTest {
 
     @Test
     fun newSessionPrefillsInput() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
@@ -1117,7 +1114,7 @@ class ChatViewModelTest {
 
     @Test
     fun sendWhileBusySteersCurrentInput() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -1135,7 +1132,7 @@ class ChatViewModelTest {
 
     @Test
     fun sendWhileBusyRejectsCommands() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -1152,7 +1149,7 @@ class ChatViewModelTest {
 
     @Test
     fun followUpNowQueuesWhileBusy() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -1169,7 +1166,7 @@ class ChatViewModelTest {
 
     @Test
     fun stopRestoresDroppedQueueText() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -1186,7 +1183,7 @@ class ChatViewModelTest {
 
     @Test
     fun queuedInputEventsUpdateQueueAndDroppedTextsRestoreInput() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         val sessionId = viewModel.state.value.conversationId!!
@@ -1216,7 +1213,7 @@ class ChatViewModelTest {
 
     @Test
     fun userInputAdmittedSplitsAssistantMessage() = runTest(dispatcher) {
-        val runtime = FakeRuntime()
+        val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
         viewModel.onInputChange("first")
@@ -1247,7 +1244,7 @@ class ChatViewModelTest {
         assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
     }
 
-    private fun multiSessionRuntime(count: Int): FakeRuntime {
+    private fun multiSessionRuntime(count: Int): FakeAgentRuntime {
         val summaries = (1..count).map { index ->
             ConversationSummary(
                 id = "session-$index",
@@ -1257,7 +1254,7 @@ class ChatViewModelTest {
                 cwd = HOME_CWD,
             )
         }
-        return FakeRuntime().apply {
+        return FakeAgentRuntime().apply {
             sessions = summaries
             histories = summaries.associate { summary ->
                 summary.id to listOf(AssistantMessage(1, AssistantRole.USER, summary.id))
@@ -1269,7 +1266,7 @@ class ChatViewModelTest {
     fun restoresDraftQuoteAndAttachmentsWhenSwitchingBack() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf(
                 "session-a" to listOf(AssistantMessage(1, AssistantRole.USER, "from a")),
@@ -1316,7 +1313,7 @@ class ChatViewModelTest {
     fun doesNotRestoreStaleQueuedInputsFromCachedSession() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
         }
@@ -1347,7 +1344,7 @@ class ChatViewModelTest {
     fun keepsScrollAnchorPerSession() = runTest(dispatcher) {
         val first = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val second = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
-        val runtime = FakeRuntime().apply {
+        val runtime = FakeAgentRuntime().apply {
             sessions = listOf(first, second)
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
         }
@@ -1473,156 +1470,105 @@ class ChatViewModelTest {
         }
     }
 
-    private class FakeRuntime : AgentRuntime {
-        private val flow = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 64)
-        private val busy = MutableStateFlow<Set<String>>(emptySet())
-        val runId = "run-1"
-        override val events: SharedFlow<SessionRuntimeEvent> = flow
-        override val busySessionIds: StateFlow<Set<String>> = busy
-        val interruptedRunState = MutableStateFlow<List<InterruptedRun>>(emptyList())
-        override val interruptedRuns: StateFlow<List<InterruptedRun>> = interruptedRunState
-        override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
-        var sessions: List<ConversationSummary> = emptyList()
-        var histories: Map<String, List<AssistantMessage>> = emptyMap()
-        var sessionModels: MutableMap<String, SessionModelSnapshot> = mutableMapOf()
-        val historyCalls = mutableMapOf<String, Int>()
-        val openCalls = mutableListOf<String>()
-        val sent = mutableListOf<String>()
-        val sentImages = mutableListOf<List<ImagePart>>()
-        val steered = mutableListOf<String>()
-        val followUps = mutableListOf<String>()
-        var queued: List<QueuedInput> = emptyList()
-        var stopDropped: List<String> = emptyList()
-        val delivered = mutableListOf<Triple<String, String, String?>>()
-        val stopped = mutableListOf<String>()
-        private var createdCount = 0
-        private val extraProjects = mutableListOf<RuntimeWorkspace>()
-
-        fun setBusy(ids: Set<String>) {
-            busy.value = ids
+    @Test
+    fun openSessionKeepsDeltasArrivingBeforeHistoryLands() = runTest(dispatcher) {
+        val sessionA = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val sessionB = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val streaming = AssistantMessage(
+            id = 0,
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            streaming = true,
+            status = MessageStatus.RUNNING,
+            startedAt = 1L,
+            runId = "run-live",
+        )
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(sessionA, sessionB)
+            histories = mapOf("session-b" to listOf(streaming))
         }
+        val delayed = DelayedOpenRuntime(runtime)
+        val viewModel = viewModel(delayed)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
 
-        override suspend fun start() = Unit
-        override suspend fun ensureStarted() = Unit
-        val dismissedRuns = mutableListOf<String>()
-        override suspend fun dismissInterruptedRun(sessionId: String) {
-            dismissedRuns += sessionId
+        delayed.gate = CompletableDeferred()
+        viewModel.openConversation("session-b")
+        runCurrent()
+        assertEquals("session-b", viewModel.state.value.conversationId)
+        assertTrue(viewModel.state.value.switchingConversation)
+
+        runtime.emitFor("session-b", RuntimeEvent.TextDelta("run-live", "late delta"))
+        runCurrent()
+        assertTrue(viewModel.state.value.messages.isEmpty())
+
+        delayed.gate?.complete(Unit)
+        runCurrent()
+        assertFalse(viewModel.state.value.switchingConversation)
+        advanceUntilIdle()
+
+        val streamed = viewModel.state.value.messages.single()
+        assertEquals(
+            "late delta",
+            streamed.steps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text },
+        )
+    }
+
+    @Test
+    fun autoRetryCountdownSurvivesSwitchingAwayAndBack() = runTest(dispatcher) {
+        val sessionA = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
+        val sessionB = ConversationSummary("session-b", "B", 1L, "b.jsonl", HOME_CWD)
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(sessionA, sessionB)
         }
+        val viewModel = viewModel(runtime, autoRetry = true)
+        advanceUntilIdle()
+        assertEquals("session-a", viewModel.state.value.conversationId)
 
-        override suspend fun workspaces(): List<RuntimeWorkspace> =
-            listOf(RuntimeWorkspace(HOME_ID, "Home", HOME_CWD, isHome = true)) + extraProjects
+        viewModel.onInputChange("hello")
+        viewModel.send()
+        runtime.emitFor("session-a", RuntimeEvent.RunStarted(runtime.runId, 1_000L))
+        runtime.emitFor("session-a", RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        advanceTimeBy(1L)
+        assertTrue(viewModel.state.value.sending)
+        assertEquals(0, runtime.retried)
 
-        override suspend fun createWorkspace(name: String): RuntimeWorkspace {
-            val workspace = RuntimeWorkspace("workspace-$name", name, "/workspaces/$name", createdAt = 1L)
-            extraProjects += workspace
-            return workspace
-        }
+        viewModel.openConversation("session-b")
+        runCurrent()
+        assertEquals("session-b", viewModel.state.value.conversationId)
+        viewModel.openConversation("session-a")
+        runCurrent()
+        assertEquals("session-a", viewModel.state.value.conversationId)
+        assertEquals(0, runtime.retried)
 
-        override suspend fun renameWorkspace(id: String, name: String) = Unit
-        override suspend fun deleteWorkspace(id: String) = Unit
+        advanceTimeBy(2_500L)
+        advanceUntilIdle()
 
-        override suspend fun allSessions(): List<ConversationSummary> =
-            sessions.filter { !it.archived }
+        assertEquals(1, runtime.retried)
+        assertTrue(viewModel.state.value.sending)
+    }
 
-        override suspend fun workspaceSessionCount(workspaceId: String): Int = sessions.size
+    @Test
+    fun droppedQueuedInputsMergeInOrderWithExistingDraft() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.conversationId!!
 
-        override suspend fun newSession(workspaceId: String): OpenedSession {
-            createdCount += 1
-            val id = "session-$createdCount"
-            sessions = sessions + ConversationSummary(id, "", createdCount.toLong(), "$id.jsonl", HOME_CWD)
-            return OpenedSession(id, "$id.jsonl", HOME_CWD)
-        }
+        viewModel.onInputChange("draft text")
+        runtime.emitFor(
+            sessionId,
+            RuntimeEvent.QueueChanged(runtime.runId, steering = listOf("s1", "s2"), followUp = listOf("f1")),
+        )
+        advanceUntilIdle()
+        assertEquals(3, viewModel.state.value.queuedInputs.size)
 
-        override suspend fun openSession(filePath: String, cwd: String): OpenedSession {
-            openCalls += filePath
-            val summary = sessions.firstOrNull { it.filePath == filePath }
-            return OpenedSession(summary?.id ?: filePath, filePath, cwd)
-        }
+        runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("first", "second"), runtime.runId))
+        runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("third"), runtime.runId))
+        advanceUntilIdle()
 
-        override suspend fun closeSession(sessionId: String) = Unit
-
-        override suspend fun reloadSession(sessionId: String): String = sessionId
-
-        override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
-            sent += text
-            sentImages += images
-        }
-
-        override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
-            steered += text
-            sentImages += images
-        }
-
-        override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) {
-            followUps += text
-            sentImages += images
-        }
-
-        override fun queuedInputs(sessionId: String): List<QueuedInput> = queued
-
-        override fun clearQueuedInputs(sessionId: String): List<String> {
-            val dropped = queued.map { it.text }
-            queued = emptyList()
-            return dropped
-        }
-
-        var retried = 0
-
-        override suspend fun retryLastTurn(sessionId: String) {
-            retried += 1
-        }
-
-        override fun stop(sessionId: String): List<String> {
-            stopped += sessionId
-            val dropped = stopDropped
-            stopDropped = emptyList()
-            return dropped
-        }
-
-        override suspend fun history(sessionId: String): List<AssistantMessage> {
-            historyCalls[sessionId] = (historyCalls[sessionId] ?: 0) + 1
-            return histories[sessionId].orEmpty()
-        }
-
-        override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
-            delivered += Triple(sessionId, text, reminder)
-        }
-
-        override suspend fun activeRunId(sessionId: String): String? = activeRuns.value[sessionId]?.runId
-
-        override suspend fun sessionTitle(sessionId: String): String? =
-            sessions.firstOrNull { it.id == sessionId }?.title
-
-        override suspend fun sessions(workspaceId: String): List<ConversationSummary> =
-            sessions.filter { !it.archived }
-
-        override suspend fun archivedSessions(): List<ConversationSummary> =
-            sessions.filter { it.archived }
-
-        override suspend fun renameSession(id: String, title: String) = Unit
-        override suspend fun setSessionPinned(id: String, pinned: Boolean) = Unit
-        override suspend fun setSessionArchived(id: String, archived: Boolean) = Unit
-        override suspend fun deleteSession(id: String) = Unit
-
-        override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = sessionModels[sessionId]
-
-        override suspend fun setSessionModel(
-            sessionId: String,
-            providerId: String,
-            modelId: String,
-            thinkingLevel: ThinkingLevel,
-        ) {
-            sessionModels[sessionId] = SessionModelSnapshot(providerId, modelId, thinkingLevel)
-        }
-
-        override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) {
-            sessionModels[sessionId]?.let { sessionModels[sessionId] = it.copy(thinkingLevel = thinkingLevel) }
-        }
-
-        override suspend fun currentConfig(): ModelConfig = ModelConfig()
-
-        suspend fun emitFor(sessionId: String, event: RuntimeEvent) =
-            flow.emit(SessionRuntimeEvent(sessionId, event))
+        assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
+        assertEquals("draft text\n\nfirst\n\nsecond\n\nthird", viewModel.state.value.input)
     }
 
     private class FakeProviders(
@@ -1685,8 +1631,6 @@ class ChatViewModelTest {
     }
 
     private companion object {
-        const val HOME_ID = "home"
-        const val HOME_CWD = "/home"
         const val SKILL_PROMPT =
             "<skill name=\"workshop\" location=\"/home/skills/workshop/SKILL.md\">\n# Workshop\n</skill>\n\nbuild a todo app"
     }

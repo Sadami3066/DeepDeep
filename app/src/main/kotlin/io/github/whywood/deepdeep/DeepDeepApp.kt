@@ -52,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.PersonalizationUi
@@ -119,7 +121,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 internal fun DeepDeepApp(
-    graph: AppGraph,
+    graph: AppDependencies,
     theme: ThemeMode,
     fontStyle: DdFontStyle = DdFontStyle.LORA,
     openSessionId: String? = null,
@@ -224,7 +226,7 @@ internal fun DeepDeepApp(
     val state by stateHolder
     val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
     val attachmentRoot = remember(state.conversationCwd) {
-        state.conversationCwd.takeIf { it.isNotBlank() }?.let(::File) ?: graph.homeDir
+        resolveAttachmentRoot(state.conversationCwd, graph.homeDir)
     }
     var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current

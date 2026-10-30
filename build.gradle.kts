@@ -106,10 +106,76 @@ allprojects {
     }
 }
 
+val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
+    group = "verification"
+    description = "Checks package-level import rules that module boundaries cannot express."
+    val sourceRoots = listOf("app", "runtime", "runtime-api", "shell", "design").associateWith { module ->
+        layout.projectDirectory.dir("$module/src/main/kotlin")
+    }
+    val allowlistFile = layout.projectDirectory.file("gradle/package-boundaries.allow")
+    inputs.files(sourceRoots.values)
+    inputs.file(allowlistFile)
+    doLast {
+        val base = "io.github.whywood.deepdeep"
+        val allowlist = allowlistFile.asFile.readLines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .toSet()
+        val observed = mutableSetOf<String>()
+        val introduced = mutableListOf<String>()
+        fun check(coupling: String, subject: String) {
+            if (observed.add(coupling)) {
+                if (coupling !in allowlist) introduced += "$subject ($coupling)"
+            }
+        }
+        for ((module, rootRef) in sourceRoots) {
+            val root = rootRef.asFile
+            if (!root.isDirectory) continue
+            root.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach { file ->
+                val relative = file.relativeTo(root).path.replace('\\', '/')
+                val packageName = relative.substringBeforeLast('/', "").replace('/', '.')
+                file.readLines().forEach { raw ->
+                    val line = raw.trim()
+                    if (!line.startsWith("import ")) return@forEach
+                    val imported = line.removePrefix("import ").removePrefix("import\t").substringBefore(" as ").trim()
+                    if (!imported.startsWith(base)) return@forEach
+                    if (module != "app" && (imported == "$base.AppGraph" || imported == "$base.DeepDeepApplication" || imported.startsWith("$base.ui."))) {
+                        check("$module/$relative|$imported", "module $module")
+                    }
+                    if (module == "app" && packageName.startsWith("$base.ui.")) {
+                        if (imported == "$base.AppGraph" || imported == "$base.DeepDeepApplication") {
+                            check("ui/$relative|$imported", "shell access from ui")
+                        }
+                        val parts = imported.split('.')
+                        if (parts.size > 6 && parts[4] == "ui") {
+                            val mine = packageName.removePrefix("$base.ui.").substringBefore('.')
+                            val target = parts[5]
+                            if (target != mine && target != "common" && target != "navigation") {
+                                check("ui/$relative|$imported", "cross-feature import")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val stale = allowlist - observed
+        if (stale.isNotEmpty()) {
+            logger.lifecycle("Package boundary allowlist has ${stale.size} stale entries (remove them):")
+            stale.sorted().forEach { logger.lifecycle("  - $it") }
+        }
+        check(introduced.isEmpty()) {
+            "New package boundary violations (fix the import, or add to gradle/package-boundaries.allow only if intentional):\n" +
+                introduced.joinToString("\n")
+        }
+        logger.lifecycle("Package boundaries verified (${observed.size} tolerated couplings)")
+    }
+}
+
 gradle.projectsEvaluated {
     val allowed = mapOf(
         ":app" to setOf(":runtime", ":shell", ":design"),
-        ":runtime" to emptySet(),
+        ":runtime" to setOf(":runtime-api"),
+        ":runtime-api" to emptySet(),
         ":shell" to emptySet(),
         ":design" to emptySet(),
     )
@@ -132,20 +198,22 @@ gradle.projectsEvaluated {
         inputs.property("violations", violations)
         doLast {
             check(violations.isEmpty()) { "Invalid module dependencies: ${violations.joinToString()}" }
-            logger.lifecycle("Module boundaries verified: app -> runtime/shell/design")
+            logger.lifecycle("Module boundaries verified: app -> runtime/shell/design; runtime -> runtime-api")
         }
     }
 
-    val unitTestTasks = subprojects.map { it.tasks.named("testDebugUnitTest") }
+    val unitTestTasks = subprojects.mapNotNull { it.tasks.findByName("testDebugUnitTest") ?: it.tasks.findByName("test") }
     val lintTasks = subprojects.mapNotNull { it.tasks.findByName("lintDebug") }
     tasks.named("check") {
         dependsOn(verifyModuleBoundaries)
+        dependsOn(verifyPackageBoundaries)
         dependsOn(unitTestTasks)
         dependsOn(lintTasks)
     }
     subprojects {
         tasks.matching { it.name == "check" }.configureEach {
             dependsOn(verifyModuleBoundaries)
+            dependsOn(verifyPackageBoundaries)
         }
     }
 }

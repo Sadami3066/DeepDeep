@@ -12,12 +12,6 @@ import kotlinx.coroutines.flow.map
 
 private val Context.modelDataStore by preferencesDataStore(name = "model_config")
 
-data class ModelConfig(
-    val providerId: String = ProviderCatalog.DEFAULT_PROVIDER_ID,
-    val modelId: String = ProviderCatalog.DEFAULT_MODEL_ID,
-    val thinkingLevel: ThinkingLevel = ThinkingLevel.OFF,
-)
-
 class ModelConfigStore(context: Context) : ModelSettings {
     private val store = context.applicationContext.modelDataStore
     private val providerKey = stringPreferencesKey("provider_id")

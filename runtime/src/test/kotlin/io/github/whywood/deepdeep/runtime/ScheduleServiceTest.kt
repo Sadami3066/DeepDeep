@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime
 import java.io.File
 import java.nio.file.Files
 import java.time.Duration
@@ -12,7 +13,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -764,104 +764,5 @@ class ScheduleServiceTest {
             service.stop()
             directory.deleteRecursively()
         }
-    }
-
-    private class Delivery(
-        val sessionId: String,
-        val text: String,
-        val reminder: String?,
-    )
-
-    private class FakeAgentRuntime : AgentRuntime {
-        override val events = MutableSharedFlow<SessionRuntimeEvent>(extraBufferCapacity = 16)
-        override val busySessionIds = MutableStateFlow<Set<String>>(emptySet())
-        override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
-        override val interruptedRuns = MutableStateFlow<List<InterruptedRun>>(emptyList())
-
-        override suspend fun dismissInterruptedRun(sessionId: String) = Unit
-
-        val deliveries = mutableListOf<Delivery>()
-        val openedFiles = mutableListOf<String>()
-        var openFailure: Exception? = null
-        var deliveryFailure: Exception? = null
-
-        override suspend fun start() = Unit
-
-        override suspend fun ensureStarted() = Unit
-
-        override suspend fun workspaces(): List<RuntimeWorkspace> = emptyList()
-
-        override suspend fun createWorkspace(name: String): RuntimeWorkspace = error("unused")
-
-        override suspend fun renameWorkspace(id: String, name: String) = Unit
-
-        override suspend fun deleteWorkspace(id: String) = Unit
-
-        override suspend fun allSessions(): List<ConversationSummary> = emptyList()
-
-        override suspend fun workspaceSessionCount(workspaceId: String): Int = 0
-
-        override suspend fun newSession(workspaceId: String): OpenedSession = error("unused")
-
-        override suspend fun openSession(filePath: String, cwd: String): OpenedSession {
-            openFailure?.let { throw it }
-            openedFiles += filePath
-            val sessionId = filePath.substringAfterLast('/').substringBeforeLast('.')
-            return OpenedSession(sessionId = sessionId, filePath = filePath, cwd = cwd)
-        }
-
-        override suspend fun closeSession(sessionId: String) = Unit
-
-        override suspend fun reloadSession(sessionId: String): String = error("unused")
-
-        override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) = Unit
-
-        override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) = Unit
-
-        override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) = Unit
-
-        override fun queuedInputs(sessionId: String): List<QueuedInput> = emptyList()
-
-        override fun clearQueuedInputs(sessionId: String): List<String> = emptyList()
-
-        override suspend fun retryLastTurn(sessionId: String) = Unit
-
-        override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
-            deliveryFailure?.let { throw it }
-            deliveries += Delivery(sessionId, text, reminder)
-        }
-
-        override suspend fun activeRunId(sessionId: String): String? = null
-
-        override fun stop(sessionId: String): List<String> = emptyList()
-
-        override suspend fun history(sessionId: String): List<AssistantMessage> = emptyList()
-
-        override suspend fun sessionTitle(sessionId: String): String? = null
-
-        override suspend fun sessions(workspaceId: String): List<ConversationSummary> = emptyList()
-
-        override suspend fun archivedSessions(): List<ConversationSummary> = emptyList()
-
-        override suspend fun renameSession(id: String, title: String) = Unit
-
-        override suspend fun setSessionPinned(id: String, pinned: Boolean) = Unit
-
-        override suspend fun setSessionArchived(id: String, archived: Boolean) = Unit
-
-        override suspend fun deleteSession(id: String) = Unit
-
-        override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = null
-
-        override suspend fun setSessionModel(
-            sessionId: String,
-            providerId: String,
-            modelId: String,
-            thinkingLevel: ThinkingLevel,
-        ) = Unit
-
-        override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) = Unit
-
-        override suspend fun currentConfig(): ModelConfig = ModelConfig()
     }
 }
