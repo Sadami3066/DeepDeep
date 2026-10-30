@@ -1,0 +1,76 @@
+name: Release
+
+# 仅手动触发（M4 准备稿）。正式启用前需要：
+#   - 正式 keystore 与 4 个 Secrets（见 docs/RELEASING.md）
+#   - app/build.gradle.kts 的 signingConfigs.release 已接好
+# 启用后再把 tag 触发加回来。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 要发布的 tag（例如 v0.3.0）
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Ensure Android SDK 36
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK_ROOT/platforms/android-36" ] || [ ! -d "$SDK_ROOT/build-tools/36.0.0" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)"
+            test -n "$SDKMANAGER"
+            yes | "$SDKMANAGER" --licenses > /dev/null || true
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+          fi
+
+      - name: Verify
+        run: ./scripts/verify.sh
+
+      - name: Stage signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+      - name: Build signed artifacts
+        run: |
+          TAG="${TAG_NAME#v}"
+          MAJOR="${TAG%%.*}"; REST="${TAG#*.}"; MINOR="${REST%%.*}"; PATCH="${REST#*.}"; PATCH="${PATCH%%-*}"
+          ./scripts/gradlew-locked -PversionName="${TAG_NAME}" \
+            -PversionCode="$((MAJOR * 10000 + MINOR * 100 + PATCH))" \
+            :app:assembleRelease :app:bundleRelease
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.tag }}" \
+            app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/bundle/release/app-release.aab \
+            --title "${{ inputs.tag }}" --generate-notes
