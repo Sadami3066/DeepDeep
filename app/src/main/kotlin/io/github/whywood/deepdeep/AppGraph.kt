@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep
 import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.DevPackageManager
@@ -84,7 +85,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AppGraph(context: Context) {
+class AppGraph(context: Context) : AppDependencies {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobWake = MutableStateFlow(true)
@@ -96,20 +97,20 @@ class AppGraph(context: Context) {
         OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
     }
 
-    val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
+    override val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
     val workspacesDir: File = File(appContext.filesDir, "workspaces").apply { mkdirs() }
     val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
 
     private val secretStore = EncryptedSecretStore(appContext)
     val apiKeyStore = ApiKeyStore(secretStore)
     val oauthCredentialStore = OAuthCredentialStore(secretStore)
-    val modelConfigStore = ModelConfigStore(appContext)
-    val attachmentStore = FileAttachmentStore(appContext, homeDir)
-    val linuxSettings = LinuxSettingsStore(appContext)
+    override val modelConfigStore = ModelConfigStore(appContext)
+    override val attachmentStore = FileAttachmentStore(appContext, homeDir)
+    override val linuxSettings = LinuxSettingsStore(appContext)
     val themePreferences = ThemePreferences(appContext)
-    val appPreferences = AppPreferences(appContext)
-    val voicePreferences = VoicePreferences(appContext)
-    val shareStaging = ShareStaging(appContext)
+    override val appPreferences = AppPreferences(appContext)
+    override val voicePreferences = VoicePreferences(appContext)
+    override val shareStaging = ShareStaging(appContext)
 
     fun skillBinds(): List<Pair<File, String>> = listOf(
         File(agentDir, "skills") to "/skills",
@@ -133,44 +134,44 @@ class AppGraph(context: Context) {
             }
         }
     }
-    val personalizationStore = PersonalizationStore(appContext)
+    override val personalizationStore = PersonalizationStore(appContext)
     val fontPreferences = FontPreferences(appContext)
-    val linuxEnvironment = LinuxEnvironment(
+    override val linuxEnvironment = LinuxEnvironment(
         appContext,
         homeDir,
         sharedStorageEnabled = { sharedStorage.value },
         extraBinds = linuxBinds(),
     )
     private val httpTransport = okHttpTransport()
-    val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
-    val providerCatalog = ProviderCatalog(httpTransport, credentials)
-    val providerOAuthService = ProviderOAuthService(
+    override val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
+    override val providerCatalog = ProviderCatalog(httpTransport, credentials)
+    override val providerOAuthService = ProviderOAuthService(
         credentials = credentials,
         transport = httpTransport,
         deviceId = { installationId.get() },
     )
     private val installationId = InstallationIdStore(agentDir)
-    val mcpConfigStore = McpConfigStore(agentDir)
+    override val mcpConfigStore = McpConfigStore(agentDir)
     private val mcpTokenStore = FileMcpTokenStore(defaultMcpAuthFile(agentDir.absolutePath.toPath()))
-    val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)
-    val mcpOAuthService = McpOAuthService(httpTransport, mcpTokenStore)
+    override val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)
+    override val mcpOAuthService = McpOAuthService(httpTransport, mcpTokenStore)
     val sessionMetaStore = SessionMetaStore(appContext)
     val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
     val workspaceStore = WorkspaceStore(appContext)
-    val skillRepository = SkillRepository(
+    override val skillRepository = SkillRepository(
         repoDir = File(appContext.filesDir, "skills"),
         agentDir = agentDir,
         homeDir = homeDir,
         workspacesDir = workspacesDir,
     )
-    val agentDocStore = AgentDocStore()
+    override val agentDocStore = AgentDocStore()
     val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
-    val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
-    val skillCatalog = SkillCatalog(agentDir)
+    override val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
+    override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(appContext)
-    val goalService: GoalService by lazy { GoalService() }
-    val jobRegistry: JobRegistry by lazy {
+    override val goalService: GoalService by lazy { GoalService() }
+    override val jobRegistry: JobRegistry by lazy {
         JobRegistry(
             scope = scope,
             notifier = { sessionId, notice, prompt ->
@@ -181,11 +182,11 @@ class AppGraph(context: Context) {
             maxRunningPerSession = { pluginSettingsStore.cachedInt("jobs", "max_running", 10) },
         )
     }
-    val questionCenter = QuestionCenter(
+    override val questionCenter = QuestionCenter(
         isForeground = { AppVisibility.foreground },
         persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
     )
-    val pluginManager: PluginManager by lazy {
+    override val pluginManager: PluginManager by lazy {
         PluginManager(
             plugins = listOf(
                 FeishuPlugin(
@@ -285,7 +286,7 @@ class AppGraph(context: Context) {
         }
     }
 
-    val workshopAgentService by lazy {
+    override val workshopAgentService by lazy {
         WorkshopAgentService(
             providers = providerCatalog,
             credentials = credentials,
@@ -317,7 +318,7 @@ class AppGraph(context: Context) {
         )
     }
 
-    val host = AgentRuntimeHost(
+    override val host = AgentRuntimeHost(
         homeDir = homeDir,
         workspacesDir = workspacesDir,
         engineFactory = engineFactory,
@@ -344,7 +345,7 @@ class AppGraph(context: Context) {
     )
 
     val notificationCenter: NotificationCenter by lazy { NotificationCenter(appContext, host) }
-    val scheduleService: ScheduleService by lazy {
+    override val scheduleService: ScheduleService by lazy {
         ScheduleService(
             host,
             scheduleStore,
@@ -352,7 +353,7 @@ class AppGraph(context: Context) {
             intentsFile = File(appContext.filesDir, "schedules/delivery-intents.json"),
         )
     }
-    val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
+    override val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
 
     init {
         scope.launch {
@@ -373,7 +374,7 @@ class AppGraph(context: Context) {
         }
     }
 
-    suspend fun prepare() {
+    override suspend fun prepare() {
         if (!questionRecoveryLoaded) {
             questionRecoveryLoaded = true
             withContext(Dispatchers.IO) { questionCenter.loadPersisted() }
