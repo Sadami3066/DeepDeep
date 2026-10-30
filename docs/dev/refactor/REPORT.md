@@ -71,7 +71,7 @@
 
 ## 6. 后续怎么继续
 
-- 任务从 `docs/dev/refactor/tasks.tsv` 取活跃卡（现只剩 M4 deferred；M0–M3 与 M5 的完成卡在 `tasks-archive-2026-10.tsv`）；新任务按 `docs/dev/refactor/PLAYBOOK.md` 写卡，并按 T0/T1/T2 选档。
+- 任务从 `docs/dev/refactor/tasks.tsv` 取活跃卡（现只剩 M4 deferred；M0–M3 与 M5 的完成卡在 `tasks-archive-2026-10.tsv`）；新任务按 `docs/dev/refactor/PLAYBOOK.md` 写卡，并按 L0–L4 选档。
 - 任何 agent 先读 `AGENTS.md`；构建只走 `./scripts/verify.sh` / `./scripts/gradlew-locked`。
 - 真机验收用 `docs/dev/ACCEPTANCE.md` + `scripts/collect-evidence.sh`。
 - 发版流程见 `docs/dev/RELEASING.md`（启用前需 keystore 与 Secrets）。

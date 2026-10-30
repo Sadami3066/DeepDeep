@@ -7,7 +7,7 @@
 DeepDeep 依赖 pi2kotlin 发布的 `dev.pi:*` 构件（`:runtime`/`:shell` 使用）。分发现状是**两步走的第一步**，已经落地：
 
 - `gradle/libs.versions.toml:13`：`pi = "0.2.4"`。
-- 根 `build.gradle.kts:23-101`：`syncPiSdk` 任务从 `https://github.com/Sadami3066/pi2kotlin/releases/download/v0.2.4/pi2kotlin-0.2.4-m2.zip` 下载，校验 `gradle/pi-sdk.sha256`（`bc1e9fed229129e085079815ea4f0b5e9e1aeb9d72f2a72d8979fd2b865f0684`），解包到 `build/pi-sdk-m2`，并挂在所有子项目 `preBuild` 上（`:103-107`）。当前离线调试走 `-PpiSdkLocalZip=<zip>`（`:94-98`、`AGENTS.md §1 环境与命令`）。
+- 根 `build.gradle.kts:23-101`：`syncPiSdk` 任务从 `https://github.com/Sadami3066/pi2kotlin/releases/download/v0.2.4/pi2kotlin-0.2.4-m2.zip` 下载，校验 `gradle/pi-sdk.sha256`（`bc1e9fed229129e085079815ea4f0b5e9e1aeb9d72f2a72d8979fd2b865f0684`），解包到 `build/pi-sdk-m2`，并挂在所有子项目 `preBuild` 上（`:103-107`）。当前离线调试走 `-PpiSdkLocalZip=<zip>`（`:94-98`、`AGENTS.md §2 命令`）。
 - `settings.gradle.kts:12-23`：依赖解析只允许两个额外仓库——`mavenLocal`（content filter 只放行 `dev.pi`）与 `build/pi-sdk-m2`；其余走 `google()`/`mavenCentral()`。
 - 实测：`build/pi-sdk-cache/pi2kotlin-0.2.4-m2.zip` 的 sha256 与 `gradle/pi-sdk.sha256` 一致；解出的 `build/pi-sdk-m2/dev/pi/*` 含 12 个模块 POM、4 个 AAR。
 - M0 之前的问题（GL-004）：SDK 只在本机 `~/.m2`（由兄弟目录 `../pi2kotlin` 的 `publishToMavenLocal` 产生），新机器/CI 只 clone 本仓库必然构建失败；这是 M0 阶段 CI 无法复活的唯一硬阻塞（M0-1/M0-2 已解除）。

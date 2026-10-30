@@ -1,13 +1,15 @@
 # 文档索引
 
-基线：**2026-10-30**，`master@2bedaa0`（M0–M3 重构完成、M7 产品迭代完成、1223 单测全绿）。文档与代码冲突时，以 `AGENTS.md` 里的命令输出为准，然后先改文档。
+基线：**2026-10-30**，`master@e4d9ec1`（M0–M3 重构完成、M7 产品迭代完成、1223 单测全绿）。文档与代码冲突时，以 `AGENTS.md` 里的命令输出为准，然后先改文档。
+
+**这是索引，不是必读清单。** 日常任务只看 `AGENTS.md §1/§6` 点名的那一两篇；不要为了「了解项目」预读全树。
 
 ## 怎么选入口
 
 | 你是谁 / 想干什么 | 去哪 |
 |---|---|
 | 想用这个 App、想知道它能干什么、边界在哪 | [`user/`](user/GUIDE.md) |
-| 要改代码、要开机、要提交 PR、要验收 | [`dev/DEVELOPMENT.md`](dev/DEVELOPMENT.md) → [`AGENTS.md`](../AGENTS.md)（先看 §1.5 分级流程） |
+| 要改代码、要开机、要提交 PR、要验收 | [`dev/DEVELOPMENT.md`](dev/DEVELOPMENT.md) → [`AGENTS.md`](../AGENTS.md)（先看 §1 任务类型表） |
 | 想知道「为什么当初这么设计」 | [`dev/adr/`](dev/adr/README.md) |
 | 想找旧计划、旧验收流水、旧调研 | [`archive/`](archive/README.md) |
 
@@ -42,7 +44,7 @@
 | [`evidence/README.md`](dev/evidence/README.md) | 证据目录规范与压缩入库规则 |
 | [`RELEASING.md`](dev/RELEASING.md) | 发布流程（未启用，发版时才执行） |
 | [`OPEN_SOURCE_CHECKLIST.md`](dev/OPEN_SOURCE_CHECKLIST.md) | 开源/发版前逐项打勾清单 |
-| [`refactor/`](dev/refactor/README.md) | 重构总纲、活跃任务卡（完成项在 `tasks-archive-*.tsv`）、T0/T1/T2 分级执行协议、基线、测试约定、仓库卫生 |
+| [`refactor/`](dev/refactor/README.md) | 重构总纲、活跃任务卡（完成项在 `tasks-archive-*.tsv`）、L0–L4 档位执行协议、基线、测试约定、仓库卫生 |
 | [`review/`](dev/review/10-30/README.md) | 2026-10-30 的结构化评审快照（`findings.tsv` 是未修项的对账口径） |
 | [`adr/`](dev/adr/README.md) | 7 篇架构决策记录（不要用「顺手优化」推翻） |
 
@@ -55,7 +57,7 @@
 ## 维护规则
 
 1. **事实以命令输出为准**：文档写的测试数、lint 数、警告数必须能用 `AGENTS.md` 里的命令复算。
-2. **功能变更同步改文档**：新增/删除用户可见功能，同一次提交里改 `user/` 对应文档；没有对应文档说明该功能缺少说明，需要补。
+2. **功能变更只改相关那一篇**：新增/删除用户可见功能时，在同一次提交里改 `user/` 对应文档；不要顺手改无关文档，也不要为「全仓同步」加一轮纯文档改动。
 3. **过时先归档再重写**：不直接删除历史文档，移入 `archive/` 并加横幅；保留「当时为什么这么定」。
 4. **一份文档只回答一类问题**：`ARCHITECTURE.md` 只写「现在是什么」，「将要变成什么」写进 `refactor/`，「为什么」写进 `adr/`。
 5. **不写个人环境**：文档里不出现本机绝对路径、密钥、真实账号、未脱敏截图。

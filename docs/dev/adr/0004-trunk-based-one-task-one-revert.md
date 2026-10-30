@@ -7,7 +7,7 @@
 协作规则的现状（均已入库）：
 
 - 一个任务 = 一张卡 = 一份简报 = 一个分支 = **一个 squash 提交 = 一次 revert**（`docs/dev/refactor/PLAYBOOK.md §1`）。
-- 提交标题 `type: 祈使句摘要 [ID]`，squash 合并，进主干只能一条；body 三行必填 `验收:`、`回滚:`、`不在范围:`（`PLAYBOOK.md §9 提交规范`、`CONTRIBUTING.md §工作方式`、`AGENTS.md §6 提交与 PR`）。
+- 提交标题 `type: 祈使句摘要 [ID]`，squash 合并，进主干只能一条；body 三行必填 `验收:`、`回滚:`、`不在范围:`（`PLAYBOOK.md §9 提交规范`、`CONTRIBUTING.md §步骤`、`AGENTS.md §4 必须`）。
 - 回滚演练每任务必做：`git revert --no-commit <sha>` 后 `./scripts/verify.sh` 必须干净通过（`PLAYBOOK.md §11 回滚演练`）。
 - PR 预算：`git diff --stat` ≤400 行 / ≤15 文件 / ≤2 模块，超了先拆成可顺序合并的小 PR（`PLAYBOOK.md §3 DoD` 第 6 条、§5 大 diff）。
 - 计划视图已定“不引 Git Flow”（`docs/dev/refactor/README.md §5 已定决策`），回滚分 L0–L3 四级（同文件 §6 回滚）。
@@ -25,9 +25,9 @@ M0/M1 的提交按任务 ID 组织（例如 `1cebafe [M1-1]`、`cffc5f3 [M1-2]`�
 1. 分支：`task/<id>-<slug>`（`CONTRIBUTING.md §工作方式`）；不在主干上直接改，不保留跨任务的长期分支。
 2. 提交：标题带任务 ID；body 固定三行；squash 后一个任务只留一条提交（`PLAYBOOK.md §9 提交规范`）。
    唯一例外是**记账提交**：任务完成后单独提交一行 `docs: mark <ID> complete`（回填 `tasks.tsv` 状态、必要时同步进度表）。它不含实现，不得夹带代码；回滚时与实现提交一并 `git revert`，不允许只回滚记账提交而留下已删/已改的实现。
-3. 回滚：每个任务交付时贴回滚命令；`git revert <sha>` 必须一行完成；需求涉及数据变更时在 PR 写清“数据影响”（`AGENTS.md §6 提交与 PR`）。
+3. 回滚：每个任务交付时贴回滚命令；`git revert <sha>` 必须一行完成；需求涉及数据变更时在 PR 写清“数据影响”（`AGENTS.md §4`）。
 4. 预算：超 400 行 / 15 文件 / 2 模块时，先在任务卡说明理由或拆卡；拆不开退回重做，不允许“一次 36k 行”（`PLAYBOOK.md §3 DoD` 第 6 条、§5）。
-5. 一个提交内不做“顺手优化”、不重排/格式化无关文件（`AGENTS.md §3 硬边界`）；跨 >2 模块且无 ADR 的改动直接退回（`CONTRIBUTING.md §硬规则`）。
+5. 一个提交内不做“顺手优化”、不重排/格式化无关文件（`AGENTS.md §5`）；跨 >2 模块且无 ADR 的改动直接退回（`CONTRIBUTING.md §两条额外硬规则`）。
 
 ## 为什么“回滚粒度”比“diff 可读”重要
 

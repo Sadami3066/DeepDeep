@@ -8,7 +8,7 @@
 
 **机器闸门（M1-7 已落地）**
 - `.github/workflows/ci.yml`：push `master` 与所有 PR 触发，跑 `./scripts/verify.sh`（`:3-6`、`:40-41`），失败上传测试/lint 报告（`:43-52`）；master 分支保护已随 M1-7 启用。
-- `scripts/verify.sh:6` 最后一行 `exec "$(dirname "$0")/gradlew-locked" check :app:assembleDebug`——全局串行锁与默认 `--max-workers=1` 在 `scripts/gradlew-locked:5-15`；`check` = 编译 + 单测（基线 1165、0 skip）+ lint（0 error）+ 模块边界 + 包边界。
+- `scripts/verify.sh:6` 最后一行 `exec "$(dirname "$0")/gradlew-locked" check :app:assembleDebug`——全局串行锁与默认 `--max-workers=1` 在 `scripts/gradlew-locked:5-15`；`check` = 编译 + 单测（基线见 `docs/dev/refactor/BASELINE.md`、0 skip）+ lint（0 error）+ 模块边界 + 包边界。
 - 它**不跑** `androidTest`、不启动模拟器、无真机。
 
 **真机证据链（M1-5 已落地）**
@@ -45,7 +45,7 @@
 - **只做 CI 不做真机证据**：CI 只跑 `check + assembleDebug`，证明不了行为和平台边界；“无 CI”条目（GL-001）的修复不等于“有回归网”。
 - **只做真机证据不做 CI**：M1-7 已复活 CI；没有机器闸门时测试基线、lint、边界、回滚演练只能靠人读，成本更高（`PLAYBOOK.md §4 验证闭环`）。
 - **把 `artifacts/validation/` 原始大图入库**：体积与隐私问题；只入压缩证据（`docs/dev/evidence/README.md`：每轮 5–10 张、长边 720px、单张 <500KB、必须有 `verdict.md`），原始大图留本地。
-- **用“截图看起来没问题”当证据**：无法对应条目、无法复核；必须绑定稳定 ID + 日期路径（`AGENTS.md §9 真机验收`）。
+- **用“截图看起来没问题”当证据**：无法对应条目、无法复核；必须绑定稳定 ID + 日期路径（`AGENTS.md §1` 的 L4 与 §8）。
 - **CI 里跑全量 `androidTest`**：需要设备/模拟器、时长不可控、平台差异导致假红；`androidTest` 目前只有 2 个设备测试（`docs/dev/DEVELOPMENT.md §测试`），按需手动跑。
 
 ## 后果
