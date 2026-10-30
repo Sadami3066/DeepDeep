@@ -5,24 +5,28 @@
 ## 1. 模块与依赖
 
 ```
-:app       Compose 界面、导航、前台服务、装配
- ├─ :runtime   pi2kotlin 适配、事件、会话元数据、凭据、MCP、调度/目标/任务/工坊
- ├─ :shell     Alpine/proot 与 ShellExecutor
- └─ :design    主题、字体、图标、motion tokens、共享组件
+:app        Compose 界面、导航、前台服务、装配
+ ├─ :runtime    pi2kotlin 适配、事件、会话元数据、凭据、MCP、调度/目标/任务/工坊
+ │   └─ :runtime-api  纯 JVM 契约（事件/通知/用量/目标/任务/插件/模型配置/提问类型），无 Android 与 SDK 依赖
+ ├─ :shell      Alpine/proot 与 ShellExecutor
+ └─ :design     主题、字体、图标、motion tokens、共享组件
 ```
 
 | 模块 | 职责 | 允许依赖 |
 |---|---|---|
 | `:app` | UI、导航、服务、装配（AppGraph） | `:runtime`、`:shell`、`:design` |
-| `:runtime` | agent 运行时适配与 App 级领域服务 | Android SDK、`dev.pi` SDK |
+| `:runtime` | agent 运行时适配与 App 级领域服务 | `:runtime-api`、Android SDK、`dev.pi` SDK |
+| `:runtime-api` | 纯 JVM 契约：事件、通知、用量、目标/任务/插件契约、模型配置、提问类型 | 仅 coroutines/stdlib（编译器强制无 Android/SDK） |
 | `:shell` | proot 用户空间执行 | 无业务模块 |
 | `:design` | 纯 UI 基础件 | Compose |
 
-依赖方向由根项目 `verifyModuleBoundaries` 强制，`./gradlew check` 会执行；新增模块必须登记进边界表，否则构建失败。
+依赖方向由根项目 `verifyModuleBoundaries` 强制，`./gradlew check` 会执行；新增模块必须登记进边界表，否则构建失败。包级约束由 `verifyPackageBoundaries` 强制（feature 之间禁止互相 import；`ui.navigation`/`ui.shell` 为 composition layer 例外；`ui` 不得 import `AppGraph`）。
 
 `:app` 内分层：`core`（装配）→ `data`（附件/技能/偏好）→ `plugin` → `ui`；`service`/`voice`/`deeplink` 为平台入口。`:runtime` 内按领域分包（session/schedule/goal/job/question/workshop/mcp/provider）。
 
-已知边界债（在 M2/M3 处理，不在本文假装已解决）：页面直连 Store（SC-001）、壳层 `DeepDeepApp` 直接依赖 27 个具体成员、`ui` 与装配之间没有接口。
+已解决的边界债（M2/M3）：壳层改为 `AppDependencies` 接口；`:runtime` 契约抽成纯 JVM 模块；Skills/MCP/Plugins/Schedule/Workshop 五屏已用 state holder；`DeepDeepApp` 1213 → ~640 行（路由/overlay/抽屉/intake/命令已抽出）；`ChatViewModel` 1660 → 807 行（7 步拆分中第 1–6 步完成）。
+
+仍存在：部分页面（设置/Provider/文件/会话等）直连 Store；`DeepDeepApp` 仍持有 ViewModel 工厂与 19 个 `collectAsState`；`:app` 未按 feature 拆模块（有意为之，见 ADR-0004 与重构路线）。
 
 ## 2. 数据所有权（唯一真相源）
 

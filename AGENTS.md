@@ -41,7 +41,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 3. 硬边界
 
-- 模块依赖只允许 `:app → {:runtime, :shell, :design}`；`:runtime`/`:shell`/`:design` 互不依赖。
+- 模块依赖只允许 `:app → {:runtime, :shell, :design}`、`:runtime → :runtime-api`；其余模块之间不得互相依赖（`verifyModuleBoundaries` 强制）。
 - 不擅自修改：`settings.gradle.kts`、根 `build.gradle.kts`、`gradle/libs.versions.toml`、签名配置、`.gitignore`。需要改就在任务卡里写明并等 Lead 批准。
 - 不碰：`artifacts/`、`*.ttf`、`*.rootfs`、`*.so`、任何 4MB 以上文件、`docs/review/` 的原始数据。
 - 只改任务卡「允许修改的文件」里的文件；需要额外文件先停下要授权。
