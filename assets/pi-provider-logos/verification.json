@@ -1,0 +1,9 @@
+{
+  "provider_count": 42,
+  "unique_artwork_count": 31,
+  "svg_count": 84,
+  "png_count": 168,
+  "android_png_count": 84,
+  "all_pngs_transparent": true,
+  "all_manifest_paths_present": true
+}

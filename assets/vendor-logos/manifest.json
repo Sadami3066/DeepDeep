@@ -1,0 +1,360 @@
+{
+  "title": "DeepDeep vendor logo assets",
+  "generated": "2026-10-29",
+  "generator": "sharp (libvips) for SVG rasterization + ImageMagick for App Store artwork cleanup; see scripts/",
+  "icon_count": 10,
+  "android_drawable_prefix": "vendor_",
+  "android_drawable_dir": "app/src/main/res/drawable-nodpi",
+  "kotlin_map_file": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/plugins/VendorIcons.kt",
+  "tabler": {
+    "version": "3.50.0",
+    "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+    "license": "MIT",
+    "license_file": "licenses/LICENSE-Tabler-MIT.txt"
+  },
+  "app_store_artwork_notice": "licenses/NOTICE-AppStore-Artwork.md",
+  "xiaomi_license_notice": "licenses/NOTICE-Xiaomi-Logo.md",
+  "icons": [
+    {
+      "id": "feishu",
+      "name": "飞书 Feishu",
+      "source_kind": "apple-app-store-artwork",
+      "license": "App Store artwork / brand trademark",
+      "brand_color": null,
+      "files": {
+        "png_512": "png/512/feishu.png",
+        "png_256": "png/256/feishu.png",
+        "png_192": "png/192/feishu.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_feishu.png"
+      },
+      "sha256": {
+        "png_512": "5645d553953ac003bb5d383fbd2f73b17e1fbfe6cc85f7ad58d88cbcdebcac0c",
+        "png_256": "83f6841b004516cca847ddfc609f52a4156311aae9d83143e22e9a543151474d",
+        "png_192": "0341395a2cc654f1b16699760c8abb8a787ddbcc5ea8b985ffe9d824bc075bdb",
+        "android_drawable": "0341395a2cc654f1b16699760c8abb8a787ddbcc5ea8b985ffe9d824bc075bdb"
+      },
+      "bytes": {
+        "png_512": 59945,
+        "png_256": 7448,
+        "png_192": 4651,
+        "android_drawable": 4651
+      },
+      "source": {
+        "track_name": "飞书 - 字节跳动旗下 AI 工作平台",
+        "artist": "Beijing Feishu Technology Co., Ltd.",
+        "search_url": "https://itunes.apple.com/search?term=%E9%A3%9E%E4%B9%A6&country=cn&entity=software&limit=5",
+        "artwork_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/45/f4/d8/45f4d8ef-fc19-8e6e-19eb-4e1e4ee1aabd/AppIcon-0-0-1x_U007epad-0-0-0-1-0-0-85-220.png/512x512bb.jpg",
+        "upstream": "upstream/feishu-appstore-512.jpg",
+        "process": "white background flood-filled to transparent (8% fuzz), trimmed, 4% transparent margin, square 512"
+      }
+    },
+    {
+      "id": "wecom",
+      "name": "企业微信 WeCom",
+      "source_kind": "apple-app-store-artwork",
+      "license": "App Store artwork / brand trademark",
+      "brand_color": null,
+      "files": {
+        "png_512": "png/512/wecom.png",
+        "png_256": "png/256/wecom.png",
+        "png_192": "png/192/wecom.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_wecom.png"
+      },
+      "sha256": {
+        "png_512": "ac51e1d35aa8be68fd91bfc0564def67f8a693327ad6cbd5a0f52bf1907d8646",
+        "png_256": "7f874086405825aa1f78685be3ace86bf19b9c0a7215d1d439eab9d2c431b525",
+        "png_192": "3ef8f18960cfd3196909c4ce6de78c598149e0251f9c2df0344db7124a72a8d0",
+        "android_drawable": "3ef8f18960cfd3196909c4ce6de78c598149e0251f9c2df0344db7124a72a8d0"
+      },
+      "bytes": {
+        "png_512": 103778,
+        "png_256": 14131,
+        "png_192": 9646,
+        "android_drawable": 9646
+      },
+      "source": {
+        "track_name": "企业微信",
+        "artist": "Tencent Technology (Shenzhen) Company Limited",
+        "search_url": "https://itunes.apple.com/search?term=%E4%BC%81%E4%B8%9A%E5%BE%AE%E4%BF%A1&country=cn&entity=software&limit=5",
+        "artwork_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3e/ba/6b/3eba6be1-a7fd-00c5-7f0d-2415c8258ef5/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg",
+        "upstream": "upstream/wecom-appstore-512.jpg",
+        "process": "white background flood-filled to transparent (8% fuzz), trimmed, 4% transparent margin, square 512"
+      }
+    },
+    {
+      "id": "wechat",
+      "name": "微信 WeChat",
+      "source_kind": "apple-app-store-artwork",
+      "license": "App Store artwork / brand trademark",
+      "brand_color": "#07C160",
+      "files": {
+        "png_512": "png/512/wechat.png",
+        "png_256": "png/256/wechat.png",
+        "png_192": "png/192/wechat.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_wechat.png"
+      },
+      "sha256": {
+        "png_512": "f684ffefeebfc603db10c80408e4c38488b6a2390fdfb5c777b24b3c27c37b2d",
+        "png_256": "41ed760d3026c992c85cfa1028fde91a27154046536369ddbf1266d5986c16ca",
+        "png_192": "75952f7350d6d5c20050d0e372eb18e14eeb7f9b40b4f165c9ed2cff636e9adb",
+        "android_drawable": "75952f7350d6d5c20050d0e372eb18e14eeb7f9b40b4f165c9ed2cff636e9adb"
+      },
+      "bytes": {
+        "png_512": 14059,
+        "png_256": 2769,
+        "png_192": 2129,
+        "android_drawable": 2129
+      },
+      "source": {
+        "track_name": "微信",
+        "artist": "Tencent Technology (Shenzhen) Company Limited",
+        "search_url": "https://itunes.apple.com/search?term=%E5%BE%AE%E4%BF%A1&country=cn&entity=software&limit=5",
+        "artwork_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/84/6b/3a/846b3ab8-9dea-e3e5-861e-f6ecaa0b3387/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-0-0-85-220.png/512x512bb.jpg",
+        "upstream": "upstream/wechat-appstore-512.jpg",
+        "process": "green tile keyed out (12% fuzz), white mark recolored to #07C160, trimmed, 4% transparent margin, square 512"
+      }
+    },
+    {
+      "id": "xiaomi",
+      "name": "小米 Xiaomi",
+      "source_kind": "wikimedia-commons-svg",
+      "license": "Public domain (Wikimedia Commons)",
+      "brand_color": "#FF6900",
+      "files": {
+        "png_512": "png/512/xiaomi.png",
+        "png_256": "png/256/xiaomi.png",
+        "png_192": "png/192/xiaomi.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_xiaomi.png"
+      },
+      "sha256": {
+        "png_512": "d62762f6559414cb09f31d772038bc7a3b3c39d95edb561ff9452cf62cd7188f",
+        "png_256": "ee2df84a9e68abfc036ed8578e14198a44a28da37631c34d607363fa841e1792",
+        "png_192": "103fce587e496e3c2266f837b2127aa7662231e0499f8c1b72c51646c7dbfa7b",
+        "android_drawable": "103fce587e496e3c2266f837b2127aa7662231e0499f8c1b72c51646c7dbfa7b",
+        "svg": "bacfc9c992c3299b2fe516c8c31d219d298593c109b8f8592d1b6a28765be6d8"
+      },
+      "bytes": {
+        "png_512": 4674,
+        "png_256": 1107,
+        "png_192": 831,
+        "android_drawable": 831
+      },
+      "source": {
+        "svg": "svg/xiaomi.svg",
+        "page": "https://commons.wikimedia.org/wiki/File:Xiaomi_logo.svg",
+        "original_credit": "http://www.mi.com/en/about/mediakit (media kit; PD conversion by Wikimedia contributors)",
+        "note": "Official Xiaomi logo; Wikimedia Commons marks it public domain (below threshold of originality). Brand trademark remains with Xiaomi."
+      }
+    },
+    {
+      "id": "dingtalk",
+      "name": "钉钉 DingTalk",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#0089FF",
+      "files": {
+        "png_512": "png/512/dingtalk.png",
+        "png_256": "png/256/dingtalk.png",
+        "png_192": "png/192/dingtalk.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_dingtalk.png"
+      },
+      "sha256": {
+        "png_512": "be119fe53b83c2149d5cb2cfead42f78fdcb51d6be08afbd7b7caf67f83f2e66",
+        "png_256": "f18675ce5f9f6bd45d3f5ed2a416b2db4df4513f8ec991d080fc4a3f8591a5d9",
+        "png_192": "3b4537ea2911d9e53877a3424544becf6c245aa22d1386d388dc6099b6dca7ad",
+        "android_drawable": "3b4537ea2911d9e53877a3424544becf6c245aa22d1386d388dc6099b6dca7ad",
+        "svg": "4f67fec71d33b946eb5adf515028fe13980e84478b31f923c49fa86f46a445c3"
+      },
+      "bytes": {
+        "png_512": 15555,
+        "png_256": 4368,
+        "png_192": 3051,
+        "android_drawable": 3051
+      },
+      "source": {
+        "svg": "svg/dingtalk.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-dingtalk.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-dingtalk.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #0089FF; rasterized with sharp/libvips at 512px."
+      }
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#000000",
+      "files": {
+        "png_512": "png/512/notion.png",
+        "png_256": "png/256/notion.png",
+        "png_192": "png/192/notion.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_notion.png"
+      },
+      "sha256": {
+        "png_512": "f4231e0d54e92e5a3f485058b8fdfd8f0e6857da6f8d4a034e5f016ca2196fe8",
+        "png_256": "6f57c784efb1011caa8e2b710ed18b6e4bd0316bb24ebce3acf226d13db174fa",
+        "png_192": "f7afe35e648ffc7b036c56b745c80d70305a0ff9119b884bd98f630be193aae1",
+        "android_drawable": "f7afe35e648ffc7b036c56b745c80d70305a0ff9119b884bd98f630be193aae1",
+        "svg": "d8357f601036eff64ab84cbde6d4846ce209254a1e55e2872bd25aaab60e9ea3"
+      },
+      "bytes": {
+        "png_512": 7343,
+        "png_256": 2448,
+        "png_192": 1917,
+        "android_drawable": 1917
+      },
+      "source": {
+        "svg": "svg/notion.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-notion.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-notion.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #000000; rasterized with sharp/libvips at 512px."
+      }
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#181717",
+      "files": {
+        "png_512": "png/512/github.png",
+        "png_256": "png/256/github.png",
+        "png_192": "png/192/github.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_github.png"
+      },
+      "sha256": {
+        "png_512": "0670757ed79a84293205575768959fb6f09a48fdeacc089903a28e9e4d585847",
+        "png_256": "53571d713bfe55ec006569c5977f0f0c7f9a5e0d474e5921e6c4d44ccfff2aa4",
+        "png_192": "01cadc8844d6d9415dc45711b89e07429cf8922a9634b64d580915ca0975353f",
+        "android_drawable": "01cadc8844d6d9415dc45711b89e07429cf8922a9634b64d580915ca0975353f",
+        "svg": "4f56013afcc0e1d5a3a816ac7f5c73cad2a869e47442d475db1d441090364451"
+      },
+      "bytes": {
+        "png_512": 13412,
+        "png_256": 3488,
+        "png_192": 2610,
+        "android_drawable": 2610
+      },
+      "source": {
+        "svg": "svg/github.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-github.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-github.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #181717; rasterized with sharp/libvips at 512px."
+      }
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#4A154B",
+      "files": {
+        "png_512": "png/512/slack.png",
+        "png_256": "png/256/slack.png",
+        "png_192": "png/192/slack.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_slack.png"
+      },
+      "sha256": {
+        "png_512": "115cd1406cdfb27e6c9f5b4637cbb312316339d17696bc31034bb8ed921b5964",
+        "png_256": "da9a669f3195a17b4aebd9b62feb1738a8245753144627a5e6e5622ff7c7c55e",
+        "png_192": "6edc5dc33e38161f3c27619d6e31601304d461b70342b9c66e5ba2e8f3e3d179",
+        "android_drawable": "6edc5dc33e38161f3c27619d6e31601304d461b70342b9c66e5ba2e8f3e3d179",
+        "svg": "303714a799782bee1e5787a8c7688c562fc034a2557ffc1576d14a7fd91be9ea"
+      },
+      "bytes": {
+        "png_512": 12059,
+        "png_256": 2750,
+        "png_192": 1748,
+        "android_drawable": 1748
+      },
+      "source": {
+        "svg": "svg/slack.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-slack.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-slack.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #4A154B; rasterized with sharp/libvips at 512px."
+      }
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#26A5E4",
+      "files": {
+        "png_512": "png/512/telegram.png",
+        "png_256": "png/256/telegram.png",
+        "png_192": "png/192/telegram.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_telegram.png"
+      },
+      "sha256": {
+        "png_512": "a5a4bda58c163d05e66ecd34a89c688516e89baecedd804a869a067fdb7cec24",
+        "png_256": "60320d727b226e14c45d57ee60453bbc5c3918d6228ff845527111d5ddea3a2c",
+        "png_192": "3928fe1539d107c21a7383a66af5eb0234d7e8bf7a3bf0d4cb3f828aeac816a7",
+        "android_drawable": "3928fe1539d107c21a7383a66af5eb0234d7e8bf7a3bf0d4cb3f828aeac816a7",
+        "svg": "65e65a4f2c3e030ec00a518561ec05dde24590880f47c4b92cf099f9383ae2d6"
+      },
+      "bytes": {
+        "png_512": 6946,
+        "png_256": 2284,
+        "png_192": 1780,
+        "android_drawable": 1780
+      },
+      "source": {
+        "svg": "svg/telegram.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-telegram.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-telegram.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #26A5E4; rasterized with sharp/libvips at 512px."
+      }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "source_kind": "tabler-icons-svg",
+      "license": "MIT (Tabler Icons)",
+      "brand_color": "#5865F2",
+      "files": {
+        "png_512": "png/512/discord.png",
+        "png_256": "png/256/discord.png",
+        "png_192": "png/192/discord.png",
+        "android_drawable": "android/res/drawable-nodpi/vendor_discord.png"
+      },
+      "sha256": {
+        "png_512": "0d9307cbacf6a9ddf38b24dc20c5fa074203766b5959bb73e041e72b7e15596d",
+        "png_256": "473cd47a47d38995eea0abc94fcfddfef9b657ff0165ef54e9a3e54b77ae80f7",
+        "png_192": "e4044913eb85e9c9d2acd3d87e96845d150a9a0ab19638786160ad7791670967",
+        "android_drawable": "e4044913eb85e9c9d2acd3d87e96845d150a9a0ab19638786160ad7791670967",
+        "svg": "f0c5235b070c0ea9576081ec5e23c43c81b76b9ae2e7bbbebb855fbafe2544b9"
+      },
+      "bytes": {
+        "png_512": 16427,
+        "png_256": 4072,
+        "png_192": 3114,
+        "android_drawable": 3114
+      },
+      "source": {
+        "svg": "svg/discord.svg",
+        "repo": "https://github.com/tabler/tabler-icons",
+        "version": "3.50.0",
+        "commit": "ed177a085b652fe04ec4f37ced867c94621e7840",
+        "path": "icons/outline/brand-discord.svg",
+        "raw_url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/brand-discord.svg",
+        "modification": "stroke=\"currentColor\" replaced with brand color #5865F2; rasterized with sharp/libvips at 512px."
+      }
+    }
+  ]
+}

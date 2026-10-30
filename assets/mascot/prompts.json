@@ -1,0 +1,61 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-21",
+  "transparent_background": true,
+  "prompts": [
+    {
+      "id": "welcome",
+      "output": "generated/mascot_welcome.png",
+      "references": [
+        "references/chibi-turnaround.png",
+        "references/character-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: reusable transparent PNG illustration for the native Android personal assistant deepdeep.\nInput images: Image 1 is the user's chibi character design reference; Image 2 is the user's detailed costume reference. They are identity/style references, not sheets to reproduce.\nSubject invariants: one cute chibi female whale mascot, about 2.5 heads tall when full body is shown, long navy/cobalt blue wavy hair fading to light sky blue at the tips, curved ahoge, large blue eyes, navy side fins with white undersides and small blue bows, white ruffled maid headband, navy and white modest maid dress, white apron with a small simple blue whale emblem, oval blue collar gem, tiny restrained gold trim, navy whale tail. Keep the reference character's identity and outfit.\nStyle: polished clean anime chibi illustration, controlled smooth linework and soft cel shading, coherent navy/cobalt/sky-blue/white palette; simplify tiny clothing details enough for small UI use.\nBackdrop: genuinely transparent RGBA, no colored or white backdrop, no checkerboard drawn into the image, no floor or cast shadow, no sticker border, no text, no watermark, no UI mockup.\nComposition: square canvas, one isolated subject only, centered, complete silhouette with generous 10 percent transparent safety margin; no clipped hair, tail, or limbs.\nPrimary request: create a new full-body welcoming pose for an app welcome/empty screen. Face forward, warm open smile, one arm raised in a friendly wave with a simple readable hand, the other relaxed near the apron. The whale tail gently curls to one side. Calm cheerful energy. One illustration, no panels, no variations."
+    },
+    {
+      "id": "avatar",
+      "output": "generated/mascot_avatar.png",
+      "references": [
+        "generated/mascot_welcome.png",
+        "references/chibi-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: reusable transparent PNG illustration for the native Android personal assistant deepdeep.\nInput images: Image 1 is the approved-for-this-series welcome illustration: match its exact rendering, character, palette, head/body ratio and costume. Image 2 is the user's original chibi character design reference. They are identity/style references, not sheets to reproduce.\nSubject invariants: one cute chibi female whale mascot, about 2.5 heads tall when full body is shown, long navy/cobalt blue wavy hair fading to light sky blue at the tips, curved ahoge, large blue eyes, navy side fins with white undersides and small blue bows, white ruffled maid headband, navy and white modest maid dress, white apron with a small simple blue whale emblem, oval blue collar gem, tiny restrained gold trim, navy whale tail. Keep the reference character's identity and outfit.\nStyle: polished clean anime chibi illustration, controlled smooth linework and soft cel shading, coherent navy/cobalt/sky-blue/white palette; simplify tiny clothing details enough for small UI use.\nBackdrop: genuinely transparent RGBA, no colored or white backdrop, no checkerboard drawn into the image, no floor or cast shadow, no sticker border, no text, no watermark, no UI mockup.\nComposition: square canvas, one isolated subject only, centered, complete silhouette with generous 10 percent transparent safety margin; no clipped hair, tail, or limbs.\nPrimary request: Create a new compact avatar: frontal head-and-shoulders portrait, both blue eyes open, small warm closed-mouth smile, long hair framing her face, ahoge and entire headband and side fins fully visible. No hands and no tail in this close portrait. The character occupies about 72 percent of the canvas width; 14 percent clear space around the outer silhouette. Strong recognizable face for a 48–64 dp chat avatar. No circular frame or badge, just the transparent portrait."
+    },
+    {
+      "id": "thinking",
+      "output": "generated/mascot_thinking.png",
+      "references": [
+        "generated/mascot_welcome.png",
+        "references/chibi-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: reusable transparent PNG illustration for the native Android personal assistant deepdeep.\nInput images: Image 1 is the approved-for-this-series welcome illustration: match its exact rendering, character, palette, head/body ratio and costume. Image 2 is the user's original chibi character design reference. They are identity/style references, not sheets to reproduce.\nSubject invariants: one cute chibi female whale mascot, about 2.5 heads tall when full body is shown, long navy/cobalt blue wavy hair fading to light sky blue at the tips, curved ahoge, large blue eyes, navy side fins with white undersides and small blue bows, white ruffled maid headband, navy and white modest maid dress, white apron with a small simple blue whale emblem, oval blue collar gem, tiny restrained gold trim, navy whale tail. Keep the reference character's identity and outfit.\nStyle: polished clean anime chibi illustration, controlled smooth linework and soft cel shading, coherent navy/cobalt/sky-blue/white palette; simplify tiny clothing details enough for small UI use.\nBackdrop: genuinely transparent RGBA, no colored or white backdrop, no checkerboard drawn into the image, no floor or cast shadow, no sticker border, no text, no watermark, no UI mockup.\nComposition: square canvas, one isolated subject only, centered, complete silhouette with generous 10 percent transparent safety margin; no clipped hair, tail, or limbs.\nPrimary request: Create a new thinking-state full-body pose: sitting neatly with legs folded to one side, head gently tilted, one simple hand near her cheek, the other resting on her lap. Both blue eyes glance thoughtfully upwards; a small closed mouth, curious and calm, not worried. Tail curls beside her. Match welcome illustration proportions and soft cel shading exactly. 12 percent clear space around entire silhouette. No thought bubbles, punctuation, objects or symbols."
+    },
+    {
+      "id": "success",
+      "output": "generated/mascot_success.png",
+      "references": [
+        "generated/mascot_welcome.png",
+        "references/chibi-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: reusable transparent PNG illustration for the native Android personal assistant deepdeep.\nInput images: Image 1 is the approved-for-this-series welcome illustration: match its exact rendering, character, palette, head/body ratio and costume. Image 2 is the user's original chibi character design reference. They are identity/style references, not sheets to reproduce.\nSubject invariants: one cute chibi female whale mascot, about 2.5 heads tall when full body is shown, long navy/cobalt blue wavy hair fading to light sky blue at the tips, curved ahoge, large blue eyes, navy side fins with white undersides and small blue bows, white ruffled maid headband, navy and white modest maid dress, white apron with a small simple blue whale emblem, oval blue collar gem, tiny restrained gold trim, navy whale tail. Keep the reference character's identity and outfit.\nStyle: polished clean anime chibi illustration, controlled smooth linework and soft cel shading, coherent navy/cobalt/sky-blue/white palette; simplify tiny clothing details enough for small UI use.\nBackdrop: genuinely transparent RGBA, no colored or white backdrop, no checkerboard drawn into the image, no floor or cast shadow, no sticker border, no text, no watermark, no UI mockup.\nComposition: square canvas, one isolated subject only, centered, complete silhouette with generous 10 percent transparent safety margin; no clipped hair, tail, or limbs.\nPrimary request: Create a new task-complete full-body pose: standing upright with feet together, eyes happily closed in upturned arcs, broad cheerful smile, both small hands closed in simple celebratory fists near her chest. Whale tail gently raised to the side. Match welcome illustration proportions and soft cel shading exactly. Keep the full headband, ahoge, tail and shoes inside generous 12 percent transparent margins. No confetti, stars, text, badges or check marks."
+    },
+    {
+      "id": "retry",
+      "output": "generated/mascot_retry.png",
+      "references": [
+        "generated/mascot_welcome.png",
+        "references/chibi-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: reusable transparent PNG illustration for the native Android personal assistant deepdeep.\nInput images: Image 1 is the selected welcome illustration: match its character, exact soft cel-shaded rendering and navy/cobalt/light-blue palette. Image 2 is the user's original chibi character reference. They are identity/style references, not sheets to reproduce.\nSubject invariants: one cute chibi female whale mascot, about 2.5 heads tall when full body is shown, long navy/cobalt blue wavy hair fading to light sky blue at the tips, curved ahoge, large blue eyes, navy side fins with white undersides and small blue bows, white ruffled maid headband, navy and white modest maid dress, white apron with a small simple blue whale emblem, oval blue collar gem, tiny restrained gold trim, navy whale tail. Keep the reference character's identity and outfit.\nStyle: polished clean anime chibi illustration, controlled smooth linework and soft cel shading, coherent navy/cobalt/sky-blue/white palette; simplify tiny clothing details enough for small UI use.\nBackdrop: genuinely transparent RGBA, no colored or white backdrop, no checkerboard drawn into the image, no floor or cast shadow, no sticker border, no text, no watermark, no UI mockup.\nComposition: square canvas, one isolated subject only, centered, complete silhouette with generous 10 percent transparent safety margin; no clipped hair, tail, or limbs.\nPrimary request: create a new full-body recoverable-error / retry illustration. Standing with feet together, head gently tilted, both hands showing a small friendly open-palm shrug. Big blue eyes look at the viewer, slightly raised inner eyebrows and small sheepish closed-mouth smile, one small blue sweat drop by the temple. A reassuring and approachable expression, not crying or distressed. Full navy whale tail curls beside her. Keep the entire silhouette with generous transparent margin. No warning signs, no exclamation marks, no text, no props."
+    },
+    {
+      "id": "whale_mark",
+      "output": "generated/whale_mark.png",
+      "references": [
+        "generated/mascot_welcome.png",
+        "references/chibi-turnaround.png"
+      ],
+      "prompt": "Use case: stylized-concept\nAsset type: small decorative whale icon candidate for the deepdeep Android assistant, transparent PNG.\nInput images: Image 1 is the selected mascot welcome illustration; Image 2 is the user's chibi design reference. Use their whale apron motif and navy/cobalt/sky-blue colors as inspiration only.\nPrimary request: draw a single simple, friendly rounded blue whale with a small raised two-lobed tail, a tiny side flipper, pale blue belly, one dot eye, a tiny relaxed smiling mouth, and two tiny water droplets above its head. A standalone companion motif for the mascot. It should be visually distinct as a cute illustrated animal; do not reproduce an existing company wordmark or exact corporate logo.\nStyle: clean hand-illustrated anime chibi companion, rounded controlled navy outlines, simple cobalt fill with subtle sky-blue cel shading and one restrained highlight. Far simpler than the detailed mascot. Clear silhouette at small UI sizes.\nComposition: square canvas, whale swimming sideways, centered and occupying roughly two thirds of canvas, generous transparent margin on every side. One whale only.\nBackdrop: genuine transparent RGBA; no white or colored field, no checkerboard baked into pixels, no floor shadow or sticker border.\nAvoid: text, watermark, badge frame, humans, intricate patterns, fins or tail cut off."
+    }
+  ]
+}

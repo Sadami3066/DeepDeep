@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deepdeep · 鲸鱼娘候选素材</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px; font: 15px/1.6 system-ui, sans-serif; color: #0a1322; background: #f6f8fc; }
+  main { max-width: 1120px; margin: auto; }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  p { margin: 8px 0 18px; }
+  a { color: #1d4ed8; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0; }
+  button { border: 1px solid #ccd7e9; background: white; color: #0a1322; border-radius: 8px; padding: 8px 16px; font: inherit; cursor: pointer; }
+  button[aria-pressed="true"] { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  article { border: 1px solid #d7dfeb; border-radius: 12px; overflow: hidden; background: white; }
+  .stage { height: 270px; padding: 18px; display: grid; place-items: center; background: #f6f8fc; }
+  .stage img { display: block; width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+  body[data-backdrop="dark"] .stage, body[data-backdrop="dark"] .small { background: #070d18; }
+  body[data-backdrop="checker"] .stage, body[data-backdrop="checker"] .small { background-color: #fff; background-image: conic-gradient(#e4e9f0 25%, transparent 0 50%, #e4e9f0 0 75%, transparent 0); background-size: 20px 20px; }
+  .info { padding: 14px 18px 18px; }
+  .info h2 { font-size: 16px; margin: 0; }
+  .info p { font-size: 13px; color: #475569; margin: 5px 0 12px; }
+  .small { background: #f6f8fc; border-radius: 8px; height: 76px; display: flex; gap: 16px; align-items: center; justify-content: center; }
+  .small img { object-fit: contain; }
+  .size-label { font-size: 12px; color: #475569; }
+  footer { margin-top: 28px; font-size: 13px; color: #475569; }
+  button:focus-visible, a:focus-visible { outline: 3px solid #7da8ff; outline-offset: 3px; }
+  @media (max-width: 480px) { body { padding: 20px 14px; } .grid { grid-template-columns: 1fr; } }
+</style>
+<body data-backdrop="light">
+<main>
+  <h1>deepdeep · 鲸鱼娘素材</h1>
+  <p>第一批候选 · 6 张透明 PNG · 1254 × 1254 · 2026-10-21<br>
+  <a href="README.md">使用说明</a> · <a href="manifest.json">素材清单</a> · <a href="prompts.json">生成记录</a></p>
+  <div class="controls" role="group" aria-label="图片背景">
+    <span>检查背景</span>
+    <button type="button" data-bg="light" aria-pressed="true">浅色</button>
+    <button type="button" data-bg="dark" aria-pressed="false">深色</button>
+    <button type="button" data-bg="checker" aria-pressed="false">透明棋盘</button>
+  </div>
+  <section class="grid" aria-label="候选素材预览">
+    <article><div class="stage"><img src="generated/mascot_avatar.png" alt="蓝发鲸鱼娘微笑头像"></div><div class="info"><h2>头像</h2><p><a href="generated/mascot_avatar.png">mascot_avatar.png</a> · 助手头像 / 关于页</p><div class="small"><img src="generated/mascot_avatar.png" width="48" height="48" alt=""><img src="generated/mascot_avatar.png" width="64" height="64" alt=""></div><span class="size-label">小尺寸检查：48 / 64 CSS px</span></div></article>
+    <article><div class="stage"><img src="generated/mascot_welcome.png" alt="鲸鱼娘微笑挥手"></div><div class="info"><h2>欢迎</h2><p><a href="generated/mascot_welcome.png">mascot_welcome.png</a> · 首页 / 新对话 / 空状态</p><div class="small"><img src="generated/mascot_welcome.png" width="48" height="48" alt=""><img src="generated/mascot_welcome.png" width="64" height="64" alt=""></div><span class="size-label">全身图建议显示 144–240 dp</span></div></article>
+    <article><div class="stage"><img src="generated/mascot_thinking.png" alt="鲸鱼娘坐着托腮思考"></div><div class="info"><h2>思考</h2><p><a href="generated/mascot_thinking.png">mascot_thinking.png</a> · 等待 / 处理中</p><div class="small"><img src="generated/mascot_thinking.png" width="48" height="48" alt=""><img src="generated/mascot_thinking.png" width="64" height="64" alt=""></div><span class="size-label">页面状态插画建议显示 128–200 dp</span></div></article>
+    <article><div class="stage"><img src="generated/mascot_success.png" alt="鲸鱼娘闭眼开心握拳"></div><div class="info"><h2>完成</h2><p><a href="generated/mascot_success.png">mascot_success.png</a> · 操作完成 / 设置成功</p><div class="small"><img src="generated/mascot_success.png" width="48" height="48" alt=""><img src="generated/mascot_success.png" width="64" height="64" alt=""></div><span class="size-label">页面状态插画建议显示 128–200 dp</span></div></article>
+    <article><div class="stage"><img src="generated/mascot_retry.png" alt="鲸鱼娘带着小汗滴温和摊手"></div><div class="info"><h2>重试</h2><p><a href="generated/mascot_retry.png">mascot_retry.png</a> · 可恢复错误 / 重试提示</p><div class="small"><img src="generated/mascot_retry.png" width="48" height="48" alt=""><img src="generated/mascot_retry.png" width="64" height="64" alt=""></div><span class="size-label">页面状态插画建议显示 128–200 dp</span></div></article>
+    <article><div class="stage"><img src="generated/whale_mark.png" alt="微笑蓝色小鲸鱼"></div><div class="info"><h2>小鲸鱼</h2><p><a href="generated/whale_mark.png">whale_mark.png</a> · 装饰 / 图标候选</p><div class="small"><img src="generated/whale_mark.png" width="32" height="32" alt=""><img src="generated/whale_mark.png" width="48" height="48" alt=""><img src="generated/whale_mark.png" width="64" height="64" alt=""></div><span class="size-label">小尺寸检查：32 / 48 / 64 CSS px</span></div></article>
+  </section>
+  <footer>用户设定参考：<a href="references/character-turnaround.png">常规比例</a> · <a href="references/chibi-turnaround.png">Q 版</a>。候选素材尚未接入应用；来源与许可待项目所有者补充。深色边缘与真机效果在前端采用时复核。</footer>
+</main>
+<script>
+  document.querySelectorAll('button[data-bg]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.body.dataset.backdrop = button.dataset.bg;
+      document.querySelectorAll('button[data-bg]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    });
+  });
+</script>
+</body>
+</html>

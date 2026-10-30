@@ -1,0 +1,274 @@
+{
+  "source": "atlas.png",
+  "source_size": [
+    1254,
+    1254
+  ],
+  "source_sha256": "0bad8e666eaf2cc8b7929860d9665d8e33e71a9a06c095f95c5bc1e6e22ee747",
+  "method": "connected components by grid-zone centroid; original RGBA edges",
+  "layout": {
+    "columns": 4,
+    "rows": 4,
+    "row_edges": [
+      0,
+      0.39,
+      0.63,
+      0.77,
+      1
+    ],
+    "alpha_threshold": 96,
+    "min_component_pixels": 128,
+    "edge_expand": 2,
+    "padding": 12,
+    "largest_only": [
+      "mascot_idle",
+      "mascot_wave",
+      "mascot_thinking",
+      "mascot_sleepy"
+    ],
+    "names": [
+      "mascot_idle",
+      "mascot_wave",
+      "mascot_thinking",
+      "mascot_sleepy",
+      "icon_whale",
+      "icon_chat",
+      "icon_microphone",
+      "icon_settings",
+      "button_primary",
+      "button_secondary",
+      "chip_selected",
+      "chip_idle",
+      "card_panel",
+      "bubble_assistant",
+      "divider_wave",
+      "accent_bow"
+    ]
+  },
+  "assets": [
+    {
+      "name": "mascot_idle",
+      "file": "mascot_idle.png",
+      "width": 349,
+      "height": 359,
+      "source_box": [
+        20,
+        134,
+        345,
+        469
+      ],
+      "components": 1,
+      "sha256": "2b0f66a84233bd7b38117cb8abeb2177e6a1d4a43887ca41e3da38d1b5472318"
+    },
+    {
+      "name": "mascot_wave",
+      "file": "mascot_wave.png",
+      "width": 342,
+      "height": 356,
+      "source_box": [
+        329,
+        134,
+        647,
+        466
+      ],
+      "components": 1,
+      "sha256": "76255f2fed57ffe4ed0b02e9490920ba4c8ddfd2c38411ea2982756c6fca6948"
+    },
+    {
+      "name": "mascot_thinking",
+      "file": "mascot_thinking.png",
+      "width": 336,
+      "height": 356,
+      "source_box": [
+        637,
+        134,
+        949,
+        466
+      ],
+      "components": 1,
+      "sha256": "e0dcc083d296266e47cfda94894f8120647530ca0d4bc21d93b7339b89529665"
+    },
+    {
+      "name": "mascot_sleepy",
+      "file": "mascot_sleepy.png",
+      "width": 328,
+      "height": 317,
+      "source_box": [
+        939,
+        172,
+        1243,
+        465
+      ],
+      "components": 1,
+      "sha256": "f41fb3eb2f9f9048f04ba427cc61426a3b099300174c7aef989585fb57f427ce"
+    },
+    {
+      "name": "icon_whale",
+      "file": "icon_whale.png",
+      "width": 311,
+      "height": 285,
+      "source_box": [
+        37,
+        497,
+        324,
+        758
+      ],
+      "components": 2,
+      "sha256": "96d33c812cca9ffa8f76d1421dfb447a069b4aeebfb1ce37371d2430217cae6a"
+    },
+    {
+      "name": "icon_chat",
+      "file": "icon_chat.png",
+      "width": 271,
+      "height": 206,
+      "source_box": [
+        364,
+        553,
+        611,
+        735
+      ],
+      "components": 1,
+      "sha256": "91be8b623e94cf33add89ca4abe5fc8ca768ef74112572b5ef9b82bf6317b4ef"
+    },
+    {
+      "name": "icon_microphone",
+      "file": "icon_microphone.png",
+      "width": 216,
+      "height": 270,
+      "source_box": [
+        695,
+        512,
+        887,
+        758
+      ],
+      "components": 1,
+      "sha256": "f41c2ca06d40e8215314858b67024336a151ebd2d1af95b15c72d8cd51263b5f"
+    },
+    {
+      "name": "icon_settings",
+      "file": "icon_settings.png",
+      "width": 264,
+      "height": 262,
+      "source_box": [
+        980,
+        520,
+        1220,
+        758
+      ],
+      "components": 1,
+      "sha256": "9020e98e148e260c0cc1808f4adff8e012831e668f3746c6af3854d322bc7d9e"
+    },
+    {
+      "name": "button_primary",
+      "file": "button_primary.png",
+      "width": 301,
+      "height": 139,
+      "source_box": [
+        30,
+        829,
+        307,
+        944
+      ],
+      "components": 1,
+      "sha256": "05b799818e958ec692eea4174f843c22816511200762df53ef3e6211351ef231"
+    },
+    {
+      "name": "button_secondary",
+      "file": "button_secondary.png",
+      "width": 295,
+      "height": 133,
+      "source_box": [
+        346,
+        833,
+        617,
+        942
+      ],
+      "components": 1,
+      "sha256": "2c0be0d9ff3ab6dfda799540ce048a915fdee0602bde30523aa2ee46886749fd"
+    },
+    {
+      "name": "chip_selected",
+      "file": "chip_selected.png",
+      "width": 281,
+      "height": 126,
+      "source_box": [
+        658,
+        837,
+        915,
+        939
+      ],
+      "components": 1,
+      "sha256": "17fb2538d401991182a9a59430872e5b3381a8e4c12c2e0fe67a09af6b976551"
+    },
+    {
+      "name": "chip_idle",
+      "file": "chip_idle.png",
+      "width": 280,
+      "height": 119,
+      "source_box": [
+        961,
+        840,
+        1217,
+        935
+      ],
+      "components": 1,
+      "sha256": "c17694740d893a9637fe8cdcb58ed464231bf148b19eae83edc83a43c53bc7f3"
+    },
+    {
+      "name": "card_panel",
+      "file": "card_panel.png",
+      "width": 287,
+      "height": 221,
+      "source_box": [
+        41,
+        986,
+        304,
+        1183
+      ],
+      "components": 1,
+      "sha256": "fb2d50eae32e09291f8d94edd543de1bec8a7cd73b0b5083f17a70087aa2ce21"
+    },
+    {
+      "name": "bubble_assistant",
+      "file": "bubble_assistant.png",
+      "width": 269,
+      "height": 162,
+      "source_box": [
+        355,
+        1034,
+        600,
+        1172
+      ],
+      "components": 1,
+      "sha256": "74b91f22c88f350034378a9687cdce35c392b9253d7800d76df595b6b28b7159"
+    },
+    {
+      "name": "divider_wave",
+      "file": "divider_wave.png",
+      "width": 334,
+      "height": 102,
+      "source_box": [
+        635,
+        1060,
+        945,
+        1138
+      ],
+      "components": 3,
+      "sha256": "7bcdcf82ba9d06756b163640fbac6e361d42dc8f6d641b0d2e97588eaee38cd5"
+    },
+    {
+      "name": "accent_bow",
+      "file": "accent_bow.png",
+      "width": 227,
+      "height": 179,
+      "source_box": [
+        993,
+        1029,
+        1196,
+        1184
+      ],
+      "components": 1,
+      "sha256": "a0a3b2e75c38ca5938986e73a3b778e5e363975b915cedb4e4224fde2275196a"
+    }
+  ]
+}
