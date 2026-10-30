@@ -54,12 +54,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - 用户可见文案一律走 `res/values*/strings_*.xml`（中英两套；插件目录里的模型错误文案可先留在 Kotlin，但新增 UI 文案必须走资源）
 - 协程：不要 `GlobalScope`；显式 `CoroutineScope` 必须带 `SupervisorJob` 与明确 dispatcher；`catch (CancellationException)` 必须重抛
 - 不新增第三方依赖（需要时先写 ADR 或找 Lead 批准）
+- **不写通配 import**（`import a.b.*`）：AGP 的 lint 在通配 import 上有已知崩溃（M3-2 实测 `AsyncExecutionService.getService must not return null`），一律显式 import
 - 不重排、不格式化无关文件；不做「顺手优化」
 
 ## 测试
 
 - 单测：`app/src/test`、`runtime/src/test`、`shell/src/test`，JUnit4 + `StandardTestDispatcher` + 手写 fake；时间相关用 `MutableTestClock`
-- 共享 fake 放在 `app/src/test/.../testing/`（后续任务会把三份重复的 `FakeAgentRuntime` 合并）
+- 共享 fake：每个模块一份（`runtime/src/test/.../testing/FakeAgentRuntime.kt`、`app/src/test/.../ui/chat/testing/FakeAgentRuntime.kt`）；新增跨测试 fake 一律进对应 `testing/` 包，禁止在生产代码加测试钩子
 - 设备测试：`app/src/androidTest` 目前只有日历与图片规范化两个
 - 行为验收靠真机：条目在 `docs/ACCEPTANCE.md`（稳定 ID），截图用 `scripts/collect-evidence.sh <ACC-ID>` 落 `docs/evidence/`
 
