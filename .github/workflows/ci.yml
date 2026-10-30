@@ -18,16 +18,53 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changes
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          full=1
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            full=0
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              case "$path" in
+                docs/*|assets/*|LICENSE|NOTICE|.gitignore|.gitattributes|.mailmap) ;;
+                .github/ISSUE_TEMPLATE/*|.github/pull_request_template.md) ;;
+                *.md) ;;
+                *) full=1 ;;
+              esac
+            done < <(git diff --name-only "$base" HEAD)
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          if [ "$full" = 0 ]; then
+            echo "仅文档/说明文件变更：跳过 Android 构建，只跑文档检查"
+          else
+            echo "涉及代码、构建或门禁变更：跑全量 verify"
+          fi
+
+      - name: Docs link check
+        run: ./scripts/check-docs.sh
 
       - uses: actions/setup-java@v6
+        if: steps.scope.outputs.full == '1'
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
 
       - uses: gradle/actions/setup-gradle@v6
+        if: steps.scope.outputs.full == '1'
 
       - name: Ensure Android SDK 36
+        if: steps.scope.outputs.full == '1'
         run: |
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           if [ ! -d "$SDK_ROOT/platforms/android-36" ] || [ ! -d "$SDK_ROOT/build-tools/36.0.0" ]; then
@@ -38,6 +75,7 @@ jobs:
           fi
 
       - name: Verify
+        if: steps.scope.outputs.full == '1'
         run: ./scripts/verify.sh
 
       - name: Upload reports
