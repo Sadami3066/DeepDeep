@@ -13,3 +13,6 @@
 9. **不做无实测的性能优化**：声称变快必须给 `gfxinfo` 前后数字。
 10. **持久化纪律**：原子写（tmp + rename）、坏文件先备份 `.corrupt` 再重建、带 `schemaVersion`。
 11. **许可边界**：自有代码 Apache-2.0；PRoot（GPL-2.0-or-later）、Alpine 包、字体/图标、pi2kotlin SDK（MIT）各自许可；不对外说「整个 APK 是 Apache-2.0」。
+12. **会话状态只有一个所有者**：`SessionCommandPlane` 用每会话锁与单调 epoch 管理 busy/stop/retry；只有当前 run 能清除 busy，迟到事件按 runId 隔离。
+13. **状态与事件分工**：运行状态以 `activeRuns` 为准；事件保持多订阅者广播，UI 从运行快照与历史对账，结构事件不得被流式 delta 挤出顺序。
+14. **能力重配置走安全点**：插件能力变化经 `host.reconfigure()`；忙碌会话在本轮结束的安全点应用，不提前关闭正在使用的会话。
