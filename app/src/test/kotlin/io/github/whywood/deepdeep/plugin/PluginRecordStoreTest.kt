@@ -50,6 +50,30 @@ class PluginRecordStoreTest {
     }
 
     @Test
+    fun backupCorruptMovesDataAsideAndLeavesWritableFile() = runTest {
+        val file = File(temporaryFolder.root, "plugins/plugins.json")
+        file.parentFile.mkdirs()
+        file.writeText("{not json")
+        val store = PluginRecordStore(file)
+
+        assertTrue(store.backupCorrupt())
+        assertEquals("{not json", File(file.parentFile, "plugins.json.corrupt").readText())
+        val rewritten = store.load()
+        assertNull(rewritten.error)
+        assertTrue(rewritten.records.isEmpty())
+
+        file.writeText("{not json")
+        assertTrue(store.backupCorrupt())
+        assertNull(store.load().error)
+
+        file.writeText("{second")
+        assertTrue(store.backupCorrupt())
+        assertEquals("{not json", File(file.parentFile, "plugins.json.corrupt").readText())
+        assertEquals("{second", File(file.parentFile, "plugins.json.corrupt-1").readText())
+        assertNull(store.load().error)
+    }
+
+    @Test
     fun writesAreReadableBySecondStore() = runTest {
         val file = File(temporaryFolder.root, "plugins/plugins.json")
         PluginRecordStore(file).upsert(PluginRecord("a", "1", 1L))

@@ -28,4 +28,5 @@
     <string name="plugin_micloud_login_verify_error">Sign-in verification failed, please retry</string>
     <string name="plugin_micloud_login_retry">Retry</string>
     <string name="plugin_micloud_login_close">Close</string>
+    <string name="plugin_micloud_error_verify_failed">Signed in, but verifying the Mi Cloud session failed. Check your network and try again.</string>
 </resources>

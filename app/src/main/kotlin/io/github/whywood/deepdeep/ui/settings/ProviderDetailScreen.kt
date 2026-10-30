@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -277,7 +276,7 @@ private fun ApiKeySection(
 ) {
     val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
-    var draft by rememberSaveable { mutableStateOf("") }
+    var draft by remember { mutableStateOf("") }
     var showRequired by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var outcome by remember { mutableStateOf<ApiKeyOutcome?>(null) }

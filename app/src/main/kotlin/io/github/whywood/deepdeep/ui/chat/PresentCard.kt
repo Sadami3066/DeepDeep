@@ -380,11 +380,12 @@ private class HtmlWebViewHolder {
         view = webView
     }
 
-    fun release() {
-        val webView = view ?: return
+    fun release(webView: WebView? = null) {
+        if (webView != null && view !== webView) return
+        val current = view ?: return
         view = null
-        runCatching { webView.stopLoading() }
-        runCatching { webView.destroy() }
+        runCatching { current.stopLoading() }
+        runCatching { current.destroy() }
     }
 }
 
@@ -420,7 +421,7 @@ private fun HtmlSurface(
                         }.also(holder::attach)
                     },
                     modifier = Modifier.fillMaxSize(),
-                    onRelease = { holder.release() },
+                    onRelease = { released -> holder.release(released) },
                 )
             }
         }

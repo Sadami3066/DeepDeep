@@ -462,6 +462,7 @@ class PluginManagerTest {
         advanceUntilIdle()
 
         assertEquals("previous", backup.readText())
+        assertEquals("{not json", File(file.parentFile, "plugins.json.corrupt-1").readText())
         assertTrue(manager.state.value.error?.isNotEmpty() == true)
     }
 

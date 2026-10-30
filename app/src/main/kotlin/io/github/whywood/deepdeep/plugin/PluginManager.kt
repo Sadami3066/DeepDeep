@@ -42,6 +42,7 @@ class PluginManager(
     private val refreshJob = AtomicReference<Job?>(null)
     private val externalReady = AtomicBoolean(false)
     @Volatile private var contributionsPending = false
+    private var recordsCorruptNotice: String? = null
     @Volatile private var cancelRequested = false
     @Volatile private var lastRefreshAt = 0L
 
@@ -53,8 +54,10 @@ class PluginManager(
             runCatching { recordStore.backupCorrupt() }.getOrDefault(false)
         val records = loaded.records.toMutableMap()
         if (recordsCorrupt && !recordsBackedUp) {
+            val notice = strings.get(R.string.plugins_error_records_unbacked)
+            recordsCorruptNotice = notice
             refreshStatuses()
-            _state.update { it.copy(error = strings.get(R.string.plugins_error_records_corrupt)) }
+            _state.update { it.copy(error = notice) }
             return
         }
         plugins.values.forEach { plugin ->
@@ -83,7 +86,9 @@ class PluginManager(
         }
         refreshStatuses()
         if (recordsCorrupt) {
-            _state.update { it.copy(error = strings.get(R.string.plugins_error_records_corrupt)) }
+            val notice = strings.get(R.string.plugins_error_records_corrupt)
+            recordsCorruptNotice = notice
+            _state.update { it.copy(error = notice) }
         }
     }
 
@@ -558,11 +563,15 @@ class PluginManager(
             )
         }
         lastRefreshAt = System.currentTimeMillis()
+        val clearCorruptNotice = records.error == null &&
+            recordsCorruptNotice != null &&
+            _state.value.error == recordsCorruptNotice
+        if (clearCorruptNotice) recordsCorruptNotice = null
         _state.update {
             it.copy(
                 plugins = snapshots,
                 loading = false,
-                error = records.error ?: it.error,
+                error = records.error ?: if (clearCorruptNotice) null else it.error,
             )
         }
     }

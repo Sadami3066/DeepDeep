@@ -24,6 +24,7 @@
     <string name="plugins_error_disabled">插件已停用</string>
     <string name="plugins_error_busy">另一个插件操作正在进行</string>
     <string name="plugins_error_records_corrupt">插件安装记录已损坏，原文件已备份为 plugins.json.corrupt，已重建</string>
+    <string name="plugins_error_records_unbacked">插件安装记录已损坏，但备份失败；请检查存储空间后重启应用</string>
     <string name="plugins_error_title">操作失败</string>
     <string name="plugins_close">关闭</string>
     <string name="plugins_retry">重试</string>

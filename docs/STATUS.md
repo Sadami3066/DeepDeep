@@ -20,8 +20,16 @@
 - 旋转/分屏不再丢未保存草稿：AGENTS 正文、MCP JSON、定时任务表单、API Key、工作区名等改用可保存状态。
 - 切换语言后聊天页状态（思考中/压缩/重试/运行工具）随当前语言刷新；通知指向已删除会话时给出提示并结束等待；分享导入超时提示。
 
+**审计追加修正**
+- 备份不再以「文件已存在」判成功：按内容校验并生成唯一备份名（`.corrupt-1`…），半写备份不计；备份成功后把损坏文件重写为空合法文件，避免后续写入再次覆盖。
+- 更高版本 schema 只读保留（不再清空）；单条日程损坏只跳过该条、保留其余；备份失败时暂停写入并提示，不再覆盖原文件。
+- 插件记录缺 `plugins` 数组按损坏处理；损坏且备份失败时拒绝写入；损坏提示在文件恢复后可清除。
+- 调度事件/timer 循环体加异常兜底；小米云登录校验失败重试 3 次后明确报错，不再空等 5 分钟。
+- API Key 保存等待真实落盘结果并上报失败；API Key 草稿不再写入 `onSaveInstanceState`；MCP 配置缺失时禁用保存。
+- 分享导入超时改为一次性截止时间；聊天发送标记加超时兜底与最新状态判断；WebView 崩溃重建时按实例释放旧视图。
+
 **验证**
-- 1020 unit tests 全绿（app 623 / runtime 365 / shell 32）；lint 0 errors / 152 warnings / 6 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
+- 1024 unit tests 全绿（app 624 / runtime 368 / shell 32）；lint 0 errors / 152 warnings / 7 hints；`:app:assembleDebug`、`:app:assembleDebugAndroidTest`、`:app:assembleRelease`、`verifyModuleBoundaries` 通过。
 - 真机（Redmi 22101316UCP / Android 13，release 覆盖安装）：语言中→英→中切换后新运行状态分别为 Thinking / 思考中；旋转后 MCP 草稿仍在；伪造损坏的 `plugins.json` 与 `schedules.json` 后重启：备份文件生成、App 不崩、页面显示插件记录重建提示、原数据已恢复；证据 `artifacts/validation/round43/`。
 - 已知限制/未真机验证：日历回滚仅有单测（需系统日历写入失败才能触发）；上翻不被拉底、PresentCard 渲染崩溃、草稿在进程死亡后的恢复未构造真机场景；小米云「服务端已失效但本地 cookie 仍在」会显示已登录，直到工具 401。
 

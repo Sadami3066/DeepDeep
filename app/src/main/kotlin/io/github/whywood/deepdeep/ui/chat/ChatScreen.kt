@@ -266,6 +266,18 @@ fun ChatScreen(
         knownSessionId = state.conversationId
     }
 
+    val latestChatState by rememberUpdatedState(state)
+
+    LaunchedEffect(state.sending) {
+        if (!state.sending) pendingLocalSend = false
+    }
+
+    LaunchedEffect(pendingLocalSend) {
+        if (!pendingLocalSend) return@LaunchedEffect
+        delay(2_000)
+        if (!latestChatState.sending) pendingLocalSend = false
+    }
+
     LaunchedEffect(controller) {
         snapshotFlow { animatedBottomInset.value to composerHeightPx }.collect {
             controller.anchorToBottom()

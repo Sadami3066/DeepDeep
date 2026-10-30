@@ -2,16 +2,13 @@ package io.github.whywood.deepdeep.runtime
 
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class GoalService(
-    scope: CoroutineScope,
-) : GoalController, GoalDriver {
+class GoalService : GoalController, GoalDriver {
     private val mutex = Mutex()
     private val persisted: MutableMap<String, Goal> = mutableMapOf()
     private val armedSessions = mutableSetOf<String>()

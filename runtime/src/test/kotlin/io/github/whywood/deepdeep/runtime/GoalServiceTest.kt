@@ -13,7 +13,7 @@ import org.junit.Test
 class GoalServiceTest {
     @Test
     fun createGoalUsesDefaults() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         val view = service.create("session-1", "  Ship the release  ")
 
         assertNotNull(view)
@@ -34,7 +34,7 @@ class GoalServiceTest {
 
     @Test
     fun maxRoundsAreClampedToOneThroughFifty() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
 
         assertEquals(0, service.create("low", "x", 0)!!.goal.maxRounds)
         assertEquals(50, service.create("high", "x", 100)!!.goal.maxRounds)
@@ -44,7 +44,7 @@ class GoalServiceTest {
 
     @Test
     fun mutationsIncrementRevision() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
 
         var view = service.create("session-1", "Draft")!!
         assertEquals(1, view.goal.revision)
@@ -80,7 +80,7 @@ class GoalServiceTest {
 
     @Test
     fun editRejectsBlankObjectiveWithoutChangingGoal() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         val created = service.create("session-1", "Original")!!
 
         assertNull(service.edit("session-1", "   "))
@@ -90,7 +90,7 @@ class GoalServiceTest {
 
     @Test
     fun clearRemovesGoalAndSessionState() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Temporary")
         service.noteTurn("session-1", TurnSource.USER)
 
@@ -109,7 +109,7 @@ class GoalServiceTest {
 
     @Test
     fun nextRoundProposesWithoutCountingUntilCommitted() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         val created = service.create("session-1", "Keep going")!!.goal
         service.noteTurn("session-1", TurnSource.GOAL)
 
@@ -136,7 +136,7 @@ class GoalServiceTest {
 
     @Test
     fun commitRoundRejectsStaleGoalIdOrRevision() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Keep going")
         val proposal = service.nextRound("session-1", TurnSource.USER, true)!!
 
@@ -148,7 +148,7 @@ class GoalServiceTest {
 
     @Test
     fun pauseClearAndEditInvalidateProposals() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
 
         service.create("paused", "Pause me")
         val pausedProposal = service.nextRound("paused", TurnSource.USER, true)!!
@@ -171,7 +171,7 @@ class GoalServiceTest {
 
     @Test
     fun roundLimitBlocksGoal() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Finish the task", 2)
 
         val firstProposal = service.nextRound("session-1", TurnSource.USER, true)!!
@@ -206,7 +206,7 @@ class GoalServiceTest {
 
     @Test
     fun failedGoalRoundPausesAndDisarms() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Keep improving")
         service.noteTurn("session-1", TurnSource.GOAL)
         val proposal = service.nextRound("session-1", TurnSource.GOAL, true)!!
@@ -229,7 +229,7 @@ class GoalServiceTest {
 
     @Test
     fun blockingRequiresThreeStartedRounds() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Resolve the blocker")
         service.noteTurn("session-1", TurnSource.GOAL)
 
@@ -254,7 +254,7 @@ class GoalServiceTest {
 
     @Test
     fun pauseOnStopPausesActiveGoal() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Long running work")
 
         service.pauseOnStop("session-1")
@@ -271,10 +271,10 @@ class GoalServiceTest {
 
     @Test
     fun goalsAreKeptInMemoryOnly() = runTest {
-        val first = GoalService(backgroundScope)
+        val first = GoalService()
         first.create("session-1", "Never touches disk")
 
-        val reopened = GoalService(backgroundScope)
+        val reopened = GoalService()
 
         assertTrue(reopened.goals.value.isEmpty())
         assertNull(reopened.resume("session-1"))
@@ -283,7 +283,7 @@ class GoalServiceTest {
 
     @Test
     fun revisionsStayUniqueAcrossCommits() = runTest {
-        val service = GoalService(backgroundScope)
+        val service = GoalService()
         service.create("session-1", "Track revisions")
 
         val firstProposal = service.nextRound("session-1", TurnSource.USER, true)!!

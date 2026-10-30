@@ -20,7 +20,7 @@ class InternalPluginsTest {
 
     @Test
     fun goalPluginExposesGoalToolsAndRoundsSetting() = runTest {
-        val plugin = GoalPlugin(GoalService(this), strings)
+        val plugin = GoalPlugin(GoalService(), strings)
 
         assertEquals(PluginKind.INTERNAL, plugin.kind)
         assertEquals("goal", plugin.id)

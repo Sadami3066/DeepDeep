@@ -448,13 +448,13 @@ class ScheduleStoreTest {
     }
 
     @Test
-    fun unsupportedSchemaVersionIsBackedUpAndReplaced() = runTest {
+    fun olderUnsupportedSchemaVersionIsBackedUpAndReplaced() = runTest {
         val file = File(directory, "schedules.json")
-        val versionThree = "{\"schemaVersion\":3,\"schedules\":[]}"
-        file.writeText(versionThree)
+        val versionZero = "{\"schemaVersion\":0,\"schedules\":[]}"
+        file.writeText(versionZero)
 
         assertTrue(store().list().isEmpty())
-        assertEquals(versionThree, File(directory, "schedules.json.corrupt").readText())
+        assertEquals(versionZero, File(directory, "schedules.json.corrupt").readText())
         assertTrue(file.readText().contains("\"schemaVersion\":2"))
     }
 
@@ -466,6 +466,49 @@ class ScheduleStoreTest {
 
         assertTrue(store().list().isEmpty())
         assertEquals(noVersion, File(directory, "schedules.json.corrupt").readText())
+    }
+
+    @Test
+    fun secondCorruptionKeepsPreviousBackupAndAddsNewOne() = runTest {
+        val file = File(directory, "schedules.json")
+        file.writeText("{ first")
+        store().list()
+        file.writeText("{ second")
+
+        assertTrue(store().list().isEmpty())
+        assertEquals("{ first", File(directory, "schedules.json.corrupt").readText())
+        assertEquals("{ second", File(directory, "schedules.json.corrupt-1").readText())
+    }
+
+    @Test
+    fun mixedCorruptEntriesKeepValidSchedules() = runTest {
+        val store = store()
+        val created = store.create(newSchedule())
+        val file = File(directory, "schedules.json")
+        val corrupted = file.readText().replaceFirst("[", "[{\"id\":\"broken\"},")
+        file.writeText(corrupted)
+
+        val loaded = store.list()
+
+        assertEquals(listOf(created), loaded)
+        assertEquals(corrupted, File(directory, "schedules.json.corrupt").readText())
+        assertFalse(file.readText().contains("broken"))
+    }
+
+    @Test
+    fun futureSchemaIsKeptReadOnlyAndBlocksWrites() = runTest {
+        val file = File(directory, "schedules.json")
+        val future = "{\"schemaVersion\":3,\"schedules\":[]}"
+        file.writeText(future)
+        val store = store()
+
+        assertTrue(store.list().isEmpty())
+        assertEquals(future, file.readText())
+        assertFalse(File(directory, "schedules.json.corrupt").exists())
+
+        val failure = runCatching { store.create(newSchedule()) }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals(future, file.readText())
     }
 
     @Test

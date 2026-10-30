@@ -44,16 +44,46 @@ class PluginRecordStore(
 
     suspend fun backupCorrupt(): Boolean = mutex.withLock {
         withContext(ioDispatcher) {
-            val backup = File(file.parentFile, "${file.name}.corrupt")
-            backup.isFile || (
-                file.isFile && runCatching { file.copyTo(backup, overwrite = false) }.isSuccess
-            )
+            if (!file.isFile) return@withContext true
+            val current = runCatching { file.readBytes() }.getOrNull() ?: return@withContext false
+            val base = File(file.parentFile, "${file.name}.corrupt")
+            if (base.isFile && runCatching { base.readBytes().contentEquals(current) }.getOrDefault(false)) {
+                writeLocked(emptyMap())
+                return@withContext true
+            }
+            val target = if (!base.exists()) base else uniqueBackup(base)
+            val temp = File(file.parentFile, "${target.name}.tmp")
+            val copied = runCatching {
+                temp.writeBytes(current)
+                if (!temp.renameTo(target)) {
+                    temp.copyTo(target, overwrite = false)
+                    temp.delete()
+                }
+            }.isSuccess
+            val backedUp = if (copied) {
+                true
+            } else {
+                runCatching { temp.delete() }
+                runCatching { file.renameTo(target) }.getOrDefault(false)
+            }
+            if (backedUp) writeLocked(emptyMap())
+            backedUp
+        }
+    }
+
+    private fun uniqueBackup(base: File): File {
+        var index = 1
+        while (true) {
+            val candidate = File(base.parentFile, "${base.name}-$index")
+            if (!candidate.exists()) return candidate
+            index += 1
         }
     }
 
     suspend fun upsert(record: PluginRecord) = mutex.withLock {
         withContext(ioDispatcher) {
             val current = loadLocked()
+            requireWritable(current)
             writeLocked(current.records + (record.id to record))
         }
     }
@@ -61,6 +91,7 @@ class PluginRecordStore(
     suspend fun remove(id: String) = mutex.withLock {
         withContext(ioDispatcher) {
             val current = loadLocked()
+            requireWritable(current)
             if (id !in current.records) return@withContext
             writeLocked(current.records - id)
         }
@@ -69,9 +100,16 @@ class PluginRecordStore(
     suspend fun setEnabled(id: String, enabled: Boolean) = mutex.withLock {
         withContext(ioDispatcher) {
             val current = loadLocked()
+            requireWritable(current)
             val record = current.records[id] ?: return@withContext
             if (record.enabled == enabled) return@withContext
             writeLocked(current.records + (id to record.copy(enabled = enabled)))
+        }
+    }
+
+    private fun requireWritable(records: PluginRecords) {
+        if (records.error != null) {
+            throw IllegalStateException("插件安装记录损坏，已暂停写入：${records.error}")
         }
     }
 
@@ -84,7 +122,8 @@ class PluginRecordStore(
         val root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrElse { error ->
             return PluginRecords(error = "plugins.json 解析失败：${error.message ?: "invalid JSON"}")
         }
-        val plugins = root["plugins"] as? JsonArray ?: return PluginRecords()
+        val plugins = root["plugins"] as? JsonArray
+            ?: return PluginRecords(error = "plugins.json 缺少 plugins 数组")
         val records = LinkedHashMap<String, PluginRecord>()
         plugins.forEach { element ->
             val item = element as? JsonObject ?: return@forEach

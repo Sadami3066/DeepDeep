@@ -169,7 +169,7 @@ class AppGraph(context: Context) {
     val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(appContext)
-    val goalService: GoalService by lazy { GoalService(scope) }
+    val goalService: GoalService by lazy { GoalService() }
     val jobRegistry: JobRegistry by lazy {
         JobRegistry(
             scope = scope,

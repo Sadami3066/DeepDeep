@@ -48,6 +48,9 @@ class ScheduleStore(
     internal val clock: Clock = Clock.systemDefaultZone(),
     private val zoneProvider: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
+    @Volatile
+    private var writesBlocked = false
+
     private val mutex = Mutex()
     private val file = File(directory, FILE_NAME)
     private val changesFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
@@ -254,7 +257,12 @@ class ScheduleStore(
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
             ?: return discardCorrupt("定时任务数据缺少 schemaVersion")
         if (version == LEGACY_SCHEMA_VERSION) {
-            if (backup(LEGACY_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) }
+            if (backup(LEGACY_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) } else blockWrites()
+            return emptyList()
+        }
+        if (version > SCHEMA_VERSION) {
+            logWarn(TAG, "定时任务数据来自更高版本 schemaVersion=$version，只读并暂停写入")
+            writesBlocked = true
             return emptyList()
         }
         if (version != SCHEMA_VERSION) {
@@ -262,29 +270,68 @@ class ScheduleStore(
         }
         val entries = root["schedules"] as? JsonArray
             ?: return discardCorrupt("定时任务数据缺少 schedules")
-        val schedules: List<Schedule> = runCatching {
-            entries.map { element ->
-                scheduleFromJsonObject(
-                    element as? JsonObject ?: throw CorruptScheduleDataException("定时任务条目不是对象"),
-                )
-            }
-        }.getOrElse { error -> return discardCorrupt("定时任务条目损坏", error) }
+        val schedules = mutableListOf<Schedule>()
+        var corruptEntries = 0
+        entries.forEach { element ->
+            runCatching {
+                scheduleFromJsonObject(element as? JsonObject ?: throw CorruptScheduleDataException("定时任务条目不是对象"))
+            }.onSuccess { schedules += it }.onFailure { corruptEntries += 1 }
+        }
+        if (corruptEntries > 0) {
+            logWarn(TAG, "定时任务条目损坏 $corruptEntries 条，已跳过")
+            if (backup(CORRUPT_BACKUP_FILE_NAME)) runCatching { persist(schedules) } else blockWrites()
+        }
         return schedules
     }
 
     private fun discardCorrupt(message: String, error: Throwable? = null): List<Schedule> {
         logWarn(TAG, message, error)
-        if (backup(CORRUPT_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) }
+        if (backup(CORRUPT_BACKUP_FILE_NAME)) {
+            runCatching { persist(emptyList()) }.onFailure { blockWrites() }
+        } else {
+            blockWrites()
+        }
         return emptyList()
     }
 
+    private fun blockWrites() {
+        writesBlocked = true
+        logError(TAG, "定时任务数据备份失败，已暂停写入以保留原文件")
+    }
+
     private fun backup(name: String): Boolean {
-        val backup = File(directory, name)
-        if (backup.exists()) return true
-        return runCatching { file.copyTo(backup, overwrite = false) }.isSuccess
+        val current = runCatching { file.readBytes() }.getOrNull() ?: return false
+        val base = File(directory, name)
+        if (base.isFile && runCatching { base.readBytes().contentEquals(current) }.getOrDefault(false)) {
+            return true
+        }
+        val target = if (!base.exists()) base else uniqueBackup(base)
+        val temp = File(directory, "${target.name}.tmp")
+        val copied = runCatching {
+            temp.writeBytes(current)
+            if (!temp.renameTo(target)) {
+                temp.copyTo(target, overwrite = false)
+                temp.delete()
+            }
+        }.isSuccess
+        if (copied) return true
+        runCatching { temp.delete() }
+        return runCatching { file.renameTo(target) }.getOrDefault(false)
+    }
+
+    private fun uniqueBackup(base: File): File {
+        var index = 1
+        while (true) {
+            val candidate = File(base.parentFile, "${base.name}-$index")
+            if (!candidate.exists()) return candidate
+            index += 1
+        }
     }
 
     private fun persist(schedules: List<Schedule>) {
+        if (writesBlocked) {
+            throw IllegalStateException("定时任务数据备份失败，已暂停写入")
+        }
         if (!directory.exists() && !directory.mkdirs()) {
             throw IllegalStateException("无法创建定时任务目录：${directory.absolutePath}")
         }

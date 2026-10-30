@@ -65,6 +65,7 @@ class MiCloudPlugin(
             Intent(context, MiCloudLoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         var checked: String? = null
+        var verifyAttempts = 0
         val deadline = System.currentTimeMillis() + LOGIN_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
             if (ui.cancelled()) throw CancellationException("micloud login cancelled")
@@ -72,11 +73,17 @@ class MiCloudPlugin(
             val cookie = cookieStore.read()
             if (cookie == null || cookie == before || cookie == checked) continue
             checked = cookie
+            verifyAttempts = 0
             ui.stage(R.string.plugin_micloud_stage_verifying)
-            if (verifySession()) {
-                ui.progress(null, R.string.plugin_micloud_stage_signed_in)
-                return
+            while (verifyAttempts < VERIFY_ATTEMPTS) {
+                if (verifySession()) {
+                    ui.progress(null, R.string.plugin_micloud_stage_signed_in)
+                    return
+                }
+                verifyAttempts += 1
+                if (verifyAttempts < VERIFY_ATTEMPTS) delay(VERIFY_RETRY_MS)
             }
+            throw IllegalStateException(string(R.string.plugin_micloud_error_verify_failed))
         }
         throw IllegalStateException(string(R.string.plugin_micloud_error_login_timeout))
     }
@@ -176,6 +183,8 @@ class MiCloudPlugin(
         const val ACTION_LOGOUT = "logout"
         const val LOGIN_TIMEOUT_MS = 5 * 60_000L
         const val LOGIN_POLL_INTERVAL_MS = 1_500L
+        const val VERIFY_ATTEMPTS = 3
+        const val VERIFY_RETRY_MS = 1_200L
         const val SKILL_ID = "deepdeep-micloud"
 
         val SKILL_MARKDOWN = """

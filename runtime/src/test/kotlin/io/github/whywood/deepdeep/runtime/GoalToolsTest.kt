@@ -69,7 +69,7 @@ class GoalToolsTest {
             fs = FileSystem.SYSTEM,
         )
         session = engine.createSession(file = null, config = null, shellEnabled = false, mcpEnabled = false)
-        service = GoalService(this)
+        service = GoalService()
         service.noteTurn(session.sessionId, TurnSource.USER)
         tools = goalTools(SessionBinding().apply { attach(session) }, service) { 10 }.associateBy { it.name }
     }

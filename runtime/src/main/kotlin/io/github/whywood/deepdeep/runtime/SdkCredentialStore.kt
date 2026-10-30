@@ -10,6 +10,7 @@ import dev.pi.ai.auth.oauth.OAuthCredential as OAuthToken
 import dev.pi.ai.auth.oauth.oauthCredentialFromJson
 import dev.pi.ai.auth.oauth.toJsonObject
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class SdkCredentialStore(
     private val writeLock = Any()
     private val writeRevisions = HashMap<String, Long>()
     private val writeCounts = HashMap<String, Int>()
+    private val writeFailures = mutableMapOf<String, Throwable>()
     private val writeTails = HashMap<String, Job>()
 
     suspend fun preload(vararg providerIds: String) {
@@ -73,9 +75,11 @@ class SdkCredentialStore(
 
     suspend fun awaitCommit(providerId: String) {
         while (true) {
-            val tail = synchronized(writeLock) { writeTails[providerId] } ?: return
+            val tail = synchronized(writeLock) { writeTails[providerId] } ?: break
             tail.join()
         }
+        val failure = synchronized(writeLock) { writeFailures.remove(providerId) }
+        if (failure != null) throw failure
     }
 
     suspend fun awaitAll() {
@@ -195,10 +199,15 @@ class SdkCredentialStore(
             writeRevisions[providerId] = revision
             writeCounts[providerId] = (writeCounts[providerId] ?: 0) + 1
             val previous = writeTails[providerId]
+            writeFailures.remove(providerId)
             job = scope.launch(ioDispatcher, start = CoroutineStart.LAZY) {
                 try {
                     previous?.join()
                     if (isLatestRevision(providerId, revision)) write()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    synchronized(writeLock) { writeFailures[providerId] = error }
                 } finally {
                     finishWrite(providerId)
                 }

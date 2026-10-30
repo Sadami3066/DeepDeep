@@ -291,6 +291,7 @@ internal fun DeepDeepApp(
     val drawerWidthPx = with(density) { 304.dp.toPx() }
 
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    var shareWaitStartedAt by remember { mutableStateOf(0L) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
     val activeQuestions = pendingQuestions.filter { it.sessionId == state.conversationId }
@@ -357,14 +358,23 @@ internal fun DeepDeepApp(
         state.conversationCwd,
         state.conversationId,
     ) {
-        val payload = pendingShare ?: return@LaunchedEffect
-        if (!state.ready) return@LaunchedEffect
-        if (state.conversationId == null) {
-            delay(SHARE_IMPORT_TIMEOUT_MS)
-            Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
-            onShareConsumed()
+        val payload = pendingShare ?: run {
+            shareWaitStartedAt = 0L
             return@LaunchedEffect
         }
+        if (!state.ready) return@LaunchedEffect
+        if (state.conversationId == null) {
+            if (shareWaitStartedAt == 0L) shareWaitStartedAt = System.currentTimeMillis()
+            val remaining = SHARE_IMPORT_TIMEOUT_MS - (System.currentTimeMillis() - shareWaitStartedAt)
+            if (remaining > 0) delay(remaining)
+            if (chatViewModel.state.value.conversationId == null) {
+                Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
+                onShareConsumed()
+            }
+            shareWaitStartedAt = 0L
+            return@LaunchedEffect
+        }
+        shareWaitStartedAt = 0L
         if (!state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
         if (state.conversationCwd.isBlank()) return@LaunchedEffect
         val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
@@ -539,8 +549,13 @@ internal fun DeepDeepApp(
         val found = state.conversations.any { it.id == sessionId } ||
             state.archivedConversations.any { it.id == sessionId }
         if (!found) {
+            chatViewModel.requestSessionsRefresh()
             delay(SESSION_LOOKUP_GRACE_MS)
-            val latest = chatViewModel.state.value
+            var latest = chatViewModel.state.value
+            if (latest.archivedCount > 0 && latest.archivedConversations.isEmpty()) {
+                delay(SESSION_LOOKUP_GRACE_MS)
+                latest = chatViewModel.state.value
+            }
             val appearsLater = latest.conversations.any { it.id == sessionId } ||
                 latest.archivedConversations.any { it.id == sessionId }
             if (!appearsLater) {

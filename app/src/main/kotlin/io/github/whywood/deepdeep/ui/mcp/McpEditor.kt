@@ -76,6 +76,7 @@ internal fun McpEditorSheet(
     val scope = rememberCoroutineScope()
     var text by rememberSaveable(target.name) { mutableStateOf("") }
     var loaded by rememberSaveable(target.name) { mutableStateOf(false) }
+    var missing by remember(target.name) { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
@@ -83,14 +84,15 @@ internal fun McpEditorSheet(
     var showDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(target.name) {
-        if (!loaded) {
+        if (!loaded && !missing) {
             val stored = store.entryJson(target.name)
             if (stored == null) {
+                missing = true
                 error = "服务器配置不存在"
             } else {
                 text = stored
+                loaded = true
             }
-            loaded = true
         }
     }
 
@@ -103,7 +105,7 @@ internal fun McpEditorSheet(
     val hasAuthorization = http?.headers?.keys?.any { it.equals("Authorization", ignoreCase = true) } == true
 
     fun save() {
-        if (saving || !loaded) return
+        if (saving || !loaded || missing) return
         val body = text
         error = null
         saving = true
@@ -170,7 +172,13 @@ internal fun McpEditorSheet(
                     .padding(horizontal = 24.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                if (!loaded) {
+                if (missing) {
+                    Text(
+                        text = stringResource(R.string.mcp_error_load_failed),
+                        style = DdType.bodySmall,
+                        color = colors.inkSecondary,
+                    )
+                } else if (!loaded) {
                     DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 } else {
                     DdTextArea(
@@ -222,7 +230,7 @@ internal fun McpEditorSheet(
                         text = stringResource(R.string.mcp_test),
                         onClick = { test() },
                         modifier = Modifier.testTag("mcp_test"),
-                        enabled = !testing && !saving && loaded,
+                        enabled = !testing && !saving && loaded && !missing,
                     )
                     if (testing) {
                         Spacer(Modifier.width(8.dp))
@@ -242,7 +250,7 @@ internal fun McpEditorSheet(
                     text = stringResource(R.string.mcp_save),
                     onClick = { save() },
                     modifier = Modifier.fillMaxWidth().testTag("mcp_save"),
-                    enabled = !saving && loaded,
+                    enabled = !saving && loaded && !missing,
                 )
             }
         }

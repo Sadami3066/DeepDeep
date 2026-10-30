@@ -145,7 +145,16 @@ class ChatViewModel(
     }
 
     fun updateUiStrings(strings: ChatUiStrings) {
+        val languageChanged = uiStrings.newChatTitle != strings.newChatTitle ||
+            uiStrings.thinking != strings.thinking
         uiStrings = strings
+        if (languageChanged) {
+            viewModelScope.launch { refreshSessions() }
+        }
+    }
+
+    fun requestSessionsRefresh() {
+        viewModelScope.launch { refreshSessions() }
     }
 
     fun onInputChange(value: String) {

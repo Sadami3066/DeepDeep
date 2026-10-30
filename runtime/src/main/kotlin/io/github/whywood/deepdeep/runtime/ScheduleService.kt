@@ -53,13 +53,13 @@ class ScheduleService(
             guard("deliver due schedules failed") { deliverDue() }
             launch {
                 store.changes.collect {
-                    refresh()
+                    guard("refresh schedules failed") { refresh() }
                     wake.trySend(Unit)
                 }
             }
             launch {
                 runtime.events.collect { event ->
-                    handleRuntimeEvent(event)
+                    guard("handle schedule event failed") { handleRuntimeEvent(event) }
                     wake.trySend(Unit)
                 }
             }
@@ -326,16 +326,27 @@ class ScheduleService(
 
     private suspend fun timerLoop() {
         while (currentCoroutineContext().isActive) {
-            val now = clock.millis()
-            val current = store.list()
-            val hasDue = current.any { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
-            if (hasDue) {
-                deliverDue()
-                continue
+            val delivered = try {
+                val now = clock.millis()
+                val current = store.list()
+                val hasDue = current.any { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
+                if (hasDue) {
+                    deliverDue()
+                    true
+                } else {
+                    val next = current.asSequence().filter { it.enabled }.mapNotNull { it.nextRunAt }.minOrNull()
+                    val wait = next?.minus(now)?.coerceIn(1L, MAX_TIMER_WAIT_MS) ?: MAX_TIMER_WAIT_MS
+                    withTimeoutOrNull(wait) { wake.receive() }
+                    false
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                logError(TAG, "schedule timer iteration failed", error)
+                withTimeoutOrNull(MAX_TIMER_WAIT_MS) { wake.receive() }
+                false
             }
-            val next = current.asSequence().filter { it.enabled }.mapNotNull { it.nextRunAt }.minOrNull()
-            val wait = next?.minus(now)?.coerceIn(1L, MAX_TIMER_WAIT_MS) ?: MAX_TIMER_WAIT_MS
-            withTimeoutOrNull(wait) { wake.receive() }
+            if (delivered) continue
         }
     }
 
