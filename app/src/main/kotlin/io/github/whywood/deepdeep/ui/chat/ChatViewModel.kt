@@ -36,6 +36,7 @@ import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.ui.chat.state.ConversationWriteTarget
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,7 +55,6 @@ import kotlinx.coroutines.withContext
 private const val STREAM_DELTA_BATCH_MS = 16L
 private const val BUSY_RECONCILE_DELAY_MS = 500L
 private const val STOP_RECONCILE_DELAY_MS = 500L
-private const val MAX_CACHED_SESSIONS = 8
 
 private data class SessionDraft(
     val input: String = "",
@@ -87,7 +87,12 @@ class ChatViewModel(
     val availableSkills: StateFlow<List<SkillSummary>> = mutableAvailableSkills.asStateFlow()
 
     private val sessionDrafts = mutableMapOf<String, SessionDraft>()
-    private val conversationCache = LinkedHashMap<String, ConversationState>(16, 0.75f, true)
+    private val conversationTarget = ConversationWriteTarget(
+        activeReader = { mutableState.value.conversationState() },
+        activeWriter = { state -> mutableState.update { it.applyConversation(state) } },
+        protectedSessionIds = { runtime.busySessionIds.value + listOfNotNull(mutableState.value.conversationId) },
+        onEvict = { sessionId -> sessionDrafts.remove(sessionId) },
+    )
     private val sessionOpenJobs = mutableMapOf<String, Job>()
     private val reconcileJobs = mutableMapOf<String, Job>()
     private val pendingDeltas = mutableListOf<RuntimeEvent>()
@@ -360,28 +365,19 @@ class ChatViewModel(
 
     private fun beginRetry(sessionId: String) {
         val now = System.currentTimeMillis()
-        if (mutableState.value.conversationId == sessionId) {
-            mutableState.update { state ->
-                state.copy(
-                    messages = markRetryingTail(state.messages, now),
-                    sending = true,
-                    activity = RuntimeActivity.Thinking,
-                    activityStartedAt = now,
-                    error = null,
-                )
-            }
-            cacheCurrentSession()
-        } else {
-            val cached = conversationCache[sessionId] ?: return
-            storeConversation(
-                sessionId,
-                cached.copy(
-                    messages = markRetryingTail(cached.messages, now),
-                    sending = true,
-                    activity = RuntimeActivity.Thinking,
-                    activityStartedAt = now,
-                ),
+        val active = conversationTarget.isActive(sessionId)
+        val applied = conversationTarget.updateIfPresent(sessionId) { state ->
+            state.copy(
+                messages = markRetryingTail(state.messages, now),
+                sending = true,
+                activity = RuntimeActivity.Thinking,
+                activityStartedAt = now,
             )
+        }
+        if (!applied) return
+        if (active) {
+            mutableState.update { it.copy(error = null) }
+            cacheCurrentSession()
         }
         autoRetryJobs.remove(sessionId)
         autoRetryTokens.remove(sessionId)
@@ -435,25 +431,12 @@ class ChatViewModel(
         val token = Any()
         autoRetryTokens[sessionId] = token
         autoRetryJobs[sessionId] = viewModelScope.launch {
-            if (mutableState.value.conversationId == sessionId) {
-                mutableState.update {
-                    it.copy(
-                        sending = true,
-                        activity = RuntimeActivity.Retrying(attempt),
-                        activityStartedAt = System.currentTimeMillis(),
-                    )
-                }
-            } else {
-                conversationCache[sessionId]?.let { cached ->
-                    storeConversation(
-                        sessionId,
-                        cached.copy(
-                            sending = true,
-                            activity = RuntimeActivity.Retrying(attempt),
-                            activityStartedAt = System.currentTimeMillis(),
-                        ),
-                    )
-                }
+            conversationTarget.updateIfPresent(sessionId) {
+                it.copy(
+                    sending = true,
+                    activity = RuntimeActivity.Retrying(attempt),
+                    activityStartedAt = System.currentTimeMillis(),
+                )
             }
             delay(AUTO_RETRY_DELAY_MS)
             if (autoRetryTokens[sessionId] !== token) return@launch
@@ -465,18 +448,8 @@ class ChatViewModel(
     private fun dismissInterruptedNotice(sessionId: String) {
         interruptedQuestionNoticeSessions -= sessionId
         interruptedRunNoticeSessions -= sessionId
-        if (mutableState.value.conversationId == sessionId) {
-            mutableState.update { state ->
-                state.copy(messages = state.messages.filterNot { message -> message.notice.isInterruptedNotice() })
-            }
-        }
-        conversationCache[sessionId]?.let { cached ->
-            storeConversation(
-                sessionId,
-                cached.copy(
-                    messages = cached.messages.filterNot { message -> message.notice.isInterruptedNotice() },
-                ),
-            )
+        conversationTarget.updateIfPresent(sessionId) { state ->
+            state.copy(messages = state.messages.filterNot { message -> message.notice.isInterruptedNotice() })
         }
         viewModelScope.launch {
             ignoreFailure { dismissInterruptedQuestions(sessionId) }
@@ -615,13 +588,11 @@ class ChatViewModel(
         val sessionId = mutableState.value.conversationId ?: return
         clearAutoRetry(sessionId)
         val dropped = runtime.stop(sessionId)
-        if (mutableState.value.conversationId == sessionId) {
-            mutableState.update { state ->
-                state.copy(
-                    input = mergeDroppedInput(state.input, dropped),
-                    queuedInputs = emptyList(),
-                )
-            }
+        mutableState.update { state ->
+            state.copy(
+                input = mergeDroppedInput(state.input, dropped),
+                queuedInputs = emptyList(),
+            )
         }
         if (runtime.activeRuns.value[sessionId] == null) {
             scheduleReconcile(sessionId, STOP_RECONCILE_DELAY_MS)
@@ -646,21 +617,7 @@ class ChatViewModel(
 
     fun onTrimMemory(level: Int) {
         if (level != ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && level != ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) return
-        val protectedIds = protectedSessionIds()
-        val iterator = conversationCache.keys.iterator()
-        while (iterator.hasNext()) {
-            val id = iterator.next()
-            if (id in protectedIds) continue
-            iterator.remove()
-            sessionDrafts.remove(id)
-        }
-        sessionDrafts.keys.retainAll(conversationCache.keys)
-    }
-
-    private fun protectedSessionIds(): Set<String> {
-        val busy = runtime.busySessionIds.value
-        val current = mutableState.value.conversationId
-        return if (current == null) busy else busy + current
+        conversationTarget.clearUnprotected()
     }
 
     private fun scheduleReconcile(sessionId: String, delayMs: Long) {
@@ -721,9 +678,7 @@ class ChatViewModel(
             applySessionModel(sessionModel)
             cacheCurrentSession()
         } else {
-            val cached = conversationCache[sessionId] ?: return
-            storeConversation(
-                sessionId,
+            conversationTarget.updateIfPresent(sessionId) { cached ->
                 cached.copy(
                     messages = settled,
                     sending = false,
@@ -731,8 +686,8 @@ class ChatViewModel(
                     activityStartedAt = null,
                     loaded = true,
                     sessionModel = sessionModel ?: cached.sessionModel,
-                ),
-            )
+                )
+            }
         }
     }
 
@@ -788,8 +743,9 @@ class ChatViewModel(
             val reopenedId = withContext(ioDispatcher) { runtime.reloadSession(sessionId) }
             if (reopenedId != sessionId) {
                 sessionDrafts.remove(sessionId)?.let { draft -> sessionDrafts[reopenedId] = draft }
-                conversationCache.remove(sessionId)?.let { snapshot -> storeConversation(reopenedId, snapshot) }
+                conversationTarget.take(sessionId)?.let { snapshot -> conversationTarget.store(reopenedId, snapshot) }
                 mutableState.update { it.copy(conversationId = reopenedId, error = null, reloading = false) }
+                conversationTarget.setActive(reopenedId)
             } else {
                 mutableState.update { it.copy(error = null, reloading = false) }
             }
@@ -1023,8 +979,7 @@ class ChatViewModel(
                 pendingDeltas.clear()
                 pendingDeltaRunId = null
             }
-            conversationCache.remove(id)
-            sessionDrafts.remove(id)
+            conversationTarget.evict(id)
             if (wasActive) runtime.stop(id)
             runCatching { withContext(ioDispatcher) { runtime.deleteSession(id) } }
             if (wasActive) {
@@ -1070,7 +1025,7 @@ class ChatViewModel(
     }
 
     private fun switchToSummary(summary: ConversationSummary) {
-        val cached = conversationCache[summary.id]
+        val cached = conversationTarget.readCached(summary.id)
         val draft = if (cached == null) null else sessionDrafts[summary.id]
         val workspaceId = mutableState.value.workspaces
             .firstOrNull { workspace -> workspace.cwd == summary.cwd }
@@ -1098,13 +1053,14 @@ class ChatViewModel(
                 importingAttachment = false,
             )
         }
+        conversationTarget.setActive(summary.id)
         applySessionModel(cached?.sessionModel)
         openSession(summary)
     }
 
     private fun ConversationState.withCachedInterruptedNotices(sessionId: String): ConversationState {
         if (sessionId !in interruptedQuestionNoticeSessions && sessionId !in interruptedRunNoticeSessions) return this
-        val cached = conversationCache[sessionId] ?: return this
+        val cached = conversationTarget.readCached(sessionId) ?: return this
         val notices = cached.messages.filter { message -> message.notice.isInterruptedNotice() }
         if (notices.isEmpty()) return this
         var id = nextMessageId(messages)
@@ -1186,16 +1142,10 @@ class ChatViewModel(
                         interruptedRuns(summary.id).size.takeIf { count -> count > 0 }
                             ?.let { count -> TurnNotice.InterruptedRun(count) }
                     }
-                storeConversation(summary.id, resolved)
-                if (mutableState.value.conversationId == summary.id) {
+                conversationTarget.store(summary.id, resolved)
+                if (conversationTarget.isActive(summary.id)) {
                     mutableState.update {
-                        it.copy(
-                            messages = resolved.messages,
-                            conversationTitle = resolved.title,
-                            sending = resolved.sending,
-                            activity = resolved.activity,
-                            activityStartedAt = resolved.activityStartedAt,
-                            usage = resolved.usage,
+                        it.applyConversation(resolved).copy(
                             historyLoaded = true,
                             switchingConversation = false,
                             queuedInputs = queuedInputs,
@@ -1226,7 +1176,7 @@ class ChatViewModel(
                 val opened = withContext(ioDispatcher) { runtime.newSession(workspaceId) }
                 val projectCwd = opened.cwd
                 val sessionModel = withContext(ioDispatcher) { runtime.sessionModel(opened.sessionId) }
-                storeConversation(opened.sessionId, ConversationState(sessionModel = sessionModel))
+                conversationTarget.store(opened.sessionId, ConversationState(sessionModel = sessionModel))
                 mutableState.update {
                     it.copy(
                         conversationId = opened.sessionId,
@@ -1250,6 +1200,7 @@ class ChatViewModel(
                         importingAttachment = false,
                     )
                 }
+                conversationTarget.setActive(opened.sessionId)
                 applySessionModel(sessionModel)
                 refreshSessions()
             } catch (cancelled: CancellationException) {
@@ -1265,8 +1216,8 @@ class ChatViewModel(
         val id = current.conversationId ?: return
         if (!current.historyLoaded) return
         flushPendingDeltas()
-        val loaded = conversationCache[id]?.loaded == true
-        storeConversation(
+        val loaded = conversationTarget.readCached(id)?.loaded == true
+        conversationTarget.store(
             id,
             ConversationState(
                 messages = current.messages,
@@ -1286,33 +1237,10 @@ class ChatViewModel(
         )
     }
 
-    private fun storeConversation(id: String, state: ConversationState) {
-        conversationCache[id] = state
-        trimConversationCache()
-    }
-
-    private fun trimConversationCache() {
-        if (conversationCache.size <= MAX_CACHED_SESSIONS) return
-        val protectedIds = protectedSessionIds()
-        val iterator = conversationCache.keys.iterator()
-        while (conversationCache.size > MAX_CACHED_SESSIONS && iterator.hasNext()) {
-            val id = iterator.next()
-            if (id in protectedIds) continue
-            iterator.remove()
-            sessionDrafts.remove(id)
-        }
-    }
-
     private suspend fun refreshUsage(sessionId: String) {
         val usage = withContext(ioDispatcher) { runtime.usage(sessionId) } ?: return
-        if (mutableState.value.conversationId == sessionId) {
-            mutableState.update { it.copy(usage = usage) }
-            cacheCurrentSession()
-        } else {
-            conversationCache[sessionId]?.let { cached ->
-                storeConversation(sessionId, cached.copy(usage = usage))
-            }
-        }
+        conversationTarget.updateIfPresent(sessionId) { it.copy(usage = usage) }
+        if (conversationTarget.isActive(sessionId)) cacheCurrentSession()
     }
 
     private suspend fun reloadHistoryAfterCompaction(sessionId: String) {
@@ -1388,21 +1316,14 @@ class ChatViewModel(
                 return
             }
             flushPendingDeltas()
-            val reduced = reduce(mutableState.value.conversationState(), event, uiStrings)
-            mutableState.update { base ->
-                val updated = base.applyConversation(reduced)
-                if (event is RuntimeEvent.RunFailed && reduced.messages.none { it.status == MessageStatus.FAILED }) {
-                    updated.copy(error = uiStrings.runError(event.message))
-                } else if (event is RuntimeEvent.RunFailed) {
-                    updated.copy(error = null)
-                } else {
-                    updated
-                }
+            conversationTarget.update(scoped.sessionId) { reduce(it, event, uiStrings) }
+            if (event is RuntimeEvent.RunFailed) {
+                val failed = mutableState.value.messages.none { it.status == MessageStatus.FAILED }
+                mutableState.update { it.copy(error = if (failed) uiStrings.runError(event.message) else null) }
             }
             cacheCurrentSession()
         } else {
-            val cached = conversationCache[scoped.sessionId] ?: ConversationState()
-            storeConversation(scoped.sessionId, reduce(cached, event, uiStrings))
+            conversationTarget.update(scoped.sessionId) { cached -> reduce(cached, event, uiStrings) }
         }
         when (event) {
             is RuntimeEvent.RunFailed -> maybeAutoRetry(scoped.sessionId, event)
@@ -1468,10 +1389,8 @@ class ChatViewModel(
     )
 
     private fun finishRunError(sessionId: String, message: String) {
-        if (mutableState.value.conversationId != sessionId) {
-            conversationCache[sessionId]?.let { cached ->
-                storeConversation(sessionId, cached.finishWithError("", message, uiStrings))
-            }
+        if (!conversationTarget.isActive(sessionId)) {
+            conversationTarget.updateIfPresent(sessionId) { it.finishWithError("", message, uiStrings) }
             return
         }
         val reduced = mutableState.value.conversationState().finishWithError("", message, uiStrings)
@@ -1491,7 +1410,7 @@ class ChatViewModel(
         val sessions = withContext(ioDispatcher) { runtime.allSessions() }
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
         val visibleIds = (sessions + archived).map { it.id }.toSet()
-        conversationCache.keys.retainAll(visibleIds)
+        conversationTarget.retainOnly(visibleIds)
         sessionDrafts.keys.retainAll(visibleIds)
         mutableState.update {
             val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
