@@ -1,8 +1,0 @@
-id	phase	status	title	scope	depends	accept	verify	rollback	size	owner	source
-M4-1	M4	deferred	Maven Central 收口（group 改 io.github.sadami3066）	../pi2kotlin;gradle/libs.versions.toml	M0-1	Central 可解析 0.3.0	mvn dependency:get	回退坐标	L	human-approve	GL-004
-M4-2	M4	deferred	正式签名与 tag 驱动 release	app/build.gradle.kts;.github/workflows/release.yml	M1-7	signingReport 显示 release keystore	--print-certs	回退配置（keystore 不可回滚）	M	human-approve	GL-006
-M4-3	M4	deferred	切 public + 社区文件	CONTRIBUTING.md;CODE_OF_CONDUCT.md;SECURITY.md;.github/ISSUE_TEMPLATE/*	M1-9	仓库可公开构建	clean clone	切回 private	M	human-external	-
-M4-4	M4	deferred	品牌素材替换决策与执行	res/drawable*/provider_*;vendor_*;docs	M1-9	3 个非开源图标已替换或声明	清单逐条	git revert	M	human-approve	-
-M4-5	M4	deferred	发行验收清单	无	M4-1..M4-4	清单全过	见 THIRD_PARTY_NOTICES 清单	-	S	agent	-
-M6-1	M6	done	手动验证档位 L0–L4 + CI 改手动 + 文档快车道	scripts/gate.sh;scripts/verify.sh;scripts/check-docs.sh;.github/workflows/ci.yml;docs/dev/refactor/PLAYBOOK.md;AGENTS.md;CONTRIBUTING.md;.github/pull_request_template.md;docs/dev/refactor/tasks.tsv;docs/dev/refactor/tasks-archive-2026-10.tsv	-	五档命令可用且耗时符合预期；CI 只手动/tag 触发；分支保护不再要求 verify；文档检查在干净 clone 下通过	./scripts/gate.sh 0..4 各跑一次并记录耗时；干净 clone 跑 check-docs；gate.sh ci 触发一次手动 run	git revert	M	agent	user-2026-10-30
-M6-2	M6	done	规则瘦身：常驻规则一页 + UI 轻量模式	AGENTS.md;CONTRIBUTING.md;docs/dev/refactor/PLAYBOOK.md;.github/pull_request_template.md;docs/README.md;docs/dev/UI.md	M6-1	开工必读从 6 份 22,455 字符降到 AGENTS 2,931 字符；UI 任务免卡免单测；旧 § 引用 0 失效	./scripts/gate.sh 0；grep 旧 § 引用	git revert	S	agent	user-2026-10-30

@@ -13,7 +13,7 @@ artifacts/validation/
 keystore.properties
 .notes/
 
-# 设计源光栅图只在本地保留（文本来源与再生成见 docs/dev/refactor/HYGIENE.md）
+# 设计源光栅图只在本地保留（文本来源与 manifest 在 assets/ 下）
 assets/**/*.png
 assets/**/*.jpg
 assets/**/*.webp

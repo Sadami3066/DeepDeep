@@ -1,63 +1,33 @@
 # DeepDeep
 
-Android 上的个人 agent：pi2kotlin agent 运行时 + proot Linux + 插件 + 创意工坊。**基本功能不需要 root**；已 root 设备可选开启前台 `root_shell` 能力。
-
-当前状态：个人项目、开发中。仓库暂为私有，但按开源标准维护（见 `CONTRIBUTING.md`）。
+Android 上的个人 agent：pi2kotlin 运行时 + proot Linux + 插件 + 创意工坊，**不需要 root**。
 
 ## 能做什么
 
-- **对话**：Claude 风格聊天、多会话与工作区、按会话切换模型与思考等级、42 家 Provider、Markdown/代码/表格、语音进出
-- **动手**：Alpine/proot 里的 `bash`、后台任务、定时提醒投递回原对话
-- **接入**：MCP、插件（飞书 / 企业微信 / 小米云 / 网络搜索 / GUI 操作）、无障碍操作、系统日历、分享接收
-- **造东西**：创意工坊——Agent 写出的 HTML 轻应用，WebView 渲染，代码与数据分离
-- **系统**：前台服务、通知中心、系统助手角色、深链接
+- **对话**：Claude 风格聊天、多工作区/会话、42 家 Provider、按会话切模型与思考档、Markdown/代码/表格、语音进出
+- **动手**：Alpine/proot 里的 `bash`、后台任务、定时提醒投递回原对话、目标续跑；已 root 设备可开可选 `root_shell`
+- **接入**：MCP、插件（飞书 / 企业微信 / 小米云 / 网络搜索 / GUI 操作 / 安排）、无障碍、系统日历、分享接收
+- **造东西**：创意工坊——Agent 写的 HTML 轻应用，WebView 渲染，数据与代码分离
+- **系统**：前台服务、通知中心、系统助手角色与浮层、深链接
 
-完整功能与边界见 [`docs/user/GUIDE.md`](docs/user/GUIDE.md)。
+功能细节与已知边界见 [docs/GUIDE.md](docs/GUIDE.md)；不可随手推翻的设计取舍见 [docs/DECISIONS.md](docs/DECISIONS.md)。
 
-## 跑起来
+## 构建与安装
 
 需要 JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。
 
 ```bash
-./scripts/dev-setup.sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./scripts/dev-setup.sh        # 首次：检查环境、写 local.properties、拉 SDK、出 APK
+./scripts/check.sh            # 日常：编译 + 单测 + lint + 模块边界 + APK
+./scripts/check.sh --device   # 再加覆盖安装到手机并启动
 ```
 
-`dev.pi` SDK 由 Gradle 任务自动从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
-
-## 门禁
-
-```bash
-./scripts/verify.sh      # 编译 + 单测 + lint + 模块边界（带全局锁，串行）
-```
-
-基线见 [`docs/dev/refactor/BASELINE.md`](docs/dev/refactor/BASELINE.md)：1223 单测、0 lint error、13 编译警告。
+`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。
 
 ## 边界
 
-- 不做权限/审批系统；Linux 运行环境与可选 root 各一个总开关（[ADR-0002](docs/dev/adr/0002-no-permission-approval.md)、[ADR-0008](docs/dev/adr/0008-root-capability.md)）
+- 不做权限/审批系统；Linux 运行环境与可选 root 各有一个总开关
 - Linux 是 proot 用户空间，**不是安全沙箱**
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据
-- 创意工坊页面只能通过 bridge 读写自己的数据，不能调用 App 内部函数、执行 shell 或读取其他数据
-- 本地分发：release 变体用 debug 证书签名（[ADR-0001](docs/dev/adr/0001-local-distribution-and-signing.md)）
-
-## 文档地图
-
-全量索引与维护规则见 [`docs/README.md`](docs/README.md)。
-
-| 想了解 | 去哪 |
-|---|---|
-| 功能与边界 | [`docs/user/GUIDE.md`](docs/user/GUIDE.md) |
-| 开发环境、命令、约定 | [`docs/dev/DEVELOPMENT.md`](docs/dev/DEVELOPMENT.md) |
-| 模块结构与数据所有权 | [`docs/dev/ARCHITECTURE.md`](docs/dev/ARCHITECTURE.md) |
-| 为什么这么设计 | [`docs/dev/adr/`](docs/dev/adr/README.md) |
-| 真机验收条目 | [`docs/dev/ACCEPTANCE.md`](docs/dev/ACCEPTANCE.md) |
-| 给 AI agent 的规则 | [`AGENTS.md`](AGENTS.md) |
-| 当前重构计划与任务 | [`docs/dev/refactor/`](docs/dev/refactor/README.md) |
-| 参与贡献 / 行为准则 / 安全问题 | [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · [`SECURITY.md`](SECURITY.md) |
-| 发布流程（未启用）与开源就绪清单 | [`docs/dev/RELEASING.md`](docs/dev/RELEASING.md) · [`docs/dev/OPEN_SOURCE_CHECKLIST.md`](docs/dev/OPEN_SOURCE_CHECKLIST.md) |
-| 变更记录 | [`CHANGELOG.md`](CHANGELOG.md) |
-
-## 许可
-
-自有代码采用 Apache-2.0（见 [`LICENSE`](LICENSE)）。随 APK 分发的第三方组件（PRoot、Alpine、字体、图标、pi2kotlin SDK 等）分别适用各自许可证，见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。本项目不授予任何商标许可。
+- 本地分发，release 也用 debug 证书签名（换签 = 所有设备卸载重装 = 丢数据，见 `DECISIONS`）
+- 自有代码 Apache-2.0；随包分发的第三方组件各自许可，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
