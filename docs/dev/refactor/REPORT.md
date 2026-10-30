@@ -8,7 +8,7 @@
 |---|---|---|
 | 任何机器 clone 即可构建 | ✅ 不再依赖作者本机 `~/.m2`；SDK 由 `syncPiSdk` 从 pi2kotlin `v0.2.4` Release 下载并校验 sha256 | GitHub Actions 在干净 runner 上 `checkout + verify` 绿；`M0` 时本机空 `~/.m2` 的 clean-clone 演练也绿 |
 | 一条命令判真伪 | ✅ `./scripts/verify.sh` = 编译 + 单测 + lint + 模块边界 + 包边界 + assembleDebug | `BUILD SUCCESSFUL`，1165 单测 0 失败 0 skip，lint 0 error / 156 warning，编译警告 13 |
-| 多 agent 可并行协作 | ✅ 任务卡/简报/闸门/回滚协议 + ownership zones + 全局构建锁 | `docs/dev/refactor/PLAYBOOK.md`、`tasks.tsv`（50+ 卡）、`scripts/gradlew-locked`；M2/M3 多轮 3–4 agent 并行完成 |
+| 多 agent 可并行协作 | ✅ 任务卡/简报/闸门/回滚协议 + ownership zones + 全局构建锁 | `docs/dev/refactor/PLAYBOOK.md`、`tasks.tsv` + `tasks-archive-2026-10.tsv`（50+ 卡）、`scripts/gradlew-locked`；M2/M3 多轮 3–4 agent 并行完成 |
 | Apache-2.0 开源标准就绪（暂不公开） | ✅ LICENSE/NOTICE/第三方声明 + 社区文件 + 就绪清单 + 发布流程（未启用） | `LICENSE`、`NOTICE`、`THIRD_PARTY_NOTICES.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`.github/ISSUE_TEMPLATE/*`、`docs/dev/OPEN_SOURCE_CHECKLIST.md`、`docs/dev/RELEASING.md` |
 
 ## 2. 里程碑
@@ -71,7 +71,7 @@
 
 ## 6. 后续怎么继续
 
-- 任务从 `docs/dev/refactor/tasks.tsv` 取卡（M0–M3 全 done，M4 为 deferred，M5 文档校准已完成（2026-10-30））；新任务按 `docs/dev/refactor/PLAYBOOK.md` 写卡。
+- 任务从 `docs/dev/refactor/tasks.tsv` 取活跃卡（现只剩 M4 deferred；M0–M3 与 M5 的完成卡在 `tasks-archive-2026-10.tsv`）；新任务按 `docs/dev/refactor/PLAYBOOK.md` 写卡，并按 T0/T1/T2 选档。
 - 任何 agent 先读 `AGENTS.md`；构建只走 `./scripts/verify.sh` / `./scripts/gradlew-locked`。
 - 真机验收用 `docs/dev/ACCEPTANCE.md` + `scripts/collect-evidence.sh`。
 - 发版流程见 `docs/dev/RELEASING.md`（启用前需 keystore 与 Secrets）。

@@ -4,12 +4,22 @@
 
 ## 工作方式
 
-1. 从 `docs/dev/refactor/tasks.tsv` 取一张卡（或开 issue），确认 `scope`/`accept`/`verify` 三列非空。
+先按 `docs/dev/refactor/PLAYBOOK.md §0` 选档（改动越大档越高，拿不准就升档）：
+
+| 档 | 做什么 |
+|---|---|
+| **T0 文档/文案** | 免卡。改完跑 `./scripts/check-docs.sh`，提交即可（CI 只跑文档检查）；body 可省略 |
+| **T1 普通代码** | 建卡 → 短分支 → `./scripts/verify.sh` → 提交；G2 由 Lead 抽检，涉 UI 才要真机证据 |
+| **T2 行为/数据/UI** | 建卡 → 短分支 → `verify.sh` → G2 证伪 → 真机证据 → 提交 |
+
+T1/T2 的步骤：
+
+1. 从 `docs/dev/refactor/tasks.tsv` 取一张卡（没有就先写一张），确认 `scope`/`accept`/`verify` 三列非空。
 2. 建短分支：`task/<id>-<slug>`。
 3. 只改任务卡白名单里的文件；需要额外文件先停下要授权。
 4. 跑 `./scripts/verify.sh`，直到全绿；把原始输出贴进 PR。
 5. 提交标题：`type: 祈使句摘要 [任务ID]`；body 三行：`验收:`、`回滚:`、`不在范围:`。
-6. 开 PR，按模板填完四段（变更面 / G1 机器闸门 / G2 证伪 / G3 验收）。
+6. 开 PR，按模板填对应档位的段落（T1 免 G2/G3；T2 全填）。
 7. squash 合并；出问题用 `git revert <sha>` 回滚，一次只回滚一个任务。
 
 ## 硬规则
@@ -22,7 +32,9 @@
 
 ## 评审
 
-三道闸门（G1 机器 / G2 证伪 / G3 人工验收）见 `docs/dev/refactor/PLAYBOOK.md §2`。G2 由另一个只读 agent 或人执行，必须至少产出一条「这个改动的假设可能不成立」，否则视为未评审。
+三道闸门（G1 机器 / G2 证伪 / G3 人工验收）见 `docs/dev/refactor/PLAYBOOK.md §2`。
+
+**G2 强制范围**：T2 必做；T1 由 Lead 抽检；T0 不做。G2 必须至少产出一条「这个改动的假设可能不成立」，否则视为未评审。
 
 ## 文档
 
