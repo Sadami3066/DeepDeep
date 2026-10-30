@@ -1,16 +1,12 @@
 package io.github.whywood.deepdeep
 
-import android.content.ComponentCallbacks2
-import android.content.res.Configuration
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,21 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
@@ -45,21 +34,29 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
-import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
-import io.github.whywood.deepdeep.ui.chat.commandQuery
-import io.github.whywood.deepdeep.ui.chat.ParsedCommand
-import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
-import io.github.whywood.deepdeep.ui.chat.parseChatCommand
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
-import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
 import io.github.whywood.deepdeep.ui.navigation.deepLinkStack
 import io.github.whywood.deepdeep.ui.shell.OverlayHost
+import io.github.whywood.deepdeep.ui.shell.ShellCommandAction
+import io.github.whywood.deepdeep.ui.shell.ShellCommandExecutor
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeActions
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeChatState
+import io.github.whywood.deepdeep.ui.shell.ShellIntakeHost
+import io.github.whywood.deepdeep.ui.shell.ShellSubmitPlan
+import io.github.whywood.deepdeep.ui.shell.buildCommandItems
+import io.github.whywood.deepdeep.ui.shell.commandInsertion
+import io.github.whywood.deepdeep.ui.shell.planSubmission
+import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
+import io.github.whywood.deepdeep.ui.shell.ShellCommandPalette
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationBackHandler
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
+import io.github.whywood.deepdeep.ui.shell.rememberShellChatViewModel
+import io.github.whywood.deepdeep.ui.shell.ShellChatLifecycle
 import io.github.whywood.deepdeep.ui.shell.ShellDrawerActions
 import io.github.whywood.deepdeep.ui.shell.ShellDrawerState
 import io.github.whywood.deepdeep.ui.shell.ShellOverlay
@@ -72,9 +69,7 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
-import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
-import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
@@ -99,91 +94,10 @@ internal fun DeepDeepApp(
 ) {
     val scope = rememberCoroutineScope()
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
-    val retryTemplate = stringResource(R.string.chat_status_retrying_format)
-    val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
-    val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
-    val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
-    val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
     val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
     val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
-    val chatUiStrings = ChatUiStrings(
-        thinking = stringResource(R.string.chat_status_thinking),
-        retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
-        compacting = stringResource(R.string.chat_status_compacting),
-        compactionFailed = stringResource(R.string.chat_status_compaction_failed),
-        runningTool = { name -> runningToolTemplate.replace("%1\$s", displayToolName(name)) },
-        requestFailed = stringResource(R.string.chat_error_request_failed),
-        runtimeStartFailed = stringResource(R.string.chat_error_runtime_start),
-        preparingSession = stringResource(R.string.chat_error_preparing),
-        maxAttachments = stringResource(R.string.chat_error_max_attachments),
-        attachmentTooLarge = stringResource(R.string.chat_error_attachment_too_large),
-        attachmentFailed = stringResource(R.string.chat_error_attachment_failed),
-        restoringSession = stringResource(R.string.chat_error_restoring),
-        sessionNotReady = stringResource(R.string.chat_error_session_not_ready),
-        createWorkspaceFailed = stringResource(R.string.chat_error_create_workspace),
-        switchModelFailed = stringResource(R.string.chat_error_switch_model),
-        switchThinkingFailed = stringResource(R.string.chat_error_switch_thinking),
-        openConversationFailed = stringResource(R.string.chat_error_open_conversation),
-        reloadBusy = stringResource(R.string.chat_reload_busy),
-        reloadFailed = stringResource(R.string.chat_reload_failed),
-        newChatFailed = stringResource(R.string.chat_error_new_chat),
-        newChatTitle = stringResource(R.string.chat_title_new),
-        invalidApiKey = stringResource(R.string.chat_error_invalid_api_key),
-        rateLimited = stringResource(R.string.chat_error_rate_limited),
-        timeout = stringResource(R.string.chat_error_timeout),
-        networkError = stringResource(R.string.chat_error_network),
-        invalidToolArgs = stringResource(R.string.chat_error_invalid_tool_args),
-        serviceUnavailable = stringResource(R.string.chat_error_service_unavailable),
-        insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
-        modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
-        retry = stringResource(R.string.assistant_retry),
-        autoRetrying = { attempt, max ->
-            autoRetryTemplate.replace("%1\$d", attempt.toString()).replace("%2\$d", max.toString())
-        },
-        withCode = { base, code ->
-            errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)
-        },
-        nothingToCompact = stringResource(R.string.chat_compact_none),
-        compactionBusy = stringResource(R.string.chat_compact_busy),
-        compactionUnavailable = stringResource(R.string.chat_compact_unavailable),
-        skillMissing = { name -> skillMissingTemplate.replace("%1\$s", name) },
-        stopBeforeCommand = stringResource(R.string.chat_error_stop_before_command),
-        insufficientSpace = stringResource(R.string.chat_error_insufficient_space),
-        unsupportedImage = stringResource(R.string.chat_error_unsupported_image),
-        imageFailed = stringResource(R.string.chat_error_image_failed),
-    )
-    val chatViewModel: ChatViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer {
-                ChatViewModel(
-                    runtime = graph.host,
-                    providers = graph.providerCatalog,
-                    modelConfigStore = graph.modelConfigStore,
-                    attachmentStore = graph.attachmentStore,
-                    prepareRuntime = graph::prepare,
-                    autoRetry = graph.appPreferences.preferences.map { preferences -> preferences.autoRetry },
-                    uiStrings = chatUiStrings,
-                    skillExpander = graph.skillCatalog,
-                    interruptedQuestions = { sessionId ->
-                        graph.questionCenter.interrupted.value.filter { it.sessionId == sessionId }
-                    },
-                    dismissInterruptedQuestions = { sessionId ->
-                        graph.questionCenter.dismissInterrupted(sessionId)
-                    },
-                    interruptedRuns = { sessionId ->
-                        graph.host.interruptedRuns.value.filter { run -> run.sessionId == sessionId }
-                    },
-                    dismissInterruptedRun = { sessionId ->
-                        graph.host.dismissInterruptedRun(sessionId)
-                    },
-                )
-            }
-        },
-    )
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current
-    LaunchedEffect(locale) {
-        chatViewModel.updateUiStrings(chatUiStrings)
-    }
+    val chatUiStrings = rememberShellChatUiStrings()
+    val chatViewModel: ChatViewModel = rememberShellChatViewModel(graph, chatUiStrings)
     val stateHolder = chatViewModel.state.collectAsStateWithLifecycle()
     val state by stateHolder
     val availableSkills by chatViewModel.availableSkills.collectAsStateWithLifecycle()
@@ -192,21 +106,7 @@ internal fun DeepDeepApp(
     }
     var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
-    DisposableEffect(context, chatViewModel) {
-        val callbacks = object : ComponentCallbacks2 {
-            override fun onTrimMemory(level: Int) {
-                chatViewModel.onTrimMemory(level)
-            }
-
-            override fun onConfigurationChanged(newConfig: Configuration) = Unit
-
-            override fun onLowMemory() = Unit
-        }
-        context.applicationContext.registerComponentCallbacks(callbacks)
-        onDispose {
-            context.applicationContext.unregisterComponentCallbacks(callbacks)
-        }
-    }
+    ShellChatLifecycle(chatViewModel)
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach(chatViewModel::attach)
@@ -252,7 +152,6 @@ internal fun DeepDeepApp(
     }
     val navigator = rememberAppNavigator()
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
-    var shareWaitStartedAt by remember { mutableStateOf(0L) }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
     val activeQuestions = pendingQuestions.filter { it.sessionId == state.conversationId }
@@ -290,65 +189,78 @@ internal fun DeepDeepApp(
     var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
     var workspaceDeleteCount by remember { mutableIntStateOf(0) }
     val appResources = LocalResources.current
-    LifecycleResumeEffect(Unit) {
-        chatViewModel.onAppForeground()
-        GuiAccessibilityState.refresh(context)
-        onPauseOrDispose { }
-    }
-    LaunchedEffect(openVoiceAssistant) {
-        if (!openVoiceAssistant) return@LaunchedEffect
-        voiceSheetOpen = true
-        onOpenVoiceAssistantConsumed()
-    }
-    LaunchedEffect(
-        pendingShare,
-        state.ready,
-        state.historyLoaded,
-        state.sending,
-        state.switchingConversation,
-        state.conversationCwd,
-        state.conversationId,
-    ) {
-        val payload = pendingShare ?: run {
-            shareWaitStartedAt = 0L
-            return@LaunchedEffect
-        }
-        if (!state.ready) return@LaunchedEffect
-        if (state.conversationId == null) {
-            if (shareWaitStartedAt == 0L) shareWaitStartedAt = System.currentTimeMillis()
-            val remaining = SHARE_IMPORT_TIMEOUT_MS - (System.currentTimeMillis() - shareWaitStartedAt)
-            if (remaining > 0) delay(remaining)
-            if (chatViewModel.state.value.conversationId == null) {
+    val intakeChat = ShellIntakeChatState(
+        ready = state.ready,
+        historyLoaded = state.historyLoaded,
+        sending = state.sending,
+        switchingConversation = state.switchingConversation,
+        conversationId = state.conversationId,
+        conversationCwd = state.conversationCwd,
+        conversations = state.conversations,
+        archivedConversations = state.archivedConversations,
+        archivedCount = state.archivedCount,
+    )
+    ShellIntakeHost(
+        openSessionId = openSessionId,
+        pendingShare = pendingShare,
+        pendingDeepDestination = pendingDeepDestination,
+        openVoiceAssistant = openVoiceAssistant,
+        chat = intakeChat,
+        chatSnapshot = {
+            val latest = chatViewModel.state.value
+            ShellIntakeChatState(
+                latest.ready, latest.historyLoaded, latest.sending, latest.switchingConversation,
+                latest.conversationId, latest.conversationCwd, latest.conversations,
+                latest.archivedConversations, latest.archivedCount,
+            )
+        },
+        actions = ShellIntakeActions(
+            onOpenSession = { sessionId ->
+                drawerOpen = false
+                navigator.reset(AppDestination.Chat)
+                chatViewModel.openConversation(sessionId)
+                onOpenSessionConsumed()
+            },
+            onSessionMissing = {
+                Toast.makeText(context, sessionMissingMessage, Toast.LENGTH_SHORT).show()
+                onOpenSessionConsumed()
+            },
+            onRefreshSessions = chatViewModel::requestSessionsRefresh,
+            onApplyDeepLink = { destination ->
+                drawerOpen = false
+                navigator.reset(AppDestination.Chat)
+                deepLinkStack(destination).forEach(navigator::push)
+                onDeepDestinationConsumed()
+            },
+            onShareStaged = { payload ->
+                val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
+                staged.files.forEach { stagedFile ->
+                    graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
+                }
+                if (payload.text.isNotBlank()) chatViewModel.onInputChange(payload.text)
+                staged.failures.forEach { failure ->
+                    Toast.makeText(context, graph.shareStaging.messageFor(failure), Toast.LENGTH_SHORT).show()
+                }
+                if (payload.streams.isEmpty() && payload.text.isBlank()) {
+                    Toast.makeText(context, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
+                }
+                navigator.reset(AppDestination.Chat)
+                onShareConsumed()
+            },
+            onShareTimeout = {
                 Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
                 onShareConsumed()
-            }
-            shareWaitStartedAt = 0L
-            return@LaunchedEffect
-        }
-        shareWaitStartedAt = 0L
-        if (!state.historyLoaded || state.sending || state.switchingConversation) return@LaunchedEffect
-        if (state.conversationCwd.isBlank()) return@LaunchedEffect
-        val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
-        staged.files.forEach { stagedFile ->
-            graph.shareStaging.shareUri(stagedFile.file)?.let(chatViewModel::attach)
-        }
-        if (payload.text.isNotBlank()) chatViewModel.onInputChange(payload.text)
-        staged.failures.forEach { failure ->
-            Toast.makeText(context, graph.shareStaging.messageFor(failure), Toast.LENGTH_SHORT).show()
-        }
-        if (payload.streams.isEmpty() && payload.text.isBlank()) {
-            Toast.makeText(context, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
-        }
-        navigator.reset(AppDestination.Chat)
-        onShareConsumed()
-    }
+            },
+            onOpenVoiceAssistant = {
+                voiceSheetOpen = true
+                onOpenVoiceAssistantConsumed()
+            },
+        ),
+    )
     LaunchedEffect(state.ready, state.conversationId, state.conversationCwd) {
         if (state.ready) chatViewModel.refreshAvailableSkills()
     }
-    val paletteOpen by remember { derivedStateOf<Boolean> { commandQuery(stateHolder.value.input) != null } }
-    LaunchedEffect(paletteOpen) {
-        if (paletteOpen) chatViewModel.refreshAvailableSkills()
-    }
+    ShellCommandPalette(input = state.input) { chatViewModel.refreshAvailableSkills() }
 
     val compactTitle = stringResource(R.string.chat_cmd_compact)
     val compactDescription = stringResource(R.string.chat_cmd_compact_desc)
@@ -364,96 +276,61 @@ internal fun DeepDeepApp(
         goalTitle,
         goalDescription,
     ) {
-        buildList {
-            add(
-                CommandItem(
-                    id = ChatCommand.COMPACT.commandName,
-                    name = ChatCommand.COMPACT.commandName,
-                    title = compactTitle,
-                    description = compactDescription,
-                    enabled = state.conversationId != null && !state.sending && !state.compacting,
-                    insertText = "/${ChatCommand.COMPACT.commandName} ",
-                ),
-            )
-            add(
-                CommandItem(
-                    id = ChatCommand.GOAL.commandName,
-                    name = ChatCommand.GOAL.commandName,
-                    title = goalTitle,
-                    description = goalDescription,
-                    enabled = state.conversationId != null,
-                    insertText = "/${ChatCommand.GOAL.commandName} ",
-                ),
-            )
-            availableSkills.forEach { skill ->
-                add(
-                    CommandItem(
-                        id = "skill:${skill.name}",
-                        name = "skill:${skill.name}",
-                        title = skill.name,
-                        description = skill.description,
-                        enabled = state.conversationId != null && !state.sending,
-                        insertText = "/skill:${skill.name} ",
-                    ),
-                )
-            }
-        }
+        buildCommandItems(
+            conversationId = state.conversationId,
+            sending = state.sending,
+            compacting = state.compacting,
+            skills = availableSkills,
+            compactTitle = compactTitle,
+            compactDescription = compactDescription,
+            goalTitle = goalTitle,
+            goalDescription = goalDescription,
+        )
     }
-
-    fun runGoalCommand(args: String) {
-        val sessionId = state.conversationId
-        if (sessionId == null) {
-            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_session_not_ready))
-            return
-        }
-        when (args) {
-            "" -> chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
-            "pause" -> scope.launch { graph.goalService.pause(sessionId) }
-            "resume" -> scope.launch { graph.goalService.resume(sessionId) }
-            "clear" -> scope.launch { graph.goalService.clear(sessionId) }
-            else -> scope.launch {
-                if (graph.goalService.create(sessionId, args) == null) {
-                    chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+    val commandExecutor = object : ShellCommandExecutor {
+        override fun perform(action: ShellCommandAction) {
+            val sessionId = chatViewModel.state.value.conversationId
+            when (action) {
+                ShellCommandAction.Compact -> chatViewModel.compactContext()
+                ShellCommandAction.GoalPause,
+                ShellCommandAction.GoalResume,
+                ShellCommandAction.GoalClear,
+                ShellCommandAction.GoalInvalid,
+                is ShellCommandAction.GoalCreate,
+                -> if (sessionId == null) {
+                    chatViewModel.showCommandError(appResources.getString(R.string.chat_error_session_not_ready))
+                } else {
+                    when (action) {
+                        ShellCommandAction.GoalPause -> scope.launch { graph.goalService.pause(sessionId) }
+                        ShellCommandAction.GoalResume -> scope.launch { graph.goalService.resume(sessionId) }
+                        ShellCommandAction.GoalClear -> scope.launch { graph.goalService.clear(sessionId) }
+                        is ShellCommandAction.GoalCreate -> scope.launch {
+                            if (graph.goalService.create(sessionId, action.objective) == null) {
+                                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+                            }
+                        }
+                        else -> chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_goal_invalid))
+                    }
                 }
             }
         }
     }
 
-    fun runChatCommand(command: ChatCommand, args: String) {
-        when (command) {
-            ChatCommand.COMPACT -> chatViewModel.compactContext()
-            ChatCommand.GOAL -> runGoalCommand(args.trim())
-        }
-    }
-
     fun pickCommand(item: CommandItem) {
-        val trigger = findCommandTrigger(state.input)
-        val base = if (trigger != null) {
-            state.input.removeRange(trigger.start, state.input.length).trimEnd()
-        } else {
-            state.input.trimEnd()
-        }
-        val separator = if (base.isEmpty() || base.last().isWhitespace()) "" else " "
-        chatViewModel.onInputChange(base + separator + item.insertText)
+        chatViewModel.onInputChange(commandInsertion(state.input, item.insertText))
     }
 
     fun submitChatInput() {
-        val parsed = parseChatCommand(state.input)
-        if (state.sending && parsed !is ParsedCommand.None) {
-            chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
-            return
-        }
-        when (parsed) {
-            ParsedCommand.None -> chatViewModel.send()
-            is ParsedCommand.Skill -> chatViewModel.send()
-            is ParsedCommand.Found -> {
+        when (val plan = planSubmission(state.input, state.sending)) {
+            ShellSubmitPlan.Send -> chatViewModel.send()
+            ShellSubmitPlan.RejectWhileSending ->
+                chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
+            is ShellSubmitPlan.RunCommand -> {
                 chatViewModel.onInputChange("")
-                runChatCommand(parsed.command, parsed.args)
+                commandExecutor.perform(plan.action)
             }
-
-            is ParsedCommand.Unknown -> {
-                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_unknown, parsed.name))
-            }
+            is ShellSubmitPlan.UnknownCommand ->
+                chatViewModel.showCommandError(appResources.getString(R.string.chat_cmd_unknown, plan.name))
         }
     }
 
@@ -485,49 +362,13 @@ internal fun DeepDeepApp(
         }
     }
 
-    NavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
-    NavigationChrome(navigator = navigator)
+    ShellNavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
+    ShellNavigationChrome(navigator = navigator)
 
     LaunchedEffect(state.ready, state.currentWorkspaceId) {
         if (state.ready && state.currentWorkspaceId.isNotBlank()) {
             expandedWorkspaceIds = expandedWorkspaceIds + state.currentWorkspaceId
         }
-    }
-
-    LaunchedEffect(openSessionId, state.ready, state.conversations, state.archivedConversations) {
-        val sessionId = openSessionId ?: return@LaunchedEffect
-        if (!state.ready) return@LaunchedEffect
-        val found = state.conversations.any { it.id == sessionId } ||
-            state.archivedConversations.any { it.id == sessionId }
-        if (!found) {
-            chatViewModel.requestSessionsRefresh()
-            delay(SESSION_LOOKUP_GRACE_MS)
-            var latest = chatViewModel.state.value
-            if (latest.archivedCount > 0 && latest.archivedConversations.isEmpty()) {
-                delay(SESSION_LOOKUP_GRACE_MS)
-                latest = chatViewModel.state.value
-            }
-            val appearsLater = latest.conversations.any { it.id == sessionId } ||
-                latest.archivedConversations.any { it.id == sessionId }
-            if (!appearsLater) {
-                Toast.makeText(context, sessionMissingMessage, Toast.LENGTH_SHORT).show()
-                onOpenSessionConsumed()
-            }
-            return@LaunchedEffect
-        }
-        drawerOpen = false
-        navigator.reset(AppDestination.Chat)
-        chatViewModel.openConversation(sessionId)
-        onOpenSessionConsumed()
-    }
-
-    LaunchedEffect(pendingDeepDestination, state.ready) {
-        val destination = pendingDeepDestination ?: return@LaunchedEffect
-        if (!state.ready) return@LaunchedEffect
-        drawerOpen = false
-        navigator.reset(AppDestination.Chat)
-        deepLinkStack(destination).forEach(navigator::push)
-        onDeepDestinationConsumed()
     }
 
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
@@ -673,6 +514,16 @@ internal fun DeepDeepApp(
             )
         }
 
+        LaunchedEffect(jobsSheetOpen, selectedJobId) {
+            val id = selectedJobId
+            if (!jobsSheetOpen || id == null) return@LaunchedEffect
+            while (true) {
+                val job = graph.jobRegistry.jobs.value.firstOrNull { it.id == id } ?: break
+                jobOutput = runCatching { graph.jobRegistry.read(id).output }.getOrNull()
+                if (job.status != JobStatus.RUNNING) break
+                delay(800)
+            }
+        }
         OverlayHost(
             overlays = ShellOverlayState(
                 workspaceCreate = ShellOverlay.WorkspaceCreate(state.workspaces.map { it.name })
@@ -788,23 +639,4 @@ internal fun DeepDeepApp(
     }
 }
 
-@Composable
-private fun NavigationBackHandler(navigator: AppNavigator, drawerOpen: Boolean, onBack: () -> Unit) {
-    BackHandler(enabled = drawerOpen || navigator.canPop, onBack = onBack)
-}
-
-@Composable
-private fun NavigationChrome(navigator: AppNavigator) {
-    val focusManager = LocalFocusManager.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(navigator.current) {
-        if (navigator.current != AppDestination.Chat) {
-            focusManager.clearFocus()
-            keyboard?.hide()
-        }
-    }
-}
-
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
-private const val SHARE_IMPORT_TIMEOUT_MS = 8_000L
-private const val SESSION_LOOKUP_GRACE_MS = 1_500L
