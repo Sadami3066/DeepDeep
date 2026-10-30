@@ -43,7 +43,7 @@ M3-13	M3	done	Plugins 屏 state holder	app/src/main/**/ui/plugins/*	M2-3	同上	
 M3-14	M3	done	Schedule 屏 state holder	app/src/main/**/ui/schedules/*	M2-3	同上	--tests '*Schedule*'	git revert	M	agent	SC-001
 M3-15	M3	done	Workshop 屏 state holder	app/src/main/**/ui/workshop/*	M2-3	同上	--tests '*Workshop*'	git revert	M	agent	SC-001
 M3-16	M3	done	design 组件 DdPageScaffold 等	design/src/main/**	M2-3	组件被 2+ 页面复用	编译 + 页面冒烟	git revert	M	agent	SC-002
-M3-17	M3	pending	收口验收：并行冲突演练 + 文档数字再生	无	M3-*	判据 3、5 通过	README 判据	-	S	agent	-
+M3-17	M3	done	收口验收：并行冲突演练 + 文档数字再生	无	M3-*	判据 3、5 通过	README 判据	-	S	agent	-
 M4-1	M4	deferred	Maven Central 收口（group 改 io.github.sadami3066）	../pi2kotlin;gradle/libs.versions.toml	M0-1	Central 可解析 0.3.0	mvn dependency:get	回退坐标	L	human-approve	GL-004
 M4-2	M4	deferred	正式签名与 tag 驱动 release	app/build.gradle.kts;.github/workflows/release.yml	M1-7	signingReport 显示 release keystore	--print-certs	回退配置（keystore 不可回滚）	M	human-approve	GL-006
 M4-3	M4	deferred	切 public + 社区文件	CONTRIBUTING.md;CODE_OF_CONDUCT.md;SECURITY.md;.github/ISSUE_TEMPLATE/*	M1-9	仓库可公开构建	clean clone	切回 private	M	human-external	-
