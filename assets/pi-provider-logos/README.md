@@ -38,3 +38,5 @@ SVG 保留原始路径和品牌颜色，仅将尺寸设为 256×256，并为可�
 30 份不同图形来自 LobeHub `lobe-icons`，已附 MIT 原许可证；品牌标识归各品牌权利人所有，用于服务商识别。Radius 来自 Earendil 官方 `elanor` 图标源，按官方第三方品牌识别条款提供，保留原图形、色彩与留白。完整官方说明模板保存在 `upstream/radius/official-guidelines-template.md`。
 
 图形源文件保存在 `upstream/`。文件名称与映射均以本包记录的 Pi 源码快照为准。
+
+光栅图（`png/`、`android/res/`、`preview.png`）按 `.gitignore` 只保留在本地，不入库；入库的是 `svg/`、`upstream/` 中的矢量与文本来源、`manifest.json`、`SHA256SUMS.txt` 与许可文本。

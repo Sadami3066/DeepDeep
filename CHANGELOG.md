@@ -25,5 +25,7 @@
 - docs: describe the runtime-api module and the solved boundary debt [M3-17]
 - refactor: collapse the chat double model and shrink ChatScreen's parameter surface [M3-10]
 - docs: refresh baseline and hotspot sizes after M3 completion [M3-17]
+- docs: regenerate changelog from m2..HEAD [M3-17]
+- docs: add the M0-M3 refactor report [M3-17]
 
 生成命令：`./scripts/changelog.sh <from-tag> <to-tag>`（不手写流水账）

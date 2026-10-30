@@ -18,8 +18,8 @@ git diff --name-only <base>..HEAD
 ## G1 机器闸门（贴原始输出，不许概括）
 
 - [ ] `./scripts/verify.sh` 通过
-- [ ] 单测 ___ 条全绿（基线 1024，不得下降；0 skip）
-- [ ] lint 0 error（警告 ___，基线 158）
+- [ ] 单测 ___ 条全绿（基线 1165，不得下降；0 skip）
+- [ ] lint 0 error（警告 ___，基线 156）
 - [ ] 编译警告 ___（基线 13）
 - [ ] 模块边界校验通过
 - [ ] 新增/修改行为有测试；**把修复回退后这些测试会红**（贴红的那次输出）
@@ -34,7 +34,7 @@ git diff --name-only <base>..HEAD
 ## G3 人工验收
 
 - [ ] 真机覆盖安装（不卸载）
-- [ ] 验收条目：#___ ～ #___（`docs/ACCEPTANCE.md`），逐条打勾，截图在 `docs/evidence/<date>-<id>/`
+- [ ] 验收条目：#___ ～ #___（`docs/dev/ACCEPTANCE.md`），逐条打勾，截图在 `docs/dev/evidence/<date>-<id>/`
 - [ ] 回滚演练：`git revert --no-commit <sha> && ./scripts/verify.sh` 干净通过
 - [ ] 未覆盖风险（写清楚「这条我没验」）：
 

@@ -22,7 +22,7 @@ fi
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 export ANDROID_HOME
 
-./gradlew syncPiSdk --max-workers=2
-./gradlew :app:assembleDebug --max-workers=2
+./scripts/gradlew-locked syncPiSdk
+./scripts/gradlew-locked :app:assembleDebug
 
 echo "APK: $(pwd)/app/build/outputs/apk/debug/app-debug.apk"

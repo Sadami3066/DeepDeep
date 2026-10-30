@@ -3,15 +3,16 @@ set -euo pipefail
 
 ADB="${ADB:-adb}"
 SIZE="${EVIDENCE_MAX_SIZE:-720}"
+MAX_INLINE_BYTES=$((500 * 1024))
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EVIDENCE_ROOT="$ROOT/docs/evidence"
-ACCEPTANCE="$ROOT/docs/ACCEPTANCE.md"
+EVIDENCE_ROOT="$ROOT/docs/dev/evidence"
+ACCEPTANCE="$ROOT/docs/dev/ACCEPTANCE.md"
 
 usage() {
   cat >&2 <<'EOF'
 用法: collect-evidence.sh <ACC-ID> [备注...]
 
-截一张当前屏幕，压到 720p，落到 docs/evidence/<YYYY-MM-DD>-<ID>/，并维护 verdict.md。
+截一张当前屏幕，压到 720p，落到 docs/dev/evidence/<YYYY-MM-DD>-<ID>/，并维护 verdict.md。
 
 示例:
   ./scripts/collect-evidence.sh ACC-CHAT-01 长任务 2s
@@ -32,12 +33,12 @@ fail() {
 [[ $# -ge 1 ]] || { usage; exit 2; }
 
 id="${1^^}"
-[[ "$id" =~ ^ACC-[A-Z][A-Z0-9]{1,11}-[0-9]{2}$ ]] || fail "条目 ID 不合法：$1（应形如 ACC-CHAT-01，取自 docs/ACCEPTANCE.md）"
+[[ "$id" =~ ^ACC-[A-Z][A-Z0-9]{1,11}-[0-9]{2}$ ]] || fail "条目 ID 不合法：$1（应形如 ACC-CHAT-01，取自 docs/dev/ACCEPTANCE.md）"
 shift
 note="$*"
 
-[[ -f "$ACCEPTANCE" ]] || fail "找不到 docs/ACCEPTANCE.md"
-grep -q "^### $id " "$ACCEPTANCE" || fail "$id 不在 docs/ACCEPTANCE.md 里；先补条目再采证据"
+[[ -f "$ACCEPTANCE" ]] || fail "找不到 docs/dev/ACCEPTANCE.md"
+grep -q "^### $id " "$ACCEPTANCE" || fail "$id 不在 docs/dev/ACCEPTANCE.md 里；先补条目再采证据"
 old="$(awk -v id="$id" '$0 ~ ("^### " id " ") { found=1; next } found && /^- 旧编号：/ { sub(/^- 旧编号：/, ""); print; exit }' "$ACCEPTANCE")"
 old="${old:-未知}"
 
@@ -96,7 +97,14 @@ if [[ "$resized" -eq 0 ]]; then
   out="$dir/$out_name"
   cp "$raw" "$out"
   printf '[evidence] 警告：没有可用的压缩工具（magick/convert/ffmpeg/python3-PIL），已保存原图：%s\n' "$out" >&2
-  printf '[evidence] 警告：未压缩原图不要入库，验收后按 docs/evidence/README.md 处理。\n' >&2
+  printf '[evidence] 警告：未压缩原图不要入库，验收后按 docs/dev/evidence/README.md 处理。\n' >&2
+fi
+
+if [[ -f "$out" ]]; then
+  out_bytes="$(wc -c < "$out" | tr -d ' ')"
+  if [[ "${out_bytes:-0}" -gt "$MAX_INLINE_BYTES" ]]; then
+    printf '[evidence] 提示：%s 为 %d KB，超过单张 500KB 规范；重新取景或删减内容后再入库。\n' "$out_name" "$((out_bytes / 1024))" >&2
+  fi
 fi
 
 verdict="$dir/verdict.md"
