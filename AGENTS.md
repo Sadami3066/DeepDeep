@@ -21,13 +21,13 @@ JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。首次：
 
 ```bash
 ./scripts/verify.sh        # 门禁：编译 + 单测 + lint + 模块边界（带全局锁，串行）
-./gradlew :app:assembleDebug
+./scripts/gradlew-locked :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 - `dev.pi` SDK 由 `syncPiSdk` 从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
-- 离线或调试 SDK 时：`./gradlew ... -PpiSdkLocalZip=/path/to/pi2kotlin-0.2.4-m2.zip`。
-- **禁止并发跑 Gradle**：本机可用内存约 3G，`verify.sh` 已用 `flock` 串行；不要绕过它。
+- 离线或调试 SDK 时：`./scripts/gradlew-locked ... -PpiSdkLocalZip=/path/to/pi2kotlin-0.2.4-m2.zip`。
+- **所有 Gradle 调用必须走 `./scripts/gradlew-locked`**（`verify.sh` 已封装）。它用 `flock` 全局串行并默认 `--max-workers=1`：本机内存有限，并发构建已在 2026-10-30 造成整机 OOM 死机。**禁止直接 `./gradlew`**。
 
 ## 2. 基线（不得下降）
 
