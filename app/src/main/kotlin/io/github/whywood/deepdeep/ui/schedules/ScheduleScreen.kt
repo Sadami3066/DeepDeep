@@ -1,13 +1,26 @@
 package io.github.whywood.deepdeep.ui.schedules
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -18,8 +31,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.*
-import io.github.whywood.deepdeep.runtime.*
+import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdSwitch
+import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.ConversationQueries
+import io.github.whywood.deepdeep.runtime.CronSummary
+import io.github.whywood.deepdeep.runtime.Schedule
+import io.github.whywood.deepdeep.runtime.ScheduleError
+import io.github.whywood.deepdeep.runtime.ScheduleService
+import io.github.whywood.deepdeep.runtime.ScheduleTrigger
+import io.github.whywood.deepdeep.runtime.summarizeCron
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -44,113 +72,58 @@ fun ScheduleScreen(
     onOpenConversation: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
     val scope = rememberCoroutineScope()
-    val schedules by service.schedules.collectAsStateWithLifecycle()
-    var titles by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
-    var conversations by remember { mutableStateOf<List<ConversationSummary>>(emptyList()) }
-    var editorOpen by rememberSaveable { mutableStateOf(false) }
-    var editorDraft by rememberSaveable(stateSaver = ScheduleDraftSaver) { mutableStateOf(ScheduleDraft()) }
-    var saving by remember { mutableStateOf(false) }
-    var errorRes by remember { mutableStateOf<Int?>(null) }
-    var loaded by remember { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        runCatching { service.list() }
-        conversations = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
-        loaded = true
-    }
-    LaunchedEffect(schedules.map { it.sessionId }) {
-        val missing = schedules.map { it.sessionId }.filter { it.isNotBlank() }.toSet() - titles.keys
-        if (missing.isNotEmpty()) {
-            val loaded = HashMap<String, String?>()
-            for (id in missing) loaded[id] = runCatching { runtime.sessionTitle(id) }.getOrNull()
-            titles = titles + loaded
-        }
-    }
-
-    fun openNew() {
-        val conversation = initialConversationId?.let { id -> conversations.firstOrNull { it.id == id } }
-        errorRes = null
-        editorDraft = ScheduleDraft(
-            sessionId = conversation?.id.orEmpty(),
-            sessionFile = conversation?.filePath.orEmpty(),
-            cwd = conversation?.cwd.orEmpty(),
-            conversationTitle = conversation?.title.orEmpty(),
+    val holder = remember(service, runtime, initialConversationId) {
+        SchedulesStateHolder(
+            source = ScheduleServiceDataSource(service, runtime),
+            scope = scope,
+            initialConversationId = initialConversationId,
         )
-        editorOpen = true
     }
+    LaunchedEffect(holder) { holder.load() }
+    val state by holder.state.collectAsStateWithLifecycle()
 
-    fun openExisting(schedule: Schedule) {
-        errorRes = null
-        editorDraft = ScheduleDraft.from(schedule, titles[schedule.sessionId].orEmpty())
-        editorOpen = true
-    }
-
-    fun saveDraft(draft: ScheduleDraft) {
-        scope.launch {
-            saving = true
-            errorRes = null
-            val trigger = draft.toTrigger()
-            val result = runCatching {
-                if (draft.id == null) {
-                    service.create(
-                        NewSchedule(
-                            draft.name, draft.prompt, trigger, draft.enabled, draft.sessionId, draft.sessionFile, draft.cwd,
-                        ),
-                    )
-                } else {
-                    service.update(
-                        draft.id,
-                        SchedulePatch(
-                            draft.name, draft.prompt, trigger, draft.enabled, draft.sessionId, draft.sessionFile, draft.cwd,
-                        ),
-                    )
-                }
+    SchedulesContent(
+        state = state,
+        onBack = onBack,
+        onQueryChange = holder::setQuery,
+        onNew = holder::openNew,
+        onRetry = { scope.launch { holder.retry() } },
+        onOpen = { schedule -> scope.launch { holder.openExisting(schedule) } },
+        onToggle = { schedule, enabled -> scope.launch { holder.setEnabled(schedule.id, enabled) } },
+        onDismissEditor = holder::dismissEditor,
+        onSave = { draft -> scope.launch { holder.save(draft) } },
+        onRunNow = { draft ->
+            scope.launch {
+                if (holder.runNow(draft) && draft.sessionId.isNotBlank()) onOpenConversation(draft.sessionId)
             }
-            saving = false
-            if (result.isSuccess) editorOpen = false else errorRes = R.string.schedule_error_save_failed
-        }
-    }
+        },
+        onDelete = { draft ->
+            val id = draft.id
+            if (id != null) scope.launch { holder.remove(id) }
+        },
+        onOpenConversation = onOpenConversation,
+        modifier = modifier,
+    )
+}
 
-    fun runEditorNow() {
-        if (!editorOpen) return
-        val draft = editorDraft
-        val id = draft.id ?: return
-        scope.launch {
-            saving = true
-            errorRes = null
-            val result = service.runNow(id)
-            saving = false
-            if (result.isSuccess) {
-                editorOpen = false
-                if (draft.sessionId.isNotBlank()) onOpenConversation(draft.sessionId)
-            } else {
-                errorRes = deliveryErrorRes((result.exceptionOrNull() as? ScheduleDeliveryException)?.error)
-            }
-        }
-    }
-
-    fun toggleEnabled(schedule: Schedule, enabled: Boolean) {
-        scope.launch {
-            if (runCatching { service.update(schedule.id, SchedulePatch(enabled = enabled)) }.isFailure) {
-                errorRes = R.string.schedule_error_save_failed
-            }
-        }
-    }
-
-    fun deleteDraft(draft: ScheduleDraft) {
-        val id = draft.id ?: return
-        scope.launch {
-            saving = true
-            errorRes = null
-            val result = runCatching { service.delete(id) }
-            saving = false
-            if (result.isSuccess) editorOpen = false else errorRes = R.string.schedule_error_delete_failed
-        }
-    }
-
+@Composable
+internal fun SchedulesContent(
+    state: SchedulesUiState,
+    onBack: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onNew: () -> Unit,
+    onRetry: () -> Unit,
+    onOpen: (Schedule) -> Unit,
+    onToggle: (Schedule, Boolean) -> Unit,
+    onDismissEditor: () -> Unit,
+    onSave: (ScheduleDraft) -> Unit,
+    onRunNow: (ScheduleDraft) -> Unit,
+    onDelete: (ScheduleDraft) -> Unit,
+    onOpenConversation: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
     Column(
         modifier.fillMaxSize().background(colors.paper).statusBarsPadding().navigationBarsPadding()
             .testTag("schedules_screen"),
@@ -163,61 +136,81 @@ fun ScheduleScreen(
             Spacer(Modifier.width(4.dp))
             Text(stringResource(R.string.schedules_title), Modifier.weight(1f), style = DdType.heading, color = colors.ink)
             DdIconButton(
-                DdIcons.Plus, { openNew() }, stringResource(R.string.schedules_new),
+                DdIcons.Plus, { onNew() }, stringResource(R.string.schedules_new),
                 Modifier.testTag("schedules_new"), tint = colors.ink, iconSize = 21.dp,
             )
         }
         DdSearchField(
-            query = query,
-            onQueryChange = { query = it },
+            query = state.query,
+            onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.schedules_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "schedules_search_field",
             clearTestTag = "schedules_search_clear",
         )
-        val filteredSchedules = filterSchedules(schedules, titles, query)
+        state.errorRes?.let { message ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(message),
+                    Modifier.weight(1f),
+                    style = DdType.bodySmall,
+                    color = colors.danger,
+                )
+                DdTextAction(stringResource(R.string.assistant_retry), onRetry, enabled = !state.busy)
+            }
+        }
         when {
-            !loaded -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            state.loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 DdSpinner(size = 22.dp, strokeWidth = 2.dp)
             }
 
-            schedules.isEmpty() -> EmptySchedules(Modifier.weight(1f))
+            state.items.isEmpty() -> EmptySchedules(Modifier.weight(1f))
 
-            filteredSchedules.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            state.filtered.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.search_no_match), style = DdType.bodySmall, color = colors.inkTertiary)
             }
 
             else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                val active = filteredSchedules.filter { it.enabled }.sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.name }))
-                val inactive = filteredSchedules.filterNot { it.enabled }.sortedByDescending { it.updatedAt }
-                if (active.isNotEmpty()) {
-                    ScheduleGroup(stringResource(R.string.schedules_group_active), active, titles, ::openExisting, ::toggleEnabled)
+                if (state.active.isNotEmpty()) {
+                    ScheduleGroup(
+                        stringResource(R.string.schedules_group_active),
+                        state.active,
+                        state.titles,
+                        onOpen,
+                        onToggle,
+                    )
                 }
-                if (inactive.isNotEmpty()) {
+                if (state.inactive.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
-                    ScheduleGroup(stringResource(R.string.schedules_group_inactive), inactive, titles, ::openExisting, ::toggleEnabled)
-                }
-                errorRes?.let { message ->
-                    Spacer(Modifier.height(16.dp))
-                    Text(stringResource(message), style = DdType.bodySmall, color = colors.danger)
+                    ScheduleGroup(
+                        stringResource(R.string.schedules_group_inactive),
+                        state.inactive,
+                        state.titles,
+                        onOpen,
+                        onToggle,
+                    )
                 }
                 Spacer(Modifier.height(40.dp))
             }
         }
     }
 
-    if (editorOpen) {
+    if (state.editorOpen) {
         ScheduleEditor(
-            initialDraft = editorDraft,
-            isEditing = editorDraft.id != null,
-            externalError = errorRes?.let { stringResource(it) },
-            saving = saving,
-            runtime = runtime,
-            onDismiss = { editorOpen = false; errorRes = null },
-            onSave = ::saveDraft,
-            onRunNow = ::runEditorNow,
-            onDelete = { deleteDraft(editorDraft) },
+            initialDraft = state.editorDraft,
+            isEditing = state.editingId != null,
+            externalError = state.errorRes?.let { stringResource(it) },
+            saving = state.busy,
+            conversations = state.conversations,
+            workspaceNames = state.workspaceNames,
+            onDismiss = onDismissEditor,
+            onSave = onSave,
+            onRunNow = onRunNow,
+            onDelete = onDelete,
             onOpenConversation = onOpenConversation,
         )
     }
