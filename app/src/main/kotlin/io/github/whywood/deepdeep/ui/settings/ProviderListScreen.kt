@@ -1,17 +1,12 @@
 package io.github.whywood.deepdeep.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,10 +24,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdEmptyState
+import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSectionLabel
@@ -69,18 +67,8 @@ fun ProviderListScreen(
         filtered.size,
     )
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(colors.paper)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding(),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    DdPageScaffold(
+        topBar = {
             DdIconButton(
                 icon = DdIcons.ArrowLeft,
                 onClick = onBack,
@@ -88,7 +76,9 @@ fun ProviderListScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-        }
+        },
+        modifier = modifier,
+    ) {
         Column(
             Modifier
                 .weight(1f)
@@ -111,13 +101,11 @@ fun ProviderListScreen(
             Spacer(Modifier.height(16.dp))
             DdSectionLabel(countLabel, Modifier.padding(start = 4.dp))
             Spacer(Modifier.height(10.dp))
-            SettingsGroup {
+            DdGroupCard {
                 if (filtered.isEmpty()) {
-                    Text(
+                    DdEmptyState(
                         text = stringResource(R.string.settings_provider_no_result),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
+                        modifier = Modifier.padding(vertical = 20.dp),
                     )
                 } else {
                     filtered.forEachIndexed { index, provider ->

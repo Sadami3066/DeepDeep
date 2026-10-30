@@ -8,19 +8,14 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,12 +43,14 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.design.DdDropdown
+import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenuItem
+import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
@@ -103,18 +100,8 @@ fun SettingsScreen(
     val providerLabel = providerName?.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.settings_status_unconfigured)
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(colors.paper)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding(),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    DdPageScaffold(
+        topBar = {
             DdIconButton(
                 icon = DdIcons.ArrowLeft,
                 onClick = onBack,
@@ -122,7 +109,9 @@ fun SettingsScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-        }
+        },
+        modifier = modifier,
+    ) {
         Column(
             Modifier
                 .weight(1f)
@@ -143,7 +132,7 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Sparkles,
                     title = stringResource(R.string.settings_personalization),
@@ -154,7 +143,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Folder,
                     title = stringResource(R.string.settings_archived),
@@ -170,7 +159,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Globe,
                     title = stringResource(R.string.settings_provider),
@@ -191,7 +180,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 ThemeControl(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
@@ -221,7 +210,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Message,
                     title = stringResource(R.string.settings_chat),
@@ -232,12 +221,12 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 NotificationRow()
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Shield,
                     title = stringResource(R.string.settings_privacy),
@@ -248,7 +237,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Info,
                     title = stringResource(R.string.settings_version),
@@ -264,7 +253,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
+            DdGroupCard {
                 PlaceholderRow(DdIcons.ArrowLeft, R.string.settings_sign_out)
             }
             Spacer(Modifier.height(40.dp))
@@ -290,7 +279,7 @@ private fun AccountCard(
     } else {
         "${stringResource(R.string.settings_new_chat_model)} · $activeModel"
     }
-    SettingsGroup {
+    DdGroupCard {
         DdPressable(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
