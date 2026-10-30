@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="assistant_overlay_title">Assistant</string>
-    <string name="assistant_overlay_hint">How can I help?</string>
     <string name="assistant_overlay_listening">Listening…</string>
     <string name="assistant_overlay_input_hint">Ask me anything…</string>
     <string name="assistant_overlay_close">Close</string>
@@ -12,6 +11,10 @@
     <string name="assistant_overlay_open_app">Open in app</string>
     <string name="assistant_overlay_open_in_app_file">Open this file in the app</string>
     <string name="assistant_overlay_copied">Copied</string>
+    <string name="assistant_overlay_copy">Copy</string>
+    <string name="assistant_overlay_speak">Read aloud</string>
+    <string name="assistant_overlay_stop_speaking">Stop reading</string>
+    <string name="assistant_overlay_share">Share</string>
     <string name="assistant_overlay_suggestion_weather">What\'s the weather today?</string>
     <string name="assistant_overlay_suggestion_music">Recommend some music</string>
     <string name="assistant_overlay_suggestion_places">Where should I visit?</string>

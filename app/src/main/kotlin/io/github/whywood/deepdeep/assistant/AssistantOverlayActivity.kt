@@ -8,7 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.whywood.deepdeep.DeepDeepApplication
@@ -65,6 +67,17 @@ class AssistantOverlayActivity : ComponentActivity() {
             val state by controller.state.collectAsStateWithLifecycle()
             val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
             val pendingForSession = pendingQuestions.any { it.sessionId == state.sessionId }
+            var modelLabel by remember { mutableStateOf("") }
+            LaunchedEffect(state.sessionId) {
+                val sessionId = state.sessionId ?: return@LaunchedEffect
+                val snapshot = runCatching { graph.host.sessionModel(sessionId) }.getOrNull()
+                modelLabel = snapshot?.let { model ->
+                    graph.providerCatalog.models(model.providerId)
+                        .firstOrNull { it.id == model.modelId }
+                        ?.displayName
+                        ?: model.modelId
+                }.orEmpty()
+            }
             DeepDeepTheme(theme, fontStyle) {
                 AssistantOverlayScreen(
                     state = state,
@@ -76,6 +89,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     language = language,
                     attachmentRoot = graph.homeDir,
                     pendingQuestion = pendingForSession,
+                    modelLabel = modelLabel,
                     onOpenQuestion = { openInApp(state.sessionId) },
                     onDismiss = { finish() },
                     onOpenInApp = ::openInApp,
