@@ -1,7 +1,12 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.AgentMessage
+import dev.pi.ai.ImageContent
+import dev.pi.ai.Model
 import dev.pi.ai.auth.CredentialStore
 import dev.pi.ai.http.HttpTransport
+import dev.pi.coding.compaction.buildSessionProjection
+import dev.pi.coding.compaction.estimateProjectedContextTokens
 import dev.pi.coding.AgentSessionOptions
 import dev.pi.coding.createAgentSession
 import dev.pi.coding.mcp.McpConfigLoader
@@ -11,6 +16,8 @@ import dev.pi.coding.settings.SettingsManager
 import dev.pi.mcp.config.McpServerConfig
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.CodingHooks
+import dev.pi.coding.session.QueueBehavior
+import dev.pi.coding.session.SessionEvent
 import dev.pi.coding.session.SessionInfo
 import dev.pi.coding.session.SessionManager
 import dev.pi.coding.tools.CodingTool
@@ -36,7 +43,7 @@ class PiSessionEngine(
     private val toolContext: AppToolContext? = null,
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
-) {
+) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
@@ -112,6 +119,9 @@ class PiSessionEngine(
         return session
     }
 
+    override suspend fun create(file: String?, config: ModelConfig): SessionHandle =
+        PiSessionHandle(this, createSession(file?.toPath(), config))
+
     fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding())
 
     private fun buildTools(activeShell: ShellExecutor?, binding: SessionBinding): List<CodingTool> = buildList {
@@ -128,7 +138,7 @@ class PiSessionEngine(
         }
     }
 
-    suspend fun loadMcpServers(): Map<String, McpServerConfig> {
+    override suspend fun loadMcpServers(): Map<String, McpServerConfig> {
         val settings = SettingsManager.forPaths(paths, fs)
         val loaded = McpConfigLoader(paths, fs, settings).load()
         return loaded.servers.toMap()
@@ -145,7 +155,7 @@ class PiSessionEngine(
         runCatching { fs.delete(filePath.toPath()) }
     }
 
-    fun titleFor(text: String): String {
+    override fun titleFor(text: String): String {
         val normalized = text.trim().replace(Regex("\\s+"), " ")
         if (normalized.isEmpty()) return "新对话"
         return if (normalized.length <= 28) normalized else normalized.take(28) + "…"
@@ -185,4 +195,110 @@ fun ThinkingLevel.displayName(): String = when (this) {
     ThinkingLevel.MEDIUM -> "中"
     ThinkingLevel.HIGH -> "高"
     ThinkingLevel.MAX -> "最大"
+}
+
+internal class PiSessionHandle(
+    private val engine: PiSessionEngine,
+    private val session: AgentSession,
+) : SessionHandle {
+    override val sessionId: String get() = session.sessionId
+
+    override val sessionFile: String? get() = session.sessionFile?.toString()
+
+    override val isBusy: Boolean get() = session.isBusy
+
+    override val isStreaming: Boolean get() = session.isStreaming
+
+    override val messages: List<AgentMessage> get() = session.messages
+
+    override val activeToolNames: List<String> get() = session.activeToolNames
+
+    override val model: Model get() = session.model
+
+    override val thinkingLevel: String get() = session.thinkingLevel
+
+    override suspend fun prompt(
+        text: String,
+        images: List<ImageContent>?,
+        behavior: QueueBehavior?,
+    ) {
+        session.prompt(text, images, behavior)
+    }
+
+    override fun abort() {
+        session.abort()
+    }
+
+    override suspend fun close() {
+        session.close()
+    }
+
+    override fun subscribe(listener: suspend (SessionEvent) -> Unit): () -> Unit =
+        session.subscribe(listener)
+
+    override fun clearQueues() {
+        session.agent.clearAllQueues()
+    }
+
+    override fun canRetryLastAssistant(): Boolean = session.canRetryLastAssistant()
+
+    override suspend fun retryLastAssistant() {
+        session.retryLastAssistant()
+    }
+
+    override fun lastAssistantText(): String? = session.getLastAssistantText()
+
+    override suspend fun setModel(model: Model, thinkingLevel: String?) {
+        session.setModel(model, thinkingLevel)
+    }
+
+    override suspend fun setThinkingLevel(level: String) {
+        session.setThinkingLevel(level)
+    }
+
+    override suspend fun compact(): SessionCompaction? = session.compact()?.let { result ->
+        SessionCompaction(result.tokensBefore, result.estimatedTokensAfter)
+    }
+
+    override fun history(): List<AssistantMessage> = engine.history(session)
+
+    override fun usage(): SessionUsage? = runCatching {
+        val manager = session.sessionManager
+        val branch = manager.getBranch()
+        val stats = manager.getSessionStats()
+        SessionUsage(
+            contextTokens = estimateProjectedContextTokens(buildSessionProjection(branch), branch).tokens,
+            contextWindow = session.model.contextWindow,
+            inputTokens = stats.inputTokens,
+            outputTokens = stats.outputTokens,
+            cacheReadTokens = stats.cacheReadTokens,
+            cacheWriteTokens = stats.cacheWriteTokens,
+            cost = stats.totalCost,
+        )
+    }.getOrNull()
+
+    override fun sessionName(): String? = session.sessionManager.getSessionName()
+
+    override suspend fun appendTitle(title: String) {
+        session.sessionManager.appendSessionInfo(title)
+    }
+
+    override suspend fun reloadMcp(servers: Map<String, McpServerConfig>) {
+        session.mcp.reload(servers)
+    }
+
+    override suspend fun reconnectMcp(server: String) {
+        session.mcp.reconnect(server)
+    }
+
+    override fun mcpServers(): List<SessionMcpServerStatus> = session.mcp.servers.map { status ->
+        SessionMcpServerStatus(
+            name = status.name,
+            state = status.state.name,
+            toolCount = status.toolCount,
+            lastError = status.lastError,
+        )
+    }
+
+    override fun deferredMcpToolCount(): Int = session.mcp.deferredCatalog().size
 }

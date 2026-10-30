@@ -13,9 +13,6 @@ import dev.pi.ai.TextContent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.ai.UserMessage
-import dev.pi.coding.compaction.buildSessionProjection
-import dev.pi.coding.compaction.estimateProjectedContextTokens
-import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.QueueBehavior
 import dev.pi.coding.session.SessionEvent
 import java.io.File
@@ -38,26 +35,45 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okio.Path.Companion.toPath
 
-class AgentRuntimeHost(
+class AgentRuntimeHost internal constructor(
     private val homeDir: File,
     private val workspacesDir: File,
-    private val engineFactory: suspend (File) -> PiSessionEngine,
-    private val modelConfigStore: ModelConfigStore,
-    private val catalog: SessionCatalog,
-    private val workspaceStore: WorkspaceStore,
-    private val providers: ProviderCatalog,
+    private val engineFactory: suspend (File) -> SessionEngine,
+    private val modelSettings: ModelSettings,
+    private val catalog: SessionDirectory,
+    private val workspaces: WorkspaceDirectory,
+    private val providers: ProviderDirectory,
     private val backgroundScope: CoroutineScope,
-    private val goalDriver: GoalDriver? = null,
-    private val sessionCleaner: ((String) -> Unit)? = null,
-    private val sessionArchived: ((String) -> Unit)? = null,
+    private val goalDriver: GoalDriver?,
+    private val sessionCleaner: ((String) -> Unit)?,
+    private val sessionArchived: ((String) -> Unit)?,
     private val runLedger: RunLedger = RunLedger(null),
     private val keepHandleAlive: (String) -> Boolean = { true },
 ) : AgentRuntime {
+    constructor(
+        homeDir: File,
+        workspacesDir: File,
+        engineFactory: suspend (File) -> PiSessionEngine,
+        modelConfigStore: ModelConfigStore,
+        catalog: SessionCatalog,
+        workspaceStore: WorkspaceStore,
+        providers: ProviderCatalog,
+        backgroundScope: CoroutineScope,
+        goalDriver: GoalDriver? = null,
+        sessionCleaner: ((String) -> Unit)? = null,
+        sessionArchived: ((String) -> Unit)? = null,
+        runLedger: RunLedger = RunLedger(null),
+        keepHandleAlive: (String) -> Boolean = { true },
+    ) : this(
+        homeDir, workspacesDir, { cwd -> engineFactory(cwd) }, modelConfigStore,
+        CatalogSessionDirectory(catalog), WorkspaceStoreDirectory(workspaceStore),
+        providers, backgroundScope, goalDriver, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
+    )
+
     internal class Handle(
-        val engine: PiSessionEngine,
-        val session: AgentSession,
+        val engine: SessionEngine,
+        val session: SessionHandle,
         val cwd: String,
         val state: SessionCommandPlane.SessionState,
     ) {
@@ -106,7 +122,7 @@ class AgentRuntimeHost(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                Log.w(TAG, "run ledger load failed", error)
+                logWarn(TAG, "run ledger load failed", error)
             }
         }
         started = true
@@ -122,7 +138,7 @@ class AgentRuntimeHost(
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = buildList {
         add(homeWorkspace())
-        addAll(workspaceStore.read().filter { it.id != HOME_ID })
+        addAll(workspaces.read().filter { it.id != HOME_ID })
     }
 
     override suspend fun createWorkspace(name: String): RuntimeWorkspace = mutex.withLock {
@@ -136,23 +152,23 @@ class AgentRuntimeHost(
             cwd = directory.absolutePath,
             createdAt = System.currentTimeMillis(),
         )
-        workspaceStore.add(workspace)
+        workspaces.add(workspace)
         emitListChanged()
         workspace
     }
 
     override suspend fun renameWorkspace(id: String, name: String) {
         if (id == HOME_ID) return
-        val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
+        val workspace = workspaces.read().firstOrNull { it.id == id } ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        workspaceStore.add(workspace.copy(name = trimmed))
+        workspaces.add(workspace.copy(name = trimmed))
         emitListChanged()
     }
 
     override suspend fun deleteWorkspace(id: String) {
         if (id == HOME_ID) return
-        val workspace = workspaceStore.read().firstOrNull { it.id == id } ?: return
+        val workspace = workspaces.read().firstOrNull { it.id == id } ?: return
         val sessions = catalog.list(workspace.cwd)
         sessions.forEach { session ->
             runCatching { stop(session.id) }
@@ -165,7 +181,7 @@ class AgentRuntimeHost(
             eventsBuffer.emit(SessionRuntimeEvent(session.id, RuntimeEvent.SessionRemoved()))
         }
         runCatching { File(workspace.cwd).deleteRecursively() }
-        workspaceStore.remove(id)
+        workspaces.remove(id)
         emitListChanged()
     }
 
@@ -182,7 +198,7 @@ class AgentRuntimeHost(
             handle.touch()
             lastOpenedSessionId = handle.session.sessionId
             emitListChanged()
-            OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), workspace.cwd)
+            OpenedSession(handle.session.sessionId, handle.session.sessionFile, workspace.cwd)
         }
         sweepIdleHandles()
         return opened
@@ -191,7 +207,7 @@ class AgentRuntimeHost(
     override suspend fun openSession(filePath: String, cwd: String): OpenedSession {
         val opened = mutex.withLock {
             closingFiles[filePath]?.await()
-            handles.values.firstOrNull { it.session.sessionFile?.toString() == filePath }?.let { existing ->
+            handles.values.firstOrNull { it.session.sessionFile == filePath }?.let { existing ->
                 existing.touch()
                 lastOpenedSessionId = existing.session.sessionId
                 OpenedSession(existing.session.sessionId, filePath, existing.cwd)
@@ -199,7 +215,7 @@ class AgentRuntimeHost(
                 val handle = attach(cwd, filePath)
                 handle.touch()
                 lastOpenedSessionId = handle.session.sessionId
-                OpenedSession(handle.session.sessionId, handle.session.sessionFile?.toString(), cwd)
+                OpenedSession(handle.session.sessionId, handle.session.sessionFile, cwd)
             }
         }
         sweepIdleHandles()
@@ -214,7 +230,7 @@ class AgentRuntimeHost(
         val reopenedId = mutex.withLock {
             val handle = handles[sessionId] ?: error("Agent session is not ready")
             check(!handle.state.busy) { "Agent session is busy" }
-            val file = handle.session.sessionFile?.toString() ?: error("Agent session has no file")
+            val file = handle.session.sessionFile ?: error("Agent session has no file")
             val cwd = handle.cwd
             val selected = lastOpenedSessionId == sessionId
             val lastActiveAt = handle.lastActiveAt
@@ -235,11 +251,11 @@ class AgentRuntimeHost(
             for (handle in targets) {
                 val loaded = runCatching { handle.engine.loadMcpServers() }
                 if (loaded.isFailure) {
-                    Log.e(TAG, "mcp reload config failed session=${handle.session.sessionId}", loaded.exceptionOrNull())
+                    logError(TAG, "mcp reload config failed session=${handle.session.sessionId}", loaded.exceptionOrNull())
                     continue
                 }
-                runCatching { handle.session.mcp.reload(loaded.getOrThrow()) }
-                    .onFailure { Log.e(TAG, "mcp reload failed session=${handle.session.sessionId}", it) }
+                runCatching { handle.session.reloadMcp(loaded.getOrThrow()) }
+                    .onFailure { logError(TAG, "mcp reload failed session=${handle.session.sessionId}", it) }
                 logMcpState(handle, "reload")
             }
         }
@@ -247,21 +263,21 @@ class AgentRuntimeHost(
 
     private fun logMcpState(handle: Handle, phase: String) {
         runCatching {
-            val servers = handle.session.mcp.servers.joinToString { status ->
-                "${status.name}=${status.state.name}/${status.toolCount}/${status.lastError.orEmpty()}"
+            val servers = handle.session.mcpServers().joinToString { status ->
+                "${status.name}=${status.state}/${status.toolCount}/${status.lastError.orEmpty()}"
             }
-            val deferred = handle.session.mcp.deferredCatalog().size
+            val deferred = handle.session.deferredMcpToolCount()
             val loaded = handle.session.activeToolNames.count { it.startsWith("mcp__") }
-            Log.i(TAG, "mcp $phase session=${handle.session.sessionId} servers=[$servers] deferred=$deferred loaded=$loaded")
-        }.onFailure { Log.e(TAG, "mcp $phase state unavailable", it) }
+            logInfo(TAG, "mcp $phase session=${handle.session.sessionId} servers=[$servers] deferred=$deferred loaded=$loaded")
+        }.onFailure { logError(TAG, "mcp $phase state unavailable", it) }
     }
 
     suspend fun reconnectMcp(server: String) = mcpMutex.withLock {
         withContext(Dispatchers.IO) {
             val targets = mutex.withLock { handles.values.toList() }
             for (handle in targets) {
-                runCatching { handle.session.mcp.reconnect(server) }
-                    .onFailure { Log.e(TAG, "mcp reconnect failed session=${handle.session.sessionId} server=$server", it) }
+                runCatching { handle.session.reconnectMcp(server) }
+                    .onFailure { logError(TAG, "mcp reconnect failed session=${handle.session.sessionId} server=$server", it) }
                 logMcpState(handle, "reconnect")
             }
         }
@@ -329,7 +345,7 @@ class AgentRuntimeHost(
         try {
             emit(handle, RuntimeEvent.RunStarted(start.runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(start.runId, RuntimeActivity.Thinking))
-            Log.i(TAG, "retry session=${handle.session.sessionId} run=${start.runId}")
+            logInfo(TAG, "retry session=${handle.session.sessionId} run=${start.runId}")
             handle.session.retryLastAssistant()
             if (!handle.state.stopRequested) {
                 val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, start.runId)
@@ -342,7 +358,7 @@ class AgentRuntimeHost(
                 emitTerminal(
                     handle = handle,
                     runId = start.runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
+                    text = handle.session.lastAssistantText().orEmpty(),
                     status = RunStatus.FAILED,
                     message = error.message,
                 )
@@ -441,7 +457,7 @@ class AgentRuntimeHost(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            Log.w(TAG, "run ledger begin failed session=$sessionId", error)
+            logWarn(TAG, "run ledger begin failed session=$sessionId", error)
         }
     }
 
@@ -452,7 +468,7 @@ class AgentRuntimeHost(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                Log.w(TAG, "run ledger clear failed run=$runId", error)
+                logWarn(TAG, "run ledger clear failed run=$runId", error)
             }
         }
     }
@@ -474,14 +490,14 @@ class AgentRuntimeHost(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            Log.w(TAG, "run ledger clear failed run=$runId", error)
+            logWarn(TAG, "run ledger clear failed run=$runId", error)
         }
         backgroundScope.launch { sweepIdleHandles() }
         if (finish.reconfigure) {
             val sessionId = handle.session.sessionId
             backgroundScope.launch {
                 runCatching { reconfigureSession(sessionId) }
-                    .onFailure { Log.e(TAG, "deferred reconfigure failed session=$sessionId", it) }
+                    .onFailure { logError(TAG, "deferred reconfigure failed session=$sessionId", it) }
             }
         }
     }
@@ -497,7 +513,7 @@ class AgentRuntimeHost(
             if (setTitle) ensureTitle(handle, text)
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
-            Log.i(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
+            logInfo(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text, images)
             if (!handle.state.stopRequested) {
                 val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
@@ -510,7 +526,7 @@ class AgentRuntimeHost(
                 emitTerminal(
                     handle = handle,
                     runId = runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
+                    text = handle.session.lastAssistantText().orEmpty(),
                     status = RunStatus.FAILED,
                     message = error.message,
                 )
@@ -525,7 +541,7 @@ class AgentRuntimeHost(
         val handle = handles[sessionId] ?: return emptyList()
         val droppedInputs = clearQueuedInputs(handle)
         val stopped = commands.stop(sessionId) { stop ->
-            val text = runCatching { handle.session.getLastAssistantText().orEmpty() }.getOrDefault("")
+            val text = runCatching { handle.session.lastAssistantText().orEmpty() }.getOrDefault("")
             emit(
                 handle,
                 RuntimeEvent.RunFinished(
@@ -544,14 +560,14 @@ class AgentRuntimeHost(
 
     override suspend fun history(sessionId: String): List<AssistantMessage> {
         val loaded = mutex.withLock {
-            handles[sessionId]?.let { handle -> handle to handle.engine.history(handle.session) }
+            handles[sessionId]?.let { handle -> handle to handle.session.history() }
         } ?: return emptyList()
         emitUsage(loaded.first)
         return loaded.second
     }
 
     override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
-        handles[sessionId]?.session?.sessionManager?.getSessionName()
+        handles[sessionId]?.session?.sessionName()
             ?: catalog.find(visibleCwds(), sessionId)?.title
     }
 
@@ -622,25 +638,11 @@ class AgentRuntimeHost(
         handle.session.setThinkingLevel(thinkingLevel.runtimeValue())
     }
 
-    override suspend fun currentConfig(): ModelConfig = modelConfigStore.read()
+    override suspend fun currentConfig(): ModelConfig = modelSettings.read()
 
     override suspend fun usage(sessionId: String): SessionUsage? {
         val handle = mutex.withLock { handles[sessionId] } ?: return null
-        return runCatching {
-            val manager = handle.session.sessionManager
-            val branch = manager.getBranch()
-            val stats = manager.getSessionStats()
-            val contextTokens = estimateProjectedContextTokens(buildSessionProjection(branch), branch).tokens
-            SessionUsage(
-                contextTokens = contextTokens,
-                contextWindow = handle.session.model.contextWindow,
-                inputTokens = stats.inputTokens,
-                outputTokens = stats.outputTokens,
-                cacheReadTokens = stats.cacheReadTokens,
-                cacheWriteTokens = stats.cacheWriteTokens,
-                cost = stats.totalCost,
-            )
-        }.getOrNull()
+        return handle.session.usage()
     }
 
     override suspend fun compact(sessionId: String): CompactionOutcome {
@@ -674,7 +676,7 @@ class AgentRuntimeHost(
         val sessionIds = mutex.withLock { handles.keys.toList() }
         for (sessionId in sessionIds) {
             runCatching { reconfigureSession(sessionId) }
-                .onFailure { Log.e(TAG, "reconfigure failed session=$sessionId", it) }
+                .onFailure { logError(TAG, "reconfigure failed session=$sessionId", it) }
         }
         emitListChanged()
     }
@@ -690,7 +692,7 @@ class AgentRuntimeHost(
                     if (!commands.ownsReconfigure(sessionId, token)) return@withLock
                     val handle = handles[sessionId] ?: return@withLock
                     val cwd = handle.cwd
-                    val file = handle.session.sessionFile?.toString()
+                    val file = handle.session.sessionFile
                     val selected = lastOpenedSessionId == sessionId
                     val lastActiveAt = handle.lastActiveAt
                     detach(sessionId, keepReconfigure = true)
@@ -716,18 +718,18 @@ class AgentRuntimeHost(
 
     private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace {
         if (workspaceId == HOME_ID || workspaceId.isBlank()) return homeWorkspace()
-        return workspaceStore.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
+        return workspaces.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
     }
 
     private suspend fun visibleCwds(): List<String> =
-        listOf(homeDir.absolutePath) + workspaceStore.read().map { it.cwd }
+        listOf(homeDir.absolutePath) + workspaces.read().map { it.cwd }
 
     private suspend fun attach(cwd: String, file: String?): Handle {
-        val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile?.toString() == file }
+        val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile == file }
         if (existing != null && file != null) return existing
         val engine = engineFactory(File(cwd))
-        val config = modelConfigStore.read()
-        val session = engine.createSession(file?.toPath(), config)
+        val config = modelSettings.read()
+        val session = engine.create(file, config)
         val handle = Handle(
             engine = engine,
             session = session,
@@ -778,10 +780,10 @@ class AgentRuntimeHost(
                 if (!evictableLocked(sessionId, current)) return@withLock null
                 val removed = detachLocked(sessionId) ?: return@withLock null
                 closingSessions[sessionId] = gate
-                removed.session.sessionFile?.toString()?.let { closingFiles[it] = gate }
+                removed.session.sessionFile?.let { closingFiles[it] = gate }
                 removed
             } ?: continue
-            val file = handle.session.sessionFile?.toString()
+            val file = handle.session.sessionFile
             try {
                 closeHandle(handle)
             } finally {
@@ -831,8 +833,8 @@ class AgentRuntimeHost(
     }
 
     private suspend fun ensureTitle(handle: Handle, text: String) {
-        if (handle.session.sessionManager.getSessionName() != null) return
-        handle.session.sessionManager.appendSessionInfo(handle.engine.titleFor(text))
+        if (handle.session.sessionName() != null) return
+        handle.session.appendTitle(handle.engine.titleFor(text))
         emitListChanged()
     }
 
@@ -840,10 +842,10 @@ class AgentRuntimeHost(
         val scoped = SessionRuntimeEvent(handle.session.sessionId, event)
         if (eventsBuffer.tryEmit(scoped)) return
         if (event is RuntimeEvent.TextDelta || event is RuntimeEvent.ReasoningDelta) {
-            Log.w(TAG, "drop delta: event buffer full session=${scoped.sessionId} run=${event.runId}")
+            logWarn(TAG, "drop delta: event buffer full session=${scoped.sessionId} run=${event.runId}")
             return
         }
-        Log.w(TAG, "event buffer full, deferring ${event::class.simpleName} session=${scoped.sessionId}")
+        logWarn(TAG, "event buffer full, deferring ${event::class.simpleName} session=${scoped.sessionId}")
         backgroundScope.launch { eventsBuffer.emit(scoped) }
     }
 
@@ -866,14 +868,14 @@ class AgentRuntimeHost(
     private fun dropPendingInputs(handle: Handle, runId: String = handle.state.runId.orEmpty()): List<String> {
         val dropped = handle.pending.drain()
         if (dropped.isEmpty()) return emptyList()
-        runCatching { handle.session.agent.clearAllQueues() }
+        runCatching { handle.session.clearQueues() }
         emitQueueChanged(handle, runId)
         return dropped.map { it.text }
     }
 
     private fun clearQueuedInputs(handle: Handle): List<String> {
         val dropped = handle.pending.drain()
-        runCatching { handle.session.agent.clearAllQueues() }
+        runCatching { handle.session.clearQueues() }
         if (dropped.isNotEmpty()) emitQueueChanged(handle, handle.state.runId.orEmpty())
         return dropped.map { it.text }
     }
@@ -901,7 +903,7 @@ class AgentRuntimeHost(
         emitTerminal(
             handle = handle,
             runId = runId,
-            text = handle.session.getLastAssistantText().orEmpty(),
+            text = handle.session.lastAssistantText().orEmpty(),
             status = status,
             message = last?.errorMessage,
         )
@@ -971,7 +973,7 @@ class AgentRuntimeHost(
                 emitTerminal(
                     handle = handle,
                     runId = runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
+                    text = handle.session.lastAssistantText().orEmpty(),
                     status = RunStatus.FAILED,
                     message = event.errorMessage.orEmpty(),
                 )
@@ -995,13 +997,13 @@ class AgentRuntimeHost(
                 emitTerminal(
                     handle = handle,
                     runId = runId,
-                    text = handle.session.getLastAssistantText().orEmpty(),
+                    text = handle.session.lastAssistantText().orEmpty(),
                     status = RunStatus.FAILED,
                     message = event.message,
                 )
             }
 
-            is SessionEvent.McpServerStatusChanged -> Log.i(
+            is SessionEvent.McpServerStatusChanged -> logInfo(
                 TAG,
                 "mcp status ${event.name}=${event.status.state.name}/${event.status.toolCount}/${event.status.lastError.orEmpty()}",
             )
@@ -1064,7 +1066,41 @@ class AgentRuntimeHost(
     }
 }
 
+private class CatalogSessionDirectory(
+    private val catalog: SessionCatalog,
+) : SessionDirectory {
+    override suspend fun list(cwd: String): List<ConversationSummary> = catalog.list(cwd)
+
+    override suspend fun listAll(cwds: List<String>): List<ConversationSummary> = catalog.listAll(cwds)
+
+    override suspend fun find(cwds: List<String>, sessionId: String): ConversationSummary? = catalog.find(cwds, sessionId)
+
+    override suspend fun delete(filePath: String) = catalog.delete(filePath)
+
+    override suspend fun rename(id: String, title: String) = catalog.rename(id, title)
+
+    override suspend fun setPinned(id: String, pinned: Boolean) = catalog.setPinned(id, pinned)
+
+    override suspend fun setArchived(id: String, archived: Boolean) = catalog.setArchived(id, archived)
+
+    override suspend fun removeMeta(id: String) = catalog.removeMeta(id)
+}
+
+private class WorkspaceStoreDirectory(
+    private val store: WorkspaceStore,
+) : WorkspaceDirectory {
+    override suspend fun read(): List<RuntimeWorkspace> = store.read()
+
+    override suspend fun add(workspace: RuntimeWorkspace) = store.add(workspace)
+
+    override suspend fun remove(id: String) = store.remove(id)
+}
+
 private const val TAG = "DeepDeepRuntime"
+
+private fun logInfo(tag: String, message: String) {
+    runCatching { android.util.Log.i(tag, message) }
+}
 
 private fun AgentMessage.userText(): String? {
     val message = asLlmMessage() as? UserMessage ?: return null
