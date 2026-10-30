@@ -133,4 +133,41 @@ class ExternalTurnTest {
         assertTrue(answer.steps.isEmpty())
         assertFalse(state.sending)
     }
+
+    @Test
+    fun externalRetryResumesFailedTail() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(1, AssistantRole.USER, "hello"),
+                AssistantMessage(
+                    id = 2,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    streaming = false,
+                    status = MessageStatus.FAILED,
+                    error = "boom",
+                ),
+            ),
+        )
+        val reduced = reduce(state, RuntimeEvent.RunStarted("run-retry", 5000L), strings)
+        assertEquals(2, reduced.messages.size)
+        val tail = reduced.messages.last()
+        assertEquals(AssistantRole.ASSISTANT, tail.role)
+        assertTrue(tail.streaming)
+        assertEquals("run-retry", tail.runId)
+        assertTrue(reduced.sending)
+        assertEquals(RuntimeActivity.Thinking, reduced.activity)
+    }
+
+    @Test
+    fun externalRetryDoesNotResurrectNonFailedTail() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(1, AssistantRole.USER, "hello"),
+                AssistantMessage(2, AssistantRole.ASSISTANT, "done", status = MessageStatus.DONE),
+            ),
+        )
+        val reduced = reduce(state, RuntimeEvent.RunStarted("run-orphan", 6000L), strings)
+        assertEquals(state, reduced)
+    }
 }

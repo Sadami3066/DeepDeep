@@ -50,6 +50,8 @@ internal fun reduce(
 
             event.prompt.isNotEmpty() -> state.startExternalRun(event)
 
+            state.retriableFailedTail() -> state.retryExternallyStartedRun(event.runId, event.startedAt)
+
             state.sending -> state.appendPlaceholder(event)
 
             else -> state
@@ -400,6 +402,11 @@ private fun failRunningTools(steps: List<AssistantStep>): List<AssistantStep> = 
         step
     }
 }
+
+private fun ConversationState.retriableFailedTail(): Boolean =
+    messages.lastOrNull()?.let {
+        it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
+    } == true
 
 private fun ConversationState.startExternalRun(event: RuntimeEvent.RunStarted): ConversationState {
     val tail = messages.lastOrNull()

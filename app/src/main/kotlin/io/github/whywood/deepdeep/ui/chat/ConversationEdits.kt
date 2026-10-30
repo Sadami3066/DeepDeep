@@ -42,6 +42,14 @@ internal fun ConversationState.toggleStep(messageId: Long, stepId: Long): Conver
     },
 )
 
+internal fun ConversationState.retryExternallyStartedRun(runId: String, startedAt: Long): ConversationState {
+    val retried = markRetryingTail(startedAt)
+    val index = retried.messages.indexOfLast { it.role == AssistantRole.ASSISTANT && it.streaming }
+    if (index < 0) return retried
+    val updated = retried.messages.toMutableList().also { list -> list[index] = list[index].copy(runId = runId) }
+    return retried.copy(messages = updated)
+}
+
 internal fun ConversationState.markRetryingTail(now: Long): ConversationState {
     val index = messages.indexOfLast {
         it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
