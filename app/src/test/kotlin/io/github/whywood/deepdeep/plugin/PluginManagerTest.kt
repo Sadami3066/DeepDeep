@@ -466,6 +466,21 @@ class PluginManagerTest {
     }
 
     @Test
+    fun startDoesNotReportCorruptionForHealthyRecords() = runTest {
+        val file = recordsFile()
+        file.parentFile.mkdirs()
+        file.writeText(
+            """{"schemaVersion":2,"plugins":[{"id":"fake-internal","version":"2.0","installedAt":1,"enabled":true,"skillIds":[]}]}"""
+        )
+        val manager = newManager(this, FakeInternalPlugin())
+        manager.start()
+        advanceUntilIdle()
+
+        assertNull(manager.state.value.error)
+        assertFalse(File(file.parentFile, "plugins.json.corrupt").exists())
+    }
+
+    @Test
     fun setSettingPersistsAndNotifiesPlugin() = runTest {
         var contributions = 0
         val plugin = FakeInternalPlugin()
