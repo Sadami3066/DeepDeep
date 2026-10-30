@@ -20,7 +20,6 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.QueuedInput
-import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
@@ -392,27 +391,15 @@ class ChatViewModel(
         }
         retryController.clear(sessionId)
         dismissInterruptedNotice(sessionId)
-        val nextId = (current.messages.maxOfOrNull { it.id } ?: -1L) + 1
-        val assistantId = nextId + 1
         val now = System.currentTimeMillis()
-        mutableState.update {
-            it.copy(
-                conversation = it.conversation.copy(
-                    messages = it.messages + AssistantMessage(nextId, AssistantRole.USER, prompt) + AssistantMessage(
-                        id = assistantId,
-                        role = AssistantRole.ASSISTANT,
-                        text = "",
-                        streaming = true,
-                        status = MessageStatus.RUNNING,
-                        startedAt = now,
-                    ),
-                    sending = true,
-                    activity = RuntimeActivity.Thinking,
-                    activityStartedAt = now,
-                    title = if (sessionList.isDefaultChatTitle(it.conversationTitle)) {
+        mutableState.update { state ->
+            val conversation = state.conversation.beginTurn(prompt, now)
+            state.copy(
+                conversation = conversation.copy(
+                    title = if (sessionList.isDefaultChatTitle(state.conversationTitle)) {
                         sessionList.titleFrom(titleSeed)
                     } else {
-                        it.conversationTitle
+                        state.conversationTitle
                     },
                 ),
                 input = "",
@@ -587,28 +574,7 @@ class ChatViewModel(
     }
 
     fun toggleStep(messageId: Long, stepId: Long) {
-        mutableState.update { state ->
-            state.copy(
-                conversation = state.conversation.copy(
-                    messages = state.messages.map { message ->
-                    if (message.id != messageId) return@map message
-                    message.copy(
-                        steps = message.steps.map { step ->
-                            when {
-                                step is AssistantStep.Reasoning && step.id == stepId ->
-                                    step.copy(expanded = !step.expanded)
-
-                                step is AssistantStep.Tool && step.trace.id == stepId ->
-                                    step.copy(trace = step.trace.copy(expanded = !step.trace.expanded))
-
-                                else -> step
-                            }
-                        },
-                    )
-                    },
-                ),
-            )
-        }
+        mutableState.update { it.copy(conversation = it.conversation.toggleStep(messageId, stepId)) }
     }
 
     fun renameSession(id: String, title: String) {

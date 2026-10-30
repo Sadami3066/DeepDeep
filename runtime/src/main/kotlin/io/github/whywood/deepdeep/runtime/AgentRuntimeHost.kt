@@ -514,7 +514,8 @@ class AgentRuntimeHost internal constructor(
     ) {
         try {
             if (setTitle) ensureTitle(handle, text)
-            emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis()))
+            val prompt = if (handle.state.turnSource == TurnSource.USER) text else ""
+            emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis(), prompt))
             emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
             logInfo(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text, images)

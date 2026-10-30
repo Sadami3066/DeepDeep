@@ -34,28 +34,12 @@ internal fun reduce(
     now: Long = System.currentTimeMillis(),
 ): ConversationState = when (event) {
     is RuntimeEvent.RunStarted -> {
+        val known = event.runId.isNotBlank() && state.messages.any { it.runId == event.runId }
         val target = state.messages.lastOrNull { it.role == AssistantRole.ASSISTANT && it.streaming }
-        if (target == null) {
-            if (state.sending) {
-                state.copy(
-                    messages = state.messages + AssistantMessage(
-                        id = nextMessageId(state.messages),
-                        role = AssistantRole.ASSISTANT,
-                        text = "",
-                        streaming = true,
-                        status = MessageStatus.RUNNING,
-                        startedAt = event.startedAt,
-                        runId = event.runId,
-                    ),
-                    sending = true,
-                    activity = RuntimeActivity.Thinking,
-                    activityStartedAt = event.startedAt,
-                )
-            } else {
-                state
-            }
-        } else {
-            state.copy(
+        when {
+            known -> state
+
+            target != null -> state.copy(
                 messages = state.messages.map {
                     if (it.id == target.id) it.copy(runId = event.runId) else it
                 },
@@ -63,6 +47,12 @@ internal fun reduce(
                 activity = RuntimeActivity.Thinking,
                 activityStartedAt = event.startedAt,
             )
+
+            event.prompt.isNotEmpty() -> state.startExternalRun(event)
+
+            state.sending -> state.appendPlaceholder(event)
+
+            else -> state
         }
     }
 
@@ -410,6 +400,48 @@ private fun failRunningTools(steps: List<AssistantStep>): List<AssistantStep> = 
         step
     }
 }
+
+private fun ConversationState.startExternalRun(event: RuntimeEvent.RunStarted): ConversationState {
+    val tail = messages.lastOrNull()
+    val withUser = if (tail != null && tail.role == AssistantRole.USER && tail.text == event.prompt) {
+        messages
+    } else {
+        messages + AssistantMessage(
+            id = nextMessageId(messages),
+            role = AssistantRole.USER,
+            text = event.prompt,
+        )
+    }
+    return copy(
+        messages = withUser + AssistantMessage(
+            id = nextMessageId(withUser),
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            streaming = true,
+            status = MessageStatus.RUNNING,
+            startedAt = event.startedAt,
+            runId = event.runId,
+        ),
+        sending = true,
+        activity = RuntimeActivity.Thinking,
+        activityStartedAt = event.startedAt,
+    )
+}
+
+private fun ConversationState.appendPlaceholder(event: RuntimeEvent.RunStarted): ConversationState = copy(
+    messages = messages + AssistantMessage(
+        id = nextMessageId(messages),
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        streaming = true,
+        status = MessageStatus.RUNNING,
+        startedAt = event.startedAt,
+        runId = event.runId,
+    ),
+    sending = true,
+    activity = RuntimeActivity.Thinking,
+    activityStartedAt = event.startedAt,
+)
 
 private fun ConversationState.injectTurn(
     event: RuntimeEvent.TurnInjected,

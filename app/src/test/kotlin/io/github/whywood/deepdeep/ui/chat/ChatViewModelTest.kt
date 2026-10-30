@@ -152,6 +152,26 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun externalRunWithPromptAppearsInActiveConversation() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val viewModel = viewModel(runtime)
+        advanceUntilIdle()
+
+        val sessionId = viewModel.state.value.conversationId!!
+        runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L, prompt = "from overlay"))
+        runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "answer"))
+        runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "answer", RunStatus.DONE, 2000L))
+        advanceUntilIdle()
+
+        val messages = viewModel.state.value.messages
+        assertEquals(listOf("from overlay", "answer"), messages.map { it.text })
+        assertEquals(AssistantRole.USER, messages[0].role)
+        assertEquals(AssistantRole.ASSISTANT, messages[1].role)
+        assertEquals(MessageStatus.DONE, messages[1].status)
+        assertFalse(viewModel.state.value.sending)
+    }
+
+    @Test
     fun updateUiStringsLocalizesSubsequentEvents() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)

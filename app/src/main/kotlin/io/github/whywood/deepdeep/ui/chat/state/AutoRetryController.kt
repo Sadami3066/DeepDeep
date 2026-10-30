@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
 import io.github.whywood.deepdeep.runtime.AgentRuntime
-import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
@@ -11,6 +10,7 @@ import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ConversationState
 import io.github.whywood.deepdeep.ui.chat.finishWithError
+import io.github.whywood.deepdeep.ui.chat.markRetryingTail
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -123,14 +123,7 @@ internal class AutoRetryController(
 
     private fun begin(sessionId: String) {
         val at = now()
-        val applied = writeTarget.updateIfPresent(sessionId) { state ->
-            state.copy(
-                messages = markRetryingTail(state.messages, at),
-                sending = true,
-                activity = RuntimeActivity.Thinking,
-                activityStartedAt = at,
-            )
-        }
+        val applied = writeTarget.updateIfPresent(sessionId) { state -> state.markRetryingTail(at) }
         if (!applied) return
         onBegin(sessionId)
         scope.launch {
@@ -143,29 +136,6 @@ internal class AutoRetryController(
                 onFailure(sessionId, error.message)
             }
         }
-    }
-
-    private fun markRetryingTail(messages: List<AssistantMessage>, at: Long): List<AssistantMessage> {
-        val index = messages.indexOfLast {
-            it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
-        }
-        if (index < 0) {
-            return messages + AssistantMessage(
-                id = (messages.maxOfOrNull { it.id } ?: -1L) + 1,
-                role = AssistantRole.ASSISTANT,
-                text = "",
-                streaming = true,
-                status = MessageStatus.RUNNING,
-                startedAt = at,
-            )
-        }
-        val retrying = messages[index].copy(
-            streaming = true,
-            retrying = true,
-            runId = "",
-            finishedAt = null,
-        )
-        return messages.take(index) + retrying
     }
 }
 

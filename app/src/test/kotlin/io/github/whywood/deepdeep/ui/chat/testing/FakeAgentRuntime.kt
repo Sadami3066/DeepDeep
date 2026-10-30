@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,6 +34,7 @@ class FakeAgentRuntime : AgentRuntime {
     override val activeRuns = MutableStateFlow<Map<String, ActiveRunSnapshot>>(emptyMap())
     var sessions: List<ConversationSummary> = emptyList()
     var histories: Map<String, List<AssistantMessage>> = emptyMap()
+    var usages: Map<String, SessionUsage> = emptyMap()
     var sessionModels: MutableMap<String, SessionModelSnapshot> = mutableMapOf()
     val historyCalls = mutableMapOf<String, Int>()
     val openCalls = mutableListOf<String>()
@@ -138,6 +140,8 @@ class FakeAgentRuntime : AgentRuntime {
         historyCalls[sessionId] = (historyCalls[sessionId] ?: 0) + 1
         return histories[sessionId].orEmpty()
     }
+
+    override suspend fun usage(sessionId: String): SessionUsage? = usages[sessionId]
 
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
         delivered += Triple(sessionId, text, reminder)

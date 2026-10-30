@@ -206,6 +206,7 @@ sealed interface RuntimeEvent {
     data class RunStarted(
         override val runId: String,
         val startedAt: Long,
+        val prompt: String = "",
     ) : RuntimeEvent
 
     data class ActivityChanged(

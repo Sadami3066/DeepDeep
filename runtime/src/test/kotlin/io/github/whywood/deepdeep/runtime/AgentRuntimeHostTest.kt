@@ -153,6 +153,32 @@ class AgentRuntimeHostTest {
     }
 
     @Test
+    fun runStartedCarriesPromptOnlyForUserTurns() = runTest {
+        val fixture = Fixture(backgroundScope)
+        val received = mutableListOf<SessionRuntimeEvent>()
+        val subscription = backgroundScope.launch {
+            fixture.host.events.collect { received += it }
+        }
+        try {
+            runCurrent()
+            fixture.addSession("session-1")
+            fixture.host.send("session-1", "hello from user")
+            settle()
+            val userStarted = received.map { it.event }.filterIsInstance<RuntimeEvent.RunStarted>().single()
+            assertEquals("hello from user", userStarted.prompt)
+
+            received.clear()
+            fixture.host.deliverReminder("session-1", "reminder body", null)
+            settle()
+            val reminderStarted = received.map { it.event }.filterIsInstance<RuntimeEvent.RunStarted>().single()
+            assertEquals("", reminderStarted.prompt)
+        } finally {
+            subscription.cancel()
+            fixture.close()
+        }
+    }
+
+    @Test
     fun reconfigureDefersRebuildUntilTurnEnds() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
