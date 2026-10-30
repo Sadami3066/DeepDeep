@@ -65,10 +65,7 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
-import io.github.whywood.deepdeep.ui.mcp.McpScreen
-import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
-import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
@@ -83,14 +80,11 @@ import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
 import io.github.whywood.deepdeep.ui.chat.parseChatCommand
 import io.github.whywood.deepdeep.ui.files.FileBrowserSheet
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
-import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
-import io.github.whywood.deepdeep.ui.skills.SkillsScreen
-import io.github.whywood.deepdeep.ui.workspaces.WorkspaceSettingsScreen
-import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
-import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
+import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
+import io.github.whywood.deepdeep.ui.navigation.deepLinkStack
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
@@ -98,16 +92,6 @@ import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
-import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
-import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
-import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
-import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
-import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
-import io.github.whywood.deepdeep.ui.settings.FontScreen
-import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
-import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
-import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
-import io.github.whywood.deepdeep.ui.settings.SettingsScreen
 import io.github.whywood.deepdeep.ui.voice.VoiceAssistantSheet
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
@@ -577,19 +561,7 @@ internal fun DeepDeepApp(
         if (!state.ready) return@LaunchedEffect
         drawerOpen = false
         navigator.reset(AppDestination.Chat)
-        when (destination) {
-            is AppDestination.PluginDetail -> {
-                navigator.push(AppDestination.Plugins)
-                navigator.push(destination)
-            }
-
-            is AppDestination.WorkshopDetail -> {
-                navigator.push(AppDestination.Workshop)
-                navigator.push(destination)
-            }
-
-            else -> navigator.push(destination)
-        }
+        deepLinkStack(destination).forEach(navigator::push)
         onDeepDestinationConsumed()
     }
 
@@ -726,221 +698,14 @@ internal fun DeepDeepApp(
                 )
             },
         ) { destination ->
-            when (destination) {
-                AppDestination.Chat -> Box(Modifier.fillMaxSize())
-
-                AppDestination.Settings -> SettingsScreen(
-                    nickname = nickname,
-                    providerName = defaultProvider?.name,
-                    modelName = defaultModelLabel,
-                    configured = defaultModelConfig.providerId in configuredProviders,
-                    themeMode = theme,
-                    linuxState = linuxState,
-                    versionName = BuildConfig.VERSION_NAME,
-                    fontLabel = fontStyle.displayName,
-                    onBack = ::back,
-                    onThemeModeChange = onThemeChange,
-                    onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
-                    onOpenProviders = { navigator.push(AppDestination.Providers) },
-                    onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
-                    onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
-                    onOpenFonts = { navigator.push(AppDestination.Fonts) },
-                    onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
-                    archivedCount = state.archivedCount,
-                    onOpenArchived = { navigator.push(AppDestination.Archived) },
-                )
-
-                AppDestination.Providers -> ProviderListScreen(
-                    providers = graph.providerCatalog.summaries,
-                    configuredProviderIds = configuredProviders,
-                    onBack = ::back,
-                    onProviderClick = { id -> navigator.push(AppDestination.ProviderDetail(id)) },
-                )
-
-                AppDestination.RuntimeSettings -> {
-                    LaunchedEffect(Unit) { graph.linuxEnvironment.refreshState() }
-                    LaunchedEffect(linuxState) { graph.devPackageManager.refresh() }
-                    RuntimeSettingsScreen(
-                        linuxState = linuxState,
-                        linuxSupported = graph.linuxEnvironment.isSupported,
-                        linuxEnabled = linuxEnabled,
-                        sharedStorageEnabled = sharedStorageEnabled,
-                        devPackages = devPackages,
-                        onBack = ::back,
-                        onInstall = { scope.launch { graph.linuxEnvironment.install() } },
-                        onReset = {
-                            scope.launch {
-                                graph.linuxSettings.setEnabled(false)
-                                graph.linuxEnvironment.reset()
-                                graph.host.reconfigure()
-                            }
-                        },
-                        onEnabledChange = { enabled ->
-                            scope.launch {
-                                graph.linuxSettings.setEnabled(enabled)
-                                graph.host.reconfigure()
-                            }
-                        },
-                        onSharedStorageChange = { enabled ->
-                            scope.launch { graph.linuxSettings.setSharedStorageEnabled(enabled) }
-                        },
-                        onInstallBundle = graph.devPackageManager::installBundle,
-                        onRefreshPackages = graph.devPackageManager::refresh,
-                    )
-                }
-
-                AppDestination.Personalization -> PersonalizationScreen(
-                    value = personalization,
-                    onBack = ::back,
-                    onSave = { value -> scope.launch { graph.personalizationStore.save(value) } },
-                )
-
-                AppDestination.Privacy -> PrivacyScreen(onBack = ::back)
-
-                AppDestination.Fonts -> FontScreen(
-                    current = fontStyle,
-                    onBack = ::back,
-                    onSelect = onFontStyleChange,
-                )
-
-                AppDestination.ChatSettings -> ChatSettingsScreen(
-                    preferences = uiPreferences,
-                    onBack = ::back,
-                    onToggle = { toggle, enabled ->
-                        scope.launch { graph.appPreferences.set(toggle, enabled) }
-                    },
-                    voiceAutoSpeak = voiceAutoSpeak,
-                    onVoiceAutoSpeakChange = { enabled ->
-                        scope.launch { graph.voicePreferences.setAutoSpeak(enabled) }
-                    },
-                    voiceSendAfterRecognition = voiceSendAfterRecognition,
-                    onVoiceSendAfterRecognitionChange = { enabled ->
-                        scope.launch { graph.voicePreferences.setSendAfterRecognition(enabled) }
-                    },
-                )
-
-                is AppDestination.ProviderDetail -> {
-                    val provider = graph.providerCatalog.summary(destination.id)
-                    if (provider == null) {
-                        LaunchedEffect(destination.id) {
-                            navigator.pop()
-                        }
-                    } else {
-                        val authKind = authKinds[provider.id]
-                        val savedApiKey = remember(provider.id, credentialRevision) {
-                            graph.credentials.cachedApiKey(provider.id)
-                        }
-                        ProviderDetailScreen(
-                            provider = provider,
-                            configured = provider.id in configuredProviders,
-                            savedApiKey = savedApiKey,
-                            authKind = authKind,
-                            oauthService = graph.providerOAuthService,
-                            onAuthChanged = {},
-                            onBack = ::back,
-                            onSaveApiKey = { key ->
-                                runCatching {
-                                    graph.credentials.writeApiKey(provider.id, key, null)
-                                    graph.credentials.awaitCommit(provider.id)
-                                }
-                            },
-                            onClearApiKey = {
-                                runCatching {
-                                    graph.credentials.delete(provider.id)
-                                    graph.credentials.awaitCommit(provider.id)
-                                }
-                            },
-                        )
-                    }
-                }
-
-                AppDestination.Mcp -> McpScreen(
-                    store = graph.mcpConfigStore,
-                    probe = graph.mcpServerProbe,
-                    oauth = graph.mcpOAuthService,
-                    onBack = ::back,
-                    onReloadSessions = { graph.host.reloadMcp() },
-                    onReconnect = { server -> graph.host.reconnectMcp(server) },
-                )
-
-                AppDestination.Plugins -> PluginsScreen(
-                    manager = graph.pluginManager,
-                    onBack = ::back,
-                    onOpenPlugin = { pluginId -> navigator.push(AppDestination.PluginDetail(pluginId)) },
-                )
-
-                is AppDestination.PluginDetail -> PluginDetailScreen(
-                    manager = graph.pluginManager,
-                    pluginId = destination.id,
-                    onBack = ::back,
-                )
-
-                AppDestination.Archived -> ArchivedSessionsScreen(
-                    archivedSessions = state.archivedConversations,
-                    onBack = ::back,
-                    onOpen = { id ->
-                        chatViewModel.openConversation(id)
-                        openChat()
-                    },
-                    onRename = chatViewModel::renameSession,
-                    onUnarchive = { id -> chatViewModel.setSessionArchived(id, false) },
-                    onDelete = chatViewModel::deleteSession,
-                )
-
-                AppDestination.Search -> SessionSearchScreen(
-                    onBack = ::back,
-                    loadSessions = chatViewModel::loadSearchSessions,
-                    onOpen = { id ->
-                        chatViewModel.openConversation(id)
-                        navigator.reset(AppDestination.Chat)
-                    },
-                )
-
-                AppDestination.Skills -> SkillsScreen(
-                    repository = graph.skillRepository,
-                    onBack = ::back,
-                )
-
-                AppDestination.Schedules -> ScheduleScreen(
-                    service = graph.scheduleService,
-                    runtime = graph.host,
-                    initialConversationId = state.conversationId,
-                    onBack = ::back,
-                    onOpenConversation = { sessionId ->
-                        chatViewModel.openConversationById(sessionId)
-                        navigator.reset(AppDestination.Chat)
-                    },
-                )
-
-                is AppDestination.WorkspaceSettings -> {
-                    val workspace = state.workspaces.firstOrNull { it.id == destination.workspaceId }
-                    if (workspace == null) {
-                        LaunchedEffect(destination.workspaceId) { navigator.pop() }
-                    } else {
-                        WorkspaceSettingsScreen(
-                            workspace = workspace,
-                            skillRepository = graph.skillRepository,
-                            agentDocStore = graph.agentDocStore,
-                            onBack = ::back,
-                            onOpenSkills = { navigator.push(AppDestination.Skills) },
-                        )
-                    }
-                }
-
-                AppDestination.Workshop -> WorkshopScreen(
-                    store = graph.workshopStore,
-                    onBack = ::back,
-                    onOpen = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
-                    onCreate = ::openWorkshopCreate,
-                )
-
-                is AppDestination.WorkshopDetail -> WorkshopViewerScreen(
-                    store = graph.workshopStore,
-                    creationId = destination.id,
-                    agentGateway = graph.workshopAgentService,
-                    onBack = ::back,
-                )
-            }
+            AppRouteContent(
+                destination, navigator, ::back, ::openChat, ::openWorkshopCreate,
+                state, chatViewModel, graph, scope, theme, onThemeChange, fontStyle,
+                onFontStyleChange, nickname, defaultProvider?.name, defaultModelLabel,
+                defaultModelConfig, configuredProviders, linuxState, linuxEnabled,
+                sharedStorageEnabled, devPackages, personalization, uiPreferences,
+                voiceAutoSpeak, voiceSendAfterRecognition, authKinds, credentialRevision,
+            )
         }
 
         if (drawerMounted) {
