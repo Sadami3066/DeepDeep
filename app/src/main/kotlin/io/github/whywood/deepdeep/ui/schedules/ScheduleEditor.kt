@@ -30,7 +30,7 @@ internal fun ScheduleEditor(
     isEditing: Boolean,
     externalError: String?,
     saving: Boolean,
-    runtime: AgentRuntime,
+    runtime: ConversationQueries,
     onDismiss: () -> Unit,
     onSave: (ScheduleDraft) -> Unit,
     onRunNow: () -> Unit,
@@ -267,7 +267,7 @@ private fun conversationLabel(draft: ScheduleDraft): String = when {
 
 @Composable
 private fun ConversationPickerSheet(
-    runtime: AgentRuntime,
+    runtime: ConversationQueries,
     selectedId: String,
     onSelect: (ConversationSummary) -> Unit,
     onDismiss: () -> Unit,
