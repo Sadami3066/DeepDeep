@@ -29,11 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,9 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.InstalledSkill
-import io.github.whywood.deepdeep.data.SkillArchiveError
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.design.DdDialog
@@ -73,11 +71,6 @@ import kotlinx.coroutines.withContext
 
 private const val MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 
-private data class SkillError(
-    @StringRes val titleRes: Int,
-    @StringRes val messageRes: Int,
-)
-
 private sealed interface ArchiveRead {
     data class Success(val bytes: ByteArray, val fallbackName: String) : ArchiveRead
     data class Failure(@StringRes val messageRes: Int) : ArchiveRead
@@ -89,122 +82,74 @@ fun SkillsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
     val context = LocalContext.current
-    val installSuccessTemplate = stringResource(R.string.skills_install_success)
     val scope = rememberCoroutineScope()
-    var skills by remember { mutableStateOf<List<InstalledSkill>>(emptyList()) }
-    var listFailed by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(true) }
-    var installing by remember { mutableStateOf(false) }
-    var busyId by remember { mutableStateOf<String?>(null) }
-    var refreshKey by remember { mutableIntStateOf(0) }
-    var selected by remember { mutableStateOf<InstalledSkill?>(null) }
-    var deleteTarget by remember { mutableStateOf<InstalledSkill?>(null) }
-    var error by remember { mutableStateOf<SkillError?>(null) }
-    var query by rememberSaveable { mutableStateOf("") }
+    val installSuccessTemplate = stringResource(R.string.skills_install_success)
+    val holder = remember(repository) { SkillsStateHolder(repository, scope) }
+    val state by holder.state.collectAsStateWithLifecycle()
 
-    val visibleSkills = remember(skills, query) { filterSkills(skills, query) }
-
-    suspend fun reloadSkills() {
-        repository.list().fold(
-            onSuccess = {
-                skills = it
-                listFailed = false
-            },
-            onFailure = { listFailed = true },
-        )
+    LaunchedEffect(holder) {
+        holder.start()
     }
-
-    LaunchedEffect(refreshKey) {
-        loading = true
-        repository.syncActiveSkills()
-        reloadSkills()
-        loading = false
-    }
-
-    LaunchedEffect(Unit) {
-        repository.changes.collect {
-            reloadSkills()
-        }
-    }
-
-    LifecycleResumeEffect(Unit) {
-        scope.launch {
-            repository.syncIfChanged()
-            reloadSkills()
-        }
+    LifecycleResumeEffect(holder) {
+        holder.resume()
         onPauseOrDispose { }
     }
 
-    fun toggle(skill: InstalledSkill, enabled: Boolean) {
-        if (busyId != null) return
-        busyId = skill.id
-        scope.launch {
-            try {
-                val ok = repository.setGlobalEnabled(skill.id, enabled)
-                reloadSkills()
-                if (!ok) {
-                    error = SkillError(R.string.skills_error_title, R.string.skills_error_io)
-                }
-            } finally {
-                busyId = null
-            }
-        }
-    }
-
-    fun delete(skill: InstalledSkill) {
-        if (busyId != null) return
-        busyId = skill.id
-        scope.launch {
-            try {
-                val ok = repository.delete(skill.id)
-                if (selected?.id == skill.id) selected = null
-                refreshKey++
-                if (!ok) {
-                    error = SkillError(R.string.skills_error_title, R.string.skills_error_io)
-                }
-            } finally {
-                busyId = null
-            }
-        }
-    }
-
-    fun install(uri: Uri) {
-        if (installing) return
-        installing = true
-        scope.launch {
-            try {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch {
                 when (val read = readArchive(context, uri)) {
-                    is ArchiveRead.Failure -> error = SkillError(
+                    is ArchiveRead.Failure -> holder.reportInstallError(
                         R.string.skills_install_failed_title,
                         read.messageRes,
                     )
-                    is ArchiveRead.Success -> when (val result = repository.install(read.bytes, read.fallbackName)) {
-                        is SkillArchiveResult.Failure -> error = SkillError(
-                            R.string.skills_install_failed_title,
-                            result.error.messageRes(),
-                        )
-                        is SkillArchiveResult.Success -> {
+
+                    is ArchiveRead.Success -> {
+                        val result = holder.install(read.bytes, read.fallbackName)
+                        if (result is SkillArchiveResult.Success) {
                             Toast.makeText(
                                 context,
                                 String.format(installSuccessTemplate, result.skill.name),
                                 Toast.LENGTH_SHORT,
                             ).show()
-                            refreshKey++
                         }
                     }
                 }
-            } finally {
-                installing = false
             }
         }
     }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) install(uri)
-    }
-    val openPicker: () -> Unit = { picker.launch(arrayOf("*/*")) }
+    SkillsContent(
+        state = state,
+        onBack = onBack,
+        onQueryChange = holder::setQuery,
+        onRetry = holder::retry,
+        onToggle = holder::toggle,
+        onDelete = holder::remove,
+        onInstall = { picker.launch(arrayOf("*/*")) },
+        onDismissInstallError = holder::dismissInstallError,
+        readContent = holder::readContent,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SkillsContent(
+    state: SkillsUiState,
+    onBack: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onRetry: () -> Unit,
+    onToggle: (InstalledSkill, Boolean) -> Unit,
+    onDelete: (InstalledSkill) -> Unit,
+    onInstall: () -> Unit,
+    onDismissInstallError: () -> Unit,
+    readContent: suspend (String) -> String?,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    var selected by remember { mutableStateOf<InstalledSkill?>(null) }
+    var deleteTarget by remember { mutableStateOf<InstalledSkill?>(null) }
 
     Column(
         modifier
@@ -232,14 +177,14 @@ fun SkillsScreen(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (installing) {
+            if (state.installing) {
                 Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                     DdSpinner(size = 20.dp)
                 }
             } else {
                 DdIconButton(
                     icon = DdIcons.Plus,
-                    onClick = openPicker,
+                    onClick = onInstall,
                     contentDescription = stringResource(R.string.skills_install),
                     modifier = Modifier.testTag("skills_install"),
                     tint = colors.ink,
@@ -248,8 +193,8 @@ fun SkillsScreen(
             }
         }
         DdSearchField(
-            query = query,
-            onQueryChange = { query = it },
+            query = state.searchQuery,
+            onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.skills_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -264,23 +209,23 @@ fun SkillsScreen(
                 .padding(horizontal = 16.dp),
         ) {
             when {
-                loading && skills.isEmpty() -> Box(
+                state.loading && state.items.isEmpty() -> Box(
                     Modifier.fillMaxWidth().padding(top = 120.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     DdSpinner(size = 22.dp)
                 }
 
-                listFailed && skills.isEmpty() -> Box(
+                state.items.isEmpty() && state.error != null -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    SkillLoadError(onRetry = { refreshKey++ })
+                    SkillsErrorRow(error = state.error, onRetry = onRetry)
                 }
 
-                skills.isEmpty() -> EmptySkills(onInstall = openPicker)
+                state.items.isEmpty() -> EmptySkills(onInstall = onInstall)
 
-                visibleSkills.isEmpty() -> Box(
+                state.visibleItems.isEmpty() -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -292,18 +237,19 @@ fun SkillsScreen(
                 }
 
                 else -> {
-                    if (listFailed) {
-                        SkillLoadError(
-                            onRetry = { refreshKey++ },
+                    if (state.error != null) {
+                        SkillsErrorRow(
+                            error = state.error,
+                            onRetry = onRetry,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     SkillsGroup(
-                        skills = visibleSkills,
-                        enabled = busyId == null,
+                        skills = state.visibleItems,
+                        enabled = !state.busy,
                         onOpen = { selected = it },
-                        onToggle = { skill, enabled -> toggle(skill, enabled) },
+                        onToggle = onToggle,
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -315,7 +261,7 @@ fun SkillsScreen(
     selected?.let { skill ->
         SkillDetailSheet(
             skill = skill,
-            repository = repository,
+            readContent = readContent,
             onDismiss = { selected = null },
             onDelete = { deleteTarget = skill },
         )
@@ -343,7 +289,8 @@ fun SkillsScreen(
                     text = stringResource(R.string.skills_delete_confirm),
                     onClick = {
                         deleteTarget = null
-                        delete(skill)
+                        if (selected?.id == skill.id) selected = null
+                        onDelete(skill)
                     },
                     modifier = Modifier.testTag("skill_delete_confirm"),
                     color = deepDeepColors().danger,
@@ -352,9 +299,9 @@ fun SkillsScreen(
         )
     }
 
-    error?.let { current ->
+    state.installError?.let { current ->
         DdDialog(
-            onDismissRequest = { error = null },
+            onDismissRequest = onDismissInstallError,
             modifier = Modifier.testTag("skills_error_dialog"),
             title = stringResource(current.titleRes),
             content = {
@@ -367,7 +314,7 @@ fun SkillsScreen(
             actions = {
                 DdTextAction(
                     text = stringResource(R.string.skills_close),
-                    onClick = { error = null },
+                    onClick = onDismissInstallError,
                     modifier = Modifier.testTag("skills_error_close"),
                 )
             },
@@ -376,7 +323,8 @@ fun SkillsScreen(
 }
 
 @Composable
-private fun SkillLoadError(
+private fun SkillsErrorRow(
+    error: SkillsError,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -386,16 +334,18 @@ private fun SkillLoadError(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.skills_error_io),
+            text = "${stringResource(error.titleRes)} · ${stringResource(error.messageRes)}",
             modifier = Modifier.weight(1f),
             style = DdType.bodySmall,
             color = colors.danger,
         )
-        DdTextAction(
-            text = stringResource(R.string.skills_retry),
-            onClick = onRetry,
-            modifier = Modifier.testTag("skills_list_retry"),
-        )
+        if (error.retryable) {
+            DdTextAction(
+                text = stringResource(R.string.skills_retry),
+                onClick = onRetry,
+                modifier = Modifier.testTag("skills_list_retry"),
+            )
+        }
     }
 }
 
@@ -497,7 +447,7 @@ private fun ManualTag() {
 @Composable
 private fun SkillDetailSheet(
     skill: InstalledSkill,
-    repository: SkillRepository,
+    readContent: suspend (String) -> String?,
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -505,7 +455,7 @@ private fun SkillDetailSheet(
     var content by remember(skill.id) { mutableStateOf<String?>(null) }
     var loading by remember(skill.id) { mutableStateOf(true) }
     LaunchedEffect(skill.id) {
-        content = repository.readContent(skill.id)
+        content = readContent(skill.id)
         loading = false
     }
     val maxBodyHeight = (LocalConfiguration.current.screenHeightDp * 0.66f).dp
@@ -590,6 +540,7 @@ private fun SkillDetailSheet(
                             style = DdType.bodySmall,
                             color = colors.inkTertiary,
                         )
+
                         else -> Text(
                             text = content.orEmpty(),
                             style = DdType.bodySmall.copy(
@@ -612,17 +563,6 @@ private fun SkillDetailSheet(
             }
         }
     }
-}
-
-private fun SkillArchiveError.messageRes(): Int = when (this) {
-    SkillArchiveError.NotZip -> R.string.skills_error_not_zip
-    SkillArchiveError.Empty -> R.string.skills_error_empty
-    SkillArchiveError.NoSkill -> R.string.skills_error_no_skill
-    SkillArchiveError.MultipleSkills -> R.string.skills_error_multiple_skills
-    SkillArchiveError.MissingDescription -> R.string.skills_error_missing_description
-    SkillArchiveError.UnsafePath -> R.string.skills_error_unsafe_path
-    SkillArchiveError.TooLarge -> R.string.skills_install_too_large
-    SkillArchiveError.Io -> R.string.skills_error_io
 }
 
 private suspend fun readArchive(context: Context, uri: Uri): ArchiveRead = withContext(Dispatchers.IO) {
@@ -676,14 +616,4 @@ private suspend fun readArchive(context: Context, uri: Uri): ArchiveRead = withC
         ?: uri.lastPathSegment?.substringBeforeLast('.')?.takeIf { it.isNotBlank() }
         ?: "skill"
     ArchiveRead.Success(bytes, name)
-}
-
-internal fun filterSkills(skills: List<InstalledSkill>, query: String): List<InstalledSkill> {
-    val normalized = query.trim()
-    if (normalized.isEmpty()) return skills
-    return skills.filter { skill ->
-        skill.name.contains(normalized, ignoreCase = true) ||
-            skill.description.contains(normalized, ignoreCase = true) ||
-            skill.id.contains(normalized, ignoreCase = true)
-    }
 }
