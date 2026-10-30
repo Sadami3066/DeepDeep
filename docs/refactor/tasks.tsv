@@ -28,21 +28,21 @@ M2-8	M2	done	MiCloudTools 拆 4 文件	app/src/main/**/plugin/micloud/MiCloudToo
 M2-9	M2	done	MarkdownParser 拆 4 文件	app/src/main/**/ui/chat/MarkdownParser.kt	M2-1	435+210 行测试 + 48 篇等价语料不变	--tests '*Markdown*'	git revert	M	agent	-
 M2-10	M2	done	:runtime-api 纯 JVM 契约模块	settings.gradle.kts;runtime-api/*	M2-5	模块编译时看不到 Android/SDK classpath	./gradlew :runtime-api:build	git revert	M	agent	-
 M3-1	M3	done	路由表抽纯函数 + 单测	app/src/main/**/ui/navigation/*;DeepDeepApp.kt	M2-3	19 路由全覆盖；DApp 降 200 行	--tests '*Navigation*'	git revert	M	agent	AC-004
-M3-2	M3	pending	OverlayHost 拆 Sheet/Dialog	app/src/main/**/ui/shell/*;DeepDeepApp.kt	M3-1	手测条目通过；DApp 继续降	真机条目	git revert	M	agent	AC-004
+M3-2	M3	done	OverlayHost 拆 Sheet/Dialog	app/src/main/**/ui/shell/*;DeepDeepApp.kt	M3-1	手测条目通过；DApp 继续降	真机条目	git revert	M	agent	AC-004
 M3-3	M3	pending	intake 子组件，DApp <=500 行	app/src/main/**/ui/shell/*;DeepDeepApp.kt	M3-2	行数 + 条目验收	wc -l DeepDeepApp.kt	git revert	L	agent	AC-004
 M3-4	M3	done	ChatViewModel Step1 ConversationWriteTarget	app/src/main/**/ui/chat/state/*;ChatViewModel.kt	M2-1	指定 3 用例绿；VM 降 80 行	--tests 指定用例	git revert	M	agent	CH-004
-M3-5	M3	pending	ChatViewModel Step2 DeltaBatcher	同上	M3-4	指定 2 用例绿；VM 降 55 行	--tests 指定用例	git revert	M	agent	CH-004,CH-005
+M3-5	M3	done	ChatViewModel Step2 DeltaBatcher	同上	M3-4	指定 2 用例绿；VM 降 55 行	--tests 指定用例	git revert	M	agent	CH-004,CH-005
 M3-6	M3	pending	ChatViewModel Step3 AutoRetryController	同上	M3-5	指定 4 用例绿；VM 降 120 行	--tests 指定用例	git revert	M	agent	CH-004
 M3-7	M3	pending	ChatViewModel Step4 ConversationCache+SessionDraftStore	同上	M3-6	指定 3 用例绿；VM 降 160 行	--tests 指定用例	git revert	M	agent	CH-004
 M3-8	M3	pending	ChatViewModel Step5 SessionOpener	同上	M3-7	指定 4 用例绿；VM 降 230 行	--tests 指定用例	git revert	L	agent	CH-004
 M3-9	M3	pending	ChatViewModel Step6 四个 controller	同上	M3-8	指定用例绿；VM 降 200 行	--tests 指定用例	git revert	L	agent	CH-004
 M3-10	M3	pending	ChatViewModel Step7 单模型收口	ChatUiState.kt;ChatViewModel.kt;ChatScreen.kt	M3-9	VM <=450 行；ChatScreen 参数 55->25	--tests '*ui.chat.*'	git revert	L	agent	CH-002,CH-004
 M3-11	M3	done	Skills 屏 state holder	app/src/main/**/ui/skills/*	M2-3	2-3 个 Compose 测试；页面不直连 Store	--tests '*Skills*'	git revert	M	agent	SC-001
-M3-12	M3	pending	MCP 屏 state holder	app/src/main/**/ui/mcp/*	M2-3	同上	--tests '*Mcp*'	git revert	M	agent	SC-001
+M3-12	M3	done	MCP 屏 state holder	app/src/main/**/ui/mcp/*	M2-3	同上	--tests '*Mcp*'	git revert	M	agent	SC-001
 M3-13	M3	pending	Plugins 屏 state holder	app/src/main/**/ui/plugins/*	M2-3	同上	--tests '*Plugin*'	git revert	M	agent	SC-001
 M3-14	M3	pending	Schedule 屏 state holder	app/src/main/**/ui/schedules/*	M2-3	同上	--tests '*Schedule*'	git revert	M	agent	SC-001
 M3-15	M3	pending	Workshop 屏 state holder	app/src/main/**/ui/workshop/*	M2-3	同上	--tests '*Workshop*'	git revert	M	agent	SC-001
-M3-16	M3	pending	design 组件 DdPageScaffold 等	design/src/main/**	M2-3	组件被 2+ 页面复用	编译 + 页面冒烟	git revert	M	agent	SC-002
+M3-16	M3	done	design 组件 DdPageScaffold 等	design/src/main/**	M2-3	组件被 2+ 页面复用	编译 + 页面冒烟	git revert	M	agent	SC-002
 M3-17	M3	pending	收口验收：并行冲突演练 + 文档数字再生	无	M3-*	判据 3、5 通过	README 判据	-	S	agent	-
 M4-1	M4	deferred	Maven Central 收口（group 改 io.github.sadami3066）	../pi2kotlin;gradle/libs.versions.toml	M0-1	Central 可解析 0.3.0	mvn dependency:get	回退坐标	L	human-approve	GL-004
 M4-2	M4	deferred	正式签名与 tag 驱动 release	app/build.gradle.kts;.github/workflows/release.yml	M1-7	signingReport 显示 release keystore	--print-certs	回退配置（keystore 不可回滚）	M	human-approve	GL-006
