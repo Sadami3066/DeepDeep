@@ -11,9 +11,20 @@ fi
 python3 - "${files[@]}" <<'PY'
 import os
 import re
+import subprocess
 import sys
 
 LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
+tracked = set(subprocess.run(["git", "ls-files"], check=True, capture_output=True, text=True).stdout.splitlines())
+
+
+def local_only(target):
+    resolved = os.path.normpath(target).replace(os.sep, "/")
+    if not resolved.startswith("assets/"):
+        return False
+    return resolved not in tracked
+
+
 bad = []
 for path in sys.argv[1:]:
     try:
@@ -29,8 +40,11 @@ for path in sys.argv[1:]:
         if not target:
             continue
         resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
-        if not os.path.exists(resolved):
-            bad.append((path, target))
+        if os.path.exists(resolved):
+            continue
+        if local_only(resolved):
+            continue
+        bad.append((path, target))
 
 if bad:
     print(f"断链 {len(bad)} 处：")
