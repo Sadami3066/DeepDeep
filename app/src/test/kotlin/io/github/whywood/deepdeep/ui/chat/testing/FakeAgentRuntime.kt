@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -136,8 +137,11 @@ class FakeAgentRuntime : AgentRuntime {
         return dropped
     }
 
+    var historyDelay: Long = 0
+
     override suspend fun history(sessionId: String): List<AssistantMessage> {
         historyCalls[sessionId] = (historyCalls[sessionId] ?: 0) + 1
+        if (historyDelay > 0) delay(historyDelay)
         return histories[sessionId].orEmpty()
     }
 

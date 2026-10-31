@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,6 +72,26 @@ class SessionOpenerTest {
         sessionNotReadyText = { "not ready" },
         reloadFailedText = { "reload failed" },
     )
+
+    @Test
+    fun switchingToSameSessionWhileLoadingStillCompletes() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val runtime = FakeAgentRuntime().apply {
+            histories = mapOf("session-1" to listOf(message("hi")))
+            historyDelay = 100
+        }
+        val opener = opener(this, dispatcher, runtime)
+
+        opener.switchToSummary(summary("session-1"))
+        runCurrent()
+        opener.switchToSummary(summary("session-1"))
+        advanceUntilIdle()
+
+        assertEquals("session-1", state.conversationId)
+        assertFalse(state.switchingConversation)
+        assertTrue(state.historyLoaded)
+        assertEquals(1, state.messages.size)
+    }
 
     @Test
     fun cachedSessionRendersBeforeHistoryLands() = runTest {

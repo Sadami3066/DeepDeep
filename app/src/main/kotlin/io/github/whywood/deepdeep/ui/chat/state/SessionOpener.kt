@@ -127,7 +127,7 @@ internal class SessionOpener(
         openSession(summary)
     }
     fun openSession(summary: ConversationSummary) {
-        if (jobs.containsKey(summary.id)) return
+        jobs.remove(summary.id)?.cancel()
         val epoch = latestEpoch
         val job = scope.launch {
             try {
