@@ -34,7 +34,7 @@
 ## 动手
 
 - Alpine/proot 里的 `bash`：无 root 用户空间，**不是安全沙箱**
-- 可选 root：已 root 设备在 设置 → 运行环境 开总开关后可用 `root_shell`（单条命令，默认 15s、上限 120s）；只在 App 前台且用户主动发起的轮次可用，后台/定时/目标续跑/工坊 Agent 都拿不到；与 `bash` 共用输出格式（截断提示 + 退出码）
+- 权限分三档（设置 → 权限）：普通档只有 `bash`；Shizuku 档追加 `shizuku_shell`；Root 档追加 `root_shell`。两个 shell 工具默认 15s、上限 120s，与 `bash` 共用输出格式（截断提示 + 退出码）；只在 App 前台且用户主动发起的轮次可用，后台/定时/目标续跑/工坊 Agent 都拿不到。选高档但未授权时按实际已授权的最高档运行，权限页会显示状态与授权动作
 - 后台任务：`job_start` / `job_output`（增量）/ `job_list` / `job_kill`；运行中数量显示在聊天顶栏右侧（与上下文占用、定时任务、更多并列）
 - 定时任务：五段 cron（英文名、`*`/`/`/`,`/`-`、范围含 1827 天），绑定会话，到点投递回原对话；错过时下次打开补投一次；Service 被杀后不保证投递
 - 目标（goal）：自动续跑，可暂停/继续/完成/清除；轮数上限来自设置或显式参数；**只在进程内有效**，重启清空
@@ -67,7 +67,8 @@
 | 创意工坊 | `workshop_create` `workshop_load` `workshop_list` `workshop_edit` |
 | 网络搜索 | `web_search` `web_fetch` |
 | GUI / 安排 / 小米云 | `gui_*`、`arrange_*`、`mi_cloud_*` |
-| root（可选） | `root_shell` |
+| Shizuku（可选） | `shizuku_shell` |
+| Root（可选） | `root_shell` |
 | MCP | `<server>` 提供的工具，形如 `mcp__<server>__<tool>` |
 
 ## 创意工坊
@@ -85,7 +86,7 @@
 
 ## 已知边界
 
-- 不做权限/审批系统；Linux 运行环境与可选 root 各有一个总开关
+- 不做二次审批，只分权限档：普通 / Shizuku / Root；授权交给系统 root 管理器与 Shizuku 自己的弹窗
 - Linux 是 proot 用户空间，不是安全沙箱
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据
 - 定时投递只在服务存活时保证，错过补投一次
