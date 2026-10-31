@@ -50,6 +50,7 @@ class AssistantOverlayControllerTest {
         runtime: FakeAgentRuntime,
         active: String?,
         scope: CoroutineScope,
+        requested: String? = null,
         onSelected: (String) -> Unit = {},
     ) = AssistantOverlayController(
         runtime = runtime,
@@ -60,6 +61,7 @@ class AssistantOverlayControllerTest {
         configuredProviders = { setOf("deepseek") },
         defaultModel = { ModelConfig("deepseek", "model", ThinkingLevel.OFF) },
         onSessionSelected = onSelected,
+        initialSessionId = { requested },
         ioDispatcher = dispatcher,
         strings = { strings },
     )
@@ -112,6 +114,84 @@ class AssistantOverlayControllerTest {
         assertEquals(listOf("session-2"), selected)
         assertTrue(controller.state.value.conversation.sending)
         controller.reset()
+    }
+
+    @Test
+    fun startPrefersExplicitRequestOverActiveRun() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(
+                session("session-1", updatedAt = 10L),
+                session("session-2", updatedAt = 20L),
+                session("session-3", updatedAt = 30L),
+            )
+            histories = mapOf(
+                "session-1" to listOf(AssistantMessage(0, AssistantRole.USER, "requested")),
+            )
+            activeRuns.value = mapOf(
+                "session-2" to ActiveRunSnapshot("run-9", 50L),
+                "session-3" to ActiveRunSnapshot("run-8", 60L),
+            )
+        }
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, "session-2", this, requested = "session-1") { selected += it }
+
+        controller.start()
+        runCurrent()
+
+        assertEquals("session-1", controller.state.value.sessionId)
+        assertEquals("requested", controller.state.value.conversation.messages.single().text)
+        assertEquals(listOf("session-1"), selected)
+        assertFalse(controller.state.value.conversation.sending)
+        controller.reset()
+    }
+
+    @Test
+    fun startPrefersExplicitRequestOverActiveAppSession() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+            histories = mapOf(
+                "session-1" to listOf(AssistantMessage(0, AssistantRole.USER, "requested")),
+                "session-2" to listOf(AssistantMessage(0, AssistantRole.USER, "active")),
+            )
+        }
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, "session-2", this, requested = "session-1") { selected += it }
+
+        controller.start()
+        runCurrent()
+
+        assertEquals("session-1", controller.state.value.sessionId)
+        assertEquals(listOf("session-1"), selected)
+        controller.reset()
+    }
+
+    @Test
+    fun startFallsBackWhenRequestedSessionIsGone() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+            activeRuns.value = mapOf("session-2" to ActiveRunSnapshot("run-9", 5L))
+        }
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, null, this, requested = "session-gone") { selected += it }
+
+        controller.start()
+        runCurrent()
+
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertEquals(listOf("session-2"), selected)
+        controller.reset()
+    }
+
+    @Test
+    fun initialSessionCandidatesKeepRequestedFirstThenActiveRunThenAppSession() {
+        assertEquals(
+            listOf("requested", "run", "active"),
+            initialSessionCandidates("requested", "run", "active"),
+        )
+        assertEquals(listOf("run", "active"), initialSessionCandidates(null, "run", "active"))
+        assertEquals(listOf("run", "active"), initialSessionCandidates("  ", "run", "active"))
+        assertEquals(listOf("run"), initialSessionCandidates(null, "run", "run"))
+        assertTrue(initialSessionCandidates(null, null, null).isEmpty())
     }
 
     @Test

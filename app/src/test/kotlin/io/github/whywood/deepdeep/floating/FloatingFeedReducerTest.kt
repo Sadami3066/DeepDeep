@@ -8,17 +8,17 @@ import io.github.whywood.deepdeep.runtime.UserQuestion
 import io.github.whywood.deepdeep.ui.chat.PresentedItem
 import io.github.whywood.deepdeep.ui.chat.PresentedItemType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FloatingFeedReducerTest {
     @Test
-    fun questionCardOutranksDeliveryAndCompletion() {
+    fun questionCardOutranksCompleted() {
         val state = baseState().copy(
             questions = listOf(pending("req-1")),
-            deliveries = listOf(delivery("session-a", 1)),
-            completions = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
         )
         assertEquals(
             FloatingEventCard.Question::class.java,
@@ -27,12 +27,15 @@ class FloatingFeedReducerTest {
     }
 
     @Test
-    fun deliveryCardOutranksCompletion() {
+    fun completedCardOutranksOlderCompleted() {
         val state = baseState().copy(
-            deliveries = listOf(delivery("session-a", 1)),
-            completions = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+            completed = listOf(
+                completion("session-b", 2_000L, RunStatus.DONE),
+                completion("session-a", 1_000L, RunStatus.DONE),
+            ),
         )
-        assertTrue(floatingEventCard(state, 1_500L) is FloatingEventCard.Delivery)
+        val card = floatingEventCard(state, 2_500L) as FloatingEventCard.Completed
+        assertEquals("session-b", card.completion.sessionId)
     }
 
     @Test
@@ -40,14 +43,14 @@ class FloatingFeedReducerTest {
         val question = pending("req-1")
         val state = baseState().copy(
             questions = listOf(question),
-            deliveries = listOf(delivery("session-a", 1)),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
         )
         val dismissed = reduceFloatingFeed(
             state,
             FloatingFeedEvent.DismissCard("question:${question.requestId}"),
             1_100L,
         )
-        assertTrue(floatingEventCard(dismissed, 1_200L) is FloatingEventCard.Delivery)
+        assertTrue(floatingEventCard(dismissed, 1_200L) is FloatingEventCard.Completed)
     }
 
     @Test
@@ -62,49 +65,132 @@ class FloatingFeedReducerTest {
     }
 
     @Test
-    fun unreadCountsQuestionsAndUnreadDeliveries() {
+    fun pendingCountCountsQuestionsAndCompleted() {
         val state = baseState().copy(
             questions = listOf(pending("req-1"), pending("req-2")),
-            deliveries = listOf(delivery("session-a", 1), delivery("session-b", 2)),
+            completed = listOf(
+                completion("session-a", 1_000L, RunStatus.DONE),
+                completion("session-b", 1_500L, RunStatus.FAILED),
+            ),
         )
-        assertEquals(4, floatingUnreadCount(state))
-        val halfRead = reduceFloatingFeed(
+        assertEquals(4, floatingPendingCount(state))
+        val removed = reduceFloatingFeed(
             state,
-            FloatingFeedEvent.MarkDeliveryRead(state.deliveries.first().key),
-            1_100L,
+            FloatingFeedEvent.RemoveCompleted(state.completed.first().key),
+            1_600L,
         )
-        assertEquals(3, floatingUnreadCount(halfRead))
-        assertEquals(2, floatingUnreadCount(reduceFloatingFeed(halfRead, FloatingFeedEvent.MarkDeliveriesRead, 1_200L)))
+        assertEquals(3, floatingPendingCount(removed))
     }
 
     @Test
-    fun completionCardExpiresAfterSixSeconds() {
+    fun completedCardExpiresAfterSixSeconds() {
         val state = reduceFloatingFeed(
             baseState(),
             FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
             1_000L,
         )
-        assertTrue(floatingEventCard(state, 6_999L) is FloatingEventCard.Completion)
+        assertTrue(floatingEventCard(state, 6_999L) is FloatingEventCard.Completed)
         assertNull(floatingEventCard(state, 7_000L))
-        val pruned = reduceFloatingFeed(state, FloatingFeedEvent.Prune(8_000L), 8_000L)
-        assertTrue(pruned.completions.isEmpty())
+        assertEquals(1, state.completed.size)
     }
 
     @Test
-    fun sameDeliveryIsStoredOnce() {
-        val items = listOf(item(PresentedItemType.FILE, "/tmp/report.md"))
+    fun completedEntryPersistsUntilRemoved() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.STOPPED, "", null),
+            1_000L,
+        )
+        val removed = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RemoveCompleted(state.completed.single().key),
+            60_000L,
+        )
+        assertTrue(removed.completed.isEmpty())
+        assertEquals(0, floatingPendingCount(removed))
+    }
+
+    @Test
+    fun completedWithDeliveryCarriesPresentItems() {
+        val items = listOf(item(PresentedItemType.FILE, "/tmp/report.md", title = "季度报告"))
+        val delivered = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Delivered("session-a", items),
+            500L,
+        )
+        assertEquals(items, delivered.stagedDeliveries["session-a"])
+
+        val completed = reduceFloatingFeed(
+            delivered,
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
+            1_000L,
+        )
+        val entry = completed.completed.single()
+        assertTrue(entry.hasDelivery)
+        assertEquals(items, entry.items)
+        assertEquals("季度报告", entry.deliveryLabel)
+        assertTrue(completed.stagedDeliveries.isEmpty())
+    }
+
+    @Test
+    fun deliveredWithoutCompletionCreatesNoEntry() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Delivered(
+                "session-a",
+                listOf(item(PresentedItemType.FILE, "/tmp/report.md")),
+            ),
+            1_000L,
+        )
+        assertTrue(state.completed.isEmpty())
+        assertEquals(0, floatingPendingCount(state))
+    }
+
+    @Test
+    fun sameSessionCompletionReplacesOlderEntry() {
         val first = reduceFloatingFeed(
             baseState(),
-            FloatingFeedEvent.Delivered("session-a", "会话", items),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "第一次", null),
             1_000L,
         )
         val second = reduceFloatingFeed(
             first,
-            FloatingFeedEvent.Delivered("session-a", "会话", items),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "第二次", null),
             2_000L,
         )
-        assertEquals(1, second.deliveries.size)
-        assertEquals(1_000L, second.deliveries.single().receivedAt)
+        val entry = second.completed.single()
+        assertEquals("第二次", entry.text)
+        assertEquals(2_000L, entry.finishedAt)
+    }
+
+    @Test
+    fun completedListKeepsNewestFirstAndDropsOverflow() {
+        var state = baseState()
+        repeat(FLOATING_COMPLETED_LIMIT + 3) { index ->
+            state = reduceFloatingFeed(
+                state,
+                FloatingFeedEvent.Completed("session-$index", "会话", RunStatus.DONE, "", null),
+                1_000L + index,
+            )
+        }
+        assertEquals(FLOATING_COMPLETED_LIMIT, state.completed.size)
+        assertEquals(
+            "session-${FLOATING_COMPLETED_LIMIT + 2}",
+            state.completed.first().sessionId,
+        )
+        assertEquals("session-3", state.completed.last().sessionId)
+    }
+
+    @Test
+    fun runningSessionCompletionIsHidden() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
+            1_000L,
+        ).copy(runs = listOf(run("session-a", "会话", 1_000L)))
+        assertTrue(floatingVisibleCompletions(state).isEmpty())
+        assertEquals(0, floatingPendingCount(state))
+        assertNull(floatingEventCard(state, 1_100L))
     }
 
     @Test
@@ -166,11 +252,11 @@ class FloatingFeedReducerTest {
             lastEventAt = 1_000L,
         )
         assertEquals(FloatingWhaleMood.WAVE, floatingWhaleMood(waiting, 2_000L))
-        val unreadDelivery = baseState().copy(
-            deliveries = listOf(delivery("session-a", 1)),
+        val completed = baseState().copy(
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
             lastEventAt = 1_000L,
         )
-        assertEquals(FloatingWhaleMood.WAVE, floatingWhaleMood(unreadDelivery, 2_000L))
+        assertEquals(FloatingWhaleMood.WAVE, floatingWhaleMood(completed, 2_000L))
         val idle = baseState().copy(lastEventAt = 1_000L)
         assertEquals(FloatingWhaleMood.IDLE, floatingWhaleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS - 1))
         assertEquals(FloatingWhaleMood.SLEEPY, floatingWhaleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS))
@@ -208,6 +294,9 @@ class FloatingFeedReducerTest {
         assertEquals("季度报告", deliveryItemLabel(titled))
         val untitled = item(PresentedItemType.FILE, "/tmp/report.md")
         assertEquals("report.md", deliveryItemLabel(untitled))
+        val entry = completion("session-a", 1_000L, RunStatus.DONE).copy(items = listOf(untitled))
+        assertEquals("report.md", entry.deliveryLabel)
+        assertFalse(entry.key.isBlank())
     }
 
     private fun baseState(): FloatingFeedState = FloatingFeedState(lastEventAt = 1_000L)
@@ -240,13 +329,6 @@ class FloatingFeedReducerTest {
         question = "要继续吗？",
         options = options,
         multiSelect = multiSelect,
-    )
-
-    private fun delivery(sessionId: String, receivedAt: Long): FloatingDelivery = FloatingDelivery(
-        sessionId = sessionId,
-        sessionTitle = "会话",
-        items = listOf(item(PresentedItemType.FILE, "/tmp/$sessionId.md")),
-        receivedAt = receivedAt,
     )
 
     private fun completion(sessionId: String, finishedAt: Long, status: RunStatus): FloatingCompletion =

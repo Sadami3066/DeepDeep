@@ -34,6 +34,7 @@ import io.github.whywood.deepdeep.ui.shell.shareChooser
 class AssistantOverlayActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
     private var controller: AssistantOverlayController? = null
+    private var requestedSessionId: String? = null
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguagePreferences.wrap(newBase))
@@ -43,9 +44,9 @@ class AssistantOverlayActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         AgentService.start(this)
-        intent.getStringExtra(AssistantEntry.EXTRA_SESSION_ID)
-            ?.takeIf { it.isNotBlank() }
-            ?.let { graph.activeSessionId.value = it }
+        requestedSessionId = savedInstanceState?.getString(STATE_SESSION_ID)
+            ?: intent.requestedSessionId()
+        requestedSessionId?.let { graph.activeSessionId.value = it }
         val language = LanguagePreferences(this).read()
         val fontStyle = graph.fontPreferences.read()
         setContent {
@@ -60,6 +61,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     configuredProviders = { graph.credentials.authKinds.value.keys },
                     defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
+                    initialSessionId = { requestedSessionId },
                     strings = { chatUiStrings },
                 )
             }
@@ -181,9 +183,23 @@ class AssistantOverlayActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val sessionId = intent.requestedSessionId() ?: return
+        requestedSessionId = sessionId
+        graph.activeSessionId.value = sessionId
+        controller?.openSession(sessionId)
+    }
+
     override fun onStart() {
         super.onStart()
         AppVisibility.activityStarted()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        controller?.state?.value?.sessionId?.let { outState.putString(STATE_SESSION_ID, it) }
     }
 
     override fun onStop() {
@@ -205,4 +221,11 @@ class AssistantOverlayActivity : ComponentActivity() {
         )
         finish()
     }
+
+    private companion object {
+        const val STATE_SESSION_ID = "io.github.whywood.deepdeep.extra.STATE_SESSION_ID"
+    }
 }
+
+private fun Intent.requestedSessionId(): String? =
+    getStringExtra(AssistantEntry.EXTRA_SESSION_ID)?.takeIf { it.isNotBlank() }

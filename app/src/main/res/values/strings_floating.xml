@@ -8,7 +8,7 @@
 
 
     <string name="floating_bubble_description">小鲸鱼</string>
-    <string name="floating_bubble_unread">%1$d 个未读</string>
+    <string name="floating_bubble_pending">%1$d 项待处理</string>
 
     <string name="floating_card_question">需要回答</string>
     <string name="floating_card_answer_in_overlay">在浮层回答</string>
@@ -24,7 +24,7 @@
     <string name="floating_panel_close">收起面板</string>
     <string name="floating_panel_running">正在运行</string>
     <string name="floating_panel_questions">待回答</string>
-    <string name="floating_panel_deliveries">待查收</string>
+    <string name="floating_panel_completed">已完成</string>
     <string name="floating_panel_virtual_screen">虚拟屏幕</string>
     <string name="floating_panel_virtual_online">在线 · %1$d×%2$d</string>
     <string name="floating_panel_virtual_starting">启动中…</string>
@@ -32,7 +32,7 @@
     <string name="floating_panel_virtual_offline">未启动</string>
     <string name="floating_panel_virtual_preview_waiting">等待画面…</string>
     <string name="floating_panel_virtual_preview_open">点按查看</string>
-    <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有进行中的会话</string>
+    <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有会话动态</string>
 
     <string name="floating_activity_thinking">正在思考…</string>
     <string name="floating_activity_retrying">正在重试（第 %1$d 次）…</string>

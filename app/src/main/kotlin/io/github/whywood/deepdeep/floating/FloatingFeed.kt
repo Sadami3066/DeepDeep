@@ -9,7 +9,6 @@ import io.github.whywood.deepdeep.service.ActiveRunView
 import io.github.whywood.deepdeep.ui.chat.parsePresentedItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +27,6 @@ class FloatingFeed(
     val state: StateFlow<FloatingFeedState> = mutableState.asStateFlow()
 
     private val jobs = mutableListOf<Job>()
-    private var pruneJob: Job? = null
 
     fun start() {
         if (jobs.isNotEmpty()) return
@@ -50,20 +48,14 @@ class FloatingFeed(
     fun stop() {
         jobs.forEach { it.cancel() }
         jobs.clear()
-        pruneJob?.cancel()
-        pruneJob = null
     }
 
     fun dismissCard(key: String) {
         dispatch(FloatingFeedEvent.DismissCard(key))
     }
 
-    fun markDeliveryRead(key: String) {
-        dispatch(FloatingFeedEvent.MarkDeliveryRead(key))
-    }
-
-    fun markDeliveriesRead() {
-        dispatch(FloatingFeedEvent.MarkDeliveriesRead)
+    fun removeCompleted(key: String) {
+        dispatch(FloatingFeedEvent.RemoveCompleted(key))
     }
 
     private suspend fun onRuntimeEvent(event: SessionRuntimeEvent) {
@@ -72,13 +64,7 @@ class FloatingFeed(
             is RuntimeEvent.ToolFinished -> {
                 if (runtimeEvent.isError || runtimeEvent.name != "present") return
                 val items = parsePresentedItems(runtimeEvent.result) ?: return
-                dispatch(
-                    FloatingFeedEvent.Delivered(
-                        sessionId = sessionId,
-                        sessionTitle = resolveTitle(sessionId),
-                        items = items,
-                    ),
-                )
+                dispatch(FloatingFeedEvent.Delivered(sessionId = sessionId, items = items))
             }
 
             is RuntimeEvent.RunFinished -> dispatch(
@@ -114,22 +100,6 @@ class FloatingFeed(
     private fun dispatch(event: FloatingFeedEvent) {
         mutableState.update { current ->
             reduceFloatingFeed(current, event, System.currentTimeMillis())
-        }
-        if (mutableState.value.completions.isNotEmpty()) schedulePrune()
-    }
-
-    private fun schedulePrune() {
-        if (pruneJob?.isActive == true) return
-        pruneJob = scope.launch {
-            while (true) {
-                val completions = mutableState.value.completions
-                if (completions.isEmpty()) break
-                val expireAt = completions.minOf { it.finishedAt + FLOATING_COMPLETION_LIFETIME_MS }
-                val wait = expireAt - System.currentTimeMillis()
-                if (wait > 0) delay(wait)
-                dispatch(FloatingFeedEvent.Prune(System.currentTimeMillis()))
-            }
-            pruneJob = null
         }
     }
 }

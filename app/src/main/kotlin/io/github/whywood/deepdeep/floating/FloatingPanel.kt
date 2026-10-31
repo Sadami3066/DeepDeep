@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -44,6 +45,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.PendingQuestion
+import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 
@@ -51,14 +53,14 @@ import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 internal fun FloatingPanel(
     runs: List<FloatingRun>,
     questions: List<PendingQuestion>,
-    deliveries: List<FloatingDelivery>,
+    completed: List<FloatingCompletion>,
     virtualScreen: VirtualScreenState?,
     virtualPreview: ImageBitmap?,
     now: Long,
     maxHeight: Dp,
     onOpenRun: (FloatingRun) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
-    onOpenDelivery: (FloatingDelivery) -> Unit,
+    onOpenCompleted: (FloatingCompletion) -> Unit,
     onOpenVirtualScreen: () -> Unit,
     onCollapse: () -> Unit,
 ) {
@@ -83,7 +85,7 @@ internal fun FloatingPanel(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                val empty = runs.isEmpty() && questions.isEmpty() && deliveries.isEmpty() && virtualScreen == null
+                val empty = runs.isEmpty() && questions.isEmpty() && completed.isEmpty() && virtualScreen == null
                 if (empty) {
                     DdEmptyState(
                         text = stringResource(R.string.floating_panel_empty),
@@ -102,10 +104,10 @@ internal fun FloatingPanel(
                         QuestionRow(pending = pending, onClick = { onOpenQuestion(pending) })
                     }
                 }
-                if (deliveries.isNotEmpty()) {
-                    SectionLabel(stringResource(R.string.floating_panel_deliveries))
-                    deliveries.forEach { delivery ->
-                        DeliveryRow(delivery = delivery, onClick = { onOpenDelivery(delivery) })
+                if (completed.isNotEmpty()) {
+                    SectionLabel(stringResource(R.string.floating_panel_completed))
+                    completed.forEach { completion ->
+                        CompletedRow(completion = completion, onClick = { onOpenCompleted(completion) })
                     }
                 }
                 if (virtualScreen != null) {
@@ -225,26 +227,53 @@ private fun QuestionRow(
 }
 
 @Composable
-private fun DeliveryRow(
-    delivery: FloatingDelivery,
+private fun CompletedRow(
+    completion: FloatingCompletion,
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    PanelRow(onClick = onClick, contentDescription = delivery.label) {
-        DdIcon(icon = DdIcons.File, tint = colors.accent, size = 16.dp)
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = delivery.label.ifBlank { stringResource(R.string.floating_card_delivery) },
-            modifier = Modifier.weight(1f),
-            style = DdType.bodySmall,
-            color = colors.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+    val title = completion.title.ifBlank { stringResource(R.string.app_name) }
+    val detail = when {
+        completion.status == RunStatus.FAILED -> stringResource(
+            R.string.floating_card_failed,
+            completion.error.orEmpty().take(80),
         )
-        Spacer(Modifier.width(8.dp))
-        if (delivery.items.size > 1) {
+
+        completion.hasDelivery -> stringResource(R.string.floating_card_delivery) +
+            " · " + completion.deliveryLabel.ifBlank { title }
+
+        completion.text.isNotBlank() -> completion.text.trim()
+
+        completion.status == RunStatus.STOPPED -> stringResource(R.string.floating_card_stopped)
+        else -> stringResource(R.string.floating_card_done)
+    }
+    PanelRow(onClick = onClick, contentDescription = title) {
+        DdIcon(
+            icon = completion.icon(),
+            tint = completion.iconTint(colors),
+            size = 16.dp,
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.floating_card_delivery_count, delivery.items.size),
+                text = title,
+                style = DdType.bodySmall,
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = detail,
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
+                color = colors.inkTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        if (completion.hasDelivery && completion.items.size > 1) {
+            Text(
+                text = stringResource(R.string.floating_card_delivery_count, completion.items.size),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
                 color = colors.inkTertiary,
                 maxLines = 1,
@@ -253,6 +282,20 @@ private fun DeliveryRow(
         }
         DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
     }
+}
+
+private fun FloatingCompletion.icon(): DdIcon = when {
+    status == RunStatus.FAILED -> DdIcons.Close
+    hasDelivery -> DdIcons.File
+    status == RunStatus.STOPPED -> DdIcons.Stop
+    else -> DdIcons.Check
+}
+
+private fun FloatingCompletion.iconTint(colors: DeepDeepColors): Color = when {
+    status == RunStatus.FAILED -> colors.danger
+    hasDelivery -> colors.accent
+    status == RunStatus.STOPPED -> colors.inkTertiary
+    else -> colors.success
 }
 
 @Composable

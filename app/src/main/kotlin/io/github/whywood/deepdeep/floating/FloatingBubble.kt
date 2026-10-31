@@ -26,12 +26,12 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 @Composable
 internal fun FloatingBubble(
     mood: FloatingWhaleMood,
-    unread: Int,
+    pending: Int,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val description = if (unread > 0) {
-        stringResource(R.string.floating_bubble_unread, unread)
+    val description = if (pending > 0) {
+        stringResource(R.string.floating_bubble_pending, pending)
     } else {
         stringResource(R.string.floating_bubble_description)
     }
@@ -57,7 +57,7 @@ internal fun FloatingBubble(
                 .offset(y = 1.dp),
             contentScale = ContentScale.Fit,
         )
-        if (unread > 0) {
+        if (pending > 0) {
             Box(
                 Modifier
                     .align(Alignment.TopEnd)
@@ -69,7 +69,7 @@ internal fun FloatingBubble(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (unread > 99) "99+" else unread.toString(),
+                    text = if (pending > 99) "99+" else pending.toString(),
                     style = DdType.numeric,
                     color = colors.onAccent,
                     maxLines = 1,

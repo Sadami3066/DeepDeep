@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 enum class AssistantOverlayError { StartFailed, SendFailed, SwitchFailed }
 
@@ -54,6 +56,7 @@ class AssistantOverlayController(
     private val configuredProviders: () -> Set<String> = { emptySet() },
     private val defaultModel: suspend () -> ModelConfig = { ModelConfig() },
     private val onSessionSelected: (String) -> Unit = {},
+    private val initialSessionId: () -> String? = { null },
     ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
 ) {
@@ -63,18 +66,17 @@ class AssistantOverlayController(
 
     private var startJob: Job? = null
     private var stateJob: Job? = null
+    private val openMutex = Mutex()
 
     fun start() {
         if (startJob != null) return
         startJob = scope.launch {
             runCatching { runtime.ensureStarted() }
-            val sessionId = openInitialSession()
-            if (sessionId == null) {
-                mutableState.value = AssistantOverlayState(error = AssistantOverlayError.StartFailed)
-                startJob = null
-                return@launch
+            val sessionId = openMutex.withLock {
+                val target = openInitialSession()
+                if (target != null && runCatching { projection.open(target) }.isFailure) null else target
             }
-            if (runCatching { projection.open(sessionId) }.isFailure) {
+            if (sessionId == null) {
                 mutableState.value = AssistantOverlayState(error = AssistantOverlayError.StartFailed)
                 startJob = null
                 return@launch
@@ -120,51 +122,55 @@ class AssistantOverlayController(
     }
 
     fun openSession(sessionId: String) {
-        if (sessionId == mutableState.value.sessionId) return
         scope.launch {
-            val opened = runCatching {
-                runtime.allSessions().firstOrNull { it.id == sessionId }
-                    ?.let { runtime.openSession(it.filePath, it.cwd) }
-            }.getOrNull()
-            val target = opened?.sessionId ?: sessionId
-            if (runCatching { projection.open(target) }.isFailure) {
-                setError(AssistantOverlayError.StartFailed)
-                return@launch
+            openMutex.withLock {
+                if (sessionId == mutableState.value.sessionId) return@withLock
+                val opened = runCatching {
+                    runtime.allSessions().firstOrNull { it.id == sessionId }
+                        ?.let { runtime.openSession(it.filePath, it.cwd) }
+                }.getOrNull()
+                val target = opened?.sessionId ?: sessionId
+                if (runCatching { projection.open(target) }.isFailure) {
+                    setError(AssistantOverlayError.StartFailed)
+                    return@withLock
+                }
+                onSessionSelected(target)
+                mutableState.update {
+                    it.copy(
+                        conversation = projection.state.value,
+                        sessionId = target,
+                        sessionTitle = "",
+                        error = null,
+                    )
+                }
+                loadMeta(target)
             }
-            onSessionSelected(target)
-            mutableState.update {
-                it.copy(
-                    conversation = projection.state.value,
-                    sessionId = target,
-                    sessionTitle = "",
-                    error = null,
-                )
-            }
-            loadMeta(target)
         }
     }
 
     fun newSession(workspaceId: String) {
         scope.launch {
-            val opened = runCatching { runtime.newSession(workspaceId) }.getOrNull()
-            if (opened == null) {
-                setError(AssistantOverlayError.StartFailed)
-                return@launch
+            openMutex.withLock {
+                val opened = runCatching { runtime.newSession(workspaceId) }.getOrNull()
+                if (opened == null) {
+                    setError(AssistantOverlayError.StartFailed)
+                    return@withLock
+                }
+                if (runCatching { projection.open(opened.sessionId) }.isFailure) {
+                    setError(AssistantOverlayError.StartFailed)
+                    return@withLock
+                }
+                onSessionSelected(opened.sessionId)
+                mutableState.update {
+                    it.copy(
+                        conversation = projection.state.value,
+                        sessionId = opened.sessionId,
+                        sessionTitle = "",
+                        error = null,
+                    )
+                }
+                loadMeta(opened.sessionId)
             }
-            if (runCatching { projection.open(opened.sessionId) }.isFailure) {
-                setError(AssistantOverlayError.StartFailed)
-                return@launch
-            }
-            onSessionSelected(opened.sessionId)
-            mutableState.update {
-                it.copy(
-                    conversation = projection.state.value,
-                    sessionId = opened.sessionId,
-                    sessionTitle = "",
-                    error = null,
-                )
-            }
-            loadMeta(opened.sessionId)
         }
     }
 
@@ -359,7 +365,13 @@ class AssistantOverlayController(
     private suspend fun openInitialSession(): String? {
         val summaries = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
         val activeRun = runtime.activeRuns.value.maxByOrNull { it.value.startedAt }?.key
-        val preferred = listOfNotNull(activeRun, activeSessionId()?.takeIf { it.isNotBlank() })
+        val requested = initialSessionId()
+            ?.takeIf { id -> id.isNotBlank() && summaries.any { it.id == id } }
+        val preferred = initialSessionCandidates(
+            requested = requested,
+            activeRun = activeRun,
+            activeSession = activeSessionId(),
+        )
         for (id in preferred) {
             val summary = summaries.firstOrNull { it.id == id }
             if (summary == null) {
@@ -389,3 +401,13 @@ class AssistantOverlayController(
         val thinkingLevels: List<ThinkingLevel>,
     )
 }
+
+internal fun initialSessionCandidates(
+    requested: String?,
+    activeRun: String?,
+    activeSession: String?,
+): List<String> = listOfNotNull(
+    requested?.takeIf { it.isNotBlank() },
+    activeRun?.takeIf { it.isNotBlank() },
+    activeSession?.takeIf { it.isNotBlank() },
+).distinct()

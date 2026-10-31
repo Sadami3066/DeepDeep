@@ -6,8 +6,9 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.PresentedItem
 
-const val FLOATING_COMPLETION_LIFETIME_MS = 6_000L
+const val FLOATING_CARD_LIFETIME_MS = 6_000L
 const val FLOATING_SLEEPY_AFTER_MS = 10 * 60_000L
+const val FLOATING_COMPLETED_LIMIT = 20
 
 enum class FloatingWhaleMood {
     IDLE,
@@ -23,19 +24,6 @@ data class FloatingRun(
     val startedAt: Long,
 )
 
-data class FloatingDelivery(
-    val sessionId: String,
-    val sessionTitle: String,
-    val items: List<PresentedItem>,
-    val receivedAt: Long,
-    val read: Boolean = false,
-) {
-    val key: String = deliveryKey(sessionId, items)
-
-    val label: String
-        get() = items.firstOrNull()?.let(::deliveryItemLabel).orEmpty()
-}
-
 data class FloatingCompletion(
     val sessionId: String,
     val title: String,
@@ -43,15 +31,21 @@ data class FloatingCompletion(
     val text: String,
     val error: String?,
     val finishedAt: Long,
+    val items: List<PresentedItem> = emptyList(),
 ) {
     val key: String = "completion:$sessionId:$finishedAt:$status"
+
+    val hasDelivery: Boolean = items.isNotEmpty()
+
+    val deliveryLabel: String
+        get() = items.firstOrNull()?.let(::deliveryItemLabel).orEmpty()
 }
 
 data class FloatingFeedState(
     val runs: List<FloatingRun> = emptyList(),
     val questions: List<PendingQuestion> = emptyList(),
-    val deliveries: List<FloatingDelivery> = emptyList(),
-    val completions: List<FloatingCompletion> = emptyList(),
+    val completed: List<FloatingCompletion> = emptyList(),
+    val stagedDeliveries: Map<String, List<PresentedItem>> = emptyMap(),
     val sessionTitles: Map<String, String> = emptyMap(),
     val lastEventAt: Long = 0L,
     val dismissedCardKey: String? = null,
@@ -64,11 +58,7 @@ sealed interface FloatingEventCard {
         override val key: String = "question:${pending.requestId}"
     }
 
-    data class Delivery(val delivery: FloatingDelivery) : FloatingEventCard {
-        override val key: String = delivery.key
-    }
-
-    data class Completion(val completion: FloatingCompletion) : FloatingEventCard {
+    data class Completed(val completion: FloatingCompletion) : FloatingEventCard {
         override val key: String = completion.key
     }
 }
@@ -80,7 +70,6 @@ sealed interface FloatingFeedEvent {
 
     data class Delivered(
         val sessionId: String,
-        val sessionTitle: String,
         val items: List<PresentedItem>,
     ) : FloatingFeedEvent
 
@@ -94,11 +83,7 @@ sealed interface FloatingFeedEvent {
 
     data class DismissCard(val key: String) : FloatingFeedEvent
 
-    data class MarkDeliveryRead(val key: String) : FloatingFeedEvent
-
-    data object MarkDeliveriesRead : FloatingFeedEvent
-
-    data class Prune(val now: Long) : FloatingFeedEvent
+    data class RemoveCompleted(val key: String) : FloatingFeedEvent
 }
 
 fun reduceFloatingFeed(
@@ -128,18 +113,11 @@ fun reduceFloatingFeed(
         if (event.items.isEmpty()) {
             state
         } else {
-            val delivery = FloatingDelivery(
-                sessionId = event.sessionId,
-                sessionTitle = event.sessionTitle,
-                items = event.items,
-                receivedAt = now,
+            val merged = state.stagedDeliveries[event.sessionId].orEmpty() + event.items
+            state.copy(
+                stagedDeliveries = state.stagedDeliveries + (event.sessionId to merged.distinctBy { it.deliveryKey() }),
+                lastEventAt = now,
             )
-            val exists = state.deliveries.any { it.key == delivery.key }
-            if (exists) {
-                state
-            } else {
-                state.copy(deliveries = state.deliveries + delivery, lastEventAt = now)
-            }
         }
     }
 
@@ -151,44 +129,34 @@ fun reduceFloatingFeed(
             text = event.text,
             error = event.error,
             finishedAt = now,
+            items = state.stagedDeliveries[event.sessionId].orEmpty(),
         )
-        val next = state.copy(
-            completions = (state.completions + completion).filter {
-                now - it.finishedAt < FLOATING_COMPLETION_LIFETIME_MS
-            },
+        state.copy(
+            completed = (listOf(completion) + state.completed.filterNot { it.sessionId == event.sessionId })
+                .take(FLOATING_COMPLETED_LIMIT),
+            stagedDeliveries = state.stagedDeliveries - event.sessionId,
             lastEventAt = now,
         )
-        next
     }
 
     is FloatingFeedEvent.DismissCard -> state.copy(dismissedCardKey = event.key)
 
-    is FloatingFeedEvent.MarkDeliveryRead -> state.copy(
-        deliveries = state.deliveries.map { delivery ->
-            if (delivery.key == event.key) delivery.copy(read = true) else delivery
-        },
+    is FloatingFeedEvent.RemoveCompleted -> state.copy(
+        completed = state.completed.filterNot { it.key == event.key },
     )
-
-    FloatingFeedEvent.MarkDeliveriesRead -> {
-        if (state.deliveries.none { !it.read }) {
-            state
-        } else {
-            state.copy(deliveries = state.deliveries.map { it.copy(read = true) })
-        }
-    }
-
-    is FloatingFeedEvent.Prune -> {
-        val kept = state.completions.filter { event.now - it.finishedAt < FLOATING_COMPLETION_LIFETIME_MS }
-        if (kept.size == state.completions.size) state else state.copy(completions = kept)
-    }
 }
 
-fun floatingUnreadCount(state: FloatingFeedState): Int =
-    state.questions.size + state.deliveries.count { !it.read }
+fun floatingVisibleCompletions(state: FloatingFeedState): List<FloatingCompletion> {
+    val running = state.runs.mapTo(HashSet()) { it.sessionId }
+    return state.completed.filterNot { it.sessionId in running }
+}
+
+fun floatingPendingCount(state: FloatingFeedState): Int =
+    state.questions.size + floatingVisibleCompletions(state).size
 
 fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = when {
     state.runs.isNotEmpty() -> FloatingWhaleMood.THINKING
-    state.questions.isNotEmpty() || state.deliveries.any { !it.read } -> FloatingWhaleMood.WAVE
+    state.questions.isNotEmpty() || floatingVisibleCompletions(state).isNotEmpty() -> FloatingWhaleMood.WAVE
     now - state.lastEventAt >= FLOATING_SLEEPY_AFTER_MS -> FloatingWhaleMood.SLEEPY
     else -> FloatingWhaleMood.IDLE
 }
@@ -196,11 +164,9 @@ fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = 
 fun floatingEventCard(state: FloatingFeedState, now: Long): FloatingEventCard? {
     val candidates = buildList {
         state.questions.firstOrNull()?.let { add(FloatingEventCard.Question(it)) }
-        state.deliveries.firstOrNull { !it.read }?.let { add(FloatingEventCard.Delivery(it)) }
-        state.completions
-            .filter { now - it.finishedAt < FLOATING_COMPLETION_LIFETIME_MS }
-            .maxByOrNull { it.finishedAt }
-            ?.let { add(FloatingEventCard.Completion(it)) }
+        floatingVisibleCompletions(state)
+            .firstOrNull { now - it.finishedAt < FLOATING_CARD_LIFETIME_MS }
+            ?.let { add(FloatingEventCard.Completed(it)) }
     }
     return candidates.firstOrNull { it.key != state.dismissedCardKey }
 }
@@ -229,7 +195,5 @@ fun floatingElapsed(elapsedMs: Long): FloatingElapsed {
 fun deliveryItemLabel(item: PresentedItem): String =
     item.title?.takeIf { it.isNotBlank() } ?: item.name
 
-private fun deliveryKey(sessionId: String, items: List<PresentedItem>): String =
-    "delivery:$sessionId:" + items.joinToString(",") { item ->
-        if (item.id != null) "creative:${item.id}" else "${item.type.name}:${item.path.orEmpty()}"
-    }
+private fun PresentedItem.deliveryKey(): String =
+    id?.let { "creative:$it" } ?: "${type.name}:${path ?: name}"

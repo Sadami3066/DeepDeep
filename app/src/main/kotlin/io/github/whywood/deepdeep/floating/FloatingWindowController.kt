@@ -218,7 +218,7 @@ class FloatingWindowController(
         if (!shown) return
         bubbleState.value = FloatingBubbleState(
             mood = floatingWhaleMood(feed.state.value, now.value),
-            unread = floatingUnreadCount(feed.state.value),
+            pending = floatingPendingCount(feed.state.value),
         )
         updateSurfaceWindow()
     }
@@ -242,7 +242,7 @@ class FloatingWindowController(
                 ui = FloatingSurfaceUi.Panel(
                     runs = feedState.runs,
                     questions = feedState.questions,
-                    deliveries = feedState.deliveries,
+                    completed = floatingVisibleCompletions(feedState),
                     virtualScreen = virtualScreenState.value,
                     now = now.value,
                 ),
@@ -261,7 +261,7 @@ class FloatingWindowController(
                 screenWidth = screenWidth,
                 screenHeight = screenHeight,
                 bubbleVisual = bubbleVisual,
-                sessionTitle = sessionTitle(card.sessionId()),
+                sessionTitle = cardTitle(card),
             )
 
             else -> removeSurfaceWindow()
@@ -332,11 +332,10 @@ class FloatingWindowController(
                         arrowOffset = with(density) { value.arrowOffsetPx.toDp() },
                         onAnswerQuestion = ::answerQuestion,
                         onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                        onOpenDelivery = { delivery ->
-                            feed.markDeliveryRead(delivery.key)
-                            openSession(delivery.sessionId)
+                        onOpenCompleted = { completion ->
+                            feed.removeCompleted(completion.key)
+                            openSession(completion.sessionId)
                         },
-                        onOpenCompletion = { completion -> openSession(completion.sessionId) },
                     )
 
                     is FloatingSurfaceUi.Panel -> {
@@ -344,16 +343,16 @@ class FloatingWindowController(
                         FloatingPanel(
                             runs = value.runs,
                             questions = value.questions,
-                            deliveries = value.deliveries,
+                            completed = value.completed,
                             virtualScreen = value.virtualScreen,
                             virtualPreview = preview,
                             now = value.now,
                             maxHeight = with(density) { value.maxHeightPx.toDp() },
                             onOpenRun = { run -> openSession(run.sessionId) },
                             onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                            onOpenDelivery = { delivery ->
-                                feed.markDeliveryRead(delivery.key)
-                                openSession(delivery.sessionId)
+                            onOpenCompleted = { completion ->
+                                feed.removeCompleted(completion.key)
+                                openSession(completion.sessionId)
                             },
                             onOpenVirtualScreen = { virtualScreen?.openViewer(context) },
                             onCollapse = { panelOpen.value = false },
@@ -420,7 +419,7 @@ class FloatingWindowController(
             val theme by themeMode.collectAsState()
             DeepDeepTheme(theme, fontStyle) {
                 val state by bubbleState.collectAsState()
-                FloatingBubble(mood = state.mood, unread = state.unread)
+                FloatingBubble(mood = state.mood, pending = state.pending)
             }
         }
         val view = FloatingTouchInterceptor(windowContext).apply {
@@ -629,6 +628,13 @@ class FloatingWindowController(
         if (!AssistantEntry.openOverlay(context, sessionId)) onOpenApp()
     }
 
+    private fun cardTitle(card: FloatingEventCard): String = when (card) {
+        is FloatingEventCard.Question -> sessionTitle(card.pending.sessionId)
+        is FloatingEventCard.Completed -> card.completion.title.ifBlank {
+            sessionTitle(card.completion.sessionId)
+        }
+    }
+
     private fun sessionTitle(sessionId: String): String {
         val titles = feed.state.value.sessionTitles
         return titles[sessionId].orEmpty()
@@ -778,7 +784,7 @@ class FloatingWindowController(
 
 internal data class FloatingBubbleState(
     val mood: FloatingWhaleMood = FloatingWhaleMood.IDLE,
-    val unread: Int = 0,
+    val pending: Int = 0,
 )
 
 private sealed interface FloatingSurfaceUi {
@@ -793,7 +799,7 @@ private sealed interface FloatingSurfaceUi {
     data class Panel(
         val runs: List<FloatingRun>,
         val questions: List<PendingQuestion>,
-        val deliveries: List<FloatingDelivery>,
+        val completed: List<FloatingCompletion>,
         val virtualScreen: VirtualScreenState?,
         val now: Long,
         val maxHeightPx: Int = 0,

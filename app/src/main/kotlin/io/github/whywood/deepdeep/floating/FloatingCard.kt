@@ -56,15 +56,13 @@ internal fun FloatingEventCard(
     arrowOffset: Dp,
     onAnswerQuestion: (PendingQuestion, QuestionOption) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
-    onOpenDelivery: (FloatingDelivery) -> Unit,
-    onOpenCompletion: (FloatingCompletion) -> Unit,
+    onOpenCompleted: (FloatingCompletion) -> Unit,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
     val onClick = when (card) {
         is FloatingEventCard.Question -> null
-        is FloatingEventCard.Delivery -> ({ onOpenDelivery(card.delivery) })
-        is FloatingEventCard.Completion -> ({ onOpenCompletion(card.completion) })
+        is FloatingEventCard.Completed -> ({ onOpenCompleted(card.completion) })
     }
     Box(Modifier.padding(FloatingSurfaceWindowPadding).testTag("floating_card")) {
         Column(Modifier.width(FloatingCardWidth)) {
@@ -97,8 +95,7 @@ internal fun FloatingEventCard(
                             onOpenOverlay = { onOpenQuestion(card.pending) },
                         )
 
-                        is FloatingEventCard.Delivery -> DeliveryBody(card.delivery, sessionTitle)
-                        is FloatingEventCard.Completion -> CompletionBody(card.completion, sessionTitle)
+                        is FloatingEventCard.Completed -> CompletedBody(card.completion, sessionTitle)
                     }
                 }
             }
@@ -209,40 +206,67 @@ private fun QuestionOptionRow(
 }
 
 @Composable
-private fun DeliveryBody(delivery: FloatingDelivery, sessionTitle: String) {
+private fun CompletedBody(completion: FloatingCompletion, sessionTitle: String) {
     val colors = deepDeepColors()
-    CardHeader(
-        label = stringResource(R.string.floating_card_delivery),
-        labelColor = colors.success,
-        title = sessionTitle,
-    )
-    Spacer(Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        DdIcon(
-            icon = delivery.items.firstOrNull()?.type?.icon() ?: DdIcons.File,
-            tint = colors.accent,
-            size = 18.dp,
+    if (completion.hasDelivery) {
+        CardHeader(
+            label = stringResource(R.string.floating_card_delivery),
+            labelColor = colors.success,
+            title = sessionTitle,
         )
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DdIcon(
+                icon = completion.items.first().type.icon(),
+                tint = colors.accent,
+                size = 18.dp,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = completion.deliveryLabel,
+                    style = DdType.body,
+                    color = colors.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (completion.items.size > 1) {
+                    Text(
+                        text = stringResource(
+                            R.string.floating_card_delivery_count,
+                            completion.items.size,
+                        ),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 15.dp)
+        }
+    } else {
+        val label = when (completion.status) {
+            RunStatus.DONE -> stringResource(R.string.floating_card_done)
+            RunStatus.STOPPED -> stringResource(R.string.floating_card_stopped)
+            RunStatus.FAILED -> stringResource(
+                R.string.floating_card_failed,
+                completion.error?.take(120).orEmpty(),
+            )
+        }
+        val labelColor = if (completion.status == RunStatus.FAILED) colors.danger else colors.inkSecondary
+        CardHeader(label = label, labelColor = labelColor, title = sessionTitle)
+        val preview = completion.text.trim().take(220)
+        if (preview.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = delivery.label,
-                style = DdType.body,
-                color = colors.ink,
-                maxLines = 2,
+                text = preview,
+                style = DdType.bodySmall,
+                color = colors.inkSecondary,
+                maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (delivery.items.size > 1) {
-                Text(
-                    text = stringResource(R.string.floating_card_delivery_count, delivery.items.size),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                )
-            }
         }
-        Spacer(Modifier.width(8.dp))
-        DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 15.dp)
     }
     Spacer(Modifier.height(6.dp))
     Text(
@@ -250,32 +274,6 @@ private fun DeliveryBody(delivery: FloatingDelivery, sessionTitle: String) {
         style = DdType.bodySmall,
         color = colors.inkTertiary,
     )
-}
-
-@Composable
-private fun CompletionBody(completion: FloatingCompletion, sessionTitle: String) {
-    val colors = deepDeepColors()
-    val label = when (completion.status) {
-        RunStatus.DONE -> stringResource(R.string.floating_card_done)
-        RunStatus.STOPPED -> stringResource(R.string.floating_card_stopped)
-        RunStatus.FAILED -> stringResource(
-            R.string.floating_card_failed,
-            completion.error?.take(120).orEmpty(),
-        )
-    }
-    val labelColor = if (completion.status == RunStatus.FAILED) colors.danger else colors.inkSecondary
-    CardHeader(label = label, labelColor = labelColor, title = sessionTitle)
-    val preview = completion.text.trim().take(220)
-    if (preview.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = preview,
-            style = DdType.bodySmall,
-            color = colors.inkSecondary,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
 }
 
 @Composable
@@ -354,6 +352,5 @@ private fun PresentedItemType.icon(): DdIcon = when (this) {
 
 internal fun FloatingEventCard.sessionId(): String = when (this) {
     is FloatingEventCard.Question -> pending.sessionId
-    is FloatingEventCard.Delivery -> delivery.sessionId
-    is FloatingEventCard.Completion -> completion.sessionId
+    is FloatingEventCard.Completed -> completion.sessionId
 }

@@ -8,7 +8,7 @@
 
 
     <string name="floating_bubble_description">Little whale</string>
-    <string name="floating_bubble_unread">%1$d unread</string>
+    <string name="floating_bubble_pending">%1$d pending</string>
 
     <string name="floating_card_question">Needs an answer</string>
     <string name="floating_card_answer_in_overlay">Answer in overlay</string>
@@ -24,7 +24,7 @@
     <string name="floating_panel_close">Collapse panel</string>
     <string name="floating_panel_running">Running</string>
     <string name="floating_panel_questions">Questions</string>
-    <string name="floating_panel_deliveries">Deliveries</string>
+    <string name="floating_panel_completed">Completed</string>
     <string name="floating_panel_virtual_screen">Virtual screen</string>
     <string name="floating_panel_virtual_online">Online · %1$d×%2$d</string>
     <string name="floating_panel_virtual_starting">Starting…</string>
@@ -32,7 +32,7 @@
     <string name="floating_panel_virtual_offline">Not started</string>
     <string name="floating_panel_virtual_preview_waiting">Waiting for screen…</string>
     <string name="floating_panel_virtual_preview_open">Tap to view</string>
-    <string name="floating_panel_empty">The whale is dozing — nothing is running</string>
+    <string name="floating_panel_empty">The whale is dozing — no session activity</string>
 
     <string name="floating_activity_thinking">Thinking…</string>
     <string name="floating_activity_retrying">Retrying (attempt %1$d)…</string>
