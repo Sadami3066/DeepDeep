@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.vscreen
+package io.github.whywood.deepdeep.vscreen
 
 import android.content.Context
 import android.os.Bundle
@@ -45,9 +45,6 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.vscreen.PrivilegedLauncher
-import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
-import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlinx.coroutines.launch
 
 class VirtualScreenActivity : ComponentActivity() {

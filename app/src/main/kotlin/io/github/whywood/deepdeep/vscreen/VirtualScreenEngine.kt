@@ -7,7 +7,6 @@ import android.graphics.BitmapFactory
 import android.net.LocalServerSocket
 import android.net.LocalSocket
 import android.util.Log
-import io.github.whywood.deepdeep.ui.vscreen.VirtualScreenActivity
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.IOException
