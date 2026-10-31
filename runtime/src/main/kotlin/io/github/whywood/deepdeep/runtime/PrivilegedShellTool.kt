@@ -76,7 +76,7 @@ fun adbShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "adb_shell",
-    description = "Run a shell command through the app's embedded wireless-debugging daemon on the Android device and return its exit code, stdout and stderr. The daemon runs as the ADB shell (uid 2000); it works in any turn while the ADB tier is connected, with no external app or persistent authorization.",
+    description = "Run a shell command through the app's embedded wireless-debugging daemon on the Android device and return its exit code and combined output (stderr is merged into stdout). The daemon runs as the ADB shell (uid 2000); it works in any turn while the ADB tier is connected, with no external app or persistent authorization.",
     promptSnippet = "Run a command through the embedded ADB shell",
     promptGuidelines = listOf(
         "Use adb_shell only when the user explicitly asks for a system-level operation that needs ADB shell privileges; prefer the regular bash tool for all other commands.",

@@ -119,11 +119,12 @@ class AdbBootstrap(context: Context) {
         val match = EXIT_PATTERN.find(raw)
         val exitCode = match?.groupValues?.get(1)?.toIntOrNull() ?: -1
         val output = if (match == null) raw else raw.removeRange(match.range)
+        val truncated = utf8ByteLength(output) > MAX_OUTPUT_BYTES
         RootCommandResult(
             exitCode = exitCode,
-            stdout = takeUtf8(output, MAX_OUTPUT_BYTES),
+            stdout = if (truncated) takeUtf8(output, MAX_OUTPUT_BYTES) else output,
             stderr = "",
-            truncated = output.length > MAX_OUTPUT_BYTES,
+            truncated = truncated,
         )
     }
 
@@ -299,13 +300,6 @@ class AdbBootstrap(context: Context) {
     private fun hostsOf(endpoint: AdbEndpoint): List<String> =
         listOf(endpoint.host, LOOPBACK).distinct()
 
-    private fun takeUtf8(text: String, limit: Int): String {
-        if (text.length <= limit) return text
-        var end = limit
-        while (end > 0 && text[end - 1].isHighSurrogate()) end--
-        return text.substring(0, end)
-    }
-
     private companion object {
         const val TAG = "AdbBootstrap"
         const val PREFS = "adb_bridge"
@@ -325,3 +319,14 @@ class AdbBootstrap(context: Context) {
         val EXIT_PATTERN = Regex("\\[EXIT=(-?\\d+)]\\s*$")
     }
 }
+
+internal fun takeUtf8(text: String, limitBytes: Int): String {
+    if (limitBytes <= 0) return ""
+    val bytes = text.toByteArray(Charsets.UTF_8)
+    if (bytes.size <= limitBytes) return text
+    var cut = limitBytes
+    while (cut > 0 && (bytes[cut].toInt() and 0xC0) == 0x80) cut--
+    return String(bytes, 0, cut, Charsets.UTF_8)
+}
+
+internal fun utf8ByteLength(text: String): Int = text.toByteArray(Charsets.UTF_8).size

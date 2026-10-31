@@ -44,6 +44,7 @@ class AdbShellToolTest {
         assertTrue(tool.description.contains("embedded wireless-debugging daemon"))
         assertTrue(tool.description.contains("uid 2000"))
         assertTrue(tool.description.contains("any turn"))
+        assertTrue(tool.description.contains("stderr is merged into stdout"))
         assertFalse(tool.description.contains("Shizuku"))
         assertTrue(tool.promptGuidelines.orEmpty().any { it.contains("uid 2000") })
     }
