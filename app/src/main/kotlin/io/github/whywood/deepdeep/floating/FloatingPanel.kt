@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.floating
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -19,8 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,6 +53,7 @@ internal fun FloatingPanel(
     questions: List<PendingQuestion>,
     deliveries: List<FloatingDelivery>,
     virtualScreen: VirtualScreenState?,
+    virtualPreview: ImageBitmap?,
     now: Long,
     maxHeight: Dp,
     onOpenRun: (FloatingRun) -> Unit,
@@ -102,7 +110,11 @@ internal fun FloatingPanel(
                 }
                 if (virtualScreen != null) {
                     SectionLabel(stringResource(R.string.floating_panel_virtual_screen))
-                    VirtualScreenRow(state = virtualScreen, onClick = onOpenVirtualScreen)
+                    VirtualScreenSection(
+                        state = virtualScreen,
+                        preview = virtualPreview,
+                        onClick = onOpenVirtualScreen,
+                    )
                 }
             }
         }
@@ -240,6 +252,98 @@ private fun DeliveryRow(
             Spacer(Modifier.width(6.dp))
         }
         DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+    }
+}
+
+@Composable
+private fun VirtualScreenSection(
+    state: VirtualScreenState,
+    preview: ImageBitmap?,
+    onClick: () -> Unit,
+) {
+    if (state !is VirtualScreenState.Online) {
+        VirtualScreenRow(state = state, onClick = onClick)
+        return
+    }
+    val colors = deepDeepColors()
+    val ratio = if (state.width > 0 && state.height > 0) {
+        state.width.toFloat() / state.height.toFloat()
+    } else {
+        9f / 16f
+    }
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        contentDescription = stringResource(R.string.floating_panel_virtual_screen),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(
+                Modifier
+                    .width(FloatingVirtualPreviewWidth)
+                    .aspectRatio(ratio)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.wash)
+                    .testTag("floating_virtual_preview"),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (preview != null) {
+                    Image(
+                        bitmap = preview,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    VirtualPreviewWaiting()
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f).padding(top = 2.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.floating_panel_virtual_online,
+                        state.width,
+                        state.height,
+                    ),
+                    style = DdType.bodySmall,
+                    color = colors.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.floating_panel_virtual_preview_open),
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+        }
+    }
+}
+
+@Composable
+private fun VirtualPreviewWaiting() {
+    val colors = deepDeepColors()
+    Column(
+        modifier = Modifier.padding(horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        DdSpinner(color = colors.inkTertiary, size = 14.dp, strokeWidth = 1.5.dp)
+        Text(
+            text = stringResource(R.string.floating_panel_virtual_preview_waiting),
+            style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+            color = colors.inkTertiary,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
     }
 }
 

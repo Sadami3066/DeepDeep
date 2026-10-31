@@ -30,6 +30,8 @@
     <string name="floating_panel_virtual_starting">Starting…</string>
     <string name="floating_panel_virtual_failed">Error</string>
     <string name="floating_panel_virtual_offline">Not started</string>
+    <string name="floating_panel_virtual_preview_waiting">Waiting for screen…</string>
+    <string name="floating_panel_virtual_preview_open">Tap to view</string>
     <string name="floating_panel_empty">The whale is dozing — nothing is running</string>
 
     <string name="floating_activity_thinking">Thinking…</string>

@@ -1,18 +1,27 @@
 package io.github.whywood.deepdeep.floating
 
+import android.content.ComponentCallbacks
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.os.Build
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewConfiguration
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsCompat
 import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
@@ -69,6 +78,14 @@ class FloatingWindowController(
     private val surfaceUi = MutableStateFlow<FloatingSurfaceUi?>(null)
     private val virtualScreenState = MutableStateFlow<VirtualScreenState?>(null)
     private val renderTrigger = MutableStateFlow(0L)
+    private val contentFrame = MutableStateFlow(
+        floatingFullContentFrame(
+            context.resources.displayMetrics.widthPixels,
+            context.resources.displayMetrics.heightPixels,
+        ),
+    )
+    private val previewFrame = MutableStateFlow<ImageBitmap?>(null)
+    private val previewScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var started = false
     private var enabled = false
@@ -84,6 +101,16 @@ class FloatingWindowController(
     private var showJob: Job? = null
     private var virtualScreen: VirtualScreenController? = null
     private var virtualScreenJob: Job? = null
+    private var previewJob: Job? = null
+    private var previewController: VirtualScreenController? = null
+    private val configurationCallbacks = object : ComponentCallbacks {
+        override fun onConfigurationChanged(newConfig: Configuration) {
+            refreshContentFrame(ignoreViewFrame = true)
+            requestRender()
+        }
+
+        override fun onLowMemory() = Unit
+    }
     private var longPressAction: Runnable? = null
     private var touchDownRawX = 0f
     private var touchDownRawY = 0f
@@ -96,6 +123,7 @@ class FloatingWindowController(
         if (started) return
         started = true
         feed.start()
+        context.applicationContext.registerComponentCallbacks(configurationCallbacks)
         scope.launch {
             preferences.settings.collect { settings ->
                 settingsState.value = settings
@@ -125,6 +153,9 @@ class FloatingWindowController(
         hideWindows()
         virtualScreenJob?.cancel()
         virtualScreenJob = null
+        runCatching { context.applicationContext.unregisterComponentCallbacks(configurationCallbacks) }
+        stopPreview()
+        previewScope.cancel()
         feed.stop()
         feedScope.cancel()
         scope.cancel()
@@ -137,6 +168,7 @@ class FloatingWindowController(
     private fun render() {
         if (!started) return
         refreshVirtualScreen()
+        updatePreview()
         val visible = enabled && Settings.canDrawOverlays(context)
         if (!visible) {
             showJob?.cancel()
@@ -161,6 +193,7 @@ class FloatingWindowController(
     private fun showWindows() {
         if (shown) return
         shown = true
+        refreshContentFrame(ignoreViewFrame = true)
         bubbleWindowPosition = restoredBubblePosition()
         if (!createBubbleWindow()) {
             shown = false
@@ -173,6 +206,7 @@ class FloatingWindowController(
     private fun hideWindows() {
         if (!shown) return
         shown = false
+        stopPreview()
         removeSurfaceWindow()
         removeBubbleWindow()
         ticker?.cancel()
@@ -190,9 +224,9 @@ class FloatingWindowController(
     }
 
     private fun updateSurfaceWindow() {
-        val metrics = context.resources.displayMetrics
-        val screenWidth = metrics.widthPixels
-        val screenHeight = metrics.heightPixels
+        val frame = contentFrame.value
+        val screenWidth = frame.width
+        val screenHeight = frame.height
         val bubbleVisual = FloatingBubblePosition(
             x = bubbleWindowPosition.x + px(FloatingBubbleWindowPadding),
             y = bubbleWindowPosition.y + px(FloatingBubbleWindowPadding),
@@ -305,22 +339,26 @@ class FloatingWindowController(
                         onOpenCompletion = { completion -> openSession(completion.sessionId) },
                     )
 
-                    is FloatingSurfaceUi.Panel -> FloatingPanel(
-                        runs = value.runs,
-                        questions = value.questions,
-                        deliveries = value.deliveries,
-                        virtualScreen = value.virtualScreen,
-                        now = value.now,
-                        maxHeight = with(density) { value.maxHeightPx.toDp() },
-                        onOpenRun = { run -> openSession(run.sessionId) },
-                        onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                        onOpenDelivery = { delivery ->
-                            feed.markDeliveryRead(delivery.key)
-                            openSession(delivery.sessionId)
-                        },
-                        onOpenVirtualScreen = { virtualScreen?.openViewer(context) },
-                        onCollapse = { panelOpen.value = false },
-                    )
+                    is FloatingSurfaceUi.Panel -> {
+                        val preview by previewFrame.collectAsState()
+                        FloatingPanel(
+                            runs = value.runs,
+                            questions = value.questions,
+                            deliveries = value.deliveries,
+                            virtualScreen = value.virtualScreen,
+                            virtualPreview = preview,
+                            now = value.now,
+                            maxHeight = with(density) { value.maxHeightPx.toDp() },
+                            onOpenRun = { run -> openSession(run.sessionId) },
+                            onOpenQuestion = { pending -> openSession(pending.sessionId) },
+                            onOpenDelivery = { delivery ->
+                                feed.markDeliveryRead(delivery.key)
+                                openSession(delivery.sessionId)
+                            },
+                            onOpenVirtualScreen = { virtualScreen?.openViewer(context) },
+                            onCollapse = { panelOpen.value = false },
+                        )
+                    }
 
                     null -> Unit
                 }
@@ -391,6 +429,13 @@ class FloatingWindowController(
                 FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
             )
             onTouch = ::handleBubbleTouch
+            setOnApplyWindowInsetsListener { _, insets ->
+                refreshContentFrame()
+                insets
+            }
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                refreshContentFrame()
+            }
         }
         host.bindOwners(view)
         val size = px(FloatingBubbleWindowSize)
@@ -415,6 +460,7 @@ class FloatingWindowController(
         bubbleView = view
         bubbleParams = params
         host.resume()
+        refreshContentFrame()
         return true
     }
 
@@ -511,13 +557,13 @@ class FloatingWindowController(
     private fun moveBubble(x: Int, y: Int) {
         val params = bubbleParams ?: return
         val view = bubbleView ?: return
-        val metrics = context.resources.displayMetrics
+        val frame = contentFrame.value
         val clamped = floatingClampBubblePosition(
             x = x,
             y = y,
             bubbleSize = px(FloatingBubbleWindowSize),
-            screenWidth = metrics.widthPixels,
-            screenHeight = metrics.heightPixels,
+            screenWidth = frame.width,
+            screenHeight = frame.height,
             edgeMargin = 0,
         )
         params.x = clamped.x
@@ -530,13 +576,13 @@ class FloatingWindowController(
     private fun finishBubbleDrag() {
         val params = bubbleParams ?: return
         val view = bubbleView ?: return
-        val metrics = context.resources.displayMetrics
+        val frame = contentFrame.value
         val clamped = floatingClampBubblePosition(
             x = bubbleWindowPosition.x,
             y = bubbleWindowPosition.y,
             bubbleSize = px(FloatingBubbleWindowSize),
-            screenWidth = metrics.widthPixels,
-            screenHeight = metrics.heightPixels,
+            screenWidth = frame.width,
+            screenHeight = frame.height,
             edgeMargin = 0,
         )
         params.x = clamped.x
@@ -548,7 +594,7 @@ class FloatingWindowController(
     }
 
     private fun restoredBubblePosition(): FloatingBubblePosition {
-        val metrics = context.resources.displayMetrics
+        val frame = contentFrame.value
         val settings = settingsState.value
         val size = px(FloatingBubbleWindowSize)
         return if (settings.hasBubblePosition) {
@@ -556,15 +602,15 @@ class FloatingWindowController(
                 x = settings.bubbleX,
                 y = settings.bubbleY,
                 bubbleSize = size,
-                screenWidth = metrics.widthPixels,
-                screenHeight = metrics.heightPixels,
+                screenWidth = frame.width,
+                screenHeight = frame.height,
                 edgeMargin = 0,
             )
         } else {
             floatingDefaultBubblePosition(
                 bubbleSize = size,
-                screenWidth = metrics.widthPixels,
-                screenHeight = metrics.heightPixels,
+                screenWidth = frame.width,
+                screenHeight = frame.height,
                 edgeMargin = 0,
             )
         }
@@ -592,15 +638,125 @@ class FloatingWindowController(
     private fun refreshVirtualScreen() {
         val controller = runCatching { virtualScreenProvider() }.getOrNull()
         if (controller === virtualScreen) return
+        stopPreview()
         virtualScreen = controller
-        virtualScreenState.value = controller?.state?.value
+        virtualScreenState.value = controller?.let { floatingStableVirtualScreenState(it.state.value) }
         virtualScreenJob?.cancel()
         virtualScreenJob = null
         if (controller != null) {
             virtualScreenJob = scope.launch {
-                controller.state.collect { state -> virtualScreenState.value = state }
+                controller.state.collect { state ->
+                    virtualScreenState.value = floatingStableVirtualScreenState(state)
+                }
             }
         }
+    }
+
+    private fun updatePreview() {
+        val controller = virtualScreen
+        if (!shown || !panelOpen.value || controller == null) {
+            stopPreview()
+            return
+        }
+        if (previewJob?.isActive == true && previewController === controller) return
+        stopPreview()
+        previewController = controller
+        val targetWidth = px(FloatingVirtualPreviewWidth)
+        previewJob = previewScope.launch {
+            var lastAcceptedAt = 0L
+            controller.state.collect { state ->
+                if (state !is VirtualScreenState.Online) {
+                    previewFrame.value = null
+                    return@collect
+                }
+                val frame = state.frame ?: return@collect
+                val now = SystemClock.elapsedRealtime()
+                if (!floatingPreviewAccepted(lastAcceptedAt, now)) return@collect
+                val preview = floatingPreviewBitmap(frame, targetWidth) ?: return@collect
+                lastAcceptedAt = now
+                previewFrame.value = preview.asImageBitmap()
+                delay(FLOATING_PREVIEW_FRAME_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopPreview() {
+        previewJob?.cancel()
+        previewJob = null
+        previewController = null
+        previewFrame.value = null
+    }
+
+    private fun refreshContentFrame(ignoreViewFrame: Boolean = false) {
+        if (!started) return
+        val display = context.resources.displayMetrics
+        val frame = (if (ignoreViewFrame) null else viewContentFrame())
+            ?: metricsContentFrame()
+            ?: floatingFullContentFrame(display.widthPixels, display.heightPixels)
+        if (frame == contentFrame.value) return
+        contentFrame.value = frame
+        clampBubbleIntoContentFrame()
+        requestRender()
+    }
+
+    private fun viewContentFrame(): FloatingContentFrame? {
+        val view = bubbleView ?: return null
+        val display = context.resources.displayMetrics
+        val rect = Rect()
+        view.getWindowVisibleDisplayFrame(rect)
+        if (rect.width() <= 0 || rect.height() <= 0) return null
+        if (rect.width() >= display.widthPixels && rect.height() >= display.heightPixels) return null
+        return FloatingContentFrame(
+            left = rect.left,
+            top = rect.top,
+            width = rect.width(),
+            height = rect.height(),
+        )
+    }
+
+    private fun metricsContentFrame(): FloatingContentFrame? {
+        if (Build.VERSION.SDK_INT < 30) return null
+        val metrics = runCatching { windowManager.currentWindowMetrics }.getOrNull() ?: return null
+        val display = context.resources.displayMetrics
+        val insets = metrics.windowInsets.floatingFrameInsets()
+        if (!insets.isEmpty) {
+            return floatingContentFrame(display.widthPixels, display.heightPixels, insets)
+        }
+        val bounds = metrics.bounds
+        if (bounds.width() <= 0 || bounds.height() <= 0) return null
+        if (bounds.width() >= display.widthPixels && bounds.height() >= display.heightPixels) return null
+        return FloatingContentFrame(
+            left = bounds.left,
+            top = bounds.top,
+            width = bounds.width(),
+            height = bounds.height(),
+        )
+    }
+
+    private fun WindowInsets.floatingFrameInsets(): FloatingFrameInsets {
+        val insets = WindowInsetsCompat.toWindowInsetsCompat(this)
+            .getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+        return FloatingFrameInsets(insets.left, insets.top, insets.right, insets.bottom)
+    }
+
+    private fun clampBubbleIntoContentFrame() {
+        if (!shown) return
+        val params = bubbleParams ?: return
+        val view = bubbleView ?: return
+        val frame = contentFrame.value
+        val clamped = floatingClampBubblePosition(
+            x = bubbleWindowPosition.x,
+            y = bubbleWindowPosition.y,
+            bubbleSize = px(FloatingBubbleWindowSize),
+            screenWidth = frame.width,
+            screenHeight = frame.height,
+            edgeMargin = 0,
+        )
+        if (clamped == bubbleWindowPosition) return
+        bubbleWindowPosition = clamped
+        params.x = clamped.x
+        params.y = clamped.y
+        runCatching { windowManager.updateViewLayout(view, params) }
     }
 
     private fun cancelLongPress() {

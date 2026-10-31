@@ -30,6 +30,8 @@
     <string name="floating_panel_virtual_starting">启动中…</string>
     <string name="floating_panel_virtual_failed">异常</string>
     <string name="floating_panel_virtual_offline">未启动</string>
+    <string name="floating_panel_virtual_preview_waiting">等待画面…</string>
+    <string name="floating_panel_virtual_preview_open">点按查看</string>
     <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有进行中的会话</string>
 
     <string name="floating_activity_thinking">正在思考…</string>
