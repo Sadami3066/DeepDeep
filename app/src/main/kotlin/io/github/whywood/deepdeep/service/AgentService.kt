@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.floating.FloatingWindowController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,7 +92,7 @@ class AgentService : Service() {
             preferences = FloatingWindowPreferences(this),
             theme = graph.themePreferences.theme,
             fontStyle = graph.fontPreferences.read(),
-            virtualScreenProvider = { null },
+            virtualScreenProvider = { VirtualScreenRuntime.engine() },
             onOpenApp = { AppVisibility.bringToFront(this) },
             onNewSession = {
                 scope.launch {

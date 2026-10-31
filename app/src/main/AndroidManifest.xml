@@ -85,6 +85,11 @@
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <activity
+            android:name=".ui.vscreen.VirtualScreenActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <activity
             android:name=".plugin.micloud.MiCloudLoginActivity"
             android:exported="false"
             android:label="@string/plugin_micloud_name"

@@ -23,6 +23,7 @@ import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.arrange.ArrangePlugin
 import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
 import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
+import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenPlugin
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
@@ -234,6 +235,10 @@ class AppGraph(context: Context) : AppDependencies {
                     context = appContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
                     linuxScreenshotDir = "/gui/screenshots",
+                ),
+                VirtualScreenPlugin(
+                    context = appContext,
+                    privilege = privilege,
                 ),
                 ArrangePlugin(context = appContext),
                 MiCloudPlugin(
