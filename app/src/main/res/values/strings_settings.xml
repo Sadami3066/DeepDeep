@@ -174,4 +174,6 @@
     <string name="assistant_settings_role_missing">未设为默认助手</string>
     <string name="assistant_settings_power">长按电源键行为</string>
     <string name="assistant_settings_power_unavailable">系统没有这个设置页</string>
+    <string name="assistant_settings_default_apps">默认应用设置</string>
+    <string name="assistant_settings_default_apps_value">把语音助手和语音输入设为 DeepDeep</string>
 </resources>

@@ -167,4 +167,6 @@
     <string name="assistant_settings_role_missing">Not the default assistant</string>
     <string name="assistant_settings_power">Long-press power button</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
+    <string name="assistant_settings_default_apps">Default apps</string>
+    <string name="assistant_settings_default_apps_value">Set voice assistant and voice input to DeepDeep</string>
 </resources>

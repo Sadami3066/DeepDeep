@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.ui.assistant
 
+import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -104,6 +106,30 @@ fun AssistantSettingsScreen(
                     },
                     showChevron = true,
                     modifier = Modifier.testTag("assistant_role"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Settings,
+                    title = stringResource(R.string.assistant_settings_default_apps),
+                    value = stringResource(R.string.assistant_settings_default_apps_value),
+                    onClick = {
+                        val intent = listOf(
+                            Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+                            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+                            Intent(Settings.ACTION_SETTINGS),
+                        ).firstOrNull { candidate ->
+                            context.packageManager.resolveActivity(candidate, 0) != null
+                        }
+                        intent?.let { target ->
+                            runCatching {
+                                context.startActivity(
+                                    target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }
+                    },
+                    showChevron = true,
+                    modifier = Modifier.testTag("assistant_default_apps"),
                 )
                 DdHairline()
                 DdListRow(
