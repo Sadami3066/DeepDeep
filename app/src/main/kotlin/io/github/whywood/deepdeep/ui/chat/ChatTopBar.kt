@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,16 +15,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SessionUsage
 
@@ -45,6 +51,12 @@ data class ChatTopBarActions(
     val onOpenFiles: () -> Unit = {},
 )
 
+private val TopBarEdge = 6.dp
+private val TopBarGap = 4.dp
+private val TopBarIconButtonSize = 42.dp
+private val WordmarkMaxSize = 27f
+private val WordmarkMinSize = 18f
+
 @Composable
 internal fun ChatTopBar(
     state: ChatTopBarState,
@@ -59,86 +71,131 @@ internal fun ChatTopBar(
             .height(58.dp),
     ) {
         val compact = maxWidth < 370.dp || LocalDensity.current.fontScale > 1.15f
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DdIconButton(
-                icon = DdIcons.Menu,
-                onClick = actions.onMenu,
-                contentDescription = stringResource(R.string.assistant_menu),
-                modifier = Modifier.testTag("assistant_menu"),
-                tint = colors.inkSecondary,
-                iconSize = 21.dp,
+        val crowded = state.jobCount > 0 || state.reminderCount > 0
+        val density = LocalDensity.current
+        var trailingWidthPx by remember { mutableStateOf(0) }
+        val trailingWidth = with(density) { trailingWidthPx.toDp() }
+        val wordmarkStyle = wordmarkStyle(maxWidth, trailingWidth, compact)
+        Box(Modifier.fillMaxSize()) {
+            DdWordmark(
+                modifier = Modifier.align(Alignment.Center),
+                color = colors.ink,
+                dotColor = colors.accent,
+                style = wordmarkStyle,
             )
-            Spacer(Modifier.width(2.dp))
-            Spacer(Modifier.weight(1f))
-            if (state.reloading) {
-                DdSpinner(
-                    modifier = Modifier.padding(end = 6.dp).testTag("assistant_reloading"),
-                    size = 16.dp,
-                    strokeWidth = 1.5.dp,
-                )
-            }
-            val usage = state.usage
-            if (usage != null && usage.contextWindow > 0L) {
-                ContextMeter(
-                    usedTokens = usage.contextTokens,
-                    windowTokens = usage.contextWindow,
-                    onClick = actions.onOpenUsage,
-                    showPercent = !compact,
-                )
-            }
-            JobsMeter(
-                count = state.jobCount,
-                onClick = actions.onOpenJobs,
-            )
-            if (state.reminderCount > 0) {
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = TopBarEdge),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 DdIconButton(
-                    icon = DdIcons.Clock,
-                    onClick = actions.onOpenSchedules,
-                    contentDescription = stringResource(R.string.assistant_reminders),
-                    modifier = Modifier.testTag("assistant_reminders"),
-                    tint = colors.inkSecondary,
+                    icon = DdIcons.Menu,
+                    onClick = actions.onMenu,
+                    contentDescription = stringResource(R.string.assistant_menu),
+                    modifier = Modifier.testTag("assistant_menu"),
+                    size = TopBarIconButtonSize,
                     iconSize = 20.dp,
-                )
-            }
-            Box {
-                DdIconButton(
-                    icon = DdIcons.DotsVertical,
-                    onClick = { menuOpen = true },
-                    contentDescription = stringResource(R.string.assistant_more),
-                    modifier = Modifier.testTag("assistant_more"),
                     tint = colors.inkSecondary,
-                    iconSize = 21.dp,
                 )
-                DdMenu(
-                    expanded = menuOpen,
-                    onDismissRequest = { menuOpen = false },
-                    menuWidth = 148.dp,
+                Spacer(Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        trailingWidthPx = coordinates.size.width
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    DdMenuItem(
-                        text = stringResource(R.string.files_menu),
-                        icon = DdIcons.Folder,
-                        onClick = {
-                            menuOpen = false
-                            actions.onOpenFiles()
-                        },
-                        testTag = "assistant_files",
+                    if (state.reloading) {
+                        DdSpinner(
+                            modifier = Modifier.padding(end = 4.dp).testTag("assistant_reloading"),
+                            size = 16.dp,
+                            strokeWidth = 1.5.dp,
+                        )
+                    }
+                    val usage = state.usage
+                    if (usage != null && usage.contextWindow > 0L) {
+                        ContextMeter(
+                            usedTokens = usage.contextTokens,
+                            windowTokens = usage.contextWindow,
+                            onClick = actions.onOpenUsage,
+                            showPercent = !compact && !crowded,
+                        )
+                    }
+                    JobsMeter(
+                        count = state.jobCount,
+                        onClick = actions.onOpenJobs,
                     )
-                    DdMenuItem(
-                        text = stringResource(R.string.assistant_reload),
-                        icon = DdIcons.Refresh,
-                        onClick = {
-                            menuOpen = false
-                            actions.onReload()
-                        },
-                        testTag = "assistant_reload",
-                    )
+                    if (state.reminderCount > 0) {
+                        DdIconButton(
+                            icon = DdIcons.Clock,
+                            onClick = actions.onOpenSchedules,
+                            contentDescription = stringResource(R.string.assistant_reminders),
+                            modifier = Modifier.testTag("assistant_reminders"),
+                            size = TopBarIconButtonSize,
+                            iconSize = 19.dp,
+                            tint = colors.inkSecondary,
+                        )
+                    }
+                    Box {
+                        DdIconButton(
+                            icon = DdIcons.DotsVertical,
+                            onClick = { menuOpen = true },
+                            contentDescription = stringResource(R.string.assistant_more),
+                            modifier = Modifier.testTag("assistant_more"),
+                            size = TopBarIconButtonSize,
+                            iconSize = 19.dp,
+                            tint = colors.inkSecondary,
+                        )
+                        DdMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                            menuWidth = 148.dp,
+                        ) {
+                            DdMenuItem(
+                                text = stringResource(R.string.files_menu),
+                                icon = DdIcons.Folder,
+                                onClick = {
+                                    menuOpen = false
+                                    actions.onOpenFiles()
+                                },
+                                testTag = "assistant_files",
+                            )
+                            DdMenuItem(
+                                text = stringResource(R.string.assistant_reload),
+                                icon = DdIcons.Refresh,
+                                onClick = {
+                                    menuOpen = false
+                                    actions.onReload()
+                                },
+                                testTag = "assistant_reload",
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun wordmarkStyle(maxWidth: Dp, trailingWidth: Dp, compact: Boolean): TextStyle {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val baseWidth = with(density) {
+        measurer.measure("deepdeep.", DdType.wordmark).size.width.toDp()
+    }
+    val allowedHalf = minOf(
+        maxWidth / 2 - TopBarEdge - trailingWidth - TopBarGap,
+        maxWidth / 2 - TopBarEdge - TopBarIconButtonSize - TopBarGap,
+    )
+    val budget = (allowedHalf * 2).coerceAtLeast(0.dp)
+    val fontSize = when {
+        compact -> WordmarkMinSize
+        baseWidth <= 0.dp || budget >= baseWidth -> WordmarkMaxSize
+        else -> (WordmarkMaxSize * (budget / baseWidth)).coerceAtLeast(WordmarkMinSize)
+    }
+    return DdType.wordmark.copy(
+        fontSize = fontSize.sp,
+        lineHeight = (fontSize + 5f).sp,
+    )
 }
