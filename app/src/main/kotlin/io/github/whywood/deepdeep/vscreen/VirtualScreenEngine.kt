@@ -95,12 +95,39 @@ class VirtualScreenEngine(
     }
 
     override suspend fun launch(packageName: String): VirtualScreenResult {
+        val report = launchWithReport(packageName)
+        return VirtualScreenResult(report.ok, report.message)
+    }
+
+    suspend fun launchWithReport(packageName: String): VirtualScreenLaunchReport {
         val name = packageName.trim()
-        if (name.isEmpty()) return VirtualScreenResult(false, "缺少包名")
-        return executeCommand(
-            VirtualScreenCommands.LAUNCH,
-            buildJsonObject { put("packageName", name) },
-        )
+        if (name.isEmpty()) {
+            return VirtualScreenLaunchReport(false, "缺少包名", taskDisplayId = INVALID_TASK_DISPLAY)
+        }
+        if (!isOnline()) {
+            return VirtualScreenLaunchReport(false, "虚拟屏未启动", taskDisplayId = INVALID_TASK_DISPLAY)
+        }
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = request(
+                    VirtualScreenCommands.LAUNCH,
+                    buildJsonObject { put("packageName", name) },
+                )
+                val displayId = response.intField("displayId") ?: INVALID_TASK_DISPLAY
+                val taskDisplayId = response.intField("taskDisplayId") ?: INVALID_TASK_DISPLAY
+                VirtualScreenLaunchReport(
+                    ok = true,
+                    message = response.stringField("message").orEmpty(),
+                    packageName = name,
+                    displayId = displayId,
+                    taskDisplayId = taskDisplayId,
+                    landedOnMain = response.booleanField("landedOnMain") ?: (taskDisplayId == 0),
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                VirtualScreenLaunchReport(false, t.readableMessage(), packageName = name, taskDisplayId = INVALID_TASK_DISPLAY)
+            }
+        }
     }
 
     override suspend fun tap(x: Int, y: Int): VirtualScreenResult {
@@ -387,6 +414,20 @@ class VirtualScreenEngine(
         const val COMMAND_TIMEOUT_MS = 10000L
         const val SCREENSHOT_TIMEOUT_MS = 10000L
         const val FRAME_RECYCLE_DELAY_MS = 1000L
+        const val INVALID_TASK_DISPLAY = -1
+    }
+}
+
+data class VirtualScreenLaunchReport(
+    val ok: Boolean,
+    val message: String,
+    val packageName: String = "",
+    val displayId: Int = INVALID_DISPLAY,
+    val taskDisplayId: Int = INVALID_DISPLAY,
+    val landedOnMain: Boolean = false,
+) {
+    companion object {
+        const val INVALID_DISPLAY = -1
     }
 }
 

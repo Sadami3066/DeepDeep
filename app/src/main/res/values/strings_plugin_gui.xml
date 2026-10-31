@@ -1,6 +1,4 @@
 <resources>
-    <string name="plugin_gui_name">界面操作</string>
-    <string name="plugin_gui_summary">查看、操作并截图当前界面</string>
     <string name="plugin_gui_size">内置</string>
     <string name="plugin_gui_service_description">允许 DeepDeep 读取当前界面、执行点击、输入、滚动操作并截取屏幕</string>
 

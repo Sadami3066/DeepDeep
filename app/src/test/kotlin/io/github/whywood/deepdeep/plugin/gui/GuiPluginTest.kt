@@ -6,10 +6,13 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.screen.SCREEN_DEFAULT_LINUX_SCREENSHOT_DIR
+import io.github.whywood.deepdeep.screen.screenToolNames
 import dev.pi.ai.TextContent
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,24 +32,12 @@ class GuiPluginTest {
     fun identityMatchesPluginContract() {
         val plugin = plugin()
         assertEquals("gui", plugin.id)
-        assertEquals("2.0.0", plugin.version)
+        assertEquals("3.0.0", plugin.version)
         assertEquals(DdIcons.HandClick, plugin.icon)
-        assertEquals(R.string.plugin_gui_name, plugin.nameRes)
-        assertEquals(R.string.plugin_gui_summary, plugin.summaryRes)
+        assertEquals(R.string.plugin_screen_name, plugin.nameRes)
+        assertEquals(R.string.plugin_screen_summary, plugin.summaryRes)
         assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)
-        assertEquals(
-            listOf(
-                "gui_observe",
-                "gui_find",
-                "gui_tap",
-                "gui_set_text",
-                "gui_scroll",
-                "gui_global",
-                "gui_wait",
-                "gui_screenshot",
-            ),
-            plugin.tools().map { it.name },
-        )
+        assertEquals(screenToolNames(), plugin.tools().map { it.name })
     }
 
     @Test
@@ -82,16 +73,18 @@ class GuiPluginTest {
     @Test
     fun detailRowsReportServiceAndKeepAliveState() = runTest {
         val connected = plugin().detailRows(PluginStatus.Ready("x"))
-        assertEquals(5, connected.size)
+        assertEquals(6, connected.size)
         assertEquals(R.string.plugin_gui_detail_service, connected[0].labelRes)
         assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected[0].value)
-        assertEquals(R.string.plugin_gui_detail_how, connected[1].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_how_value}", connected[1].value)
-        assertEquals(R.string.plugin_gui_detail_battery, connected[2].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[2].value)
-        assertEquals(R.string.plugin_gui_detail_background, connected[3].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[3].value)
-        assertEquals(R.string.plugin_gui_detail_recent, connected[4].labelRes)
+        assertEquals(R.string.plugin_screen_detail_virtual, connected[1].labelRes)
+        assertEquals("res:${R.string.plugin_screen_detail_virtual_value}", connected[1].value)
+        assertEquals(R.string.plugin_gui_detail_how, connected[2].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_how_value}", connected[2].value)
+        assertEquals(R.string.plugin_gui_detail_battery, connected[3].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[3].value)
+        assertEquals(R.string.plugin_gui_detail_background, connected[4].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[4].value)
+        assertEquals(R.string.plugin_gui_detail_recent, connected[5].labelRes)
 
         val disabled = plugin(FakeActions(disconnected = true)).detailRows(PluginStatus.NotReady("x"))
         assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled[0].value)
@@ -102,18 +95,36 @@ class GuiPluginTest {
         val png = byteArrayOf(5, 6, 7)
         val actions = FakeActions().apply { screenshotResult = GuiScreenshot(png, 720, 1600) }
         val plugin = plugin(actions = actions, linuxScreenshotDir = "/workspace/shots")
-        val tool = plugin.tools().first { it.name == "gui_screenshot" }
+        val tool = plugin.tools().first { it.name == "screen_screenshot" }
         val result = tool.execute("call", buildJsonObject { }, null, null)
         assertNull(result.isError)
         val text = (result.content.single() as TextContent).text
-        assertTrue(text.contains("\"path\":\"/workspace/shots/gui-"))
+        assertTrue(text.contains("\"path\":\"/workspace/shots/screen-"))
+        assertTrue(text.contains("\"target\":\"main\""))
+        assertTrue(text.contains("\"backend\":\"accessibility\""))
         val file = screenshotDir.listFiles()!!.single()
-        assertTrue(file.name.startsWith("gui-"))
+        assertTrue(file.name.startsWith("screen-"))
         assertArrayEquals(png, file.readBytes())
     }
 
     @Test
-    fun skillHasFrontmatterAndV2Guidance() {
+    fun screenshotToolWritesVirtualCapture() = runTest {
+        val png = byteArrayOf(9, 9)
+        val actions = FakeActions().apply { screenshotResult = GuiScreenshot(png, 1080, 2400) }
+        val plugin = plugin(actions = actions)
+        val tool = plugin.tools().first { it.name == "screen_screenshot" }
+        val result = tool.execute(
+            "call",
+            buildJsonObject { put("target", "virtual") },
+            null,
+            null,
+        )
+        assertEquals(true, result.isError)
+        assertTrue((result.content.single() as TextContent).text.contains("虚拟屏"))
+    }
+
+    @Test
+    fun skillHasFrontmatterAndScreenGuidance() {
         val skills = plugin().skills()
         assertEquals(1, skills.size)
         val skill = skills.single()
@@ -121,16 +132,22 @@ class GuiPluginTest {
         assertTrue(skill.markdown.startsWith("---\n"))
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
         assertTrue(frontmatter.contains("name: deepdeep-gui"))
-        assertTrue(frontmatter.contains("description: 通过无障碍服务"))
+        assertTrue(frontmatter.contains("description: 统一操作手机主屏与后台虚拟屏"))
         listOf(
-            "gui_observe",
-            "gui_find",
-            "gui_tap",
-            "gui_set_text",
-            "gui_scroll",
-            "gui_global",
-            "gui_wait",
-            "gui_screenshot",
+            "screen_status",
+            "screen_observe",
+            "screen_find",
+            "screen_screenshot",
+            "screen_tap",
+            "screen_swipe",
+            "screen_scroll",
+            "screen_type",
+            "screen_key",
+            "screen_wait",
+            "screen_launch",
+            "screen_list_apps",
+            "target=main",
+            "target=virtual",
             "forTextGone",
             "verified",
             "FLAG_SECURE",
@@ -140,13 +157,13 @@ class GuiPluginTest {
             "权限弹窗",
             "设备管理员",
             "锁屏",
-            "当前活动窗口",
+            "taskDisplayId",
         ).forEach { expected -> assertTrue(expected, skill.markdown.contains(expected)) }
     }
 
     private fun plugin(
         actions: GuiActions = FakeActions(),
-        linuxScreenshotDir: String = GUI_DEFAULT_LINUX_SCREENSHOT_DIR,
+        linuxScreenshotDir: String = SCREEN_DEFAULT_LINUX_SCREENSHOT_DIR,
     ): GuiPlugin = GuiPlugin(context, actions, screenshotDir, linuxScreenshotDir)
 
     private class FakeActions(

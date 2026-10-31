@@ -1,6 +1,4 @@
 <resources>
-    <string name="plugin_gui_name">Screen control</string>
-    <string name="plugin_gui_summary">Observe, control and screenshot the current screen</string>
     <string name="plugin_gui_size">Built-in</string>
     <string name="plugin_gui_service_description">Lets DeepDeep read the current screen, tap, type, scroll and capture screenshots</string>
 

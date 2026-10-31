@@ -1,0 +1,7 @@
+<resources>
+    <string name="plugin_screen_name">屏幕</string>
+    <string name="plugin_screen_summary">查看并操作主屏与虚拟屏：无障碍 + 无线调试（ADB）</string>
+
+    <string name="plugin_screen_detail_virtual">虚拟屏操作</string>
+    <string name="plugin_screen_detail_virtual_value">用 screen_* 工具并指定 target=virtual</string>
+</resources>

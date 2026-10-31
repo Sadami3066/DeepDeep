@@ -22,6 +22,7 @@ import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
+import android.view.InputDevice
 import android.view.InputEvent
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
@@ -210,10 +211,21 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val conflict = occupancyConflict(packageName, display.displayId)
         if (conflict != null) throw IllegalStateException(conflict)
         launchOnDisplay(packageName, display.displayId)
+        val taskDisplayId = taskDisplayOf(packageName)
+        val landedOnMain = taskDisplayId == Display.DEFAULT_DISPLAY
         respond(id) {
             put("packageName", packageName)
             put("displayId", display.displayId)
-            put("message", "已在虚拟屏启动 $packageName")
+            put("taskDisplayId", taskDisplayId)
+            put("landedOnMain", landedOnMain)
+            put(
+                "message",
+                if (taskDisplayId == display.displayId) {
+                    "已在虚拟屏启动 $packageName（task display ${display.displayId}）"
+                } else {
+                    "已启动 $packageName，但任务落屏是 ${if (taskDisplayId < 0) "未知" else taskDisplayId.toString()}，不是虚拟屏 ${display.displayId}"
+                },
+            )
         }
     }
 
@@ -319,6 +331,26 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     private fun requireDisplayId(): Int = session?.displayId ?: throw IllegalStateException("虚拟屏未启动")
 
+    private fun taskDisplayOf(packageName: String): Int {
+        repeat(TASK_DISPLAY_RETRIES) { attempt ->
+            val tasks = runCatching { tasksOf(packageName) }.getOrElse {
+                Log.w(TAG, "读取任务列表失败", it)
+                return INVALID_TASK_DISPLAY
+            }
+            val visible = tasks.firstOrNull { it.visible }
+            val displayId = visible?.displayId ?: tasks.firstOrNull()?.displayId
+            if (displayId != null) return displayId
+            if (attempt < TASK_DISPLAY_RETRIES - 1) {
+                try {
+                    Thread.sleep(TASK_DISPLAY_RETRY_MS)
+                } catch (t: InterruptedException) {
+                    return INVALID_TASK_DISPLAY
+                }
+            }
+        }
+        return INVALID_TASK_DISPLAY
+    }
+
     private fun occupancyConflict(packageName: String, displayId: Int): String? {
         val tasks = runCatching { tasksOf(packageName) }.getOrElse {
             Log.w(TAG, "读取任务列表失败", it)
@@ -423,6 +455,12 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     private fun inject(event: InputEvent, displayId: Int): Boolean {
         event.javaClass.getMethod("setDisplayId", Int::class.javaPrimitiveType).invoke(event, displayId)
+        when (event) {
+            is MotionEvent -> event.source = InputDevice.SOURCE_TOUCHSCREEN
+            is KeyEvent -> event.javaClass
+                .getMethod("setSource", Int::class.javaPrimitiveType)
+                .invoke(event, InputDevice.SOURCE_KEYBOARD)
+        }
         val manager = inputManager()
         val method = manager.javaClass.getMethod(
             "injectInputEvent",
@@ -784,6 +822,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         const val SHELL_PACKAGE = "com.android.shell"
         const val USER_CURRENT = -2
         const val MAX_TASKS = 100
+        const val INVALID_TASK_DISPLAY = -1
+        const val TASK_DISPLAY_RETRIES = 3
+        const val TASK_DISPLAY_RETRY_MS = 120L
         const val FRAME_INTERVAL_MS = 80L
         const val FRAME_THREAD_JOIN_MS = 1000L
         const val EXEC_TIMEOUT_SECONDS = 10L

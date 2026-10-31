@@ -18,6 +18,8 @@
     <string name="plugin_virtual_screen_detail_display">Display ID</string>
     <string name="plugin_virtual_screen_detail_backend">Privilege backend</string>
     <string name="plugin_virtual_screen_detail_uid">Running as</string>
+    <string name="plugin_virtual_screen_detail_controls">Screen control</string>
+    <string name="plugin_virtual_screen_detail_controls_value">Use the screen_* tools in the Screen plugin with target=virtual</string>
 
     <string name="plugin_virtual_screen_value_offline">—</string>
     <string name="plugin_virtual_screen_backend_root">Root</string>
