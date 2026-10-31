@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="floating_settings_title">Floating window</string>
+    <string name="floating_settings_enable">Enable floating window</string>
+    <string name="floating_settings_enable_hint">Show the little whale outside DeepDeep</string>
+    <string name="floating_settings_description">The whale floats above other apps: it spins while a run is active and waves when a question or a delivery is waiting. Tap to open the run panel, long-press to open DeepDeep or turn the window off. Drag it to a screen edge and it snaps into place.</string>
+    <string name="floating_settings_permission">Overlay permission</string>
+    <string name="floating_settings_permission_granted">Granted</string>
+    <string name="floating_settings_permission_missing">Not granted</string>
+    <string name="floating_settings_permission_hint">Allow “Display over other apps” in system settings so the whale can appear.</string>
+
+    <string name="floating_menu_open_app">Open DeepDeep</string>
+    <string name="floating_close">Turn off floating window</string>
+
+    <string name="floating_bubble_description">Little whale</string>
+    <string name="floating_bubble_unread">%1$d unread</string>
+
+    <string name="floating_card_question">Needs an answer</string>
+    <string name="floating_card_answer_in_overlay">Answer in overlay</string>
+    <string name="floating_card_more_questions">%1$d questions — answer in the overlay</string>
+    <string name="floating_card_delivery">Delivered</string>
+    <string name="floating_card_delivery_count">%1$d delivered</string>
+    <string name="floating_card_open_in_overlay">Open in overlay</string>
+    <string name="floating_card_done">Reply ready</string>
+    <string name="floating_card_stopped">Stopped</string>
+    <string name="floating_card_failed">Failed: %1$s</string>
+
+    <string name="floating_panel_title">Little whale</string>
+    <string name="floating_panel_close">Collapse panel</string>
+    <string name="floating_panel_running">Running</string>
+    <string name="floating_panel_questions">Questions</string>
+    <string name="floating_panel_deliveries">Deliveries</string>
+    <string name="floating_panel_virtual_screen">Virtual screen</string>
+    <string name="floating_panel_virtual_online">Online · %1$d×%2$d</string>
+    <string name="floating_panel_virtual_starting">Starting…</string>
+    <string name="floating_panel_virtual_failed">Error</string>
+    <string name="floating_panel_virtual_offline">Not started</string>
+    <string name="floating_panel_empty">The whale is dozing — nothing is running</string>
+    <string name="floating_panel_open_app">Open DeepDeep</string>
+    <string name="floating_panel_new_session">New chat</string>
+
+    <string name="floating_activity_thinking">Thinking…</string>
+    <string name="floating_activity_retrying">Retrying (attempt %1$d)…</string>
+    <string name="floating_activity_compacting">Compacting context…</string>
+    <string name="floating_activity_tool">Running %1$s</string>
+    <string name="floating_elapsed_seconds">%1$d s</string>
+    <string name="floating_elapsed_minutes">%1$d min %2$d s</string>
+    <string name="floating_elapsed_hours">%1$d h %2$d min</string>
+</resources>

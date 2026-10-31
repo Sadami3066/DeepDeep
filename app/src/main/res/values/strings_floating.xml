@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="floating_settings_title">悬浮窗</string>
+    <string name="floating_settings_enable">启用悬浮窗</string>
+    <string name="floating_settings_enable_hint">不在 DeepDeep 时显示小鲸鱼</string>
+    <string name="floating_settings_description">小鲸鱼浮在其他应用上层：运行中打转，有提问或交付时招手。点一下看运行面板，长按可以打开 DeepDeep 或关闭悬浮窗；拖到屏幕边缘会自动吸附。</string>
+    <string name="floating_settings_permission">悬浮窗权限</string>
+    <string name="floating_settings_permission_granted">已授予</string>
+    <string name="floating_settings_permission_missing">未授予</string>
+    <string name="floating_settings_permission_hint">需要在系统设置中允许「显示在其他应用上层」，小鲸鱼才会出现。</string>
+
+    <string name="floating_menu_open_app">打开 DeepDeep</string>
+    <string name="floating_close">关闭悬浮窗</string>
+
+    <string name="floating_bubble_description">小鲸鱼</string>
+    <string name="floating_bubble_unread">%1$d 个未读</string>
+
+    <string name="floating_card_question">需要回答</string>
+    <string name="floating_card_answer_in_overlay">在浮层回答</string>
+    <string name="floating_card_more_questions">共 %1$d 个问题，请在浮层回答</string>
+    <string name="floating_card_delivery">交付</string>
+    <string name="floating_card_delivery_count">%1$d 项交付</string>
+    <string name="floating_card_open_in_overlay">在浮层查看</string>
+    <string name="floating_card_done">回答完成</string>
+    <string name="floating_card_stopped">已停止</string>
+    <string name="floating_card_failed">失败：%1$s</string>
+
+    <string name="floating_panel_title">小鲸鱼</string>
+    <string name="floating_panel_close">收起面板</string>
+    <string name="floating_panel_running">正在运行</string>
+    <string name="floating_panel_questions">待回答</string>
+    <string name="floating_panel_deliveries">待查收</string>
+    <string name="floating_panel_virtual_screen">虚拟屏幕</string>
+    <string name="floating_panel_virtual_online">在线 · %1$d×%2$d</string>
+    <string name="floating_panel_virtual_starting">启动中…</string>
+    <string name="floating_panel_virtual_failed">异常</string>
+    <string name="floating_panel_virtual_offline">未启动</string>
+    <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有进行中的会话</string>
+    <string name="floating_panel_open_app">打开 DeepDeep</string>
+    <string name="floating_panel_new_session">新建会话</string>
+
+    <string name="floating_activity_thinking">正在思考…</string>
+    <string name="floating_activity_retrying">正在重试（第 %1$d 次）…</string>
+    <string name="floating_activity_compacting">正在压缩上下文…</string>
+    <string name="floating_activity_tool">正在运行 %1$s</string>
+    <string name="floating_elapsed_seconds">%1$d 秒</string>
+    <string name="floating_elapsed_minutes">%1$d 分 %2$d 秒</string>
+    <string name="floating_elapsed_hours">%1$d 小时 %2$d 分</string>
+</resources>
