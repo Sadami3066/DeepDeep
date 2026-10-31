@@ -266,7 +266,6 @@ internal fun ChatComposer(
                                 enabled = configured,
                                 maxLines = 8,
                                 visualTransformation = SlashCommandColor(colors.accent),
-                                onSend = { if (canSend) onSend() },
                                 focusRequester = focusRequester,
                                 testTag = "assistant_input",
                             )

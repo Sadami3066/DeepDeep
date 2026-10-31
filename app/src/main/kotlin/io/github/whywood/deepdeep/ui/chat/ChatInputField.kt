@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +18,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -39,7 +36,6 @@ internal fun ChatInputField(
     enabled: Boolean = true,
     maxLines: Int = 8,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    onSend: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     testTag: String = "assistant_input",
 ) {
@@ -72,8 +68,6 @@ internal fun ChatInputField(
         cursorBrush = SolidColor(colors.accent),
         visualTransformation = visualTransformation,
         maxLines = maxLines,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-        keyboardActions = KeyboardActions(onSend = { onSend() }),
         decorationBox = { inner ->
             Box {
                 if (textFieldValue.text.isEmpty()) {
