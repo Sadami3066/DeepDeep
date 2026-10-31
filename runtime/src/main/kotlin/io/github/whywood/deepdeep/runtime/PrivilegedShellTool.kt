@@ -30,11 +30,6 @@ private val shizukuShellParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("command")) })
 }
 
-internal class ShellGate(
-    val allowed: () -> Boolean,
-    val message: String,
-)
-
 internal fun privilegedShellTool(
     name: String,
     description: String,
@@ -42,7 +37,8 @@ internal fun privilegedShellTool(
     promptGuidelines: List<String>,
     parameters: JsonObject,
     executor: RootCommandExecutor,
-    gates: List<ShellGate>,
+    enabled: () -> Boolean,
+    disabledMessage: String,
     status: () -> RootToolStatus,
     unavailableMessage: String,
     failureMessage: String,
@@ -57,9 +53,8 @@ internal fun privilegedShellTool(
         promptGuidelines = promptGuidelines,
         execute = { toolCallId, args, signal, onUpdate ->
             signal?.throwIfAborted()
-            val denied = gates.firstOrNull { gate -> !gate.allowed() }
             when {
-                denied != null -> textResult(denied.message, isError = true)
+                !enabled() -> textResult(disabledMessage, isError = true)
                 status() == RootToolStatus.Unsupported -> textResult(unavailableMessage, isError = true)
                 else -> try {
                     delegate.execute(toolCallId, args.shellArguments(), signal, onUpdate)
@@ -78,26 +73,21 @@ internal fun privilegedShellTool(
 fun shizukuShellTool(
     executor: RootCommandExecutor,
     enabled: () -> Boolean,
-    foreground: () -> Boolean,
-    userTurn: () -> Boolean,
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "shizuku_shell",
-    description = "Run a shell command through Shizuku on the Android device and return its exit code, stdout and stderr. Only works while the app is in the foreground, Shizuku is running and the user has granted Shizuku permission; privileges follow the Shizuku session (usually ADB shell uid 2000, but equivalent to root when Shizuku was started by root).",
+    description = "Run a shell command through Shizuku on the Android device and return its exit code, stdout and stderr. Works while Shizuku is running and the user has granted Shizuku permission, in any turn; privileges follow the Shizuku session (usually ADB shell uid 2000, but equivalent to root when Shizuku was started by root).",
     promptSnippet = "Run a command through Shizuku",
     promptGuidelines = listOf(
         "Use shizuku_shell only when the user explicitly asks for a system-level operation that needs Shizuku privileges; prefer the regular bash tool for all other commands.",
-        "shizuku_shell runs only while the app is in the foreground and Shizuku permission is granted; it never persists an authorization.",
+        "shizuku_shell works in foreground, background, scheduled and goal-continued runs alike; it never persists an authorization.",
         "Commands run with whatever privileges the Shizuku session already has: usually the ADB shell (uid 2000), but equivalent to root when Shizuku was started by root. Never assume the command is unprivileged.",
         "Do not run destructive commands unless the user explicitly asked for that exact command.",
     ),
     parameters = shizukuShellParameters,
     executor = executor,
-    gates = listOf(
-        ShellGate({ enabled() }, "shizuku_disabled"),
-        ShellGate({ foreground() }, "shizuku_foreground_required"),
-        ShellGate({ userTurn() }, "shizuku_user_turn_required"),
-    ),
+    enabled = enabled,
+    disabledMessage = "shizuku_disabled",
     status = status,
     unavailableMessage = "shizuku_unavailable",
     failureMessage = "shizuku_shell 执行失败",

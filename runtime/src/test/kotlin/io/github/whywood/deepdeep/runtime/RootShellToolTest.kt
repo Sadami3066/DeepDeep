@@ -22,10 +22,8 @@ class RootShellToolTest {
     private fun tool(
         executor: RootCommandExecutor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
         enabled: () -> Boolean = { true },
-        foreground: () -> Boolean = { true },
-        userTurn: () -> Boolean = { true },
         status: () -> RootToolStatus = { RootToolStatus.Granted },
-    ): CodingTool = rootShellTool(executor, enabled, foreground, userTurn, status)
+    ): CodingTool = rootShellTool(executor, enabled, status)
 
     private fun resultText(result: AgentToolResult): String =
         result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
@@ -60,42 +58,6 @@ class RootShellToolTest {
 
         assertEquals(true, result.isError)
         assertEquals("root_disabled", resultText(result))
-        assertFalse(called)
-    }
-
-    @Test
-    fun backgroundToolReturnsForegroundRequired() = runBlocking {
-        var called = false
-        val tool = tool(
-            executor = RootCommandExecutor { _, _ ->
-                called = true
-                RootCommandResult(0, "", "", false)
-            },
-            foreground = { false },
-        )
-
-        val result = tool.execute("call-1", args("id"), null, null)
-
-        assertEquals(true, result.isError)
-        assertEquals("root_foreground_required", resultText(result))
-        assertFalse(called)
-    }
-
-    @Test
-    fun backgroundTurnReturnsUserTurnRequired() = runBlocking {
-        var called = false
-        val tool = tool(
-            executor = RootCommandExecutor { _, _ ->
-                called = true
-                RootCommandResult(0, "", "", false)
-            },
-            userTurn = { false },
-        )
-
-        val result = tool.execute("call-1", args("id"), null, null)
-
-        assertEquals(true, result.isError)
-        assertEquals("root_user_turn_required", resultText(result))
         assertFalse(called)
     }
 

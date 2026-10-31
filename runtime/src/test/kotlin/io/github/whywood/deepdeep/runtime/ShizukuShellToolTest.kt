@@ -18,10 +18,8 @@ class ShizukuShellToolTest {
     private fun tool(
         executor: RootCommandExecutor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
         enabled: () -> Boolean = { true },
-        foreground: () -> Boolean = { true },
-        userTurn: () -> Boolean = { true },
         status: () -> RootToolStatus = { RootToolStatus.Granted },
-    ): CodingTool = shizukuShellTool(executor, enabled, foreground, userTurn, status)
+    ): CodingTool = shizukuShellTool(executor, enabled, status)
 
     private fun resultText(result: AgentToolResult): String =
         result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
@@ -65,42 +63,6 @@ class ShizukuShellToolTest {
 
         assertEquals(true, result.isError)
         assertEquals("shizuku_disabled", resultText(result))
-        assertFalse(called)
-    }
-
-    @Test
-    fun backgroundToolReturnsForegroundRequired() = runBlocking {
-        var called = false
-        val tool = tool(
-            executor = RootCommandExecutor { _, _ ->
-                called = true
-                RootCommandResult(0, "", "", false)
-            },
-            foreground = { false },
-        )
-
-        val result = tool.execute("call-1", args("id"), null, null)
-
-        assertEquals(true, result.isError)
-        assertEquals("shizuku_foreground_required", resultText(result))
-        assertFalse(called)
-    }
-
-    @Test
-    fun backgroundTurnReturnsUserTurnRequired() = runBlocking {
-        var called = false
-        val tool = tool(
-            executor = RootCommandExecutor { _, _ ->
-                called = true
-                RootCommandResult(0, "", "", false)
-            },
-            userTurn = { false },
-        )
-
-        val result = tool.execute("call-1", args("id"), null, null)
-
-        assertEquals(true, result.isError)
-        assertEquals("shizuku_user_turn_required", resultText(result))
         assertFalse(called)
     }
 

@@ -305,8 +305,6 @@ class AppGraph(context: Context) : AppDependencies {
                                         )
                                     },
                                     enabled = { privilege.state.value.effective == PrivilegeLevel.ROOT },
-                                    foreground = { AppVisibility.foreground },
-                                    userTurn = { userTurnAllowed(binding) },
                                     status = { privilege.state.value.root.toRootToolStatus() },
                                 ),
                             )
@@ -315,8 +313,6 @@ class AppGraph(context: Context) : AppDependencies {
                                 shizukuShellTool(
                                     executor = privilegeImpl.shizukuExecutor,
                                     enabled = { privilege.state.value.effective == PrivilegeLevel.SHIZUKU },
-                                    foreground = { AppVisibility.foreground },
-                                    userTurn = { userTurnAllowed(binding) },
                                     status = { shizukuToolStatus() },
                                 ),
                             )
@@ -438,12 +434,6 @@ class AppGraph(context: Context) : AppDependencies {
                 }
             }
         }
-    }
-
-    private fun userTurnAllowed(binding: io.github.whywood.deepdeep.runtime.SessionBinding): Boolean {
-        val sessionId = binding.current()?.sessionId ?: return false
-        val source = host.activeTurnSource(sessionId)
-        return source == TurnSource.USER || source == TurnSource.RETRY
     }
 
     private fun shizukuToolStatus(): RootToolStatus {
