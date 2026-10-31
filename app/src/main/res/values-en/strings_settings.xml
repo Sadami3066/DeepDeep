@@ -159,7 +159,6 @@
     <string name="settings_background_job_wake">Wake when a background job finishes</string>
     <string name="settings_oauth_manual_hint">Browser did not return automatically? Paste the authorization code or redirect URL below.</string>
     <string name="settings_new_chat_model">Default model for new chats</string>
-    <string name="settings_root_title">Root access</string>
     <string name="settings_assistant">System assistant</string>
     <string name="assistant_settings_title">System assistant</string>
     <string name="assistant_settings_role">Default assistant</string>
@@ -169,4 +168,5 @@
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
     <string name="assistant_settings_default_apps">Default apps</string>
     <string name="assistant_settings_default_apps_value">Set voice assistant and voice input to DeepDeep</string>
+    <string name="settings_privilege">Permissions</string>
 </resources>

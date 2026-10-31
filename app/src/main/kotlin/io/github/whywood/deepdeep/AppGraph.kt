@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
@@ -31,6 +32,10 @@ import io.github.whywood.deepdeep.plugin.internal.SchedulePlugin
 import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.privilege.PrivilegeController
+import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
+import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.privilege.ShizukuClient
 import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
@@ -56,6 +61,7 @@ import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.rootShellTool
+import io.github.whywood.deepdeep.runtime.shizukuShellTool
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
@@ -117,9 +123,16 @@ class AppGraph(context: Context) : AppDependencies {
     override val attachmentStore = FileAttachmentStore(appContext, homeDir)
     override val linuxSettings = LinuxSettingsStore(appContext)
     private val rootShell = RootShell()
-    private val rootEnabledState = MutableStateFlow(false)
-    override val rootEnabled: StateFlow<Boolean> = rootEnabledState
-    private val rootStatusState = MutableStateFlow(RootStatus.NotRequested)
+    private val shizukuClient by lazy { ShizukuClient(appContext) }
+    private val privilegeImpl by lazy {
+        PrivilegeControllerImpl(
+            preferences = PrivilegePreferences(appContext) { linuxSettings.isRootEnabled() },
+            rootShell = rootShell,
+            shizukuClient = shizukuClient,
+            scope = scope,
+        ) { host.reconfigure() }
+    }
+    override val privilege: PrivilegeController get() = privilegeImpl
     val themePreferences = ThemePreferences(appContext)
     override val appPreferences = AppPreferences(appContext)
     override val voicePreferences = VoicePreferences(appContext)
@@ -273,8 +286,9 @@ class AppGraph(context: Context) : AppDependencies {
                 { _, binding ->
                     buildList {
                         add(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() })
-                        if (rootEnabledState.value) {
-                            add(
+                        when (privilege.state.value.effective) {
+                            PrivilegeLevel.NORMAL -> Unit
+                            PrivilegeLevel.ROOT -> add(
                                 rootShellTool(
                                     executor = RootCommandExecutor { command, timeoutMillis ->
                                         val result = rootShell.execute(command, timeoutMillis)
@@ -285,15 +299,20 @@ class AppGraph(context: Context) : AppDependencies {
                                             truncated = result.truncated,
                                         )
                                     },
-                                    enabled = { rootEnabledState.value },
+                                    enabled = { privilege.state.value.effective == PrivilegeLevel.ROOT },
                                     foreground = { AppVisibility.foreground },
-                                    userTurn = {
-                                        val sessionId = binding.current()?.sessionId
-                                        sessionId != null && host.activeTurnSource(sessionId).let {
-                                            it == TurnSource.USER || it == TurnSource.RETRY
-                                        }
-                                    },
-                                    status = { rootStatusState.value.toRootToolStatus() },
+                                    userTurn = { userTurnAllowed(binding) },
+                                    status = { privilege.state.value.root.toRootToolStatus() },
+                                ),
+                            )
+
+                            PrivilegeLevel.SHIZUKU -> add(
+                                shizukuShellTool(
+                                    executor = privilegeImpl.shizukuExecutor,
+                                    enabled = { privilege.state.value.effective == PrivilegeLevel.SHIZUKU },
+                                    foreground = { AppVisibility.foreground },
+                                    userTurn = { userTurnAllowed(binding) },
+                                    status = { shizukuToolStatus() },
                                 ),
                             )
                         }
@@ -416,28 +435,19 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
-    init {
-        scope.launch {
-            linuxSettings.rootEnabled.collect { enabled ->
-                rootEnabledState.value = enabled
-                if (!enabled) rootStatusState.value = RootStatus.NotRequested
-                host.reconfigure()
-            }
-        }
+    private fun userTurnAllowed(binding: io.github.whywood.deepdeep.runtime.SessionBinding): Boolean {
+        val sessionId = binding.current()?.sessionId ?: return false
+        val source = host.activeTurnSource(sessionId)
+        return source == TurnSource.USER || source == TurnSource.RETRY
     }
 
-    override suspend fun setRootEnabled(enabled: Boolean) {
-        linuxSettings.setRootEnabled(enabled)
-        if (enabled && probeRoot() != RootStatus.Granted) {
-            linuxSettings.setRootEnabled(false)
+    private fun shizukuToolStatus(): RootToolStatus {
+        val shizuku = privilege.state.value.shizuku
+        return when {
+            shizuku.granted -> RootToolStatus.Granted
+            shizuku.running -> RootToolStatus.NotRequested
+            else -> RootToolStatus.Unsupported
         }
-    }
-
-    private suspend fun probeRoot(): RootStatus {
-        val status = rootShell.probe()
-        rootStatusState.value = status
-        if (status == RootStatus.Granted) host.reconfigure()
-        return status
     }
 
     override suspend fun prepare() {

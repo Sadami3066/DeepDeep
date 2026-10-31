@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
@@ -27,8 +28,6 @@ import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 interface AppDependencies :
     RuntimeDependencies,
@@ -38,9 +37,7 @@ interface AppDependencies :
     AdvancedDependencies
 
 interface AdvancedDependencies {
-    val rootEnabled: StateFlow<Boolean> get() = MutableStateFlow(false)
-
-    suspend fun setRootEnabled(enabled: Boolean) = Unit
+    val privilege: PrivilegeController
 }
 
 interface RuntimeDependencies {

@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -81,6 +82,8 @@ fun SettingsScreen(
     onOpenAssistant: () -> Unit = {},
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
+    onOpenPermission: () -> Unit = {},
+    privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
@@ -184,6 +187,21 @@ fun SettingsScreen(
                     onClick = onOpenAssistant,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_assistant"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Shield,
+                    title = stringResource(R.string.settings_privilege),
+                    value = stringResource(
+                        when (privilegeLevel) {
+                            PrivilegeLevel.NORMAL -> R.string.permission_level_normal
+                            PrivilegeLevel.SHIZUKU -> R.string.permission_level_shizuku
+                            PrivilegeLevel.ROOT -> R.string.permission_level_root
+                        },
+                    ),
+                    onClick = onOpenPermission,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_permission"),
                 )
             }
 

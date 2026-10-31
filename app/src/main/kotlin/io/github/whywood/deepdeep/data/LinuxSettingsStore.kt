@@ -33,10 +33,6 @@ class LinuxSettingsStore(context: Context) {
 
     suspend fun isRootEnabled(): Boolean = rootEnabled.first()
 
-    suspend fun setRootEnabled(value: Boolean) {
-        store.edit { it[rootEnabledKey] = value }
-    }
-
     suspend fun isSharedStorageEnabled(): Boolean = sharedStorageEnabled.first()
 
     suspend fun setSharedStorageEnabled(value: Boolean) {

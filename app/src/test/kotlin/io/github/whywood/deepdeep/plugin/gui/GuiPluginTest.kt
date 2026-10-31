@@ -82,14 +82,16 @@ class GuiPluginTest {
     @Test
     fun detailRowsReportServiceAndKeepAliveState() = runTest {
         val connected = plugin().detailRows(PluginStatus.Ready("x"))
-        assertEquals(4, connected.size)
+        assertEquals(5, connected.size)
         assertEquals(R.string.plugin_gui_detail_service, connected[0].labelRes)
         assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected[0].value)
-        assertEquals(R.string.plugin_gui_detail_battery, connected[1].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[1].value)
-        assertEquals(R.string.plugin_gui_detail_background, connected[2].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[2].value)
-        assertEquals(R.string.plugin_gui_detail_recent, connected[3].labelRes)
+        assertEquals(R.string.plugin_gui_detail_how, connected[1].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_how_value}", connected[1].value)
+        assertEquals(R.string.plugin_gui_detail_battery, connected[2].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[2].value)
+        assertEquals(R.string.plugin_gui_detail_background, connected[3].labelRes)
+        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[3].value)
+        assertEquals(R.string.plugin_gui_detail_recent, connected[4].labelRes)
 
         val disabled = plugin(FakeActions(disconnected = true)).detailRows(PluginStatus.NotReady("x"))
         assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled[0].value)

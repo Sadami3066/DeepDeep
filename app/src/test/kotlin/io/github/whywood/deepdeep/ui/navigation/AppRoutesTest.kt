@@ -19,6 +19,7 @@ class AppRoutesTest {
         AppDestination.Fonts,
         AppDestination.ChatSettings,
         AppDestination.Privacy,
+        AppDestination.Permission,
         AppDestination.Search,
         AppDestination.Skills,
         AppDestination.Schedules,
@@ -34,8 +35,8 @@ class AppRoutesTest {
     private val rootDestinations = allDestinations - detailDestinations.toSet()
 
     @Test
-    fun allNineteenRoutesRoundTripThroughRouteKey() {
-        assertEquals(19, allDestinations.size)
+    fun allRoutesRoundTripThroughRouteKey() {
+        assertEquals(20, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 

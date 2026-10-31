@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.ui.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -8,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.DevPackagesState
@@ -31,6 +35,7 @@ import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.FontScreen
 import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
+import io.github.whywood.deepdeep.ui.settings.PermissionScreen
 import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
@@ -89,6 +94,7 @@ internal fun AppRouteContent(
     onOpenFile: (String) -> Unit = {},
     onOpenAssistantSettings: () -> Unit = {},
 ) {
+    val privilegeState by dependencies.privilege.state.collectAsStateWithLifecycle()
     when (destination) {
         AppDestination.Chat -> Box(Modifier.fillMaxSize())
 
@@ -115,6 +121,8 @@ internal fun AppRouteContent(
             onOpenAssistant = onOpenAssistantSettings,
             onOpenProviders = { navigator.push(AppDestination.Providers) },
             onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
+            onOpenPermission = { navigator.push(AppDestination.Permission) },
+            privilegeLevel = privilegeState.effective,
             onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
             onOpenFonts = { navigator.push(AppDestination.Fonts) },
             onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
@@ -130,7 +138,6 @@ internal fun AppRouteContent(
         )
 
         AppDestination.RuntimeSettings -> {
-            val rootEnabled by dependencies.rootEnabled.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }
             LaunchedEffect(linuxState) { dependencies.devPackageManager.refresh() }
             RuntimeSettingsScreen(
@@ -139,8 +146,6 @@ internal fun AppRouteContent(
                 linuxEnabled = linuxEnabled,
                 sharedStorageEnabled = sharedStorageEnabled,
                 devPackages = devPackages,
-                rootEnabled = rootEnabled,
-                onRootEnabledChange = { enabled -> scope.launch { dependencies.setRootEnabled(enabled) } },
                 onBack = onBack,
                 onInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
                 onReset = {
@@ -161,6 +166,24 @@ internal fun AppRouteContent(
                 },
                 onInstallBundle = dependencies.devPackageManager::installBundle,
                 onRefreshPackages = dependencies.devPackageManager::refresh,
+            )
+        }
+
+        AppDestination.Permission -> {
+            val context = LocalContext.current
+            PermissionScreen(
+                state = privilegeState,
+                onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
+                onRefresh = { scope.launch { dependencies.privilege.refresh() } },
+                onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
+                onRequestShizukuPermission = {
+                    context.findActivity()?.let { activity ->
+                        dependencies.privilege.requestShizukuPermission(activity)
+                    }
+                },
+                onOpenShizuku = { dependencies.privilege.openShizuku(context) },
+                onOpenShizukuInstall = { dependencies.privilege.openShizukuInstall(context) },
+                onBack = onBack,
             )
         }
 
@@ -323,4 +346,13 @@ internal fun AppRouteContent(
             onBack = onBack,
         )
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }

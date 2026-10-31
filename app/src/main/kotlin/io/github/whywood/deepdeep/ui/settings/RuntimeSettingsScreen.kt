@@ -22,11 +22,9 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.DevPackagesState
-import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.shell.LinuxInstallState
@@ -38,8 +36,6 @@ fun RuntimeSettingsScreen(
     linuxEnabled: Boolean,
     sharedStorageEnabled: Boolean,
     devPackages: DevPackagesState,
-    rootEnabled: Boolean,
-    onRootEnabledChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onInstall: () -> Unit,
     onReset: () -> Unit,
@@ -93,17 +89,6 @@ fun RuntimeSettingsScreen(
                     onReset = onReset,
                     onEnabledChange = onEnabledChange,
                     onSharedStorageChange = onSharedStorageChange,
-                )
-                DdHairline()
-                DdListRow(
-                    title = stringResource(R.string.settings_root_title),
-                    trailing = {
-                        DdSwitch(
-                            checked = rootEnabled,
-                            onCheckedChange = onRootEnabledChange,
-                            modifier = Modifier.testTag("settings_root_switch"),
-                        )
-                    },
                 )
             }
             Spacer(Modifier.height(24.dp))

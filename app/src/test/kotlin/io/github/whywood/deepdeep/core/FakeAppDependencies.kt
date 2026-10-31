@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
@@ -86,6 +87,8 @@ internal class FakeAppDependencies(
     override val mcpOAuthService: McpOAuthService get() = unavailable("mcpOAuthService")
 
     override val workshopAgentService: WorkshopAgentService get() = unavailable("workshopAgentService")
+
+    override val privilege: PrivilegeController get() = unavailable("privilege")
 
     private fun unavailable(member: String): Nothing =
         error("FakeAppDependencies.$member 不可用；测试只应访问已注入的成员")

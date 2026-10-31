@@ -166,7 +166,6 @@
     <string name="settings_background_job_wake">后台任务完成时唤醒</string>
     <string name="settings_oauth_manual_hint">浏览器没有自动返回？也可以手动粘贴授权码或回调链接。</string>
     <string name="settings_new_chat_model">新会话默认模型</string>
-    <string name="settings_root_title">Root 能力</string>
     <string name="settings_assistant">系统助手</string>
     <string name="assistant_settings_title">系统助手</string>
     <string name="assistant_settings_role">默认助手</string>
@@ -176,4 +175,5 @@
     <string name="assistant_settings_power_unavailable">系统没有这个设置页</string>
     <string name="assistant_settings_default_apps">默认应用设置</string>
     <string name="assistant_settings_default_apps_value">把语音助手和语音输入设为 DeepDeep</string>
+    <string name="settings_privilege">权限</string>
 </resources>
