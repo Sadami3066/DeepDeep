@@ -11,7 +11,6 @@
 
     <string name="plugin_virtual_screen_action_start">启动虚拟屏幕</string>
     <string name="plugin_virtual_screen_action_stop">停止虚拟屏幕</string>
-    <string name="plugin_virtual_screen_action_view">查看屏幕</string>
 
     <string name="plugin_virtual_screen_detail_state">状态</string>
     <string name="plugin_virtual_screen_detail_resolution">分辨率</string>
@@ -25,12 +24,4 @@
     <string name="plugin_virtual_screen_backend_root">Root</string>
     <string name="plugin_virtual_screen_backend_adb">ADB</string>
 
-    <string name="virtual_screen_viewer_title">虚拟屏幕</string>
-    <string name="virtual_screen_viewer_back">返回</string>
-    <string name="virtual_screen_viewer_stop">停止</string>
-    <string name="virtual_screen_viewer_start">启动</string>
-    <string name="virtual_screen_viewer_offline">虚拟屏幕未启动</string>
-    <string name="virtual_screen_viewer_starting">正在启动虚拟屏幕…</string>
-    <string name="virtual_screen_viewer_waiting">正在等待画面…</string>
-    <string name="virtual_screen_viewer_unavailable">虚拟屏引擎未就绪，请从插件页打开</string>
 </resources>

@@ -76,11 +76,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <activity
-            android:name=".vscreen.VirtualScreenActivity"
-            android:exported="false"
-            android:launchMode="singleTop" />
-
         <receiver
             android:name=".adb.AdbPairingReceiver"
             android:exported="false" />

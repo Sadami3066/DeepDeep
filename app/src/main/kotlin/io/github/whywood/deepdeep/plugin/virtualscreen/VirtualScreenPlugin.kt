@@ -77,14 +77,12 @@ class VirtualScreenPlugin(
         } else {
             add(PluginAction(ACTION_START, R.string.plugin_virtual_screen_action_start))
         }
-        add(PluginAction(ACTION_VIEW, R.string.plugin_virtual_screen_action_view))
     }
 
     override suspend fun runAction(actionId: String, ui: PluginUi) {
         when (actionId) {
             ACTION_START -> engine.start()
             ACTION_STOP -> engine.stop()
-            ACTION_VIEW -> engine.openViewer(context)
         }
     }
 
@@ -131,7 +129,6 @@ class VirtualScreenPlugin(
     private companion object {
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
-        const val ACTION_VIEW = "view"
     }
 }
 

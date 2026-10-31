@@ -25,13 +25,10 @@
     <string name="floating_panel_running">正在运行</string>
     <string name="floating_panel_questions">待回答</string>
     <string name="floating_panel_completed">已完成</string>
-    <string name="floating_panel_virtual_screen">虚拟屏幕</string>
-    <string name="floating_panel_virtual_online">在线 · %1$d×%2$d</string>
-    <string name="floating_panel_virtual_starting">启动中…</string>
-    <string name="floating_panel_virtual_failed">异常</string>
-    <string name="floating_panel_virtual_offline">未启动</string>
-    <string name="floating_panel_virtual_preview_waiting">等待画面…</string>
-    <string name="floating_panel_virtual_preview_open">点按查看</string>
+    <string name="floating_preview_offline">虚拟屏未运行</string>
+    <string name="floating_preview_starting">虚拟屏启动中…</string>
+    <string name="floating_preview_failed">虚拟屏启动失败</string>
+    <string name="floating_preview_waiting">等待画面…</string>
     <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有会话动态</string>
 
     <string name="floating_activity_thinking">正在思考…</string>

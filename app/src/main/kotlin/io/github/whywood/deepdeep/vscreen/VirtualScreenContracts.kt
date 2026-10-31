@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.vscreen
 
-import android.content.Context
 import android.graphics.Bitmap
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,6 +42,4 @@ interface VirtualScreenController {
     suspend fun text(value: String): VirtualScreenResult
 
     suspend fun screenshot(): ByteArray?
-
-    fun openViewer(context: Context)
 }

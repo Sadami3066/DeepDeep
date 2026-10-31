@@ -11,7 +11,6 @@
 
     <string name="plugin_virtual_screen_action_start">Start virtual screen</string>
     <string name="plugin_virtual_screen_action_stop">Stop virtual screen</string>
-    <string name="plugin_virtual_screen_action_view">View screen</string>
 
     <string name="plugin_virtual_screen_detail_state">State</string>
     <string name="plugin_virtual_screen_detail_resolution">Resolution</string>
@@ -25,12 +24,4 @@
     <string name="plugin_virtual_screen_backend_root">Root</string>
     <string name="plugin_virtual_screen_backend_adb">ADB</string>
 
-    <string name="virtual_screen_viewer_title">Virtual screen</string>
-    <string name="virtual_screen_viewer_back">Back</string>
-    <string name="virtual_screen_viewer_stop">Stop</string>
-    <string name="virtual_screen_viewer_start">Start</string>
-    <string name="virtual_screen_viewer_offline">Virtual screen is not running</string>
-    <string name="virtual_screen_viewer_starting">Starting the virtual screen…</string>
-    <string name="virtual_screen_viewer_waiting">Waiting for frames…</string>
-    <string name="virtual_screen_viewer_unavailable">Virtual screen engine is not ready, open it from the plugin page</string>
 </resources>

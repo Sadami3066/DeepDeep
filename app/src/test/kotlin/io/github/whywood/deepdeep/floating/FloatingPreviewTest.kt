@@ -58,4 +58,40 @@ class FloatingPreviewTest {
         )
         assertEquals(online, floatingStableVirtualScreenState(online))
     }
+
+    @Test
+    fun ratioUsesOnlineDimensions() {
+        val online = VirtualScreenState.Online(
+            displayId = 3,
+            width = 720,
+            height = 1280,
+            backend = "adb",
+        )
+        assertEquals(0.5625f, floatingPreviewRatio(online), 0.0001f)
+    }
+
+    @Test
+    fun ratioFallsBackForNonOnlineStates() {
+        assertEquals(9f / 16f, floatingPreviewRatio(VirtualScreenState.Offline), 0.0001f)
+        assertEquals(9f / 16f, floatingPreviewRatio(VirtualScreenState.Starting), 0.0001f)
+        assertEquals(9f / 16f, floatingPreviewRatio(VirtualScreenState.Failed("boom")), 0.0001f)
+    }
+
+    @Test
+    fun ratioFallsBackForInvalidOnlineDimensions() {
+        val online = VirtualScreenState.Online(
+            displayId = 3,
+            width = 0,
+            height = 1280,
+            backend = "adb",
+        )
+        assertEquals(9f / 16f, floatingPreviewRatio(online), 0.0001f)
+    }
+
+    @Test
+    fun previewEnabledOnlyWhileWindowShownAndPreviewOpen() {
+        assertTrue(floatingPreviewEnabled(shown = true, previewOpen = true))
+        assertFalse(floatingPreviewEnabled(shown = false, previewOpen = true))
+        assertFalse(floatingPreviewEnabled(shown = true, previewOpen = false))
+    }
 }

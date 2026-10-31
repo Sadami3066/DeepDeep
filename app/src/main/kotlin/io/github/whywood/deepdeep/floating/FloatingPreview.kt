@@ -30,3 +30,16 @@ internal fun floatingPreviewBitmap(frame: Bitmap?, targetWidth: Int): Bitmap? {
         }
     }.getOrNull()?.takeUnless { it.isRecycled }
 }
+
+const val FLOATING_PREVIEW_DEFAULT_RATIO = 9f / 16f
+
+fun floatingPreviewRatio(state: VirtualScreenState): Float {
+    val online = state as? VirtualScreenState.Online ?: return FLOATING_PREVIEW_DEFAULT_RATIO
+    if (online.width <= 0 || online.height <= 0) return FLOATING_PREVIEW_DEFAULT_RATIO
+    return online.width.toFloat() / online.height.toFloat()
+}
+
+fun floatingPreviewEnabled(
+    shown: Boolean,
+    previewOpen: Boolean,
+): Boolean = shown && previewOpen

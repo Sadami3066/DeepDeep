@@ -25,13 +25,10 @@
     <string name="floating_panel_running">Running</string>
     <string name="floating_panel_questions">Questions</string>
     <string name="floating_panel_completed">Completed</string>
-    <string name="floating_panel_virtual_screen">Virtual screen</string>
-    <string name="floating_panel_virtual_online">Online · %1$d×%2$d</string>
-    <string name="floating_panel_virtual_starting">Starting…</string>
-    <string name="floating_panel_virtual_failed">Error</string>
-    <string name="floating_panel_virtual_offline">Not started</string>
-    <string name="floating_panel_virtual_preview_waiting">Waiting for screen…</string>
-    <string name="floating_panel_virtual_preview_open">Tap to view</string>
+    <string name="floating_preview_offline">Virtual screen is off</string>
+    <string name="floating_preview_starting">Starting virtual screen…</string>
+    <string name="floating_preview_failed">Virtual screen failed</string>
+    <string name="floating_preview_waiting">Waiting for frames…</string>
     <string name="floating_panel_empty">The whale is dozing — no session activity</string>
 
     <string name="floating_activity_thinking">Thinking…</string>

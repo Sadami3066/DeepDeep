@@ -129,4 +129,103 @@ class FloatingPlacementTest {
         assertTrue(placement.arrowOffset >= arrowInset)
         assertTrue(placement.arrowOffset <= 1100 - arrowInset)
     }
+
+    @Test
+    fun previewSizeFollowsScreenAspectRatio() {
+        val size = floatingPreviewSize(width = 396, aspectRatio = 0.5f, maxHeight = 1_000)
+        assertEquals(396, size.width)
+        assertEquals(792, size.height)
+    }
+
+    @Test
+    fun previewSizeCapsHeightAndShrinksWidth() {
+        val size = floatingPreviewSize(width = 396, aspectRatio = 0.5f, maxHeight = 500)
+        assertEquals(250, size.width)
+        assertEquals(500, size.height)
+    }
+
+    @Test
+    fun previewSizeFallsBackToDefaultRatio() {
+        val zero = floatingPreviewSize(width = 360, aspectRatio = 0f, maxHeight = 4_000)
+        val negative = floatingPreviewSize(width = 360, aspectRatio = -1f, maxHeight = 4_000)
+        assertEquals(640, zero.height)
+        assertEquals(zero, negative)
+    }
+
+    @Test
+    fun previewSitsCenteredAboveBubble() {
+        val placement = floatingPlacePreview(
+            bubble = FloatingBubblePosition(x = 880, y = 1_628),
+            bubbleSize = bubbleSize,
+            windowWidth = 100,
+            windowHeight = 200,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+        )
+        assertEquals(930, placement.x)
+        assertEquals(1_410, placement.y)
+    }
+
+    @Test
+    fun previewDropsBelowBubbleWhenTopRoomIsMissing() {
+        val placement = floatingPlacePreview(
+            bubble = FloatingBubblePosition(x = 880, y = 100),
+            bubbleSize = bubbleSize,
+            windowWidth = 100,
+            windowHeight = 200,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+        )
+        assertEquals(318, placement.y)
+    }
+
+    @Test
+    fun previewStaysInsideScreenNearLeftEdge() {
+        val placement = floatingPlacePreview(
+            bubble = FloatingBubblePosition(x = 0, y = 1_628),
+            bubbleSize = bubbleSize,
+            windowWidth = 400,
+            windowHeight = 200,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+        )
+        assertEquals(margin, placement.x)
+    }
+
+    @Test
+    fun previewStaysInsideScreenNearRightEdge() {
+        val placement = floatingPlacePreview(
+            bubble = FloatingBubblePosition(x = 880, y = 1_628),
+            bubbleSize = bubbleSize,
+            windowWidth = 400,
+            windowHeight = 200,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+        )
+        assertEquals(screenWidth - 400 - margin, placement.x)
+    }
+
+    @Test
+    fun previewFallsBackInsideWhenNeitherSideHasRoom() {
+        val placement = floatingPlacePreview(
+            bubble = FloatingBubblePosition(x = 250, y = 300),
+            bubbleSize = bubbleSize,
+            windowWidth = 300,
+            windowHeight = 300,
+            screenWidth = 500,
+            screenHeight = 800,
+            edgeMargin = margin,
+            gap = gap,
+        )
+        assertEquals(176, placement.x)
+        assertEquals(476, placement.y)
+    }
 }

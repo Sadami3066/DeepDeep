@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.vscreen
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -253,12 +252,6 @@ class VirtualScreenEngine(
                 screenshotGate.close(epoch)
             }
         }
-    }
-
-    override fun openViewer(context: Context) {
-        val intent = Intent(context, VirtualScreenActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { context.startActivity(intent) }
     }
 
     private suspend fun startLocked(): VirtualScreenResult {

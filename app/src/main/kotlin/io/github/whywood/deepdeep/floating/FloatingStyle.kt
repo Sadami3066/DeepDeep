@@ -18,7 +18,13 @@ internal val FloatingCardCorner = 20.dp
 internal val FloatingArrowWidth = 20.dp
 internal val FloatingArrowHeight = 9.dp
 internal val FloatingPanelWidth = 300.dp
-internal val FloatingVirtualPreviewWidth = 96.dp
+internal val FloatingVirtualPreviewWidth = 132.dp
+internal val FloatingVirtualPreviewPadding = 12.dp
+internal val FloatingVirtualPreviewChipHeight = 46.dp
+internal val FloatingVirtualPreviewCorner = 14.dp
+internal const val FloatingVirtualPreviewMaxHeightRatio = 0.45f
+internal val FloatingVirtualPreviewChipBackground = Color(0xE60B1220)
+internal val FloatingVirtualPreviewChipText = Color(0xF2FFFFFF)
 internal const val FloatingCardMaxHeightRatio = 0.45f
 internal const val FloatingPanelMaxHeightRatio = 0.70f
 

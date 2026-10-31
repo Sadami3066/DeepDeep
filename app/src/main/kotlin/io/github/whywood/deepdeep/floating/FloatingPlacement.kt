@@ -106,3 +106,53 @@ fun floatingPlaceSurface(
         )
     }
 }
+
+data class FloatingPreviewSize(
+    val width: Int,
+    val height: Int,
+)
+
+data class FloatingPreviewPlacement(
+    val x: Int,
+    val y: Int,
+)
+
+fun floatingPreviewSize(
+    width: Int,
+    aspectRatio: Float,
+    maxHeight: Int,
+): FloatingPreviewSize {
+    val ratio = aspectRatio.takeIf { it > 0f } ?: FLOATING_PREVIEW_DEFAULT_RATIO
+    val height = (width / ratio).roundToInt().coerceAtLeast(1)
+    return if (height <= maxHeight) {
+        FloatingPreviewSize(width, height)
+    } else {
+        val cappedHeight = maxHeight.coerceAtLeast(1)
+        FloatingPreviewSize((cappedHeight * ratio).roundToInt().coerceAtLeast(1), cappedHeight)
+    }
+}
+
+fun floatingPlacePreview(
+    bubble: FloatingBubblePosition,
+    bubbleSize: Int,
+    windowWidth: Int,
+    windowHeight: Int,
+    screenWidth: Int,
+    screenHeight: Int,
+    edgeMargin: Int,
+    gap: Int,
+): FloatingPreviewPlacement {
+    val maxX = (screenWidth - windowWidth - edgeMargin).coerceAtLeast(edgeMargin)
+    val centeredX = bubble.x + bubbleSize / 2 - windowWidth / 2
+    val aboveY = bubble.y - gap - windowHeight
+    val belowY = bubble.y + bubbleSize + gap
+    val y = when {
+        aboveY >= edgeMargin -> aboveY
+        belowY + windowHeight <= screenHeight - edgeMargin -> belowY
+        else -> (screenHeight - windowHeight - edgeMargin).coerceAtLeast(edgeMargin)
+    }
+    return FloatingPreviewPlacement(
+        x = centeredX.coerceIn(edgeMargin, maxX),
+        y = y,
+    )
+}

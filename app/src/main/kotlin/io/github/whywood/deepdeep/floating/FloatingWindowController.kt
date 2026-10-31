@@ -70,6 +70,7 @@ class FloatingWindowController(
     private val windowContext = LanguagePreferences.wrap(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
+    private val previewOpen = MutableStateFlow(false)
     private val appForeground = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(FloatingWindowSettings())
     private val themeMode = MutableStateFlow(ThemeMode.SYSTEM)
@@ -134,11 +135,13 @@ class FloatingWindowController(
         scope.launch {
             AppVisibility.foregroundFlow.collect { foreground ->
                 appForeground.value = foreground
+                if (foreground && previewOpen.value) previewOpen.value = false
                 requestRender()
             }
         }
         scope.launch { feed.state.collect { requestRender() } }
         scope.launch { panelOpen.collect { requestRender() } }
+        scope.launch { previewOpen.collect { requestRender() } }
         scope.launch { theme.collect { mode -> themeMode.value = mode } }
         scope.launch { now.collect { requestRender() } }
         scope.launch { virtualScreenState.collect { requestRender() } }
@@ -212,6 +215,7 @@ class FloatingWindowController(
         ticker?.cancel()
         ticker = null
         panelOpen.value = false
+        previewOpen.value = false
     }
 
     private fun updateWindows() {
@@ -232,7 +236,7 @@ class FloatingWindowController(
             y = bubbleWindowPosition.y + px(FloatingBubbleWindowPadding),
         )
         val feedState = feed.state.value
-        val card = if (panelOpen.value || appForeground.value) {
+        val card = if (panelOpen.value || previewOpen.value || appForeground.value) {
             null
         } else {
             floatingEventCard(feedState, System.currentTimeMillis())
@@ -243,7 +247,6 @@ class FloatingWindowController(
                     runs = feedState.runs,
                     questions = feedState.questions,
                     completed = floatingVisibleCompletions(feedState),
-                    virtualScreen = virtualScreenState.value,
                     now = now.value,
                 ),
                 surfaceWidth = FloatingPanelWidth,
@@ -252,6 +255,12 @@ class FloatingWindowController(
                 screenHeight = screenHeight,
                 bubbleVisual = bubbleVisual,
                 sessionTitle = "",
+            )
+
+            previewOpen.value -> showPreviewWindow(
+                screenWidth = screenWidth,
+                screenHeight = screenHeight,
+                bubbleVisual = bubbleVisual,
             )
 
             card != null -> showSurfaceWindow(
@@ -266,6 +275,49 @@ class FloatingWindowController(
 
             else -> removeSurfaceWindow()
         }
+    }
+
+    private fun showPreviewWindow(
+        screenWidth: Int,
+        screenHeight: Int,
+        bubbleVisual: FloatingBubblePosition,
+    ) {
+        if (surfaceView == null) createSurfaceWindow()
+        val view = surfaceView ?: return
+        val params = surfaceParams ?: return
+        val state = virtualScreenState.value
+        val padding = px(FloatingVirtualPreviewPadding)
+        val size = if (state is VirtualScreenState.Online) {
+            floatingPreviewSize(
+                width = px(FloatingVirtualPreviewWidth),
+                aspectRatio = floatingPreviewRatio(state),
+                maxHeight = (screenHeight * FloatingVirtualPreviewMaxHeightRatio).toInt() - padding * 2,
+            )
+        } else {
+            FloatingPreviewSize(
+                width = px(FloatingVirtualPreviewWidth),
+                height = px(FloatingVirtualPreviewChipHeight),
+            )
+        }
+        val windowWidth = size.width + padding * 2
+        val windowHeight = size.height + padding * 2
+        val placement = floatingPlacePreview(
+            bubble = bubbleVisual,
+            bubbleSize = px(FloatingBubbleSize),
+            windowWidth = windowWidth,
+            windowHeight = windowHeight,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = px(FloatingEdgeMargin),
+            gap = px(FloatingSurfaceGap),
+        )
+        params.width = windowWidth
+        params.height = windowHeight
+        params.gravity = Gravity.LEFT or Gravity.TOP
+        params.x = placement.x
+        params.y = placement.y
+        runCatching { windowManager.updateViewLayout(view, params) }
+        surfaceUi.value = FloatingSurfaceUi.Preview
     }
 
     private fun showSurfaceWindow(
@@ -310,6 +362,8 @@ class FloatingWindowController(
             )
 
             is FloatingSurfaceUi.Panel -> ui.copy(maxHeightPx = placement.maxContentHeight)
+
+            is FloatingSurfaceUi.Preview -> ui
         }
     }
 
@@ -338,25 +392,25 @@ class FloatingWindowController(
                         },
                     )
 
-                    is FloatingSurfaceUi.Panel -> {
+                    is FloatingSurfaceUi.Panel -> FloatingPanel(
+                        runs = value.runs,
+                        questions = value.questions,
+                        completed = value.completed,
+                        now = value.now,
+                        maxHeight = with(density) { value.maxHeightPx.toDp() },
+                        onOpenRun = { run -> openSession(run.sessionId) },
+                        onOpenQuestion = { pending -> openSession(pending.sessionId) },
+                        onOpenCompleted = { completion ->
+                            feed.removeCompleted(completion.key)
+                            openSession(completion.sessionId)
+                        },
+                        onCollapse = { panelOpen.value = false },
+                    )
+
+                    is FloatingSurfaceUi.Preview -> {
+                        val state by virtualScreenState.collectAsState()
                         val preview by previewFrame.collectAsState()
-                        FloatingPanel(
-                            runs = value.runs,
-                            questions = value.questions,
-                            completed = value.completed,
-                            virtualScreen = value.virtualScreen,
-                            virtualPreview = preview,
-                            now = value.now,
-                            maxHeight = with(density) { value.maxHeightPx.toDp() },
-                            onOpenRun = { run -> openSession(run.sessionId) },
-                            onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                            onOpenCompleted = { completion ->
-                                feed.removeCompleted(completion.key)
-                                openSession(completion.sessionId)
-                            },
-                            onOpenVirtualScreen = { virtualScreen?.openViewer(context) },
-                            onCollapse = { panelOpen.value = false },
-                        )
+                        FloatingVirtualPreview(state = state, frame = preview)
                     }
 
                     null -> Unit
@@ -370,7 +424,7 @@ class FloatingWindowController(
             )
             onTouch = { event ->
                 if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                    onSurfaceOutsideTouch()
+                    onSurfaceOutsideTouch(event)
                     true
                 } else {
                     false
@@ -506,6 +560,7 @@ class FloatingWindowController(
                 if (!dragging && hypot(dx.toDouble(), dy.toDouble()) > touchSlop()) {
                     dragging = true
                     cancelLongPress()
+                    if (previewOpen.value) previewOpen.value = false
                 }
                 if (dragging) {
                     moveBubble(touchDownWindowX + dx.toInt(), touchDownWindowY + dy.toInt())
@@ -538,19 +593,37 @@ class FloatingWindowController(
     }
 
     private fun onBubbleClick() {
+        if (previewOpen.value) previewOpen.value = false
         panelOpen.value = true
     }
 
     private fun onBubbleLongPress() {
         longPressFired = true
-        panelOpen.value = false
-        AssistantEntry.openOverlay(context)
+        if (previewOpen.value) {
+            previewOpen.value = false
+        } else {
+            panelOpen.value = false
+            previewOpen.value = true
+        }
     }
 
-    private fun onSurfaceOutsideTouch() {
+    private fun onSurfaceOutsideTouch(event: MotionEvent) {
+        if (previewOpen.value) {
+            if (!hitsBubbleWindow(event)) previewOpen.value = false
+            return
+        }
         if (panelOpen.value) return
         val card = floatingEventCard(feed.state.value, System.currentTimeMillis()) ?: return
         feed.dismissCard(card.key)
+    }
+
+    private fun hitsBubbleWindow(event: MotionEvent): Boolean {
+        val frame = contentFrame.value
+        val size = px(FloatingBubbleWindowSize)
+        val left = bubbleWindowPosition.x + frame.left
+        val top = bubbleWindowPosition.y + frame.top
+        return event.rawX >= left && event.rawX <= left + size &&
+            event.rawY >= top && event.rawY <= top + size
     }
 
     private fun moveBubble(x: Int, y: Int) {
@@ -660,7 +733,7 @@ class FloatingWindowController(
 
     private fun updatePreview() {
         val controller = virtualScreen
-        if (!shown || !panelOpen.value || controller == null) {
+        if (controller == null || !floatingPreviewEnabled(shown, previewOpen.value)) {
             stopPreview()
             return
         }
@@ -800,8 +873,9 @@ private sealed interface FloatingSurfaceUi {
         val runs: List<FloatingRun>,
         val questions: List<PendingQuestion>,
         val completed: List<FloatingCompletion>,
-        val virtualScreen: VirtualScreenState?,
         val now: Long,
         val maxHeightPx: Int = 0,
     ) : FloatingSurfaceUi
+
+    data object Preview : FloatingSurfaceUi
 }
