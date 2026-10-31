@@ -436,7 +436,7 @@ internal fun AssistantOverlayScreen(
                         switcherOpen = true
                     },
                     maxHeight = panelMaxHeight,
-                    snapHeight = imeVisible || imeChanged,
+                    snapHeight = imeVisible || imeChanged || state.conversation.sending,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

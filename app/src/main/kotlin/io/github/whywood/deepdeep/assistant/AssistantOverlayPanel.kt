@@ -67,8 +67,6 @@ import io.github.whywood.deepdeep.ui.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filter
 
 @Composable
 internal fun AssistantOverlayPanel(
@@ -132,15 +130,20 @@ internal fun AssistantOverlayPanel(
         label = "overlay-panel-height",
     )
 
-    LaunchedEffect(running, state.sessionId, messages.isEmpty()) {
-        stableContentHeightPx = -1
-        if (running || messages.isEmpty()) return@LaunchedEffect
-        snapshotFlow { contentHeightPx }
-            .filter { it >= 0 }
-            .collectLatest { height ->
-                delay(250)
-                stableContentHeightPx = height
-            }
+    LaunchedEffect(running) {
+        if (running) stableContentHeightPx = -1
+    }
+    LaunchedEffect(state.sessionId, messages.size) {
+        if (messages.isEmpty()) {
+            stableContentHeightPx = -1
+            return@LaunchedEffect
+        }
+        if (running) return@LaunchedEffect
+        delay(250)
+        if (!running) {
+            val measured = contentHeightPx
+            stableContentHeightPx = if (measured >= 0) measured else -1
+        }
     }
 
     LaunchedEffect(state.sessionId, state.conversation.loaded) {
