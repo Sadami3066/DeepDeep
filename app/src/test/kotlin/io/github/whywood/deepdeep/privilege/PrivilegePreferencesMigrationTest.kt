@@ -17,20 +17,26 @@ class PrivilegePreferencesMigrationTest {
     @Test
     fun storedLevelWinsOverLegacyFlag() {
         assertEquals(PrivilegeLevel.NORMAL, resolveMigratedLevel(PrivilegeLevel.NORMAL, legacyRootEnabled = true))
-        assertEquals(PrivilegeLevel.SHIZUKU, resolveMigratedLevel(PrivilegeLevel.SHIZUKU, legacyRootEnabled = false))
+        assertEquals(PrivilegeLevel.ADB, resolveMigratedLevel(PrivilegeLevel.ADB, legacyRootEnabled = false))
         assertEquals(PrivilegeLevel.ROOT, resolveMigratedLevel(PrivilegeLevel.ROOT, legacyRootEnabled = false))
     }
 
     @Test
     fun parseKnownLevels() {
         assertEquals(PrivilegeLevel.NORMAL, parsePrivilegeLevel("NORMAL"))
-        assertEquals(PrivilegeLevel.SHIZUKU, parsePrivilegeLevel("SHIZUKU"))
+        assertEquals(PrivilegeLevel.ADB, parsePrivilegeLevel("ADB"))
         assertEquals(PrivilegeLevel.ROOT, parsePrivilegeLevel("ROOT"))
+    }
+
+    @Test
+    fun storedShizukuLevelMigratesToAdb() {
+        assertEquals(PrivilegeLevel.ADB, parsePrivilegeLevel("SHIZUKU"))
     }
 
     @Test
     fun parseUnknownLevelsFallsBackToNormal() {
         assertEquals(PrivilegeLevel.NORMAL, parsePrivilegeLevel("ROOTED"))
+        assertEquals(PrivilegeLevel.NORMAL, parsePrivilegeLevel("shizuku"))
         assertEquals(PrivilegeLevel.NORMAL, parsePrivilegeLevel(""))
     }
 }

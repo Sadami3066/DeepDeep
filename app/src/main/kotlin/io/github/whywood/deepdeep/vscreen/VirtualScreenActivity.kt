@@ -192,7 +192,7 @@ private fun ViewerFooter(state: VirtualScreenState) {
     val backend = online?.backend?.let { backend ->
         when (backend) {
             PrivilegedLauncher.BACKEND_ROOT -> stringResource(R.string.plugin_virtual_screen_backend_root)
-            PrivilegedLauncher.BACKEND_SHIZUKU -> stringResource(R.string.plugin_virtual_screen_backend_shizuku)
+            PrivilegedLauncher.BACKEND_ADB -> stringResource(R.string.plugin_virtual_screen_backend_adb)
             else -> backend
         }
     } ?: stringResource(R.string.plugin_virtual_screen_value_offline)

@@ -72,8 +72,10 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.webkit)
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
+    implementation(libs.libadb)
+    implementation(libs.hiddenapibypass)
+    implementation(libs.bcpkix)
+    implementation(libs.okhttp)
 
     debugImplementation(libs.compose.tooling)
     testImplementation(libs.junit)

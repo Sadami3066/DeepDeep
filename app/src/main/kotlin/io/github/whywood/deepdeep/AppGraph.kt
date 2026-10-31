@@ -33,10 +33,11 @@ import io.github.whywood.deepdeep.plugin.internal.SchedulePlugin
 import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.adb.AdbBootstrap
+import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
-import io.github.whywood.deepdeep.privilege.ShizukuClient
 import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
@@ -62,7 +63,7 @@ import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.rootShellTool
-import io.github.whywood.deepdeep.runtime.shizukuShellTool
+import io.github.whywood.deepdeep.runtime.adbShellTool
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
@@ -124,12 +125,12 @@ class AppGraph(context: Context) : AppDependencies {
     override val attachmentStore = FileAttachmentStore(appContext, homeDir)
     override val linuxSettings = LinuxSettingsStore(appContext)
     private val rootShell = RootShell()
-    private val shizukuClient by lazy { ShizukuClient(appContext) }
+    val adbBridge: AdbBootstrap = AdbBridgeRuntime.install(appContext)
     private val privilegeImpl by lazy {
         PrivilegeControllerImpl(
             preferences = PrivilegePreferences(appContext) { linuxSettings.isRootEnabled() },
             rootShell = rootShell,
-            shizukuClient = shizukuClient,
+            adbBridge = adbBridge,
             scope = scope,
         ) { host.reconfigure() }
     }
@@ -239,6 +240,7 @@ class AppGraph(context: Context) : AppDependencies {
                 VirtualScreenPlugin(
                     context = appContext,
                     privilege = privilege,
+                    adb = adbBridge,
                 ),
                 ArrangePlugin(context = appContext),
                 MiCloudPlugin(
@@ -291,31 +293,34 @@ class AppGraph(context: Context) : AppDependencies {
                 { _, binding ->
                     buildList {
                         add(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() })
-                        when (privilege.state.value.effective) {
-                            PrivilegeLevel.NORMAL -> Unit
-                            PrivilegeLevel.ROOT -> add(
-                                rootShellTool(
-                                    executor = RootCommandExecutor { command, timeoutMillis ->
-                                        val result = rootShell.execute(command, timeoutMillis)
-                                        RootCommandResult(
-                                            exitCode = result.exitCode,
-                                            stdout = result.stdout,
-                                            stderr = result.stderr,
-                                            truncated = result.truncated,
-                                        )
-                                    },
-                                    enabled = { privilege.state.value.effective == PrivilegeLevel.ROOT },
-                                    status = { privilege.state.value.root.toRootToolStatus() },
-                                ),
-                            )
+                        for (backend in availableShellBackends()) {
+                            when (backend) {
+                                PrivilegeLevel.ROOT -> add(
+                                    rootShellTool(
+                                        executor = RootCommandExecutor { command, timeoutMillis ->
+                                            val result = rootShell.execute(command, timeoutMillis)
+                                            RootCommandResult(
+                                                exitCode = result.exitCode,
+                                                stdout = result.stdout,
+                                                stderr = result.stderr,
+                                                truncated = result.truncated,
+                                            )
+                                        },
+                                        enabled = { PrivilegeLevel.ROOT in privilege.state.value.availableBackends },
+                                        status = { privilege.state.value.root.toRootToolStatus() },
+                                    ),
+                                )
 
-                            PrivilegeLevel.SHIZUKU -> add(
-                                shizukuShellTool(
-                                    executor = privilegeImpl.shizukuExecutor,
-                                    enabled = { privilege.state.value.effective == PrivilegeLevel.SHIZUKU },
-                                    status = { shizukuToolStatus() },
-                                ),
-                            )
+                                PrivilegeLevel.ADB -> add(
+                                    adbShellTool(
+                                        executor = privilegeImpl.adbExecutor,
+                                        enabled = { PrivilegeLevel.ADB in privilege.state.value.availableBackends },
+                                        status = { adbToolStatus() },
+                                    ),
+                                )
+
+                                PrivilegeLevel.NORMAL -> Unit
+                            }
                         }
                     }
                 },
@@ -436,11 +441,25 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
-    private fun shizukuToolStatus(): RootToolStatus {
-        val shizuku = privilege.state.value.shizuku
+    private fun availableShellBackends(): List<PrivilegeLevel> {
+        val state = privilege.state.value
+        if (state.selected == PrivilegeLevel.NORMAL) return emptyList()
+        val available = state.availableBackends
+        if (available.isEmpty()) return emptyList()
+        return if (state.selected in available) {
+            listOf(state.selected) + available.filter { it != state.selected }
+        } else {
+            available.toList()
+        }
+    }
+
+    private fun adbToolStatus(): RootToolStatus {
+        val adb = privilege.state.value.adb
         return when {
-            shizuku.granted -> RootToolStatus.Granted
-            shizuku.running -> RootToolStatus.NotRequested
+            adb.daemon -> RootToolStatus.Granted
+            adb.busy -> RootToolStatus.NotRequested
+            adb.error != null -> RootToolStatus.Error
+            adb.paired -> RootToolStatus.NotRequested
             else -> RootToolStatus.Unsupported
         }
     }

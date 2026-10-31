@@ -1,123 +1,93 @@
 package io.github.whywood.deepdeep.vscreen
 
 import android.content.Context
-import android.content.pm.PackageManager
+import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
-import io.github.whywood.deepdeep.shell.RootStatus
-import java.io.FileInputStream
-import moe.shizuku.server.IRemoteProcess
-import moe.shizuku.server.IShizukuService
-import rikka.shizuku.Shizuku
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class PrivilegedLauncher(
-    private val context: Context,
+    context: Context,
+    private val adb: AdbBootstrap,
     private val privilege: PrivilegeController,
 ) {
+    private val appContext = context.applicationContext
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     fun backends(): List<String> {
         val state = privilege.state.value
-        val shizukuReady = runCatching {
-            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-        }.getOrDefault(false)
-        val rootReady = state.root == RootStatus.Granted || state.effective == PrivilegeLevel.ROOT
-        return when (state.effective) {
-            PrivilegeLevel.ROOT -> buildList {
-                add(BACKEND_ROOT)
-                if (shizukuReady) add(BACKEND_SHIZUKU)
-            }
-            PrivilegeLevel.SHIZUKU -> buildList {
-                if (shizukuReady) add(BACKEND_SHIZUKU)
-                if (rootReady) add(BACKEND_ROOT)
-            }
-            PrivilegeLevel.NORMAL -> emptyList()
+        return orderedBackends(
+            preferredBackend = preferredBackendOf(state.selected),
+            adbAvailable = PrivilegeLevel.ADB in state.availableBackends,
+            rootAvailable = PrivilegeLevel.ROOT in state.availableBackends,
+        )
+    }
+
+    suspend fun start(backend: String, port: Int, nonce: String): HelperProcess = when (backend) {
+        BACKEND_ADB -> startAdb(port, nonce)
+        BACKEND_ROOT -> startRoot(port, nonce)
+        else -> throw IllegalArgumentException("未知特权后端：$backend")
+    }
+
+    private suspend fun startAdb(port: Int, nonce: String): HelperProcess {
+        val pid = adb.startHelper(port, nonce)
+            ?: throw IllegalStateException("无线调试守护进程启动虚拟屏 helper 失败")
+        return HelperProcess(BACKEND_ADB) {
+            if (pid > 0) cleanupScope.launch { adb.killHelper(pid) }
         }
     }
 
-    fun start(backend: String, socketName: String, nonce: String): HelperProcess {
-        val command = helperCommand(socketName, nonce)
-        return when (backend) {
-            BACKEND_ROOT -> HelperProcess(
-                backend = backend,
-                process = ProcessBuilder("su", "-c", "su $SHELL_UID -c '$command'")
-                    .redirectErrorStream(true)
-                    .start(),
-            )
-            BACKEND_SHIZUKU -> startShizuku(backend, command)
-            else -> throw IllegalArgumentException("未知特权后端：$backend")
-        }
+    private fun startRoot(port: Int, nonce: String): HelperProcess {
+        val process = ProcessBuilder("su", "-c", "su $SHELL_UID -c '${helperCommand(port, nonce)}'")
+            .redirectErrorStream(true)
+            .start()
+        return HelperProcess(BACKEND_ROOT, process = process)
     }
 
-    private fun startShizuku(backend: String, command: String): HelperProcess {
-        val service = shizukuService()
-        val uid = shizukuProcessUid(service)
-        val remote = when (uid) {
-            SHELL_UID -> service.newProcess(arrayOf("/system/bin/sh", "-c", command), null, null)
-            ROOT_UID -> service.newProcess(
-                arrayOf("/system/bin/sh", "-c", "su $SHELL_UID -c '$command'"),
-                null,
-                null,
-            )
-            else -> throw IllegalStateException("Shizuku 子进程身份为 uid=$uid，无法启动 shell helper")
-        }
-        return HelperProcess(backend = backend, remote = remote)
-    }
-
-    private fun shizukuProcessUid(service: IShizukuService): Int {
-        val probed = runCatching { probeUid(service) }.getOrNull()
-        if (probed != null) return probed
-        val reported = runCatching { Shizuku.getUid() }.getOrDefault(-1)
-        if (reported >= 0) return reported
-        throw IllegalStateException("无法确认 Shizuku 子进程身份")
-    }
-
-    private fun probeUid(service: IShizukuService): Int {
-        val remote = service.newProcess(arrayOf("/system/bin/sh", "-c", "id -u"), null, null)
-        return try {
-            val descriptor = remote.inputStream
-            val output = descriptor.use { stream ->
-                FileInputStream(stream.fileDescriptor).bufferedReader().readText()
-            }
-            output.trim().toIntOrNull()
-                ?: throw IllegalStateException("无法解析 Shizuku 子进程身份：${output.trim()}")
-        } finally {
-            runCatching { remote.destroy() }
-        }
-    }
-
-    private fun shizukuService(): IShizukuService {
-        if (!runCatching { Shizuku.pingBinder() }.getOrDefault(false)) {
-            throw IllegalStateException("Shizuku 服务未连接，请先启动 Shizuku")
-        }
-        if (runCatching { Shizuku.checkSelfPermission() }.getOrDefault(-1) != PackageManager.PERMISSION_GRANTED) {
-            throw IllegalStateException("Shizuku 未授权，请在权限设置中允许 DeepDeep 使用 Shizuku")
-        }
-        val binder = runCatching { Shizuku.getBinder() }.getOrNull()
-            ?: throw IllegalStateException("Shizuku 服务未连接，请先启动 Shizuku")
-        return IShizukuService.Stub.asInterface(binder)
-    }
-
-    private fun helperCommand(socketName: String, nonce: String): String {
-        val apk = context.applicationInfo.sourceDir
+    private fun helperCommand(port: Int, nonce: String): String {
+        val apk = appContext.applicationInfo.sourceDir
         return "CLASSPATH=$apk /system/bin/setsid /system/bin/app_process /system/bin --nice-name=deepdeep-vscreen " +
-            "${VirtualScreenHelperMain::class.java.name} --socket $socketName --nonce $nonce"
+            "${VirtualScreenHelperMain::class.java.name} --port $port --nonce $nonce"
     }
 
     companion object {
+        const val BACKEND_ADB = "adb"
         const val BACKEND_ROOT = "root"
-        const val BACKEND_SHIZUKU = "shizuku"
 
         private const val SHELL_UID = 2000
-        private const val ROOT_UID = 0
     }
+}
+
+internal fun preferredBackendOf(selected: PrivilegeLevel): String? = when (selected) {
+    PrivilegeLevel.NORMAL -> null
+    PrivilegeLevel.ADB -> PrivilegedLauncher.BACKEND_ADB
+    PrivilegeLevel.ROOT -> PrivilegedLauncher.BACKEND_ROOT
+}
+
+internal fun orderedBackends(
+    preferredBackend: String?,
+    adbAvailable: Boolean,
+    rootAvailable: Boolean,
+): List<String> {
+    if (preferredBackend == null) return emptyList()
+    val available = buildList {
+        if (adbAvailable) add(PrivilegedLauncher.BACKEND_ADB)
+        if (rootAvailable) add(PrivilegedLauncher.BACKEND_ROOT)
+    }
+    if (preferredBackend !in available) return available
+    return listOf(preferredBackend) + available.filter { it != preferredBackend }
 }
 
 class HelperProcess internal constructor(
     val backend: String,
     private val process: Process? = null,
-    private val remote: IRemoteProcess? = null,
+    private val onDestroy: () -> Unit = {},
 ) {
     fun destroy() {
         runCatching { process?.destroy() }
-        runCatching { remote?.destroy() }
+        runCatching { onDestroy() }
     }
 }

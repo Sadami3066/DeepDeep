@@ -1,7 +1,9 @@
 package io.github.whywood.deepdeep.privilege
 
-import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.shell.RootShell
@@ -16,35 +18,37 @@ import kotlinx.coroutines.launch
 class PrivilegeControllerImpl(
     private val preferences: PrivilegePreferences,
     private val rootShell: RootShell,
-    private val shizukuClient: ShizukuClient,
+    private val adbBridge: AdbBootstrap,
     private val scope: CoroutineScope,
     private val onChanged: suspend () -> Unit = {},
 ) : PrivilegeController {
-    private val stateFlow = MutableStateFlow(PrivilegeState(shizuku = shizukuClient.state.value))
+    private val stateFlow = MutableStateFlow(PrivilegeState())
     override val state: StateFlow<PrivilegeState> = stateFlow.asStateFlow()
 
-    val shizukuExecutor: RootCommandExecutor = shizukuClient
+    val adbExecutor: RootCommandExecutor = RootCommandExecutor { command, timeoutMillis ->
+        adbBridge.exec(command, timeoutMillis)
+    }
 
     init {
         scope.launch {
             preferences.migrateLegacyRoot()
             val level = preferences.readLevel()
             publish { it.copy(selected = level) }
-            if (level == PrivilegeLevel.ROOT) probeRoot()
+            refreshBackends()
         }
         scope.launch {
-            shizukuClient.state.collect { shizuku -> publish { it.copy(shizuku = shizuku) } }
+            adbBridge.state.collect { bridge -> publish { it.copy(adb = bridge) } }
         }
     }
 
     override suspend fun select(level: PrivilegeLevel) {
         preferences.writeLevel(level)
         publish { it.copy(selected = level) }
-        if (level == PrivilegeLevel.ROOT) probeRoot()
+        if (level != PrivilegeLevel.NORMAL) refreshBackends()
     }
 
     override suspend fun refresh() {
-        publish { it.copy(shizuku = shizukuClient.refresh()) }
+        refreshBackends()
     }
 
     override suspend fun probeRoot(): RootStatus {
@@ -53,25 +57,39 @@ class PrivilegeControllerImpl(
         return status
     }
 
-    override fun requestShizukuPermission(activity: Activity) {
-        shizukuClient.requestPermission(activity)
+    override suspend fun connect() {
+        runCatching { adbBridge.connectAndStart() }
     }
 
-    override fun openShizuku(context: Context) {
-        shizukuClient.openApp(context)
+    override fun startPairing() {
+        scope.launch { runCatching { adbBridge.startPairing() } }
     }
 
-    override fun openShizukuInstall(context: Context) {
-        shizukuClient.openInstallPage(context)
+    override fun openWirelessDebugging(context: Context) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+    }
+
+    private suspend fun refreshBackends() {
+        runCatching { adbBridge.refreshState() }
+        val root = stateFlow.value.root
+        if (root != RootStatus.Denied && root != RootStatus.Unsupported) probeRoot()
     }
 
     private fun publish(transform: (PrivilegeState) -> PrivilegeState) {
-        var effectiveChanged = false
+        var changed = false
         stateFlow.update { current ->
             val next = transform(current).resolveEffective()
-            if (current.effective != next.effective) effectiveChanged = true
+            if (
+                current.selected != next.selected ||
+                current.effective != next.effective ||
+                current.availableBackends != next.availableBackends
+            ) {
+                changed = true
+            }
             next
         }
-        if (effectiveChanged) scope.launch { onChanged() }
+        if (changed) scope.launch { onChanged() }
     }
 }

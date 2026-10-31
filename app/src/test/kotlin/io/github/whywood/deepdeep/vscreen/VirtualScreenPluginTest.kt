@@ -7,7 +7,6 @@ import io.github.whywood.deepdeep.plugin.virtualscreen.parseSwipeCommand
 import io.github.whywood.deepdeep.plugin.virtualscreen.parseTapCommand
 import io.github.whywood.deepdeep.plugin.virtualscreen.parseTextValue
 import io.github.whywood.deepdeep.plugin.virtualscreen.virtualScreenAvailability
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -17,19 +16,12 @@ import org.junit.Test
 
 class VirtualScreenPluginTest {
     @Test
-    fun availabilityRequiresPrivilege() {
-        val unavailable = virtualScreenAvailability(PrivilegeLevel.NORMAL, "需要 Shizuku 或 Root 权限")
+    fun availabilityFollowsBackendAvailability() {
+        val reason = "需要无线调试（ADB）或 Root 权限"
+        val unavailable = virtualScreenAvailability(available = false, unavailableReason = reason)
         assertTrue(unavailable is PluginAvailability.Unavailable)
-        assertEquals(
-            "需要 Shizuku 或 Root 权限",
-            (unavailable as PluginAvailability.Unavailable).reason,
-        )
-        assertTrue(
-            virtualScreenAvailability(PrivilegeLevel.SHIZUKU, "需要 Shizuku 或 Root 权限") is PluginAvailability.Available,
-        )
-        assertTrue(
-            virtualScreenAvailability(PrivilegeLevel.ROOT, "需要 Shizuku 或 Root 权限") is PluginAvailability.Available,
-        )
+        assertEquals(reason, (unavailable as PluginAvailability.Unavailable).reason)
+        assertTrue(virtualScreenAvailability(available = true, unavailableReason = reason) is PluginAvailability.Available)
     }
 
     @Test

@@ -14,8 +14,6 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.Image
 import android.media.ImageReader
-import android.net.LocalSocket
-import android.net.LocalSocketAddress
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
@@ -34,6 +32,8 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
@@ -45,20 +45,20 @@ import kotlinx.serialization.json.put
 private const val TAG = "VScreenHelper"
 
 object VirtualScreenHelperMain {
-    private const val ARG_SOCKET = "--socket"
+    private const val ARG_PORT = "--port"
     private const val ARG_NONCE = "--nonce"
 
     @JvmStatic
     fun main(args: Array<String>) {
         runCatching { Looper.prepareMainLooper() }
-        val socketName = optionValue(args, ARG_SOCKET)
+        val port = optionValue(args, ARG_PORT)?.toIntOrNull()
         val nonce = optionValue(args, ARG_NONCE)
-        if (socketName.isNullOrBlank() || nonce.isNullOrBlank()) {
-            Log.e(TAG, "缺少 --socket 或 --nonce 参数")
+        if (port == null || port !in 1..65535 || nonce.isNullOrBlank()) {
+            Log.e(TAG, "缺少 --port 或 --nonce 参数")
             return
         }
         val code = try {
-            HelperServer(socketName, nonce).run()
+            HelperServer(port, nonce).run()
         } catch (t: Throwable) {
             Log.e(TAG, "helper 运行失败", t)
             1
@@ -72,9 +72,9 @@ object VirtualScreenHelperMain {
     }
 }
 
-private class HelperServer(private val socketName: String, private val nonce: String) {
+private class HelperServer(private val port: Int, private val nonce: String) {
     private val writeLock = Any()
-    private var socket: LocalSocket? = null
+    private var socket: Socket? = null
     private var input: InputStream? = null
     private var output: OutputStream? = null
     private var session: DisplaySession? = null
@@ -85,13 +85,13 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
     fun run(): Int {
         val client = connectToApp() ?: run {
-            Log.e(TAG, "连接 App 超时：$socketName")
+            Log.e(TAG, "连接 App 超时：127.0.0.1:$port")
             shutdown()
             return 2
         }
         socket = client
-        input = BufferedInputStream(client.inputStream)
-        output = BufferedOutputStream(client.outputStream)
+        input = BufferedInputStream(client.getInputStream())
+        output = BufferedOutputStream(client.getOutputStream())
         sendJson(
             buildJsonObject {
                 put("event", VirtualScreenCommands.HELLO)
@@ -124,12 +124,13 @@ private class HelperServer(private val socketName: String, private val nonce: St
         return 0
     }
 
-    private fun connectToApp(): LocalSocket? {
+    private fun connectToApp(): Socket? {
         val deadline = SystemClock.uptimeMillis() + CONNECT_TIMEOUT_MS
+        val address = InetSocketAddress(LOOPBACK, port)
         while (SystemClock.uptimeMillis() < deadline) {
-            val candidate = LocalSocket()
+            val candidate = Socket()
             try {
-                candidate.connect(LocalSocketAddress(socketName, LocalSocketAddress.Namespace.ABSTRACT))
+                candidate.connect(address, CONNECT_ATTEMPT_TIMEOUT_MS)
                 return candidate
             } catch (t: IOException) {
                 runCatching { candidate.close() }
@@ -153,7 +154,7 @@ private class HelperServer(private val socketName: String, private val nonce: St
         try {
             when (command) {
                 VirtualScreenCommands.PING -> respond(id) { put("pong", true) }
-                VirtualScreenCommands.START -> handleStart(json, id)
+                VirtualScreenCommands.START -> handleStart(id)
                 VirtualScreenCommands.STOP -> {
                     respond(id) {}
                     running = false
@@ -174,20 +175,19 @@ private class HelperServer(private val socketName: String, private val nonce: St
         return true
     }
 
-    private fun handleStart(json: JsonObject, id: Int) {
+    private fun handleStart(id: Int) {
         if (session != null) throw IllegalStateException("虚拟屏已启动")
         val screen = realScreenMetrics()
-        val width = (json.intField("width") ?: screen.widthPixels).coerceIn(240, 2160)
-        val height = (json.intField("height") ?: screen.heightPixels).coerceIn(240, 3840)
-        val dpi = (json.intField("dpi") ?: screen.densityDpi).coerceIn(120, 640)
-        val display = DisplaySession(context(), width, height, dpi)
+        val size = portraitScreenSize(screen.widthPixels, screen.heightPixels)
+        val dpi = screen.densityDpi
+        val display = DisplaySession(context(), size.width, size.height, dpi)
         val displayId = display.start()
         session = display
         startFrameThread(display)
         respond(id) {
             put("displayId", displayId)
-            put("width", width)
-            put("height", height)
+            put("width", size.width)
+            put("height", size.height)
             put("dpi", dpi)
         }
     }
@@ -787,7 +787,9 @@ private class HelperServer(private val socketName: String, private val nonce: St
         const val FRAME_INTERVAL_MS = 80L
         const val FRAME_THREAD_JOIN_MS = 1000L
         const val EXEC_TIMEOUT_SECONDS = 10L
+        const val LOOPBACK = "127.0.0.1"
         const val CONNECT_TIMEOUT_MS = 5000L
+        const val CONNECT_ATTEMPT_TIMEOUT_MS = 500
         const val CONNECT_RETRY_MS = 100L
         const val INJECT_MODE_WAIT_FOR_FINISH = 2
         const val DEFAULT_TAP_MILLIS = 60L
@@ -815,3 +817,8 @@ private class HelperServer(private val socketName: String, private val nonce: St
         }
     }
 }
+
+internal data class PortraitScreenSize(val width: Int, val height: Int)
+
+internal fun portraitScreenSize(width: Int, height: Int): PortraitScreenSize =
+    if (width <= height) PortraitScreenSize(width, height) else PortraitScreenSize(height, width)

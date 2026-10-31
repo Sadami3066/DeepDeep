@@ -1,8 +1,5 @@
 package io.github.whywood.deepdeep.ui.navigation
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -177,13 +174,10 @@ internal fun AppRouteContent(
                 state = privilegeState,
                 onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
                 onRefresh = { scope.launch { dependencies.privilege.refresh() } },
-                onRequestShizukuPermission = {
-                    context.findActivity()?.let { activity ->
-                        dependencies.privilege.requestShizukuPermission(activity)
-                    }
-                },
-                onOpenShizuku = { dependencies.privilege.openShizuku(context) },
-                onOpenShizukuInstall = { dependencies.privilege.openShizukuInstall(context) },
+                onPair = { dependencies.privilege.startPairing() },
+                onConnect = { scope.launch { dependencies.privilege.connect() } },
+                onOpenWirelessDebugging = { dependencies.privilege.openWirelessDebugging(context) },
+                onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
                 onBack = onBack,
             )
         }
@@ -349,13 +343,4 @@ internal fun AppRouteContent(
             onBack = onBack,
         )
     }
-}
-
-private fun Context.findActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }

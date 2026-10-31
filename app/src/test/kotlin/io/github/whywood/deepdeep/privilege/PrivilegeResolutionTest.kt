@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.privilege
 
+import io.github.whywood.deepdeep.adb.AdbBridgeState
 import io.github.whywood.deepdeep.shell.RootStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,96 +8,116 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PrivilegeResolutionTest {
+    private val adbRunning = AdbBridgeState(paired = true, daemon = true)
+
     @Test
-    fun selectedTierIsKeptWhenGranted() {
+    fun availableBackendsFollowActualBackends() {
+        assertEquals(setOf(PrivilegeLevel.ADB), resolveAvailableBackends(adbAvailable = true, rootAvailable = false))
+        assertEquals(setOf(PrivilegeLevel.ROOT), resolveAvailableBackends(adbAvailable = false, rootAvailable = true))
         assertEquals(
-            PrivilegeLevel.NORMAL,
-            resolveEffectiveLevel(PrivilegeLevel.NORMAL, shizukuGranted = true, rootGranted = true),
+            setOf(PrivilegeLevel.ADB, PrivilegeLevel.ROOT),
+            resolveAvailableBackends(adbAvailable = true, rootAvailable = true),
+        )
+        assertEquals(emptySet<PrivilegeLevel>(), resolveAvailableBackends(adbAvailable = false, rootAvailable = false))
+    }
+
+    @Test
+    fun selectedBackendWinsWhenAvailable() {
+        assertEquals(
+            PrivilegeLevel.ADB,
+            resolveEffectiveLevel(PrivilegeLevel.ADB, adbAvailable = true, rootAvailable = false),
         )
         assertEquals(
-            PrivilegeLevel.SHIZUKU,
-            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = true, rootGranted = false),
+            PrivilegeLevel.ADB,
+            resolveEffectiveLevel(PrivilegeLevel.ADB, adbAvailable = true, rootAvailable = true),
         )
         assertEquals(
             PrivilegeLevel.ROOT,
-            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = true, rootGranted = true),
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, adbAvailable = false, rootAvailable = true),
+        )
+        assertEquals(
+            PrivilegeLevel.ROOT,
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, adbAvailable = true, rootAvailable = true),
         )
     }
 
     @Test
-    fun shizukuSelectionNeedsShizukuGrantEvenWhenRootIsGranted() {
+    fun selectedAdbFallsBackToRoot() {
+        assertEquals(
+            PrivilegeLevel.ROOT,
+            resolveEffectiveLevel(PrivilegeLevel.ADB, adbAvailable = false, rootAvailable = true),
+        )
+    }
+
+    @Test
+    fun selectedRootFallsBackToAdb() {
+        assertEquals(
+            PrivilegeLevel.ADB,
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, adbAvailable = true, rootAvailable = false),
+        )
+    }
+
+    @Test
+    fun unavailableBackendsFallBackToNormal() {
         assertEquals(
             PrivilegeLevel.NORMAL,
-            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = false, rootGranted = true),
+            resolveEffectiveLevel(PrivilegeLevel.ADB, adbAvailable = false, rootAvailable = false),
         )
-        assertEquals(
-            PrivilegeLevel.SHIZUKU,
-            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = true, rootGranted = true),
-        )
-    }
-
-    @Test
-    fun ungrantedSelectionFallsBackToGrantedTier() {
         assertEquals(
             PrivilegeLevel.NORMAL,
-            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = false, rootGranted = false),
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, adbAvailable = false, rootAvailable = false),
         )
+    }
+
+    @Test
+    fun normalStaysNormalEvenWhenBackendsAreAvailable() {
         assertEquals(
-            PrivilegeLevel.SHIZUKU,
-            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = true, rootGranted = false),
+            PrivilegeLevel.NORMAL,
+            resolveEffectiveLevel(PrivilegeLevel.NORMAL, adbAvailable = true, rootAvailable = true),
         )
     }
 
     @Test
-    fun highestGrantedLevelPrefersRootThenShizuku() {
-        assertEquals(PrivilegeLevel.ROOT, highestGrantedLevel(shizukuGranted = true, rootGranted = true))
-        assertEquals(PrivilegeLevel.SHIZUKU, highestGrantedLevel(shizukuGranted = true, rootGranted = false))
-        assertEquals(PrivilegeLevel.ROOT, highestGrantedLevel(shizukuGranted = false, rootGranted = true))
-        assertEquals(PrivilegeLevel.NORMAL, highestGrantedLevel(shizukuGranted = false, rootGranted = false))
-    }
-
-    @Test
-    fun stateResolvesEffectiveFromShizukuGrant() {
+    fun pairedWithoutRunningDaemonIsNotAvailable() {
         val state = PrivilegeState(
-            selected = PrivilegeLevel.SHIZUKU,
-            shizuku = ShizukuState(installed = true, running = true, granted = true, version = 13, uid = 2000),
+            selected = PrivilegeLevel.ADB,
+            adb = AdbBridgeState(paired = true, daemon = false),
         )
 
-        assertEquals(PrivilegeLevel.SHIZUKU, state.resolveEffective().effective)
-    }
-
-    @Test
-    fun stateRequiresRunningShizuku() {
-        val state = PrivilegeState(
-            selected = PrivilegeLevel.SHIZUKU,
-            shizuku = ShizukuState(installed = true, running = false, granted = true),
-        )
-
+        assertFalse(state.availableBackends.contains(PrivilegeLevel.ADB))
         assertEquals(PrivilegeLevel.NORMAL, state.resolveEffective().effective)
     }
 
     @Test
-    fun stateResolvesRootGrant() {
-        val state = PrivilegeState(selected = PrivilegeLevel.ROOT, root = RootStatus.Granted)
-
-        assertEquals(PrivilegeLevel.ROOT, state.resolveEffective().effective)
-    }
-
-    @Test
-    fun stateFallsBackWhenSelectedRootIsDenied() {
-        val state = PrivilegeState(
-            selected = PrivilegeLevel.ROOT,
-            root = RootStatus.Denied,
-            shizuku = ShizukuState(installed = true, running = true, granted = true),
+    fun stateResolvesEffectiveFromAvailableBackends() {
+        assertEquals(
+            PrivilegeLevel.ADB,
+            PrivilegeState(selected = PrivilegeLevel.ADB, adb = adbRunning).resolveEffective().effective,
         )
-
-        assertEquals(PrivilegeLevel.SHIZUKU, state.resolveEffective().effective)
+        assertEquals(
+            PrivilegeLevel.ROOT,
+            PrivilegeState(selected = PrivilegeLevel.ADB, root = RootStatus.Granted).resolveEffective().effective,
+        )
+        assertEquals(
+            PrivilegeLevel.ADB,
+            PrivilegeState(selected = PrivilegeLevel.ROOT, adb = adbRunning).resolveEffective().effective,
+        )
+        assertEquals(
+            PrivilegeLevel.ROOT,
+            PrivilegeState(selected = PrivilegeLevel.ROOT, root = RootStatus.Granted).resolveEffective().effective,
+        )
     }
 
     @Test
-    fun virtualScreenFollowsEffectiveLevel() {
-        assertFalse(PrivilegeState(effective = PrivilegeLevel.NORMAL).virtualScreenAvailable)
-        assertTrue(PrivilegeState(effective = PrivilegeLevel.SHIZUKU).virtualScreenAvailable)
-        assertTrue(PrivilegeState(effective = PrivilegeLevel.ROOT).virtualScreenAvailable)
+    fun virtualScreenRequiresSelectedTierAndAnyAvailableBackend() {
+        assertFalse(PrivilegeState(selected = PrivilegeLevel.NORMAL, adb = adbRunning).virtualScreenAvailable)
+        assertFalse(PrivilegeState(selected = PrivilegeLevel.ADB).virtualScreenAvailable)
+        assertFalse(PrivilegeState(selected = PrivilegeLevel.ROOT).virtualScreenAvailable)
+        assertTrue(PrivilegeState(selected = PrivilegeLevel.ADB, adb = adbRunning).virtualScreenAvailable)
+        assertTrue(
+            PrivilegeState(selected = PrivilegeLevel.ROOT, root = RootStatus.Granted).virtualScreenAvailable,
+        )
+        assertTrue(PrivilegeState(selected = PrivilegeLevel.ADB, root = RootStatus.Granted).virtualScreenAvailable)
+        assertTrue(PrivilegeState(selected = PrivilegeLevel.ROOT, adb = adbRunning).virtualScreenAvailable)
     }
 }

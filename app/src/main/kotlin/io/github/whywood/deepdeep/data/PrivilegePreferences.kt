@@ -33,9 +33,9 @@ class PrivilegePreferences(
     }
 
     suspend fun migrateLegacyRoot() {
-        val stored = store.data.first()[levelKey]?.let(::parsePrivilegeLevel)
-        val migrated = resolveMigratedLevel(stored, legacyRootEnabled())
-        if (migrated == stored) return
+        val raw = store.data.first()[levelKey]
+        val migrated = resolveMigratedLevel(raw?.let(::parsePrivilegeLevel), legacyRootEnabled())
+        if (raw == migrated.name) return
         writeLevel(migrated)
     }
 }

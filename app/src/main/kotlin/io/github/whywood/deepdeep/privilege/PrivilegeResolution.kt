@@ -2,22 +2,27 @@ package io.github.whywood.deepdeep.privilege
 
 import io.github.whywood.deepdeep.shell.RootStatus
 
-internal fun highestGrantedLevel(shizukuGranted: Boolean, rootGranted: Boolean): PrivilegeLevel = when {
-    rootGranted -> PrivilegeLevel.ROOT
-    shizukuGranted -> PrivilegeLevel.SHIZUKU
-    else -> PrivilegeLevel.NORMAL
-}
+internal fun resolveAvailableBackends(adbAvailable: Boolean, rootAvailable: Boolean): Set<PrivilegeLevel> =
+    buildSet {
+        if (adbAvailable) add(PrivilegeLevel.ADB)
+        if (rootAvailable) add(PrivilegeLevel.ROOT)
+    }
 
 internal fun resolveEffectiveLevel(
     selected: PrivilegeLevel,
-    shizukuGranted: Boolean,
-    rootGranted: Boolean,
+    adbAvailable: Boolean,
+    rootAvailable: Boolean,
 ): PrivilegeLevel = when (selected) {
     PrivilegeLevel.NORMAL -> PrivilegeLevel.NORMAL
-    PrivilegeLevel.SHIZUKU -> if (shizukuGranted) PrivilegeLevel.SHIZUKU else PrivilegeLevel.NORMAL
+    PrivilegeLevel.ADB -> when {
+        adbAvailable -> PrivilegeLevel.ADB
+        rootAvailable -> PrivilegeLevel.ROOT
+        else -> PrivilegeLevel.NORMAL
+    }
+
     PrivilegeLevel.ROOT -> when {
-        rootGranted -> PrivilegeLevel.ROOT
-        shizukuGranted -> PrivilegeLevel.SHIZUKU
+        rootAvailable -> PrivilegeLevel.ROOT
+        adbAvailable -> PrivilegeLevel.ADB
         else -> PrivilegeLevel.NORMAL
     }
 }
@@ -25,13 +30,19 @@ internal fun resolveEffectiveLevel(
 internal fun resolveMigratedLevel(stored: PrivilegeLevel?, legacyRootEnabled: Boolean): PrivilegeLevel =
     stored ?: if (legacyRootEnabled) PrivilegeLevel.ROOT else PrivilegeLevel.NORMAL
 
-internal fun parsePrivilegeLevel(raw: String): PrivilegeLevel =
-    PrivilegeLevel.entries.firstOrNull { it.name == raw } ?: PrivilegeLevel.NORMAL
+internal fun parsePrivilegeLevel(raw: String): PrivilegeLevel = when (raw) {
+    "NORMAL" -> PrivilegeLevel.NORMAL
+    "ADB", LEGACY_ADB_NAME -> PrivilegeLevel.ADB
+    "ROOT" -> PrivilegeLevel.ROOT
+    else -> PrivilegeLevel.NORMAL
+}
 
 internal fun PrivilegeState.resolveEffective(): PrivilegeState = copy(
     effective = resolveEffectiveLevel(
         selected = selected,
-        shizukuGranted = shizuku.running && shizuku.granted,
-        rootGranted = root == RootStatus.Granted,
+        adbAvailable = adb.daemon,
+        rootAvailable = root == RootStatus.Granted,
     ),
 )
+
+private const val LEGACY_ADB_NAME = "SHIZUKU"

@@ -4,17 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.LocalServerSocket
-import android.net.LocalSocket
 import android.util.Log
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +47,7 @@ class VirtualScreenEngine(
     private val requestIds = AtomicInteger()
     private val writeLock = Any()
 
-    private var socket: LocalSocket? = null
+    private var socket: Socket? = null
     private var input: InputStream? = null
     private var output: OutputStream? = null
     private var helper: HelperProcess? = null
@@ -171,17 +172,17 @@ class VirtualScreenEngine(
         runCatching { context.startActivity(intent) }
     }
 
-    private fun startSession(): VirtualScreenResult {
+    private suspend fun startSession(): VirtualScreenResult {
         val backends = launcher.backends()
-        if (backends.isEmpty()) return VirtualScreenResult(false, "需要 Shizuku 或 Root 权限")
-        val socketName = "deepdeep-vscreen-" + UUID.randomUUID().toString().replace("-", "")
+        if (backends.isEmpty()) return VirtualScreenResult(false, "需要无线调试（ADB）或 Root 权限")
         val nonce = UUID.randomUUID().toString().replace("-", "")
         val errors = mutableListOf<String>()
         for (backend in backends) {
             try {
-                tryBackend(backend, socketName, nonce)
+                tryBackend(backend, nonce)
                 return VirtualScreenResult(true, "虚拟屏已启动")
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 Log.w(TAG, "$backend 启动虚拟屏失败", t)
                 errors += "${backendLabel(backend)}：${t.readableMessage()}"
                 cleanupSession()
@@ -190,59 +191,50 @@ class VirtualScreenEngine(
         return VirtualScreenResult(false, "虚拟屏启动失败：" + errors.joinToString("；"))
     }
 
-    private fun tryBackend(backend: String, socketName: String, nonce: String) {
-        val server = LocalServerSocket(socketName)
+    private suspend fun tryBackend(backend: String, nonce: String) {
+        val server = ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))
         try {
-            helper = launcher.start(backend, socketName, nonce)
+            helper = launcher.start(backend, server.localPort, nonce)
             val client = accept(server) ?: throw IOException("等待 helper 连接超时")
+            runCatching { server.close() }
             socket = client
-        input = BufferedInputStream(client.inputStream)
-        output = BufferedOutputStream(client.outputStream)
-        client.soTimeout = HANDSHAKE_TIMEOUT_MS
-        val hello = readFrameJson() ?: throw IOException("helper 未发送握手信息")
-        val uid = hello.intField("uid") ?: -1
-        if (uid != VirtualScreenCommands.SHELL_UID) {
-            throw IOException("helper 身份为 uid=$uid，需要 shell(2000)")
-        }
-        if (hello.stringField("nonce") != nonce) {
-            throw IOException("helper 握手 nonce 不匹配")
-        }
-        connectedUid = uid
-        connectedBackend = backend
-        val id = requestIds.incrementAndGet()
-        sendText(
-            VirtualScreenCommands.START,
-            buildJsonObject { put("id", id) },
-        )
-        val response = readResponse(id) ?: throw IOException("helper 未返回启动结果")
-        if (response.booleanField("ok") != true) {
-            throw IOException(response.stringField("error") ?: "启动虚拟屏失败")
-        }
-        val displayId = response.intField("displayId") ?: throw IOException("helper 未返回 displayId")
-        val width = response.intField("width") ?: VirtualScreenCommands.DEFAULT_WIDTH
-        val height = response.intField("height") ?: VirtualScreenCommands.DEFAULT_HEIGHT
-        client.soTimeout = 0
-        _state.value = VirtualScreenState.Online(displayId, width, height, backend, null)
-        readerJob = scope.launch { readLoop(client) }
+            input = BufferedInputStream(client.getInputStream())
+            output = BufferedOutputStream(client.getOutputStream())
+            client.soTimeout = HANDSHAKE_TIMEOUT_MS
+            val hello = readFrameJson() ?: throw IOException("helper 未发送握手信息")
+            val uid = hello.intField("uid") ?: -1
+            if (uid != VirtualScreenCommands.SHELL_UID) {
+                throw IOException("helper 身份为 uid=$uid，需要 shell(2000)")
+            }
+            if (hello.stringField("nonce") != nonce) {
+                throw IOException("helper 握手 nonce 不匹配")
+            }
+            connectedUid = uid
+            connectedBackend = backend
+            val id = requestIds.incrementAndGet()
+            sendText(
+                VirtualScreenCommands.START,
+                buildJsonObject { put("id", id) },
+            )
+            val response = readResponse(id) ?: throw IOException("helper 未返回启动结果")
+            if (response.booleanField("ok") != true) {
+                throw IOException(response.stringField("error") ?: "启动虚拟屏失败")
+            }
+            val displayId = response.intField("displayId") ?: throw IOException("helper 未返回 displayId")
+            val width = response.intField("width") ?: VirtualScreenCommands.DEFAULT_WIDTH
+            val height = response.intField("height") ?: VirtualScreenCommands.DEFAULT_HEIGHT
+            client.soTimeout = 0
+            _state.value = VirtualScreenState.Online(displayId, width, height, backend, null)
+            readerJob = scope.launch { readLoop(client) }
         } finally {
             runCatching { server.close() }
         }
     }
 
-    private fun accept(server: LocalServerSocket): LocalSocket? {
-        val accepted = AtomicReference<LocalSocket?>(null)
-        val thread = Thread({
-            accepted.set(runCatching { server.accept() }.getOrNull())
-        }, "vscreen-accept")
-        thread.isDaemon = true
-        thread.start()
-        thread.join(CONNECT_TIMEOUT_MS)
-        if (thread.isAlive) {
-            runCatching { server.close() }
-            thread.join(500)
-        }
-        return accepted.get()
-    }
+    private fun accept(server: ServerSocket): Socket? = runCatching {
+        server.soTimeout = CONNECT_TIMEOUT_MS.toInt()
+        server.accept()
+    }.getOrNull()
 
     private fun readFrameJson(): JsonObject? {
         while (true) {
@@ -261,7 +253,7 @@ class VirtualScreenEngine(
         }
     }
 
-    private fun readLoop(client: LocalSocket) {
+    private fun readLoop(client: Socket) {
         try {
             while (true) {
                 val frame = VirtualScreenProtocol.read(input ?: break) ?: break
@@ -300,7 +292,7 @@ class VirtualScreenEngine(
         online.frame?.takeIf { it !== bitmap }?.let { recycleLater(it) }
     }
 
-    private fun failConnection(client: LocalSocket) {
+    private fun failConnection(client: Socket) {
         if (socket !== client) return
         val online = _state.value as? VirtualScreenState.Online ?: return
         cleanupSession()
@@ -383,14 +375,14 @@ class VirtualScreenEngine(
 
     private fun backendLabel(backend: String): String = when (backend) {
         PrivilegedLauncher.BACKEND_ROOT -> "Root"
-        PrivilegedLauncher.BACKEND_SHIZUKU -> "Shizuku"
+        PrivilegedLauncher.BACKEND_ADB -> "ADB"
         else -> backend
     }
 
     private companion object {
         const val TAG = "VScreenEngine"
-        const val CONNECT_TIMEOUT_MS = 5000L
-        const val CONNECT_RETRY_MS = 100L
+        const val LOOPBACK = "127.0.0.1"
+        const val CONNECT_TIMEOUT_MS = 10000L
         const val HANDSHAKE_TIMEOUT_MS = 5000
         const val COMMAND_TIMEOUT_MS = 10000L
         const val SCREENSHOT_TIMEOUT_MS = 10000L

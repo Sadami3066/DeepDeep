@@ -1,32 +1,27 @@
 package io.github.whywood.deepdeep.privilege
 
-import android.app.Activity
 import android.content.Context
+import io.github.whywood.deepdeep.adb.AdbBridgeState
 import io.github.whywood.deepdeep.shell.RootStatus
 import kotlinx.coroutines.flow.StateFlow
 
 enum class PrivilegeLevel {
     NORMAL,
-    SHIZUKU,
+    ADB,
     ROOT,
 }
-
-data class ShizukuState(
-    val installed: Boolean = false,
-    val running: Boolean = false,
-    val granted: Boolean = false,
-    val version: Int = -1,
-    val uid: Int = -1,
-)
 
 data class PrivilegeState(
     val selected: PrivilegeLevel = PrivilegeLevel.NORMAL,
     val effective: PrivilegeLevel = PrivilegeLevel.NORMAL,
     val root: RootStatus = RootStatus.NotRequested,
-    val shizuku: ShizukuState = ShizukuState(),
+    val adb: AdbBridgeState = AdbBridgeState(),
 ) {
+    val availableBackends: Set<PrivilegeLevel>
+        get() = resolveAvailableBackends(adbAvailable = adb.daemon, rootAvailable = root == RootStatus.Granted)
+
     val virtualScreenAvailable: Boolean
-        get() = effective != PrivilegeLevel.NORMAL
+        get() = selected != PrivilegeLevel.NORMAL && availableBackends.isNotEmpty()
 }
 
 interface PrivilegeController {
@@ -38,9 +33,9 @@ interface PrivilegeController {
 
     suspend fun probeRoot(): RootStatus
 
-    fun requestShizukuPermission(activity: Activity)
+    suspend fun connect()
 
-    fun openShizuku(context: Context)
+    fun startPairing()
 
-    fun openShizukuInstall(context: Context)
+    fun openWirelessDebugging(context: Context)
 }

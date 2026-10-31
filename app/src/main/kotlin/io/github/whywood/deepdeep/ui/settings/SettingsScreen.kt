@@ -196,7 +196,7 @@ fun SettingsScreen(
                     value = stringResource(
                         when (privilegeLevel) {
                             PrivilegeLevel.NORMAL -> R.string.permission_level_normal
-                            PrivilegeLevel.SHIZUKU -> R.string.permission_level_shizuku
+                            PrivilegeLevel.ADB -> R.string.permission_level_adb
                             PrivilegeLevel.ROOT -> R.string.permission_level_root
                         },
                     ),

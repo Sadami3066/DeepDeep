@@ -1,0 +1,24 @@
+<resources>
+    <string name="adb_pairing_channel_name">Wireless debugging pairing</string>
+    <string name="adb_pairing_channel_description">Enter the pairing code from system wireless debugging</string>
+    <string name="adb_pairing_notification_title">Pair wireless debugging</string>
+    <string name="adb_pairing_notification_text">Open Developer options → Wireless debugging → Pair device with pairing code, then pull down and expand the notification (long-press on some systems) and tap Enter pairing code</string>
+    <string name="adb_pairing_reply_label">Pairing code</string>
+    <string name="adb_pairing_reply_action">Enter pairing code</string>
+    <string name="adb_pairing_progress_title">Pairing wireless debugging</string>
+    <string name="adb_pairing_progress_text">Handshaking with system wireless debugging and starting the daemon</string>
+    <string name="adb_pairing_success_title">Wireless debugging connected</string>
+    <string name="adb_pairing_success_text">Paired successfully. The ADB daemon is running (uid 2000)</string>
+    <string name="adb_pairing_failed_title">Wireless debugging pairing failed</string>
+    <string name="adb_pairing_retry_action">Open wireless debugging settings</string>
+
+    <string name="adb_error_wireless_debugging_disabled">Wireless debugging is off. Enable it in Developer options first</string>
+    <string name="adb_error_notification_permission_required">Notification permission is required to receive the pairing code. Allow notifications in system settings</string>
+    <string name="adb_error_notification_unavailable">Unable to post the pairing notification</string>
+    <string name="adb_error_pairing_code_invalid">Invalid pairing code. Enter 6 digits</string>
+    <string name="adb_error_no_pairing_service">No pairing service found. Open the Pair device with pairing code screen in system settings first</string>
+    <string name="adb_error_pairing_failed">Pairing failed. Reopen the pairing screen to get a new code</string>
+    <string name="adb_error_not_paired">System wireless debugging does not trust DeepDeep yet. Pair again</string>
+    <string name="adb_error_connect_failed">Cannot connect to local wireless debugging. Make sure it is enabled</string>
+    <string name="adb_error_daemon_start_failed">Failed to start the ADB daemon</string>
+</resources>

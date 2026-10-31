@@ -1,0 +1,24 @@
+<resources>
+    <string name="adb_pairing_channel_name">无线调试配对</string>
+    <string name="adb_pairing_channel_description">输入系统无线调试的配对码</string>
+    <string name="adb_pairing_notification_title">配对无线调试</string>
+    <string name="adb_pairing_notification_text">打开「开发者选项 → 无线调试 → 使用配对码配对设备」，下拉通知并展开（部分系统需长按），点「输入配对码」填入 6 位码</string>
+    <string name="adb_pairing_reply_label">配对码</string>
+    <string name="adb_pairing_reply_action">输入配对码</string>
+    <string name="adb_pairing_progress_title">正在配对无线调试</string>
+    <string name="adb_pairing_progress_text">正在与系统无线调试握手并启动守护进程</string>
+    <string name="adb_pairing_success_title">无线调试已连接</string>
+    <string name="adb_pairing_success_text">配对成功，ADB 守护进程运行中（uid 2000）</string>
+    <string name="adb_pairing_failed_title">无线调试配对失败</string>
+    <string name="adb_pairing_retry_action">打开无线调试设置</string>
+
+    <string name="adb_error_wireless_debugging_disabled">无线调试未开启，请先在开发者选项中打开无线调试</string>
+    <string name="adb_error_notification_permission_required">需要通知权限才能接收配对码，请在系统设置中允许通知</string>
+    <string name="adb_error_notification_unavailable">无法发送配对通知</string>
+    <string name="adb_error_pairing_code_invalid">配对码无效，请输入 6 位数字</string>
+    <string name="adb_error_no_pairing_service">没有发现配对服务，请先在系统中打开「使用配对码配对设备」页面</string>
+    <string name="adb_error_pairing_failed">配对失败，请重新打开配对页面获取新的配对码</string>
+    <string name="adb_error_not_paired">本机无线调试未信任 DeepDeep，请重新配对</string>
+    <string name="adb_error_connect_failed">无法连接到本机无线调试，请确认无线调试已开启</string>
+    <string name="adb_error_daemon_start_failed">ADB 守护进程启动失败</string>
+</resources>

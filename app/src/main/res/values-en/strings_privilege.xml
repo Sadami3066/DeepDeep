@@ -2,14 +2,15 @@
     <string name="permission_title">Permissions</string>
 
     <string name="permission_level_normal">Normal</string>
-    <string name="permission_level_shizuku">Shizuku (ADB)</string>
+    <string name="permission_level_adb">Wireless debugging (ADB)</string>
     <string name="permission_level_root">Root</string>
 
     <string name="permission_status_normal">No grant needed, uses the built-in environment</string>
-    <string name="permission_status_shizuku_missing">Not installed</string>
-    <string name="permission_status_shizuku_stopped">Installed, not running</string>
-    <string name="permission_status_shizuku_denied">Running, not granted (v%1$d · uid %2$d)</string>
-    <string name="permission_status_shizuku_granted">Running, granted (v%1$d · uid %2$d)</string>
+    <string name="permission_status_adb_unpaired">Not paired; pair wireless debugging first</string>
+    <string name="permission_status_adb_paired">Paired, daemon not running</string>
+    <string name="permission_status_adb_connecting">Connecting…</string>
+    <string name="permission_status_adb_running">Daemon running (uid 2000)</string>
+    <string name="permission_status_adb_error">Error: %1$s</string>
     <string name="permission_status_root_not_requested">Not checked yet</string>
     <string name="permission_status_root_granted">Granted</string>
     <string name="permission_status_root_denied">Not granted</string>
@@ -17,14 +18,27 @@
     <string name="permission_status_root_timeout">Check timed out</string>
     <string name="permission_status_root_error">Check failed</string>
 
-    <string name="permission_action_install_shizuku">Install Shizuku</string>
-    <string name="permission_action_open_shizuku">Open Shizuku</string>
-    <string name="permission_action_grant_shizuku">Grant DeepDeep</string>
+    <string name="permission_error_wireless_debugging_disabled">Wireless debugging is off</string>
+    <string name="permission_error_notification_permission_required">Notification permission is needed to receive the pairing code</string>
+    <string name="permission_error_notification_unavailable">Could not post the pairing notification</string>
+    <string name="permission_error_pairing_code_invalid">The pairing code is incorrect</string>
+    <string name="permission_error_no_pairing_service">No pairing service found; open the system pairing page first</string>
+    <string name="permission_error_pairing_failed">Pairing failed</string>
+    <string name="permission_error_not_paired">Not paired yet</string>
+    <string name="permission_error_connect_failed">Could not connect to wireless debugging</string>
+    <string name="permission_error_daemon_start_failed">Could not start the daemon</string>
+
+    <string name="permission_action_adb_pair">Pair wireless debugging</string>
+    <string name="permission_action_adb_connect">Connect and start daemon</string>
+    <string name="permission_action_adb_restart">Reconnect</string>
+    <string name="permission_action_adb_retry">Retry connection</string>
+    <string name="permission_action_adb_connecting">Connecting…</string>
+    <string name="permission_action_adb_settings">Open developer options</string>
+    <string name="permission_action_root_probe">Check root again</string>
 
     <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>
-    <string name="permission_hint_shizuku_root">Shizuku is running as root, so shizuku_shell has the same reach as root_shell. Use it with care.</string>
-    <string name="permission_hint_shizuku">Shizuku must be installed separately and started over ADB or root. Once granted, DeepDeep runs commands with the privileges of the Shizuku session (usually uid 2000, root when Shizuku runs as root).</string>
+    <string name="permission_hint_adb">DeepDeep keeps a daemon inside the app over the system Wireless debugging, and runs commands as the shell user (uid 2000); no other app is needed. On first use, open Wireless debugging in developer options, tap Pair wireless debugging, then enter the 6-digit code from the notification (pull down and expand it; long-press on some systems).</string>
 
     <string name="permission_effective">Effective now</string>
-    <string name="permission_effective_fallback">The selected tier is not granted; running at %1$s instead.</string>
+    <string name="permission_effective_fallback">The selected tier is not available; running at %1$s instead.</string>
 </resources>

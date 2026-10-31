@@ -15,12 +15,12 @@ import kotlinx.serialization.json.putJsonObject
 import okio.Path.Companion.toPath
 import kotlin.math.ceil
 
-private val shizukuShellParameters: JsonObject = buildJsonObject {
+private val adbShellParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run through Shizuku on the Android device; privileges follow the Shizuku session (usually ADB shell uid 2000, root when Shizuku runs as root)")
+            put("description", "Shell command to run through the app's embedded wireless-debugging daemon on the Android device, with ADB shell privileges (uid 2000)")
         }
         putJsonObject("timeout_ms") {
             put("type", "number")
@@ -70,27 +70,27 @@ internal fun privilegedShellTool(
     )
 }
 
-fun shizukuShellTool(
+fun adbShellTool(
     executor: RootCommandExecutor,
     enabled: () -> Boolean,
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
-    name = "shizuku_shell",
-    description = "Run a shell command through Shizuku on the Android device and return its exit code, stdout and stderr. Works while Shizuku is running and the user has granted Shizuku permission, in any turn; privileges follow the Shizuku session (usually ADB shell uid 2000, but equivalent to root when Shizuku was started by root).",
-    promptSnippet = "Run a command through Shizuku",
+    name = "adb_shell",
+    description = "Run a shell command through the app's embedded wireless-debugging daemon on the Android device and return its exit code, stdout and stderr. The daemon runs as the ADB shell (uid 2000); it works in any turn while the ADB tier is connected, with no external app or persistent authorization.",
+    promptSnippet = "Run a command through the embedded ADB shell",
     promptGuidelines = listOf(
-        "Use shizuku_shell only when the user explicitly asks for a system-level operation that needs Shizuku privileges; prefer the regular bash tool for all other commands.",
-        "shizuku_shell works in foreground, background, scheduled and goal-continued runs alike; it never persists an authorization.",
-        "Commands run with whatever privileges the Shizuku session already has: usually the ADB shell (uid 2000), but equivalent to root when Shizuku was started by root. Never assume the command is unprivileged.",
+        "Use adb_shell only when the user explicitly asks for a system-level operation that needs ADB shell privileges; prefer the regular bash tool for all other commands.",
+        "adb_shell works in foreground, background, scheduled and goal-continued runs alike; it never persists an authorization.",
+        "Commands run as the ADB shell (uid 2000), never as root; use root_shell for root-only operations when root is available.",
         "Do not run destructive commands unless the user explicitly asked for that exact command.",
     ),
-    parameters = shizukuShellParameters,
+    parameters = adbShellParameters,
     executor = executor,
     enabled = enabled,
-    disabledMessage = "shizuku_disabled",
+    disabledMessage = "adb_disabled",
     status = status,
-    unavailableMessage = "shizuku_unavailable",
-    failureMessage = "shizuku_shell 执行失败",
+    unavailableMessage = "adb_unavailable",
+    failureMessage = "adb_shell 执行失败",
 )
 
 internal fun JsonObject.shellArguments(): JsonObject {

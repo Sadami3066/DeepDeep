@@ -14,12 +14,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ShizukuShellToolTest {
+class AdbShellToolTest {
     private fun tool(
         executor: RootCommandExecutor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
         enabled: () -> Boolean = { true },
         status: () -> RootToolStatus = { RootToolStatus.Granted },
-    ): CodingTool = shizukuShellTool(executor, enabled, status)
+    ): CodingTool = adbShellTool(executor, enabled, status)
 
     private fun resultText(result: AgentToolResult): String =
         result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
@@ -30,26 +30,26 @@ class ShizukuShellToolTest {
     }
 
     @Test
-    fun toolExposesShizukuShellSchema() {
+    fun toolExposesAdbShellSchema() {
         val properties = tool().parameters.getValue("properties").jsonObject
         assertTrue(properties.containsKey("command"))
         assertTrue(properties.containsKey("timeout_ms"))
-        assertEquals("shizuku_shell", tool().name)
+        assertEquals("adb_shell", tool().name)
     }
 
     @Test
-    fun toolDescribesSessionPrivilegesInsteadOfFixedUid() {
+    fun toolDescribesEmbeddedDaemonAndFixedShellUid() {
         val tool = tool()
 
-        assertTrue(tool.description.contains("privileges follow the Shizuku session"))
+        assertTrue(tool.description.contains("embedded wireless-debugging daemon"))
         assertTrue(tool.description.contains("uid 2000"))
-        assertTrue(tool.description.contains("root"))
-        assertFalse(tool.description.contains("as the ADB shell (uid 2000)"))
+        assertTrue(tool.description.contains("any turn"))
+        assertFalse(tool.description.contains("Shizuku"))
         assertTrue(tool.promptGuidelines.orEmpty().any { it.contains("uid 2000") })
     }
 
     @Test
-    fun disabledToolReturnsShizukuDisabled() = runBlocking {
+    fun disabledToolReturnsAdbDisabled() = runBlocking {
         var called = false
         val tool = tool(
             executor = RootCommandExecutor { _, _ ->
@@ -62,16 +62,16 @@ class ShizukuShellToolTest {
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("shizuku_disabled", resultText(result))
+        assertEquals("adb_disabled", resultText(result))
         assertFalse(called)
     }
 
     @Test
-    fun unsupportedStatusReturnsShizukuUnavailable() = runBlocking {
+    fun unsupportedStatusReturnsAdbUnavailable() = runBlocking {
         val result = tool(status = { RootToolStatus.Unsupported }).execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("shizuku_unavailable", resultText(result))
+        assertEquals("adb_unavailable", resultText(result))
     }
 
     @Test
@@ -165,11 +165,11 @@ class ShizukuShellToolTest {
 
     @Test
     fun executorFailureReturnsErrorText() = runBlocking {
-        val tool = tool(executor = RootCommandExecutor { _, _ -> throw IllegalStateException("shizuku crashed") })
+        val tool = tool(executor = RootCommandExecutor { _, _ -> throw IllegalStateException("adb daemon crashed") })
 
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("shizuku crashed", resultText(result))
+        assertEquals("adb daemon crashed", resultText(result))
     }
 }

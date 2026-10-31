@@ -29,6 +29,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.adb.AdbBridgeError
+import io.github.whywood.deepdeep.adb.AdbBridgeState
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
@@ -39,7 +41,6 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.privilege.PrivilegeState
-import io.github.whywood.deepdeep.privilege.ShizukuState
 import io.github.whywood.deepdeep.shell.RootStatus
 
 @Composable
@@ -47,9 +48,10 @@ fun PermissionScreen(
     state: PrivilegeState,
     onSelect: (PrivilegeLevel) -> Unit,
     onRefresh: () -> Unit,
-    onRequestShizukuPermission: () -> Unit,
-    onOpenShizuku: () -> Unit,
-    onOpenShizukuInstall: () -> Unit,
+    onPair: () -> Unit,
+    onConnect: () -> Unit,
+    onOpenWirelessDebugging: () -> Unit,
+    onProbeRoot: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -101,11 +103,11 @@ fun PermissionScreen(
                 )
                 DdHairline()
                 PrivilegeLevelRow(
-                    level = PrivilegeLevel.SHIZUKU,
-                    status = shizukuStatusText(state.shizuku),
-                    checked = state.selected == PrivilegeLevel.SHIZUKU,
-                    onSelect = { onSelect(PrivilegeLevel.SHIZUKU) },
-                    testTag = "permission_level_shizuku",
+                    level = PrivilegeLevel.ADB,
+                    status = adbStatusText(state.adb),
+                    checked = state.selected == PrivilegeLevel.ADB,
+                    onSelect = { onSelect(PrivilegeLevel.ADB) },
+                    testTag = "permission_level_adb",
                 )
                 DdHairline()
                 PrivilegeLevelRow(
@@ -119,9 +121,10 @@ fun PermissionScreen(
             Spacer(Modifier.height(12.dp))
             PrivilegeLevelAction(
                 state = state,
-                onRequestShizukuPermission = onRequestShizukuPermission,
-                onOpenShizuku = onOpenShizuku,
-                onOpenShizukuInstall = onOpenShizukuInstall,
+                onPair = onPair,
+                onConnect = onConnect,
+                onOpenWirelessDebugging = onOpenWirelessDebugging,
+                onProbeRoot = onProbeRoot,
             )
             Spacer(Modifier.height(24.dp))
             SettingsGroup {
@@ -189,53 +192,68 @@ private fun PrivilegeRadio(checked: Boolean) {
 @Composable
 private fun PrivilegeLevelAction(
     state: PrivilegeState,
-    onRequestShizukuPermission: () -> Unit,
-    onOpenShizuku: () -> Unit,
-    onOpenShizukuInstall: () -> Unit,
+    onPair: () -> Unit,
+    onConnect: () -> Unit,
+    onOpenWirelessDebugging: () -> Unit,
+    onProbeRoot: () -> Unit,
 ) {
     when (state.selected) {
         PrivilegeLevel.NORMAL -> PrivilegeHint(R.string.permission_hint_normal)
 
-        PrivilegeLevel.SHIZUKU -> Column(Modifier.fillMaxWidth()) {
-            val shizuku = state.shizuku
+        PrivilegeLevel.ADB -> Column(Modifier.fillMaxWidth()) {
+            val adb = state.adb
             DdGroupCard {
                 when {
-                    !shizuku.installed -> PrivilegeAction(
-                        icon = DdIcons.External,
-                        title = stringResource(R.string.permission_action_install_shizuku),
-                        onClick = onOpenShizukuInstall,
+                    adb.busy -> DdListRow(
+                        icon = DdIcons.Refresh,
+                        title = stringResource(R.string.permission_action_adb_connecting),
+                        enabled = false,
                     )
 
-                    !shizuku.running -> PrivilegeAction(
-                        icon = DdIcons.External,
-                        title = stringResource(R.string.permission_action_open_shizuku),
-                        onClick = onOpenShizuku,
+                    !adb.paired -> PrivilegeAction(
+                        icon = DdIcons.Plug,
+                        title = stringResource(R.string.permission_action_adb_pair),
+                        onClick = onPair,
                     )
 
-                    !shizuku.granted -> PrivilegeAction(
-                        icon = DdIcons.Shield,
-                        title = stringResource(R.string.permission_action_grant_shizuku),
-                        onClick = onRequestShizukuPermission,
+                    adb.error != null -> PrivilegeAction(
+                        icon = DdIcons.Refresh,
+                        title = stringResource(R.string.permission_action_adb_retry),
+                        onClick = onConnect,
+                    )
+
+                    !adb.daemon -> PrivilegeAction(
+                        icon = DdIcons.Plug,
+                        title = stringResource(R.string.permission_action_adb_connect),
+                        onClick = onConnect,
                     )
 
                     else -> PrivilegeAction(
-                        icon = DdIcons.External,
-                        title = stringResource(R.string.permission_action_open_shizuku),
-                        onClick = onOpenShizuku,
+                        icon = DdIcons.Refresh,
+                        title = stringResource(R.string.permission_action_adb_restart),
+                        onClick = onConnect,
                     )
                 }
+                DdHairline()
+                PrivilegeAction(
+                    icon = DdIcons.External,
+                    title = stringResource(R.string.permission_action_adb_settings),
+                    onClick = onOpenWirelessDebugging,
+                )
             }
             Spacer(Modifier.height(10.dp))
-            PrivilegeHint(
-                if (shizuku.granted && shizuku.uid == 0) {
-                    R.string.permission_hint_shizuku_root
-                } else {
-                    R.string.permission_hint_shizuku
-                },
-            )
+            PrivilegeHint(R.string.permission_hint_adb)
         }
 
-        PrivilegeLevel.ROOT -> Unit
+        PrivilegeLevel.ROOT -> if (state.root != RootStatus.Granted) {
+            DdGroupCard {
+                PrivilegeAction(
+                    icon = DdIcons.Shield,
+                    title = stringResource(R.string.permission_action_root_probe),
+                    onClick = onProbeRoot,
+                )
+            }
+        }
     }
 }
 
@@ -267,28 +285,34 @@ private fun PrivilegeHint(@StringRes textRes: Int) {
 private fun levelLabel(level: PrivilegeLevel): String = stringResource(
     when (level) {
         PrivilegeLevel.NORMAL -> R.string.permission_level_normal
-        PrivilegeLevel.SHIZUKU -> R.string.permission_level_shizuku
+        PrivilegeLevel.ADB -> R.string.permission_level_adb
         PrivilegeLevel.ROOT -> R.string.permission_level_root
     },
 )
 
 @Composable
-private fun shizukuStatusText(shizuku: ShizukuState): String = when {
-    shizuku.granted -> stringResource(
-        R.string.permission_status_shizuku_granted,
-        shizuku.version,
-        shizuku.uid,
-    )
-
-    shizuku.running -> stringResource(
-        R.string.permission_status_shizuku_denied,
-        shizuku.version,
-        shizuku.uid,
-    )
-
-    shizuku.installed -> stringResource(R.string.permission_status_shizuku_stopped)
-    else -> stringResource(R.string.permission_status_shizuku_missing)
+private fun adbStatusText(adb: AdbBridgeState): String = when {
+    adb.busy -> stringResource(R.string.permission_status_adb_connecting)
+    adb.daemon -> stringResource(R.string.permission_status_adb_running)
+    adb.error != null -> stringResource(R.string.permission_status_adb_error, adbErrorLabel(adb.error))
+    adb.paired -> stringResource(R.string.permission_status_adb_paired)
+    else -> stringResource(R.string.permission_status_adb_unpaired)
 }
+
+@Composable
+private fun adbErrorLabel(error: AdbBridgeError): String = stringResource(
+    when (error) {
+        AdbBridgeError.WIRELESS_DEBUGGING_DISABLED -> R.string.permission_error_wireless_debugging_disabled
+        AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED -> R.string.permission_error_notification_permission_required
+        AdbBridgeError.NOTIFICATION_UNAVAILABLE -> R.string.permission_error_notification_unavailable
+        AdbBridgeError.PAIRING_CODE_INVALID -> R.string.permission_error_pairing_code_invalid
+        AdbBridgeError.NO_PAIRING_SERVICE -> R.string.permission_error_no_pairing_service
+        AdbBridgeError.PAIRING_FAILED -> R.string.permission_error_pairing_failed
+        AdbBridgeError.NOT_PAIRED -> R.string.permission_error_not_paired
+        AdbBridgeError.CONNECT_FAILED -> R.string.permission_error_connect_failed
+        AdbBridgeError.DAEMON_START_FAILED -> R.string.permission_error_daemon_start_failed
+    },
+)
 
 @Composable
 private fun rootStatusText(status: RootStatus): String = stringResource(

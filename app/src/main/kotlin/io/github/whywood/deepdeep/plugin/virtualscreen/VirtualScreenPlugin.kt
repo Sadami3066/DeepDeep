@@ -6,6 +6,7 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
@@ -18,7 +19,6 @@ import io.github.whywood.deepdeep.plugin.PluginProgress
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.PluginUi
 import io.github.whywood.deepdeep.privilege.PrivilegeController
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.vscreen.PrivilegedLauncher
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
@@ -38,11 +38,12 @@ import kotlinx.serialization.json.putJsonObject
 class VirtualScreenPlugin(
     private val context: Context,
     private val privilege: PrivilegeController,
+    private val adb: AdbBootstrap,
 ) : OfficialPlugin {
     private val engine: VirtualScreenEngine = VirtualScreenRuntime.install(
         VirtualScreenEngine(
             context.applicationContext,
-            PrivilegedLauncher(context.applicationContext, privilege),
+            PrivilegedLauncher(context.applicationContext, adb, privilege),
         ),
     )
 
@@ -55,7 +56,7 @@ class VirtualScreenPlugin(
     override val sizeLabelRes: Int = R.string.plugin_virtual_screen_size
 
     override suspend fun availability(): PluginAvailability = virtualScreenAvailability(
-        privilege.state.value.effective,
+        privilege.state.value.virtualScreenAvailable,
         string(R.string.plugin_virtual_screen_privilege_required),
     )
 
@@ -99,7 +100,7 @@ class VirtualScreenPlugin(
         val backend = online?.backend?.let { backend ->
             when (backend) {
                 PrivilegedLauncher.BACKEND_ROOT -> string(R.string.plugin_virtual_screen_backend_root)
-                PrivilegedLauncher.BACKEND_SHIZUKU -> string(R.string.plugin_virtual_screen_backend_shizuku)
+                PrivilegedLauncher.BACKEND_ADB -> string(R.string.plugin_virtual_screen_backend_adb)
                 else -> backend
             }
         } ?: string(R.string.plugin_virtual_screen_value_offline)
@@ -143,12 +144,12 @@ class VirtualScreenPlugin(
 }
 
 internal fun virtualScreenAvailability(
-    effective: PrivilegeLevel,
+    available: Boolean,
     unavailableReason: String,
-): PluginAvailability = if (effective == PrivilegeLevel.NORMAL) {
-    PluginAvailability.Unavailable(unavailableReason)
-} else {
+): PluginAvailability = if (available) {
     PluginAvailability.Available
+} else {
+    PluginAvailability.Unavailable(unavailableReason)
 }
 
 internal data class VirtualTapCommand(val x: Int, val y: Int, val durationMs: Long)
@@ -328,7 +329,7 @@ private val textParameters: JsonObject = buildJsonObject {
 
 private fun startTool(engine: VirtualScreenEngine): CodingTool = CodingTool(
     name = "virtual_screen_start",
-    description = "Start the privileged virtual screen at the phone screen size. Requires Shizuku or Root privilege to be selected and granted.",
+    description = "Start the privileged virtual screen at the real phone screen size in portrait. Requires ADB (wireless debugging) or Root privilege to be selected and available.",
     parameters = noParameters,
     label = "virtual_screen_start",
     promptSnippet = "Start the background virtual screen",
