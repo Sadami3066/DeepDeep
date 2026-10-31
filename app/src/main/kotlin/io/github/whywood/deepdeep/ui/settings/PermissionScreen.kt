@@ -235,9 +235,7 @@ private fun PrivilegeLevelAction(
             )
         }
 
-        PrivilegeLevel.ROOT -> Column(Modifier.fillMaxWidth()) {
-            PrivilegeHint(R.string.permission_hint_root)
-        }
+        PrivilegeLevel.ROOT -> Unit
     }
 }
 

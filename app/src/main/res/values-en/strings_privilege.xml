@@ -24,7 +24,6 @@
     <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>
     <string name="permission_hint_shizuku_root">Shizuku is running as root, so shizuku_shell has the same reach as root_shell. Use it with care.</string>
     <string name="permission_hint_shizuku">Shizuku must be installed separately and started over ADB or root. Once granted, DeepDeep runs commands with the privileges of the Shizuku session (usually uid 2000, root when Shizuku runs as root).</string>
-    <string name="permission_hint_root">Root access is confirmed by the system root manager; the app does not persist the grant.</string>
 
     <string name="permission_effective">Effective now</string>
     <string name="permission_effective_fallback">The selected tier is not granted; running at %1$s instead.</string>
