@@ -26,7 +26,6 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdSpinner
-import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SessionUsage
 
@@ -75,10 +74,6 @@ internal fun ChatTopBar(
                 iconSize = 21.dp,
             )
             Spacer(Modifier.width(2.dp))
-            DdWordmark(
-                color = colors.ink,
-                dotColor = colors.accent,
-            )
             Spacer(Modifier.weight(1f))
             if (state.reloading) {
                 DdSpinner(
