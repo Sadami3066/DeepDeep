@@ -34,7 +34,6 @@ data class AssistantOverlayState(
     val conversationCwd: String = "",
     val workspaceId: String = "",
     val workspaces: List<RuntimeWorkspace> = emptyList(),
-    val sessions: List<ConversationSummary> = emptyList(),
     val allSessions: List<ConversationSummary> = emptyList(),
     val providers: List<ProviderSummary> = emptyList(),
     val providerId: String = "",
@@ -145,10 +144,6 @@ class AssistantOverlayController(
         }
     }
 
-    fun newSession() {
-        newSession(mutableState.value.workspaceId.ifBlank { homeWorkspaceId })
-    }
-
     fun newSession(workspaceId: String) {
         scope.launch {
             val opened = runCatching { runtime.newSession(workspaceId) }.getOrNull()
@@ -173,22 +168,11 @@ class AssistantOverlayController(
         }
     }
 
-    fun selectWorkspace(workspaceId: String) {
-        scope.launch {
-            val sessions = runCatching { runtime.sessions(workspaceId) }.getOrDefault(emptyList())
-            mutableState.update { it.copy(workspaceId = workspaceId, sessions = sessions) }
-        }
-    }
-
     fun refreshLists() {
         scope.launch {
             val workspaces = runCatching { runtime.workspaces() }.getOrDefault(emptyList())
-            val workspaceId = mutableState.value.workspaceId.ifBlank { homeWorkspaceId }
-            val sessions = runCatching { runtime.sessions(workspaceId) }.getOrDefault(emptyList())
             val allSessions = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
-            mutableState.update {
-                it.copy(workspaces = workspaces, sessions = sessions, allSessions = allSessions)
-            }
+            mutableState.update { it.copy(workspaces = workspaces, allSessions = allSessions) }
         }
     }
 
@@ -268,7 +252,6 @@ class AssistantOverlayController(
             val workspaceId = summary
                 ?.let { owner -> workspaces.firstOrNull { it.cwd == owner.cwd }?.id }
                 ?: homeWorkspaceId
-            val sessions = runCatching { runtime.sessions(workspaceId) }.getOrDefault(emptyList())
             val title = runCatching { runtime.sessionTitle(sessionId) }.getOrNull().orEmpty()
             val cwd = summary?.cwd.orEmpty()
             val model = modelSnapshot(sessionId)
@@ -282,7 +265,6 @@ class AssistantOverlayController(
                         conversationCwd = cwd,
                         workspaceId = workspaceId,
                         workspaces = workspaces,
-                        sessions = sessions,
                         allSessions = summaries,
                         providers = providerList,
                         providerId = model.providerId,

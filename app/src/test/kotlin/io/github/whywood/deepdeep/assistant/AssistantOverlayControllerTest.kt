@@ -498,24 +498,6 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun selectWorkspaceReloadsSessionList() = runTest(dispatcher) {
-        val runtime = FakeAgentRuntime().apply {
-            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
-        }
-        val controller = controller(runtime, "session-1", this)
-        controller.start()
-        runCurrent()
-
-        controller.selectWorkspace("workspace-x")
-        runCurrent()
-
-        assertEquals("workspace-x", controller.state.value.workspaceId)
-        assertEquals(2, controller.state.value.sessions.size)
-        assertEquals("session-1", controller.state.value.sessionId)
-        controller.reset()
-    }
-
-    @Test
     fun selectModelCallsRuntimeAndReflectsTruth() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime().apply {
             sessionModels["session-1"] = SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF)

@@ -11,13 +11,9 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,7 +24,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -48,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -105,9 +101,7 @@ internal data class AssistantOverlayActions(
     val onShareFile: (String) -> Unit,
     val onOpenWorkshop: (String) -> Unit,
     val onOpenSession: (String) -> Unit,
-    val onNewSession: () -> Unit,
     val onNewSessionInWorkspace: (String) -> Unit,
-    val onSelectWorkspace: (String) -> Unit,
     val onRefreshLists: () -> Unit,
     val onSelectProvider: (String) -> Unit,
     val onSelectModel: (String) -> Unit,
@@ -150,7 +144,7 @@ internal fun AssistantOverlayScreen(
     var listenJob by remember { mutableStateOf<Job?>(null) }
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
-    var sentThisSession by remember { mutableStateOf(false) }
+    var panelMounted by remember { mutableStateOf(false) }
     val messages = state.conversation.messages
 
     fun stopListening() {
@@ -175,7 +169,6 @@ internal fun AssistantOverlayScreen(
         focusManager.clearFocus()
         if (actions.onSend(text, followUp)) {
             input = ""
-            sentThisSession = true
         }
     }
 
@@ -258,7 +251,6 @@ internal fun AssistantOverlayScreen(
 
     LaunchedEffect(state.sessionId) {
         input = ""
-        sentThisSession = false
     }
 
     LaunchedEffect(state.conversation.loaded, state.sessionId, pendingQuestions.size) {
@@ -321,14 +313,32 @@ internal fun AssistantOverlayScreen(
             )
         }
         val bottomGap = with(density) { (animatedBottomInset.value.roundToInt() + 8.dp.toPx()).toDp() }
-        val panelHeight = (maxHeight * 0.52f).coerceAtLeast(240.dp)
-        val hasPanelContent = messages.isNotEmpty() ||
-            state.conversation.sending ||
-            pendingQuestions.isNotEmpty() ||
-            sentThisSession
-        val panelVisible = entered && hasPanelContent && imeBottomPx == 0
+        val panelMaxHeight = maxHeight * 0.5f
+        val panelVisible = entered &&
+            state.sessionId != null &&
+            state.conversation.loaded &&
+            imeBottomPx == 0
 
         LaunchedEffect(Unit) { entered = true }
+        LaunchedEffect(panelVisible) {
+            if (panelVisible) panelMounted = true
+        }
+        val composerProgress by animateFloatAsState(
+            targetValue = if (entered) 1f else 0f,
+            animationSpec = tween(DdMotion.ENTER, easing = DdMotion.EaseOut),
+            label = "overlay-composer",
+        )
+        val panelProgress by animateFloatAsState(
+            targetValue = if (panelVisible) 1f else 0f,
+            animationSpec = tween(
+                if (panelVisible) DdMotion.ENTER else DdMotion.BASE,
+                easing = if (panelVisible) DdMotion.EaseOut else DdMotion.EaseInOut,
+            ),
+            label = "overlay-panel",
+        )
+        LaunchedEffect(panelProgress, panelVisible) {
+            if (!panelVisible && panelProgress <= 0.001f) panelMounted = false
+        }
 
         Box(
             Modifier
@@ -340,41 +350,40 @@ internal fun AssistantOverlayScreen(
                     onClick = ::dismiss,
                 ),
         )
-        AnimatedVisibility(
-            visible = panelVisible,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = with(density) { statusTopPx.toDp() } + 8.dp, start = 12.dp, end = 12.dp)
-                .height(panelHeight),
-            enter = slideInVertically(
-                animationSpec = tween(DdMotion.ENTER, easing = DdMotion.EaseOut),
-                initialOffsetY = { -it },
-            ) + fadeIn(tween(DdMotion.FAST)),
-            exit = slideOutVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseInOut),
-                targetOffsetY = { -it },
-            ) + fadeOut(tween(DdMotion.FAST)),
-        ) {
-            AssistantOverlayPanel(
-                state = state,
-                pendingQuestions = pendingQuestions,
-                config = config,
-                actions = actions,
-                onQuote = quote,
-                onOpenInApp = { state.sessionId?.let(actions.onOpenInApp) },
-                modifier = Modifier.fillMaxSize(),
-            )
+        if (panelMounted) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer {
+                        alpha = panelProgress
+                        translationY = -(1f - panelProgress) * size.height
+                    }
+                    .padding(
+                        top = with(density) { statusTopPx.toDp() } + 8.dp,
+                        start = 12.dp,
+                        end = 12.dp,
+                    ),
+            ) {
+                AssistantOverlayPanel(
+                    state = state,
+                    pendingQuestions = pendingQuestions,
+                    config = config,
+                    actions = actions,
+                    onQuote = quote,
+                    onOpenInApp = { state.sessionId?.let(actions.onOpenInApp) },
+                    maxHeight = panelMaxHeight,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
-        AnimatedVisibility(
-            visible = entered,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(
-                animationSpec = tween(DdMotion.ENTER, easing = DdMotion.EaseOut),
-                initialOffsetY = { it },
-            ) + fadeIn(tween(DdMotion.FAST)),
-        ) {
+        if (entered) {
             Column(
                 Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        alpha = composerProgress
+                        translationY = (1f - composerProgress) * size.height
+                    }
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
                     .padding(bottom = bottomGap),
