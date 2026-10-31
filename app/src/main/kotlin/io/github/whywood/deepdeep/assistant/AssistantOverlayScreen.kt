@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -155,8 +154,10 @@ internal fun AssistantOverlayScreen(
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
     var laidOut by remember { mutableStateOf(false) }
+    var slideStarted by remember { mutableStateOf(false) }
+    var panelSlideDone by remember { mutableStateOf(false) }
     var panelMounted by remember { mutableStateOf(false) }
-    var panelVisible by remember { mutableStateOf(false) }
+    var panelLaidOut by remember { mutableStateOf(false) }
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var switcherOpen by remember { mutableStateOf(false) }
     var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
@@ -342,10 +343,6 @@ internal fun AssistantOverlayScreen(
         val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
         val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
         val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
-        val imeVisible = imeBottomPx > 0
-        var lastImeVisible by remember { mutableStateOf(imeVisible) }
-        val imeChanged = imeVisible != lastImeVisible
-        SideEffect { lastImeVisible = imeVisible }
         var stableNavigationBottomPx by remember { mutableIntStateOf(navigationBottomPx) }
         SideEffect {
             if (windowFocused) {
@@ -362,19 +359,20 @@ internal fun AssistantOverlayScreen(
             )
         }
         val panelTopPx = statusTopPx.toFloat() + with(density) { 8.dp.toPx() }
-        val composerTopPx = with(density) { maxHeight.toPx() } - composerHeightPx - extraImeTargetPx
+        val composerBottomPaddingPx =
+            stableNavigationBottomPx + with(density) { 8.dp.toPx() }
+        val composerTopPx = with(density) { maxHeight.toPx() } -
+            composerBottomPaddingPx - composerHeightPx - extraImeTargetPx
         val panelMaxHeight = with(density) {
-            (composerTopPx - panelTopPx - 8.dp.toPx()).toDp()
+            (composerTopPx - panelTopPx - 24.dp.toPx()).toDp()
         }.coerceIn(120.dp, (maxHeight * 0.5f).coerceAtLeast(120.dp))
-        val panelTarget = entered && state.sessionId != null && state.conversation.loaded
+        val panelTarget = state.sessionId != null && state.conversation.loaded
         LaunchedEffect(panelTarget) {
-            if (!panelTarget) {
-                panelVisible = false
+            if (panelTarget) {
+                panelMounted = true
                 return@LaunchedEffect
             }
-            panelMounted = true
-            withFrameNanos { }
-            panelVisible = true
+            panelLaidOut = false
         }
 
         LaunchedEffect(laidOut, windowFocused) {
@@ -382,20 +380,40 @@ internal fun AssistantOverlayScreen(
             delay(if (windowFocused) 90 else 500)
             entered = true
         }
+        LaunchedEffect(entered, panelTarget, panelLaidOut) {
+            if (slideStarted || !entered) return@LaunchedEffect
+            if (state.sessionId == null && state.error == null) return@LaunchedEffect
+            if (panelTarget && !panelLaidOut) return@LaunchedEffect
+            slideStarted = true
+        }
+        LaunchedEffect(entered) {
+            if (!entered) return@LaunchedEffect
+            delay(1600)
+            if (!slideStarted) slideStarted = true
+        }
         val composerProgress by animateFloatAsState(
-            targetValue = if (entered) 1f else 0f,
+            targetValue = if (slideStarted) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
             label = "overlay-composer",
         )
         val panelProgress by animateFloatAsState(
-            targetValue = if (panelVisible) 1f else 0f,
+            targetValue = if (slideStarted && panelMounted) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
             label = "overlay-panel",
         )
+        LaunchedEffect(slideStarted) {
+            if (!slideStarted) {
+                panelSlideDone = false
+                return@LaunchedEffect
+            }
+            snapshotFlow { panelProgress }.first { it >= 0.99f }
+            panelSlideDone = true
+        }
         LaunchedEffect(panelTarget) {
             if (panelTarget) return@LaunchedEffect
             snapshotFlow { panelProgress }.first { it <= 0.01f }
             panelMounted = false
+            panelLaidOut = false
         }
 
         Box(
@@ -436,8 +454,8 @@ internal fun AssistantOverlayScreen(
                         switcherOpen = true
                     },
                     maxHeight = panelMaxHeight,
-                    snapHeight = imeVisible || imeChanged || state.conversation.sending,
-                    modifier = Modifier.fillMaxWidth(),
+                    snapHeight = state.conversation.sending || !panelSlideDone,
+                    modifier = Modifier.fillMaxWidth().onSizeChanged { panelLaidOut = true },
                 )
             }
         }

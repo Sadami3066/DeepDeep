@@ -43,12 +43,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -87,11 +89,13 @@ internal fun AssistantOverlayPanel(
     val chatDensity = remember(density, config.chatFontScale) {
         Density(density = density.density, fontScale = density.fontScale * config.chatFontScale)
     }
-    val listState = rememberLazyListState()
+    val messages = state.conversation.messages
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = (messages.size - 4).coerceAtLeast(0),
+    )
     val scroll = rememberChatScrollController(listState)
     val shape = RoundedCornerShape(28.dp)
     val copiedMessage = stringResource(R.string.assistant_overlay_copied)
-    val messages = state.conversation.messages
     val workspaceName = state.workspaces.firstOrNull { it.id == state.workspaceId }?.name
         ?: stringResource(R.string.assistant_overlay_workspace)
     var headerHeightPx by remember { mutableIntStateOf(0) }
@@ -124,7 +128,7 @@ internal fun AssistantOverlayPanel(
         else -> (headerHeight + with(density) { stableContentHeightPx.toDp() } + 2.dp)
             .coerceIn(headerHeight + 8.dp, maxHeight)
     }
-    val panelHeight by animateDpAsState(
+    val panelHeight = animateDpAsState(
         targetValue = targetHeight,
         animationSpec = if (snapHeight) snap() else tween(DdMotion.BASE, easing = DdMotion.EaseOut),
         label = "overlay-panel-height",
@@ -157,7 +161,7 @@ internal fun AssistantOverlayPanel(
         }
     }
     LaunchedEffect(scroll) {
-        snapshotFlow { panelHeight }.collect { scroll.anchorToBottom() }
+        snapshotFlow { panelHeight.value }.collect { scroll.anchorToBottom() }
     }
 
     val copyOutput: (String) -> Unit = { text ->
@@ -168,7 +172,18 @@ internal fun AssistantOverlayPanel(
 
     Box(
         modifier
-            .height(panelHeight)
+            .layout { measurable, constraints ->
+                val height = panelHeight.value.roundToPx().coerceIn(0, constraints.maxHeight)
+                val placeable = measurable.measure(
+                    Constraints(
+                        minWidth = constraints.minWidth,
+                        maxWidth = constraints.maxWidth,
+                        minHeight = height,
+                        maxHeight = height,
+                    ),
+                )
+                layout(placeable.width, height) { placeable.placeRelative(0, 0) }
+            }
             .shadow(
                 elevation = 12.dp,
                 shape = shape,
