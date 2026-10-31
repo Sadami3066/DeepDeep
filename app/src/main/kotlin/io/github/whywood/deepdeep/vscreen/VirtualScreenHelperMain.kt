@@ -107,6 +107,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             buildJsonObject {
                 put("event", VirtualScreenCommands.HELLO)
                 put("uid", Process.myUid())
+                put("pid", Process.myPid())
                 put("sdk", Build.VERSION.SDK_INT)
                 put("nonce", nonce)
             },
