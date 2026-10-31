@@ -1,0 +1,32 @@
+<resources>
+    <string name="permission_title">Permissions</string>
+    <string name="permission_intro">Shell tools only run at the effective tier. Selecting a higher tier that is not granted still runs at the highest granted tier.</string>
+
+    <string name="permission_level_normal">Normal</string>
+    <string name="permission_level_shizuku">Shizuku (ADB)</string>
+    <string name="permission_level_root">Root</string>
+
+    <string name="permission_status_normal">No grant needed, uses the built-in environment</string>
+    <string name="permission_status_shizuku_missing">Not installed</string>
+    <string name="permission_status_shizuku_stopped">Installed, not running</string>
+    <string name="permission_status_shizuku_denied">Running, not granted</string>
+    <string name="permission_status_shizuku_granted">Running, granted</string>
+    <string name="permission_status_root_not_requested">Not checked yet</string>
+    <string name="permission_status_root_granted">Granted</string>
+    <string name="permission_status_root_denied">Not granted</string>
+    <string name="permission_status_root_unsupported">su is not available on this device</string>
+    <string name="permission_status_root_timeout">Check timed out</string>
+    <string name="permission_status_root_error">Check failed</string>
+
+    <string name="permission_action_install_shizuku">Install Shizuku</string>
+    <string name="permission_action_open_shizuku">Open Shizuku</string>
+    <string name="permission_action_grant_shizuku">Grant DeepDeep</string>
+    <string name="permission_action_probe_root">Check root access</string>
+
+    <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>
+    <string name="permission_hint_shizuku">Shizuku must be installed separately and started over ADB or root. Once granted, DeepDeep can run commands as the ADB shell (uid 2000).</string>
+    <string name="permission_hint_root">Root access is confirmed by the system root manager. The app does not persist the grant and checks the foreground on every use.</string>
+
+    <string name="permission_effective">Effective now</string>
+    <string name="permission_effective_fallback">The selected tier is not granted; running at %1$s instead.</string>
+</resources>
