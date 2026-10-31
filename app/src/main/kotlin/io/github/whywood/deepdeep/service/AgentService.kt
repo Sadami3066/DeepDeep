@@ -8,6 +8,10 @@ import android.content.IntentFilter
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.DeepDeepApplication
+import io.github.whywood.deepdeep.assistant.AssistantEntry
+import io.github.whywood.deepdeep.data.FloatingWindowPreferences
+import io.github.whywood.deepdeep.floating.FloatingWindowController
+import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,6 +22,7 @@ import kotlinx.coroutines.launch
 class AgentService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val graph by lazy { (application as DeepDeepApplication).graph }
+    private var floatingWindow: FloatingWindowController? = null
     private val clockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
@@ -33,6 +38,7 @@ class AgentService : Service() {
         startForeground(NOTIFICATION_ID, graph.notificationCenter.foregroundNotification())
         graph.notificationCenter.onForegroundStarted()
         registerClockReceiver()
+        startFloatingWindow()
         scope.launch {
             ProcessExitLog.record(this@AgentService)
             graph.host.ensureStarted()
@@ -68,10 +74,36 @@ class AgentService : Service() {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(clockReceiver) }
+        floatingWindow?.stop()
+        floatingWindow = null
         graph.scheduleService.stop()
         graph.notificationCenter.stop()
         scope.cancel()
         super.onDestroy()
+    }
+
+    private fun startFloatingWindow() {
+        val controller = FloatingWindowController(
+            context = this,
+            runtime = graph.host,
+            activeRuns = graph.notificationCenter.runActivity.activeRuns,
+            questionCenter = graph.questionCenter,
+            preferences = FloatingWindowPreferences(this),
+            theme = graph.themePreferences.theme,
+            fontStyle = graph.fontPreferences.read(),
+            virtualScreenProvider = { null },
+            onOpenApp = { AppVisibility.bringToFront(this) },
+            onNewSession = {
+                scope.launch {
+                    val sessionId = runCatching {
+                        graph.host.newSession(AgentRuntimeHost.HOME_ID).sessionId
+                    }.getOrNull()
+                    if (sessionId != null) AssistantEntry.openOverlay(this@AgentService, sessionId)
+                }
+            },
+        )
+        floatingWindow = controller
+        controller.start()
     }
 
     private fun registerClockReceiver() {

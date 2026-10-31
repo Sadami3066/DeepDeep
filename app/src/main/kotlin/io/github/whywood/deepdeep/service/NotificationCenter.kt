@@ -22,8 +22,6 @@ import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,16 +36,9 @@ class NotificationCenter(
     private val runtime: ConversationQueries,
     private val pendingQuestions: StateFlow<List<PendingQuestion>>,
 ) {
-    private data class ActiveRun(
-        val sessionId: String,
-        val title: String,
-        val activity: RuntimeActivity?,
-        val startedAt: Long,
-    )
-
     private val manager = NotificationManagerCompat.from(context)
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val active = LinkedHashMap<String, ActiveRun>()
+    val runActivity = RunActivityTracker(runtime) { context.getString(R.string.chat_title_new) }
     private val postedQuestionSessions = ConcurrentHashMap.newKeySet<String>()
     private var collector: Job? = null
     private var questionCollector: Job? = null
@@ -57,8 +48,9 @@ class NotificationCenter(
     fun start() {
         if (collector != null) return
         createChannels()
+        runActivity.start()
         collector = scope.launch {
-            runtime.events.collect(::onEvent)
+            runActivity.changes.collect(::onRunChange)
         }
         questionCollector = scope.launch {
             pendingQuestions.collect(::onPendingQuestions)
@@ -70,11 +62,11 @@ class NotificationCenter(
         collector = null
         questionCollector?.cancel()
         questionCollector = null
+        runActivity.stop()
         clearQuestionNotifications()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         foregroundStarted = false
-        active.clear()
         manager.cancel(FOREGROUND_ID)
     }
 
@@ -138,7 +130,9 @@ class NotificationCenter(
         postedQuestionSessions += sessionId
     }
 
-    fun foregroundNotification(): android.app.Notification {        val latest = active.values.maxByOrNull { it.startedAt }
+    fun foregroundNotification(): android.app.Notification {
+        val active = runActivity.activeRuns.value
+        val latest = active.values.maxByOrNull { it.startedAt }
         val title = when {
             active.isEmpty() -> context.getString(R.string.app_name)
             active.size == 1 -> latest?.title.orEmpty().ifBlank { context.getString(R.string.app_name) }
@@ -244,67 +238,16 @@ class NotificationCenter(
         )
     }
 
-    private suspend fun onEvent(event: SessionRuntimeEvent) {
-        val runtimeEvent = event.event
-        if (runtimeEvent is RuntimeEvent.SessionListChanged) {
-            refreshTitles()
-            updateForeground()
-            return
-        }
-        if (event.sessionId.isBlank()) return
-        when (runtimeEvent) {
-            is RuntimeEvent.RunStarted -> {
-                val title = runtime.sessionTitle(event.sessionId) ?: context.getString(R.string.chat_title_new)
-                active[event.sessionId] = ActiveRun(
-                    sessionId = event.sessionId,
-                    title = title,
-                    activity = RuntimeActivity.Thinking,
-                    startedAt = runtimeEvent.startedAt,
-                )
-                updateForeground()
-            }
-
-            is RuntimeEvent.ActivityChanged -> {
-                val current = active[event.sessionId] ?: return
-                active[event.sessionId] = current.copy(activity = runtimeEvent.activity)
-                updateForeground()
-            }
-
-            is RuntimeEvent.RunFinished -> {
-                val current = active.remove(event.sessionId)
-                updateForeground()
-                postResult(
-                    sessionId = event.sessionId,
-                    title = current?.title.orEmpty(),
-                    status = runtimeEvent.status,
-                    text = runtimeEvent.text,
-                    error = null,
-                )
-            }
-
-            is RuntimeEvent.RunFailed -> {
-                val current = active.remove(event.sessionId)
-                updateForeground()
-                postResult(
-                    sessionId = event.sessionId,
-                    title = current?.title.orEmpty(),
-                    status = RunStatus.FAILED,
-                    text = "",
-                    error = runtimeEvent.message,
-                )
-            }
-
-            else -> Unit
-        }
-    }
-
-    private suspend fun refreshTitles() {
-        for ((id, current) in active.entries.toList()) {
-            val title = runtime.sessionTitle(id) ?: continue
-            if (title != current.title) {
-                active[id] = current.copy(title = title)
-            }
-        }
+    private suspend fun onRunChange(change: RunActivityChange) {
+        updateForeground()
+        if (change !is RunActivityChange.Finished) return
+        postResult(
+            sessionId = change.sessionId,
+            title = change.title,
+            status = change.status,
+            text = change.text,
+            error = change.error,
+        )
     }
 
     private fun updateForeground() {
