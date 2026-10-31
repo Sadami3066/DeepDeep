@@ -2,9 +2,15 @@
     <string name="adb_pairing_channel_name">Wireless debugging pairing</string>
     <string name="adb_pairing_channel_description">Enter the pairing code from system wireless debugging</string>
     <string name="adb_pairing_notification_title">Pair wireless debugging</string>
-    <string name="adb_pairing_notification_text">Open Developer options → Wireless debugging → Pair device with pairing code, then pull down and expand the notification (long-press on some systems) and tap Enter pairing code</string>
+    <string name="adb_pairing_notification_text">Open Wireless debugging → Pair device with pairing code, expand the notification and tap Enter pairing code. If input is unavailable, use split screen and enter it in the app dialog.</string>
     <string name="adb_pairing_reply_label">Pairing code</string>
     <string name="adb_pairing_reply_action">Enter pairing code</string>
+    <string name="adb_pairing_dialog_title">Pair wireless debugging</string>
+    <string name="adb_pairing_dialog_steps">Keep the system pairing code page open and enter its 6 digits here. If both screens cannot be shown together, use split screen first.</string>
+    <string name="adb_pairing_dialog_code_placeholder">6-digit pairing code</string>
+    <string name="adb_pairing_dialog_cancel">Cancel</string>
+    <string name="adb_pairing_dialog_confirm">Start pairing</string>
+    <string name="adb_pairing_dialog_waiting">Pairing with the system…</string>
     <string name="adb_pairing_progress_title">Pairing wireless debugging</string>
     <string name="adb_pairing_progress_text">Handshaking with system wireless debugging and starting the daemon</string>
     <string name="adb_pairing_success_title">Wireless debugging connected</string>
@@ -13,8 +19,6 @@
     <string name="adb_pairing_retry_action">Open wireless debugging settings</string>
 
     <string name="adb_error_wireless_debugging_disabled">Wireless debugging is off. Enable it in Developer options first</string>
-    <string name="adb_error_notification_permission_required">Notification permission is required to receive the pairing code. Allow notifications in system settings</string>
-    <string name="adb_error_notification_unavailable">Unable to post the pairing notification</string>
     <string name="adb_error_pairing_code_invalid">Invalid pairing code. Enter 6 digits</string>
     <string name="adb_error_no_pairing_service">No pairing service found. Open the Pair device with pairing code screen in system settings first</string>
     <string name="adb_error_pairing_failed">Pairing failed. Reopen the pairing screen to get a new code</string>

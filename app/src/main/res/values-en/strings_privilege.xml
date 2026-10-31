@@ -19,8 +19,6 @@
     <string name="permission_status_root_error">Check failed</string>
 
     <string name="permission_error_wireless_debugging_disabled">Wireless debugging is off</string>
-    <string name="permission_error_notification_permission_required">Notification permission is needed to receive the pairing code</string>
-    <string name="permission_error_notification_unavailable">Could not post the pairing notification</string>
     <string name="permission_error_pairing_code_invalid">The pairing code is incorrect</string>
     <string name="permission_error_no_pairing_service">No pairing service found; open the system pairing page first</string>
     <string name="permission_error_pairing_failed">Pairing failed</string>
@@ -34,11 +32,10 @@
     <string name="permission_action_adb_retry">Retry connection</string>
     <string name="permission_action_adb_connecting">Connecting…</string>
     <string name="permission_action_adb_settings">Open developer options</string>
-    <string name="permission_action_notification_settings">Open notification settings</string>
     <string name="permission_action_root_probe">Check root again</string>
 
     <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>
-    <string name="permission_hint_adb">DeepDeep keeps a daemon inside the app over the system Wireless debugging and runs commands as the shell user (uid 2000); no other app is needed. On first use, open Wireless debugging in developer options, tap Pair wireless debugging, then enter the system\'s 6-digit pairing code in the app. Once the daemon is ready, accessibility is enabled automatically with no manual setup.</string>
+    <string name="permission_hint_adb">Runs a shell daemon (uid 2000) over the system Wireless debugging. If the pairing code cannot be entered from the notification, use split screen with the system pairing page and enter it in the app dialog. Accessibility turns on automatically once the daemon is ready.</string>
 
     <string name="permission_effective">Effective now</string>
     <string name="permission_effective_fallback">The selected tier is not available; running at %1$s instead.</string>

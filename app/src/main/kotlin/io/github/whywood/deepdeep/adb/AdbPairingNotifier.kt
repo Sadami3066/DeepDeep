@@ -135,8 +135,6 @@ class AdbPairingNotifier(private val context: Context) {
     fun errorText(error: AdbBridgeError): String = context.getString(
         when (error) {
             AdbBridgeError.WIRELESS_DEBUGGING_DISABLED -> R.string.adb_error_wireless_debugging_disabled
-            AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED -> R.string.adb_error_notification_permission_required
-            AdbBridgeError.NOTIFICATION_UNAVAILABLE -> R.string.adb_error_notification_unavailable
             AdbBridgeError.PAIRING_CODE_INVALID -> R.string.adb_error_pairing_code_invalid
             AdbBridgeError.NO_PAIRING_SERVICE -> R.string.adb_error_no_pairing_service
             AdbBridgeError.PAIRING_FAILED -> R.string.adb_error_pairing_failed

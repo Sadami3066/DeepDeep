@@ -1,8 +1,5 @@
 package io.github.whywood.deepdeep.ui.settings
 
-import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,28 +16,37 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBridgeError
 import io.github.whywood.deepdeep.adb.AdbBridgeState
+import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
@@ -53,6 +59,7 @@ fun PermissionScreen(
     onSelect: (PrivilegeLevel) -> Unit,
     onRefresh: () -> Unit,
     onPair: () -> Unit,
+    onPairingCode: (String) -> Unit,
     onConnect: () -> Unit,
     onOpenWirelessDebugging: () -> Unit,
     onProbeRoot: () -> Unit,
@@ -60,6 +67,7 @@ fun PermissionScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    var showPairingDialog by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) {
         onRefresh()
         onPauseOrDispose {}
@@ -125,7 +133,10 @@ fun PermissionScreen(
             Spacer(Modifier.height(12.dp))
             PrivilegeLevelAction(
                 state = state,
-                onPair = onPair,
+                onPair = {
+                    showPairingDialog = true
+                    onPair()
+                },
                 onConnect = onConnect,
                 onOpenWirelessDebugging = onOpenWirelessDebugging,
                 onProbeRoot = onProbeRoot,
@@ -148,6 +159,13 @@ fun PermissionScreen(
             }
             Spacer(Modifier.height(40.dp))
         }
+    }
+    if (showPairingDialog) {
+        PairingCodeDialog(
+            adb = state.adb,
+            onDismiss = { showPairingDialog = false },
+            onConfirm = onPairingCode,
+        )
     }
 }
 
@@ -206,7 +224,6 @@ private fun PrivilegeLevelAction(
 
         PrivilegeLevel.ADB -> Column(Modifier.fillMaxWidth()) {
             val adb = state.adb
-            val context = LocalContext.current
             DdGroupCard {
                 when {
                     adb.busy -> DdListRow(
@@ -238,15 +255,6 @@ private fun PrivilegeLevelAction(
                         title = stringResource(R.string.permission_action_adb_restart),
                         onClick = onConnect,
                     )
-                }
-                if (notificationBlocked(adb.error)) {
-                    DdHairline()
-                    PrivilegeAction(
-                        icon = DdIcons.Settings,
-                        title = stringResource(R.string.permission_action_notification_settings),
-                    ) {
-                        openNotificationSettings(context)
-                    }
                 }
                 DdHairline()
                 PrivilegeAction(
@@ -314,11 +322,70 @@ private fun adbStatusText(adb: AdbBridgeState): String = when {
 }
 
 @Composable
+private fun PairingCodeDialog(
+    adb: AdbBridgeState,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    var code by remember { mutableStateOf("") }
+    LaunchedEffect(adb.paired) {
+        if (adb.paired) onDismiss()
+    }
+    DdDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("permission_pairing_dialog"),
+        title = stringResource(R.string.adb_pairing_dialog_title),
+        content = {
+            Text(
+                text = stringResource(R.string.adb_pairing_dialog_steps),
+                style = DdType.bodySmall,
+                color = colors.inkSecondary,
+            )
+            Spacer(Modifier.height(14.dp))
+            DdTextField(
+                value = code,
+                onValueChange = { input -> code = input.filter(Char::isDigit).take(6) },
+                placeholder = stringResource(R.string.adb_pairing_dialog_code_placeholder),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                testTag = "permission_pairing_code",
+            )
+            if (adb.busy) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.adb_pairing_dialog_waiting),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
+                )
+            } else if (adb.error != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = adbErrorLabel(adb.error),
+                    style = DdType.bodySmall,
+                    color = colors.danger,
+                )
+            }
+        },
+        actions = {
+            DdTextAction(
+                text = stringResource(R.string.adb_pairing_dialog_cancel),
+                onClick = onDismiss,
+                color = colors.inkSecondary,
+            )
+            DdTextAction(
+                text = stringResource(R.string.adb_pairing_dialog_confirm),
+                onClick = { onConfirm(code) },
+                color = colors.accent,
+                enabled = code.length == 6 && !adb.busy,
+            )
+        },
+    )
+}
+
+@Composable
 private fun adbErrorLabel(error: AdbBridgeError): String = stringResource(
     when (error) {
         AdbBridgeError.WIRELESS_DEBUGGING_DISABLED -> R.string.permission_error_wireless_debugging_disabled
-        AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED -> R.string.permission_error_notification_permission_required
-        AdbBridgeError.NOTIFICATION_UNAVAILABLE -> R.string.permission_error_notification_unavailable
         AdbBridgeError.PAIRING_CODE_INVALID -> R.string.permission_error_pairing_code_invalid
         AdbBridgeError.NO_PAIRING_SERVICE -> R.string.permission_error_no_pairing_service
         AdbBridgeError.PAIRING_FAILED -> R.string.permission_error_pairing_failed
@@ -340,12 +407,3 @@ private fun rootStatusText(status: RootStatus): String = stringResource(
     },
 )
 
-private fun notificationBlocked(error: AdbBridgeError?): Boolean =
-    error == AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED || error == AdbBridgeError.NOTIFICATION_UNAVAILABLE
-
-private fun openNotificationSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { context.startActivity(intent) }
-}

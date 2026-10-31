@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ProviderAuthKind
+import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.assistant.AssistantSettingsScreen
@@ -175,6 +176,7 @@ internal fun AppRouteContent(
                 onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
                 onRefresh = { scope.launch { dependencies.privilege.refresh() } },
                 onPair = { dependencies.privilege.startPairing() },
+                onPairingCode = { code -> AgentService.applyPairingCode(context, code) },
                 onConnect = { scope.launch { dependencies.privilege.connect() } },
                 onOpenWirelessDebugging = { dependencies.privilege.openWirelessDebugging(context) },
                 onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },

@@ -55,15 +55,10 @@ class AdbBootstrap(context: Context) {
     }
 
     suspend fun startPairing(): Result<Unit> = withContext(Dispatchers.IO) {
-        when {
-            !notifier.canNotify() -> failNow(AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED)
-            !notifier.notifyCodeRequired() -> failNow(AdbBridgeError.NOTIFICATION_UNAVAILABLE)
-            else -> {
-                mutableState.update { it.copy(error = null) }
-                withContext(Dispatchers.Main) { openDevelopmentSettings() }
-                Result.success(Unit)
-            }
-        }
+        mutableState.update { it.copy(error = null) }
+        if (notifier.canNotify()) notifier.notifyCodeRequired()
+        withContext(Dispatchers.Main) { openDevelopmentSettings() }
+        Result.success(Unit)
     }
 
     suspend fun pairAndStart(code: String): Result<Unit> = withContext(Dispatchers.IO) {
