@@ -1,0 +1,33 @@
+<resources>
+    <string name="permission_title">权限</string>
+    <string name="permission_intro">shell 工具只在当前生效档位内可用；选择较高档位但尚未授权时，仍按实际已授权的最高档位运行。</string>
+
+    <string name="permission_level_normal">普通</string>
+    <string name="permission_level_shizuku">Shizuku（ADB）</string>
+    <string name="permission_level_root">Root</string>
+
+    <string name="permission_status_normal">无需授权，使用 App 内置环境</string>
+    <string name="permission_status_shizuku_missing">未安装</string>
+    <string name="permission_status_shizuku_stopped">已安装，未运行</string>
+    <string name="permission_status_shizuku_denied">运行中，未授权（v%1$d · uid %2$d）</string>
+    <string name="permission_status_shizuku_granted">运行中，已授权（v%1$d · uid %2$d）</string>
+    <string name="permission_status_root_not_requested">尚未检测</string>
+    <string name="permission_status_root_granted">已授权</string>
+    <string name="permission_status_root_denied">未授权</string>
+    <string name="permission_status_root_unsupported">当前设备不支持 su</string>
+    <string name="permission_status_root_timeout">检测超时</string>
+    <string name="permission_status_root_error">检测失败</string>
+
+    <string name="permission_action_install_shizuku">安装 Shizuku</string>
+    <string name="permission_action_open_shizuku">打开 Shizuku</string>
+    <string name="permission_action_grant_shizuku">授权 DeepDeep</string>
+    <string name="permission_action_probe_root">检测 Root 授权</string>
+
+    <string name="permission_hint_normal">普通档不调用系统级命令，shell 工具在 App 内置的 Linux 环境中运行。</string>
+    <string name="permission_hint_shizuku_root">Shizuku 当前以 root 运行，shizuku_shell 与 root_shell 等同，请谨慎使用。</string>
+    <string name="permission_hint_shizuku">Shizuku 需要单独安装，并通过 ADB 或 Root 启动；授权后 DeepDeep 以 Shizuku 会话的权限执行命令（通常 uid 2000，Shizuku 以 root 运行时等同 root）。</string>
+    <string name="permission_hint_root">Root 授权由系统 root 管理器确认；App 不持久化授权状态，每次使用都在前台校验。</string>
+
+    <string name="permission_effective">当前生效</string>
+    <string name="permission_effective_fallback">所选档位尚未授权，当前按「%1$s」运行。</string>
+</resources>
