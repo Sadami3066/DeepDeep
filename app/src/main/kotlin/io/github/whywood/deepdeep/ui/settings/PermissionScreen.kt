@@ -235,7 +235,13 @@ private fun PrivilegeLevelAction(
                 }
             }
             Spacer(Modifier.height(10.dp))
-            PrivilegeHint(R.string.permission_hint_shizuku)
+            PrivilegeHint(
+                if (shizuku.granted && shizuku.uid == 0) {
+                    R.string.permission_hint_shizuku_root
+                } else {
+                    R.string.permission_hint_shizuku
+                },
+            )
         }
 
         PrivilegeLevel.ROOT -> Column(Modifier.fillMaxWidth()) {
@@ -287,8 +293,18 @@ private fun levelLabel(level: PrivilegeLevel): String = stringResource(
 
 @Composable
 private fun shizukuStatusText(shizuku: ShizukuState): String = when {
-    shizuku.granted -> stringResource(R.string.permission_status_shizuku_granted)
-    shizuku.running -> stringResource(R.string.permission_status_shizuku_denied)
+    shizuku.granted -> stringResource(
+        R.string.permission_status_shizuku_granted,
+        shizuku.version,
+        shizuku.uid,
+    )
+
+    shizuku.running -> stringResource(
+        R.string.permission_status_shizuku_denied,
+        shizuku.version,
+        shizuku.uid,
+    )
+
     shizuku.installed -> stringResource(R.string.permission_status_shizuku_stopped)
     else -> stringResource(R.string.permission_status_shizuku_missing)
 }
