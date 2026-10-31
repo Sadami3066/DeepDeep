@@ -2,6 +2,11 @@
 
 ## HEAD (since m2)
 
+- feat: 统一 screen_* 屏幕工具层（ADB + 无障碍 + 虚拟屏） [屏幕]
+- fix: 虚拟屏注入 source、落屏诊断、root 冷启动探测、配对前台服务与单 shell 后端 [权限]
+- feat: 悬浮窗虚拟屏缩略预览与 content frame 坐标修复 [浮窗]
+- refactor: 删除旧 gui_* 工具与 daemon 主屏注入端点 [屏幕]
+- docs: 同步统一屏幕层、悬浮窗几何与依赖例外 [docs]
 - feat: 内嵌无线调试配对与 ShellDaemon，移除 Shizuku 依赖 [权限]
 - feat: 权限档位与 shell 工具迁移到内嵌 ADB [权限]
 - feat: 虚拟屏改用 daemon 启动与 loopback TCP，固定竖屏 [虚拟屏]
