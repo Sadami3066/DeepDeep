@@ -4,6 +4,15 @@ import android.content.Context
 import android.content.Intent
 
 internal object AssistantEntry {
+    const val EXTRA_SESSION_ID = "io.github.whywood.deepdeep.extra.SESSION_ID"
+
+    fun openOverlay(context: Context, sessionId: String? = null): Boolean {
+        val intent = Intent(context, AssistantOverlayActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (!sessionId.isNullOrBlank()) intent.putExtra(EXTRA_SESSION_ID, sessionId)
+        return runCatching { context.startActivity(intent) }.isSuccess
+    }
+
     fun powerSettingsActions(): List<String> = listOf(
         "android.settings.ACTION_POWER_MENU_SETTINGS",
         "android.settings.ASSIST_GESTURE_SETTINGS",

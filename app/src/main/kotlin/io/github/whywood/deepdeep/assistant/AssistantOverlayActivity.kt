@@ -43,6 +43,9 @@ class AssistantOverlayActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         AgentService.start(this)
+        intent.getStringExtra(AssistantEntry.EXTRA_SESSION_ID)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { graph.activeSessionId.value = it }
         val language = LanguagePreferences(this).read()
         val fontStyle = graph.fontPreferences.read()
         setContent {
