@@ -236,11 +236,12 @@ class FloatingWindowController(
             y = bubbleWindowPosition.y + px(FloatingBubbleWindowPadding),
         )
         val feedState = feed.state.value
-        val card = if (panelOpen.value || previewOpen.value || appForeground.value) {
-            null
+        val queue = if (panelOpen.value || previewOpen.value || appForeground.value) {
+            emptyList()
         } else {
-            floatingEventCard(feedState)
+            floatingEventQueue(feedState)
         }
+        val card = queue.firstOrNull()
         when {
             panelOpen.value -> showSurfaceWindow(
                 ui = FloatingSurfaceUi.Panel(
@@ -264,7 +265,7 @@ class FloatingWindowController(
             )
 
             card != null -> showSurfaceWindow(
-                ui = FloatingSurfaceUi.Card(card = card),
+                ui = FloatingSurfaceUi.Card(card = card, queueSize = queue.size),
                 surfaceWidth = FloatingCardWidth,
                 maxHeightRatio = FloatingCardMaxHeightRatio,
                 screenWidth = screenWidth,
@@ -381,6 +382,7 @@ class FloatingWindowController(
                     is FloatingSurfaceUi.Card -> FloatingEventCard(
                         card = value.card,
                         sessionTitle = value.sessionTitle,
+                        queueSize = value.queueSize,
                         maxHeight = with(density) { value.maxHeightPx.toDp() },
                         arrowSide = value.arrowSide,
                         arrowOffset = with(density) { value.arrowOffsetPx.toDp() },
@@ -860,6 +862,7 @@ private sealed interface FloatingSurfaceUi {
     data class Card(
         val card: FloatingEventCard,
         val sessionTitle: String = "",
+        val queueSize: Int = 1,
         val maxHeightPx: Int = 0,
         val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
         val arrowOffsetPx: Int = 0,

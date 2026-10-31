@@ -71,6 +71,61 @@ class FloatingFeedReducerTest {
     }
 
     @Test
+    fun eventQueuePutsQuestionsBeforeCompletedInPendingOrder() {
+        val state = baseState().copy(
+            questions = listOf(pending("req-1"), pending("req-2", sessionId = "session-b")),
+            completed = listOf(
+                completion("session-c", 2_000L, RunStatus.DONE),
+                completion("session-d", 1_000L, RunStatus.DONE),
+            ),
+        )
+        val queue = floatingEventQueue(state)
+        assertEquals(4, queue.size)
+        assertEquals("req-1", (queue[0] as FloatingEventCard.Question).pending.requestId)
+        assertEquals("req-2", (queue[1] as FloatingEventCard.Question).pending.requestId)
+        assertEquals("session-c", (queue[2] as FloatingEventCard.Completed).completion.sessionId)
+        assertEquals("session-d", (queue[3] as FloatingEventCard.Completed).completion.sessionId)
+        assertEquals(queue.first(), floatingEventCard(state))
+    }
+
+    @Test
+    fun eventQueueSkipsDismissedAndRemovedCards() {
+        val first = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-b", "会话", RunStatus.DONE, "B", null),
+            1_000L,
+        )
+        var state = reduceFloatingFeed(
+            first,
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "A", null),
+            2_000L,
+        )
+        val head = state.completed.first()
+        state = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard(head.key), 3_000L)
+        val queue = floatingEventQueue(state)
+        assertEquals(1, queue.size)
+        assertEquals("session-b", (queue.single() as FloatingEventCard.Completed).completion.sessionId)
+        val removed = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RemoveCompleted(state.completed.last().key),
+            4_000L,
+        )
+        assertTrue(floatingEventQueue(removed).isEmpty())
+    }
+
+    @Test
+    fun answeredQuestionLeavesQueueAndNextCardTakesOver() {
+        var state = baseState().copy(
+            questions = listOf(pending("req-1"), pending("req-2")),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+        )
+        assertEquals(3, floatingEventQueue(state).size)
+        state = reduceFloatingFeed(state, FloatingFeedEvent.QuestionsChanged(emptyList()), 2_000L)
+        assertEquals(1, floatingEventQueue(state).size)
+        assertTrue(floatingEventCard(state) is FloatingEventCard.Completed)
+    }
+
+    @Test
     fun pendingCountCountsQuestionsAndCompleted() {
         val state = baseState().copy(
             questions = listOf(pending("req-1"), pending("req-2")),

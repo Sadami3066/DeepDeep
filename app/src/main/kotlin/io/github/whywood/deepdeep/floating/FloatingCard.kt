@@ -53,6 +53,7 @@ import io.github.whywood.deepdeep.ui.chat.PresentedItemType
 internal fun FloatingEventCard(
     card: FloatingEventCard,
     sessionTitle: String,
+    queueSize: Int,
     maxHeight: Dp,
     arrowSide: FloatingArrowSide,
     arrowOffset: Dp,
@@ -94,11 +95,17 @@ internal fun FloatingEventCard(
                         is FloatingEventCard.Question -> QuestionBody(
                             pending = card.pending,
                             sessionTitle = sessionTitle,
+                            queueSize = queueSize,
                             onAnswer = onAnswerQuestion,
                             onOpenOverlay = { onOpenQuestion(card.pending) },
                         )
 
-                        is FloatingEventCard.Completed -> CompletedBody(card.completion, sessionTitle, onDismiss)
+                        is FloatingEventCard.Completed -> CompletedBody(
+                            completion = card.completion,
+                            sessionTitle = sessionTitle,
+                            queueSize = queueSize,
+                            onDismiss = onDismiss,
+                        )
                     }
                 }
             }
@@ -113,6 +120,7 @@ internal fun FloatingEventCard(
 private fun QuestionBody(
     pending: PendingQuestion,
     sessionTitle: String,
+    queueSize: Int,
     onAnswer: (PendingQuestion, QuestionOption) -> Unit,
     onOpenOverlay: () -> Unit,
 ) {
@@ -123,6 +131,7 @@ private fun QuestionBody(
         label = stringResource(R.string.floating_card_question),
         labelColor = colors.accent,
         title = sessionTitle,
+        queueSize = queueSize,
     )
     Spacer(Modifier.height(8.dp))
     Text(
@@ -212,6 +221,7 @@ private fun QuestionOptionRow(
 private fun CompletedBody(
     completion: FloatingCompletion,
     sessionTitle: String,
+    queueSize: Int,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -220,6 +230,7 @@ private fun CompletedBody(
             label = stringResource(R.string.floating_card_delivery),
             labelColor = colors.success,
             title = sessionTitle,
+            queueSize = queueSize,
             onClose = onDismiss,
         )
         Spacer(Modifier.height(8.dp))
@@ -263,7 +274,13 @@ private fun CompletedBody(
             )
         }
         val labelColor = if (completion.status == RunStatus.FAILED) colors.danger else colors.inkSecondary
-        CardHeader(label = label, labelColor = labelColor, title = sessionTitle, onClose = onDismiss)
+        CardHeader(
+            label = label,
+            labelColor = labelColor,
+            title = sessionTitle,
+            queueSize = queueSize,
+            onClose = onDismiss,
+        )
         val preview = completion.text.trim().take(220)
         if (preview.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -289,12 +306,17 @@ private fun CardHeader(
     label: String,
     labelColor: Color,
     title: String,
+    queueSize: Int,
     onClose: (() -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = label,
+            text = if (queueSize > 1) {
+                label + stringResource(R.string.floating_card_queue, queueSize)
+            } else {
+                label
+            },
             style = DdType.micro,
             color = labelColor,
             maxLines = 1,

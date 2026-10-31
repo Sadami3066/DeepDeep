@@ -181,13 +181,15 @@ fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = 
     else -> FloatingWhaleMood.IDLE
 }
 
-fun floatingEventCard(state: FloatingFeedState): FloatingEventCard? {
+fun floatingEventQueue(state: FloatingFeedState): List<FloatingEventCard> {
     val candidates = buildList {
-        state.questions.firstOrNull()?.let { add(FloatingEventCard.Question(it)) }
+        state.questions.forEach { add(FloatingEventCard.Question(it)) }
         floatingVisibleCompletions(state).forEach { add(FloatingEventCard.Completed(it)) }
     }
-    return candidates.firstOrNull { it.key !in state.dismissedCardKeys }
+    return candidates.filterNot { it.key in state.dismissedCardKeys }
 }
+
+fun floatingEventCard(state: FloatingFeedState): FloatingEventCard? = floatingEventQueue(state).firstOrNull()
 
 fun floatingInlineOptions(pending: PendingQuestion): List<QuestionOption>? {
     val question = pending.questions.singleOrNull() ?: return null
