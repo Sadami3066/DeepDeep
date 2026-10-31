@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.screen
 
+import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
 import io.github.whywood.deepdeep.plugin.gui.GuiGlobalAction
 import io.github.whywood.deepdeep.plugin.gui.GuiNode
@@ -24,13 +25,15 @@ class ScreenRouterTest {
     private val virtual = FakeVirtual()
     private val apps = FakeApps()
 
-    private fun router(): ScreenRouter = ScreenRouter(
+    private fun router(
+        accessibilityEnabled: () -> Boolean = { accessibility.connected },
+    ): ScreenRouter = ScreenRouter(
         accessibility = accessibility,
         adb = adb,
         virtual = virtual,
         apps = apps,
         mainDisplaySize = { 1080 to 2400 },
-        accessibilityEnabled = { accessibility.connected },
+        accessibilityEnabled = accessibilityEnabled,
     )
 
     @Test
@@ -351,6 +354,145 @@ class ScreenRouterTest {
         assertTrue(!snapshotMatches(snapshot, null, null, "OK"))
     }
 
+    @Test
+    fun observeDropsUnusableBoundsAndReportsFilteredCount() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshot = viewPagerSnapshot()
+        val observed = router().observe(ScreenTarget.MAIN, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+        assertEquals(listOf("0", "2"), observed.snapshot.nodes.map { it.ref })
+        assertEquals(1, observed.filteredNodes)
+    }
+
+    @Test
+    fun findSearchesFullDepthAndFindsDeepNode() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshotForDepth = { maxDepth, maxNodes ->
+            GuiNodeTree.buildSnapshot(deepRoot(), maxDepth = maxDepth, maxNodes = maxNodes)
+        }
+        val found = router().find(ScreenTarget.MAIN, listOf(GuiSelector.Text("深层目标")), 20)
+        assertEquals(1, found.matches.size)
+        assertEquals(SCREEN_DEFAULT_MAX_DEPTH, accessibility.lastObserveMaxDepth)
+    }
+
+    @Test
+    fun findUsesPrunedSnapshotAndReportsMatches() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshot = viewPagerSnapshot()
+        val found = router().find(ScreenTarget.MAIN, listOf(GuiSelector.Text("OK")), 20)
+        assertEquals(1, found.matches.size)
+        assertEquals("2", found.matches.single().ref)
+    }
+
+    @Test
+    fun scrollWithUnlaidOutRefFailsReadably() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshot = viewPagerSnapshot()
+        val error = expectFailure {
+            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, GuiSelector.Ref("1"))
+        }
+        assertTrue(error.message.orEmpty().contains("找不到滚动目标节点"))
+    }
+
+    @Test
+    fun scrollPathIsClampedIntoVirtualDisplay() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshot = wideNodeSnapshot()
+        router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.RIGHT, 1, GuiSelector.Ref("1"))
+        assertEquals(listOf(660L, 600L, 699L, 600L, 300L), virtual.swiped)
+    }
+
+    @Test
+    fun swipeRejectsCoordinatesOutsideDisplay() = runBlocking {
+        val virtualError = expectFailure {
+            router().swipe(ScreenTarget.VIRTUAL, 0, 0, 700, 1200, 300)
+        }
+        assertTrue(virtualError.message.orEmpty().contains("滑动坐标超出屏幕范围"))
+        assertTrue(virtualError.message.orEmpty().contains("700×1200"))
+        val mainError = expectFailure {
+            router().swipe(ScreenTarget.MAIN, 0, 0, 1080, 10, 300)
+        }
+        assertTrue(mainError.message.orEmpty().contains("1080×2400"))
+        val samePoint = expectFailure {
+            router().swipe(ScreenTarget.VIRTUAL, 10, 10, 10, 10, 300)
+        }
+        assertTrue(samePoint.message.orEmpty().contains("起点与终点相同"))
+    }
+
+    @Test
+    fun tapByPointRejectsCoordinatesOutsideDisplay() = runBlocking {
+        val mainError = expectFailure {
+            router().tap(ScreenTarget.MAIN, GuiSelector.Point(1080, 10), 60)
+        }
+        assertTrue(mainError.message.orEmpty().contains("点击坐标超出屏幕范围"))
+        val virtualError = expectFailure {
+            router().tap(ScreenTarget.VIRTUAL, GuiSelector.Point(10, 1200), 60)
+        }
+        assertTrue(virtualError.message.orEmpty().contains("700×1200"))
+    }
+
+    @Test
+    fun adbTapResolvesRefsAgainstPrunedSnapshot() = runBlocking {
+        accessibility.connected = false
+        virtual.stateValue = VirtualScreenState.Offline
+        adb.availableState = true
+        adb.snapshot = viewPagerSnapshot()
+        router().tap(ScreenTarget.MAIN, GuiSelector.Ref("2"), 60)
+        assertEquals(200 to 100, adb.tapped)
+    }
+
+    @Test
+    fun statusSeparatesEnabledFromConnectedAndReportsChannels() = runBlocking {
+        accessibility.connected = false
+        adb.availableState = true
+        val status = router(accessibilityEnabled = { true }).status()
+        assertEquals(false, status.accessibilityConnected)
+        assertEquals(true, status.accessibilityEnabled)
+        assertEquals(BACKEND_ADB, status.main.backend)
+        assertEquals(BACKEND_ADB, status.main.nodeBackend)
+        assertEquals(BACKEND_ADB, status.main.inputBackend)
+        assertEquals(BACKEND_NONE, status.virtual?.nodeBackend)
+        assertEquals(BACKEND_HELPER, status.virtual?.inputBackend)
+    }
+
+    @Test
+    fun statusReportsAccessibilityChannelsWhenConnected() = runBlocking {
+        accessibility.connected = true
+        adb.availableState = true
+        val status = router(accessibilityEnabled = { true }).status()
+        assertEquals(BACKEND_ACCESSIBILITY, status.main.nodeBackend)
+        assertEquals(BACKEND_ADB, status.main.inputBackend)
+        assertEquals(BACKEND_ACCESSIBILITY, status.virtual?.nodeBackend)
+        assertEquals(BACKEND_HELPER, status.virtual?.inputBackend)
+    }
+
+    @Test
+    fun virtualNodeErrorsWhileRebindingAskToWait() = runBlocking {
+        accessibility.connected = false
+        val error = expectFailure {
+            router(accessibilityEnabled = { true }).tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60)
+        }
+        assertTrue(error.message.orEmpty().contains("正在重新绑定"))
+        assertTrue(error.message.orEmpty().contains("等待几秒"))
+    }
+
+    @Test
+    fun virtualNodeErrorsWhenDisabledPointToSettings() = runBlocking {
+        accessibility.connected = false
+        val error = expectFailure {
+            router(accessibilityEnabled = { false }).tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60)
+        }
+        assertTrue(error.message.orEmpty().contains("请到系统设置开启"))
+    }
+
+    @Test
+    fun mainObserveWhileRebindingWithVirtualOnlineAsksToWait() = runBlocking {
+        accessibility.connected = false
+        val error = expectFailure {
+            router(accessibilityEnabled = { true }).observe(ScreenTarget.MAIN, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+        }
+        assertTrue(error.message.orEmpty().contains("正在重新绑定"))
+    }
+
     private suspend fun expectFailure(block: suspend () -> Unit): Throwable {
         try {
             block()
@@ -364,6 +506,9 @@ class ScreenRouterTest {
         override var connected = true
         var observeCalls = 0
         var lastObserveDisplayId = -1
+        var lastObserveMaxDepth = -1
+        var snapshot: GuiSnapshot = testSnapshot()
+        var snapshotForDepth: ((Int, Int) -> GuiSnapshot)? = null
         var lastTapDisplayId = -1
         var lastTapSelector: GuiSelector? = null
         var lastSetTextDisplayId = -1
@@ -375,7 +520,8 @@ class ScreenRouterTest {
         override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
             observeCalls++
             lastObserveDisplayId = displayId
-            return testSnapshot()
+            lastObserveMaxDepth = maxDepth
+            return snapshotForDepth?.invoke(maxDepth, maxNodes) ?: snapshot
         }
 
         override suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int) {
@@ -413,6 +559,7 @@ class ScreenRouterTest {
         var availableState = true
         var observeCalls = 0
         var observeFailure: Throwable? = null
+        var snapshot: GuiSnapshot = testSnapshot()
         var tapped: Pair<Int, Int>? = null
         var swiped: List<Int>? = null
         var lastKeyEvent: Int? = null
@@ -423,7 +570,7 @@ class ScreenRouterTest {
         override suspend fun observeMain(maxDepth: Int, maxNodes: Int): GuiSnapshot {
             observeCalls++
             observeFailure?.let { throw it }
-            return testSnapshot()
+            return snapshot
         }
 
         override suspend fun tap(x: Int, y: Int) {
@@ -531,5 +678,61 @@ private fun testSnapshot(): GuiSnapshot = GuiNodeTree.buildSnapshot(
                     ),
                 ),
             ),
+    packageName = "com.example",
+)
+
+private fun viewPagerSnapshot(): GuiSnapshot = GuiNodeTree.buildSnapshot(
+    root = GuiNode(
+        className = "android.widget.FrameLayout",
+        bounds = GuiBounds(0, 0, 1080, 2400),
+        children = listOf(
+            GuiNode(
+                className = "androidx.viewpager.widget.ViewPager",
+                bounds = GuiBounds(79, 2433, 202, 2400),
+                text = "未布局页",
+            ),
+            GuiNode(
+                className = "android.widget.Button",
+                bounds = GuiBounds(100, 50, 300, 150),
+                text = "OK",
+                clickable = true,
+            ),
+        ),
+    ),
+    maxDepth = SCREEN_DEFAULT_MAX_DEPTH,
+    maxNodes = GUI_MAX_NODES,
+    packageName = "com.example",
+)
+
+private fun deepRoot(): GuiNode {
+    var node = GuiNode(
+        className = "android.widget.TextView",
+        bounds = GuiBounds(10, 10, 100, 50),
+        text = "深层目标",
+    )
+    repeat(19) {
+        node = GuiNode(
+            className = "android.widget.FrameLayout",
+            bounds = GuiBounds(0, 0, 1080, 2400),
+            children = listOf(node),
+        )
+    }
+    return node
+}
+
+private fun wideNodeSnapshot(): GuiSnapshot = GuiNodeTree.buildSnapshot(
+    root = GuiNode(
+        className = "android.widget.FrameLayout",
+        bounds = GuiBounds(0, 0, 1080, 2400),
+        children = listOf(
+            GuiNode(
+                className = "android.widget.ListView",
+                bounds = GuiBounds(600, 100, 900, 1100),
+                scrollable = true,
+            ),
+        ),
+    ),
+    maxDepth = SCREEN_DEFAULT_MAX_DEPTH,
+    maxNodes = GUI_MAX_NODES,
     packageName = "com.example",
 )

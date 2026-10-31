@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.screen
 
 import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
 import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
@@ -77,6 +78,63 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun observeToolDefaultsToFullDepth() = runTest {
+        val result = run("screen_observe", buildJsonObject { })
+        assertNull(result.isError)
+        assertEquals(GUI_MAX_DEPTH, controller.lastObserveMaxDepth)
+    }
+
+    @Test
+    fun observeToolReportsFilteredNodes() = runTest {
+        controller.filteredNodes = 3
+        val result = run("screen_observe", buildJsonObject { })
+        assertNull(result.isError)
+        assertTrue(result.text().contains("\"filtered\":3"))
+    }
+
+    @Test
+    fun observeToolKeepsExplicitDepth() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("maxDepth", 6) })
+        assertNull(result.isError)
+        assertEquals(6, controller.lastObserveMaxDepth)
+    }
+
+    @Test
+    fun statusToolReportsReconnectingAccessibility() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            accessibilityConnected = false,
+            accessibilityEnabled = true,
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"state\":\"reconnecting\""))
+        assertTrue(text.contains("无障碍服务正在重新绑定"))
+        assertTrue(text.contains("\"nodeBackend\""))
+        assertTrue(text.contains("\"inputBackend\""))
+    }
+
+    @Test
+    fun statusToolReportsDisabledAccessibility() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            accessibilityConnected = false,
+            accessibilityEnabled = false,
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"state\":\"disabled\""))
+        assertTrue(text.contains("无障碍服务未开启"))
+    }
+
+    @Test
+    fun statusToolReportsConnectedAccessibility() = runTest {
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        assertTrue(result.text().contains("\"state\":\"connected\""))
+    }
+
+    @Test
     fun findToolRejectsMissingSelectors() = runTest {
         val result = run("screen_find", buildJsonObject { put("target", "main") })
         assertTrue(result.isError == true)
@@ -89,6 +147,17 @@ class ScreenToolsTest {
         assertNull(result.isError)
         assertTrue(result.text().contains("\"count\":1"))
         assertTrue(result.text().contains("\"total\":1"))
+        assertTrue(result.text().contains("\"scanned\":2"))
+    }
+
+    @Test
+    fun findToolHintsWhenNothingMatches() = runTest {
+        val result = run("screen_find", buildJsonObject { put("text", "不存在的文字") })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"count\":0"))
+        assertTrue(text.contains("\"scanned\":2"))
+        assertTrue(text.contains("\"hint\""))
     }
 
     @Test
@@ -252,6 +321,8 @@ class ScreenToolsTest {
 
     private class FakeController : ScreenController {
         var lastObserveTarget: ScreenTarget? = null
+        var lastObserveMaxDepth = -1
+        var filteredNodes = 0
         var lastTapTarget: ScreenTarget? = null
         var lastTapSelector: GuiSelector? = null
         var lastTapDuration = -1
@@ -262,6 +333,16 @@ class ScreenToolsTest {
         var lastLaunchTarget: ScreenTarget? = null
         var capture = ScreenCapture(byteArrayOf(9), 1, 1, BACKEND_ACCESSIBILITY)
         var waitResult = true
+        var statusSnapshot = ScreenStatusSnapshot(
+            accessibilityConnected = true,
+            accessibilityEnabled = true,
+            adbAvailable = false,
+            main = ScreenDisplayInfo(ScreenTarget.MAIN, MAIN_DISPLAY_ID, 1080, 2400, BACKEND_ACCESSIBILITY),
+            virtualState = "online",
+            virtual = ScreenDisplayInfo(ScreenTarget.VIRTUAL, 9, 1080, 2400, BACKEND_HELPER),
+            virtualBackend = "adb",
+            virtualUid = 2000,
+        )
         var launchReport = ScreenLaunchReport(
             ok = true,
             message = "已在虚拟屏启动",
@@ -273,16 +354,7 @@ class ScreenToolsTest {
             backend = BACKEND_HELPER,
         )
 
-        override suspend fun status(): ScreenStatusSnapshot = ScreenStatusSnapshot(
-            accessibilityConnected = true,
-            accessibilityEnabled = true,
-            adbAvailable = false,
-            main = ScreenDisplayInfo(ScreenTarget.MAIN, MAIN_DISPLAY_ID, 1080, 2400, BACKEND_ACCESSIBILITY),
-            virtualState = "online",
-            virtual = ScreenDisplayInfo(ScreenTarget.VIRTUAL, 9, 1080, 2400, BACKEND_HELPER),
-            virtualBackend = "adb",
-            virtualUid = 2000,
-        )
+        override suspend fun status(): ScreenStatusSnapshot = statusSnapshot
 
         override suspend fun observe(
             target: ScreenTarget,
@@ -291,7 +363,8 @@ class ScreenToolsTest {
             expectedPackage: String?,
         ): ScreenObserveResult {
             lastObserveTarget = target
-            return ScreenObserveResult(BACKEND_ACCESSIBILITY, snapshot())
+            lastObserveMaxDepth = maxDepth
+            return ScreenObserveResult(BACKEND_ACCESSIBILITY, snapshot(), filteredNodes)
         }
 
         override suspend fun find(

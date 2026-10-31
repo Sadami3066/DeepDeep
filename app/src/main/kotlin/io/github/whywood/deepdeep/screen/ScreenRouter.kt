@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GUI_DEFAULT_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
 import io.github.whywood.deepdeep.plugin.gui.GuiGlobalAction
@@ -21,23 +20,46 @@ class ScreenRouter(
     private val accessibilityEnabled: () -> Boolean = { accessibility.connected },
 ) : ScreenController {
     override suspend fun status(): ScreenStatusSnapshot {
+        val accessibilityConnected = runCatching { accessibility.connected }.getOrDefault(false)
+        val accessibilityOn = runCatching { accessibilityEnabled() }.getOrDefault(false)
         val virtualState = runCatching { virtual.state() }.getOrElse { VirtualScreenState.Offline }
         val online = virtualState as? VirtualScreenState.Online
         val adbAvailable = runCatching { adb.available() }.getOrDefault(false)
         val size = mainDisplaySize()
-        val mainBackend = when {
-            accessibility.connected -> BACKEND_ACCESSIBILITY
+        val mainNodeBackend = when {
+            accessibilityConnected -> BACKEND_ACCESSIBILITY
             adbAvailable -> BACKEND_ADB
-            else -> "none"
+            else -> BACKEND_NONE
+        }
+        val mainInputBackend = when {
+            adbAvailable -> BACKEND_ADB
+            accessibilityConnected -> BACKEND_ACCESSIBILITY
+            else -> BACKEND_NONE
         }
         return ScreenStatusSnapshot(
-            accessibilityConnected = accessibility.connected,
-            accessibilityEnabled = runCatching { accessibilityEnabled() }.getOrDefault(false),
+            accessibilityConnected = accessibilityConnected,
+            accessibilityEnabled = accessibilityOn,
             adbAvailable = adbAvailable,
-            main = ScreenDisplayInfo(ScreenTarget.MAIN, MAIN_DISPLAY_ID, size.first, size.second, mainBackend),
+            main = ScreenDisplayInfo(
+                target = ScreenTarget.MAIN,
+                displayId = MAIN_DISPLAY_ID,
+                width = size.first,
+                height = size.second,
+                backend = mainNodeBackend,
+                nodeBackend = mainNodeBackend,
+                inputBackend = mainInputBackend,
+            ),
             virtualState = virtualStateName(virtualState),
             virtual = online?.let {
-                ScreenDisplayInfo(ScreenTarget.VIRTUAL, it.displayId, it.width, it.height, BACKEND_HELPER)
+                ScreenDisplayInfo(
+                    target = ScreenTarget.VIRTUAL,
+                    displayId = it.displayId,
+                    width = it.width,
+                    height = it.height,
+                    backend = BACKEND_HELPER,
+                    nodeBackend = if (accessibilityConnected) BACKEND_ACCESSIBILITY else BACKEND_NONE,
+                    inputBackend = BACKEND_HELPER,
+                )
             },
             virtualBackend = online?.backend,
             virtualUid = runCatching { virtual.helperUid() }.getOrNull(),
@@ -50,19 +72,13 @@ class ScreenRouter(
         maxNodes: Int,
         expectedPackage: String?,
     ): ScreenObserveResult {
-        val result = when (target) {
-            ScreenTarget.MAIN -> if (accessibility.connected) {
-                ScreenObserveResult(BACKEND_ACCESSIBILITY, accessibility.observe(MAIN_DISPLAY_ID, maxDepth, maxNodes))
-            } else {
-                ensureAdbMainObservationAllowed()
-                ScreenObserveResult(BACKEND_ADB, adb.observeMain(maxDepth, maxNodes))
-            }
-            ScreenTarget.VIRTUAL -> {
-                val online = requireVirtualOnline()
-                if (!accessibility.connected) throw virtualAccessibilityError()
-                ScreenObserveResult(BACKEND_ACCESSIBILITY, accessibility.observe(online.displayId, maxDepth, maxNodes))
-            }
-        }
+        val observed = observeRaw(target, maxDepth, maxNodes)
+        val pruned = observed.snapshot.usableOn(displayBounds(target))
+        val result = ScreenObserveResult(
+            backend = observed.backend,
+            snapshot = pruned,
+            filteredNodes = observed.snapshot.nodes.size - pruned.nodes.size,
+        )
         val currentPackage = result.snapshot.packageName
         if (expectedPackage != null && currentPackage != null && currentPackage != expectedPackage) {
             throw IllegalStateException(
@@ -72,20 +88,48 @@ class ScreenRouter(
         return result
     }
 
+    private suspend fun observeRaw(target: ScreenTarget, maxDepth: Int, maxNodes: Int): ScreenObserveResult = when (target) {
+        ScreenTarget.MAIN -> if (accessibility.connected) {
+            ScreenObserveResult(BACKEND_ACCESSIBILITY, accessibility.observe(MAIN_DISPLAY_ID, maxDepth, maxNodes))
+        } else {
+            ensureAdbMainObservationAllowed()
+            ScreenObserveResult(BACKEND_ADB, adb.observeMain(maxDepth, maxNodes))
+        }
+        ScreenTarget.VIRTUAL -> {
+            val online = requireVirtualOnline()
+            if (!accessibility.connected) throw virtualAccessibilityError()
+            ScreenObserveResult(BACKEND_ACCESSIBILITY, accessibility.observe(online.displayId, maxDepth, maxNodes))
+        }
+    }
+
+    private suspend fun displayBounds(target: ScreenTarget): GuiBounds = when (target) {
+        ScreenTarget.MAIN -> mainBounds()
+        ScreenTarget.VIRTUAL -> {
+            val online = requireVirtualOnline()
+            GuiBounds(0, 0, online.width, online.height)
+        }
+    }
+
     override suspend fun find(
         target: ScreenTarget,
         selectors: List<GuiSelector>,
         limit: Int,
     ): ScreenFindResult {
         if (selectors.isEmpty()) throw IllegalArgumentException("需要提供至少一个查找条件")
-        val observed = observe(target, GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+        val observed = observe(target, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         val matches = GuiNodeTree.findAll(observed.snapshot, selectors, limit)
         return ScreenFindResult(observed.backend, observed.snapshot, matches)
     }
 
-    override suspend fun tap(target: ScreenTarget, selector: GuiSelector, durationMs: Int): String = when (target) {
-        ScreenTarget.MAIN -> tapMain(selector, durationMs)
-        ScreenTarget.VIRTUAL -> tapVirtual(selector, durationMs)
+    override suspend fun tap(target: ScreenTarget, selector: GuiSelector, durationMs: Int): String {
+        if (selector is GuiSelector.Point) {
+            val display = displayBounds(target)
+            invalidTapCoordinate(selector.x, selector.y, display)?.let { throw IllegalArgumentException(it) }
+        }
+        return when (target) {
+            ScreenTarget.MAIN -> tapMain(selector, durationMs)
+            ScreenTarget.VIRTUAL -> tapVirtual(selector, durationMs)
+        }
     }
 
     override suspend fun swipe(
@@ -95,18 +139,22 @@ class ScreenRouter(
         x2: Int,
         y2: Int,
         durationMs: Long,
-    ): String = when (target) {
-        ScreenTarget.MAIN -> {
-            if (!adb.available()) {
-                throw IllegalStateException("主屏滑动需要无线调试（ADB）连接：请到权限设置完成配对；滚动请改用 screen_scroll")
+    ): String {
+        val display = displayBounds(target)
+        invalidSwipeCoordinates(x1, y1, x2, y2, display)?.let { throw IllegalArgumentException(it) }
+        return when (target) {
+            ScreenTarget.MAIN -> {
+                if (!adb.available()) {
+                    throw IllegalStateException("主屏滑动需要无线调试（ADB）连接：请到权限设置完成配对；滚动请改用 screen_scroll")
+                }
+                adb.swipe(x1, y1, x2, y2, durationMs)
+                "已通过 ADB 在 $(target.id) 屏幕滑动 ($x1, $y1) → ($x2, $y2)"
             }
-            adb.swipe(x1, y1, x2, y2, durationMs)
-            "已通过 ADB 在 $(target.id) 屏幕滑动 ($x1, $y1) → ($x2, $y2)"
-        }
-        ScreenTarget.VIRTUAL -> {
-            requireVirtualOnline()
-            virtual.swipe(x1, y1, x2, y2, durationMs).requireOk()
-            "已在虚拟屏滑动 ($x1, $y1) → ($x2, $y2)"
+            ScreenTarget.VIRTUAL -> {
+                requireVirtualOnline()
+                virtual.swipe(x1, y1, x2, y2, durationMs).requireOk()
+                "已在虚拟屏滑动 ($x1, $y1) → ($x2, $y2)"
+            }
         }
     }
 
@@ -119,7 +167,9 @@ class ScreenRouter(
         val steps = amount.coerceIn(1, MAX_SCROLL_AMOUNT)
         val bounds = when {
             selector != null -> resolveBounds(target, selector)
-                ?: throw IllegalArgumentException("找不到滚动目标节点，请先 screen_observe 后重试")
+                ?: throw IllegalArgumentException(
+                    "找不到滚动目标节点：ref 可能已失效、节点未布局或已移出屏幕；请重新 screen_observe 后重试",
+                )
             target == ScreenTarget.MAIN -> mainBounds()
             else -> {
                 val online = requireVirtualOnline()
@@ -185,7 +235,13 @@ class ScreenRouter(
     override suspend fun screenshot(target: ScreenTarget): ScreenCapture = when (target) {
         ScreenTarget.MAIN -> {
             if (!accessibility.connected) {
-                throw IllegalStateException("主屏截图需要无障碍服务（Android 11+）：请到系统设置开启 DeepDeep 无障碍")
+                throw IllegalStateException(
+                    if (accessibilityRebinding()) {
+                        "主屏截图需要无障碍服务（Android 11+）：无障碍服务正在重新绑定，请等待几秒后重试"
+                    } else {
+                        "主屏截图需要无障碍服务（Android 11+）：请到系统设置开启 DeepDeep 无障碍"
+                    },
+                )
             }
             val shot = accessibility.screenshotMain()
             ScreenCapture(shot.png, shot.width, shot.height, BACKEND_ACCESSIBILITY)
@@ -250,10 +306,12 @@ class ScreenRouter(
         }
         if (!adb.available()) throw mainAccessError()
         ensureAdbMainObservationAllowed()
-        val snapshot = adb.observeMain(GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
-        val node = GuiNodeTree.find(snapshot, selector)
+        val display = mainBounds()
+        val snapshot = adb.observeMain(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES).usableOn(display)
+        val node = findScreenNode(snapshot, selector)
             ?: throw IllegalArgumentException("界面上找不到匹配的节点，请先 screen_observe 后重试")
-        adb.tap(node.bounds.centerX, node.bounds.centerY)
+        val (x, y) = node.bounds.centerWithin(display)
+        adb.tap(x, y)
         return "已通过 ADB 点击主屏 ${selector.describeSelector()}（${node.bounds.format()}）"
     }
 
@@ -272,7 +330,11 @@ class ScreenRouter(
         if (selector != null) {
             if (!accessibility.connected) {
                 throw IllegalStateException(
-                    "主屏按节点输入需要无障碍服务与输入框 ref：请开启无障碍后重试；不能把文本盲注入当前焦点",
+                    if (accessibilityRebinding()) {
+                        "主屏按节点输入需要无障碍服务与输入框 ref：无障碍服务正在重新绑定，请等待几秒后重试"
+                    } else {
+                        "主屏按节点输入需要无障碍服务与输入框 ref：请开启无障碍后重试；不能把文本盲注入当前焦点"
+                    },
                 )
             }
             val outcome = accessibility.setText(MAIN_DISPLAY_ID, selector, text)
@@ -336,7 +398,7 @@ class ScreenRouter(
         val deadline = System.currentTimeMillis() + timeoutMs
         ensureAdbMainObservationAllowed()
         while (true) {
-            val snapshot = runCatching { adb.observeMain(GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES) }.getOrNull()
+            val snapshot = runCatching { adb.observeMain(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES) }.getOrNull()
             if (snapshot != null && snapshotMatches(snapshot, packageName, text, textGone)) return true
             if (System.currentTimeMillis() >= deadline) return false
             delay(WAIT_POLL_MS)
@@ -346,18 +408,18 @@ class ScreenRouter(
     private suspend fun resolveBounds(target: ScreenTarget, selector: GuiSelector): GuiBounds? = runCatching {
         val snapshot: GuiSnapshot = when (target) {
             ScreenTarget.MAIN -> if (accessibility.connected) {
-                accessibility.observe(MAIN_DISPLAY_ID, GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
+                accessibility.observe(MAIN_DISPLAY_ID, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
             } else {
                 ensureAdbMainObservationAllowed()
-                adb.observeMain(GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
+                adb.observeMain(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
             }
             ScreenTarget.VIRTUAL -> {
                 val online = requireVirtualOnline()
                 if (!accessibility.connected) return null
-                accessibility.observe(online.displayId, GUI_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
+                accessibility.observe(online.displayId, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES)
             }
         }
-        GuiNodeTree.find(snapshot, selector)?.bounds
+        findScreenNode(snapshot.usableOn(displayBounds(target)), selector)?.bounds
     }.getOrNull()
 
     private suspend fun swipeWithin(
@@ -366,7 +428,11 @@ class ScreenRouter(
         steps: Int,
         bounds: GuiBounds,
     ): String {
-        val path = swipePathFor(direction, bounds)
+        val path = clampedSwipePath(direction, bounds, displayBounds(target))
+            ?: throw IllegalStateException(
+                "滚动目标的坐标超出屏幕或可滑区域太小，无法生成有效滑动：" +
+                    "请重新 screen_observe 确认节点，或改用 screen_swipe 按坐标滑动",
+            )
         repeat(steps) {
             when (target) {
                 ScreenTarget.MAIN -> adb.swipe(path[0], path[1], path[2], path[3], SCROLL_DURATION_MS)
@@ -390,20 +456,38 @@ class ScreenRouter(
             VirtualScreenState.Offline -> throw IllegalStateException("虚拟屏未启动：请先调用 virtual_screen_start")
         }
 
-    private fun virtualAccessibilityError(): IllegalStateException = IllegalStateException(
-        "虚拟屏的节点读取与文本输入需要无障碍服务：请到系统设置开启 DeepDeep 无障碍；" +
-            "无障碍关闭时只能用坐标点击、滑动、按键与截图",
-    )
+    private fun accessibilityRebinding(): Boolean = runCatching { accessibilityEnabled() }.getOrDefault(false)
 
-    private fun mainAccessError(): IllegalStateException = IllegalStateException(
-        "主屏操作需要无障碍服务或无线调试（ADB）连接：请到权限设置完成配对，或开启无障碍服务",
-    )
+    private fun virtualAccessibilityError(): IllegalStateException = if (accessibilityRebinding()) {
+        IllegalStateException(
+            "无障碍服务正在重新绑定（系统设置里已开启）：请等待几秒后重试；" +
+                "期间虚拟屏只能坐标点击、滑动、按键与截图",
+        )
+    } else {
+        IllegalStateException(
+            "虚拟屏的节点读取与文本输入需要无障碍服务：请到系统设置开启 DeepDeep 无障碍；" +
+                "无障碍关闭时只能用坐标点击、滑动、按键与截图",
+        )
+    }
+
+    private fun mainAccessError(): IllegalStateException = if (accessibilityRebinding()) {
+        IllegalStateException(
+            "主屏操作的无障碍服务正在重新绑定（系统设置里已开启）：请等待几秒后重试；" +
+                "也可以到权限设置完成 ADB 配对",
+        )
+    } else {
+        IllegalStateException("主屏操作需要无障碍服务或无线调试（ADB）连接：请到权限设置完成配对，或开启无障碍服务")
+    }
 
     private suspend fun ensureAdbMainObservationAllowed() {
         val state = runCatching { virtual.state() }.getOrElse { VirtualScreenState.Offline }
         if (state is VirtualScreenState.Online) {
             throw IllegalStateException(
-                "主屏节点读取需要无障碍：虚拟屏在线时 ADB uiautomator 可能读到虚拟屏；请开启无障碍后重试",
+                if (accessibilityRebinding()) {
+                    "主屏节点读取需要无障碍：无障碍服务正在重新绑定，请等待几秒后重试"
+                } else {
+                    "主屏节点读取需要无障碍：虚拟屏在线时 ADB uiautomator 可能读到虚拟屏；请开启无障碍后重试"
+                },
             )
         }
     }

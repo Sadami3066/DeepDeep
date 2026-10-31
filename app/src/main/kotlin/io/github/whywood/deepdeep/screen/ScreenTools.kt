@@ -4,7 +4,6 @@ import dev.pi.agent.AgentToolResult
 import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
-import io.github.whywood.deepdeep.plugin.gui.GUI_DEFAULT_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
 import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
@@ -226,7 +225,7 @@ internal fun findLimitOf(args: JsonObject): Int {
 }
 
 internal fun observeLimitsOf(args: JsonObject): Pair<Int, Int> {
-    val maxDepth = args.intOrNull("maxDepth") ?: GUI_DEFAULT_MAX_DEPTH
+    val maxDepth = args.intOrNull("maxDepth") ?: SCREEN_DEFAULT_MAX_DEPTH
     val maxNodes = args.intOrNull("maxNodes") ?: GUI_MAX_NODES
     if (maxDepth !in 1..GUI_MAX_DEPTH) {
         throw IllegalArgumentException("maxDepth 需要在 1..$GUI_MAX_DEPTH 之间")
@@ -250,7 +249,11 @@ private val observeParameters: JsonObject = buildJsonObject {
         putTargetProperty()
         putJsonObject("maxDepth") {
             put("type", "integer")
-            put("description", "Maximum node depth to include, 1-$GUI_MAX_DEPTH. Defaults to $GUI_DEFAULT_MAX_DEPTH.")
+            put(
+                "description",
+                "Maximum node depth to include, 1-$GUI_MAX_DEPTH. Defaults to $SCREEN_DEFAULT_MAX_DEPTH, " +
+                    "which covers the full visible hierarchy; lower it only to trim very large trees.",
+            )
         }
         putJsonObject("maxNodes") {
             put("type", "integer")
@@ -323,11 +326,11 @@ private val tapParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("x") {
             put("type", "integer")
-            put("description", "Screen x coordinate in pixels; requires y.")
+            put("description", "Screen x coordinate in pixels; requires y and must lie inside the current display.")
         }
         putJsonObject("y") {
             put("type", "integer")
-            put("description", "Screen y coordinate in pixels; requires x.")
+            put("description", "Screen y coordinate in pixels; requires x and must lie inside the current display.")
         }
         putJsonObject("durationMs") {
             put("type", "integer")
@@ -389,7 +392,11 @@ private val scrollParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("ref") {
             put("type", "string")
-            put("description", "Optional ref of a scrollable node; defaults to the whole screen.")
+            put(
+                "description",
+                "Optional ref of a scrollable node from the latest observe on the same screen; " +
+                    "defaults to the whole screen. Off-screen, reversed or zero-area targets are rejected.",
+            )
         }
         putJsonObject("amount") {
             put("type", "integer")
@@ -494,13 +501,14 @@ private fun JsonObjectBuilder.putTargetProperty() {
 
 private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_status",
-    description = "Report screen backends and state: accessibility connection, ADB availability, main display size, and the virtual screen display id, resolution, privilege backend and helper uid.",
+    description = "Report screen backends and state: accessibility connected/enabled state, ADB availability, main display size with its node and input backends, and the virtual screen display id, resolution, privilege backend, helper uid and node/input backends.",
     parameters = statusParameters,
     label = "screen_status",
     promptSnippet = "Check screen backends and the virtual screen state",
     promptGuidelines = listOf(
         "Call screen_status when unsure which backends are available before using screen_* tools.",
         "target=main works with accessibility only; without it main observation and coordinate input fall back to ADB wireless debugging.",
+        "When accessibility.enabled is true but accessibility.connected is false, the service is rebinding: wait a few seconds and retry instead of asking the user to enable it again.",
     ),
     execute = { _, _, signal, _ ->
         signal?.throwIfAborted()
@@ -510,13 +518,14 @@ private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_observe",
-    description = "Read a trimmed snapshot of a screen: package, window title and a node list with refs, text, bounds and flags. target=main uses accessibility, falling back to uiautomator XML over ADB.",
+    description = "Read a snapshot of a screen: package, window title and a node list with refs, text, bounds and flags. Off-screen, reversed and zero-area nodes are dropped. target=main uses accessibility, falling back to uiautomator XML over ADB.",
     parameters = observeParameters,
     label = "screen_observe",
     promptSnippet = "Observe a screen as a node snapshot",
     promptGuidelines = listOf(
         "Call screen_observe before acting and again after every action that changes the screen; refs from an older observe are invalid.",
         "On the virtual screen, node reading requires the accessibility service; screenshot/tap-by-coordinate still work without it.",
+        "maxDepth defaults to the full tree; nodes filtered out as off-screen or unlaid-out are reported in the filtered field.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
@@ -532,12 +541,13 @@ private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun findTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_find",
-    description = "Find nodes on a screen by text, desc, resourceId and/or class, and return their refs for later actions.",
+    description = "Find nodes on a screen by text, desc, resourceId and/or class, and return their refs for later actions. The whole visible hierarchy is searched.",
     parameters = findParameters,
     label = "screen_find",
     promptSnippet = "Find screen nodes by text, desc, resourceId or class",
     promptGuidelines = listOf(
         "Use screen_find when the target text, desc, resourceId or class is known; the returned refs stay valid until the next observe on that screen.",
+        "text matches visible text and desc matches content description: retry with the other field when count is 0, and use total/scanned to see how much was searched.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
@@ -546,16 +556,25 @@ private fun findTool(controller: ScreenController): CodingTool = CodingTool(
             val selectors = parseScreenFindSelectors(args)
             val limit = findLimitOf(args)
             val found = controller.find(target, selectors, limit)
+            val total = found.snapshot.nodes.count { node ->
+                selectors.all { selector -> GuiNodeTree.matches(node, selector) }
+            }
             textResult(
                 buildJsonObject {
                     put("backend", found.backend)
                     put("count", found.matches.size)
-                    put("total", found.snapshot.nodes.count { node ->
-                        selectors.all { selector -> GuiNodeTree.matches(node, selector) }
-                    })
-                    put("hasMore", found.snapshot.nodes.size == GUI_MAX_NODES || found.matches.size >= limit)
+                    put("total", total)
+                    put("scanned", found.snapshot.nodes.size)
+                    put("hasMore", found.snapshot.truncated || found.matches.size >= limit)
                     put("truncated", found.snapshot.truncated)
                     put("nodes", buildJsonArray { found.matches.forEach { add(GuiNodeTree.nodeJson(it)) } })
+                    if (found.matches.isEmpty()) {
+                        put(
+                            "hint",
+                            "未命中：已按默认最大深度 $SCREEN_DEFAULT_MAX_DEPTH 检索 ${found.snapshot.nodes.size} 个节点；" +
+                                "text 只匹配可见文本、desc 只匹配内容描述，可分别尝试或改用 resourceId/class 后重试",
+                        )
+                    }
                 }.toString(),
             )
         }
@@ -627,12 +646,13 @@ private fun tapTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_swipe",
-    description = "Swipe between two coordinates on a screen. target=main needs ADB wireless debugging; target=virtual uses the virtual screen helper.",
+    description = "Swipe between two coordinates on a screen. Coordinates must lie inside the current display; out-of-range coordinates are rejected with the display size in the error. target=main needs ADB wireless debugging; target=virtual uses the virtual screen helper.",
     parameters = swipeParameters,
     label = "screen_swipe",
     promptSnippet = "Swipe on a screen",
     promptGuidelines = listOf(
         "Prefer screen_scroll for scrolling content; use screen_swipe for gestures such as dismissing cards.",
+        "Coordinates are display pixels: check screen_status for the main display size and observe bounds before using them.",
     ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
@@ -651,11 +671,14 @@ private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun scrollTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_scroll",
-    description = "Scroll a screen or a scrollable node in the given direction. Works on the main screen with ADB or accessibility, and on the virtual screen through the helper.",
+    description = "Scroll a screen or a scrollable node in the given direction. Works on the main screen with ADB or accessibility, and on the virtual screen through the helper. Swipe coordinates are clamped into the current display; a target whose bounds are off-screen, reversed or too small fails with a readable error instead of injecting an invalid gesture.",
     parameters = scrollParameters,
     label = "screen_scroll",
     promptSnippet = "Scroll a screen in a direction",
-    promptGuidelines = listOf("Call screen_observe again after scrolling to confirm the new screen content."),
+    promptGuidelines = listOf(
+        "Call screen_observe again after scrolling to confirm the new screen content.",
+        "When scrolling a ref fails with an out-of-screen or too-small target error, re-observe and use a visible scrollable node, or scroll the whole screen without ref.",
+    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -835,6 +858,21 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
     putJsonObject("accessibility") {
         put("connected", status.accessibilityConnected)
         put("enabled", status.accessibilityEnabled)
+        when {
+            status.accessibilityConnected -> put("state", "connected")
+            status.accessibilityEnabled -> {
+                put("state", "reconnecting")
+                put(
+                    "hint",
+                    "无障碍服务正在重新绑定（设置里已开启）：请等待几秒后重试；" +
+                        "期间无法读取节点树与按 ref 操作，坐标点击、滑动和截图仍可用",
+                )
+            }
+            else -> {
+                put("state", "disabled")
+                put("hint", "无障碍服务未开启：请到系统设置开启 DeepDeep 无障碍；开启后虚拟屏节点操作才可用")
+            }
+        }
     }
     putJsonObject("adb") {
         put("available", status.adbAvailable)
@@ -844,6 +882,8 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
         put("width", status.main.width)
         put("height", status.main.height)
         put("backend", status.main.backend)
+        put("nodeBackend", status.main.nodeBackend)
+        put("inputBackend", status.main.inputBackend)
     }
     putJsonObject("virtual") {
         put("state", status.virtualState)
@@ -852,6 +892,8 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
             put("width", info.width)
             put("height", info.height)
             put("backend", info.backend)
+            put("nodeBackend", info.nodeBackend)
+            put("inputBackend", info.inputBackend)
         }
         status.virtualBackend?.let { put("privilegeBackend", it) }
         status.virtualUid?.let { put("uid", it) }
@@ -864,6 +906,7 @@ internal fun observeJson(observed: ScreenObserveResult): JsonObject = buildJsonO
     observed.snapshot.windowTitle?.let { put("title", it) }
     put("count", observed.snapshot.nodes.size)
     put("truncated", observed.snapshot.truncated)
+    if (observed.filteredNodes > 0) put("filtered", observed.filteredNodes)
     put("nodes", buildJsonArray { observed.snapshot.nodes.forEach { add(GuiNodeTree.nodeJson(it)) } })
 }
 

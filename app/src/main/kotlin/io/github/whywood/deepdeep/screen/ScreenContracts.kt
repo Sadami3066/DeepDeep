@@ -43,6 +43,8 @@ data class ScreenDisplayInfo(
     val width: Int,
     val height: Int,
     val backend: String,
+    val nodeBackend: String = backend,
+    val inputBackend: String = backend,
 )
 
 data class ScreenStatusSnapshot(
@@ -59,6 +61,7 @@ data class ScreenStatusSnapshot(
 data class ScreenObserveResult(
     val backend: String,
     val snapshot: GuiSnapshot,
+    val filteredNodes: Int = 0,
 )
 
 data class ScreenFindResult(
@@ -206,6 +209,7 @@ interface ScreenController {
 internal const val BACKEND_ACCESSIBILITY = "accessibility"
 internal const val BACKEND_ADB = "adb"
 internal const val BACKEND_HELPER = "helper"
+internal const val BACKEND_NONE = "none"
 
 internal fun isAsciiText(text: String): Boolean =
     text.all { character -> character.code in 0x20..0x7E || character == '\n' || character == '\t' }
