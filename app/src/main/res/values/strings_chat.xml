@@ -59,7 +59,6 @@
     <string name="assistant_tool_failed">失败</string>
     <string name="assistant_tool_output">输出</string>
     <string name="assistant_tool_running">运行中</string>
-    <string name="assistant_working">思考中</string>
     <string name="chat_status_thinking">思考中</string>
     <string name="chat_status_retrying_format">重试中（第 %1$d 次）</string>
     <string name="chat_status_compacting">压缩上下文…</string>

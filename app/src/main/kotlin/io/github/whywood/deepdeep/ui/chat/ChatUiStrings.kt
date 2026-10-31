@@ -56,15 +56,6 @@ data class ChatUiStrings(
     val unsupportedImage: String = "This image format is not supported",
     val imageFailed: String = "Could not process the image; sending it as a file",
 ) {
-    fun activity(activity: RuntimeActivity?): String? = when (activity) {
-        null -> null
-        RuntimeActivity.Thinking -> thinking
-        is RuntimeActivity.Retrying -> retrying(activity.attempt)
-        RuntimeActivity.Compacting -> compacting
-        RuntimeActivity.CompactionFailed -> compactionFailed
-        is RuntimeActivity.RunningTool -> runningTool(activity.name)
-    }
-
     fun runErrorKind(raw: String?): RunErrorKind {
         val text = raw?.trim().orEmpty()
         if (text.isEmpty()) return RunErrorKind.UNKNOWN

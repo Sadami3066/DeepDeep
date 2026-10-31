@@ -440,7 +440,7 @@ private fun AssistantTurn(
             .toList()
     }
     Column(Modifier.fillMaxWidth()) {
-        val hasVisibleProcess = message.steps.any { it.id != excludedStepId }
+        val hasVisibleProcess = message.steps.any { it.id != excludedStepId } || message.streaming
         if (hasVisibleProcess) {
             ProcessSection(
                 message = message,

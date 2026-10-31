@@ -3,7 +3,7 @@ package io.github.whywood.deepdeep.ui.chat
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class WorkingIndicatorTest {
+class DurationFormatTest {
     private val enHoursMinutesSeconds = "%1\$dh %2\$dm %3\$ds"
     private val enMinutesSeconds = "%1\$dm %2\$ds"
     private val enSeconds = "%1\$ds"

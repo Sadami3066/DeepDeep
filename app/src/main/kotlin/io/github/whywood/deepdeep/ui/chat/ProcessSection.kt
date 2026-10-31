@@ -20,10 +20,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -43,6 +44,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -51,6 +53,7 @@ import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.ui.questions.AnsweredAskCard
 import io.github.whywood.deepdeep.ui.questions.parseQuestionRecord
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun ProcessSection(
@@ -62,6 +65,14 @@ internal fun ProcessSection(
     excludedStepId: Long? = null,
 ) {
     val colors = deepDeepColors()
+    var now by remember(message.id) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(message.streaming) {
+        if (!message.streaming) return@LaunchedEffect
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
     val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
     val answerStarted = message.streaming && trailingText?.text?.isNotBlank() == true
@@ -80,8 +91,12 @@ internal fun ProcessSection(
     )
     val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
     val toolCount = message.steps.count { it is AssistantStep.Tool }
-    val duration = message.finishedAt?.let { finished ->
-        if (message.startedAt > 0 && finished > message.startedAt) finished - message.startedAt else null
+    val finishedAt = message.finishedAt
+    val duration = when {
+        message.streaming && message.startedAt > 0 -> (now - message.startedAt).coerceAtLeast(0L)
+        !message.streaming && finishedAt != null && message.startedAt > 0 &&
+            finishedAt > message.startedAt -> finishedAt - message.startedAt
+        else -> null
     }
     val progressLabel = stringResource(R.string.assistant_process)
     val reasoningLabel = if (reasoningCount > 0) {
@@ -94,7 +109,14 @@ internal fun ProcessSection(
     } else {
         null
     }
-    val durationText = duration?.let { durationLabel(it) }
+    val durationText = duration?.let { elapsed ->
+        formatElapsed(
+            elapsed / 1000L,
+            stringResource(R.string.assistant_elapsed_hours_minutes_seconds),
+            stringResource(R.string.assistant_elapsed_minutes_seconds),
+            stringResource(R.string.assistant_elapsed_seconds),
+        )
+    }
     val summary = listOfNotNull(progressLabel, reasoningLabel, toolLabel, durationText).joinToString(" · ")
     val activeReasoningId = if (message.streaming) {
         message.steps.lastOrNull()?.takeIf { it is AssistantStep.Reasoning }?.id
@@ -117,6 +139,10 @@ internal fun ProcessSection(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (message.streaming) {
+                    DdSpinner(size = 13.dp, color = colors.inkTertiary)
+                    Spacer(Modifier.size(6.dp))
+                }
                 Text(
                     text = summary,
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
@@ -216,4 +242,21 @@ internal fun durationLabel(durationMs: Long): String = when {
         R.string.assistant_duration_seconds,
         String.format(Locale.US, "%.1f", durationMs / 1000.0),
     )
+}
+
+internal fun formatElapsed(
+    totalSeconds: Long,
+    hoursMinutesSeconds: String,
+    minutesSeconds: String,
+    secondsOnly: String,
+): String {
+    val clamped = totalSeconds.coerceAtLeast(0L)
+    val hours = clamped / 3600
+    val minutes = (clamped % 3600) / 60
+    val seconds = clamped % 60
+    return when {
+        hours > 0 -> String.format(Locale.ROOT, hoursMinutesSeconds, hours, minutes, seconds)
+        minutes > 0 -> String.format(Locale.ROOT, minutesSeconds, minutes, seconds)
+        else -> String.format(Locale.ROOT, secondsOnly, seconds)
+    }
 }

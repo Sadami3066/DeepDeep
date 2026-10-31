@@ -397,7 +397,6 @@ internal fun DeepDeepApp(
                     nickname = nickname,
                     providers = configuredProviderList,
                     attachmentRoot = attachmentRoot,
-                    chatUiStrings = chatUiStrings,
                     actions = ChatScreenActions(
                         onInputChange = chatViewModel::onInputChange,
                         onSend = ::submitChatInput,

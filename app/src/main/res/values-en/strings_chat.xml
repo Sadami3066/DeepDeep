@@ -59,7 +59,6 @@
     <string name="assistant_tool_failed">Failed</string>
     <string name="assistant_tool_output">Output</string>
     <string name="assistant_tool_running">Running</string>
-    <string name="assistant_working">Thinking</string>
     <string name="chat_status_thinking">Thinking</string>
     <string name="chat_status_retrying_format">Retrying (%1$d)</string>
     <string name="chat_status_compacting">Compacting context…</string>

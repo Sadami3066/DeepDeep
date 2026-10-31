@@ -162,7 +162,6 @@ fun ChatScreen(
     nickname: String,
     providers: List<ProviderSummary>,
     attachmentRoot: File,
-    chatUiStrings: ChatUiStrings,
     actions: ChatScreenActions,
     overlay: ChatScreenOverlay,
     scrollAnchorFor: (String) -> ScrollAnchor?,
@@ -449,22 +448,6 @@ fun ChatScreen(
                     ) {
                         JumpToBottomChip(
                             onClick = { scope.launch { controller.jumpToBottom(animate = true) } },
-                        )
-                    }
-                }
-                AnimatedVisibility(
-                    visible = state.sending,
-                    enter = fadeIn(tween(DdMotion.FAST)) + expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-                    exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 18.dp),
-                        contentAlignment = Alignment.TopCenter,
-                    ) {
-                        WorkingIndicator(
-                            activityText = chatUiStrings.activity(state.activity),
-                            startedAt = state.activityStartedAt,
-                            modifier = Modifier.widthIn(max = 780.dp).fillMaxWidth(),
                         )
                     }
                 }
