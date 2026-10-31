@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
     private val pendingSessionId = mutableStateOf<String?>(null)
     private val pendingDeepDestination = mutableStateOf<AppDestination?>(null)
     private val pendingShare = mutableStateOf<SharePayload?>(null)
-    private var resumingFromStop = false
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguagePreferences.wrap(newBase))
@@ -46,11 +45,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent?.isAssistantLaunch() == true) {
-            startAssistantOverlay()
-            finishAndRemoveTask()
-            return
-        }
         enableEdgeToEdge()
         if (savedInstanceState == null) {
             handleIntent(intent)
@@ -87,27 +81,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.isAssistantLaunch()) {
-            startAssistantOverlay()
-            if (resumingFromStop) moveTaskToBack(true)
-            return
-        }
         setIntent(intent)
         handleIntent(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        resumingFromStop = false
-    }
-
-    private fun Intent.isAssistantLaunch(): Boolean =
-        action == Intent.ACTION_ASSIST || action == "android.intent.action.VOICE_ASSIST"
-
-    private fun startAssistantOverlay() {
-        startActivity(
-            Intent(this, AssistantOverlayActivity::class.java).setAction(Intent.ACTION_ASSIST),
-        )
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -121,7 +96,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        resumingFromStop = true
         AppVisibility.activityStarted()
         AppVisibility.taskId = taskId
         graph.notificationCenter.clearQuestionNotifications()
@@ -147,6 +121,12 @@ class MainActivity : ComponentActivity() {
             return
         }
         pendingSessionId.value = intent.getStringExtra(NotificationCenter.EXTRA_SESSION_ID)
+        if (intent.action == Intent.ACTION_ASSIST) {
+            startActivity(
+                Intent(this, AssistantOverlayActivity::class.java).setAction(Intent.ACTION_ASSIST),
+            )
+            return
+        }
         val action = intent.action
         if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
         val streams = if (action == Intent.ACTION_SEND) {
