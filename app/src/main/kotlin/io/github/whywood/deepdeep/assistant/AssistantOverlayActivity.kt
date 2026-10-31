@@ -155,6 +155,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                         onOpenWorkshop = { state.sessionId?.let(::openInApp) },
                         onOpenSession = controller::openSession,
                         onNewSession = controller::newSession,
+                        onNewSessionInWorkspace = { workspaceId -> controller.newSession(workspaceId) },
                         onSelectWorkspace = controller::selectWorkspace,
                         onRefreshLists = controller::refreshLists,
                         onSelectProvider = controller::selectProvider,

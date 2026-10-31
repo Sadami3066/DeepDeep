@@ -451,6 +451,36 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
+    fun startExposesAllSessionsForSwitcher() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        assertEquals(
+            listOf("session-1", "session-2"),
+            controller.state.value.allSessions.map { it.id },
+        )
+        controller.reset()
+    }
+
+    @Test
+    fun newSessionUsesRequestedWorkspace() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, null, this)
+        controller.start()
+        runCurrent()
+
+        controller.newSession("workspace-x")
+        runCurrent()
+
+        assertEquals("workspace-x", runtime.newSessionCalls.last())
+        controller.reset()
+    }
+
+    @Test
     fun newSessionCreatesAndOpensIt() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val selected = mutableListOf<String>()
@@ -458,11 +488,12 @@ class AssistantOverlayControllerTest {
         controller.start()
         runCurrent()
 
-        controller.newSession()
+        controller.newSession(HOME_ID)
         runCurrent()
 
         assertEquals("session-2", controller.state.value.sessionId)
         assertEquals("session-2", selected.last())
+        assertEquals(HOME_ID, runtime.newSessionCalls.last())
         controller.reset()
     }
 

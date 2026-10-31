@@ -35,6 +35,7 @@ data class AssistantOverlayState(
     val workspaceId: String = "",
     val workspaces: List<RuntimeWorkspace> = emptyList(),
     val sessions: List<ConversationSummary> = emptyList(),
+    val allSessions: List<ConversationSummary> = emptyList(),
     val providers: List<ProviderSummary> = emptyList(),
     val providerId: String = "",
     val modelId: String = "",
@@ -145,8 +146,11 @@ class AssistantOverlayController(
     }
 
     fun newSession() {
+        newSession(mutableState.value.workspaceId.ifBlank { homeWorkspaceId })
+    }
+
+    fun newSession(workspaceId: String) {
         scope.launch {
-            val workspaceId = mutableState.value.workspaceId.ifBlank { homeWorkspaceId }
             val opened = runCatching { runtime.newSession(workspaceId) }.getOrNull()
             if (opened == null) {
                 setError(AssistantOverlayError.StartFailed)
@@ -181,7 +185,10 @@ class AssistantOverlayController(
             val workspaces = runCatching { runtime.workspaces() }.getOrDefault(emptyList())
             val workspaceId = mutableState.value.workspaceId.ifBlank { homeWorkspaceId }
             val sessions = runCatching { runtime.sessions(workspaceId) }.getOrDefault(emptyList())
-            mutableState.update { it.copy(workspaces = workspaces, sessions = sessions) }
+            val allSessions = runCatching { runtime.allSessions() }.getOrDefault(emptyList())
+            mutableState.update {
+                it.copy(workspaces = workspaces, sessions = sessions, allSessions = allSessions)
+            }
         }
     }
 
@@ -276,6 +283,7 @@ class AssistantOverlayController(
                         workspaceId = workspaceId,
                         workspaces = workspaces,
                         sessions = sessions,
+                        allSessions = summaries,
                         providers = providerList,
                         providerId = model.providerId,
                         modelId = model.modelId,

@@ -106,6 +106,7 @@ internal data class AssistantOverlayActions(
     val onOpenWorkshop: (String) -> Unit,
     val onOpenSession: (String) -> Unit,
     val onNewSession: () -> Unit,
+    val onNewSessionInWorkspace: (String) -> Unit,
     val onSelectWorkspace: (String) -> Unit,
     val onRefreshLists: () -> Unit,
     val onSelectProvider: (String) -> Unit,

@@ -49,6 +49,7 @@ class FakeAgentRuntime : AgentRuntime {
     val stopped = mutableListOf<String>()
     private var createdCount = 0
     private val extraProjects = mutableListOf<RuntimeWorkspace>()
+    val newSessionCalls = mutableListOf<String>()
 
     fun setBusy(ids: Set<String>) {
         busy.value = ids
@@ -82,6 +83,7 @@ class FakeAgentRuntime : AgentRuntime {
     override suspend fun workspaceSessionCount(workspaceId: String): Int = sessions.size
 
     override suspend fun newSession(workspaceId: String): OpenedSession {
+        newSessionCalls += workspaceId
         createdCount += 1
         val id = "session-$createdCount"
         sessions = sessions + ConversationSummary(id, "", createdCount.toLong(), "$id.jsonl", HOME_CWD)
