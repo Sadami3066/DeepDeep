@@ -15,6 +15,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -142,15 +146,25 @@ internal fun AssistantOverlayScreen(
     var voiceFailure by remember { mutableStateOf<SpeechError?>(null) }
     var permissionPermanentlyDenied by remember { mutableStateOf(false) }
     var listenJob by remember { mutableStateOf<Job?>(null) }
+    var micWasListening by remember { mutableStateOf(false) }
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
     var panelMounted by remember { mutableStateOf(false) }
+    var switcherOpen by remember { mutableStateOf(false) }
+    var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
     val messages = state.conversation.messages
+    val glowSignal = remember(state, pendingQuestions) { overlayRunSignal(state, pendingQuestions) }
+    val glow = rememberOverlayGlow(glowSignal, entryPlayed = false, entryStart = entered)
 
     fun stopListening() {
         listenJob?.cancel()
         listenJob = null
         listening = false
+    }
+
+    fun finishListening() {
+        if (listening) recognizer.stopListening()
     }
 
     fun dismiss() {
@@ -240,6 +254,22 @@ internal fun AssistantOverlayScreen(
         }
     }
 
+    val micPressStart: () -> Unit = {
+        micWasListening = listening
+        if (!listening) requestListening()
+    }
+
+    val micPressEnd: (Boolean) -> Unit = { heldLong ->
+        when {
+            heldLong -> finishListening()
+            micWasListening -> stopListening()
+        }
+    }
+
+    val micCancel: () -> Unit = {
+        stopListening()
+    }
+
     DisposableEffect(speaker) {
         onDispose {
             listenJob?.cancel()
@@ -291,13 +321,14 @@ internal fun AssistantOverlayScreen(
         )
     }
 
-    BackHandler(onBack = ::dismiss)
+    BackHandler {
+        if (switcherOpen) switcherOpen = false else dismiss()
+    }
 
     BoxWithConstraints(Modifier.fillMaxSize().testTag("assistant_overlay")) {
         val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
         val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
         val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
-        val windowFocused = LocalWindowInfo.current.isWindowFocused
         var stableNavigationBottomPx by remember { mutableIntStateOf(navigationBottomPx) }
         SideEffect {
             if (windowFocused) {
@@ -350,12 +381,12 @@ internal fun AssistantOverlayScreen(
                     onClick = ::dismiss,
                 ),
         )
+        OverlayEdgeGlow(glow, Modifier.fillMaxSize())
         if (panelMounted) {
             Box(
                 Modifier
                     .align(Alignment.TopCenter)
                     .graphicsLayer {
-                        alpha = panelProgress
                         translationY = -(1f - panelProgress) * size.height
                     }
                     .padding(
@@ -371,6 +402,14 @@ internal fun AssistantOverlayScreen(
                     actions = actions,
                     onQuote = quote,
                     onOpenInApp = { state.sessionId?.let(actions.onOpenInApp) },
+                    onOpenWorkspaceSwitcher = {
+                        switcherLevel = OverlaySwitcherLevel.Workspaces
+                        switcherOpen = true
+                    },
+                    onOpenSessionSwitcher = {
+                        switcherLevel = OverlaySwitcherLevel.Sessions(state.workspaceId)
+                        switcherOpen = true
+                    },
                     maxHeight = panelMaxHeight,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -381,7 +420,6 @@ internal fun AssistantOverlayScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer {
-                        alpha = composerProgress
                         translationY = (1f - composerProgress) * size.height
                     }
                     .fillMaxWidth()
@@ -413,14 +451,27 @@ internal fun AssistantOverlayScreen(
                     onToggleMic = {
                         if (listening) stopListening() else requestListening()
                     },
+                    onMicPressStart = micPressStart,
+                    onMicPressEnd = micPressEnd,
+                    onMicCancel = micCancel,
                     onSubmit = { followUp -> submit(input, followUp) },
                     config = config,
                     actions = actions,
+                    glow = glow,
                     modifier = Modifier.fillMaxWidth(),
                     focusRequester = inputFocus,
                 )
             }
         }
+        AssistantOverlaySwitcher(
+            state = state,
+            actions = actions,
+            visible = switcherOpen,
+            level = switcherLevel,
+            width = minOf(272.dp, maxWidth * 0.76f),
+            onClose = { switcherOpen = false },
+            onLevelChange = { switcherLevel = it },
+        )
         if (preview != null) {
             AttachmentPreviewDialog(
                 attachment = preview.attachment,
@@ -440,7 +491,17 @@ private fun OverlayVoiceFailure(
     onOpenSettings: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .shadow(10.dp, shape, clip = false, ambientColor = colors.ink, spotColor = colors.ink)
+            .clip(shape)
+            .background(colors.surface.copy(alpha = 0.96f))
+            .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
         Text(
             text = voiceErrorMessage(failure),
             modifier = Modifier.testTag("assistant_overlay_voice_error"),
@@ -464,7 +525,17 @@ private fun OverlaySendError(
     onRetry: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .shadow(10.dp, shape, clip = false, ambientColor = colors.ink, spotColor = colors.ink)
+            .clip(shape)
+            .background(colors.surface.copy(alpha = 0.96f))
+            .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
         Text(
             text = stringResource(
                 when (error) {

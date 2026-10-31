@@ -19,9 +19,20 @@ internal class SpeechRecognizerController(context: Context) {
     private val appContext = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
 
+    @Volatile
+    private var activeRecognizer: SpeechRecognizer? = null
+
     fun isAvailable(): Boolean = runCatching {
         SpeechRecognizer.isRecognitionAvailable(appContext)
     }.getOrDefault(false)
+
+    fun stopListening() {
+        main.post {
+            activeRecognizer?.let { recognizer ->
+                runCatching { recognizer.stopListening() }
+            }
+        }
+    }
 
     fun listen(languageTag: String): Flow<SpeechEvent> = callbackFlow {
         if (!isAvailable()) {
@@ -85,6 +96,7 @@ internal class SpeechRecognizerController(context: Context) {
                 return@post
             }
             recognizer = speech
+            activeRecognizer = speech
             speech.setRecognitionListener(listener)
             val started = runCatching {
                 speech.startListening(recognitionIntent(languageTag))
@@ -98,6 +110,7 @@ internal class SpeechRecognizerController(context: Context) {
             main.post {
                 val speech = recognizer
                 recognizer = null
+                if (activeRecognizer === speech) activeRecognizer = null
                 if (speech != null) {
                     runCatching { speech.cancel() }
                     runCatching { speech.destroy() }

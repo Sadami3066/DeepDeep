@@ -3,7 +3,10 @@ package io.github.whywood.deepdeep.assistant
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +33,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
@@ -53,7 +59,11 @@ internal fun AssistantOverlayComposer(
     onSubmit: (Boolean) -> Unit,
     config: AssistantOverlayConfig,
     actions: AssistantOverlayActions,
+    glow: OverlayGlow,
     modifier: Modifier = Modifier,
+    onMicPressStart: () -> Unit = {},
+    onMicPressEnd: (heldLong: Boolean) -> Unit = { _ -> },
+    onMicCancel: () -> Unit = {},
     focusRequester: FocusRequester? = null,
 ) {
     val colors = deepDeepColors()
@@ -62,6 +72,9 @@ internal fun AssistantOverlayComposer(
     var showModelSheet by remember { mutableStateOf(false) }
     val modelLabel = state.modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
     val micDescription = stringResource(R.string.assistant_overlay_mic)
+    val pressStart by rememberUpdatedState(onMicPressStart)
+    val pressEnd by rememberUpdatedState(onMicPressEnd)
+    val pressCancel by rememberUpdatedState(onMicCancel)
     val sendDescription = stringResource(
         if (busy) R.string.assistant_send_steer else R.string.assistant_overlay_send,
     )
@@ -74,6 +87,7 @@ internal fun AssistantOverlayComposer(
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             OverlayComposerCard(
+                glow = glow,
                 modifier = Modifier
                     .widthIn(max = 780.dp)
                     .fillMaxWidth(),
@@ -123,12 +137,42 @@ internal fun AssistantOverlayComposer(
                         maxWidth = 150.dp,
                     )
                     Spacer(Modifier.weight(1f))
-                    DdPressable(
-                        onClick = onToggleMic,
-                        modifier = Modifier.size(38.dp).testTag("assistant_overlay_mic"),
-                        shape = CircleShape,
-                        background = if (listening) colors.accentSoft else colors.wash,
-                        contentDescription = micDescription,
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(if (listening) colors.accentSoft else colors.wash)
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    pressStart()
+                                    val early = withTimeoutOrNull(280) {
+                                        waitForUpOrCancellation() != null
+                                    }
+                                    when (early) {
+                                        null -> {
+                                            if (waitForUpOrCancellation() != null) {
+                                                pressEnd(true)
+                                            } else {
+                                                pressCancel()
+                                            }
+                                        }
+
+                                        true -> pressEnd(false)
+                                        false -> pressCancel()
+                                    }
+                                }
+                            }
+                            .semantics {
+                                contentDescription = micDescription
+                                role = Role.Button
+                                onClick {
+                                    onToggleMic()
+                                    true
+                                }
+                            }
+                            .testTag("assistant_overlay_mic"),
+                        contentAlignment = Alignment.Center,
                     ) {
                         DdIcon(
                             icon = if (listening) DdIcons.AudioLines else DdIcons.Mic,

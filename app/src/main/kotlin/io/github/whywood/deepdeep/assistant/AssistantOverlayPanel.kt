@@ -10,7 +10,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -75,6 +74,8 @@ internal fun AssistantOverlayPanel(
     actions: AssistantOverlayActions,
     onQuote: (Long, String) -> Unit,
     onOpenInApp: () -> Unit,
+    onOpenWorkspaceSwitcher: () -> Unit,
+    onOpenSessionSwitcher: () -> Unit,
     maxHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -91,8 +92,6 @@ internal fun AssistantOverlayPanel(
     val messages = state.conversation.messages
     val workspaceName = state.workspaces.firstOrNull { it.id == state.workspaceId }?.name
         ?: stringResource(R.string.assistant_overlay_workspace)
-    var switcherOpen by remember { mutableStateOf(false) }
-    var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
     var headerHeightPx by remember { mutableIntStateOf(0) }
     var contentLaidOut by remember { mutableStateOf(false) }
 
@@ -113,9 +112,10 @@ internal fun AssistantOverlayPanel(
     }
     val headerHeight = with(density) { headerHeightPx.toDp() }
     val contentHeight = with(density) { contentHeightPx.toDp() }
-    val targetHeight = when {
-        switcherOpen || contentHeightPx < 0 -> maxHeight
-        else -> (headerHeight + contentHeight).coerceIn(headerHeight + 8.dp, maxHeight)
+    val targetHeight = if (contentHeightPx < 0) {
+        maxHeight
+    } else {
+        (headerHeight + contentHeight).coerceIn(headerHeight + 8.dp, maxHeight)
     }
     val panelHeight by animateDpAsState(
         targetValue = targetHeight,
@@ -143,7 +143,7 @@ internal fun AssistantOverlayPanel(
         Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
     }
 
-    BoxWithConstraints(
+    Box(
         modifier
             .height(panelHeight)
             .shadow(
@@ -195,10 +195,7 @@ internal fun AssistantOverlayPanel(
                 }
                 DdIconButton(
                     icon = DdIcons.Folder,
-                    onClick = {
-                        switcherLevel = OverlaySwitcherLevel.Workspaces
-                        switcherOpen = true
-                    },
+                    onClick = onOpenWorkspaceSwitcher,
                     contentDescription = stringResource(R.string.assistant_overlay_switch_workspace),
                     modifier = Modifier.testTag("assistant_overlay_workspace_switch"),
                     size = 36.dp,
@@ -207,10 +204,7 @@ internal fun AssistantOverlayPanel(
                 )
                 DdIconButton(
                     icon = DdIcons.Message,
-                    onClick = {
-                        switcherLevel = OverlaySwitcherLevel.Sessions(state.workspaceId)
-                        switcherOpen = true
-                    },
+                    onClick = onOpenSessionSwitcher,
                     contentDescription = stringResource(R.string.assistant_overlay_switch_session),
                     modifier = Modifier.testTag("assistant_overlay_session_switch"),
                     size = 36.dp,
@@ -235,7 +229,7 @@ internal fun AssistantOverlayPanel(
                             .fillMaxSize()
                             .onSizeChanged { contentLaidOut = true }
                             .testTag("assistant_overlay_transcript"),
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 18.dp),
                         verticalArrangement = Arrangement.spacedBy(18.dp),
                     ) {
                         items(messages, key = { it.id }) { message ->
@@ -289,23 +283,22 @@ internal fun AssistantOverlayPanel(
                 )
             }
         }
-        AssistantOverlaySwitcher(
-            state = state,
-            actions = actions,
-            visible = switcherOpen,
-            level = switcherLevel,
-            width = minOf(300.dp, maxWidth * 0.86f),
-            onClose = { switcherOpen = false },
-            onLevelChange = { switcherLevel = it },
-        )
     }
 }
 
 @Composable
 internal fun AssistantOverlayListening(transcript: String) {
     val colors = deepDeepColors()
+    val shape = RoundedCornerShape(18.dp)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
+            .shadow(10.dp, shape, clip = false, ambientColor = colors.ink, spotColor = colors.ink)
+            .clip(shape)
+            .background(colors.surface.copy(alpha = 0.96f))
+            .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+            .padding(start = 14.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIcon(icon = DdIcons.AudioLines, tint = colors.accent, size = 16.dp)
