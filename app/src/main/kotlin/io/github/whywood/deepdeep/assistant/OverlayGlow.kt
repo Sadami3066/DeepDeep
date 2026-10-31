@@ -26,6 +26,7 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 internal enum class OverlayRunPhase { Idle, Thinking, Streaming, Waiting, Done, Stopped, Failed }
 
@@ -167,6 +168,7 @@ internal class OverlayGlow internal constructor(
     val startPulse: Animatable<Float, AnimationVector1D>,
     val rise: Animatable<Float, AnimationVector1D>,
     val replyPulse: Animatable<Float, AnimationVector1D>,
+    val replySweep: Animatable<Float, AnimationVector1D>,
 ) {
     val active: Boolean
         get() = phase == OverlayRunPhase.Thinking ||
@@ -181,8 +183,10 @@ private const val GLOW_PULSE_IN_MS = 180
 private const val GLOW_PULSE_OUT_MS = 500
 private const val GLOW_RISE_DELAY_MS = 80
 private const val GLOW_RISE_MS = 900
-private const val GLOW_REPLY_IN_MS = 90
-private const val GLOW_REPLY_OUT_MS = 420
+private const val GLOW_REPLY_IN_MS = 120
+private const val GLOW_REPLY_HOLD_MS = 350
+private const val GLOW_REPLY_OUT_MS = 400
+private const val GLOW_SWEEP_MS = 900
 private const val GLOW_ACTIVITY_MS = 320
 private const val GLOW_DONE_MS = 900
 private const val GLOW_STOP_MS = 480
@@ -215,6 +219,7 @@ internal fun rememberOverlayGlow(
     val startPulse = remember { Animatable(0f) }
     val rise = remember { Animatable(0f) }
     val replyPulse = remember { Animatable(0f) }
+    val replySweep = remember { Animatable(0f) }
     val startTracker = remember { OverlayStartTracker() }
     val replyTracker = remember { OverlayReplyTracker() }
     val playsEntry = remember { !entryPlayed }
@@ -267,12 +272,17 @@ internal fun rememberOverlayGlow(
     }
     LaunchedEffect(replyToken) {
         if (replyToken == 0 || motionScale() == 0f) return@LaunchedEffect
+        replySweep.snapTo(0f)
         replyPulse.snapTo(0f)
-        replyPulse.animateTo(1f, tween(GLOW_REPLY_IN_MS, easing = DdMotion.EaseOut))
-        replyPulse.animateTo(0f, tween(GLOW_REPLY_OUT_MS, easing = DdMotion.EaseInOut))
+        launch {
+            replyPulse.animateTo(1f, tween(GLOW_REPLY_IN_MS, easing = DdMotion.EaseOut))
+            delay(GLOW_REPLY_HOLD_MS.toLong())
+            replyPulse.animateTo(0f, tween(GLOW_REPLY_OUT_MS, easing = DdMotion.EaseInOut))
+        }
+        replySweep.animateTo(1f, tween(GLOW_SWEEP_MS, easing = DdMotion.EaseInOut))
     }
 
-    return remember(time, entry, activity, startPulse, rise, replyPulse, signal.phase) {
+    return remember(time, entry, activity, startPulse, rise, replyPulse, replySweep, signal.phase) {
         OverlayGlow(
             phase = signal.phase,
             time = time,
@@ -281,6 +291,7 @@ internal fun rememberOverlayGlow(
             startPulse = startPulse,
             rise = rise,
             replyPulse = replyPulse,
+            replySweep = replySweep,
         )
     }
 }

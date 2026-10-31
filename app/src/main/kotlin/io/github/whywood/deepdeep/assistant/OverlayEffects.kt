@@ -61,19 +61,28 @@ private const val UPWELL_TRAVEL_Y = 0.62f
 private const val UPWELL_FADE_POWER = 1.4f
 private const val EDGE_ACTIVITY_DARK = 0.07f
 private const val EDGE_ACTIVITY_LIGHT = 0.15f
-private const val EDGE_REPLY_DARK = 0.30f
-private const val EDGE_REPLY_LIGHT = 0.36f
+private const val EDGE_REPLY_DARK = 0.08f
+private const val EDGE_REPLY_LIGHT = 0.10f
 private const val EDGE_START_DARK = 0.10f
 private const val EDGE_START_LIGHT = 0.10f
 private const val EDGE_ENTRY_DARK = 0.18f
 private const val EDGE_ENTRY_LIGHT = 0.28f
 private const val STROKE_BASE_DARK = 0.08f
 private const val STROKE_BASE_LIGHT = 0.16f
-private const val STROKE_REPLY_DARK = 0.30f
-private const val STROKE_REPLY_LIGHT = 0.36f
+private const val STROKE_REPLY_DARK = 0.08f
+private const val STROKE_REPLY_LIGHT = 0.10f
 private const val STROKE_START_DARK = 0.10f
 private const val STROKE_START_LIGHT = 0.10f
 private const val STROKE_ENTRY = 0.18f
+private const val HOTSPOT_FROM_Y = 1.06f
+private const val HOTSPOT_TO_Y = -0.06f
+private const val HOTSPOT_HALF_HEIGHT = 0.13f
+private const val HOTSPOT_CORNER_HALF_WIDTH = 0.32f
+private const val HOTSPOT_CORNER_HALF_HEIGHT = 0.10f
+private const val HOTSPOT_BOTTOM_POWER = 1.6f
+private const val HOTSPOT_TOP_POWER = 1.6f
+private const val HOTSPOT_PEAK_DARK = 0.55f
+private const val HOTSPOT_PEAK_LIGHT = 0.60f
 private const val WASH_ALPHA_DARK = 0.18f
 private const val WASH_ALPHA_LIGHT = 0.30f
 private const val MIN_ALPHA = 0.002f
@@ -83,6 +92,7 @@ private val HaloShape = RoundedCornerShape(28.dp)
 private val EdgeBand = 64.dp
 private val ScreenStroke = 1.5.dp
 private val ScreenCorner = 28.dp
+private val HotspotWidth = 72.dp
 private val UpwellX = floatArrayOf(-0.06f, 0.04f, -0.02f)
 private val UpwellHalfWidth = floatArrayOf(1.05f, 0.90f, 0.75f)
 private val UpwellHalfHeight = floatArrayOf(0.42f, 0.34f, 0.26f)
@@ -104,6 +114,31 @@ private val ScreenStrokeDark = Color(0xFFA5F3FC)
 private val ScreenStrokeLight = Color(0xFF2563EB)
 private val BaseGlowDark = Color(0xFF3B82F6)
 private val BaseGlowLight = Color(0xFF2563EB)
+private val HotspotLeftDark = Color(0xFF22D3EE)
+private val HotspotLeftLight = Color(0xFF06B6D4)
+private val HotspotRightDark = Color(0xFFA5F3FC)
+private val HotspotRightLight = Color(0xFF38BDF8)
+private val HotspotBottomDark = Color(0xFF3B82F6)
+private val HotspotBottomLight = Color(0xFF0284C7)
+private val HotspotTopDark = Color(0xFFA5F3FC)
+private val HotspotTopLight = Color(0xFFBAE6FD)
+
+private class HotspotBrushes(
+    val left: Brush,
+    val right: Brush,
+    val bottom: Brush,
+    val top: Brush,
+    val halfWidth: Float,
+)
+
+internal fun replyHotspotCenterFraction(sweep: Float): Float =
+    HOTSPOT_FROM_Y + (HOTSPOT_TO_Y - HOTSPOT_FROM_Y) * sweep.coerceIn(0f, 1f)
+
+internal fun replyBottomHotspotWeight(sweep: Float): Float =
+    (1f - sweep.coerceIn(0f, 1f)).pow(HOTSPOT_BOTTOM_POWER)
+
+internal fun replyTopHotspotWeight(sweep: Float): Float =
+    sweep.coerceIn(0f, 1f).pow(HOTSPOT_TOP_POWER)
 
 private class HaloBlob(
     val darkColor: Color,
@@ -276,6 +311,13 @@ internal fun OverlayScreenGlow(
                 val stroke = Stroke(width = ScreenStroke.toPx())
                 val corner = CornerRadius(ScreenCorner.toPx())
                 val strokeInset = stroke.width / 2f
+                val hotspots = HotspotBrushes(
+                    left = glowBrush(if (dark) HotspotLeftDark else HotspotLeftLight, radius),
+                    right = glowBrush(if (dark) HotspotRightDark else HotspotRightLight, radius),
+                    bottom = glowBrush(if (dark) HotspotBottomDark else HotspotBottomLight, radius),
+                    top = glowBrush(if (dark) HotspotTopDark else HotspotTopLight, radius),
+                    halfWidth = HotspotWidth.toPx() * 0.5f,
+                )
                 onDrawBehind {
                     drawScreenGlow(
                         upwellBrushes = upwellBrushes,
@@ -286,6 +328,7 @@ internal fun OverlayScreenGlow(
                         bottomBrush = bottomBrush,
                         leftBrush = leftBrush,
                         rightBrush = rightBrush,
+                        hotspots = hotspots,
                         strokeColor = if (dark) ScreenStrokeDark else ScreenStrokeLight,
                         stroke = stroke,
                         corner = corner,
@@ -296,6 +339,7 @@ internal fun OverlayScreenGlow(
                         activity = glow.activity.value,
                         startPulse = glow.startPulse.value,
                         replyPulse = glow.replyPulse.value,
+                        replySweep = glow.replySweep.value,
                     )
                 }
             }
@@ -343,6 +387,7 @@ private fun DrawScope.drawScreenGlow(
     bottomBrush: Brush,
     leftBrush: Brush,
     rightBrush: Brush,
+    hotspots: HotspotBrushes,
     strokeColor: Color,
     stroke: Stroke,
     corner: CornerRadius,
@@ -353,6 +398,7 @@ private fun DrawScope.drawScreenGlow(
     activity: Float,
     startPulse: Float,
     replyPulse: Float,
+    replySweep: Float,
 ) {
     val width = size.width
     val height = size.height
@@ -401,6 +447,41 @@ private fun DrawScope.drawScreenGlow(
             size = Size(band, height),
             alpha = edgeAlpha,
         )
+    }
+
+    if (replyPulse > MIN_ALPHA) {
+        val peak = if (dark) HOTSPOT_PEAK_DARK else HOTSPOT_PEAK_LIGHT
+        val sideAlpha = replyPulse * peak
+        val centerY = height * replyHotspotCenterFraction(replySweep)
+        val halfHeight = height * HOTSPOT_HALF_HEIGHT
+        drawBlob(hotspots.left, radius, 0f, centerY, hotspots.halfWidth, halfHeight, 0f, sideAlpha)
+        drawBlob(hotspots.right, radius, width, centerY, hotspots.halfWidth, halfHeight, 0f, sideAlpha)
+        val bottomWeight = replyBottomHotspotWeight(replySweep)
+        if (bottomWeight > MIN_ALPHA) {
+            drawBlob(
+                brush = hotspots.bottom,
+                radius = radius,
+                centerX = width * 0.5f,
+                centerY = height,
+                halfWidth = width * HOTSPOT_CORNER_HALF_WIDTH,
+                halfHeight = height * HOTSPOT_CORNER_HALF_HEIGHT,
+                angle = 0f,
+                alpha = sideAlpha * bottomWeight,
+            )
+        }
+        val topWeight = replyTopHotspotWeight(replySweep)
+        if (topWeight > MIN_ALPHA) {
+            drawBlob(
+                brush = hotspots.top,
+                radius = radius,
+                centerX = width * 0.5f,
+                centerY = 0f,
+                halfWidth = width * HOTSPOT_CORNER_HALF_WIDTH,
+                halfHeight = height * HOTSPOT_CORNER_HALF_HEIGHT,
+                angle = 0f,
+                alpha = sideAlpha * topWeight,
+            )
+        }
     }
 
     val strokeAlpha = (

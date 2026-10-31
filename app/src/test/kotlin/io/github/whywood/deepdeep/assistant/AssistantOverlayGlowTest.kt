@@ -370,4 +370,16 @@ class AssistantOverlayGlowTest {
         assertFalse(tracker.update(waitingSignal()))
         assertTrue(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
     }
+
+    @Test
+    fun replySweepTravelsFromBottomToTop() {
+        assertEquals(1.06f, replyHotspotCenterFraction(0f), 0.001f)
+        assertEquals(-0.06f, replyHotspotCenterFraction(1f), 0.001f)
+        assertEquals(1f, replyBottomHotspotWeight(0f), 0.001f)
+        assertEquals(0f, replyBottomHotspotWeight(1f), 0.001f)
+        assertEquals(0f, replyTopHotspotWeight(0f), 0.001f)
+        assertEquals(1f, replyTopHotspotWeight(1f), 0.001f)
+        assertTrue(replyTopHotspotWeight(0.7f) > replyTopHotspotWeight(0.3f))
+        assertTrue(replyBottomHotspotWeight(0.3f) > replyBottomHotspotWeight(0.7f))
+    }
 }
