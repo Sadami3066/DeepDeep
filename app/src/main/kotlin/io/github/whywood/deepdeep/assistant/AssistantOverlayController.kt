@@ -31,6 +31,7 @@ data class AssistantOverlayState(
     val conversation: ConversationState = ConversationState(),
     val sessionId: String? = null,
     val sessionTitle: String = "",
+    val conversationCwd: String = "",
     val workspaceId: String = "",
     val workspaces: List<RuntimeWorkspace> = emptyList(),
     val sessions: List<ConversationSummary> = emptyList(),
@@ -262,6 +263,7 @@ class AssistantOverlayController(
                 ?: homeWorkspaceId
             val sessions = runCatching { runtime.sessions(workspaceId) }.getOrDefault(emptyList())
             val title = runCatching { runtime.sessionTitle(sessionId) }.getOrNull().orEmpty()
+            val cwd = summary?.cwd.orEmpty()
             val model = modelSnapshot(sessionId)
             val providerList = usableProviders()
             mutableState.update { current ->
@@ -270,6 +272,7 @@ class AssistantOverlayController(
                 } else {
                     current.copy(
                         sessionTitle = title,
+                        conversationCwd = cwd,
                         workspaceId = workspaceId,
                         workspaces = workspaces,
                         sessions = sessions,

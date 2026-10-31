@@ -19,14 +19,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -60,17 +58,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
-import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
-import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdMenuItem
-import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -142,8 +134,6 @@ internal fun ChatComposer(
         onFollowUp, onClearQueue, onVoiceClick, onModelsOpenChange,
     ) = actions
     val colors = deepDeepColors()
-    var showProviders by remember { mutableStateOf(false) }
-    var showThinking by remember { mutableStateOf(false) }
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment
     val shape = RoundedCornerShape(28.dp)
     val label = modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
@@ -410,151 +400,24 @@ internal fun ChatComposer(
     }
 
     if (modelsOpen) {
-        DdSheet(onDismiss = { onModelsOpenChange(false) }) {
-            DdSheetHeader(
-                title = stringResource(R.string.assistant_model_sheet),
-                onClose = { onModelsOpenChange(false) },
-            )
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 520.dp)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-            ) {
-                Spacer(Modifier.height(8.dp))
-                if (providers.isNotEmpty()) {
-                    val providerName = providers.firstOrNull { it.id == providerId }?.name ?: providerId
-                    DdDropdown(
-                        expanded = showProviders,
-                        onDismissRequest = { showProviders = false },
-                        anchor = {
-                            DdListRow(
-                                title = stringResource(R.string.assistant_model_provider),
-                                trailing = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = providerName,
-                                            style = DdType.bodySmall,
-                                            color = colors.inkTertiary,
-                                            maxLines = 1,
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
-                                    }
-                                },
-                                onClick = { showProviders = true },
-                                modifier = Modifier.testTag("assistant_provider_row"),
-                            )
-                        },
-                    ) {
-                        providers.forEach { provider ->
-                            DdMenuItem(
-                                text = provider.name,
-                                onClick = {
-                                    showProviders = false
-                                    onProviderChange(provider.id)
-                                },
-                                selected = provider.id == providerId,
-                                trailing = if (provider.id == providerId) {
-                                    {
-                                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
-                                    }
-                                } else {
-                                    null
-                                },
-                                testTag = "assistant_provider_${provider.id}",
-                            )
-                        }
-                    }
-                    DdHairline()
-                }
-
-                if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
-                    DdDropdown(
-                        expanded = showThinking,
-                        onDismissRequest = { showThinking = false },
-                        anchor = {
-                            DdListRow(
-                                title = stringResource(R.string.assistant_thinking_sheet),
-                                trailing = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = thinkingLabel(thinkingLevel),
-                                            style = DdType.bodySmall,
-                                            color = colors.inkTertiary,
-                                            maxLines = 1,
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
-                                    }
-                                },
-                                onClick = { showThinking = true },
-                                modifier = Modifier.testTag("assistant_thinking_row"),
-                            )
-                        },
-                    ) {
-                        thinkingLevels.forEach { level ->
-                            DdMenuItem(
-                                text = thinkingLabel(level),
-                                onClick = {
-                                    showThinking = false
-                                    onModelsOpenChange(false)
-                                    onThinkingLevelChange(level)
-                                },
-                                selected = level == thinkingLevel,
-                                trailing = if (level == thinkingLevel) {
-                                    {
-                                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
-                                    }
-                                } else {
-                                    null
-                                },
-                                testTag = "assistant_thinking_${level.name.lowercase()}",
-                            )
-                        }
-                    }
-                }
-                if (models.isEmpty()) {
-                    DdListRow(
-                        title = stringResource(R.string.assistant_model_unconfigured),
-                        onClick = null,
-                        enabled = false,
-                    )
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.assistant_open_settings),
-                        onClick = {
-                            onModelsOpenChange(false)
-                            onOpenSettings()
-                        },
-                        showChevron = true,
-                    )
-                } else {
-                    models.forEachIndexed { index, option ->
-                        DdListRow(
-                            title = option.displayName,
-                            onClick = {
-                                onModelsOpenChange(false)
-                                onModelChange(option.id)
-                            },
-                            trailing = {
-                                if (option.id == modelId) {
-                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 20.dp)
-                                }
-                            },
-                        )
-                        if (index != models.lastIndex) DdHairline()
-                    }
-                }
-                Spacer(Modifier.height(28.dp))
-            }
-        }
+        ModelPickerSheet(
+            providerId = providerId,
+            modelId = modelId,
+            providers = providers,
+            models = models,
+            thinkingLevel = thinkingLevel,
+            thinkingLevels = thinkingLevels,
+            onDismiss = { onModelsOpenChange(false) },
+            onProviderChange = onProviderChange,
+            onModelChange = onModelChange,
+            onThinkingLevelChange = onThinkingLevelChange,
+            onOpenSettings = onOpenSettings,
+        )
     }
 }
 
 @Composable
-private fun QueueStrip(
+internal fun QueueStrip(
     queuedInputs: List<QueuedInput>,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
@@ -603,7 +466,7 @@ private fun QueueStrip(
 }
 
 @Composable
-private fun ComposerChip(
+internal fun ComposerChip(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean,
