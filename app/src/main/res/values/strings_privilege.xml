@@ -27,6 +27,7 @@
     <string name="permission_error_daemon_start_failed">守护进程启动失败</string>
 
     <string name="permission_action_adb_pair">配对无线调试</string>
+    <string name="permission_action_adb_repair">重新配对无线调试</string>
     <string name="permission_action_adb_connect">连接并启动守护进程</string>
     <string name="permission_action_adb_restart">重新连接</string>
     <string name="permission_action_adb_retry">重试连接</string>

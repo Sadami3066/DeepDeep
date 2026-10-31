@@ -256,6 +256,14 @@ private fun PrivilegeLevelAction(
                         onClick = onConnect,
                     )
                 }
+                if (adb.paired || adb.daemon) {
+                    DdHairline()
+                    PrivilegeAction(
+                        icon = DdIcons.Plug,
+                        title = stringResource(R.string.permission_action_adb_repair),
+                        onClick = onPair,
+                    )
+                }
                 DdHairline()
                 PrivilegeAction(
                     icon = DdIcons.External,

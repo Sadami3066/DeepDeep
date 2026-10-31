@@ -27,6 +27,7 @@
     <string name="permission_error_daemon_start_failed">Could not start the daemon</string>
 
     <string name="permission_action_adb_pair">Pair wireless debugging</string>
+    <string name="permission_action_adb_repair">Re-pair wireless debugging</string>
     <string name="permission_action_adb_connect">Connect and start daemon</string>
     <string name="permission_action_adb_restart">Reconnect</string>
     <string name="permission_action_adb_retry">Retry connection</string>
