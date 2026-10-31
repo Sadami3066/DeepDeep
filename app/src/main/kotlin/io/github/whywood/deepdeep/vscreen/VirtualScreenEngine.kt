@@ -212,12 +212,7 @@ class VirtualScreenEngine(
         val id = requestIds.incrementAndGet()
         sendText(
             VirtualScreenCommands.START,
-            buildJsonObject {
-                put("id", id)
-                put("width", VirtualScreenCommands.DEFAULT_WIDTH)
-                put("height", VirtualScreenCommands.DEFAULT_HEIGHT)
-                put("dpi", VirtualScreenCommands.DEFAULT_DPI)
-            },
+            buildJsonObject { put("id", id) },
         )
         val response = readResponse(id) ?: throw IOException("helper 未返回启动结果")
         if (response.booleanField("ok") != true) {

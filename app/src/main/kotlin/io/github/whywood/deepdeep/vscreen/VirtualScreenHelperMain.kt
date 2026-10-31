@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
 import android.view.InputEvent
@@ -175,9 +176,10 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
     private fun handleStart(json: JsonObject, id: Int) {
         if (session != null) throw IllegalStateException("虚拟屏已启动")
-        val width = (json.intField("width") ?: VirtualScreenCommands.DEFAULT_WIDTH).coerceIn(240, 2160)
-        val height = (json.intField("height") ?: VirtualScreenCommands.DEFAULT_HEIGHT).coerceIn(240, 3840)
-        val dpi = (json.intField("dpi") ?: VirtualScreenCommands.DEFAULT_DPI).coerceIn(120, 640)
+        val screen = realScreenMetrics()
+        val width = (json.intField("width") ?: screen.widthPixels).coerceIn(240, 2160)
+        val height = (json.intField("height") ?: screen.heightPixels).coerceIn(240, 3840)
+        val dpi = (json.intField("dpi") ?: screen.densityDpi).coerceIn(120, 640)
         val display = DisplaySession(context(), width, height, dpi)
         val displayId = display.start()
         session = display
@@ -188,6 +190,17 @@ private class HelperServer(private val socketName: String, private val nonce: St
             put("height", height)
             put("dpi", dpi)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun realScreenMetrics(): DisplayMetrics {
+        val metrics = DisplayMetrics()
+        val manager = DisplayManager::class.java
+            .getDeclaredConstructor(Context::class.java)
+            .apply { isAccessible = true }
+            .newInstance(context())
+        manager.getDisplay(Display.DEFAULT_DISPLAY).getRealMetrics(metrics)
+        return metrics
     }
 
     private fun handleLaunch(json: JsonObject, id: Int) {

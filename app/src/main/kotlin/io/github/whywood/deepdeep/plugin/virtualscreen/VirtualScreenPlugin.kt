@@ -328,7 +328,7 @@ private val textParameters: JsonObject = buildJsonObject {
 
 private fun startTool(engine: VirtualScreenEngine): CodingTool = CodingTool(
     name = "virtual_screen_start",
-    description = "Start the privileged virtual screen (720x1280). Requires Shizuku or Root privilege to be selected and granted.",
+    description = "Start the privileged virtual screen at the phone screen size. Requires Shizuku or Root privilege to be selected and granted.",
     parameters = noParameters,
     label = "virtual_screen_start",
     promptSnippet = "Start the background virtual screen",
