@@ -119,7 +119,6 @@ internal class SessionOpener(
                 quote = draft?.quote,
                 attachments = draft?.attachments.orEmpty(),
                 error = null,
-                queuedInputs = emptyList(),
                 importingAttachment = false,
             )
         }
@@ -172,6 +171,7 @@ internal class SessionOpener(
             loaded = true,
             usage = usage,
             sessionModel = sessionModel,
+            queuedInputs = queuedInputs,
         )
         if (activeRun != null) {
             snapshot = snapshot.adoptActiveRun(activeRun.runId, RuntimeActivity.Thinking, activeRun.startedAt)
@@ -183,7 +183,6 @@ internal class SessionOpener(
                 it.copy(
                     conversation = resolved.copy(loaded = true),
                     switchingConversation = false,
-                    queuedInputs = queuedInputs,
                     importingAttachment = false,
                 )
             }
@@ -211,7 +210,6 @@ internal class SessionOpener(
                         quote = null,
                         attachments = emptyList(),
                         error = null,
-                        queuedInputs = emptyList(),
                         importingAttachment = false,
                     )
                 }

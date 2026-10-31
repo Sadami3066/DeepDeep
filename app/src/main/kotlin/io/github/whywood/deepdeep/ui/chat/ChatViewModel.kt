@@ -19,7 +19,6 @@ import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
-import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
@@ -285,10 +284,7 @@ class ChatViewModel(
         val sessionId = mutableState.value.conversationId ?: return
         val dropped = runCatching { runtime.clearQueuedInputs(sessionId) }.getOrDefault(emptyList())
         mutableState.update { state ->
-            state.copy(
-                input = sessionDrafts.mergeDroppedInput(state.input, dropped),
-                queuedInputs = emptyList(),
-            )
+            state.copy(input = sessionDrafts.mergeDroppedInput(state.input, dropped))
         }
     }
 
@@ -482,10 +478,7 @@ class ChatViewModel(
         retryController.clear(sessionId)
         val dropped = runtime.stop(sessionId)
         mutableState.update { state ->
-            state.copy(
-                input = sessionDrafts.mergeDroppedInput(state.input, dropped),
-                queuedInputs = emptyList(),
-            )
+            state.copy(input = sessionDrafts.mergeDroppedInput(state.input, dropped))
         }
         if (runtime.activeRuns.value[sessionId] == null) {
             scheduleReconcile(sessionId, STOP_RECONCILE_DELAY_MS)
@@ -698,20 +691,12 @@ class ChatViewModel(
         deltaBatcher.flush()
         val isActive = scoped.sessionId == mutableState.value.conversationId
         when (event) {
-            is RuntimeEvent.QueueChanged -> {
-                if (isActive) {
-                    mutableState.update { it.copy(queuedInputs = queueInputs(event.steering, event.followUp)) }
-                }
-                return
-            }
-
             is RuntimeEvent.QueuedInputsDropped -> {
                 if (isActive) {
                     mutableState.update {
-                        it.copy(input = sessionDrafts.mergeDroppedInput(it.input, event.texts), queuedInputs = emptyList())
+                        it.copy(input = sessionDrafts.mergeDroppedInput(it.input, event.texts))
                     }
                 }
-                return
             }
 
             is RuntimeEvent.SessionListChanged, is RuntimeEvent.SessionRemoved, is RuntimeEvent.SessionArchived -> {
@@ -754,10 +739,6 @@ class ChatViewModel(
             steps
         }
     }
-
-    private fun queueInputs(steering: List<String>, followUp: List<String>): List<QueuedInput> =
-        steering.map { QueuedInput(InputQueueKind.STEER, it) } +
-            followUp.map { QueuedInput(InputQueueKind.FOLLOW_UP, it) }
 
     private companion object {
         const val LEGACY_NEW_TITLE = "新对话"

@@ -4,8 +4,10 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.BackgroundTurnStarted
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.NoticeEvent
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -25,6 +27,7 @@ data class ConversationState(
     val loaded: Boolean = false,
     val usage: SessionUsage? = null,
     val sessionModel: SessionModelSnapshot? = null,
+    val queuedInputs: List<QueuedInput> = emptyList(),
 )
 
 internal fun reduce(
@@ -129,8 +132,12 @@ internal fun reduce(
 
     is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, now)
 
-    is RuntimeEvent.QueueChanged -> state
-    is RuntimeEvent.QueuedInputsDropped -> state
+    is RuntimeEvent.QueueChanged -> state.copy(
+        queuedInputs = event.steering.map { QueuedInput(InputQueueKind.STEER, it) } +
+            event.followUp.map { QueuedInput(InputQueueKind.FOLLOW_UP, it) },
+    )
+
+    is RuntimeEvent.QueuedInputsDropped -> state.copy(queuedInputs = emptyList())
 
     is NoticeEvent -> state.appendNotice(event.notice, now)
     is BackgroundTurnStarted -> state.startBackgroundTurn(event, now)

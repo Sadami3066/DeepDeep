@@ -42,7 +42,12 @@ internal class SessionProjection(
         val localized = history.map { message ->
             message.error?.let { raw -> message.copy(error = strings().runError(raw)) } ?: message
         }
-        var seeded = ConversationState(messages = localized, loaded = true, usage = usage)
+        var seeded = ConversationState(
+            messages = localized,
+            loaded = true,
+            usage = usage,
+            queuedInputs = runtime.queuedInputs(sessionId),
+        )
         runtime.activeRuns.value[sessionId]?.let { active ->
             seeded = seeded.adoptActiveRun(active.runId, RuntimeActivity.Thinking, active.startedAt)
         }

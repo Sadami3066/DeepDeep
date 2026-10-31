@@ -114,12 +114,8 @@ internal class SessionDraftStore(
         updateState { it.copy(attachments = it.attachments.filterNot { ref -> ref.id == id }) }
     }
 
-    fun mergeDroppedInput(input: String, dropped: List<String>): String {
-        val texts = dropped.map { it.trim() }.filter { it.isNotEmpty() }
-        if (texts.isEmpty()) return input
-        val merged = texts.joinToString("\n\n")
-        return if (input.isBlank()) merged else input.trimEnd() + "\n\n" + merged
-    }
+    fun mergeDroppedInput(input: String, dropped: List<String>): String =
+        mergeDroppedInputText(input, dropped)
 
     fun attachmentRoot(current: ChatUiState): File? =
         current.conversationCwd.takeIf { it.isNotBlank() }?.let(::File)
@@ -179,4 +175,11 @@ internal class SessionDraftStore(
     companion object {
         const val MAX_ATTACHMENTS = 20
     }
+}
+
+internal fun mergeDroppedInputText(input: String, dropped: List<String>): String {
+    val texts = dropped.map { it.trim() }.filter { it.isNotEmpty() }
+    if (texts.isEmpty()) return input
+    val merged = texts.joinToString("\n\n")
+    return if (input.isBlank()) merged else input.trimEnd() + "\n\n" + merged
 }

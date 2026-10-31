@@ -3,7 +3,9 @@ package io.github.whywood.deepdeep.ui.chat
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -276,5 +278,29 @@ class ConversationReducerTest {
         val steps = listOf(AssistantStep.Text(id = 0, text = "hello"))
         assertTrue(consumeFinalText(steps, "hello").isEmpty())
         assertTrue(consumeFinalText(steps, "other").isNotEmpty())
+    }
+
+    @Test
+    fun queueChangedFillsQueuedInputsInOrder() {
+        val reduced = reduce(
+            ConversationState(),
+            RuntimeEvent.QueueChanged("run-1", steering = listOf("s1", "s2"), followUp = listOf("f1")),
+            strings,
+        )
+        assertEquals(
+            listOf(
+                QueuedInput(InputQueueKind.STEER, "s1"),
+                QueuedInput(InputQueueKind.STEER, "s2"),
+                QueuedInput(InputQueueKind.FOLLOW_UP, "f1"),
+            ),
+            reduced.queuedInputs,
+        )
+    }
+
+    @Test
+    fun queuedInputsDroppedClearsQueue() {
+        val state = ConversationState(queuedInputs = listOf(QueuedInput(InputQueueKind.STEER, "s1")))
+        val reduced = reduce(state, RuntimeEvent.QueuedInputsDropped(listOf("s1"), "run-1"), strings)
+        assertTrue(reduced.queuedInputs.isEmpty())
     }
 }

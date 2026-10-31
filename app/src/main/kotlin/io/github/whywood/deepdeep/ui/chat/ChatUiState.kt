@@ -39,7 +39,6 @@ data class ChatUiState(
     val switchingConversation: Boolean = false,
     val reloading: Boolean = false,
     val compacting: Boolean = false,
-    val queuedInputs: List<QueuedInput> = emptyList(),
     val importingAttachment: Boolean = false,
 ) {
     val messages: List<AssistantMessage> get() = conversation.messages
@@ -49,6 +48,7 @@ data class ChatUiState(
     val activityStartedAt: Long? get() = conversation.activityStartedAt
     val historyLoaded: Boolean get() = conversation.loaded
     val usage: SessionUsage? get() = conversation.usage
+    val queuedInputs: List<QueuedInput> get() = conversation.queuedInputs
 
     fun updateConversation(transform: (ConversationState) -> ConversationState): ChatUiState =
         copy(conversation = transform(conversation))
