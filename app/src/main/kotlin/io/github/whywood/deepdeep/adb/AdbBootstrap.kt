@@ -157,25 +157,7 @@ class AdbBootstrap(context: Context) {
     }
 
     private suspend fun connectAndStartDaemon() {
-        val endpoint = discover(AdbMdns.SERVICE_TYPE_TLS_CONNECT, CONNECT_DISCOVERY_TIMEOUT_MS)
-            ?: throw AdbBridgeException(AdbBridgeError.CONNECT_FAILED)
-        var unauthorized: AdbPairingRequiredException? = null
-        var lastFailure: Exception? = null
-        val connected = hostsOf(endpoint).any { host ->
-            try {
-                manager.connect(host, endpoint.port)
-            } catch (pairingRequired: AdbPairingRequiredException) {
-                unauthorized = pairingRequired
-                false
-            } catch (failure: Exception) {
-                lastFailure = failure
-                false
-            }
-        }
-        if (!connected) {
-            unauthorized?.let { throw AdbBridgeException(AdbBridgeError.NOT_PAIRED, it) }
-            throw AdbBridgeException(AdbBridgeError.CONNECT_FAILED, lastFailure)
-        }
+        connectToServer()
         try {
             startDaemon()
         } finally {
@@ -189,6 +171,43 @@ class AdbBootstrap(context: Context) {
             }
         }
         if (!alive) throw AdbBridgeException(AdbBridgeError.DAEMON_START_FAILED)
+    }
+
+    private suspend fun connectToServer() {
+        var unauthorized: AdbPairingRequiredException? = null
+        var lastFailure: Exception? = null
+        suspend fun tryEndpoint(endpoint: AdbEndpoint): Boolean {
+            for (host in hostsOf(endpoint)) {
+                try {
+                    manager.connect(host, endpoint.port)
+                    return true
+                } catch (pairingRequired: AdbPairingRequiredException) {
+                    unauthorized = pairingRequired
+                } catch (failure: Exception) {
+                    lastFailure = failure
+                }
+            }
+            return false
+        }
+        val cachedPort = preferences.getInt(KEY_CONNECT_PORT, 0)
+        if (cachedPort > 0 && tryEndpoint(AdbEndpoint(LOOPBACK, cachedPort))) {
+            Log.i(TAG, "connected with cached port $cachedPort")
+            return
+        }
+        for (attempt in 1..CONNECT_DISCOVERY_ATTEMPTS) {
+            val endpoint = discover(AdbMdns.SERVICE_TYPE_TLS_CONNECT, CONNECT_DISCOVERY_TIMEOUT_MS)
+            if (endpoint == null) {
+                Log.w(TAG, "tls connect service not found: attempt=$attempt")
+                continue
+            }
+            if (tryEndpoint(endpoint)) {
+                preferences.edit().putInt(KEY_CONNECT_PORT, endpoint.port).apply()
+                return
+            }
+            Log.w(TAG, "tls connect failed: port=${endpoint.port} attempt=$attempt", lastFailure)
+        }
+        unauthorized?.let { throw AdbBridgeException(AdbBridgeError.NOT_PAIRED, it) }
+        throw AdbBridgeException(AdbBridgeError.CONNECT_FAILED, lastFailure)
     }
 
     private suspend fun pairKey(code: String) {
@@ -304,7 +323,9 @@ class AdbBootstrap(context: Context) {
         const val SETTING_ADB_WIFI_ENABLED = "adb_wifi_enabled"
         const val DAEMON_PORT = 18242
         const val PAIR_DISCOVERY_TIMEOUT_MS = 8000L
-        const val CONNECT_DISCOVERY_TIMEOUT_MS = 6000L
+        const val CONNECT_DISCOVERY_TIMEOUT_MS = 8000L
+        const val CONNECT_DISCOVERY_ATTEMPTS = 3
+        const val KEY_CONNECT_PORT = "connect_port"
         const val DAEMON_START_WAIT_MS = 1500L
         const val DAEMON_HEALTH_ATTEMPTS = 24
         const val DAEMON_HEALTH_INTERVAL_MS = 250L
