@@ -27,6 +27,15 @@ internal val FloatingVirtualPreviewChipBackground = Color(0xE60B1220)
 internal val FloatingVirtualPreviewChipText = Color(0xF2FFFFFF)
 internal const val FloatingCardMaxHeightRatio = 0.45f
 internal const val FloatingPanelMaxHeightRatio = 0.70f
+internal val FloatingSurfaceNearPadding = 2.dp
+internal val FloatingRingGap = 3.dp
+internal val FloatingRingStroke = 2.5.dp
+internal val FloatingRingStart = Color(0xFF7DD3FC)
+internal val FloatingRingEnd = Color(0xFF2563EB)
+internal const val FloatingRingSweepMs = 300
+internal const val FloatingRingFadeMs = 180
+internal const val FloatingRingStartDelayMs = 120L
+internal const val FloatingRingResetDelayMs = 200L
 
 internal fun Modifier.floatingLift(shape: Shape, colors: DeepDeepColors): Modifier = shadow(
     elevation = 12.dp,

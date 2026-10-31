@@ -112,7 +112,9 @@ class FloatingWindowController(
 
         override fun onLowMemory() = Unit
     }
+    private val ring = MutableStateFlow(FloatingBubbleRing.NONE)
     private var longPressAction: Runnable? = null
+    private var ringStartAction: Runnable? = null
     private var touchDownRawX = 0f
     private var touchDownRawY = 0f
     private var touchDownWindowX = 0
@@ -135,7 +137,6 @@ class FloatingWindowController(
         scope.launch {
             AppVisibility.foregroundFlow.collect { foreground ->
                 appForeground.value = foreground
-                if (foreground && previewOpen.value) previewOpen.value = false
                 requestRender()
             }
         }
@@ -318,7 +319,7 @@ class FloatingWindowController(
         params.x = placement.x
         params.y = placement.y
         runCatching { windowManager.updateViewLayout(view, params) }
-        surfaceUi.value = FloatingSurfaceUi.Preview
+        surfaceUi.value = FloatingSurfaceUi.Preview(arrowSide = placement.arrowSide)
     }
 
     private fun showSurfaceWindow(
@@ -362,7 +363,10 @@ class FloatingWindowController(
                     px(FloatingArrowWidth) / 2,
             )
 
-            is FloatingSurfaceUi.Panel -> ui.copy(maxHeightPx = placement.maxContentHeight)
+            is FloatingSurfaceUi.Panel -> ui.copy(
+                maxHeightPx = placement.maxContentHeight,
+                arrowSide = placement.arrowSide,
+            )
 
             is FloatingSurfaceUi.Preview -> ui
         }
@@ -401,6 +405,7 @@ class FloatingWindowController(
                         completed = value.completed,
                         now = value.now,
                         maxHeight = with(density) { value.maxHeightPx.toDp() },
+                        nearEdge = value.arrowSide,
                         onOpenRun = { run -> openSession(run.sessionId) },
                         onOpenQuestion = { pending -> openSession(pending.sessionId) },
                         onOpenCompleted = { completion ->
@@ -413,7 +418,11 @@ class FloatingWindowController(
                     is FloatingSurfaceUi.Preview -> {
                         val state by virtualScreenState.collectAsState()
                         val preview by previewFrame.collectAsState()
-                        FloatingVirtualPreview(state = state, frame = preview)
+                        FloatingVirtualPreview(
+                            state = state,
+                            frame = preview,
+                            nearEdge = value.arrowSide,
+                        )
                     }
 
                     null -> Unit
@@ -425,14 +434,7 @@ class FloatingWindowController(
                 compose,
                 FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT),
             )
-            onTouch = { event ->
-                if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                    onSurfaceOutsideTouch(event)
-                    true
-                } else {
-                    false
-                }
-            }
+            onTouch = { event -> event.actionMasked == MotionEvent.ACTION_OUTSIDE }
         }
         host.bindOwners(view)
         val params = WindowManager.LayoutParams(
@@ -476,7 +478,8 @@ class FloatingWindowController(
             val theme by themeMode.collectAsState()
             DeepDeepTheme(theme, fontStyle) {
                 val state by bubbleState.collectAsState()
-                FloatingBubble(mood = state.mood, pending = state.pending)
+                val bubbleRing by ring.collectAsState()
+                FloatingBubble(mood = state.mood, pending = state.pending, ring = bubbleRing)
             }
         }
         val view = FloatingTouchInterceptor(windowContext).apply {
@@ -554,6 +557,15 @@ class FloatingWindowController(
                 val action = Runnable { onBubbleLongPress() }
                 longPressAction = action
                 bubbleView?.postDelayed(action, LONG_PRESS_MS)
+                val start = Runnable {
+                    ring.value = if (previewOpen.value) {
+                        FloatingBubbleRing.DRAINING
+                    } else {
+                        FloatingBubbleRing.FILLING
+                    }
+                }
+                ringStartAction = start
+                bubbleView?.postDelayed(start, FloatingRingStartDelayMs)
                 return true
             }
 
@@ -563,7 +575,7 @@ class FloatingWindowController(
                 if (!dragging && hypot(dx.toDouble(), dy.toDouble()) > touchSlop()) {
                     dragging = true
                     cancelLongPress()
-                    if (previewOpen.value) previewOpen.value = false
+                    fadeRing()
                 }
                 if (dragging) {
                     moveBubble(touchDownWindowX + dx.toInt(), touchDownWindowY + dy.toInt())
@@ -575,10 +587,13 @@ class FloatingWindowController(
                 cancelLongPress()
                 if (longPressFired) {
                     longPressFired = false
-                } else if (dragging) {
-                    finishBubbleDrag()
                 } else {
-                    onBubbleClick()
+                    fadeRing()
+                    if (dragging) {
+                        finishBubbleDrag()
+                    } else {
+                        onBubbleClick()
+                    }
                 }
                 dragging = false
                 return true
@@ -586,6 +601,7 @@ class FloatingWindowController(
 
             MotionEvent.ACTION_CANCEL -> {
                 cancelLongPress()
+                fadeRing()
                 if (dragging) finishBubbleDrag()
                 dragging = false
                 longPressFired = false
@@ -596,12 +612,13 @@ class FloatingWindowController(
     }
 
     private fun onBubbleClick() {
-        if (previewOpen.value) previewOpen.value = false
+        if (previewOpen.value) return
         panelOpen.value = true
     }
 
     private fun onBubbleLongPress() {
         longPressFired = true
+        fadeRing()
         if (previewOpen.value) {
             previewOpen.value = false
         } else {
@@ -610,18 +627,15 @@ class FloatingWindowController(
         }
     }
 
-    private fun onSurfaceOutsideTouch(event: MotionEvent) {
-        if (!previewOpen.value) return
-        if (!hitsBubbleWindow(event)) previewOpen.value = false
-    }
-
-    private fun hitsBubbleWindow(event: MotionEvent): Boolean {
-        val frame = contentFrame.value
-        val size = px(FloatingBubbleWindowSize)
-        val left = bubbleWindowPosition.x + frame.left
-        val top = bubbleWindowPosition.y + frame.top
-        return event.rawX >= left && event.rawX <= left + size &&
-            event.rawY >= top && event.rawY <= top + size
+    private fun fadeRing() {
+        if (ring.value == FloatingBubbleRing.NONE) return
+        ring.value = FloatingBubbleRing.FADING
+        bubbleView?.postDelayed(
+            Runnable {
+                if (ring.value == FloatingBubbleRing.FADING) ring.value = FloatingBubbleRing.NONE
+            },
+            FloatingRingResetDelayMs,
+        )
     }
 
     private fun moveBubble(x: Int, y: Int) {
@@ -839,6 +853,8 @@ class FloatingWindowController(
     private fun cancelLongPress() {
         longPressAction?.let { action -> bubbleView?.removeCallbacks(action) }
         longPressAction = null
+        ringStartAction?.let { action -> bubbleView?.removeCallbacks(action) }
+        ringStartAction = null
     }
 
     private fun px(value: Dp): Int = (value.value * context.resources.displayMetrics.density).roundToInt()
@@ -874,7 +890,10 @@ private sealed interface FloatingSurfaceUi {
         val completed: List<FloatingCompletion>,
         val now: Long,
         val maxHeightPx: Int = 0,
+        val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
     ) : FloatingSurfaceUi
 
-    data object Preview : FloatingSurfaceUi
+    data class Preview(
+        val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
+    ) : FloatingSurfaceUi
 }

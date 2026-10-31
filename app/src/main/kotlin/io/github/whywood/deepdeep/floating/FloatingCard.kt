@@ -64,11 +64,24 @@ internal fun FloatingEventCard(
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
+    val near = FloatingSurfaceNearPadding
+    val far = FloatingSurfaceWindowPadding * 2 - near
+    val topPadding = if (arrowSide == FloatingArrowSide.TOP) near else far
+    val bottomPadding = if (arrowSide == FloatingArrowSide.BOTTOM) near else far
     val onClick = when (card) {
         is FloatingEventCard.Question -> null
         is FloatingEventCard.Completed -> ({ onOpenCompleted(card.completion) })
     }
-    Box(Modifier.padding(FloatingSurfaceWindowPadding).testTag("floating_card")) {
+    Box(
+        Modifier
+            .padding(
+                start = FloatingSurfaceWindowPadding,
+                end = FloatingSurfaceWindowPadding,
+                top = topPadding,
+                bottom = bottomPadding,
+            )
+            .testTag("floating_card"),
+    ) {
         Column(Modifier.width(FloatingCardWidth)) {
             if (arrowSide == FloatingArrowSide.TOP) {
                 FloatingArrow(side = FloatingArrowSide.TOP, offset = arrowOffset)

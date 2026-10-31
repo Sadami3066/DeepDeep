@@ -115,6 +115,7 @@ data class FloatingPreviewSize(
 data class FloatingPreviewPlacement(
     val x: Int,
     val y: Int,
+    val arrowSide: FloatingArrowSide,
 )
 
 fun floatingPreviewSize(
@@ -146,13 +147,24 @@ fun floatingPlacePreview(
     val centeredX = bubble.x + bubbleSize / 2 - windowWidth / 2
     val aboveY = bubble.y - gap - windowHeight
     val belowY = bubble.y + bubbleSize + gap
+    val canAbove = aboveY >= edgeMargin
+    val canBelow = belowY + windowHeight <= screenHeight - edgeMargin
+    val preferAbove = bubble.y + bubbleSize / 2 > screenHeight / 2
+    val above = when {
+        preferAbove && canAbove -> true
+        !preferAbove && canBelow -> false
+        canAbove -> true
+        canBelow -> false
+        else -> preferAbove
+    }
     val y = when {
-        aboveY >= edgeMargin -> aboveY
-        belowY + windowHeight <= screenHeight - edgeMargin -> belowY
+        above && canAbove -> aboveY
+        !above && canBelow -> belowY
         else -> (screenHeight - windowHeight - edgeMargin).coerceAtLeast(edgeMargin)
     }
     return FloatingPreviewPlacement(
         x = centeredX.coerceIn(edgeMargin, maxX),
         y = y,
+        arrowSide = if (above) FloatingArrowSide.BOTTOM else FloatingArrowSide.TOP,
     )
 }

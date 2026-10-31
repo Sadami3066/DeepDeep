@@ -48,6 +48,7 @@ internal fun FloatingPanel(
     completed: List<FloatingCompletion>,
     now: Long,
     maxHeight: Dp,
+    nearEdge: FloatingArrowSide,
     onOpenRun: (FloatingRun) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
@@ -55,7 +56,20 @@ internal fun FloatingPanel(
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
-    Box(Modifier.padding(FloatingSurfaceWindowPadding).testTag("floating_panel")) {
+    val near = FloatingSurfaceNearPadding
+    val far = FloatingSurfaceWindowPadding * 2 - near
+    val topPadding = if (nearEdge == FloatingArrowSide.TOP) near else far
+    val bottomPadding = if (nearEdge == FloatingArrowSide.BOTTOM) near else far
+    Box(
+        Modifier
+            .padding(
+                start = FloatingSurfaceWindowPadding,
+                end = FloatingSurfaceWindowPadding,
+                top = topPadding,
+                bottom = bottomPadding,
+            )
+            .testTag("floating_panel"),
+    ) {
         Column(
             Modifier
                 .width(FloatingPanelWidth)
