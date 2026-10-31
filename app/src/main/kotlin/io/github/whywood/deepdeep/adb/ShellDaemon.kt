@@ -133,9 +133,12 @@ object ShellDaemon {
         )
         builder.environment()["CLASSPATH"] = apk
         builder.redirectErrorStream(true)
-        builder.redirectOutput(File(LOG_FILE))
+        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(File(LOG_FILE)))
         val process = builder.start()
-        return "pid=${process.processId()}\n"
+        val pid = process.processId()
+        println("SHD_HELPER pid=$pid port=$port apk=$apk log=$LOG_FILE")
+        System.out.flush()
+        return "pid=$pid\n"
     }
 
     private fun handleKillHelper(path: String): String {

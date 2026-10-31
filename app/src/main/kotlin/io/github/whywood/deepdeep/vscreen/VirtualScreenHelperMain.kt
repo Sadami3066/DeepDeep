@@ -9,7 +9,11 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.Image
@@ -36,6 +40,7 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 import kotlinx.serialization.json.JsonObject
@@ -75,11 +80,14 @@ object VirtualScreenHelperMain {
 
 private class HelperServer(private val port: Int, private val nonce: String) {
     private val writeLock = Any()
+    private val frameQueue = LinkedBlockingQueue<VirtualScreenFrame>(FRAME_QUEUE_CAPACITY)
     private var socket: Socket? = null
     private var input: InputStream? = null
     private var output: OutputStream? = null
     private var session: DisplaySession? = null
     private var frameThread: Thread? = null
+    private var writerThread: Thread? = null
+    private var lastFrameDropLogAt = 0L
     private var systemContext: Context? = null
     @Volatile
     private var running = true
@@ -87,12 +95,14 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     fun run(): Int {
         val client = connectToApp() ?: run {
             Log.e(TAG, "连接 App 超时：127.0.0.1:$port")
+            println("VSH_EXIT pid=${Process.myPid()} reason=connect_timeout")
             shutdown()
             return 2
         }
         socket = client
         input = BufferedInputStream(client.getInputStream())
         output = BufferedOutputStream(client.getOutputStream())
+        println("VSH_START pid=${Process.myPid()} port=$port sdk=${Build.VERSION.SDK_INT}")
         sendJson(
             buildJsonObject {
                 put("event", VirtualScreenCommands.HELLO)
@@ -101,26 +111,39 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 put("nonce", nonce)
             },
         )
-        if (Process.myUid() != VirtualScreenCommands.SHELL_UID) {
-            Log.e(TAG, "helper 需要以 shell(2000) 身份运行，当前 uid=${Process.myUid()}")
-            shutdown()
-            return 3
-        }
+        var exitReason = "正常结束"
         try {
+            if (Process.myUid() != VirtualScreenCommands.SHELL_UID) {
+                exitReason = "需要以 shell(2000) 身份运行，当前 uid=${Process.myUid()}"
+                Log.e(TAG, exitReason)
+                return 3
+            }
             while (running) {
-                val stream = input ?: break
+                val stream = input ?: run {
+                    exitReason = "连接已关闭"
+                    break
+                }
                 val frame = try {
                     VirtualScreenProtocol.read(stream)
                 } catch (t: IOException) {
-                    Log.w(TAG, "读取客户端帧失败：${t.message}")
+                    exitReason = "读取客户端帧失败：${t.message}"
+                    Log.w(TAG, exitReason)
                     break
-                } ?: break
+                } ?: run {
+                    exitReason = "客户端已断开"
+                    break
+                }
                 if (frame.kind != VirtualScreenFrameKind.TEXT) continue
                 val json = runCatching { VirtualScreenProtocol.json(frame) }.getOrNull() ?: continue
-                if (!handle(json)) break
+                if (!handle(json)) {
+                    exitReason = "收到停止命令"
+                    break
+                }
             }
         } finally {
             shutdown()
+            Log.i(TAG, "helper 退出：$exitReason")
+            println("VSH_EXIT pid=${Process.myPid()} reason=$exitReason")
         }
         return 0
     }
@@ -230,16 +253,19 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     }
 
     private fun handleTap(json: JsonObject, id: Int) {
-        val displayId = requireDisplayId()
+        val display = session ?: throw IllegalStateException("虚拟屏未启动")
+        val displayId = display.displayId
         val x = json.intField("x") ?: throw IllegalArgumentException("缺少 x")
         val y = json.intField("y") ?: throw IllegalArgumentException("缺少 y")
-        if (x < 0 || y < 0) throw IllegalArgumentException("坐标不能为负数")
+        outOfBoundsReason("点击", x, y, display.width, display.height)?.let {
+            throw IllegalArgumentException(it)
+        }
         val duration = (json.longField("durationMs") ?: DEFAULT_TAP_MILLIS).coerceIn(0L, MAX_TAP_MILLIS)
         val downTime = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
         if (!inject(down, displayId)) {
             down.recycle()
-            throw IllegalStateException("按下事件注入失败")
+            throw IllegalStateException("按下事件注入失败：($x, $y) display=$displayId")
         }
         down.recycle()
         if (duration > 0) Thread.sleep(duration)
@@ -247,18 +273,25 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
         if (!inject(up, displayId)) {
             up.recycle()
-            throw IllegalStateException("抬起事件注入失败")
+            throw IllegalStateException("抬起事件注入失败：($x, $y) display=$displayId")
         }
         up.recycle()
         respond(id) { put("message", "已点击 ($x, $y)") }
     }
 
     private fun handleSwipe(json: JsonObject, id: Int) {
-        val displayId = requireDisplayId()
+        val display = session ?: throw IllegalStateException("虚拟屏未启动")
+        val displayId = display.displayId
         val x1 = json.intField("x1") ?: throw IllegalArgumentException("缺少 x1")
         val y1 = json.intField("y1") ?: throw IllegalArgumentException("缺少 y1")
         val x2 = json.intField("x2") ?: throw IllegalArgumentException("缺少 x2")
         val y2 = json.intField("y2") ?: throw IllegalArgumentException("缺少 y2")
+        outOfBoundsReason("滑动起点", x1, y1, display.width, display.height)?.let {
+            throw IllegalArgumentException(it)
+        }
+        outOfBoundsReason("滑动终点", x2, y2, display.width, display.height)?.let {
+            throw IllegalArgumentException(it)
+        }
         val duration = (json.longField("durationMs") ?: DEFAULT_SWIPE_MILLIS).coerceIn(50L, MAX_SWIPE_MILLIS)
         val steps = (duration / 16).toInt().coerceIn(2, 60)
         val stepDelay = (duration / steps).coerceAtLeast(8L)
@@ -266,7 +299,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat(), 0)
         if (!inject(down, displayId)) {
             down.recycle()
-            throw IllegalStateException("按下事件注入失败")
+            throw IllegalStateException("按下事件注入失败：($x1, $y1) display=$displayId")
         }
         down.recycle()
         for (index in 1..steps) {
@@ -277,14 +310,14 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             val move = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0)
             val injected = inject(move, displayId)
             move.recycle()
-            if (!injected) throw IllegalStateException("滑动事件注入失败")
+            if (!injected) throw IllegalStateException("滑动事件注入失败：(${x.toInt()}, ${y.toInt()}) display=$displayId")
             Thread.sleep(stepDelay)
         }
         val upTime = SystemClock.uptimeMillis()
         val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat(), 0)
         if (!inject(up, displayId)) {
             up.recycle()
-            throw IllegalStateException("抬起事件注入失败")
+            throw IllegalStateException("抬起事件注入失败：($x2, $y2) display=$displayId")
         }
         up.recycle()
         respond(id) { put("message", "已滑动 ($x1, $y1) → ($x2, $y2)") }
@@ -326,7 +359,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             put("height", display.height)
             put("sizeBytes", png.size)
         }
-        send(VirtualScreenProtocol.screenshot(png))
+        writeFrame(VirtualScreenProtocol.screenshot(png))
     }
 
     private fun requireDisplayId(): Int = session?.displayId ?: throw IllegalStateException("虚拟屏未启动")
@@ -504,13 +537,33 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     }
 
     private fun startFrameThread(display: DisplaySession) {
-        val thread = Thread({
+        val writer = Thread({
+            while (running && session === display) {
+                val frame = try {
+                    frameQueue.poll(FRAME_WRITE_POLL_MS, TimeUnit.MILLISECONDS)
+                } catch (t: InterruptedException) {
+                    null
+                } ?: continue
+                try {
+                    if (!writeFrame(frame)) break
+                } catch (t: Throwable) {
+                    Log.w(TAG, "写入预览帧失败", t)
+                    break
+                }
+            }
+        }, "vscreen-writer")
+        writer.isDaemon = true
+        writer.start()
+        writerThread = writer
+        val encoder = Thread({
             while (running && session === display) {
                 val started = SystemClock.uptimeMillis()
-                val jpeg = runCatching { display.streamJpeg(VirtualScreenCommands.STREAM_WIDTH) }
-                    .onFailure { Log.w(TAG, "编码预览帧失败", it) }
-                    .getOrNull()
-                if (jpeg != null && !send(VirtualScreenProtocol.binary(jpeg))) break
+                try {
+                    val jpeg = display.streamJpeg(VirtualScreenCommands.STREAM_WIDTH)
+                    if (jpeg != null && !enqueueFrame(VirtualScreenProtocol.binary(jpeg))) break
+                } catch (t: Throwable) {
+                    Log.w(TAG, "编码预览帧失败", t)
+                }
                 val elapsed = SystemClock.uptimeMillis() - started
                 if (elapsed < FRAME_INTERVAL_MS) {
                     try {
@@ -521,9 +574,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 }
             }
         }, "vscreen-frames")
-        thread.isDaemon = true
-        thread.start()
-        frameThread = thread
+        encoder.isDaemon = true
+        encoder.start()
+        frameThread = encoder
     }
 
     private fun context(): Context = systemContext ?: createSystemContext().also { systemContext = it }
@@ -590,9 +643,20 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         )
     }
 
-    private fun sendJson(json: JsonObject): Boolean = send(VirtualScreenProtocol.text(json))
+    private fun sendJson(json: JsonObject): Boolean = writeFrame(VirtualScreenProtocol.text(json))
 
-    private fun send(frame: VirtualScreenFrame): Boolean {
+    private fun enqueueFrame(frame: VirtualScreenFrame): Boolean {
+        if (!running) return false
+        if (frameQueue.offer(frame)) return true
+        val now = SystemClock.uptimeMillis()
+        if (now - lastFrameDropLogAt >= FRAME_DROP_LOG_INTERVAL_MS) {
+            lastFrameDropLogAt = now
+            Log.w(TAG, "预览帧积压，丢弃新帧")
+        }
+        return true
+    }
+
+    private fun writeFrame(frame: VirtualScreenFrame): Boolean {
         synchronized(writeLock) {
             val stream = output ?: return false
             return try {
@@ -607,7 +671,11 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     private fun shutdown() {
         running = false
+        frameThread?.interrupt()
+        writerThread?.interrupt()
         runCatching { frameThread?.join(FRAME_THREAD_JOIN_MS) }
+        runCatching { writerThread?.join(FRAME_THREAD_JOIN_MS) }
+        frameQueue.clear()
         session?.release()
         session = null
         runCatching { socket?.close() }
@@ -651,6 +719,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         private val imageLock = Any()
         private var display: VirtualDisplay? = null
         private var snapshot: FrameSnapshot? = null
+        private var snapshotAtUptime = 0L
+        private var frameBuffer: Bitmap? = null
+        private var previewBuffer: Bitmap? = null
 
         val displayId: Int
             get() = display?.display?.displayId ?: -1
@@ -676,25 +747,40 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
         fun streamJpeg(targetWidth: Int): ByteArray? {
             val image = tryAcquire() ?: return null
-            val bitmap = try {
-                cacheSnapshot(image)
-                toBitmap(image)
+            return try {
+                cacheSnapshotIfDue(image)
+                encodeJpeg(image, targetWidth)
             } finally {
                 image.close()
             }
-            return try {
-                val scaled = if (bitmap.width > targetWidth) {
-                    Bitmap.createScaledBitmap(bitmap, targetWidth, bitmap.height * targetWidth / bitmap.width, true)
-                } else {
-                    bitmap
+        }
+
+        private fun encodeJpeg(image: Image, maxWidth: Int): ByteArray {
+            val plane = image.planes[0]
+            val paddedWidth = plane.rowStride / plane.pixelStride
+            val frame = frameBuffer?.takeIf { it.width == paddedWidth && it.height == image.height }
+                ?: Bitmap.createBitmap(paddedWidth, image.height, Bitmap.Config.ARGB_8888).also {
+                    frameBuffer?.recycle()
+                    frameBuffer = it
                 }
-                val out = ByteArrayOutputStream()
-                scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-                if (scaled !== bitmap) scaled.recycle()
-                out.toByteArray()
-            } finally {
-                bitmap.recycle()
-            }
+            frame.copyPixelsFromBuffer(plane.buffer.rewind())
+            val targetWidth = maxWidth.coerceAtMost(image.width).coerceAtLeast(1)
+            val targetHeight = (image.height * targetWidth / image.width).coerceAtLeast(1)
+            val preview = previewBuffer?.takeIf { it.width == targetWidth && it.height == targetHeight }
+                ?: Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888).also {
+                    previewBuffer?.recycle()
+                    previewBuffer = it
+                }
+            preview.eraseColor(Color.TRANSPARENT)
+            Canvas(preview).drawBitmap(
+                frame,
+                Rect(0, 0, image.width, image.height),
+                Rect(0, 0, targetWidth, targetHeight),
+                SCALE_PAINT,
+            )
+            val out = ByteArrayOutputStream()
+            preview.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+            return out.toByteArray()
         }
 
         fun screenshotPng(): ByteArray? {
@@ -703,7 +789,6 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 val image = tryAcquire()
                 if (image != null) {
                     return try {
-                        cacheSnapshot(image)
                         val bitmap = toBitmap(image)
                         try {
                             encodePng(bitmap)
@@ -728,7 +813,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             }
         }
 
-        private fun cacheSnapshot(image: Image) {
+        private fun cacheSnapshotIfDue(image: Image) {
+            val now = SystemClock.uptimeMillis()
+            if (now - snapshotAtUptime < SNAPSHOT_CACHE_INTERVAL_MS) return
             val plane = image.planes[0]
             val buffer = plane.buffer
             val bytes = ByteArray(buffer.remaining())
@@ -743,6 +830,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                     pixels = bytes,
                 )
             }
+            snapshotAtUptime = now
         }
 
         private fun bitmapFromSnapshot(value: FrameSnapshot): Bitmap {
@@ -765,6 +853,11 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             runCatching { display?.release() }
             display = null
             runCatching { reader.close() }
+            frameBuffer?.recycle()
+            frameBuffer = null
+            previewBuffer?.recycle()
+            previewBuffer = null
+            synchronized(imageLock) { snapshot = null }
         }
 
         private fun tryAcquire(): Image? = synchronized(imageLock) {
@@ -775,7 +868,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             val plane = image.planes[0]
             val paddedWidth = plane.rowStride / plane.pixelStride
             val padded = Bitmap.createBitmap(paddedWidth, image.height, Bitmap.Config.ARGB_8888)
-            padded.copyPixelsFromBuffer(plane.buffer)
+            padded.copyPixelsFromBuffer(plane.buffer.rewind())
             if (paddedWidth == image.width) return padded
             val cropped = Bitmap.createBitmap(padded, 0, 0, image.width, image.height)
             padded.recycle()
@@ -805,6 +898,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             const val DISPLAY_NAME = "deepdeep-vscreen"
             const val JPEG_QUALITY = 70
             const val SCREENSHOT_WAIT_MS = 3000L
+            const val SNAPSHOT_CACHE_INTERVAL_MS = 1000L
             const val DISPLAY_IME_POLICY_LOCAL = 0
             const val FLAG_PUBLIC = 1 shl 0
             const val FLAG_OWN_CONTENT_ONLY = 1 shl 3
@@ -815,6 +909,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             const val FLAG_OWN_DISPLAY_GROUP = 1 shl 11
             const val FLAG_ALWAYS_UNLOCKED = 1 shl 12
             const val FLAG_TOUCH_FEEDBACK_DISABLED = 1 shl 13
+            val SCALE_PAINT = Paint(Paint.FILTER_BITMAP_FLAG)
         }
     }
 
@@ -825,7 +920,10 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         const val INVALID_TASK_DISPLAY = -1
         const val TASK_DISPLAY_RETRIES = 3
         const val TASK_DISPLAY_RETRY_MS = 120L
-        const val FRAME_INTERVAL_MS = 80L
+        const val FRAME_INTERVAL_MS = 200L
+        const val FRAME_QUEUE_CAPACITY = 2
+        const val FRAME_WRITE_POLL_MS = 200L
+        const val FRAME_DROP_LOG_INTERVAL_MS = 5000L
         const val FRAME_THREAD_JOIN_MS = 1000L
         const val EXEC_TIMEOUT_SECONDS = 10L
         const val LOOPBACK = "127.0.0.1"
@@ -863,3 +961,10 @@ internal data class PortraitScreenSize(val width: Int, val height: Int)
 
 internal fun portraitScreenSize(width: Int, height: Int): PortraitScreenSize =
     if (width <= height) PortraitScreenSize(width, height) else PortraitScreenSize(height, width)
+
+internal fun outOfBoundsReason(label: String, x: Int, y: Int, width: Int, height: Int): String? =
+    if (x >= 0 && y >= 0 && x < width && y < height) {
+        null
+    } else {
+        "${label}坐标超出虚拟屏范围：($x, $y)，虚拟屏 ${width}×${height}"
+    }
