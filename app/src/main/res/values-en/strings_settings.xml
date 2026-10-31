@@ -161,12 +161,11 @@
     <string name="settings_new_chat_model">Default model for new chats</string>
     <string name="settings_assistant">System assistant</string>
     <string name="assistant_settings_title">System assistant</string>
+    <string name="assistant_settings_subtitle">Replaces the phone\'s system assistant</string>
     <string name="assistant_settings_role">Default assistant</string>
     <string name="assistant_settings_role_held">Set as the default assistant</string>
     <string name="assistant_settings_role_missing">Not the default assistant</string>
-    <string name="assistant_settings_power">Long-press power button</string>
+    <string name="assistant_settings_power">Set long-press wake-up</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
-    <string name="assistant_settings_default_apps">Default apps</string>
-    <string name="assistant_settings_default_apps_value">Set voice assistant and voice input to DeepDeep</string>
     <string name="settings_privilege">Permissions</string>
 </resources>

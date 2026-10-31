@@ -177,7 +177,6 @@ internal fun AppRouteContent(
                 state = privilegeState,
                 onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
                 onRefresh = { scope.launch { dependencies.privilege.refresh() } },
-                onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
                 onRequestShizukuPermission = {
                     context.findActivity()?.let { activity ->
                         dependencies.privilege.requestShizukuPermission(activity)

@@ -1,10 +1,7 @@
 package io.github.whywood.deepdeep.ui.assistant
 
 import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,9 +47,6 @@ fun AssistantSettingsScreen(
     val context = LocalContext.current
     var roleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
     val powerUnavailableMessage = stringResource(R.string.assistant_settings_power_unavailable)
-    val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        roleHeld = AssistantRole.isHeld(context)
-    }
     LifecycleResumeEffect(Unit) {
         roleHeld = AssistantRole.isHeld(context)
         onPauseOrDispose {}
@@ -90,6 +84,12 @@ fun AssistantSettingsScreen(
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.assistant_settings_subtitle),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+            )
             Spacer(Modifier.height(20.dp))
             DdGroupCard {
                 DdListRow(
@@ -100,36 +100,14 @@ fun AssistantSettingsScreen(
                         else R.string.assistant_settings_role_missing,
                     ),
                     onClick = {
-                        val intent = AssistantRole.requestIntent(context)
-                            ?: AssistantRole.settingsIntent(context)
-                        roleLauncher.launch(intent)
-                    },
-                    showChevron = true,
-                    modifier = Modifier.testTag("assistant_role"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Settings,
-                    title = stringResource(R.string.assistant_settings_default_apps),
-                    value = stringResource(R.string.assistant_settings_default_apps_value),
-                    onClick = {
-                        val intent = listOf(
-                            Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
-                            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
-                            Intent(Settings.ACTION_SETTINGS),
-                        ).firstOrNull { candidate ->
-                            context.packageManager.resolveActivity(candidate, 0) != null
-                        }
-                        intent?.let { target ->
+                        AssistantRole.defaultAppsIntent(context)?.let { intent ->
                             runCatching {
-                                context.startActivity(
-                                    target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
+                                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                             }
                         }
                     },
                     showChevron = true,
-                    modifier = Modifier.testTag("assistant_default_apps"),
+                    modifier = Modifier.testTag("assistant_role"),
                 )
                 DdHairline()
                 DdListRow(

@@ -47,7 +47,6 @@ fun PermissionScreen(
     state: PrivilegeState,
     onSelect: (PrivilegeLevel) -> Unit,
     onRefresh: () -> Unit,
-    onProbeRoot: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizuku: () -> Unit,
     onOpenShizukuInstall: () -> Unit,
@@ -91,12 +90,6 @@ fun PermissionScreen(
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.permission_intro),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
             Spacer(Modifier.height(20.dp))
             SettingsGroup {
                 PrivilegeLevelRow(
@@ -126,7 +119,6 @@ fun PermissionScreen(
             Spacer(Modifier.height(12.dp))
             PrivilegeLevelAction(
                 state = state,
-                onProbeRoot = onProbeRoot,
                 onRequestShizukuPermission = onRequestShizukuPermission,
                 onOpenShizuku = onOpenShizuku,
                 onOpenShizukuInstall = onOpenShizukuInstall,
@@ -197,7 +189,6 @@ private fun PrivilegeRadio(checked: Boolean) {
 @Composable
 private fun PrivilegeLevelAction(
     state: PrivilegeState,
-    onProbeRoot: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizuku: () -> Unit,
     onOpenShizukuInstall: () -> Unit,
@@ -245,14 +236,6 @@ private fun PrivilegeLevelAction(
         }
 
         PrivilegeLevel.ROOT -> Column(Modifier.fillMaxWidth()) {
-            DdGroupCard {
-                PrivilegeAction(
-                    icon = DdIcons.Shield,
-                    title = stringResource(R.string.permission_action_probe_root),
-                    onClick = onProbeRoot,
-                )
-            }
-            Spacer(Modifier.height(10.dp))
             PrivilegeHint(R.string.permission_hint_root)
         }
     }
