@@ -33,6 +33,7 @@ import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
+import io.github.whywood.deepdeep.ui.settings.FloatingWindowScreen
 import io.github.whywood.deepdeep.ui.settings.FontScreen
 import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
 import io.github.whywood.deepdeep.ui.settings.PermissionScreen
@@ -122,6 +123,7 @@ internal fun AppRouteContent(
             onOpenProviders = { navigator.push(AppDestination.Providers) },
             onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
             onOpenPermission = { navigator.push(AppDestination.Permission) },
+            onOpenFloating = { navigator.push(AppDestination.FloatingWindow) },
             privilegeLevel = privilegeState.effective,
             onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
             onOpenFonts = { navigator.push(AppDestination.Fonts) },
@@ -186,6 +188,8 @@ internal fun AppRouteContent(
                 onBack = onBack,
             )
         }
+
+        AppDestination.FloatingWindow -> FloatingWindowScreen(onBack = onBack)
 
         AppDestination.Personalization -> PersonalizationScreen(
             value = personalization,

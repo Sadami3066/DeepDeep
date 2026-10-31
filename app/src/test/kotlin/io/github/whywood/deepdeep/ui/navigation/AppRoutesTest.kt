@@ -20,6 +20,7 @@ class AppRoutesTest {
         AppDestination.ChatSettings,
         AppDestination.Privacy,
         AppDestination.Permission,
+        AppDestination.FloatingWindow,
         AppDestination.Search,
         AppDestination.Skills,
         AppDestination.Schedules,
@@ -36,7 +37,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(20, allDestinations.size)
+        assertEquals(21, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 

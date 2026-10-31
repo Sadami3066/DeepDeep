@@ -83,6 +83,7 @@ fun SettingsScreen(
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
     onOpenPermission: () -> Unit = {},
+    onOpenFloating: () -> Unit = {},
     privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
@@ -202,6 +203,14 @@ fun SettingsScreen(
                     onClick = onOpenPermission,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_permission"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Monitor,
+                    title = stringResource(R.string.floating_settings_title),
+                    onClick = onOpenFloating,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_floating"),
                 )
             }
 
