@@ -28,6 +28,7 @@ class AssistantOverlayController(
     private val activeSessionId: () -> String?,
     private val homeWorkspaceId: String,
     private val scope: CoroutineScope,
+    private val onSessionSelected: (String) -> Unit = {},
     ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
 ) {
@@ -115,14 +116,28 @@ class AssistantOverlayController(
     }
 
     private suspend fun resolveSession(): String? {
-        activeSessionId()?.takeIf { it.isNotBlank() }?.let { return it }
+        activeRunSessionId()?.let { sessionId ->
+            onSessionSelected(sessionId)
+            return sessionId
+        }
+        activeSessionId()?.takeIf { it.isNotBlank() }?.let { sessionId ->
+            onSessionSelected(sessionId)
+            return sessionId
+        }
         val latest = runCatching { runtime.allSessions() }.getOrNull()
             ?.maxByOrNull { it.updatedAt }
         if (latest != null) {
             runCatching { runtime.openSession(latest.filePath, latest.cwd) }
                 .getOrNull()
-                ?.let { return it.sessionId }
+                ?.let { opened ->
+                    onSessionSelected(opened.sessionId)
+                    return opened.sessionId
+                }
         }
         return runCatching { runtime.newSession(homeWorkspaceId).sessionId }.getOrNull()
+            ?.also(onSessionSelected)
     }
+
+    private fun activeRunSessionId(): String? =
+        runtime.activeRuns.value.maxByOrNull { it.value.startedAt }?.key
 }

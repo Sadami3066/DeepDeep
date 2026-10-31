@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startAgentService() {
-        ContextCompat.startForegroundService(this, Intent(this, AgentService::class.java))
+        AgentService.start(this)
     }
 
     private fun requestNotificationPermission() {

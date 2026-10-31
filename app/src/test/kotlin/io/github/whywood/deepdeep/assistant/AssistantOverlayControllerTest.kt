@@ -41,11 +41,13 @@ class AssistantOverlayControllerTest {
         runtime: FakeAgentRuntime,
         active: String?,
         scope: CoroutineScope,
+        onSelected: (String) -> Unit = {},
     ) = AssistantOverlayController(
         runtime = runtime,
         activeSessionId = { active },
         homeWorkspaceId = HOME_ID,
         scope = scope,
+        onSessionSelected = onSelected,
         ioDispatcher = dispatcher,
         strings = { strings },
     )
@@ -70,6 +72,33 @@ class AssistantOverlayControllerTest {
         assertEquals(2, controller.state.value.conversation.messages.size)
         assertEquals("hello", controller.state.value.conversation.messages[1].text)
         assertTrue(runtime.openCalls.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun startPrefersSessionWithActiveRun() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+            histories = mapOf(
+                "session-2" to listOf(
+                    AssistantMessage(0, AssistantRole.USER, "running"),
+                    AssistantMessage(1, AssistantRole.ASSISTANT, ""),
+                ),
+            )
+            activeRuns.value = mapOf(
+                "session-2" to ActiveRunSnapshot("run-9", 5L),
+                "session-1" to ActiveRunSnapshot("run-8", 1L),
+            )
+        }
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, "session-1", this) { selected += it }
+
+        controller.start()
+        runCurrent()
+
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertEquals(listOf("session-2"), selected)
+        assertTrue(controller.state.value.conversation.sending)
         controller.reset()
     }
 

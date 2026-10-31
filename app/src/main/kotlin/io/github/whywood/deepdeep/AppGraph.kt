@@ -95,6 +95,7 @@ import kotlinx.coroutines.withContext
 class AppGraph(context: Context) : AppDependencies {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val appScope: CoroutineScope get() = scope
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
     val activeSessionId = MutableStateFlow<String?>(null)

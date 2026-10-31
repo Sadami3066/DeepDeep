@@ -83,6 +83,10 @@ class AgentService : Service() {
     }
 
     companion object {
+        fun start(context: Context) {
+            ContextCompat.startForegroundService(context, Intent(context, AgentService::class.java))
+        }
+
         const val ACTION_STOP = "io.github.whywood.deepdeep.action.STOP"
         const val ACTION_STOP_SESSION = "io.github.whywood.deepdeep.action.STOP_SESSION"
         private const val NOTIFICATION_ID = 1

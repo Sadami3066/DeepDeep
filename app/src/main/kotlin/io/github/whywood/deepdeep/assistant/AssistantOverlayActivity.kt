@@ -12,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
@@ -20,6 +19,8 @@ import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.service.AgentService
+import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
 
@@ -34,6 +35,7 @@ class AssistantOverlayActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AgentService.start(this)
         val language = LanguagePreferences(this).read()
         val fontStyle = graph.fontPreferences.read()
         setContent {
@@ -43,7 +45,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                     runtime = graph.host,
                     activeSessionId = { graph.activeSessionId.value },
                     homeWorkspaceId = AgentRuntimeHost.HOME_ID,
-                    scope = lifecycleScope,
+                    scope = graph.appScope,
+                    onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
                     strings = { chatUiStrings },
                 )
             }
@@ -101,6 +104,16 @@ class AssistantOverlayActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppVisibility.activityStarted()
+    }
+
+    override fun onStop() {
+        AppVisibility.activityStopped()
+        super.onStop()
     }
 
     override fun onDestroy() {
