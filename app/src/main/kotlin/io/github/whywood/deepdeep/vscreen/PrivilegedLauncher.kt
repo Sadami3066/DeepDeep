@@ -35,7 +35,7 @@ class PrivilegedLauncher(
     private suspend fun startAdb(port: Int, nonce: String): HelperProcess {
         val pid = adb.startHelper(port, nonce)
             ?: throw IllegalStateException("无线调试守护进程启动虚拟屏 helper 失败")
-        return HelperProcess(BACKEND_ADB) {
+        return HelperProcess(BACKEND_ADB, pid = pid.takeIf { it > 0 }) {
             if (pid > 0) cleanupScope.launch { adb.killHelper(pid) }
         }
     }
@@ -83,6 +83,7 @@ internal fun orderedBackends(
 
 class HelperProcess internal constructor(
     val backend: String,
+    val pid: Int? = null,
     private val process: Process? = null,
     private val onDestroy: () -> Unit = {},
 ) {

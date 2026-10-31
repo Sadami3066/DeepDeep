@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import io.github.whywood.deepdeep.R
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.IOException
@@ -44,22 +45,63 @@ class VirtualScreenEngine(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lifecycleMutex = Mutex()
     private val commandMutex = Mutex()
+    private val connectionLock = Any()
     private val requestIds = AtomicInteger()
+    private val heartbeatIds = AtomicInteger()
     private val writeLock = Any()
 
+    @Volatile
     private var socket: Socket? = null
+
+    @Volatile
     private var input: InputStream? = null
+
+    @Volatile
     private var output: OutputStream? = null
+
+    @Volatile
     private var helper: HelperProcess? = null
+
+    @Volatile
     private var readerJob: Job? = null
+
+    @Volatile
+    private var heartbeatJob: Job? = null
+
+    @Volatile
+    private var recoveryJob: Job? = null
+
+    private val correlator = ResponseCorrelator()
+    private val screenshotGate = ScreenshotGate()
+    private val heartbeat = HeartbeatPolicy()
+    private val pongGate = PongGate()
+    private val lifecycle = SessionLifecycle()
+
+    @Volatile
     private var pendingResponse: CompletableDeferred<JsonObject>? = null
-    private var pendingBinary: CompletableDeferred<ByteArray>? = null
+
+    @Volatile
+    private var pendingScreenshotEpoch = 0L
+
+    @Volatile
+    private var pendingFailure: TransportFailure? = null
 
     @Volatile
     private var connectedBackend: String? = null
 
     @Volatile
     private var connectedUid: Int? = null
+
+    @Volatile
+    private var connectedHelperPid: Int? = null
+
+    @Volatile
+    internal var lastFailure: VirtualScreenFailureInfo? = null
+        private set
+
+    @Volatile
+    internal var lastTransportNotice: String? = null
+        private set
 
     val backend: String?
         get() = connectedBackend
@@ -70,25 +112,44 @@ class VirtualScreenEngine(
     fun isOnline(): Boolean = _state.value is VirtualScreenState.Online
 
     override suspend fun start(): VirtualScreenResult = lifecycleMutex.withLock {
-        when (_state.value) {
-            is VirtualScreenState.Online -> return@withLock VirtualScreenResult(true, "虚拟屏已启动")
-            VirtualScreenState.Starting -> return@withLock VirtualScreenResult(false, "虚拟屏正在启动")
-            else -> Unit
+        cancelRecovery()
+        lastTransportNotice = null
+        val current = _state.value
+        val online = current as? VirtualScreenState.Online
+        val healthOk = if (online != null) probeOnline(online) else null
+        when (planStart(online = online != null, starting = current is VirtualScreenState.Starting, healthOk = healthOk)) {
+            StartPlan.BUSY -> return@withLock VirtualScreenResult(false, string(R.string.virtual_screen_result_starting))
+            StartPlan.REUSE -> return@withLock VirtualScreenResult(true, string(R.string.virtual_screen_result_started))
+            StartPlan.REBUILD -> {
+                Log.w(
+                    TAG,
+                    VirtualScreenTransportLog.event(
+                        "online_unhealthy",
+                        "backend" to online?.backend,
+                        "helperPid" to connectedHelperPid,
+                        "displayId" to online?.displayId,
+                    ),
+                )
+                cleanupSession()
+                online?.frame?.let { recycleLater(it) }
+            }
+            StartPlan.START -> Unit
         }
-        _state.value = VirtualScreenState.Starting
-        val result = withContext(Dispatchers.IO) { startSession() }
-        if (!result.ok) _state.value = VirtualScreenState.Failed(result.message)
-        result
+        startLocked()
     }
 
     override suspend fun stop() {
         lifecycleMutex.withLock {
+            lifecycle.onStopped()
+            cancelRecovery()
             if (_state.value is VirtualScreenState.Offline) return@withLock
-            withContext(Dispatchers.IO) {
+            val frame = withContext(Dispatchers.IO) {
                 runCatching { sendText(VirtualScreenCommands.STOP, JsonObject(emptyMap())) }
                 cleanupSession()
+                (_state.value as? VirtualScreenState.Online)?.frame
             }
-            val frame = (_state.value as? VirtualScreenState.Online)?.frame
+            lastFailure = null
+            lastTransportNotice = null
             _state.value = VirtualScreenState.Offline
             frame?.let { recycleLater(it) }
         }
@@ -178,17 +239,16 @@ class VirtualScreenEngine(
     override suspend fun screenshot(): ByteArray? = withContext(Dispatchers.IO) {
         if (!isOnline()) return@withContext null
         commandMutex.withLock {
-            val binary = CompletableDeferred<ByteArray>()
-            pendingBinary = binary
+            val epoch = screenshotGate.open()
             try {
-                val response = requestLocked(VirtualScreenCommands.SCREENSHOT, JsonObject(emptyMap()))
-                val kind = response.stringField("kind")
-                if (kind != null && kind != "screenshot") return@withLock null
-                withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { binary.await() }
+                val response = requestLocked(VirtualScreenCommands.SCREENSHOT, JsonObject(emptyMap()), screenshotEpoch = epoch)
+                if (response.stringField("kind") != "screenshot") return@withLock null
+                screenshotGate.await(epoch, SCREENSHOT_TIMEOUT_MS)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 null
             } finally {
-                if (pendingBinary === binary) pendingBinary = null
+                screenshotGate.close(epoch)
             }
         }
     }
@@ -199,23 +259,63 @@ class VirtualScreenEngine(
         runCatching { context.startActivity(intent) }
     }
 
-    private suspend fun startSession(): VirtualScreenResult {
+    private suspend fun startLocked(): VirtualScreenResult {
+        _state.value = VirtualScreenState.Starting
+        val outcome = try {
+            withContext(Dispatchers.IO) { startSession() }
+        } catch (t: Throwable) {
+            cleanupSession()
+            if (t is CancellationException) {
+                lifecycle.onStopped()
+                val message = string(R.string.virtual_screen_result_start_cancelled)
+                recordFailure(VirtualScreenFailureCategory.START, message, recoverable = false)
+                _state.value = VirtualScreenState.Failed(message)
+                throw t
+            }
+            val message = t.readableMessage()
+            lifecycle.onStopped()
+            recordFailure(VirtualScreenFailureCategory.START, message, recoverable = false)
+            _state.value = VirtualScreenState.Failed(message)
+            return VirtualScreenResult(false, message)
+        }
+        if (outcome.ok) {
+            lastFailure = null
+            lastTransportNotice = null
+            return VirtualScreenResult(true, string(R.string.virtual_screen_result_started))
+        }
+        lifecycle.onStopped()
+        recordFailure(outcome.category ?: VirtualScreenFailureCategory.START, outcome.message, recoverable = false)
+        _state.value = VirtualScreenState.Failed(outcome.message)
+        return VirtualScreenResult(false, outcome.message)
+    }
+
+    private suspend fun startSession(): SessionStart {
         val backends = launcher.backends()
-        if (backends.isEmpty()) return VirtualScreenResult(false, "需要无线调试（ADB）或 Root 权限")
+        if (backends.isEmpty()) {
+            return SessionStart(
+                ok = false,
+                message = string(R.string.virtual_screen_result_no_backend),
+                category = VirtualScreenFailureCategory.BACKEND,
+            )
+        }
         val nonce = UUID.randomUUID().toString().replace("-", "")
         val errors = mutableListOf<String>()
         for (backend in backends) {
             try {
                 tryBackend(backend, nonce)
-                return VirtualScreenResult(true, "虚拟屏已启动")
+                return SessionStart(ok = true)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                Log.w(TAG, "$backend 启动虚拟屏失败", t)
+                Log.w(TAG, VirtualScreenTransportLog.event("backend_start_failed", "backend" to backend, "error" to t.readableMessage()))
                 errors += "${backendLabel(backend)}：${t.readableMessage()}"
                 cleanupSession()
             }
         }
-        return VirtualScreenResult(false, "虚拟屏启动失败：" + errors.joinToString("；"))
+        return SessionStart(
+            ok = false,
+            message = string(R.string.virtual_screen_result_start_failed, errors.joinToString("; ")),
+            category = VirtualScreenFailureCategory.START,
+        )
     }
 
     private suspend fun tryBackend(backend: String, nonce: String) {
@@ -238,6 +338,7 @@ class VirtualScreenEngine(
             }
             connectedUid = uid
             connectedBackend = backend
+            connectedHelperPid = hello.intField("pid") ?: helper?.pid
             val id = requestIds.incrementAndGet()
             sendText(
                 VirtualScreenCommands.START,
@@ -250,9 +351,29 @@ class VirtualScreenEngine(
             val displayId = response.intField("displayId") ?: throw IOException("helper 未返回 displayId")
             val width = response.intField("width") ?: VirtualScreenCommands.DEFAULT_WIDTH
             val height = response.intField("height") ?: VirtualScreenCommands.DEFAULT_HEIGHT
+            correlator.reset()
+            screenshotGate.reset()
+            pongGate.reset()
+            heartbeat.onConnected(nowMs())
             client.soTimeout = 0
             _state.value = VirtualScreenState.Online(displayId, width, height, backend, null)
+            lifecycle.onStarted()
+            lastFailure = null
+            lastTransportNotice = null
+            Log.i(
+                TAG,
+                VirtualScreenTransportLog.event(
+                    "transport_online",
+                    "backend" to backend,
+                    "helperPid" to connectedHelperPid,
+                    "displayId" to displayId,
+                    "uid" to uid,
+                    "width" to width,
+                    "height" to height,
+                ),
+            )
             readerJob = scope.launch { readLoop(client) }
+            heartbeatJob = scope.launch { heartbeatLoop(client) }
         } finally {
             runCatching { server.close() }
         }
@@ -281,9 +402,19 @@ class VirtualScreenEngine(
     }
 
     private fun readLoop(client: Socket) {
+        var kind = TransportFailureKind.EOF
+        var detail = "stream ended"
+        var error: Throwable? = null
         try {
-            while (true) {
-                val frame = VirtualScreenProtocol.read(input ?: break) ?: break
+            while (socket === client) {
+                val frame = try {
+                    VirtualScreenProtocol.read(input ?: break)
+                } catch (t: IOException) {
+                    kind = TransportFailureKind.FRAME_INVALID
+                    detail = t.readableMessage()
+                    error = t
+                    break
+                } ?: break
                 when (frame.kind) {
                     VirtualScreenFrameKind.TEXT -> handleTextFrame(frame)
                     VirtualScreenFrameKind.BINARY -> handleStreamFrame(frame.payload)
@@ -291,21 +422,76 @@ class VirtualScreenEngine(
                 }
             }
         } catch (t: Throwable) {
-            if (t is kotlinx.coroutines.CancellationException) return
-            Log.w(TAG, "读取 helper 失败", t)
+            if (t is CancellationException) return
+            kind = TransportFailureKind.IO
+            detail = t.readableMessage()
+            error = t
         }
-        failConnection(client)
+        if (socket !== client) return
+        val logLine = VirtualScreenTransportLog.event(
+            "read_loop_end",
+            "reason" to kind.code,
+            "backend" to connectedBackend,
+            "helperPid" to connectedHelperPid,
+            "displayId" to (_state.value as? VirtualScreenState.Online)?.displayId,
+            "detail" to detail,
+        )
+        if (error != null) Log.w(TAG, logLine, error) else Log.w(TAG, logLine)
+        failConnection(client, kind, detail)
     }
 
     private fun handleTextFrame(frame: VirtualScreenFrame) {
-        val json = runCatching { VirtualScreenProtocol.json(frame) }.getOrNull() ?: return
-        val id = json.intField("id") ?: return
-        pendingResponse?.complete(json)
+        val json = runCatching { VirtualScreenProtocol.json(frame) }.getOrNull()
+        if (json == null) {
+            Log.w(TAG, VirtualScreenTransportLog.event("text_frame_invalid", "backend" to connectedBackend))
+            return
+        }
+        if (isPongResponse(json)) {
+            heartbeat.onPong(nowMs())
+            pongGate.onPong()
+            return
+        }
+        val id = json.intField("id") ?: 0
+        if (id <= 0) {
+            Log.w(
+                TAG,
+                VirtualScreenTransportLog.event(
+                    "text_frame_uncorrelated",
+                    "backend" to connectedBackend,
+                    "payload" to json.toString().take(MAX_LOG_PAYLOAD_CHARS),
+                ),
+            )
+            return
+        }
+        when (correlator.resolve(id)) {
+            ResponseMatch.MATCHED -> completePending(json)
+            ResponseMatch.LATE -> Log.w(
+                TAG,
+                VirtualScreenTransportLog.event("late_response_dropped", "id" to id, "backend" to connectedBackend),
+            )
+            ResponseMatch.UNKNOWN -> Log.w(
+                TAG,
+                VirtualScreenTransportLog.event("unknown_response_dropped", "id" to id, "backend" to connectedBackend),
+            )
+        }
+    }
+
+    private fun completePending(json: JsonObject) {
+        val deferred = pendingResponse ?: return
+        val epoch = pendingScreenshotEpoch
+        if (epoch > 0 && json.stringField("kind") == "screenshot" && !screenshotGate.arm(epoch)) {
+            Log.w(TAG, VirtualScreenTransportLog.event("screenshot_arm_failed", "epoch" to epoch, "backend" to connectedBackend))
+        }
+        deferred.complete(json)
     }
 
     private fun handleScreenshotFrame(bytes: ByteArray) {
-        val screenshot = pendingBinary ?: return
-        if (!screenshot.isCompleted) screenshot.complete(bytes)
+        if (!screenshotGate.onFrame(bytes)) {
+            Log.w(
+                TAG,
+                VirtualScreenTransportLog.event("screenshot_frame_dropped", "bytes" to bytes.size, "backend" to connectedBackend),
+            )
+        }
     }
 
     private fun handleStreamFrame(bytes: ByteArray) {
@@ -319,12 +505,191 @@ class VirtualScreenEngine(
         online.frame?.takeIf { it !== bitmap }?.let { recycleLater(it) }
     }
 
-    private fun failConnection(client: Socket) {
-        if (socket !== client) return
-        val online = _state.value as? VirtualScreenState.Online ?: return
-        cleanupSession()
-        _state.value = VirtualScreenState.Failed("虚拟屏连接已断开")
-        online.frame?.let { recycleLater(it) }
+    private fun failConnection(client: Socket, detectedKind: TransportFailureKind, detectedDetail: String) {
+        synchronized(connectionLock) {
+            if (socket !== client) return
+            val online = _state.value as? VirtualScreenState.Online ?: return
+            if (!lifecycle.shouldRecover()) return
+            val failure = pendingFailure ?: TransportFailure(detectedKind, detectedDetail)
+            pendingFailure = null
+            Log.w(
+                TAG,
+                VirtualScreenTransportLog.failure(failure.kind, connectedBackend, connectedHelperPid, online.displayId, failure.detail),
+            )
+            cleanupSession()
+            online.frame?.let { recycleLater(it) }
+            val message = string(R.string.virtual_screen_failed_transport_lost, reasonLabel(failure.kind))
+            recordFailure(VirtualScreenFailureCategory.TRANSPORT, message, recoverable = true, reason = failure.kind)
+            _state.value = VirtualScreenState.Failed(message)
+            scheduleRecovery(failure.kind)
+        }
+    }
+
+    private suspend fun heartbeatLoop(client: Socket) {
+        while (true) {
+            try {
+                delay(HeartbeatPolicy.CHECK_INTERVAL_MS)
+            } catch (t: CancellationException) {
+                throw t
+            }
+            if (socket !== client) return
+            val now = nowMs()
+            if (heartbeat.isTransportLost(now)) {
+                closeTransport(client, TransportFailureKind.HEARTBEAT, "no pong for ${HeartbeatPolicy.TIMEOUT_MS}ms")
+                return
+            }
+            if (!heartbeat.isPingDue(now)) continue
+            try {
+                sendPing()
+                heartbeat.onPingSent(now)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                closeTransport(client, TransportFailureKind.IO, t.readableMessage())
+                return
+            }
+        }
+    }
+
+    private fun closeTransport(client: Socket, kind: TransportFailureKind, detail: String) {
+        synchronized(connectionLock) {
+            if (socket !== client) return
+            if (pendingFailure == null) pendingFailure = TransportFailure(kind, detail)
+            Log.w(
+                TAG,
+                VirtualScreenTransportLog.event(
+                    "transport_closing",
+                    "reason" to kind.code,
+                    "backend" to connectedBackend,
+                    "helperPid" to connectedHelperPid,
+                    "detail" to detail,
+                ),
+            )
+            runCatching { client.close() }
+        }
+    }
+
+    private suspend fun probeOnline(online: VirtualScreenState.Online): Boolean = withContext(Dispatchers.IO) {
+        commandMutex.withLock {
+            val client = socket ?: return@withLock false
+            if (client.isClosed) return@withLock false
+            pongGate.arm()
+            try {
+                sendPing()
+                pongGate.await(HeartbeatPolicy.HEALTH_PING_TIMEOUT_MS)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                Log.w(
+                    TAG,
+                    VirtualScreenTransportLog.event(
+                        "health_probe_failed",
+                        "backend" to online.backend,
+                        "helperPid" to connectedHelperPid,
+                        "displayId" to online.displayId,
+                        "error" to t.readableMessage(),
+                    ),
+                )
+                false
+            } finally {
+                pongGate.reset()
+            }
+        }
+    }
+
+    private fun scheduleRecovery(kind: TransportFailureKind) {
+        recoveryJob?.cancel()
+        val scheduler = ReconnectScheduler()
+        recoveryJob = scope.launch {
+            Log.w(
+                TAG,
+                VirtualScreenTransportLog.event(
+                    "recovery_start",
+                    "reason" to kind.code,
+                    "attempts" to scheduler.maxAttempts,
+                    "backend" to connectedBackend,
+                ),
+            )
+            val recovered = scheduler.run { attempt ->
+                if (!lifecycle.shouldRecover()) {
+                    RecoveryOutcome.ABORT
+                } else {
+                    Log.i(TAG, VirtualScreenTransportLog.event("recovery_attempt", "reason" to kind.code, "attempt" to attempt))
+                    withContext(Dispatchers.IO) { recoverAttempt(kind) }
+                }
+            }
+            if (recovered) {
+                val notice = string(R.string.virtual_screen_rebuilt_notice)
+                lastTransportNotice = notice
+                lastFailure = null
+                Log.i(
+                    TAG,
+                    VirtualScreenTransportLog.event(
+                        "recovery_success",
+                        "reason" to kind.code,
+                        "notice" to notice,
+                        "backend" to connectedBackend,
+                        "helperPid" to connectedHelperPid,
+                        "displayId" to (_state.value as? VirtualScreenState.Online)?.displayId,
+                    ),
+                )
+            } else {
+                val failure = lastFailure
+                if (_state.value !is VirtualScreenState.Online && (failure == null || failure.recoverable)) {
+                    val message = string(R.string.virtual_screen_failed_reconnect_gave_up, reasonLabel(kind))
+                    recordFailure(VirtualScreenFailureCategory.TRANSPORT, message, recoverable = false, reason = kind)
+                    _state.value = VirtualScreenState.Failed(message)
+                }
+                Log.w(
+                    TAG,
+                    VirtualScreenTransportLog.event(
+                        "recovery_gave_up",
+                        "reason" to kind.code,
+                        "category" to lastFailure?.category,
+                        "backend" to connectedBackend,
+                    ),
+                )
+            }
+        }
+    }
+
+    private suspend fun recoverAttempt(kind: TransportFailureKind): RecoveryOutcome = lifecycleMutex.withLock {
+        if (!lifecycle.shouldRecover()) return@withLock RecoveryOutcome.ABORT
+        if (_state.value is VirtualScreenState.Online) return@withLock RecoveryOutcome.RECOVERED
+        _state.value = VirtualScreenState.Starting
+        val outcome = try {
+            withContext(Dispatchers.IO) { startSession() }
+        } catch (t: Throwable) {
+            cleanupSession()
+            if (t is CancellationException) throw t
+            val message = string(R.string.virtual_screen_failed_reconnect_retrying, reasonLabel(kind))
+            recordFailure(VirtualScreenFailureCategory.TRANSPORT, message, recoverable = true, reason = kind)
+            _state.value = VirtualScreenState.Failed(message)
+            return@withLock RecoveryOutcome.RETRY
+        }
+        when {
+            outcome.ok -> RecoveryOutcome.RECOVERED
+            outcome.category == VirtualScreenFailureCategory.BACKEND -> {
+                lifecycle.onStopped()
+                val message = string(R.string.virtual_screen_failed_reconnect_backend)
+                recordFailure(VirtualScreenFailureCategory.BACKEND, message, recoverable = false, reason = kind)
+                _state.value = VirtualScreenState.Failed(message)
+                RecoveryOutcome.ABORT
+            }
+            else -> {
+                val message = string(R.string.virtual_screen_failed_reconnect_retrying, reasonLabel(kind))
+                recordFailure(VirtualScreenFailureCategory.TRANSPORT, message, recoverable = true, reason = kind)
+                _state.value = VirtualScreenState.Failed(message)
+                RecoveryOutcome.RETRY
+            }
+        }
+    }
+
+    private fun cancelRecovery() {
+        recoveryJob?.cancel()
+        recoveryJob = null
+    }
+
+    private fun recordFailure(category: VirtualScreenFailureCategory, message: String, recoverable: Boolean, reason: TransportFailureKind? = null) {
+        lastFailure = VirtualScreenFailureInfo(category = category, message = message, recoverable = recoverable, reason = reason?.code)
     }
 
     private suspend fun executeCommand(command: String, params: JsonObject): VirtualScreenResult =
@@ -334,6 +699,7 @@ class VirtualScreenEngine(
                 val response = request(command, params)
                 VirtualScreenResult(true, response.stringField("message").orEmpty())
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 VirtualScreenResult(false, t.readableMessage())
             }
         }
@@ -341,17 +707,24 @@ class VirtualScreenEngine(
     private suspend fun request(command: String, params: JsonObject): JsonObject =
         commandMutex.withLock { requestLocked(command, params) }
 
-    private suspend fun requestLocked(command: String, params: JsonObject): JsonObject {
+    private suspend fun requestLocked(command: String, params: JsonObject, screenshotEpoch: Long = 0L): JsonObject {
         val id = requestIds.incrementAndGet()
         val deferred = CompletableDeferred<JsonObject>()
+        correlator.expect(id)
         pendingResponse = deferred
+        pendingScreenshotEpoch = screenshotEpoch
         val response = try {
             sendText(command, params, id)
             withTimeoutOrNull(COMMAND_TIMEOUT_MS) { deferred.await() }
-                ?: throw IOException("命令超时：$command")
         } finally {
             if (pendingResponse === deferred) pendingResponse = null
+            pendingScreenshotEpoch = 0L
+            if (correlator.isPending(id)) {
+                correlator.abandon(id)
+                Log.w(TAG, VirtualScreenTransportLog.event("command_abandoned", "id" to id, "command" to command))
+            }
         }
+        if (response == null) throw IOException("命令超时：$command")
         if (response.booleanField("ok") != true) {
             throw IllegalStateException(response.stringField("error") ?: "命令失败：$command")
         }
@@ -360,11 +733,16 @@ class VirtualScreenEngine(
 
     private fun sendText(command: String, params: JsonObject, id: Int = 0) {
         val json = buildJsonObject {
-            if (id > 0) put("id", id)
+            if (id != 0) put("id", id)
             put("cmd", command)
             for ((key, value) in params) put(key, value)
         }
         sendFrame(VirtualScreenProtocol.text(json))
+    }
+
+    private fun sendPing() {
+        val id = -heartbeatIds.incrementAndGet()
+        sendText(VirtualScreenCommands.PING, JsonObject(emptyMap()), id)
     }
 
     private fun sendFrame(frame: VirtualScreenFrame) {
@@ -375,20 +753,29 @@ class VirtualScreenEngine(
     }
 
     private fun cleanupSession() {
-        readerJob?.cancel()
-        readerJob = null
-        pendingResponse?.completeExceptionally(IOException("虚拟屏连接已关闭"))
-        pendingResponse = null
-        pendingBinary?.completeExceptionally(IOException("虚拟屏连接已关闭"))
-        pendingBinary = null
-        runCatching { socket?.close() }
-        socket = null
-        input = null
-        output = null
-        helper?.destroy()
-        helper = null
-        connectedBackend = null
-        connectedUid = null
+        synchronized(connectionLock) {
+            readerJob?.cancel()
+            readerJob = null
+            heartbeatJob?.cancel()
+            heartbeatJob = null
+            pendingResponse?.completeExceptionally(IOException("虚拟屏连接已关闭"))
+            pendingResponse = null
+            pendingScreenshotEpoch = 0L
+            correlator.reset()
+            screenshotGate.reset()
+            pongGate.reset()
+            heartbeat.reset()
+            pendingFailure = null
+            runCatching { socket?.close() }
+            socket = null
+            input = null
+            output = null
+            helper?.destroy()
+            helper = null
+            connectedBackend = null
+            connectedUid = null
+            connectedHelperPid = null
+        }
     }
 
     private fun recycleLater(bitmap: Bitmap) {
@@ -400,11 +787,32 @@ class VirtualScreenEngine(
         }
     }
 
+    private fun reasonLabel(kind: TransportFailureKind): String = string(
+        when (kind) {
+            TransportFailureKind.EOF -> R.string.virtual_screen_reason_eof
+            TransportFailureKind.HEARTBEAT -> R.string.virtual_screen_reason_heartbeat
+            TransportFailureKind.FRAME_INVALID -> R.string.virtual_screen_reason_frame_invalid
+            TransportFailureKind.IO -> R.string.virtual_screen_reason_io
+        },
+    )
+
+    private fun string(resId: Int, vararg args: Any): String = context.getString(resId, *args)
+
     private fun backendLabel(backend: String): String = when (backend) {
         PrivilegedLauncher.BACKEND_ROOT -> "Root"
         PrivilegedLauncher.BACKEND_ADB -> "ADB"
         else -> backend
     }
+
+    private fun nowMs(): Long = System.nanoTime() / 1_000_000L
+
+    private class TransportFailure(val kind: TransportFailureKind, val detail: String)
+
+    private class SessionStart(
+        val ok: Boolean,
+        val message: String = "",
+        val category: VirtualScreenFailureCategory? = null,
+    )
 
     private companion object {
         const val TAG = "VScreenEngine"
@@ -415,6 +823,7 @@ class VirtualScreenEngine(
         const val SCREENSHOT_TIMEOUT_MS = 10000L
         const val FRAME_RECYCLE_DELAY_MS = 1000L
         const val INVALID_TASK_DISPLAY = -1
+        const val MAX_LOG_PAYLOAD_CHARS = 120
     }
 }
 

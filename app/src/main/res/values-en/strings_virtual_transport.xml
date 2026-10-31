@@ -1,0 +1,18 @@
+<resources>
+    <string name="virtual_screen_result_started">Virtual screen started</string>
+    <string name="virtual_screen_result_starting">Virtual screen is starting</string>
+    <string name="virtual_screen_result_start_cancelled">Virtual screen start cancelled</string>
+    <string name="virtual_screen_result_no_backend">Requires wireless debugging (ADB) or Root privilege</string>
+    <string name="virtual_screen_result_start_failed">Virtual screen failed to start: %1$s</string>
+
+    <string name="virtual_screen_failed_transport_lost">Virtual screen connection lost (%1$s); reconnecting automatically…</string>
+    <string name="virtual_screen_failed_reconnect_retrying">Automatic reconnect failed (%1$s); retrying…</string>
+    <string name="virtual_screen_failed_reconnect_gave_up">Virtual screen connection lost (%1$s) and automatic reconnect failed; apps on the old screen are gone, start the virtual screen again</string>
+    <string name="virtual_screen_failed_reconnect_backend">Virtual screen connection lost and wireless debugging (ADB) or Root privilege is no longer available; check the privilege and start the virtual screen again</string>
+    <string name="virtual_screen_rebuilt_notice">Virtual screen rebuilt; apps on the old screen are gone, call screen_launch and screen_observe again</string>
+
+    <string name="virtual_screen_reason_eof">connection closed by helper</string>
+    <string name="virtual_screen_reason_heartbeat">heartbeat timeout</string>
+    <string name="virtual_screen_reason_frame_invalid">invalid frame</string>
+    <string name="virtual_screen_reason_io">I/O error</string>
+</resources>

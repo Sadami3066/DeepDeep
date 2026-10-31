@@ -1,0 +1,18 @@
+<resources>
+    <string name="virtual_screen_result_started">虚拟屏已启动</string>
+    <string name="virtual_screen_result_starting">虚拟屏正在启动</string>
+    <string name="virtual_screen_result_start_cancelled">虚拟屏启动已取消</string>
+    <string name="virtual_screen_result_no_backend">需要无线调试（ADB）或 Root 权限</string>
+    <string name="virtual_screen_result_start_failed">虚拟屏启动失败：%1$s</string>
+
+    <string name="virtual_screen_failed_transport_lost">虚拟屏连接已断开（%1$s），正在自动重连…</string>
+    <string name="virtual_screen_failed_reconnect_retrying">自动重连失败（%1$s），正在重试…</string>
+    <string name="virtual_screen_failed_reconnect_gave_up">虚拟屏连接已断开（%1$s），自动重连失败；旧屏上的应用已丢失，请重新启动虚拟屏</string>
+    <string name="virtual_screen_failed_reconnect_backend">虚拟屏连接已断开，且当前没有可用的无线调试（ADB）或 Root 权限；请检查权限后重新启动虚拟屏</string>
+    <string name="virtual_screen_rebuilt_notice">虚拟屏已重建，旧屏上的应用已丢失，需要重新 screen_launch + screen_observe</string>
+
+    <string name="virtual_screen_reason_eof">连接被对端关闭</string>
+    <string name="virtual_screen_reason_heartbeat">心跳超时</string>
+    <string name="virtual_screen_reason_frame_invalid">数据帧异常</string>
+    <string name="virtual_screen_reason_io">读写错误</string>
+</resources>
