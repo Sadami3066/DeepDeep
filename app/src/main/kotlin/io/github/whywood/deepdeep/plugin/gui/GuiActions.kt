@@ -33,6 +33,18 @@ interface GuiActions {
     suspend fun screenshot(): GuiScreenshot
 }
 
+interface GuiDisplayActions {
+    val connected: Boolean
+
+    suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot
+
+    suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int)
+
+    suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult
+
+    suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean
+}
+
 enum class GuiScrollDirection {
     UP,
     DOWN,
