@@ -9,7 +9,7 @@
 5. **本地分发**：不上架；Maven Central 与仓库公开都推迟，等真有外部使用者再说。
 6. **会话以 pi JSONL 为唯一权威**：置顶/归档/改名/草稿都是本地元数据，不回写会话正文。
 7. **创意工坊是安全边界**：独立 origin + document-start bridge + 工具白名单；页面不能调 App 内部函数、不能执行 shell、读不到其他数据。
-8. **可选 root**：默认关闭的增强层，只在 Root 档注册 `root_shell` 单工具；授权交给系统 root 管理器，App 不做二次审批；只在「前台 + 用户主动发起的轮次」可用。
+8. **Root 是可选增强层**：默认普通档，Root 档注册 `root_shell` 单工具；授权交给系统 root 管理器，App 不做二次审批；前台、后台、定时、目标续跑等任何轮次都可执行。
 9. **不做无实测的性能优化**：声称变快必须给 `gfxinfo` 前后数字。
 10. **持久化纪律**：原子写（tmp + rename）、坏文件先备份 `.corrupt` 再重建、带 `schemaVersion`。
 11. **许可边界**：自有代码 Apache-2.0；PRoot（GPL-2.0-or-later）、Alpine 包、字体/图标、pi2kotlin SDK（MIT）各自许可；不对外说「整个 APK 是 Apache-2.0」。
@@ -29,9 +29,9 @@
 25. **浮层入场等首帧就绪再起步**：唤起时立即压暗背景并起光效，但输入卡与面板的滑动要等会话加载、面板完成首帧布局后才开始；面板内容列表从底部附近起步，避免先组合顶部再跳到底部。这样入场期间的组合/测量尖峰落在静止背景上，卡片运动本身保持高刷流畅；冷启动的剩余卡顿属于进程/首帧成本，不等于动画卡顿。
 26. **语音入口只有一个形态**：旧语音 sheet 及其状态机已删除；主界面输入卡与浮层麦克风统一为「短按切换、按住说话、松手结束」，识别结果回填输入框（设置允许且输入为空时直接发送）。任何入口收到 `ACTION_ASSIST` 都转到系统助手浮层，包括旧版本遗留在系统里、仍指向 `MainActivity` 的助手组件；不再保留第二套语音界面。
 
-27. **权限分三档，工具按档位裁剪**：普通档只有 PRoot Alpine 里的 `bash`；Shizuku 档追加 `shizuku_shell`（命令经 Shizuku 会话执行，通常 ADB shell uid 2000，Shizuku 以 root 启动时等同 root）；Root 档追加 `root_shell`（`su`，uid 0）。档位是上限：选高档但未授权时按实际已授权的最高档降级运行，权限页显示状态与授权动作。两个 `*_shell` 都只在「前台 + 用户主动发起的轮次」可用，后台/定时/目标续跑拿不到；档位变化走 `host.reconfigure()` 安全点。虚拟屏幕插件要求有效档位 ≥ Shizuku。
+27. **权限分三档，工具按档位裁剪**：普通档只有 PRoot Alpine 里的 `bash`；Shizuku 档追加 `shizuku_shell`（命令经 Shizuku 会话执行，通常 ADB shell uid 2000，Shizuku 以 root 启动时等同 root）；Root 档追加 `root_shell`（`su`，uid 0）。档位是上限：选高档但未授权时按实际已授权的最高档降级运行，权限页显示状态与授权动作。两个 `*_shell` 不限制前台或轮次来源，后台、定时、目标续跑与工坊 Agent 一样可执行；档位变化走 `host.reconfigure()` 安全点。虚拟屏幕插件要求有效档位 ≥ Shizuku。
 28. **Shizuku 依赖破例**：项目默认不加第三方依赖；Shizuku 档破例引入 `dev.rikka.shizuku:api` + `provider`（13.1.5，Apache-2.0，约 200KB）。理由是手写 binder 协议会随 Shizuku 版本漂移，且 `Shizuku.newProcess` 在 13.1.5 是 private 方法，只能用反射调用（release 不混淆）。除此之外不新增任何依赖。实测环境：APatch root 设备 + Shizuku 13.6.0（root 模式启动）授权通过；Shizuku 以 root 运行时授权页会提示其权限等同 root。
 
-29. **悬浮窗是第三层入口**：小鲸鱼气泡用 `TYPE_APPLICATION_OVERLAY` + `SYSTEM_ALERT_WINDOW`，只在 App/助手浮层不在前台时显示；点击开运行面板，长按菜单，拖拽贴边并持久化位置；提问/交付/完成用气泡旁的事件卡（优先级 提问 > 交付 > 完成），气泡内只内联单选提问，文本/多选跳助手浮层。事件卡与面板复用运行状态单一来源（`RunActivityTracker` + `QuestionCenter.pending` + `present` 工具结果），不另建运行订阅。入口链路固定为 悬浮窗 → 助手浮层 → App。鲸鱼娘四态取自 `assets/ui-kit/whale-flat-v1`（idle/wave/thinking/sleepy），只表达状态，成败仍以工具结果与文字为准。
-30. **虚拟屏幕是特权插件**：用 `app_process` helper 在 shell uid 2000 下创建 trusted VirtualDisplay（720×1280@320），`am start --display` 启动 App，反射 `InputManager` 注入输入、ImageReader 取帧；helper 必须 uid 2000（uid 0 会被系统「包名与 uid 不匹配」校验拒绝），root 路径为 `su -c "su 2000 -c ..."`。IPC 方向为 App 建 `LocalServerSocket`、helper 反向 connect（SELinux 只保证 magisk/shell → app 方向；反过来没有策略保证），hello 携带 uid + 一次性 nonce 双校验。帧流 360 宽 JPEG ≈12fps，截图在无新帧时回退最近一帧缓存。插件要求有效档位 ≥ Shizuku；GUI 插件按 display 参数改造留后续。已知限制：`text` 只支持 ASCII；将来若 Shizuku 以 adb/无线调试启动（helper 落在 shell 域），App socket 的 connectto 无策略保证，只在文档标注、不写兼容代码。
+29. **悬浮窗是第三层入口**：小鲸鱼气泡用 `TYPE_APPLICATION_OVERLAY` + `SYSTEM_ALERT_WINDOW`，开启后在 App、助手浮层与其他应用上一律显示；点击开关运行面板（再点关闭），面板跟随气泡一起拖动，拖动自由摆放、不吸附边缘，位置持久化；长按打开助手浮层。提问/交付/完成用气泡旁的事件卡（优先级 提问 > 交付 > 完成，只在 App/助手浮层不在前台时出现，避免与页内提问重复），气泡内只内联单选提问，文本/多选跳助手浮层。事件卡与面板复用运行状态单一来源（`RunActivityTracker` + `QuestionCenter.pending` + `present` 工具结果），不另建运行订阅。入口链路固定为 悬浮窗 → 助手浮层 → App。鲸鱼娘四态取自 `assets/ui-kit/whale-flat-v1`（idle/wave/thinking/sleepy），只表达状态，成败仍以工具结果与文字为准。
+30. **虚拟屏幕是特权插件**：用 `app_process` helper 在 shell uid 2000 下创建 trusted VirtualDisplay，宽高与 dpi 默认取手机真实屏幕（helper 的系统资源，实测 1080×2400@440；App 不再下发固定尺寸），`am start --display` 启动 App，反射 `InputManager` 注入输入、ImageReader 取帧；helper 必须 uid 2000（uid 0 会被系统「包名与 uid 不匹配」校验拒绝），root 路径为 `su -c "su 2000 -c ..."`。IPC 方向为 App 建 `LocalServerSocket`、helper 反向 connect（SELinux 只保证 magisk/shell → app 方向；反过来没有策略保证），hello 携带 uid + 一次性 nonce 双校验。帧流 360 宽 JPEG ≈12fps，截图在无新帧时回退最近一帧缓存。插件要求有效档位 ≥ Shizuku；GUI 插件按 display 参数改造留后续。已知限制：`text` 只支持 ASCII；将来若 Shizuku 以 adb/无线调试启动（helper 落在 shell 域），App socket 的 connectto 无策略保证，只在文档标注、不写兼容代码。
 31. **ui-kit 鲸鱼娘素材的用途**：`assets/ui-kit/whale-flat-v1` 的 `mascot_idle/wave/thinking/sleepy` 导出为 192px WebP 放 `drawable-nodpi`，只用于悬浮窗气泡的状态表情（运行 thinking、待处理 wave、常态 idle、长时间无事件 sleepy）；不做按钮底色或可拉伸九宫格，UI 组件仍用 Compose 绘制。
