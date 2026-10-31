@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -72,6 +75,9 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.ui.voice.rememberInlineVoiceInput
+import io.github.whywood.deepdeep.ui.voice.voiceFailureText
+import io.github.whywood.deepdeep.ui.voice.voiceMicGestures
 
 @OptIn(ExperimentalFoundationApi::class)
 data class ChatComposerState(
@@ -108,7 +114,6 @@ data class ChatComposerActions(
     val onOpenSettings: () -> Unit,
     val onFollowUp: () -> Unit,
     val onClearQueue: () -> Unit,
-    val onVoiceClick: (() -> Unit)?,
     val onModelsOpenChange: (Boolean) -> Unit,
 )
 
@@ -116,6 +121,8 @@ data class ChatComposerActions(
 internal fun ChatComposer(
     state: ChatComposerState,
     actions: ChatComposerActions,
+    voiceSendAfterRecognition: Boolean = false,
+    voiceLanguage: AppLanguage = AppLanguage.SYSTEM,
     modifier: Modifier = Modifier,
 ) {
     val (
@@ -126,7 +133,7 @@ internal fun ChatComposer(
     val (
         onValueChange, onSend, onStop, onModelChange, onProviderChange, onThinkingLevelChange,
         onClearQuote, onPickAttachment, onRemoveAttachment, onOpenAttachment, onOpenSettings,
-        onFollowUp, onClearQueue, onVoiceClick, onModelsOpenChange,
+        onFollowUp, onClearQueue, onModelsOpenChange,
     ) = actions
     val colors = deepDeepColors()
     val canSend = ready && configured && value.isNotBlank() && !importingAttachment
@@ -147,6 +154,14 @@ internal fun ChatComposer(
             keyboard?.show()
         }
     }
+
+    val voice = rememberInlineVoiceInput(
+        language = voiceLanguage,
+        sendAfterRecognition = voiceSendAfterRecognition,
+        input = { value },
+        onFill = onValueChange,
+        onSend = onSend,
+    )
 
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
@@ -251,7 +266,10 @@ internal fun ChatComposer(
                         }
                         ChatInputField(
                             value = value,
-                            onValueChange = onValueChange,
+                            onValueChange = { next ->
+                                voice.clearFailure()
+                                onValueChange(next)
+                            },
                             placeholder = placeholder,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = configured,
@@ -260,6 +278,33 @@ internal fun ChatComposer(
                             focusRequester = focusRequester,
                             testTag = "assistant_input",
                         )
+                        AnimatedVisibility(
+                            visible = voice.listening || voice.failure != null,
+                            enter = fadeIn(tween(DdMotion.FAST)) +
+                                expandVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    expandFrom = Alignment.Top,
+                                ),
+                            exit = fadeOut(tween(DdMotion.FAST)) +
+                                shrinkVertically(
+                                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                                    shrinkTowards = Alignment.Top,
+                                ),
+                        ) {
+                            val failure = voice.failure
+                            Text(
+                                text = if (failure != null) {
+                                    voiceFailureText(failure)
+                                } else {
+                                    stringResource(R.string.voice_listening)
+                                },
+                                modifier = Modifier
+                                    .padding(top = 2.dp, bottom = 2.dp)
+                                    .testTag("assistant_voice_status"),
+                                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                                color = if (failure != null) colors.danger else colors.inkTertiary,
+                            )
+                        }
                     }
                 }
                 Row(
@@ -286,18 +331,38 @@ internal fun ChatComposer(
                         maxWidth = 150.dp,
                     )
                     Spacer(Modifier.weight(1f))
-                    val voiceClick = onVoiceClick
-                    if (voiceClick != null && !sending) {
-                        DdPressable(
-                            onClick = voiceClick,
+                    if (!sending) {
+                        val micDescription = if (voice.listening) {
+                            stringResource(R.string.voice_listening)
+                        } else {
+                            stringResource(R.string.voice_open)
+                        }
+                        Box(
                             modifier = Modifier
                                 .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (voice.listening) colors.accentSoft else colors.wash)
+                                .voiceMicGestures(
+                                    onPressStart = voice.pressStart,
+                                    onPressEnd = voice.pressEnd,
+                                    onCancel = voice.cancel,
+                                )
+                                .semantics {
+                                    contentDescription = micDescription
+                                    role = Role.Button
+                                    onClick {
+                                        voice.toggle()
+                                        true
+                                    }
+                                }
                                 .testTag("assistant_voice"),
-                            shape = CircleShape,
-                            background = colors.wash,
-                            contentDescription = stringResource(R.string.voice_open),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            DdIcon(icon = DdIcons.Mic, tint = colors.inkSecondary, size = 18.dp)
+                            DdIcon(
+                                icon = if (voice.listening) DdIcons.AudioLines else DdIcons.Mic,
+                                tint = if (voice.listening) colors.accent else colors.inkSecondary,
+                                size = 18.dp,
+                            )
                         }
                         Spacer(Modifier.width(6.dp))
                     }
@@ -331,7 +396,10 @@ internal fun ChatComposer(
                             .combinedClickable(
                                 enabled = canSend,
                                 role = Role.Button,
-                                onClick = onSend,
+                                onClick = {
+                                    voice.cancel()
+                                    onSend()
+                                },
                                 onLongClick = { if (sending && canSend) onFollowUp() },
                             )
                             .semantics { contentDescription = sendDescription }

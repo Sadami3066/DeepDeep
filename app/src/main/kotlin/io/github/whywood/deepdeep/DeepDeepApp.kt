@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.UiPreferences
@@ -89,8 +90,6 @@ internal fun DeepDeepApp(
     onDeepDestinationConsumed: () -> Unit = {},
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
-    openVoiceAssistant: Boolean = false,
-    onOpenVoiceAssistantConsumed: () -> Unit = {},
     onActiveSessionChanged: (String?) -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
@@ -142,7 +141,7 @@ internal fun DeepDeepApp(
     val voiceSendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
         initialValue = false,
     )
-    var voiceSheetOpen by rememberSaveable { mutableStateOf(false) }
+    val appLanguage = remember(context) { LanguagePreferences(context).read() }
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val presentOpenFailed = stringResource(R.string.present_open_failed)
@@ -209,7 +208,6 @@ internal fun DeepDeepApp(
         openSessionId = openSessionId,
         pendingShare = pendingShare,
         pendingDeepDestination = pendingDeepDestination,
-        openVoiceAssistant = openVoiceAssistant,
         chat = intakeChat,
         chatSnapshot = {
             val latest = chatViewModel.state.value
@@ -255,10 +253,6 @@ internal fun DeepDeepApp(
             onShareTimeout = {
                 Toast.makeText(context, shareImportTimeoutMessage, Toast.LENGTH_SHORT).show()
                 onShareConsumed()
-            },
-            onOpenVoiceAssistant = {
-                voiceSheetOpen = true
-                onOpenVoiceAssistantConsumed()
             },
         ),
     )
@@ -487,7 +481,6 @@ internal fun DeepDeepApp(
                                             },
                         onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
                         onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
-                        onVoiceClick = { voiceSheetOpen = true },
                         onFollowUp = chatViewModel::followUpNow,
                         onClearQueue = chatViewModel::clearQueuedInputs,
                         onScrollAnchorChange = chatViewModel::updateScrollAnchor,
@@ -506,6 +499,8 @@ internal fun DeepDeepApp(
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
                     chatFontScale = uiPreferences.chatFontScale,
+                    voiceSendAfterRecognition = voiceSendAfterRecognition,
+                    voiceLanguage = appLanguage,
                 )
             },
         ) { destination ->
@@ -549,13 +544,6 @@ internal fun DeepDeepApp(
                 usage = state.usage?.takeIf { usageSheetOpen }?.let(ShellOverlay::Usage),
                 jobs = ShellOverlay.Jobs(activeJobs, selectedJobId, jobOutput).takeIf { jobsSheetOpen },
                 pluginSetup = pluginsState.interaction?.let(ShellOverlay::PluginSetup),
-                voiceAssistant = ShellOverlay.VoiceAssistant(
-                    state.messages
-                        .lastOrNull { it.role == io.github.whywood.deepdeep.runtime.AssistantRole.ASSISTANT }
-                        ?.text
-                        .orEmpty(),
-                    state.sending, voiceAutoSpeak, voiceSendAfterRecognition,
-                ).takeIf { voiceSheetOpen },
             ),
             overlayActions = ShellOverlayActions(
                 onConfirmWorkspaceCreate = { name -> workspaceCreateOpen = false; chatViewModel.createWorkspace(name) },
@@ -589,9 +577,6 @@ internal fun DeepDeepApp(
                 onKillJob = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
                 onClearSettledJobs = { graph.jobRegistry.clearSettled() },
                 onDismissJobs = { jobsSheetOpen = false },
-                onFillVoice = chatViewModel::onInputChange,
-                onSendVoice = { text -> chatViewModel.onInputChange(text); chatViewModel.send() },
-                onDismissVoice = { voiceSheetOpen = false },
             ),
             drawer = ShellDrawerState(
                 drawerOpen,

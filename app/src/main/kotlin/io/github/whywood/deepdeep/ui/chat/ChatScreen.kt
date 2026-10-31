@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AttachmentRef
 import java.io.File
 import io.github.whywood.deepdeep.design.DdIcon
@@ -137,7 +138,6 @@ data class ChatScreenActions(
     val onSharePresentFile: (String) -> Unit,
     val onOpenWorkshop: (String) -> Unit,
     val onOpenFiles: () -> Unit,
-    val onVoiceClick: (() -> Unit)?,
     val onFollowUp: () -> Unit,
     val onClearQueue: () -> Unit,
     val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
@@ -168,6 +168,8 @@ fun ChatScreen(
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
     chatFontScale: Float = 1f,
+    voiceSendAfterRecognition: Boolean = false,
+    voiceLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
     val (
         onInputChange, onSend, onStop, onOpenDrawer, onOpenSettings, onReload,
@@ -176,7 +178,7 @@ fun ChatScreen(
         onOpenAttachment, onOpenFile, onOpenSchedules, onRetry, onPickCommand,
         onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
         onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
-        onOpenWorkshop, onOpenFiles, onVoiceClick, onFollowUp, onClearQueue, onScrollAnchorChange,
+        onOpenWorkshop, onOpenFiles, onFollowUp, onClearQueue, onScrollAnchorChange,
     ) = actions
     val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
     val attachments = state.attachments
@@ -572,15 +574,10 @@ fun ChatScreen(
                         onOpenSettings = onOpenSettings,
                         onFollowUp = onFollowUp,
                         onClearQueue = onClearQueue,
-                        onVoiceClick = onVoiceClick?.let { openVoice ->
-                            {
-                                keyboard?.hide()
-                                focusManager.clearFocus()
-                                openVoice()
-                            }
-                        },
                         onModelsOpenChange = onModelsOpenChange,
                     ),
+                    voiceSendAfterRecognition = voiceSendAfterRecognition,
+                    voiceLanguage = voiceLanguage,
                     modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
                 )
             }

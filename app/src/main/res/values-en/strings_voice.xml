@@ -1,17 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="voice_title">Voice assistant</string>
     <string name="voice_open">Voice input</string>
-    <string name="voice_start">Start voice input</string>
-    <string name="voice_hint">Tap the microphone and speak</string>
     <string name="voice_listening">Listening</string>
-    <string name="voice_thinking">Replying</string>
-    <string name="voice_speaking">Reading aloud</string>
-    <string name="voice_stop_speaking">Stop reading</string>
-    <string name="voice_cancel">Cancel</string>
-    <string name="voice_retry">Retry</string>
-    <string name="voice_open_settings">Open settings</string>
-    <string name="voice_permission_settings_hint">Microphone access is blocked; enable it in system settings</string>
     <string name="voice_error_no_match">Didn\'t catch that, please try again</string>
     <string name="voice_error_timeout">No speech detected</string>
     <string name="voice_error_permission">Microphone permission is required for voice input</string>
@@ -20,9 +10,6 @@
     <string name="voice_error_language">Speech recognition does not support the current language</string>
     <string name="voice_error_unavailable">Speech recognition is not available on this device</string>
     <string name="voice_error_generic">Speech recognition failed, please try again</string>
-    <string name="voice_role_set">Set as system assistant</string>
-    <string name="voice_role_settings">Voice settings</string>
-    <string name="voice_settings_title">Voice</string>
     <string name="voice_setting_auto_speak">Read answers aloud</string>
     <string name="voice_setting_send_after_recognition">Send after recognition</string>
 </resources>

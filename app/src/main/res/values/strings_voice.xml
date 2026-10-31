@@ -1,17 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="voice_title">语音助手</string>
     <string name="voice_open">语音输入</string>
-    <string name="voice_start">开始语音输入</string>
-    <string name="voice_hint">点击麦克风开始说话</string>
     <string name="voice_listening">正在聆听</string>
-    <string name="voice_thinking">正在回复</string>
-    <string name="voice_speaking">正在朗读</string>
-    <string name="voice_stop_speaking">停止朗读</string>
-    <string name="voice_cancel">取消</string>
-    <string name="voice_retry">重试</string>
-    <string name="voice_open_settings">前往设置</string>
-    <string name="voice_permission_settings_hint">麦克风权限已被拒绝，请在系统设置中开启</string>
     <string name="voice_error_no_match">没有听清，请再说一次</string>
     <string name="voice_error_timeout">没有检测到语音</string>
     <string name="voice_error_permission">需要麦克风权限才能使用语音输入</string>
@@ -20,9 +10,6 @@
     <string name="voice_error_language">当前语言暂不支持语音识别</string>
     <string name="voice_error_unavailable">此设备不支持语音识别</string>
     <string name="voice_error_generic">语音识别失败，请重试</string>
-    <string name="voice_role_set">设为系统助手</string>
-    <string name="voice_role_settings">系统语音设置</string>
-    <string name="voice_settings_title">语音</string>
     <string name="voice_setting_auto_speak">自动朗读回答</string>
     <string name="voice_setting_send_after_recognition">识别后直接发送</string>
 </resources>

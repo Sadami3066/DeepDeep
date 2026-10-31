@@ -24,7 +24,6 @@ class OverlayHostTest {
         listOf(JobSnapshot("j1", "s1", "label", "cmd", JobStatus.RUNNING, 0L)), "j1", "out",
     )
     private val pluginSetup = ShellOverlay.PluginSetup(PluginInteraction("p1", "title", "stage"))
-    private val voice = ShellOverlay.VoiceAssistant("answer", false, false, false)
     private val all = ShellOverlayState(
         workspaceCreate = workspaceCreate,
         workspaceRename = workspaceRename,
@@ -33,7 +32,6 @@ class OverlayHostTest {
         usage = usage,
         jobs = jobs,
         pluginSetup = pluginSetup,
-        voiceAssistant = voice,
     )
 
     @Test
@@ -46,16 +44,16 @@ class OverlayHostTest {
     fun allOverlaysResolveInCompositionOrder() {
         val expected = listOf(
             workspaceCreate, workspaceRename, workspaceDelete,
-            attachment, usage, jobs, pluginSetup, voice,
+            attachment, usage, jobs, pluginSetup,
         )
         assertEquals(expected, resolveOverlays(all))
     }
 
     @Test
     fun topmostOverlayIsLastResolved() {
-        assertEquals(voice, resolveOverlay(all))
-        assertEquals(pluginSetup, resolveOverlay(all.copy(voiceAssistant = null)))
-        assertEquals(jobs, resolveOverlay(all.copy(voiceAssistant = null, pluginSetup = null)))
+        assertEquals(pluginSetup, resolveOverlay(all))
+        assertEquals(jobs, resolveOverlay(all.copy(pluginSetup = null)))
+        assertEquals(usage, resolveOverlay(all.copy(pluginSetup = null, jobs = null)))
     }
 
     @Test

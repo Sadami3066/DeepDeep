@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.MAX_SHARE_STREAMS
 import io.github.whywood.deepdeep.data.SharePayload
@@ -37,7 +38,6 @@ class MainActivity : ComponentActivity() {
     private val pendingSessionId = mutableStateOf<String?>(null)
     private val pendingDeepDestination = mutableStateOf<AppDestination?>(null)
     private val pendingShare = mutableStateOf<SharePayload?>(null)
-    private val openVoiceAssistant = mutableStateOf(false)
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguagePreferences.wrap(newBase))
@@ -68,8 +68,6 @@ class MainActivity : ComponentActivity() {
                     onDeepDestinationConsumed = { pendingDeepDestination.value = null },
                     pendingShare = pendingShare.value,
                     onShareConsumed = { pendingShare.value = null },
-                    openVoiceAssistant = openVoiceAssistant.value,
-                    onOpenVoiceAssistantConsumed = { openVoiceAssistant.value = false },
                     onActiveSessionChanged = { graph.activeSessionId.value = it },
                     onFontStyleChange = { style ->
                         graph.fontPreferences.save(style)
@@ -94,7 +92,6 @@ class MainActivity : ComponentActivity() {
             outState.putString(EXTRA_SHARE_TEXT, payload.text)
             outState.putString(EXTRA_SHARE_TITLE, payload.title)
         }
-        outState.putBoolean(EXTRA_OPEN_VOICE, openVoiceAssistant.value)
     }
 
     override fun onStart() {
@@ -125,7 +122,9 @@ class MainActivity : ComponentActivity() {
         }
         pendingSessionId.value = intent.getStringExtra(NotificationCenter.EXTRA_SESSION_ID)
         if (intent.action == Intent.ACTION_ASSIST) {
-            openVoiceAssistant.value = true
+            startActivity(
+                Intent(this, AssistantOverlayActivity::class.java).setAction(Intent.ACTION_ASSIST),
+            )
             return
         }
         val action = intent.action
@@ -161,7 +160,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreIntake(savedInstanceState: Bundle) {
-        openVoiceAssistant.value = savedInstanceState.getBoolean(EXTRA_OPEN_VOICE, false)
         val streams = savedInstanceState.getStringArrayList(EXTRA_SHARE_STREAMS).orEmpty()
         val text = savedInstanceState.getString(EXTRA_SHARE_TEXT).orEmpty()
         val title = savedInstanceState.getString(EXTRA_SHARE_TITLE).orEmpty()
@@ -193,6 +191,5 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SHARE_STREAMS = "io.github.whywood.deepdeep.extra.SHARE_STREAMS"
         const val EXTRA_SHARE_TEXT = "io.github.whywood.deepdeep.extra.SHARE_TEXT"
         const val EXTRA_SHARE_TITLE = "io.github.whywood.deepdeep.extra.SHARE_TITLE"
-        const val EXTRA_OPEN_VOICE = "io.github.whywood.deepdeep.extra.OPEN_VOICE"
     }
 }

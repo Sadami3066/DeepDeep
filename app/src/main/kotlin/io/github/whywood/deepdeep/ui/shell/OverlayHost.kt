@@ -41,7 +41,6 @@ import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.UsageSheet
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
-import io.github.whywood.deepdeep.ui.voice.VoiceAssistantSheet
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
@@ -55,9 +54,6 @@ sealed interface ShellOverlay {
     data class Usage(val usage: SessionUsage) : ShellOverlay
     data class Jobs(val jobs: List<JobSnapshot>, val selectedJobId: String?, val output: String?) : ShellOverlay
     data class PluginSetup(val interaction: PluginInteraction) : ShellOverlay
-    data class VoiceAssistant(
-        val answer: String, val streaming: Boolean, val autoSpeak: Boolean, val sendAfterRecognition: Boolean,
-    ) : ShellOverlay
 }
 
 data class ShellOverlayState(
@@ -67,7 +63,7 @@ data class ShellOverlayState(
     val attachmentPreview: ShellOverlay.AttachmentPreview? = null,
     val usage: ShellOverlay.Usage? = null,
     val jobs: ShellOverlay.Jobs? = null,
-    val pluginSetup: ShellOverlay.PluginSetup? = null, val voiceAssistant: ShellOverlay.VoiceAssistant? = null,
+    val pluginSetup: ShellOverlay.PluginSetup? = null,
 )
 
 data class ShellOverlayActions(
@@ -78,8 +74,6 @@ data class ShellOverlayActions(
     val onDismissUsage: () -> Unit, val onSelectJob: (String) -> Unit,
     val onCloseJobOutput: () -> Unit, val onKillJob: (String) -> Unit,
     val onClearSettledJobs: () -> Unit, val onDismissJobs: () -> Unit,
-    val onFillVoice: (String) -> Unit, val onSendVoice: (String) -> Unit,
-    val onDismissVoice: () -> Unit,
 )
 
 data class ShellDrawerState(
@@ -108,7 +102,6 @@ fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
     state.usage?.let(::add)
     state.jobs?.let(::add)
     state.pluginSetup?.let(::add)
-    state.voiceAssistant?.let(::add)
 }
 
 fun resolveOverlay(state: ShellOverlayState): ShellOverlay? = resolveOverlays(state).lastOrNull()
@@ -161,12 +154,6 @@ internal fun OverlayHost(
                 )
 
                 is ShellOverlay.PluginSetup -> pluginSetupContent(overlay.interaction)
-
-                is ShellOverlay.VoiceAssistant -> VoiceAssistantSheet(
-                    overlay.answer, overlay.streaming, overlay.autoSpeak, overlay.sendAfterRecognition,
-                    onFill = overlayActions.onFillVoice, onSend = overlayActions.onSendVoice,
-                    onDismiss = overlayActions.onDismissVoice,
-                )
             }
         }
     }

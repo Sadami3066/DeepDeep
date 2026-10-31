@@ -46,7 +46,6 @@ data class ShellIntakeActions(
     val onOpenSession: (String) -> Unit, val onSessionMissing: () -> Unit,
     val onRefreshSessions: () -> Unit, val onApplyDeepLink: (AppDestination) -> Unit,
     val onShareStaged: suspend (SharePayload) -> Unit, val onShareTimeout: () -> Unit,
-    val onOpenVoiceAssistant: () -> Unit,
 )
 
 sealed interface SessionIntake {
@@ -111,16 +110,11 @@ internal fun ShellIntakeHost(
     openSessionId: String?,
     pendingShare: SharePayload?,
     pendingDeepDestination: AppDestination?,
-    openVoiceAssistant: Boolean,
     chat: ShellIntakeChatState,
     chatSnapshot: () -> ShellIntakeChatState,
     actions: ShellIntakeActions,
 ) {
     var shareWaitStartedAt by remember { mutableStateOf(0L) }
-
-    LaunchedEffect(openVoiceAssistant) {
-        if (openVoiceAssistant) actions.onOpenVoiceAssistant()
-    }
 
     LaunchedEffect(
         pendingShare,
