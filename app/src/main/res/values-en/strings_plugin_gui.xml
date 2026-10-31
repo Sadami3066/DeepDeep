@@ -12,6 +12,8 @@
     <string name="plugin_gui_detail_service">Accessibility service</string>
     <string name="plugin_gui_detail_enabled">On</string>
     <string name="plugin_gui_detail_disabled">Off</string>
+    <string name="plugin_gui_detail_how">How to enable</string>
+    <string name="plugin_gui_detail_how_value">Enable DeepDeep in accessibility settings; if the toggle is greyed out, allow restricted settings in App info</string>
     <string name="plugin_gui_status_disconnected">Accessibility service disconnected — turn it off and on again</string>
     <string name="plugin_gui_action_battery">Allow background running</string>
     <string name="plugin_gui_action_autostart">Autostart settings</string>

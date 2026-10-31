@@ -92,6 +92,10 @@ class GuiPlugin(
             ),
         ),
         PluginDetailRow(
+            R.string.plugin_gui_detail_how,
+            string(R.string.plugin_gui_detail_how_value),
+        ),
+        PluginDetailRow(
             R.string.plugin_gui_detail_battery,
             string(
                 if (KeepAlive.isIgnoringBatteryOptimizations(context)) {
