@@ -33,7 +33,6 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
-import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -53,9 +52,6 @@ internal fun FloatingPanel(
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenDelivery: (FloatingDelivery) -> Unit,
     onOpenVirtualScreen: () -> Unit,
-    onOpenApp: () -> Unit,
-    onNewSession: () -> Unit,
-    onClose: () -> Unit,
     onCollapse: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -109,12 +105,6 @@ internal fun FloatingPanel(
                     VirtualScreenRow(state = virtualScreen, onClick = onOpenVirtualScreen)
                 }
             }
-            DdHairline()
-            PanelFooter(
-                onOpenApp = onOpenApp,
-                onNewSession = onNewSession,
-                onClose = onClose,
-            )
         }
     }
 }
@@ -312,38 +302,6 @@ private fun PanelRow(
 }
 
 @Composable
-private fun PanelFooter(
-    onOpenApp: () -> Unit,
-    onNewSession: () -> Unit,
-    onClose: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DdTextAction(
-            text = stringResource(R.string.floating_panel_open_app),
-            onClick = onOpenApp,
-            color = colors.accent,
-        )
-        DdTextAction(
-            text = stringResource(R.string.floating_panel_new_session),
-            onClick = onNewSession,
-            color = colors.inkSecondary,
-        )
-        DdTextAction(
-            text = stringResource(R.string.floating_close),
-            onClick = onClose,
-            color = colors.inkTertiary,
-        )
-    }
-}
-
-@Composable
 private fun activityText(activity: RuntimeActivity?): String = when (activity) {
     null, is RuntimeActivity.Thinking -> stringResource(R.string.floating_activity_thinking)
     is RuntimeActivity.Retrying -> stringResource(R.string.floating_activity_retrying, activity.attempt)
@@ -377,66 +335,4 @@ private fun panelBorder(colors: DeepDeepColors) = if (colors.dark) {
     colors.ink.copy(alpha = 0.08f)
 } else {
     colors.accent.copy(alpha = 0.16f)
-}
-
-@Composable
-internal fun FloatingMenu(
-    maxHeight: Dp,
-    onOpenApp: () -> Unit,
-    onClose: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    val shape = RoundedCornerShape(FloatingCardCorner)
-    Box(Modifier.padding(FloatingSurfaceWindowPadding).testTag("floating_menu")) {
-        Column(
-            Modifier
-                .width(FloatingMenuWidth)
-                .heightIn(max = maxHeight)
-                .floatingLift(shape, colors)
-                .clip(shape)
-                .background(colors.surface)
-                .border(1.dp, panelBorder(colors), shape)
-                .padding(vertical = 6.dp),
-        ) {
-            MenuRow(
-                icon = DdIcons.External,
-                text = stringResource(R.string.floating_menu_open_app),
-                onClick = onOpenApp,
-            )
-            MenuRow(
-                icon = DdIcons.Close,
-                text = stringResource(R.string.floating_close),
-                onClick = onClose,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MenuRow(
-    icon: DdIcon,
-    text: String,
-    onClick: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdPressable(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
-        shape = RoundedCornerShape(12.dp),
-        contentDescription = text,
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DdIcon(icon = icon, tint = colors.inkSecondary, size = 16.dp)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = text,
-                style = DdType.bodySmall,
-                color = colors.ink,
-                maxLines = 1,
-            )
-        }
-    }
 }

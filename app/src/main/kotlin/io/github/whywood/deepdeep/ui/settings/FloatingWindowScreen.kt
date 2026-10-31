@@ -121,22 +121,6 @@ fun FloatingWindowScreen(
                     )
                 }
             }
-            if (settings.enabled && !canDrawOverlays) {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = stringResource(R.string.floating_settings_permission_hint),
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.floating_settings_description),
-                modifier = Modifier.padding(horizontal = 4.dp),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -153,7 +137,6 @@ private fun FloatingSwitchRow(
     DdListRow(
         icon = DdIcons.Monitor,
         title = stringResource(R.string.floating_settings_enable),
-        subtitle = stringResource(R.string.floating_settings_enable_hint),
         onClick = { onCheckedChange(!checked) },
         trailing = {
             DdSwitch(

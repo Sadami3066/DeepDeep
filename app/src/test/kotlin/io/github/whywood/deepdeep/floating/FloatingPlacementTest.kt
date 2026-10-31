@@ -27,27 +27,6 @@ class FloatingPlacementTest {
     }
 
     @Test
-    fun bubbleSnapsToNearestHorizontalEdge() {
-        val left = floatingSnapBubbleToEdge(
-            position = FloatingBubblePosition(x = 120, y = 800),
-            bubbleSize = bubbleSize,
-            screenWidth = screenWidth,
-            screenHeight = screenHeight,
-            edgeMargin = 0,
-        )
-        assertEquals(0, left.x)
-        assertEquals(800, left.y)
-        val right = floatingSnapBubbleToEdge(
-            position = FloatingBubblePosition(x = 700, y = 800),
-            bubbleSize = bubbleSize,
-            screenWidth = screenWidth,
-            screenHeight = screenHeight,
-            edgeMargin = 0,
-        )
-        assertEquals(screenWidth - bubbleSize, right.x)
-    }
-
-    @Test
     fun offscreenBubbleIsClampedBackOnScreen() {
         val topLeft = floatingClampBubblePosition(
             x = -400,

@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.floating
 
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 const val FLOATING_DEFAULT_BUBBLE_Y_RATIO = 0.78f
@@ -52,27 +51,6 @@ fun floatingClampBubblePosition(
         x = x.coerceIn(edgeMargin, maxX),
         y = y.coerceIn(edgeMargin, maxY),
     )
-}
-
-fun floatingSnapBubbleToEdge(
-    position: FloatingBubblePosition,
-    bubbleSize: Int,
-    screenWidth: Int,
-    screenHeight: Int,
-    edgeMargin: Int,
-): FloatingBubblePosition {
-    val clamped = floatingClampBubblePosition(
-        x = position.x,
-        y = position.y,
-        bubbleSize = bubbleSize,
-        screenWidth = screenWidth,
-        screenHeight = screenHeight,
-        edgeMargin = edgeMargin,
-    )
-    val leftX = edgeMargin
-    val rightX = (screenWidth - bubbleSize - edgeMargin).coerceAtLeast(edgeMargin)
-    val snappedX = if (abs(clamped.x - leftX) <= abs(clamped.x - rightX)) leftX else rightX
-    return clamped.copy(x = snappedX)
 }
 
 fun floatingPlaceSurface(

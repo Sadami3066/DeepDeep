@@ -18,10 +18,8 @@ internal val FloatingCardCorner = 20.dp
 internal val FloatingArrowWidth = 20.dp
 internal val FloatingArrowHeight = 9.dp
 internal val FloatingPanelWidth = 300.dp
-internal val FloatingMenuWidth = 220.dp
 internal const val FloatingCardMaxHeightRatio = 0.45f
 internal const val FloatingPanelMaxHeightRatio = 0.70f
-internal const val FloatingMenuMaxHeightRatio = 0.32f
 
 internal fun Modifier.floatingLift(shape: Shape, colors: DeepDeepColors): Modifier = shadow(
     elevation = 12.dp,

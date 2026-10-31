@@ -8,10 +8,8 @@ import android.content.IntentFilter
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.DeepDeepApplication
-import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.floating.FloatingWindowController
-import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -94,14 +92,6 @@ class AgentService : Service() {
             fontStyle = graph.fontPreferences.read(),
             virtualScreenProvider = { VirtualScreenRuntime.engine() },
             onOpenApp = { AppVisibility.bringToFront(this) },
-            onNewSession = {
-                scope.launch {
-                    val sessionId = runCatching {
-                        graph.host.newSession(AgentRuntimeHost.HOME_ID).sessionId
-                    }.getOrNull()
-                    if (sessionId != null) AssistantEntry.openOverlay(this@AgentService, sessionId)
-                }
-            },
         )
         floatingWindow = controller
         controller.start()

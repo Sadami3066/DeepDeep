@@ -5,13 +5,11 @@ import android.graphics.PixelFormat
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -43,7 +41,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -57,7 +54,6 @@ class FloatingWindowController(
     private val fontStyle: DdFontStyle,
     private val virtualScreenProvider: () -> VirtualScreenController?,
     private val onOpenApp: () -> Unit,
-    private val onNewSession: () -> Unit,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val feedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -65,7 +61,7 @@ class FloatingWindowController(
     private val windowContext = LanguagePreferences.wrap(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
-    private val menuOpen = MutableStateFlow(false)
+    private val appForeground = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(FloatingWindowSettings())
     private val themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     private val now = MutableStateFlow(System.currentTimeMillis())
@@ -101,16 +97,20 @@ class FloatingWindowController(
         started = true
         feed.start()
         scope.launch {
-            combine(preferences.settings, AppVisibility.foregroundFlow) { settings, _ -> settings }
-                .collect { settings ->
-                    settingsState.value = settings
-                    enabled = settings.enabled
-                    requestRender()
-                }
+            preferences.settings.collect { settings ->
+                settingsState.value = settings
+                enabled = settings.enabled
+                requestRender()
+            }
+        }
+        scope.launch {
+            AppVisibility.foregroundFlow.collect { foreground ->
+                appForeground.value = foreground
+                requestRender()
+            }
         }
         scope.launch { feed.state.collect { requestRender() } }
         scope.launch { panelOpen.collect { requestRender() } }
-        scope.launch { menuOpen.collect { requestRender() } }
         scope.launch { theme.collect { mode -> themeMode.value = mode } }
         scope.launch { now.collect { requestRender() } }
         scope.launch { virtualScreenState.collect { requestRender() } }
@@ -137,7 +137,7 @@ class FloatingWindowController(
     private fun render() {
         if (!started) return
         refreshVirtualScreen()
-        val visible = enabled && !AppVisibility.foreground && Settings.canDrawOverlays(context)
+        val visible = enabled && Settings.canDrawOverlays(context)
         if (!visible) {
             showJob?.cancel()
             showJob = null
@@ -153,7 +153,7 @@ class FloatingWindowController(
             delay(SHOW_DELAY_MS)
             showJob = null
             if (!started) return@launch
-            if (!enabled || AppVisibility.foreground || !Settings.canDrawOverlays(context)) return@launch
+            if (!enabled || !Settings.canDrawOverlays(context)) return@launch
             showWindows()
         }
     }
@@ -178,7 +178,6 @@ class FloatingWindowController(
         ticker?.cancel()
         ticker = null
         panelOpen.value = false
-        menuOpen.value = false
     }
 
     private fun updateWindows() {
@@ -199,22 +198,12 @@ class FloatingWindowController(
             y = bubbleWindowPosition.y + px(FloatingBubbleWindowPadding),
         )
         val feedState = feed.state.value
-        val card = if (panelOpen.value || menuOpen.value) {
+        val card = if (panelOpen.value || appForeground.value) {
             null
         } else {
             floatingEventCard(feedState, System.currentTimeMillis())
         }
         when {
-            menuOpen.value -> showSurfaceWindow(
-                ui = FloatingSurfaceUi.Menu(),
-                surfaceWidth = FloatingMenuWidth,
-                maxHeightRatio = FloatingMenuMaxHeightRatio,
-                screenWidth = screenWidth,
-                screenHeight = screenHeight,
-                bubbleVisual = bubbleVisual,
-                sessionTitle = "",
-            )
-
             panelOpen.value -> showSurfaceWindow(
                 ui = FloatingSurfaceUi.Panel(
                     runs = feedState.runs,
@@ -287,7 +276,6 @@ class FloatingWindowController(
             )
 
             is FloatingSurfaceUi.Panel -> ui.copy(maxHeightPx = placement.maxContentHeight)
-            is FloatingSurfaceUi.Menu -> ui.copy(maxHeightPx = placement.maxContentHeight)
         }
     }
 
@@ -331,16 +319,7 @@ class FloatingWindowController(
                             openSession(delivery.sessionId)
                         },
                         onOpenVirtualScreen = { virtualScreen?.openViewer(context) },
-                        onOpenApp = ::openApp,
-                        onNewSession = ::startNewSession,
-                        onClose = ::closeFloatingWindow,
                         onCollapse = { panelOpen.value = false },
-                    )
-
-                    is FloatingSurfaceUi.Menu -> FloatingMenu(
-                        maxHeight = with(density) { value.maxHeightPx.toDp() },
-                        onOpenApp = ::openApp,
-                        onClose = ::closeFloatingWindow,
                     )
 
                     null -> Unit
@@ -354,7 +333,7 @@ class FloatingWindowController(
             )
             onTouch = { event ->
                 if (event.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                    onSurfaceOutsideTouch()
+                    onSurfaceOutsideTouch(event.rawX, event.rawY)
                     true
                 } else {
                     false
@@ -482,9 +461,6 @@ class FloatingWindowController(
                 if (!dragging && hypot(dx.toDouble(), dy.toDouble()) > touchSlop()) {
                     dragging = true
                     cancelLongPress()
-                    panelOpen.value = false
-                    menuOpen.value = false
-                    removeSurfaceWindow()
                 }
                 if (dragging) {
                     moveBubble(touchDownWindowX + dx.toInt(), touchDownWindowY + dy.toInt())
@@ -517,28 +493,31 @@ class FloatingWindowController(
     }
 
     private fun onBubbleClick() {
-        if (menuOpen.value) {
-            menuOpen.value = false
-            return
-        }
         panelOpen.value = !panelOpen.value
     }
 
     private fun onBubbleLongPress() {
         longPressFired = true
         panelOpen.value = false
-        menuOpen.value = true
+        AssistantEntry.openOverlay(context)
     }
 
-    private fun onSurfaceOutsideTouch() {
-        when {
-            menuOpen.value -> menuOpen.value = false
-            panelOpen.value -> panelOpen.value = false
-            else -> {
-                val card = floatingEventCard(feed.state.value, System.currentTimeMillis()) ?: return
-                feed.dismissCard(card.key)
-            }
+    private fun onSurfaceOutsideTouch(x: Float, y: Float) {
+        if (!panelOpen.value) {
+            val card = floatingEventCard(feed.state.value, System.currentTimeMillis()) ?: return
+            feed.dismissCard(card.key)
+            return
         }
+        if (isInsideBubbleWindow(x, y)) return
+        panelOpen.value = false
+    }
+
+    private fun isInsideBubbleWindow(x: Float, y: Float): Boolean {
+        val size = px(FloatingBubbleWindowSize).toFloat()
+        return x >= bubbleWindowPosition.x &&
+            x <= bubbleWindowPosition.x + size &&
+            y >= bubbleWindowPosition.y &&
+            y <= bubbleWindowPosition.y + size
     }
 
     private fun moveBubble(x: Int, y: Int) {
@@ -557,24 +536,26 @@ class FloatingWindowController(
         params.y = clamped.y
         bubbleWindowPosition = clamped
         runCatching { windowManager.updateViewLayout(view, params) }
+        updateSurfaceWindow()
     }
 
     private fun finishBubbleDrag() {
         val params = bubbleParams ?: return
         val view = bubbleView ?: return
         val metrics = context.resources.displayMetrics
-        val snapped = floatingSnapBubbleToEdge(
-            position = bubbleWindowPosition,
+        val clamped = floatingClampBubblePosition(
+            x = bubbleWindowPosition.x,
+            y = bubbleWindowPosition.y,
             bubbleSize = px(FloatingBubbleWindowSize),
             screenWidth = metrics.widthPixels,
             screenHeight = metrics.heightPixels,
             edgeMargin = 0,
         )
-        params.x = snapped.x
-        params.y = snapped.y
-        bubbleWindowPosition = snapped
+        params.x = clamped.x
+        params.y = clamped.y
+        bubbleWindowPosition = clamped
         runCatching { windowManager.updateViewLayout(view, params) }
-        feedScope.launch { preferences.setBubblePosition(snapped.x, snapped.y) }
+        feedScope.launch { preferences.setBubblePosition(clamped.x, clamped.y) }
         requestRender()
     }
 
@@ -583,8 +564,9 @@ class FloatingWindowController(
         val settings = settingsState.value
         val size = px(FloatingBubbleWindowSize)
         return if (settings.hasBubblePosition) {
-            floatingSnapBubbleToEdge(
-                position = FloatingBubblePosition(settings.bubbleX, settings.bubbleY),
+            floatingClampBubblePosition(
+                x = settings.bubbleX,
+                y = settings.bubbleY,
                 bubbleSize = size,
                 screenWidth = metrics.widthPixels,
                 screenHeight = metrics.heightPixels,
@@ -610,28 +592,7 @@ class FloatingWindowController(
 
     private fun openSession(sessionId: String) {
         panelOpen.value = false
-        menuOpen.value = false
         if (!AssistantEntry.openOverlay(context, sessionId)) onOpenApp()
-    }
-
-    private fun openApp() {
-        panelOpen.value = false
-        menuOpen.value = false
-        onOpenApp()
-    }
-
-    private fun startNewSession() {
-        panelOpen.value = false
-        menuOpen.value = false
-        onNewSession()
-    }
-
-    private fun closeFloatingWindow() {
-        panelOpen.value = false
-        menuOpen.value = false
-        enabled = false
-        hideWindows()
-        feedScope.launch { preferences.setEnabled(false) }
     }
 
     private fun sessionTitle(sessionId: String): String {
@@ -693,6 +654,4 @@ private sealed interface FloatingSurfaceUi {
         val now: Long,
         val maxHeightPx: Int = 0,
     ) : FloatingSurfaceUi
-
-    data class Menu(val maxHeightPx: Int = 0) : FloatingSurfaceUi
 }
