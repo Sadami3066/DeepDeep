@@ -38,7 +38,7 @@
     <string name="permission_action_root_probe">重新检测 Root 权限</string>
 
     <string name="permission_hint_normal">普通档不调用系统级命令，shell 工具在 App 内置的 Linux 环境中运行。</string>
-    <string name="permission_hint_adb">DeepDeep 通过系统「无线调试」在 App 内运行常驻守护进程，命令以 shell 身份（uid 2000）执行，无需安装其他 App。首次使用请在开发者选项打开「无线调试」，点「配对无线调试」后从通知输入 6 位配对码（下拉通知并展开，部分系统需长按）。</string>
+    <string name="permission_hint_adb">DeepDeep 通过系统「无线调试」在 App 内运行常驻守护进程，命令以 shell 身份（uid 2000）执行，无需安装其他 App。首次使用请在开发者选项打开「无线调试」，点「配对无线调试」后在 App 内输入系统给出的 6 位配对码；守护进程就绪后无障碍会自动开启，无需手动申请。</string>
 
     <string name="permission_effective">当前生效</string>
     <string name="permission_effective_fallback">所选档位尚未授权，当前按「%1$s」运行。</string>

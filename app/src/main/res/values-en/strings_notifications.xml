@@ -24,7 +24,7 @@
     <string name="notification_download_done">%1$s installed</string>
     <string name="notification_download_failed">Install failed: %1$s</string>
     <string name="notification_accessibility_lost_title">Accessibility service disconnected</string>
-    <string name="notification_accessibility_lost_text">The system interrupted a background task. Turn DeepDeep off and on again in Accessibility settings, or reboot the phone.</string>
+    <string name="notification_accessibility_lost_text">The system dropped the accessibility service. It recovers automatically once the app opens with wireless debugging connected; if it stays off, turn DeepDeep off and on again in Accessibility settings, or reboot the phone.</string>
     <string name="notification_channel_questions">Questions</string>
     <string name="notification_channel_questions_desc">A background session is waiting for your answer</string>
     <string name="notification_question_title">%1$s · waiting for you</string>

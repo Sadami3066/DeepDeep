@@ -24,7 +24,7 @@
     <string name="notification_download_done">%1$s 安装完成</string>
     <string name="notification_download_failed">安装失败：%1$s</string>
     <string name="notification_accessibility_lost_title">无障碍服务已断开</string>
-    <string name="notification_accessibility_lost_text">后台任务被系统中断。请在无障碍设置里把 DeepDeep 关闭再重新打开，或重启手机。</string>
+    <string name="notification_accessibility_lost_text">无障碍服务被系统回收。打开 App 并连上无线调试后会自动恢复；若长时间未恢复，可在无障碍设置里把 DeepDeep 关闭再打开，或重启手机。</string>
     <string name="notification_channel_questions">需要回答</string>
     <string name="notification_channel_questions_desc">后台会话在等你回答问题</string>
     <string name="notification_question_title">%1$s · 等待回答</string>

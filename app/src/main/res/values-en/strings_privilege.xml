@@ -38,7 +38,7 @@
     <string name="permission_action_root_probe">Check root again</string>
 
     <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>
-    <string name="permission_hint_adb">DeepDeep keeps a daemon inside the app over the system Wireless debugging, and runs commands as the shell user (uid 2000); no other app is needed. On first use, open Wireless debugging in developer options, tap Pair wireless debugging, then enter the 6-digit code from the notification (pull down and expand it; long-press on some systems).</string>
+    <string name="permission_hint_adb">DeepDeep keeps a daemon inside the app over the system Wireless debugging and runs commands as the shell user (uid 2000); no other app is needed. On first use, open Wireless debugging in developer options, tap Pair wireless debugging, then enter the system\'s 6-digit pairing code in the app. Once the daemon is ready, accessibility is enabled automatically with no manual setup.</string>
 
     <string name="permission_effective">Effective now</string>
     <string name="permission_effective_fallback">The selected tier is not available; running at %1$s instead.</string>

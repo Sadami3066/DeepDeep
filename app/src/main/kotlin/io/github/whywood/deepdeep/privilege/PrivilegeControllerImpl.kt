@@ -29,22 +29,39 @@ class PrivilegeControllerImpl(
         adbBridge.exec(command, timeoutMillis)
     }
 
+    private val accessibilityBootstrap = AccessibilityBootstrapRunner(
+        component = accessibilityServiceComponent(),
+        exec = { command, timeoutMillis -> adbBridge.exec(command, timeoutMillis) },
+        isDaemonAlive = { adbBridge.isDaemonAlive() },
+        isEnabled = { stateFlow.value.effective != PrivilegeLevel.NORMAL },
+        scope = scope,
+    )
+
     init {
         scope.launch {
             preferences.migrateLegacyRoot()
             val level = preferences.readLevel()
             publish { it.copy(selected = level) }
             refreshBackends(probeRoot = shouldProbeRootOnStartup(level))
+            if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
         }
         scope.launch {
-            adbBridge.state.collect { bridge -> publish { it.copy(adb = bridge) } }
+            var daemonReady = false
+            adbBridge.state.collect { bridge ->
+                publish { it.copy(adb = bridge) }
+                if (bridge.daemon && !daemonReady) accessibilityBootstrap.onBridgeReady()
+                daemonReady = bridge.daemon
+            }
         }
     }
 
     override suspend fun select(level: PrivilegeLevel) {
         preferences.writeLevel(level)
         publish { it.copy(selected = level) }
-        if (level != PrivilegeLevel.NORMAL) refreshBackends(probeRoot = true)
+        if (level != PrivilegeLevel.NORMAL) {
+            refreshBackends(probeRoot = true)
+            if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
+        }
     }
 
     override suspend fun refresh() {
@@ -59,6 +76,7 @@ class PrivilegeControllerImpl(
 
     override suspend fun connect() {
         runCatching { adbBridge.connectAndStart() }
+        if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
     }
 
     override fun startPairing() {
