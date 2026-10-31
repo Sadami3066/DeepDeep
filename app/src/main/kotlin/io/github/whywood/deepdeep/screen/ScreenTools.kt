@@ -501,7 +501,7 @@ private fun JsonObjectBuilder.putTargetProperty() {
 
 private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_status",
-    description = "Report screen backends and state: accessibility connected/enabled state, ADB availability, main display size with its node and input backends, and the virtual screen display id, resolution, privilege backend, helper uid and node/input backends.",
+    description = "Report screen backends and state: accessibility connected/enabled state, ADB availability, main display size with its node and input backends, and the virtual screen display id, resolution, privilege backend, helper uid, node/input backends, failure category and recovery notice.",
     parameters = statusParameters,
     label = "screen_status",
     promptSnippet = "Check screen backends and the virtual screen state",
@@ -897,6 +897,18 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
         }
         status.virtualBackend?.let { put("privilegeBackend", it) }
         status.virtualUid?.let { put("uid", it) }
+        status.virtualTransportNotice?.takeIf { it.isNotBlank() }?.let { put("notice", it) }
+        if (status.virtualState == "failed") {
+            status.virtualFailure?.let { failure ->
+                putJsonObject("failure") {
+                    put("category", failure.category)
+                    put("recoverable", failure.recoverable)
+                    failure.reason?.takeIf { it.isNotBlank() }?.let { put("reason", it) }
+                    put("message", failure.message)
+                    put("hint", failure.hint())
+                }
+            }
+        }
     }
 }
 

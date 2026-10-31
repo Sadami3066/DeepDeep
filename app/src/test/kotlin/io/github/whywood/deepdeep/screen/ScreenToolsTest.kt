@@ -205,6 +205,53 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun statusToolReportsVirtualFailureAndNotice() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            virtualState = "failed",
+            virtualFailure = ScreenVirtualFailure(
+                category = VIRTUAL_FAILURE_TRANSPORT,
+                message = "虚拟屏连接已断开（连接被对端关闭），自动重连失败",
+                recoverable = true,
+                reason = "eof",
+            ),
+            virtualTransportNotice = "虚拟屏已重建，旧屏上的应用已丢失",
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"category\":\"transport\""))
+        assertTrue(text.contains("\"recoverable\":true"))
+        assertTrue(text.contains("\"reason\":\"eof\""))
+        assertTrue(text.contains("自动重连已尝试"))
+        assertTrue(text.contains("\"notice\""))
+    }
+
+    @Test
+    fun statusToolOmitsVirtualFailureUnlessFailed() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            virtualState = "online",
+            virtualFailure = ScreenVirtualFailure(
+                category = VIRTUAL_FAILURE_TRANSPORT,
+                message = "旧错误",
+                recoverable = true,
+            ),
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        assertTrue(!result.text().contains("\"failure\""))
+    }
+
+    @Test
+    fun virtualFailureHintsFollowCategory() {
+        val transport = ScreenVirtualFailure(VIRTUAL_FAILURE_TRANSPORT, "m", true, "eof").hint()
+        assertTrue(transport.contains("screen_launch"))
+        val backend = ScreenVirtualFailure(VIRTUAL_FAILURE_BACKEND, "m", false).hint()
+        assertTrue(backend.contains("无线调试/Root 不可用"))
+        val start = ScreenVirtualFailure(VIRTUAL_FAILURE_START, "m", true).hint()
+        assertTrue(start.contains("启动失败"))
+    }
+
+    @Test
     fun typeToolParsesTextAndFieldText() = runTest {
         val result = run(
             "screen_type",

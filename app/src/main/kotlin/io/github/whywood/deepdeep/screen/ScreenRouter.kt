@@ -63,6 +63,8 @@ class ScreenRouter(
             },
             virtualBackend = online?.backend,
             virtualUid = runCatching { virtual.helperUid() }.getOrNull(),
+            virtualFailure = runCatching { virtual.lastFailure() }.getOrNull(),
+            virtualTransportNotice = runCatching { virtual.lastTransportNotice() }.getOrNull(),
         )
     }
 
@@ -452,9 +454,16 @@ class ScreenRouter(
         when (val state = runCatching { virtual.state() }.getOrElse { VirtualScreenState.Offline }) {
             is VirtualScreenState.Online -> state
             VirtualScreenState.Starting -> throw IllegalStateException("虚拟屏正在启动，请稍后重试")
-            is VirtualScreenState.Failed -> throw IllegalStateException("虚拟屏启动失败：${state.message}")
+            is VirtualScreenState.Failed -> throw IllegalStateException(virtualFailureMessage(state))
             VirtualScreenState.Offline -> throw IllegalStateException("虚拟屏未启动：请先调用 virtual_screen_start")
         }
+
+    private fun virtualFailureMessage(state: VirtualScreenState.Failed): String {
+        val failure = runCatching { virtual.lastFailure() }.getOrNull()
+            ?: return "虚拟屏启动失败：${state.message}"
+        val reason = failure.reason?.takeIf { it.isNotBlank() }?.let { "${failure.category}/$it" } ?: failure.category
+        return "${failure.hint()}（$reason）：${failure.message}"
+    }
 
     private fun accessibilityRebinding(): Boolean = runCatching { accessibilityEnabled() }.getOrDefault(false)
 

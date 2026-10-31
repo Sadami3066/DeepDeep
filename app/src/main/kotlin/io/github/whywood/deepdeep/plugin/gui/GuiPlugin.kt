@@ -241,6 +241,7 @@ class GuiPlugin(
 
             - 用 `screen_list_apps` 找到包名，再 `screen_launch`；主屏启动需要包可启动，虚拟屏启动需要虚拟屏已在线。
             - 虚拟屏启动返回 `displayId`、`taskDisplayId`、`landedOnMain` 诊断字段；`landedOnMain=true` 表示任务没落到虚拟屏，先报告用户、不要重复尝试。
+            - 虚拟屏断连后引擎会自动重连：`screen_status` 的 `virtual.notice` 表示刚重建成功（旧屏应用已丢失，需要重新 `screen_launch` + `screen_observe`）；`virtual.state=failed` 时看 `virtual.failure.category`：`transport` 说明自动重连已尝试（重新 launch + observe），`backend` 说明无线调试/Root 不可用（需用户处理权限），`start` 可重试 `virtual_screen_start`。
 
             ## 安全红线
 

@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -493,6 +494,57 @@ class ScreenRouterTest {
         assertTrue(error.message.orEmpty().contains("正在重新绑定"))
     }
 
+    @Test
+    fun statusReportsVirtualTransportFailureAndRebuildNotice() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Failed("虚拟屏连接已断开")
+        virtual.failure = ScreenVirtualFailure(
+            category = VIRTUAL_FAILURE_TRANSPORT,
+            message = "虚拟屏连接已断开（连接被对端关闭），自动重连失败",
+            recoverable = true,
+            reason = "eof",
+        )
+        virtual.transportNotice = "虚拟屏已重建，旧屏上的应用已丢失"
+        val status = router().status()
+        assertEquals("failed", status.virtualState)
+        assertEquals(VIRTUAL_FAILURE_TRANSPORT, status.virtualFailure?.category)
+        assertEquals(true, status.virtualFailure?.recoverable)
+        assertEquals("eof", status.virtualFailure?.reason)
+        assertEquals("虚拟屏已重建，旧屏上的应用已丢失", status.virtualTransportNotice)
+    }
+
+    @Test
+    fun failedVirtualTransportErrorSuggestsRelaunch() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Failed("连接被对端关闭")
+        virtual.failure = ScreenVirtualFailure(
+            category = VIRTUAL_FAILURE_TRANSPORT,
+            message = "连接被对端关闭",
+            recoverable = true,
+            reason = "eof",
+        )
+        val error = expectFailure {
+            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
+        }
+        val message = error.message.orEmpty()
+        assertTrue(message.contains("自动重连已尝试"))
+        assertTrue(message.contains("screen_launch"))
+        assertTrue(message.contains("eof"))
+        assertFalse(message.contains("启动失败"))
+    }
+
+    @Test
+    fun failedVirtualBackendErrorPointsToPermissions() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Failed("没有可用后端")
+        virtual.failure = ScreenVirtualFailure(
+            category = VIRTUAL_FAILURE_BACKEND,
+            message = "没有可用的无线调试（ADB）或 Root 权限",
+            recoverable = false,
+        )
+        val error = expectFailure {
+            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
+        }
+        assertTrue(error.message.orEmpty().contains("无线调试/Root 不可用"))
+    }
+
     private suspend fun expectFailure(block: suspend () -> Unit): Throwable {
         try {
             block()
@@ -599,6 +651,8 @@ class ScreenRouterTest {
             height = 1200,
             backend = "adb",
         )
+        var failure: ScreenVirtualFailure? = null
+        var transportNotice: String? = null
         var tapped: Pair<Int, Int>? = null
         var swiped: List<Long>? = null
         var swipeCount = 0
@@ -645,6 +699,10 @@ class ScreenRouterTest {
         override suspend fun launch(packageName: String): VirtualScreenLaunchReport = launchReport
 
         override fun helperUid(): Int? = 2000
+
+        override fun lastFailure(): ScreenVirtualFailure? = failure
+
+        override fun lastTransportNotice(): String? = transportNotice
     }
 
     private class FakeApps : ScreenAppCatalog {

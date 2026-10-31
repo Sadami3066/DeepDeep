@@ -13,6 +13,23 @@ import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 
 const val MAIN_DISPLAY_ID = 0
 
+internal const val VIRTUAL_FAILURE_TRANSPORT = "transport"
+internal const val VIRTUAL_FAILURE_BACKEND = "backend"
+internal const val VIRTUAL_FAILURE_START = "start"
+
+data class ScreenVirtualFailure(
+    val category: String,
+    val message: String,
+    val recoverable: Boolean,
+    val reason: String? = null,
+)
+
+internal fun ScreenVirtualFailure.hint(): String = when (category) {
+    VIRTUAL_FAILURE_TRANSPORT -> "自动重连已尝试；请重新 screen_launch + screen_observe"
+    VIRTUAL_FAILURE_BACKEND -> "无线调试/Root 不可用，需用户处理权限后重试"
+    else -> "虚拟屏启动失败，可重试"
+}
+
 enum class ScreenTarget(val id: String) {
     MAIN("main"),
     VIRTUAL("virtual"),
@@ -56,6 +73,8 @@ data class ScreenStatusSnapshot(
     val virtual: ScreenDisplayInfo? = null,
     val virtualBackend: String? = null,
     val virtualUid: Int? = null,
+    val virtualFailure: ScreenVirtualFailure? = null,
+    val virtualTransportNotice: String? = null,
 )
 
 data class ScreenObserveResult(
@@ -156,6 +175,10 @@ interface ScreenVirtualBackend {
     suspend fun launch(packageName: String): VirtualScreenLaunchReport
 
     fun helperUid(): Int?
+
+    fun lastFailure(): ScreenVirtualFailure? = null
+
+    fun lastTransportNotice(): String? = null
 }
 
 interface ScreenAppCatalog {

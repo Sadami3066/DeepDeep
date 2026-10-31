@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.screen
 
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureCategory
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
@@ -25,6 +26,23 @@ class VirtualEngineBackend(
     override suspend fun launch(packageName: String): VirtualScreenLaunchReport = requireEngine().launchWithReport(packageName)
 
     override fun helperUid(): Int? = runCatching { requireEngine().helperUid }.getOrNull()
+
+    override fun lastFailure(): ScreenVirtualFailure? = runCatching {
+        requireEngine().lastFailure?.let { failure ->
+            ScreenVirtualFailure(
+                category = when (failure.category) {
+                    VirtualScreenFailureCategory.TRANSPORT -> VIRTUAL_FAILURE_TRANSPORT
+                    VirtualScreenFailureCategory.BACKEND -> VIRTUAL_FAILURE_BACKEND
+                    VirtualScreenFailureCategory.START -> VIRTUAL_FAILURE_START
+                },
+                message = failure.message,
+                recoverable = failure.recoverable,
+                reason = failure.reason,
+            )
+        }
+    }.getOrNull()
+
+    override fun lastTransportNotice(): String? = runCatching { requireEngine().lastTransportNotice }.getOrNull()
 
     private fun requireEngine(): VirtualScreenEngine = engineProvider()
         ?: throw IllegalStateException("虚拟屏引擎未就绪：请到插件页打开「虚拟屏幕」后再重试")
