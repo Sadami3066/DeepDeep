@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,11 +61,14 @@ import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.ui.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 
 @Composable
 internal fun AssistantOverlayPanel(
@@ -76,6 +80,7 @@ internal fun AssistantOverlayPanel(
     onOpenInApp: () -> Unit,
     onOpenWorkspaceSwitcher: () -> Unit,
     maxHeight: Dp,
+    snapHeight: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -93,6 +98,7 @@ internal fun AssistantOverlayPanel(
         ?: stringResource(R.string.assistant_overlay_workspace)
     var headerHeightPx by remember { mutableIntStateOf(0) }
     var contentLaidOut by remember { mutableStateOf(false) }
+    var stableContentHeightPx by remember { mutableIntStateOf(-1) }
 
     val contentHeightPx by remember {
         derivedStateOf {
@@ -110,17 +116,32 @@ internal fun AssistantOverlayPanel(
         }
     }
     val headerHeight = with(density) { headerHeightPx.toDp() }
-    val contentHeight = with(density) { contentHeightPx.toDp() }
-    val targetHeight = if (contentHeightPx < 0) {
-        maxHeight
-    } else {
-        (headerHeight + contentHeight).coerceIn(headerHeight + 8.dp, maxHeight)
+    val running = state.conversation.sending ||
+        messages.any { it.streaming || it.status == MessageStatus.RUNNING } ||
+        pendingQuestions.isNotEmpty()
+    val targetHeight = when {
+        running -> maxHeight
+        messages.isEmpty() -> headerHeight + 8.dp
+        stableContentHeightPx < 0 -> maxHeight
+        else -> (headerHeight + with(density) { stableContentHeightPx.toDp() } + 2.dp)
+            .coerceIn(headerHeight + 8.dp, maxHeight)
     }
     val panelHeight by animateDpAsState(
         targetValue = targetHeight,
-        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+        animationSpec = if (snapHeight) snap() else tween(DdMotion.BASE, easing = DdMotion.EaseOut),
         label = "overlay-panel-height",
     )
+
+    LaunchedEffect(running, state.sessionId, messages.isEmpty()) {
+        stableContentHeightPx = -1
+        if (running || messages.isEmpty()) return@LaunchedEffect
+        snapshotFlow { contentHeightPx }
+            .filter { it >= 0 }
+            .collectLatest { height ->
+                delay(250)
+                stableContentHeightPx = height
+            }
+    }
 
     LaunchedEffect(state.sessionId, state.conversation.loaded) {
         if (state.conversation.loaded) scroll.jumpToBottom(animate = false)

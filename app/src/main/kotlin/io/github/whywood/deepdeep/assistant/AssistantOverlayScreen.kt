@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,11 +43,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -79,9 +83,9 @@ import io.github.whywood.deepdeep.voice.SpeechRecognizerController
 import io.github.whywood.deepdeep.voice.TextSpeaker
 import io.github.whywood.deepdeep.voice.VoiceLanguage
 import java.io.File
-import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 internal data class AssistantOverlayConfig(
@@ -152,6 +156,8 @@ internal fun AssistantOverlayScreen(
     var entered by remember { mutableStateOf(false) }
     var laidOut by remember { mutableStateOf(false) }
     var panelMounted by remember { mutableStateOf(false) }
+    var panelVisible by remember { mutableStateOf(false) }
+    var composerHeightPx by remember { mutableIntStateOf(0) }
     var switcherOpen by remember { mutableStateOf(false) }
     var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
@@ -336,56 +342,66 @@ internal fun AssistantOverlayScreen(
         val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
         val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
         val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
+        val imeVisible = imeBottomPx > 0
+        var lastImeVisible by remember { mutableStateOf(imeVisible) }
+        val imeChanged = imeVisible != lastImeVisible
+        SideEffect { lastImeVisible = imeVisible }
         var stableNavigationBottomPx by remember { mutableIntStateOf(navigationBottomPx) }
         SideEffect {
             if (windowFocused) {
                 stableNavigationBottomPx = navigationBottomPx
             }
         }
-        val targetBottomInsetPx = maxOf(imeBottomPx, stableNavigationBottomPx).toFloat()
-        val animatedBottomInset = remember { Animatable(0f) }
-        LaunchedEffect(targetBottomInsetPx) {
-            animatedBottomInset.animateTo(
-                targetValue = targetBottomInsetPx,
+        val extraImeInset = remember { Animatable(0f) }
+        val extraImeTargetPx =
+            (maxOf(imeBottomPx, stableNavigationBottomPx) - stableNavigationBottomPx).toFloat()
+        LaunchedEffect(imeBottomPx, stableNavigationBottomPx) {
+            extraImeInset.animateTo(
+                targetValue = extraImeTargetPx,
                 animationSpec = tween(DdMotion.BASE + 80, easing = DdMotion.EaseInOut),
             )
         }
-        val bottomGap = with(density) { (animatedBottomInset.value.roundToInt() + 8.dp.toPx()).toDp() }
-        val panelMaxHeight = maxHeight * 0.5f
-        val panelVisible = entered &&
-            state.sessionId != null &&
-            state.conversation.loaded &&
-            imeBottomPx == 0
+        val panelTopPx = statusTopPx.toFloat() + with(density) { 8.dp.toPx() }
+        val composerTopPx = with(density) { maxHeight.toPx() } - composerHeightPx - extraImeTargetPx
+        val panelMaxHeight = with(density) {
+            (composerTopPx - panelTopPx - 8.dp.toPx()).toDp()
+        }.coerceIn(120.dp, (maxHeight * 0.5f).coerceAtLeast(120.dp))
+        val panelTarget = entered && state.sessionId != null && state.conversation.loaded
+        LaunchedEffect(panelTarget) {
+            if (!panelTarget) {
+                panelVisible = false
+                return@LaunchedEffect
+            }
+            panelMounted = true
+            withFrameNanos { }
+            panelVisible = true
+        }
 
         LaunchedEffect(laidOut, windowFocused) {
             if (entered || !laidOut) return@LaunchedEffect
             delay(if (windowFocused) 90 else 500)
             entered = true
         }
-        LaunchedEffect(panelVisible) {
-            if (panelVisible) panelMounted = true
-        }
         val composerProgress by animateFloatAsState(
             targetValue = if (entered) 1f else 0f,
-            animationSpec = tween(DdMotion.ENTER, easing = DdMotion.EaseOut),
+            animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
             label = "overlay-composer",
         )
         val panelProgress by animateFloatAsState(
             targetValue = if (panelVisible) 1f else 0f,
-            animationSpec = tween(
-                if (panelVisible) DdMotion.ENTER else DdMotion.BASE,
-                easing = if (panelVisible) DdMotion.EaseOut else DdMotion.EaseInOut,
-            ),
+            animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
             label = "overlay-panel",
         )
-        LaunchedEffect(panelProgress, panelVisible) {
-            if (!panelVisible && panelProgress <= 0.001f) panelMounted = false
+        LaunchedEffect(panelTarget) {
+            if (panelTarget) return@LaunchedEffect
+            snapshotFlow { panelProgress }.first { it <= 0.01f }
+            panelMounted = false
         }
 
         Box(
             Modifier
                 .fillMaxSize()
-                .background(colors.ink.copy(alpha = 0.10f))
+                .background(Color.Black.copy(alpha = if (colors.dark) 0.34f else 0.22f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -420,6 +436,7 @@ internal fun AssistantOverlayScreen(
                         switcherOpen = true
                     },
                     maxHeight = panelMaxHeight,
+                    snapHeight = imeVisible || imeChanged,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -429,11 +446,12 @@ internal fun AssistantOverlayScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer {
-                        translationY = (1f - composerProgress) * size.height
+                        translationY = (1f - composerProgress) * size.height - extraImeInset.value
                     }
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
-                    .padding(bottom = bottomGap),
+                    .padding(bottom = with(density) { (stableNavigationBottomPx + 8.dp.toPx()).toDp() })
+                    .onSizeChanged { composerHeightPx = it.height },
             ) {
                 if (listening) {
                     AssistantOverlayListening(transcript)
