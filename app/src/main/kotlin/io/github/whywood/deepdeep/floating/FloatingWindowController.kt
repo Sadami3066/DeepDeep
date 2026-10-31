@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.floating
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
@@ -92,8 +91,6 @@ class FloatingWindowController(
     private var touchDownWindowY = 0
     private var dragging = false
     private var longPressFired = false
-    private var panelOpenAtDown = false
-    private var lastPanelCloseAt = 0L
 
     fun start() {
         if (started) return
@@ -452,7 +449,6 @@ class FloatingWindowController(
                 touchDownWindowY = bubbleWindowPosition.y
                 dragging = false
                 longPressFired = false
-                panelOpenAtDown = panelOpen.value
                 val action = Runnable { onBubbleLongPress() }
                 longPressAction = action
                 bubbleView?.postDelayed(action, LONG_PRESS_MS)
@@ -497,8 +493,7 @@ class FloatingWindowController(
     }
 
     private fun onBubbleClick() {
-        val closedByOutside = SystemClock.uptimeMillis() - lastPanelCloseAt < PANEL_CLOSE_GUARD_MS
-        panelOpen.value = !panelOpenAtDown && !closedByOutside
+        panelOpen.value = true
     }
 
     private fun onBubbleLongPress() {
@@ -508,11 +503,7 @@ class FloatingWindowController(
     }
 
     private fun onSurfaceOutsideTouch() {
-        if (panelOpen.value) {
-            panelOpen.value = false
-            lastPanelCloseAt = SystemClock.uptimeMillis()
-            return
-        }
+        if (panelOpen.value) return
         val card = floatingEventCard(feed.state.value, System.currentTimeMillis()) ?: return
         feed.dismissCard(card.key)
     }
@@ -626,7 +617,6 @@ class FloatingWindowController(
         const val LONG_PRESS_MS = 480L
         const val TICK_PANEL_MS = 1_000L
         const val TICK_IDLE_MS = 20_000L
-        const val PANEL_CLOSE_GUARD_MS = 400L
     }
 }
 
