@@ -38,6 +38,7 @@ import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.privilege.shellBackendsFor
 import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
@@ -441,17 +442,8 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
-    private fun availableShellBackends(): List<PrivilegeLevel> {
-        val state = privilege.state.value
-        if (state.selected == PrivilegeLevel.NORMAL) return emptyList()
-        val available = state.availableBackends
-        if (available.isEmpty()) return emptyList()
-        return if (state.selected in available) {
-            listOf(state.selected) + available.filter { it != state.selected }
-        } else {
-            available.toList()
-        }
-    }
+    private fun availableShellBackends(): List<PrivilegeLevel> =
+        shellBackendsFor(privilege.state.value.effective)
 
     private fun adbToolStatus(): RootToolStatus {
         val adb = privilege.state.value.adb

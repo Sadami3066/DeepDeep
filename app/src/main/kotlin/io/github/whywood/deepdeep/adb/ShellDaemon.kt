@@ -1,13 +1,6 @@
 package io.github.whywood.deepdeep.adb
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.os.Looper
-import android.os.SystemClock
-import android.provider.Settings
-import android.view.InputDevice
-import android.view.InputEvent
-import android.view.MotionEvent
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
@@ -19,36 +12,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
-@SuppressLint("PrivateApi", "BlockedPrivateApi")
 object ShellDaemon {
     private const val HELPER_CLASS = "io.github.whywood.deepdeep.vscreen.VirtualScreenHelperMain"
     private const val LOG_FILE = "/data/local/tmp/deepdeep-vscreen.log"
     private var token = ""
-
-    private val shellContext: Context by lazy {
-        val activityThread = Class.forName("android.app.ActivityThread")
-        val thread = activityThread.getMethod("systemMain").invoke(null)
-        val system = activityThread.getMethod("getSystemContext").invoke(thread) as Context
-        system.createPackageContext("com.android.shell", 0)
-    }
-
-    private val inputManager: Any by lazy {
-        val className = if (android.os.Build.VERSION.SDK_INT >= 34) {
-            "android.hardware.input.InputManagerGlobal"
-        } else {
-            "android.hardware.input.InputManager"
-        }
-        Class.forName(className).getMethod("getInstance").invoke(null)
-            ?: error("InputManager unavailable")
-    }
-
-    private val injectMethod by lazy {
-        inputManager.javaClass.getMethod(
-            "injectInputEvent",
-            InputEvent::class.java,
-            Int::class.javaPrimitiveType,
-        )
-    }
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -107,9 +74,6 @@ object ShellDaemon {
             when (route) {
                 "/health" -> 200 to "uid=${android.os.Process.myUid()} ok\n"
                 "/exec" -> 200 to execShell(body, timeoutSeconds)
-                "/tap" -> 200 to handleTap(path)
-                "/swipe" -> 200 to handleSwipe(path)
-                "/settings" -> 200 to handleSettings(path)
                 "/start-helper" -> 200 to handleStartHelper(path)
                 "/kill-helper" -> 200 to handleKillHelper(path)
                 else -> 404 to "not found\n"
@@ -151,78 +115,6 @@ object ShellDaemon {
         reader.join(1000)
         val text = synchronized(output) { output.toString() }
         return "$text[EXIT=${process.exitValue()}]\n"
-    }
-
-    private fun handleTap(path: String): String {
-        val x = queryParam(path, "x")?.toFloatOrNull() ?: return "need x\n"
-        val y = queryParam(path, "y")?.toFloatOrNull() ?: return "need y\n"
-        val now = SystemClock.uptimeMillis()
-        injectMotion(MotionEvent.ACTION_DOWN, now, now, x, y)
-        injectMotion(MotionEvent.ACTION_UP, now, now + 15, x, y)
-        return "ok\n"
-    }
-
-    private fun handleSwipe(path: String): String {
-        val x1 = queryParam(path, "x1")?.toFloatOrNull() ?: return "need x1\n"
-        val y1 = queryParam(path, "y1")?.toFloatOrNull() ?: return "need y1\n"
-        val x2 = queryParam(path, "x2")?.toFloatOrNull() ?: return "need x2\n"
-        val y2 = queryParam(path, "y2")?.toFloatOrNull() ?: return "need y2\n"
-        val duration = (queryParam(path, "dur")?.toLongOrNull() ?: 300L).coerceIn(50L, 5000L)
-        val downTime = SystemClock.uptimeMillis()
-        injectMotion(MotionEvent.ACTION_DOWN, downTime, downTime, x1, y1)
-        val steps = (duration / 16).toInt().coerceIn(2, 60)
-        for (index in 1..steps) {
-            SystemClock.sleep(16)
-            val fraction = index.toFloat() / steps
-            injectMotion(
-                MotionEvent.ACTION_MOVE,
-                downTime,
-                SystemClock.uptimeMillis(),
-                x1 + (x2 - x1) * fraction,
-                y1 + (y2 - y1) * fraction,
-            )
-        }
-        injectMotion(MotionEvent.ACTION_UP, downTime, SystemClock.uptimeMillis(), x2, y2)
-        return "ok\n"
-    }
-
-    private fun injectMotion(action: Int, downTime: Long, eventTime: Long, x: Float, y: Float) {
-        val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
-        event.source = InputDevice.SOURCE_TOUCHSCREEN
-        try {
-            injectMethod.invoke(inputManager, event, 2)
-        } finally {
-            event.recycle()
-        }
-    }
-
-    private fun handleSettings(path: String): String {
-        val namespace = queryParam(path, "ns") ?: "system"
-        val key = queryParam(path, "key") ?: return "need key\n"
-        val value = queryParam(path, "value")
-        val resolver = shellContext.contentResolver
-        return when (namespace) {
-            "global" -> if (value == null) {
-                "${Settings.Global.getString(resolver, key)}\n"
-            } else {
-                Settings.Global.putString(resolver, key, value)
-                "ok\n"
-            }
-
-            "secure" -> if (value == null) {
-                "${Settings.Secure.getString(resolver, key)}\n"
-            } else {
-                Settings.Secure.putString(resolver, key, value)
-                "ok\n"
-            }
-
-            else -> if (value == null) {
-                "${Settings.System.getString(resolver, key)}\n"
-            } else {
-                Settings.System.putString(resolver, key, value)
-                "ok\n"
-            }
-        }
     }
 
     private fun handleStartHelper(path: String): String {

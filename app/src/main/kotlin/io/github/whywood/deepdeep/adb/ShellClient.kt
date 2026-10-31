@@ -49,26 +49,6 @@ class ShellClient(
         }
     }
 
-    suspend fun tap(x: Int, y: Int): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val request = Request.Builder()
-                .url("$baseUrl/tap?x=$x&y=$y")
-                .header(TOKEN_HEADER, token)
-                .build()
-            http.newCall(request).execute().use { it.isSuccessful }
-        }.getOrDefault(false)
-    }
-
-    suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val request = Request.Builder()
-                .url("$baseUrl/swipe?x1=$x1&y1=$y1&x2=$x2&y2=$y2&dur=$durationMs")
-                .header(TOKEN_HEADER, token)
-                .build()
-            http.newCall(request).execute().use { it.isSuccessful }
-        }.getOrDefault(false)
-    }
-
     suspend fun startHelper(apkPath: String, helperPort: Int, nonce: String): Int? = withContext(Dispatchers.IO) {
         runCatching {
             val encoded = URLEncoder.encode(apkPath, "UTF-8")
