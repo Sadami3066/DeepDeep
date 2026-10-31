@@ -134,20 +134,14 @@ internal fun AssistantOverlayPanel(
         label = "overlay-panel-height",
     )
 
-    LaunchedEffect(running) {
-        if (running) stableContentHeightPx = -1
-    }
-    LaunchedEffect(state.sessionId, messages.size) {
-        if (messages.isEmpty()) {
+    LaunchedEffect(state.sessionId, messages.size, running) {
+        if (messages.isEmpty() || running) {
             stableContentHeightPx = -1
             return@LaunchedEffect
         }
-        if (running) return@LaunchedEffect
         delay(250)
-        if (!running) {
-            val measured = contentHeightPx
-            stableContentHeightPx = if (measured >= 0) measured else -1
-        }
+        val measured = contentHeightPx
+        stableContentHeightPx = if (measured >= 0) measured else -1
     }
 
     LaunchedEffect(state.sessionId, state.conversation.loaded) {
