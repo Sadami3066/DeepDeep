@@ -33,6 +33,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 import kotlinx.serialization.json.JsonObject
@@ -563,6 +564,14 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
     private class TaskEntry(val displayId: Int, val visible: Boolean)
 
+    private class FrameSnapshot(
+        val width: Int,
+        val height: Int,
+        val rowStride: Int,
+        val pixelStride: Int,
+        val pixels: ByteArray,
+    )
+
     private class ShellContext(base: Context) : ContextWrapper(base) {
         override fun getPackageName(): String = SHELL_PACKAGE
 
@@ -589,6 +598,7 @@ private class HelperServer(private val socketName: String, private val nonce: St
         private val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
         private val imageLock = Any()
         private var display: VirtualDisplay? = null
+        private var snapshot: FrameSnapshot? = null
 
         val displayId: Int
             get() = display?.display?.displayId ?: -1
@@ -614,7 +624,12 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
         fun streamJpeg(targetWidth: Int): ByteArray? {
             val image = tryAcquire() ?: return null
-            val bitmap = image.use { toBitmap(it) }
+            val bitmap = try {
+                cacheSnapshot(image)
+                toBitmap(image)
+            } finally {
+                image.close()
+            }
             return try {
                 val scaled = if (bitmap.width > targetWidth) {
                     Bitmap.createScaledBitmap(bitmap, targetWidth, bitmap.height * targetWidth / bitmap.width, true)
@@ -632,22 +647,66 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
         fun screenshotPng(): ByteArray? {
             val deadline = SystemClock.uptimeMillis() + SCREENSHOT_WAIT_MS
-            while (SystemClock.uptimeMillis() < deadline) {
+            while (true) {
                 val image = tryAcquire()
-                if (image == null) {
-                    Thread.sleep(50)
-                    continue
+                if (image != null) {
+                    return try {
+                        cacheSnapshot(image)
+                        val bitmap = toBitmap(image)
+                        try {
+                            encodePng(bitmap)
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    } finally {
+                        image.close()
+                    }
                 }
-                val bitmap = image.use { toBitmap(it) }
-                return try {
-                    val out = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                    out.toByteArray()
-                } finally {
-                    bitmap.recycle()
+                val cached = synchronized(imageLock) { snapshot }
+                if (cached != null) {
+                    val bitmap = bitmapFromSnapshot(cached)
+                    return try {
+                        encodePng(bitmap)
+                    } finally {
+                        bitmap.recycle()
+                    }
                 }
+                if (SystemClock.uptimeMillis() >= deadline) return null
+                Thread.sleep(50)
             }
-            return null
+        }
+
+        private fun cacheSnapshot(image: Image) {
+            val plane = image.planes[0]
+            val buffer = plane.buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            buffer.rewind()
+            synchronized(imageLock) {
+                snapshot = FrameSnapshot(
+                    width = image.width,
+                    height = image.height,
+                    rowStride = plane.rowStride,
+                    pixelStride = plane.pixelStride,
+                    pixels = bytes,
+                )
+            }
+        }
+
+        private fun bitmapFromSnapshot(value: FrameSnapshot): Bitmap {
+            val paddedWidth = value.rowStride / value.pixelStride
+            val padded = Bitmap.createBitmap(paddedWidth, value.height, Bitmap.Config.ARGB_8888)
+            padded.copyPixelsFromBuffer(ByteBuffer.wrap(value.pixels))
+            if (paddedWidth == value.width) return padded
+            val cropped = Bitmap.createBitmap(padded, 0, 0, value.width, value.height)
+            padded.recycle()
+            return cropped
+        }
+
+        private fun encodePng(bitmap: Bitmap): ByteArray {
+            val out = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            return out.toByteArray()
         }
 
         fun release() {
