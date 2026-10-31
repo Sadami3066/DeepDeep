@@ -30,10 +30,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
@@ -57,6 +59,7 @@ internal fun FloatingEventCard(
     onAnswerQuestion: (PendingQuestion, QuestionOption) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
@@ -95,7 +98,7 @@ internal fun FloatingEventCard(
                             onOpenOverlay = { onOpenQuestion(card.pending) },
                         )
 
-                        is FloatingEventCard.Completed -> CompletedBody(card.completion, sessionTitle)
+                        is FloatingEventCard.Completed -> CompletedBody(card.completion, sessionTitle, onDismiss)
                     }
                 }
             }
@@ -206,13 +209,18 @@ private fun QuestionOptionRow(
 }
 
 @Composable
-private fun CompletedBody(completion: FloatingCompletion, sessionTitle: String) {
+private fun CompletedBody(
+    completion: FloatingCompletion,
+    sessionTitle: String,
+    onDismiss: () -> Unit,
+) {
     val colors = deepDeepColors()
     if (completion.hasDelivery) {
         CardHeader(
             label = stringResource(R.string.floating_card_delivery),
             labelColor = colors.success,
             title = sessionTitle,
+            onClose = onDismiss,
         )
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -255,7 +263,7 @@ private fun CompletedBody(completion: FloatingCompletion, sessionTitle: String) 
             )
         }
         val labelColor = if (completion.status == RunStatus.FAILED) colors.danger else colors.inkSecondary
-        CardHeader(label = label, labelColor = labelColor, title = sessionTitle)
+        CardHeader(label = label, labelColor = labelColor, title = sessionTitle, onClose = onDismiss)
         val preview = completion.text.trim().take(220)
         if (preview.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -281,6 +289,7 @@ private fun CardHeader(
     label: String,
     labelColor: Color,
     title: String,
+    onClose: (() -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -290,15 +299,26 @@ private fun CardHeader(
             color = labelColor,
             maxLines = 1,
         )
-        Spacer(Modifier.weight(1f))
         Text(
             text = title.ifBlank { stringResource(R.string.app_name) },
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
         )
+        if (onClose != null) {
+            DdIconButton(
+                icon = DdIcons.Close,
+                onClick = onClose,
+                contentDescription = stringResource(R.string.floating_card_dismiss),
+                modifier = Modifier.padding(start = 2.dp),
+                size = 28.dp,
+                iconSize = 16.dp,
+                tint = colors.inkTertiary,
+            )
+        }
     }
 }
 

@@ -19,6 +19,7 @@
     <string name="floating_card_done">Reply ready</string>
     <string name="floating_card_stopped">Stopped</string>
     <string name="floating_card_failed">Failed: %1$s</string>
+    <string name="floating_card_dismiss">Dismiss</string>
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">Collapse panel</string>

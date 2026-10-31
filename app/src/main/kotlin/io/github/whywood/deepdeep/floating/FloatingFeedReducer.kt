@@ -6,9 +6,9 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.PresentedItem
 
-const val FLOATING_CARD_LIFETIME_MS = 6_000L
 const val FLOATING_SLEEPY_AFTER_MS = 10 * 60_000L
 const val FLOATING_COMPLETED_LIMIT = 20
+const val FLOATING_DISMISSED_LIMIT = 50
 
 enum class FloatingWhaleMood {
     IDLE,
@@ -48,7 +48,7 @@ data class FloatingFeedState(
     val stagedDeliveries: Map<String, List<PresentedItem>> = emptyMap(),
     val sessionTitles: Map<String, String> = emptyMap(),
     val lastEventAt: Long = 0L,
-    val dismissedCardKey: String? = null,
+    val dismissedCardKeys: Set<String> = emptySet(),
 )
 
 sealed interface FloatingEventCard {
@@ -131,19 +131,39 @@ fun reduceFloatingFeed(
             finishedAt = now,
             items = state.stagedDeliveries[event.sessionId].orEmpty(),
         )
+        val completed = (listOf(completion) + state.completed.filterNot { it.sessionId == event.sessionId })
+            .take(FLOATING_COMPLETED_LIMIT)
         state.copy(
-            completed = (listOf(completion) + state.completed.filterNot { it.sessionId == event.sessionId })
-                .take(FLOATING_COMPLETED_LIMIT),
+            completed = completed,
+            dismissedCardKeys = liveDismissedKeys(state.dismissedCardKeys, completed),
             stagedDeliveries = state.stagedDeliveries - event.sessionId,
             lastEventAt = now,
         )
     }
 
-    is FloatingFeedEvent.DismissCard -> state.copy(dismissedCardKey = event.key)
-
-    is FloatingFeedEvent.RemoveCompleted -> state.copy(
-        completed = state.completed.filterNot { it.key == event.key },
+    is FloatingFeedEvent.DismissCard -> state.copy(
+        dismissedCardKeys = (state.dismissedCardKeys + event.key)
+            .toList()
+            .takeLast(FLOATING_DISMISSED_LIMIT)
+            .toCollection(LinkedHashSet()),
     )
+
+    is FloatingFeedEvent.RemoveCompleted -> {
+        val completed = state.completed.filterNot { it.key == event.key }
+        state.copy(
+            completed = completed,
+            dismissedCardKeys = liveDismissedKeys(state.dismissedCardKeys, completed),
+        )
+    }
+}
+
+private fun liveDismissedKeys(
+    keys: Set<String>,
+    completed: List<FloatingCompletion>,
+): Set<String> {
+    if (keys.isEmpty()) return keys
+    val live = completed.mapTo(HashSet()) { it.key }
+    return keys.filterTo(LinkedHashSet()) { it in live }
 }
 
 fun floatingVisibleCompletions(state: FloatingFeedState): List<FloatingCompletion> {
@@ -161,14 +181,12 @@ fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = 
     else -> FloatingWhaleMood.IDLE
 }
 
-fun floatingEventCard(state: FloatingFeedState, now: Long): FloatingEventCard? {
+fun floatingEventCard(state: FloatingFeedState): FloatingEventCard? {
     val candidates = buildList {
         state.questions.firstOrNull()?.let { add(FloatingEventCard.Question(it)) }
-        floatingVisibleCompletions(state)
-            .firstOrNull { now - it.finishedAt < FLOATING_CARD_LIFETIME_MS }
-            ?.let { add(FloatingEventCard.Completed(it)) }
+        floatingVisibleCompletions(state).forEach { add(FloatingEventCard.Completed(it)) }
     }
-    return candidates.firstOrNull { it.key != state.dismissedCardKey }
+    return candidates.firstOrNull { it.key !in state.dismissedCardKeys }
 }
 
 fun floatingInlineOptions(pending: PendingQuestion): List<QuestionOption>? {

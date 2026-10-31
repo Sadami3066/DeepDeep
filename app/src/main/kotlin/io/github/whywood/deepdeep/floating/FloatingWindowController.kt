@@ -239,7 +239,7 @@ class FloatingWindowController(
         val card = if (panelOpen.value || previewOpen.value || appForeground.value) {
             null
         } else {
-            floatingEventCard(feedState, System.currentTimeMillis())
+            floatingEventCard(feedState)
         }
         when {
             panelOpen.value -> showSurfaceWindow(
@@ -390,6 +390,7 @@ class FloatingWindowController(
                             feed.removeCompleted(completion.key)
                             openSession(completion.sessionId)
                         },
+                        onDismiss = { feed.dismissCard(value.card.key) },
                     )
 
                     is FloatingSurfaceUi.Panel -> FloatingPanel(
@@ -608,13 +609,8 @@ class FloatingWindowController(
     }
 
     private fun onSurfaceOutsideTouch(event: MotionEvent) {
-        if (previewOpen.value) {
-            if (!hitsBubbleWindow(event)) previewOpen.value = false
-            return
-        }
-        if (panelOpen.value) return
-        val card = floatingEventCard(feed.state.value, System.currentTimeMillis()) ?: return
-        feed.dismissCard(card.key)
+        if (!previewOpen.value) return
+        if (!hitsBubbleWindow(event)) previewOpen.value = false
     }
 
     private fun hitsBubbleWindow(event: MotionEvent): Boolean {

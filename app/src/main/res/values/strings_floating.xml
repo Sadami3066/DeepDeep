@@ -19,6 +19,7 @@
     <string name="floating_card_done">回答完成</string>
     <string name="floating_card_stopped">已停止</string>
     <string name="floating_card_failed">失败：%1$s</string>
+    <string name="floating_card_dismiss">关闭通知</string>
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">收起面板</string>

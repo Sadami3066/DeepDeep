@@ -22,7 +22,7 @@ class FloatingFeedReducerTest {
         )
         assertEquals(
             FloatingEventCard.Question::class.java,
-            floatingEventCard(state, 1_500L)?.javaClass,
+            floatingEventCard(state)?.javaClass,
         )
     }
 
@@ -34,34 +34,40 @@ class FloatingFeedReducerTest {
                 completion("session-a", 1_000L, RunStatus.DONE),
             ),
         )
-        val card = floatingEventCard(state, 2_500L) as FloatingEventCard.Completed
+        val card = floatingEventCard(state) as FloatingEventCard.Completed
         assertEquals("session-b", card.completion.sessionId)
     }
 
     @Test
-    fun dismissedCardFallsThroughToNextCandidate() {
-        val question = pending("req-1")
+    fun dismissedCompletedCardFallsThroughToNextCompleted() {
         val state = baseState().copy(
-            questions = listOf(question),
-            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+            completed = listOf(
+                completion("session-b", 2_000L, RunStatus.DONE),
+                completion("session-a", 1_000L, RunStatus.DONE),
+            ),
         )
-        val dismissed = reduceFloatingFeed(
-            state,
-            FloatingFeedEvent.DismissCard("question:${question.requestId}"),
-            1_100L,
-        )
-        assertTrue(floatingEventCard(dismissed, 1_200L) is FloatingEventCard.Completed)
+        val first = floatingEventCard(state) as FloatingEventCard.Completed
+        assertEquals("session-b", first.completion.sessionId)
+        val dismissed = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard(first.key), 3_000L)
+        val next = floatingEventCard(dismissed) as FloatingEventCard.Completed
+        assertEquals("session-a", next.completion.sessionId)
     }
 
     @Test
-    fun dismissedOnlyCardLeavesNoCard() {
-        val question = pending("req-1")
+    fun dismissedCompletedCardLeavesNoCardAndKeepsPanelEntry() {
         val state = reduceFloatingFeed(
-            baseState().copy(questions = listOf(question)),
-            FloatingFeedEvent.DismissCard("question:${question.requestId}"),
-            1_100L,
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
+            1_000L,
         )
-        assertNull(floatingEventCard(state, 1_200L))
+        val key = state.completed.single().key
+        val dismissed = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard(key), 1_100L)
+        assertNull(floatingEventCard(dismissed))
+        assertEquals(1, dismissed.completed.size)
+        val dismissedTwice = reduceFloatingFeed(dismissed, FloatingFeedEvent.DismissCard(key), 2_000L)
+        assertNull(floatingEventCard(dismissedTwice))
+        assertEquals(setOf(key), dismissedTwice.dismissedCardKeys)
+        assertEquals(1, floatingPendingCount(dismissedTwice))
     }
 
     @Test
@@ -83,15 +89,75 @@ class FloatingFeedReducerTest {
     }
 
     @Test
-    fun completedCardExpiresAfterSixSeconds() {
+    fun completedCardPersistsUntilDismissed() {
         val state = reduceFloatingFeed(
             baseState(),
             FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
             1_000L,
         )
-        assertTrue(floatingEventCard(state, 6_999L) is FloatingEventCard.Completed)
-        assertNull(floatingEventCard(state, 7_000L))
+        assertTrue(floatingEventCard(state) is FloatingEventCard.Completed)
+        assertTrue(floatingEventCard(state.copy(lastEventAt = 0L)) is FloatingEventCard.Completed)
         assertEquals(1, state.completed.size)
+    }
+
+    @Test
+    fun openingCompletedEntryAdvancesToNextCard() {
+        val first = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-b", "会话", RunStatus.DONE, "B", null),
+            1_000L,
+        )
+        val state = reduceFloatingFeed(
+            first,
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "A", null),
+            2_000L,
+        )
+        val card = floatingEventCard(state) as FloatingEventCard.Completed
+        assertEquals("session-a", card.completion.sessionId)
+        val removed = reduceFloatingFeed(state, FloatingFeedEvent.RemoveCompleted(card.key), 3_000L)
+        val next = floatingEventCard(removed) as FloatingEventCard.Completed
+        assertEquals("session-b", next.completion.sessionId)
+    }
+
+    @Test
+    fun dismissedKeysArePrunedWhenCompletedEntryIsReplaced() {
+        val first = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "第一次", null),
+            1_000L,
+        )
+        val key = first.completed.single().key
+        val dismissed = reduceFloatingFeed(first, FloatingFeedEvent.DismissCard(key), 1_100L)
+        assertEquals(setOf(key), dismissed.dismissedCardKeys)
+        val replaced = reduceFloatingFeed(
+            dismissed,
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "第二次", null),
+            2_000L,
+        )
+        assertTrue(replaced.dismissedCardKeys.isEmpty())
+        assertTrue(floatingEventCard(replaced) is FloatingEventCard.Completed)
+    }
+
+    @Test
+    fun dismissedKeysAreCapped() {
+        var state = baseState()
+        repeat(FLOATING_DISMISSED_LIMIT + 5) { index ->
+            state = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard("card-$index"), 1_000L + index)
+        }
+        assertEquals(FLOATING_DISMISSED_LIMIT, state.dismissedCardKeys.size)
+        assertFalse("card-0" in state.dismissedCardKeys)
+        assertTrue("card-${FLOATING_DISMISSED_LIMIT + 4}" in state.dismissedCardKeys)
+    }
+
+    @Test
+    fun answeredQuestionRevealsPendingCompletedCard() {
+        val state = baseState().copy(
+            questions = listOf(pending("req-1")),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+        )
+        assertTrue(floatingEventCard(state) is FloatingEventCard.Question)
+        val answered = reduceFloatingFeed(state, FloatingFeedEvent.QuestionsChanged(emptyList()), 2_000L)
+        assertTrue(floatingEventCard(answered) is FloatingEventCard.Completed)
     }
 
     @Test
@@ -190,7 +256,7 @@ class FloatingFeedReducerTest {
         ).copy(runs = listOf(run("session-a", "会话", 1_000L)))
         assertTrue(floatingVisibleCompletions(state).isEmpty())
         assertEquals(0, floatingPendingCount(state))
-        assertNull(floatingEventCard(state, 1_100L))
+        assertNull(floatingEventCard(state))
     }
 
     @Test
