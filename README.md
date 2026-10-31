@@ -22,11 +22,12 @@ Android 上的个人 agent：pi2kotlin 运行时 + proot Linux + 插件 + 创意
 ./scripts/check.sh --device   # 再加覆盖安装到手机并启动
 ```
 
-`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。
+`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。无线调试客户端依赖 `com.github.MuntashirAkon:libadb-android:3.1.1`（JitPack），首次构建需能访问 JitPack/Maven Central。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。
 
 ## 边界
 
-- 不做权限/审批系统；Linux 运行环境与可选 root 各有一个总开关
+- 不做审批流程；系统级能力走权限页三档（普通 / 无线调试 ADB / Root），ADB 首次用系统无线调试配对码，Root 交给系统 root 管理器
+- 内嵌 ADB 守护进程挂在 adbd 下：关闭无线调试或重启后需重新开启并在权限页点一次连接；不常驻自启动
 - Linux 是 proot 用户空间，**不是安全沙箱**
 - 会话以 pi JSONL 为唯一权威；置顶/归档/重命名是本地元数据
 - 本地分发，release 也用 debug 证书签名（换签 = 所有设备卸载重装 = 丢数据，见 `DECISIONS`）

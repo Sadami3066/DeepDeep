@@ -19,6 +19,11 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 | talloc 2.4.2 | LGPL-3.0-or-later | 可与专有程序链接分发（静态链接时须提供重新链接所需材料） | 附许可全文；提供库源码；不限制用户替换/重链接 |
 | pi2kotlin SDK | MIT | 可闭源使用与再分发 | 保留版权声明与许可全文 |
 | AndroidX / Compose / Kotlin / kotlinx.coroutines / Okio / WebKit | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本；上游如有 NOTICE 文件须一并保留 |
+| libadb-android 3.1.1 / AdbLib | Apache-2.0 / BSD-3-Clause | 可闭源使用与再分发 | 保留版权声明与许可全文；本项目按 Apache-2.0 使用 |
+| spake2-android 2.2.1 | LGPL-3.0 | 可与 App 链接分发；需提供库源码与重新链接条件 | 附许可全文；提供源码；不限制用户替换/重链接 |
+| Bouncy Castle 1.86（bcprov/bcpkix/bcutil） | Bouncy Castle License（MIT 式） | 可闭源使用与再分发 | 保留版权声明与许可全文 |
+| hiddenapibypass 6.1 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
+| OkHttp 5.4.0 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
 | DataStore 重打包 proto-lite | BSD-3-Clause | 可闭源使用与再分发 | 保留版权声明与许可全文 |
 | Lora / Manrope | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；字体不得单独出售 |
 | Tabler Icons / LobeHub lobe-icons | MIT | 可再分发 | 保留版权声明与许可全文 |
@@ -125,7 +130,35 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 - 来源：AndroidX DataStore 1.2.0（<https://developer.android.com/jetpack/androidx/releases/datastore#1.2.0>），源码 <https://cs.android.com/androidx/platform/frameworks/support>；上游 protobuf <https://github.com/protocolbuffers/protobuf>
 - 许可文本位置：APK 内 `META-INF/androidx/datastore/datastore-preferences-external-protobuf/LICENSE.txt`（BSD-3-Clause 文本随 APK 保留）；补充全文 `licenses/BSD-3-Clause.txt`；版本声明 `gradle/libs.versions.toml`（`datastore = "1.2.0"`）
 
-### 2.4 仅构建/测试期使用、不随 APK 分发
+### 2.4 内嵌无线调试（ADB）依赖
+
+- `libadb-android:3.1.1`（JitPack；上游 `GPL-3.0-or-later OR Apache-2.0` 双许可，本项目按 Apache-2.0 使用）
+  - 版权：`Copyright 2013 Cameron Gutman`（AdbLib 部分，BSD-3-Clause）、`Copyright 2020-2022 Muntashir Al-Islam`（libadb 部分）
+  - 来源：<https://github.com/MuntashirAkon/libadb-android> 标签 `3.1.1`，<https://jitpack.io/#MuntashirAkon/libadb-android/3.1.1>
+  - 用途：无线调试 TLS 连接、配对与 `shell:` 流；不修改代码
+  - 许可全文：`licenses/Apache-2.0.txt`、`licenses/BSD-3-Clause.txt`
+- `spake2-android:2.2.1`（JitPack；LGPL-3.0；`libspake2.so`）
+  - 版权：`Copyright 2021 Muntashir Al-Islam`；底层 Ed25519/ref10 与 BoringSSL SPAKE2 分别按其上游许可
+  - 来源：<https://github.com/MuntashirAkon/spake2-java> 标签 `2.2.1`（`spake2-c` 子模块 <https://github.com/MuntashirAkon/spake2-c>）
+  - 用途：系统无线调试配对码的 SPAKE2 密钥交换
+  - 许可全文：`licenses/LGPL-3.0.txt`；完整对应源码见第 1.4 节书面要约
+- `org.bouncycastle:bcprov-jdk15to18:1.86`、`bcpkix-jdk15to18:1.86`、`bcutil-jdk15to18:1.86`（Maven Central；Bouncy Castle License）
+  - 版权：`Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.`
+  - 来源：<https://www.bouncycastle.org/>、<https://repo1.maven.org/maven2/org/bouncycastle/>
+  - 用途：自签 ADB X.509 证书、配对 AES-GCM/HKDF 与 ADB 公钥编码
+  - 许可全文：`licenses/Bouncy-Castle.txt`
+- `org.lsposed.hiddenapibypass:hiddenapibypass:6.1`（Maven Central；Apache-2.0）
+  - 版权：LSPosed 项目贡献者
+  - 来源：<https://github.com/LSPosed/AndroidHiddenApiBypass>
+  - 用途：配对时读取平台 Conscrypt 的 TLS keying material（Android 隐藏 API 豁免）
+  - 许可全文：`licenses/Apache-2.0.txt`
+- `com.squareup.okhttp3:okhttp:5.4.0`（Maven Central；Apache-2.0）
+  - 版权：`Copyright 2019 Square, Inc.`
+  - 来源：<https://github.com/square/okhttp> 标签 `parent-5.4.0`
+  - 用途：访问本机 daemon 的 HTTP 回环接口
+  - 许可全文：`licenses/Apache-2.0.txt`
+
+### 2.5 仅构建/测试期使用、不随 APK 分发
 
 Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress 1.28.0、androidx.test.runner 1.7.0、androidx.test.ext:junit 1.3.0、Android SDK/build-tools。它们在构建机或测试 APK 中使用，不属于本 APK 的分发内容，不在本声明范围。
 
@@ -210,7 +243,7 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 
 ## 7. 许可文本来源与校验
 
-以下文件均为对官方发布地址的直接下载（未手写、未改写条款）；BSD-2-Clause/BSD-3-Clause 的 SPDX 文本含模板变量，已按变量 `original=` 值展开，并将行尾由 CRLF 归一化为 LF，其余字节不变。
+以下文件均为对官方发布地址的直接下载（未改写条款）；BSD-2-Clause/BSD-3-Clause 的 SPDX 文本含模板变量，已按变量 `original=` 值展开，并将行尾由 CRLF 归一化为 LF，其余字节不变。`licenses/Bouncy-Castle.txt` 为上游 Bouncy Castle 许可文本的逐字转录（无修改），官方地址为 <https://www.bouncycastle.org/licence.html>。
 
 | 文件 | 官方下载地址 | sha256（仓库内文件） |
 |---|---|---|
@@ -221,6 +254,7 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 | `licenses/Zlib.txt` | <https://spdx.org/licenses/Zlib.txt> | `e21f5c0f66a0103c75f120a8864ef885d2f5922862d8ce168709451a2964972b` |
 | `licenses/BSD-2-Clause.txt` | <https://spdx.org/licenses/BSD-2-Clause.txt>（下载原文 sha256 `ffcd6a8c421ee58d9f85b115ee0642805be3b497d2023565739622f044dc11e2`） | `0b86240ad7fea85ddf41452089afc233637d0879dc833cf425d73dac9fd4dee0` |
 | `licenses/BSD-3-Clause.txt` | <https://spdx.org/licenses/BSD-3-Clause.txt>（下载原文 sha256 `0fe4dd6931c4c2fc418940de41074fa3c506cad24bfd891743ea7f2fcfe631ef`） | `7d4b8b9f72b9a4795b33e71ab9fcddd8df245b2a609aa82fd455270e103b70a8` |
+| `licenses/Bouncy-Castle.txt` | <https://www.bouncycastle.org/licence.html> | c61027784b36d538c8ca196869d6a3e3f3937e3cd0e5869c38c1c10bdbb6723d |
 | `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/pi2kotlin/6cff93ecce9e9ed7b56c4646ad3f4b0005abd73f/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt>（与 cyrealtype/Lora-Cyrillic 的 OFL.txt 字节一致） | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
@@ -233,3 +267,4 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 ## 8. 变更记录
 
 - 2026-10-30：初版。覆盖 APK 内 PRoot/loader/Alpine、pi2kotlin SDK、AndroidX/Compose/Kotlin/kotlinx/Okio/WebKit、DataStore proto-lite、两款字体、Tabler/LobeHub/Radius 与厂商图标、mascot 插画；补齐 GPL/LGPL/MIT/OFL/Apache/MPL/Zlib/BSD 许可全文。
+- 2026-10-31：新增内嵌无线调试依赖（libadb-android、spake2-android、Bouncy Castle、hiddenapibypass、OkHttp）；移除 Shizuku 依赖；补充 Bouncy Castle 许可全文与 JitPack/Maven 来源。

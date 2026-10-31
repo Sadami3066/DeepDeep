@@ -2,6 +2,10 @@
 
 ## HEAD (since m2)
 
+- feat: 内嵌无线调试配对与 ShellDaemon，移除 Shizuku 依赖 [权限]
+- feat: 权限档位与 shell 工具迁移到内嵌 ADB [权限]
+- feat: 虚拟屏改用 daemon 启动与 loopback TCP，固定竖屏 [虚拟屏]
+- docs: 同步无线调试架构、依赖许可与测试基线 [docs]
 - fix: 悬浮窗仅面板 X 收起、权限页 Root 小字 [收尾]
 - feat: 特权 shell 工具去掉前后台与轮次限制 [权限]
 - fix: 虚拟屏幕分辨率跟随手机真实屏幕 [虚拟屏]
