@@ -2,6 +2,11 @@
 
 ## HEAD (since m2)
 
+- feat: 三档权限（普通/Shizuku/Root）与权限页、shizuku_shell [权限]
+- feat: 小鲸鱼悬浮窗：运行面板、提问/交付事件卡、设置页 [浮窗]
+- feat: 虚拟屏幕插件：特权 helper、实时查看、点击滑动输入截图 [虚拟屏]
+- feat: 系统助手增加默认应用入口、聊天顶栏去掉字标 [设置]
+- feat: 界面操作插件补充无障碍开启说明 [插件]
 - refactor: route conversation writes through a single ConversationWriteTarget [M3-4]
 - refactor: extract route dispatch into pure functions and fix the package boundary rule [M3-1]
 - refactor: give the Skills screen a state holder and surface its errors [M3-11]
