@@ -70,7 +70,6 @@ import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
-import io.github.whywood.deepdeep.runtime.SessionUsage
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 
@@ -117,10 +116,6 @@ data class ChatComposerActions(
 internal fun ChatComposer(
     state: ChatComposerState,
     actions: ChatComposerActions,
-    usage: SessionUsage?,
-    jobCount: Int,
-    onOpenUsage: () -> Unit,
-    onOpenJobs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (
@@ -254,39 +249,17 @@ internal fun ChatComposer(
                                 modifier = Modifier.padding(bottom = 10.dp),
                             )
                         }
-                        Row(
+                        ChatInputField(
+                            value = value,
+                            onValueChange = onValueChange,
+                            placeholder = placeholder,
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            ChatInputField(
-                                value = value,
-                                onValueChange = onValueChange,
-                                placeholder = placeholder,
-                                modifier = Modifier.weight(1f),
-                                enabled = configured,
-                                maxLines = 8,
-                                visualTransformation = SlashCommandColor(colors.accent),
-                                focusRequester = focusRequester,
-                                testTag = "assistant_input",
-                            )
-                            Row(
-                                modifier = Modifier.padding(start = 8.dp),
-                                verticalAlignment = Alignment.Top,
-                            ) {
-                                JobsMeter(
-                                    count = jobCount,
-                                    onClick = onOpenJobs,
-                                    modifier = Modifier.padding(end = 4.dp),
-                                )
-                                if (usage != null && usage.contextWindow > 0) {
-                                    ContextMeter(
-                                        usedTokens = usage.contextTokens,
-                                        windowTokens = usage.contextWindow,
-                                        onClick = onOpenUsage,
-                                    )
-                                }
-                            }
-                        }
+                            enabled = configured,
+                            maxLines = 8,
+                            visualTransformation = SlashCommandColor(colors.accent),
+                            focusRequester = focusRequester,
+                            testTag = "assistant_input",
+                        )
                     }
                 }
                 Row(

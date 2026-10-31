@@ -32,6 +32,7 @@ fun ContextMeter(
     windowTokens: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showPercent: Boolean = true,
 ) {
     if (windowTokens <= 0L) return
     val colors = deepDeepColors()
@@ -49,9 +50,7 @@ fun ContextMeter(
         contentDescription = description,
     ) {
         Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(start = 6.dp, end = 6.dp, top = 2.dp),
+            modifier = Modifier.padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Canvas(Modifier.size(20.dp)) {
@@ -79,13 +78,15 @@ fun ContextMeter(
                     )
                 }
             }
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = stringResource(R.string.usage_meter_percent, percent),
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                color = colors.inkSecondary,
-                maxLines = 1,
-            )
+            if (showPercent) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.usage_meter_percent, percent),
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                    color = colors.inkSecondary,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

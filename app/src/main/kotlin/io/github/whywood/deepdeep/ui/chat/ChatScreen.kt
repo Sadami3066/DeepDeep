@@ -334,7 +334,12 @@ fun ChatScreen(
     ) {
         CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {
         ChatTopBar(
-            state = ChatTopBarState(reminderCount = reminderCount, reloading = reloading),
+            state = ChatTopBarState(
+                reminderCount = reminderCount,
+                reloading = reloading,
+                usage = state.usage,
+                jobCount = jobCount,
+            ),
             actions = ChatTopBarActions(
                 onMenu = {
                     keyboard?.hide()
@@ -347,6 +352,14 @@ fun ChatScreen(
                 onOpenSchedules = {
                     keyboard?.hide()
                     onOpenSchedules()
+                },
+                onOpenUsage = {
+                    keyboard?.hide()
+                    onOpenUsage()
+                },
+                onOpenJobs = {
+                    keyboard?.hide()
+                    onOpenJobs()
                 },
                 onOpenFiles = {
                     keyboard?.hide()
@@ -568,10 +581,6 @@ fun ChatScreen(
                         },
                         onModelsOpenChange = onModelsOpenChange,
                     ),
-                    usage = state.usage,
-                    jobCount = jobCount,
-                    onOpenUsage = onOpenUsage,
-                    onOpenJobs = onOpenJobs,
                     modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
                 )
             }
