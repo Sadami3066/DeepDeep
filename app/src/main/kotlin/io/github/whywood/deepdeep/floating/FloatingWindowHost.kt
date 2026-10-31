@@ -43,8 +43,12 @@ internal class FloatingWindowHost : LifecycleOwner, SavedStateRegistryOwner, Vie
     }
 
     fun composeView(context: Context): ComposeView = ComposeView(context).apply {
-        setViewTreeLifecycleOwner(this@FloatingWindowHost)
-        setViewTreeSavedStateRegistryOwner(this@FloatingWindowHost)
-        setViewTreeViewModelStoreOwner(this@FloatingWindowHost)
+        bindOwners(this)
+    }
+
+    fun bindOwners(view: android.view.View) {
+        view.setViewTreeLifecycleOwner(this)
+        view.setViewTreeSavedStateRegistryOwner(this)
+        view.setViewTreeViewModelStoreOwner(this)
     }
 }

@@ -361,6 +361,7 @@ class FloatingWindowController(
                 }
             }
         }
+        host.bindOwners(view)
         val params = WindowManager.LayoutParams(
             px(FloatingCardWidth) + px(FloatingSurfaceWindowPadding) * 2,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -412,6 +413,7 @@ class FloatingWindowController(
             )
             onTouch = ::handleBubbleTouch
         }
+        host.bindOwners(view)
         val size = px(FloatingBubbleWindowSize)
         val params = WindowManager.LayoutParams(
             size,
