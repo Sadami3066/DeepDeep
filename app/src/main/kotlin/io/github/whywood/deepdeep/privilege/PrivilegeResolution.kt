@@ -8,8 +8,19 @@ internal fun highestGrantedLevel(shizukuGranted: Boolean, rootGranted: Boolean):
     else -> PrivilegeLevel.NORMAL
 }
 
-internal fun resolveEffectiveLevel(selected: PrivilegeLevel, granted: PrivilegeLevel): PrivilegeLevel =
-    if (selected.ordinal <= granted.ordinal) selected else granted
+internal fun resolveEffectiveLevel(
+    selected: PrivilegeLevel,
+    shizukuGranted: Boolean,
+    rootGranted: Boolean,
+): PrivilegeLevel = when (selected) {
+    PrivilegeLevel.NORMAL -> PrivilegeLevel.NORMAL
+    PrivilegeLevel.SHIZUKU -> if (shizukuGranted) PrivilegeLevel.SHIZUKU else PrivilegeLevel.NORMAL
+    PrivilegeLevel.ROOT -> when {
+        rootGranted -> PrivilegeLevel.ROOT
+        shizukuGranted -> PrivilegeLevel.SHIZUKU
+        else -> PrivilegeLevel.NORMAL
+    }
+}
 
 internal fun resolveMigratedLevel(stored: PrivilegeLevel?, legacyRootEnabled: Boolean): PrivilegeLevel =
     stored ?: if (legacyRootEnabled) PrivilegeLevel.ROOT else PrivilegeLevel.NORMAL
@@ -20,9 +31,7 @@ internal fun parsePrivilegeLevel(raw: String): PrivilegeLevel =
 internal fun PrivilegeState.resolveEffective(): PrivilegeState = copy(
     effective = resolveEffectiveLevel(
         selected = selected,
-        granted = highestGrantedLevel(
-            shizukuGranted = shizuku.running && shizuku.granted,
-            rootGranted = root == RootStatus.Granted,
-        ),
+        shizukuGranted = shizuku.running && shizuku.granted,
+        rootGranted = root == RootStatus.Granted,
     ),
 )

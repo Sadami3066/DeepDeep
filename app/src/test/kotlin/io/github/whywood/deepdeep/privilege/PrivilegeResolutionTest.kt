@@ -9,16 +9,42 @@ import org.junit.Test
 class PrivilegeResolutionTest {
     @Test
     fun selectedTierIsKeptWhenGranted() {
-        assertEquals(PrivilegeLevel.NORMAL, resolveEffectiveLevel(PrivilegeLevel.NORMAL, PrivilegeLevel.ROOT))
-        assertEquals(PrivilegeLevel.SHIZUKU, resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, PrivilegeLevel.ROOT))
-        assertEquals(PrivilegeLevel.ROOT, resolveEffectiveLevel(PrivilegeLevel.ROOT, PrivilegeLevel.ROOT))
+        assertEquals(
+            PrivilegeLevel.NORMAL,
+            resolveEffectiveLevel(PrivilegeLevel.NORMAL, shizukuGranted = true, rootGranted = true),
+        )
+        assertEquals(
+            PrivilegeLevel.SHIZUKU,
+            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = true, rootGranted = false),
+        )
+        assertEquals(
+            PrivilegeLevel.ROOT,
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = true, rootGranted = true),
+        )
+    }
+
+    @Test
+    fun shizukuSelectionNeedsShizukuGrantEvenWhenRootIsGranted() {
+        assertEquals(
+            PrivilegeLevel.NORMAL,
+            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = false, rootGranted = true),
+        )
+        assertEquals(
+            PrivilegeLevel.SHIZUKU,
+            resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, shizukuGranted = true, rootGranted = true),
+        )
     }
 
     @Test
     fun ungrantedSelectionFallsBackToGrantedTier() {
-        assertEquals(PrivilegeLevel.NORMAL, resolveEffectiveLevel(PrivilegeLevel.SHIZUKU, PrivilegeLevel.NORMAL))
-        assertEquals(PrivilegeLevel.NORMAL, resolveEffectiveLevel(PrivilegeLevel.ROOT, PrivilegeLevel.NORMAL))
-        assertEquals(PrivilegeLevel.SHIZUKU, resolveEffectiveLevel(PrivilegeLevel.ROOT, PrivilegeLevel.SHIZUKU))
+        assertEquals(
+            PrivilegeLevel.NORMAL,
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = false, rootGranted = false),
+        )
+        assertEquals(
+            PrivilegeLevel.SHIZUKU,
+            resolveEffectiveLevel(PrivilegeLevel.ROOT, shizukuGranted = true, rootGranted = false),
+        )
     }
 
     @Test
