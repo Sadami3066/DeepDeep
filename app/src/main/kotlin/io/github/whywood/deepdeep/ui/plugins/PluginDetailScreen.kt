@@ -294,6 +294,23 @@ private fun PluginDetailContent(
             }
 
             Spacer(Modifier.height(24.dp))
+            if (snapshot.installed && snapshot.enabled) {
+                val actions = snapshot.status?.let { plugin.actions(it) }.orEmpty()
+                if (actions.isNotEmpty()) {
+                    SettingsGroup {
+                        actions.forEachIndexed { index, action ->
+                            if (index > 0) DdHairline()
+                            DdListRow(
+                                title = stringResource(action.labelRes),
+                                onClick = { if (!busy) onRunAction(action.id) },
+                                enabled = !busy,
+                                modifier = Modifier.testTag("plugin_action_${action.id}"),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+            }
             when {
                 plugin.kind == PluginKind.INTERNAL -> Unit
 
@@ -307,23 +324,6 @@ private fun PluginDetailContent(
                 }
 
                 else -> {
-                    if (snapshot.enabled) {
-                        val actions = snapshot.status?.let { plugin.actions(it) }.orEmpty()
-                        if (actions.isNotEmpty()) {
-                            SettingsGroup {
-                                actions.forEachIndexed { index, action ->
-                                    if (index > 0) DdHairline()
-                                    DdListRow(
-                                        title = stringResource(action.labelRes),
-                                        onClick = { if (!busy) onRunAction(action.id) },
-                                        enabled = !busy,
-                                        modifier = Modifier.testTag("plugin_action_${action.id}"),
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(24.dp))
-                        }
-                    }
                     if (snapshot.updateAvailable) {
                         DdPrimaryButton(
                             text = stringResource(R.string.plugins_action_update),

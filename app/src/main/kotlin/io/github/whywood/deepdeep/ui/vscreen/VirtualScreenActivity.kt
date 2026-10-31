@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPrimaryButton
@@ -66,6 +67,16 @@ class VirtualScreenActivity : ComponentActivity() {
                 VirtualScreenViewer(onClose = { finish() })
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppVisibility.activityStarted()
+    }
+
+    override fun onStop() {
+        AppVisibility.activityStopped()
+        super.onStop()
     }
 }
 
