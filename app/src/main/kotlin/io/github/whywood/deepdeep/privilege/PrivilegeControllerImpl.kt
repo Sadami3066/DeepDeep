@@ -34,7 +34,7 @@ class PrivilegeControllerImpl(
             preferences.migrateLegacyRoot()
             val level = preferences.readLevel()
             publish { it.copy(selected = level) }
-            refreshBackends()
+            refreshBackends(probeRoot = shouldProbeRootOnStartup(level))
         }
         scope.launch {
             adbBridge.state.collect { bridge -> publish { it.copy(adb = bridge) } }
@@ -44,11 +44,11 @@ class PrivilegeControllerImpl(
     override suspend fun select(level: PrivilegeLevel) {
         preferences.writeLevel(level)
         publish { it.copy(selected = level) }
-        if (level != PrivilegeLevel.NORMAL) refreshBackends()
+        if (level != PrivilegeLevel.NORMAL) refreshBackends(probeRoot = true)
     }
 
     override suspend fun refresh() {
-        refreshBackends()
+        refreshBackends(probeRoot = true)
     }
 
     override suspend fun probeRoot(): RootStatus {
@@ -71,10 +71,9 @@ class PrivilegeControllerImpl(
         runCatching { context.startActivity(intent) }
     }
 
-    private suspend fun refreshBackends() {
+    private suspend fun refreshBackends(probeRoot: Boolean) {
         runCatching { adbBridge.refreshState() }
-        val root = stateFlow.value.root
-        if (root != RootStatus.Denied && root != RootStatus.Unsupported) probeRoot()
+        if (probeRoot && shouldAutoProbeRoot(stateFlow.value.root)) probeRoot()
     }
 
     private fun publish(transform: (PrivilegeState) -> PrivilegeState) {
@@ -93,3 +92,12 @@ class PrivilegeControllerImpl(
         if (changed) scope.launch { onChanged() }
     }
 }
+
+internal fun shouldProbeRootOnStartup(selected: PrivilegeLevel): Boolean =
+    selected != PrivilegeLevel.NORMAL
+
+internal fun shouldAutoProbeRoot(status: RootStatus): Boolean =
+    status != RootStatus.Denied && status != RootStatus.Unsupported
+
+internal fun shellBackendsFor(effective: PrivilegeLevel): List<PrivilegeLevel> =
+    if (effective == PrivilegeLevel.NORMAL) emptyList() else listOf(effective)

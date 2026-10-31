@@ -34,6 +34,7 @@
     <string name="permission_action_adb_retry">Retry connection</string>
     <string name="permission_action_adb_connecting">Connecting…</string>
     <string name="permission_action_adb_settings">Open developer options</string>
+    <string name="permission_action_notification_settings">Open notification settings</string>
     <string name="permission_action_root_probe">Check root again</string>
 
     <string name="permission_hint_normal">The normal tier runs without system-level commands; shell tools use the Linux environment built into the app.</string>

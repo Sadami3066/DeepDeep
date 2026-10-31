@@ -34,6 +34,7 @@
     <string name="permission_action_adb_retry">重试连接</string>
     <string name="permission_action_adb_connecting">连接中…</string>
     <string name="permission_action_adb_settings">打开开发者选项</string>
+    <string name="permission_action_notification_settings">打开通知设置</string>
     <string name="permission_action_root_probe">重新检测 Root 权限</string>
 
     <string name="permission_hint_normal">普通档不调用系统级命令，shell 工具在 App 内置的 Linux 环境中运行。</string>

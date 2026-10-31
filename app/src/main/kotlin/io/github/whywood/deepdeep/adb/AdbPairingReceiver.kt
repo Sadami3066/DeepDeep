@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.RemoteInput
+import io.github.whywood.deepdeep.service.AgentService
 
 class AdbPairingReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -11,7 +12,6 @@ class AdbPairingReceiver : BroadcastReceiver() {
         val code = RemoteInput.getResultsFromIntent(intent)
             ?.getCharSequence(AdbPairingNotifier.EXTRA_CODE)
             ?.toString()
-        val pending = goAsync()
-        AdbBridgeRuntime.launchPairingCode(context, code).invokeOnCompletion { pending.finish() }
+        AgentService.applyPairingCode(context, code)
     }
 }

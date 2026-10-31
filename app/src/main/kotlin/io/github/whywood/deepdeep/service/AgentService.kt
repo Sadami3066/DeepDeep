@@ -65,6 +65,11 @@ class AgentService : Service() {
                 val sessionId = intent.getStringExtra(NotificationCenter.EXTRA_SESSION_ID)
                 if (!sessionId.isNullOrBlank()) graph.host.stop(sessionId)
             }
+
+            ACTION_PAIRING_CODE -> {
+                val code = intent.getStringExtra(EXTRA_PAIRING_CODE)
+                scope.launch { graph.adbBridge.handlePairingReply(code) }
+            }
         }
         return START_STICKY
     }
@@ -110,8 +115,17 @@ class AgentService : Service() {
             ContextCompat.startForegroundService(context, Intent(context, AgentService::class.java))
         }
 
+        fun applyPairingCode(context: Context, code: String?) {
+            val intent = Intent(context, AgentService::class.java)
+                .setAction(ACTION_PAIRING_CODE)
+                .putExtra(EXTRA_PAIRING_CODE, code)
+            ContextCompat.startForegroundService(context, intent)
+        }
+
         const val ACTION_STOP = "io.github.whywood.deepdeep.action.STOP"
         const val ACTION_STOP_SESSION = "io.github.whywood.deepdeep.action.STOP_SESSION"
+        const val ACTION_PAIRING_CODE = "io.github.whywood.deepdeep.action.PAIRING_CODE"
+        const val EXTRA_PAIRING_CODE = "io.github.whywood.deepdeep.extra.PAIRING_CODE"
         private const val NOTIFICATION_ID = 1
         private const val ACCESSIBILITY_CHECK_DELAY_MS = 4_000L
     }

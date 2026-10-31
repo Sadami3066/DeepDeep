@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -202,6 +206,7 @@ private fun PrivilegeLevelAction(
 
         PrivilegeLevel.ADB -> Column(Modifier.fillMaxWidth()) {
             val adb = state.adb
+            val context = LocalContext.current
             DdGroupCard {
                 when {
                     adb.busy -> DdListRow(
@@ -233,6 +238,15 @@ private fun PrivilegeLevelAction(
                         title = stringResource(R.string.permission_action_adb_restart),
                         onClick = onConnect,
                     )
+                }
+                if (notificationBlocked(adb.error)) {
+                    DdHairline()
+                    PrivilegeAction(
+                        icon = DdIcons.Settings,
+                        title = stringResource(R.string.permission_action_notification_settings),
+                    ) {
+                        openNotificationSettings(context)
+                    }
                 }
                 DdHairline()
                 PrivilegeAction(
@@ -325,3 +339,13 @@ private fun rootStatusText(status: RootStatus): String = stringResource(
         RootStatus.Error -> R.string.permission_status_root_error
     },
 )
+
+private fun notificationBlocked(error: AdbBridgeError?): Boolean =
+    error == AdbBridgeError.NOTIFICATION_PERMISSION_REQUIRED || error == AdbBridgeError.NOTIFICATION_UNAVAILABLE
+
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { context.startActivity(intent) }
+}
