@@ -47,4 +47,11 @@ class VirtualScreenHelperPolicyTest {
         )
         assertNull(outOfBoundsReason("滑动终点", 719, 1279, 720, 1280))
     }
+    @Test
+    fun screenshotFrameLimitMatchesProtocolHeader() {
+        val limit = VirtualScreenProtocol.MAX_FRAME_BYTES
+        assertEquals(false, screenshotFrameExceedsLimit(limit - 5))
+        assertEquals(true, screenshotFrameExceedsLimit(limit - 4))
+        assertEquals(true, screenshotFrameExceedsLimit(limit))
+    }
 }

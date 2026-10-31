@@ -28,6 +28,15 @@ class VirtualScreenHeartbeatTest {
     }
 
     @Test
+    fun transportLossIsPausedWhileCommandInFlight() {
+        val policy = HeartbeatPolicy()
+        policy.onConnected(nowMs = 0L)
+        assertFalse(policy.isTransportLost(30_000L, commandInFlight = true))
+        assertTrue(policy.isTransportLost(30_000L, commandInFlight = false))
+        assertFalse(policy.isTransportLost(14_999L, commandInFlight = false))
+    }
+
+    @Test
     fun pongResetsTransportLossWindow() {
         val policy = HeartbeatPolicy()
         policy.onConnected(nowMs = 0L)

@@ -22,7 +22,11 @@ internal class HeartbeatPolicy(
     }
 
     @Synchronized
-    fun isTransportLost(nowMs: Long): Boolean = nowMs - lastPongAtMs >= timeoutMs
+    fun isTransportLost(nowMs: Long): Boolean = isTransportLost(nowMs, commandInFlight = false)
+
+    @Synchronized
+    fun isTransportLost(nowMs: Long, commandInFlight: Boolean): Boolean =
+        !commandInFlight && nowMs - lastPongAtMs >= timeoutMs
 
     @Synchronized
     fun isPingDue(nowMs: Long): Boolean = nowMs >= nextPingAtMs

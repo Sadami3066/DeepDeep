@@ -354,6 +354,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun handleScreenshot(id: Int) {
         val display = session ?: throw IllegalStateException("虚拟屏未启动")
         val png = display.screenshotPng() ?: throw IllegalStateException("暂无画面，请稍后再试")
+        if (screenshotFrameExceedsLimit(png.size)) {
+            throw IllegalStateException("截图过大：${png.size} 字节，超过帧上限 ${VirtualScreenProtocol.MAX_FRAME_BYTES}")
+        }
         respond(id) {
             put("kind", "screenshot")
             put("width", display.width)
@@ -959,6 +962,11 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 }
 
 internal data class PortraitScreenSize(val width: Int, val height: Int)
+
+internal fun screenshotFrameExceedsLimit(sizeBytes: Int): Boolean =
+    sizeBytes > VirtualScreenProtocol.MAX_FRAME_BYTES - SCREENSHOT_FRAME_HEADER_BYTES
+
+private const val SCREENSHOT_FRAME_HEADER_BYTES = 5
 
 internal fun portraitScreenSize(width: Int, height: Int): PortraitScreenSize =
     if (width <= height) PortraitScreenSize(width, height) else PortraitScreenSize(height, width)

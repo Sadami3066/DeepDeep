@@ -67,6 +67,8 @@ class VirtualScreenEngine(
 
     @Volatile
     private var heartbeatJob: Job? = null
+    @Volatile
+    private var commandInFlight = false
 
     @Volatile
     private var recoveryJob: Job? = null
@@ -534,7 +536,7 @@ class VirtualScreenEngine(
             }
             if (socket !== client) return
             val now = nowMs()
-            if (heartbeat.isTransportLost(now)) {
+            if (heartbeat.isTransportLost(now, commandInFlight)) {
                 closeTransport(client, TransportFailureKind.HEARTBEAT, "no pong for ${HeartbeatPolicy.TIMEOUT_MS}ms")
                 return
             }
@@ -714,9 +716,11 @@ class VirtualScreenEngine(
         pendingResponse = deferred
         pendingScreenshotEpoch = screenshotEpoch
         val response = try {
+            commandInFlight = true
             sendText(command, params, id)
             withTimeoutOrNull(COMMAND_TIMEOUT_MS) { deferred.await() }
         } finally {
+            commandInFlight = false
             if (pendingResponse === deferred) pendingResponse = null
             pendingScreenshotEpoch = 0L
             if (correlator.isPending(id)) {
