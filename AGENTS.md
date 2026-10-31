@@ -10,7 +10,7 @@ DeepDeep：Android 个人 agent App（Kotlin + Compose）。模块：`:app`（UI
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 1271、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 1289、0 失败 0 skip、lint 0 error。
 
 ## 规则
 
@@ -23,6 +23,12 @@ DeepDeep：Android 个人 agent App（Kotlin + Compose）。模块：`:app`（UI
 - 改 UI：直接改对应 Screen 和 `design/` 组件，编译过 + 手机上截一张图就算验收，不要求写测试。
 - 可能删除真实数据、不可逆迁移、换签名、发布或改变关键产品取舍时先确认；已授权需求内的常规持久化与权限接线直接完成。
 - 需要流程文档时去 git 历史找（`git log -- docs`），不要新建。
+
+## 保持审美反省
+
+- 改界面先看边距、对齐、层级和视觉重心，不把“能显示”当验收。
+- 不为了填满空间堆控件；留白、克制和清楚的主次优先。
+- 完成后以陌生用户视角再看一遍，觉得不美就继续改。
 
 ## Team 模式
 
