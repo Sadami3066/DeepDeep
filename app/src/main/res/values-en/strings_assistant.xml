@@ -19,6 +19,5 @@
     <string name="assistant_overlay_back">Back</string>
     <string name="assistant_overlay_fullscreen">Full screen</string>
     <string name="assistant_overlay_switch_workspace">Switch workspace</string>
-    <string name="assistant_overlay_switch_session">Switch chat</string>
     <string name="assistant_overlay_switcher_empty">No chats yet</string>
 </resources>

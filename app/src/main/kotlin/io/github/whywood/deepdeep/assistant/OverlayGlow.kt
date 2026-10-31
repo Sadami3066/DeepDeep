@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
 
 internal enum class OverlayRunPhase { Idle, Thinking, Streaming, Waiting, Done, Stopped, Failed }
@@ -31,6 +32,7 @@ internal enum class OverlayRunPhase { Idle, Thinking, Streaming, Waiting, Done, 
 internal data class OverlayRunSignal(
     val loaded: Boolean = false,
     val sessionId: String? = null,
+    val workspaceId: String = "",
     val active: Boolean = false,
     val phase: OverlayRunPhase = OverlayRunPhase.Idle,
     val messageId: Long? = null,
@@ -44,7 +46,7 @@ internal fun overlayRunSignal(
     val conversation = state.conversation
     val sessionId = state.sessionId
     if (!conversation.loaded) {
-        return OverlayRunSignal(sessionId = sessionId)
+        return OverlayRunSignal(sessionId = sessionId, workspaceId = state.workspaceId)
     }
     val lastAssistant = conversation.messages.lastOrNull { it.role == AssistantRole.ASSISTANT }
     val activeMessage = conversation.messages.lastOrNull {
@@ -61,6 +63,7 @@ internal fun overlayRunSignal(
     return OverlayRunSignal(
         loaded = true,
         sessionId = sessionId,
+        workspaceId = state.workspaceId,
         active = active,
         phase = phase,
         messageId = activeMessage?.id,
@@ -114,6 +117,47 @@ internal class OverlayStartTracker {
     }
 }
 
+internal class OverlayReplyTracker {
+    private var seenLoad = false
+    private var sessionId: String? = null
+    private var workspaceId: String = ""
+    private var lastKey: String? = null
+
+    fun update(signal: OverlayRunSignal): Boolean {
+        val currentSession = signal.sessionId
+        if (!signal.loaded || currentSession == null) return false
+        if (!seenLoad) {
+            seenLoad = true
+            lastKey = streamingKey(signal)
+            record(signal)
+            return false
+        }
+        val scopeChanged = currentSession != sessionId || signal.workspaceId != workspaceId
+        if (scopeChanged) {
+            lastKey = streamingKey(signal)
+            record(signal)
+            return false
+        }
+        val key = streamingKey(signal)
+        val replyStarted = signal.phase == OverlayRunPhase.Streaming && key != null && key != lastKey
+        if (replyStarted) lastKey = key
+        record(signal)
+        return replyStarted
+    }
+
+    private fun streamingKey(signal: OverlayRunSignal): String? {
+        val messageId = signal.messageId
+        if (messageId != null) return "message:$messageId"
+        val runId = signal.runId
+        return if (runId.isNotBlank()) "run:$runId" else null
+    }
+
+    private fun record(signal: OverlayRunSignal) {
+        sessionId = signal.sessionId
+        workspaceId = signal.workspaceId
+    }
+}
+
 @Stable
 internal class OverlayGlow internal constructor(
     val phase: OverlayRunPhase,
@@ -121,6 +165,8 @@ internal class OverlayGlow internal constructor(
     val entry: Animatable<Float, AnimationVector1D>,
     val activity: Animatable<Float, AnimationVector1D>,
     val startPulse: Animatable<Float, AnimationVector1D>,
+    val rise: Animatable<Float, AnimationVector1D>,
+    val replyPulse: Animatable<Float, AnimationVector1D>,
 ) {
     val active: Boolean
         get() = phase == OverlayRunPhase.Thinking ||
@@ -128,14 +174,19 @@ internal class OverlayGlow internal constructor(
             phase == OverlayRunPhase.Waiting
 }
 
+private const val GLOW_ENTRY_DELAY_MS = 180
 private const val GLOW_ENTRY_IN_MS = 260
 private const val GLOW_ENTRY_OUT_MS = 560
 private const val GLOW_PULSE_IN_MS = 180
 private const val GLOW_PULSE_OUT_MS = 500
+private const val GLOW_RISE_DELAY_MS = 80
+private const val GLOW_RISE_MS = 900
+private const val GLOW_REPLY_IN_MS = 90
+private const val GLOW_REPLY_OUT_MS = 420
 private const val GLOW_ACTIVITY_MS = 320
 private const val GLOW_DONE_MS = 900
 private const val GLOW_STOP_MS = 480
-private const val FRAME_STEP_NANOS = 33_000_000L
+private const val FRAME_STEP_NANOS = 16_666_667L
 private const val MAX_FRAME_STEP_NANOS = 100_000_000L
 private const val NANOS_PER_SECOND = 1_000_000_000f
 
@@ -162,23 +213,44 @@ internal fun rememberOverlayGlow(
     val entry = remember { Animatable(0f) }
     val activity = remember { Animatable(0f) }
     val startPulse = remember { Animatable(0f) }
-    val tracker = remember { OverlayStartTracker() }
+    val rise = remember { Animatable(0f) }
+    val replyPulse = remember { Animatable(0f) }
+    val startTracker = remember { OverlayStartTracker() }
+    val replyTracker = remember { OverlayReplyTracker() }
     val playsEntry = remember { !entryPlayed }
     var entryStarted by remember { mutableStateOf(false) }
+    var riseStarted by remember { mutableStateOf(false) }
     var pulseToken by remember { mutableIntStateOf(0) }
+    var replyToken by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(signal) {
-        if (tracker.update(signal)) pulseToken += 1
+        if (startTracker.update(signal)) pulseToken += 1
+        if (replyTracker.update(signal)) replyToken += 1
     }
     LaunchedEffect(playsEntry, entryStart) {
         if (entryStarted || !playsEntry || !entryStart) return@LaunchedEffect
         entryStarted = true
-        delay(180)
+        if (motionScale() == 0f) return@LaunchedEffect
+        delay(GLOW_ENTRY_DELAY_MS.toLong())
         entry.animateTo(1f, tween(GLOW_ENTRY_IN_MS, easing = DdMotion.EaseOut))
         entry.animateTo(0f, tween(GLOW_ENTRY_OUT_MS, easing = DdMotion.EaseInOut))
     }
+    LaunchedEffect(entryStart) {
+        if (riseStarted || !entryStart) return@LaunchedEffect
+        riseStarted = true
+        if (motionScale() == 0f) {
+            rise.snapTo(1f)
+            return@LaunchedEffect
+        }
+        delay(GLOW_RISE_DELAY_MS.toLong())
+        rise.animateTo(1f, tween(GLOW_RISE_MS, easing = DdMotion.EaseOut))
+    }
     LaunchedEffect(signal.phase) {
         val target = signal.phase.glowActivityTarget()
+        if (motionScale() == 0f) {
+            activity.snapTo(target)
+            return@LaunchedEffect
+        }
         activity.animateTo(
             targetValue = target,
             animationSpec = tween(
@@ -188,22 +260,33 @@ internal fun rememberOverlayGlow(
         )
     }
     LaunchedEffect(pulseToken) {
-        if (pulseToken == 0) return@LaunchedEffect
+        if (pulseToken == 0 || motionScale() == 0f) return@LaunchedEffect
         startPulse.snapTo(0f)
         startPulse.animateTo(1f, tween(GLOW_PULSE_IN_MS, easing = DdMotion.EaseOut))
         startPulse.animateTo(0f, tween(GLOW_PULSE_OUT_MS, easing = DdMotion.EaseInOut))
     }
+    LaunchedEffect(replyToken) {
+        if (replyToken == 0 || motionScale() == 0f) return@LaunchedEffect
+        replyPulse.snapTo(0f)
+        replyPulse.animateTo(1f, tween(GLOW_REPLY_IN_MS, easing = DdMotion.EaseOut))
+        replyPulse.animateTo(0f, tween(GLOW_REPLY_OUT_MS, easing = DdMotion.EaseInOut))
+    }
 
-    return remember(time, entry, activity, startPulse, signal.phase) {
+    return remember(time, entry, activity, startPulse, rise, replyPulse, signal.phase) {
         OverlayGlow(
             phase = signal.phase,
             time = time,
             entry = entry,
             activity = activity,
             startPulse = startPulse,
+            rise = rise,
+            replyPulse = replyPulse,
         )
     }
 }
+
+private suspend fun motionScale(): Float =
+    (coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f)
 
 @Composable
 private fun rememberOverlayFrameTime(): State<Float> {
@@ -213,22 +296,21 @@ private fun rememberOverlayFrameTime(): State<Float> {
     val resumed = lifecycleState == Lifecycle.State.RESUMED
     LaunchedEffect(lifecycleOwner, resumed) {
         if (!resumed) return@LaunchedEffect
-        if ((coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f) == 0f) return@LaunchedEffect
+        if (motionScale() == 0f) return@LaunchedEffect
         var lastFrame = Long.MIN_VALUE
+        var carry = 0L
         while (true) {
             withFrameNanos { now ->
-                if (lastFrame == Long.MIN_VALUE) {
-                    lastFrame = now
-                } else {
-                    val delta = (now - lastFrame).coerceAtMost(MAX_FRAME_STEP_NANOS)
-                    if (delta >= FRAME_STEP_NANOS) {
-                        lastFrame = now
-                        time.floatValue += delta / NANOS_PER_SECOND
+                if (lastFrame != Long.MIN_VALUE) {
+                    carry += (now - lastFrame).coerceAtMost(MAX_FRAME_STEP_NANOS)
+                    while (carry >= FRAME_STEP_NANOS) {
+                        carry -= FRAME_STEP_NANOS
+                        time.floatValue += FRAME_STEP_NANOS / NANOS_PER_SECOND
                     }
                 }
+                lastFrame = now
             }
         }
     }
     return time
 }
-

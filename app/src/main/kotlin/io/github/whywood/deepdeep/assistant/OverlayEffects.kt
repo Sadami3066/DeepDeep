@@ -15,10 +15,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
@@ -27,9 +30,9 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sin
 
-private const val GLOW_AMBIENT = 0.55f
 private const val GLOW_ENTRY_BOOST = 0.8f
 private const val GLOW_PULSE_BOOST = 0.9f
 private const val GLOW_ALPHA_SWING = 0.24f
@@ -37,6 +40,8 @@ private const val GLOW_SCALE_SWING = 0.09f
 private const val GLOW_DRIFT_X = 0.03f
 private const val GLOW_DRIFT_Y = 0.06f
 private const val GLOW_ANGLE_SWING = 6f
+private const val GLOW_AMBIENT_DARK = 0.55f
+private const val GLOW_AMBIENT_LIGHT = 1.0f
 private const val PERIOD_X = 4.6f
 private const val PERIOD_Y = 5.9f
 private const val PERIOD_SCALE = 6.8f
@@ -47,28 +52,62 @@ private const val BASE_CENTER_Y = 0.68f
 private const val BASE_HALF_WIDTH = 0.46f
 private const val BASE_HALF_HEIGHT = 0.30f
 private const val BASE_ALPHA = 0.45f
-private const val HALO_LIGHT_INTENSITY = 0.70f
 private const val HALO_CARD_ALPHA_DARK = 0.90f
 private const val HALO_CARD_ALPHA_LIGHT = 0.96f
-private const val EDGE_SIDE_PEAK_DARK = 0.20f
-private const val EDGE_SIDE_PEAK_LIGHT = 0.14f
-private const val EDGE_BOTTOM_PEAK_DARK = 0.22f
-private const val EDGE_BOTTOM_PEAK_LIGHT = 0.16f
-private const val EDGE_MIN_FLASH = 0.002f
-private const val EDGE_SIDE_WIDTH = 0.26f
-private const val EDGE_SIDE_HEIGHT = 0.38f
-private const val EDGE_BOTTOM_WIDTH = 0.62f
-private const val EDGE_BOTTOM_HEIGHT = 0.30f
+private const val UPWELL_LAYERS = 3
+private const val UPWELL_BASE_Y = 1.12f
+private const val UPWELL_STEP_Y = 0.06f
+private const val UPWELL_TRAVEL_Y = 0.62f
+private const val UPWELL_FADE_POWER = 1.4f
+private const val EDGE_ACTIVITY_DARK = 0.07f
+private const val EDGE_ACTIVITY_LIGHT = 0.15f
+private const val EDGE_REPLY_DARK = 0.30f
+private const val EDGE_REPLY_LIGHT = 0.36f
+private const val EDGE_START_DARK = 0.10f
+private const val EDGE_START_LIGHT = 0.10f
+private const val EDGE_ENTRY_DARK = 0.18f
+private const val EDGE_ENTRY_LIGHT = 0.28f
+private const val STROKE_BASE_DARK = 0.08f
+private const val STROKE_BASE_LIGHT = 0.16f
+private const val STROKE_REPLY_DARK = 0.30f
+private const val STROKE_REPLY_LIGHT = 0.36f
+private const val STROKE_START_DARK = 0.10f
+private const val STROKE_START_LIGHT = 0.10f
+private const val STROKE_ENTRY = 0.18f
+private const val WASH_ALPHA_DARK = 0.18f
+private const val WASH_ALPHA_LIGHT = 0.30f
+private const val MIN_ALPHA = 0.002f
 private val TwoPi = (2.0 * PI).toFloat()
 private val HaloBleed = 56.dp
 private val HaloShape = RoundedCornerShape(28.dp)
-private val BaseGlowColor = Color(0xFF3B82F6)
-private val EdgeLeftColor = Color(0xFF3B82F6)
-private val EdgeRightColor = Color(0xFF22D3EE)
-private val EdgeBottomColor = Color(0xFF6366F1)
+private val EdgeBand = 64.dp
+private val ScreenStroke = 1.5.dp
+private val ScreenCorner = 28.dp
+private val UpwellX = floatArrayOf(-0.06f, 0.04f, -0.02f)
+private val UpwellHalfWidth = floatArrayOf(1.05f, 0.90f, 0.75f)
+private val UpwellHalfHeight = floatArrayOf(0.42f, 0.34f, 0.26f)
+private val UpwellAlphaDark = floatArrayOf(0.50f, 0.36f, 0.24f)
+private val UpwellAlphaLight = floatArrayOf(0.58f, 0.44f, 0.32f)
+private val UpwellDark = listOf(Color(0xFF3B82F6), Color(0xFF22D3EE), Color(0xFFA5F3FC))
+private val UpwellLight = listOf(Color(0xFF0284C7), Color(0xFF38BDF8), Color(0xFFE0F2FE))
+private val WashDark = Color(0xFF1E40AF)
+private val WashLight = Color(0xFF7DD3FC)
+private val EdgeTopDark = Color(0xFF3B82F6)
+private val EdgeTopLight = Color(0xFF0284C7)
+private val EdgeBottomDark = Color(0xFF6366F1)
+private val EdgeBottomLight = Color(0xFF2563EB)
+private val EdgeLeftDark = Color(0xFF22D3EE)
+private val EdgeLeftLight = Color(0xFF06B6D4)
+private val EdgeRightDark = Color(0xFFA5F3FC)
+private val EdgeRightLight = Color(0xFF38BDF8)
+private val ScreenStrokeDark = Color(0xFFA5F3FC)
+private val ScreenStrokeLight = Color(0xFF2563EB)
+private val BaseGlowDark = Color(0xFF3B82F6)
+private val BaseGlowLight = Color(0xFF2563EB)
 
 private class HaloBlob(
-    val color: Color,
+    val darkColor: Color,
+    val lightColor: Color,
     val centerX: Float,
     val centerY: Float,
     val halfWidth: Float,
@@ -86,7 +125,8 @@ private class HaloBlob(
 
 private val HaloBlobs = listOf(
     HaloBlob(
-        color = Color(0xFF3B82F6),
+        darkColor = Color(0xFF3B82F6),
+        lightColor = Color(0xFF0284C7),
         centerX = 0.50f,
         centerY = 0.50f,
         halfWidth = 0.46f,
@@ -102,7 +142,8 @@ private val HaloBlobs = listOf(
         periodAlpha = PERIOD_SCALE,
     ),
     HaloBlob(
-        color = Color(0xFF22D3EE),
+        darkColor = Color(0xFF22D3EE),
+        lightColor = Color(0xFF06B6D4),
         centerX = 0.60f,
         centerY = 0.44f,
         halfWidth = 0.36f,
@@ -118,7 +159,8 @@ private val HaloBlobs = listOf(
         periodAlpha = PERIOD_X,
     ),
     HaloBlob(
-        color = Color(0xFF6366F1),
+        darkColor = Color(0xFF6366F1),
+        lightColor = Color(0xFF38BDF8),
         centerX = 0.40f,
         centerY = 0.60f,
         halfWidth = 0.42f,
@@ -134,7 +176,8 @@ private val HaloBlobs = listOf(
         periodAlpha = PERIOD_Y,
     ),
     HaloBlob(
-        color = Color(0xFFA5F3FC),
+        darkColor = Color(0xFFA5F3FC),
+        lightColor = Color(0xFFBAE6FD),
         centerX = 0.34f,
         centerY = 0.50f,
         halfWidth = 0.30f,
@@ -172,7 +215,7 @@ internal fun OverlayComposerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(
-                        elevation = 12.dp,
+                        elevation = if (dark) 12.dp else 20.dp,
                         shape = HaloShape,
                         clip = false,
                         ambientColor = haloShadowAmbient(dark),
@@ -208,10 +251,8 @@ internal fun OverlayComposerCard(
     }
 }
 
-
-
 @Composable
-internal fun OverlayEdgeGlow(
+internal fun OverlayScreenGlow(
     glow: OverlayGlow,
     modifier: Modifier = Modifier,
 ) {
@@ -221,33 +262,40 @@ internal fun OverlayEdgeGlow(
             if (size.width <= 0f || size.height <= 0f) {
                 onDrawBehind { }
             } else {
-                val radius = max(size.width, size.height)
-                val leftBrush = glowBrush(EdgeLeftColor, radius)
-                val rightBrush = glowBrush(EdgeRightColor, radius)
-                val bottomBrush = glowBrush(EdgeBottomColor, radius)
+                val width = size.width
+                val height = size.height
+                val radius = max(width, height)
+                val upwellBrushes = (if (dark) UpwellDark else UpwellLight)
+                    .map { color -> glowBrush(color, radius) }
+                val washBrush = screenWashBrush(if (dark) WashDark else WashLight, height)
+                val band = EdgeBand.toPx()
+                val topBrush = topEdgeBrush(if (dark) EdgeTopDark else EdgeTopLight, band)
+                val bottomBrush = bottomEdgeBrush(if (dark) EdgeBottomDark else EdgeBottomLight, band, height)
+                val leftBrush = leftEdgeBrush(if (dark) EdgeLeftDark else EdgeLeftLight, band)
+                val rightBrush = rightEdgeBrush(if (dark) EdgeRightDark else EdgeRightLight, band, width)
+                val stroke = Stroke(width = ScreenStroke.toPx())
+                val corner = CornerRadius(ScreenCorner.toPx())
+                val strokeInset = stroke.width / 2f
                 onDrawBehind {
-                    val entry = glow.entry.value
-                    val pulse = glow.startPulse.value
-                    val flash = max(entry, pulse)
-                    if (flash <= EDGE_MIN_FLASH) return@onDrawBehind
-                    val width = size.width
-                    val height = size.height
-                    val sideAlpha = (if (dark) EDGE_SIDE_PEAK_DARK else EDGE_SIDE_PEAK_LIGHT) * flash
-                    val sideWidth = width * EDGE_SIDE_WIDTH
-                    val sideHeight = height * EDGE_SIDE_HEIGHT
-                    drawBlob(leftBrush, radius, 0f, height * 0.30f, sideWidth, sideHeight, 0f, sideAlpha)
-                    drawBlob(rightBrush, radius, width, height * 0.30f, sideWidth, sideHeight, 0f, sideAlpha)
-                    val bottomAlpha = (if (dark) EDGE_BOTTOM_PEAK_DARK else EDGE_BOTTOM_PEAK_LIGHT) *
-                        max(entry, pulse * 0.85f)
-                    drawBlob(
-                        brush = bottomBrush,
+                    drawScreenGlow(
+                        upwellBrushes = upwellBrushes,
+                        washBrush = washBrush,
                         radius = radius,
-                        centerX = width * 0.5f,
-                        centerY = height * 0.94f,
-                        halfWidth = width * EDGE_BOTTOM_WIDTH,
-                        halfHeight = height * 0.34f,
-                        angle = 0f,
-                        alpha = bottomAlpha,
+                        band = band,
+                        topBrush = topBrush,
+                        bottomBrush = bottomBrush,
+                        leftBrush = leftBrush,
+                        rightBrush = rightBrush,
+                        strokeColor = if (dark) ScreenStrokeDark else ScreenStrokeLight,
+                        stroke = stroke,
+                        corner = corner,
+                        strokeInset = strokeInset,
+                        dark = dark,
+                        rise = glow.rise.value,
+                        entry = glow.entry.value,
+                        activity = glow.activity.value,
+                        startPulse = glow.startPulse.value,
+                        replyPulse = glow.replyPulse.value,
                     )
                 }
             }
@@ -266,8 +314,10 @@ private fun HaloLayer(
                 onDrawBehind { }
             } else {
                 val radius = max(size.width, size.height)
-                val localBrushes = HaloBlobs.map { blob -> glowBrush(blob.color, radius) }
-                val baseBrush = glowBrush(BaseGlowColor, radius)
+                val localBrushes = HaloBlobs.map { blob ->
+                    glowBrush(if (dark) blob.darkColor else blob.lightColor, radius)
+                }
+                val baseBrush = glowBrush(if (dark) BaseGlowDark else BaseGlowLight, radius)
                 onDrawBehind {
                     drawHalo(
                         localBrushes = localBrushes,
@@ -284,6 +334,93 @@ private fun HaloLayer(
     )
 }
 
+private fun DrawScope.drawScreenGlow(
+    upwellBrushes: List<Brush>,
+    washBrush: Brush,
+    radius: Float,
+    band: Float,
+    topBrush: Brush,
+    bottomBrush: Brush,
+    leftBrush: Brush,
+    rightBrush: Brush,
+    strokeColor: Color,
+    stroke: Stroke,
+    corner: CornerRadius,
+    strokeInset: Float,
+    dark: Boolean,
+    rise: Float,
+    entry: Float,
+    activity: Float,
+    startPulse: Float,
+    replyPulse: Float,
+) {
+    val width = size.width
+    val height = size.height
+    if (width <= 0f || height <= 0f) return
+
+    val fade = (1f - rise).coerceIn(0f, 1f)
+    val upwell = fade.pow(UPWELL_FADE_POWER)
+    if (upwell > MIN_ALPHA) {
+        val wash = fade.pow(1.2f) * (if (dark) WASH_ALPHA_DARK else WASH_ALPHA_LIGHT)
+        if (wash > MIN_ALPHA) {
+            drawRect(brush = washBrush, alpha = wash)
+        }
+        val alphas = if (dark) UpwellAlphaDark else UpwellAlphaLight
+        for (index in 0 until UPWELL_LAYERS) {
+            drawBlob(
+                brush = upwellBrushes[index],
+                radius = radius,
+                centerX = width * (0.5f + UpwellX[index]),
+                centerY = height * (UPWELL_BASE_Y + UPWELL_STEP_Y * index - UPWELL_TRAVEL_Y * rise),
+                halfWidth = width * UpwellHalfWidth[index],
+                halfHeight = height * UpwellHalfHeight[index],
+                angle = 0f,
+                alpha = upwell * alphas[index],
+            )
+        }
+    }
+
+    val edgeAlpha = (
+        activity * (if (dark) EDGE_ACTIVITY_DARK else EDGE_ACTIVITY_LIGHT) +
+            replyPulse * (if (dark) EDGE_REPLY_DARK else EDGE_REPLY_LIGHT) +
+            startPulse * (if (dark) EDGE_START_DARK else EDGE_START_LIGHT) +
+            entry * (if (dark) EDGE_ENTRY_DARK else EDGE_ENTRY_LIGHT)
+        ).coerceIn(0f, 1f)
+    if (edgeAlpha > MIN_ALPHA) {
+        drawRect(brush = topBrush, size = Size(width, band), alpha = edgeAlpha)
+        drawRect(
+            brush = bottomBrush,
+            topLeft = Offset(0f, height - band),
+            size = Size(width, band),
+            alpha = edgeAlpha,
+        )
+        drawRect(brush = leftBrush, size = Size(band, height), alpha = edgeAlpha)
+        drawRect(
+            brush = rightBrush,
+            topLeft = Offset(width - band, 0f),
+            size = Size(band, height),
+            alpha = edgeAlpha,
+        )
+    }
+
+    val strokeAlpha = (
+        activity * (if (dark) STROKE_BASE_DARK else STROKE_BASE_LIGHT) +
+            replyPulse * (if (dark) STROKE_REPLY_DARK else STROKE_REPLY_LIGHT) +
+            startPulse * (if (dark) STROKE_START_DARK else STROKE_START_LIGHT) +
+            entry * STROKE_ENTRY
+        ).coerceIn(0f, 1f)
+    if (strokeAlpha > MIN_ALPHA) {
+        drawRoundRect(
+            color = strokeColor,
+            topLeft = Offset(strokeInset, strokeInset),
+            size = Size(width - strokeInset * 2f, height - strokeInset * 2f),
+            cornerRadius = corner,
+            style = stroke,
+            alpha = strokeAlpha,
+        )
+    }
+}
+
 private fun DrawScope.drawHalo(
     localBrushes: List<Brush>,
     baseBrush: Brush,
@@ -292,12 +429,11 @@ private fun DrawScope.drawHalo(
     activity: Float,
     entry: Float,
     pulse: Float,
-) {
-    val width = size.width
+) {    val width = size.width
     val height = size.height
     if (width <= 0f || height <= 0f) return
-    val intensity = if (dark) 1f else HALO_LIGHT_INTENSITY
-    val level = (GLOW_AMBIENT + (1f - GLOW_AMBIENT) * activity) *
+    val ambient = if (dark) GLOW_AMBIENT_DARK else GLOW_AMBIENT_LIGHT
+    val level = (ambient + (1f - ambient) * activity) *
         (1f + GLOW_ENTRY_BOOST * entry) *
         (1f + GLOW_PULSE_BOOST * pulse)
     val radius = max(width, height)
@@ -314,7 +450,7 @@ private fun DrawScope.drawHalo(
         halfHeight = height * BASE_HALF_HEIGHT *
             (1f + GLOW_SCALE_SWING * cos(basePhaseX + 1.5f)) * (1f - 0.04f * pulse),
         angle = 0f,
-        alpha = BASE_ALPHA * intensity * level * (1f + GLOW_ALPHA_SWING * sin(basePhaseY + 2.1f)),
+        alpha = BASE_ALPHA * level * (1f + GLOW_ALPHA_SWING * sin(basePhaseY + 2.1f)),
     )
 
     HaloBlobs.forEachIndexed { index, blob ->
@@ -335,7 +471,7 @@ private fun DrawScope.drawHalo(
                 (1f - 0.04f * pulse),
             angle = blob.angle +
                 GLOW_ANGLE_SWING * sin(time * TwoPi / blob.periodAngle + phase + 2.4f),
-            alpha = blob.alpha * intensity * level * (1f + GLOW_ALPHA_SWING * alphaWave),
+            alpha = blob.alpha * level * (1f + GLOW_ALPHA_SWING * alphaWave),
         )
     }
 }
@@ -350,7 +486,7 @@ private fun DrawScope.drawBlob(
     angle: Float,
     alpha: Float,
 ) {
-    if (alpha <= 0.001f || halfWidth <= 0f || halfHeight <= 0f) return
+    if (alpha <= MIN_ALPHA || halfWidth <= 0f || halfHeight <= 0f) return
     withTransform({
         translate(centerX, centerY)
         rotate(angle, Offset.Zero)
@@ -377,7 +513,39 @@ private fun glowBrush(color: Color, radius: Float): Brush = Brush.radialGradient
     radius = radius,
 )
 
+private fun screenWashBrush(color: Color, height: Float): Brush = Brush.verticalGradient(
+    *arrayOf(
+        0f to Color.Transparent,
+        0.45f to color.copy(alpha = 0.12f),
+        0.78f to color.copy(alpha = 0.55f),
+        1f to color,
+    ),
+    startY = 0f,
+    endY = height,
+)
 
+private fun topEdgeBrush(color: Color, band: Float): Brush = Brush.verticalGradient(    *arrayOf(0f to color, 1f to Color.Transparent),
+    startY = 0f,
+    endY = band,
+)
+
+private fun bottomEdgeBrush(color: Color, band: Float, height: Float): Brush = Brush.verticalGradient(
+    *arrayOf(0f to Color.Transparent, 1f to color),
+    startY = height - band,
+    endY = height,
+)
+
+private fun leftEdgeBrush(color: Color, band: Float): Brush = Brush.horizontalGradient(
+    *arrayOf(0f to color, 1f to Color.Transparent),
+    startX = 0f,
+    endX = band,
+)
+
+private fun rightEdgeBrush(color: Color, band: Float, width: Float): Brush = Brush.horizontalGradient(
+    *arrayOf(0f to Color.Transparent, 1f to color),
+    startX = width - band,
+    endX = width,
+)
 
 private fun haloBorderBrush(dark: Boolean): Brush = if (dark) {
     Brush.linearGradient(
@@ -390,21 +558,21 @@ private fun haloBorderBrush(dark: Boolean): Brush = if (dark) {
 } else {
     Brush.linearGradient(
         colors = listOf(
-            Color(0x332563EB),
-            Color(0x1A06B6D4),
-            Color(0x332563EB),
+            Color(0x552563EB),
+            Color(0x3806B6D4),
+            Color(0x553B82F6),
         ),
     )
 }
 
 private fun haloShadowAmbient(dark: Boolean): Color =
-    if (dark) Color(0xFF071426) else Color(0xFF0B1220)
+    if (dark) Color(0xFF071426) else Color(0x332563EB)
 
 private fun haloShadowSpot(dark: Boolean): Color =
-    if (dark) Color(0x803B82F6) else Color(0x382563EB)
+    if (dark) Color(0x803B82F6) else Color(0x6638BDF8)
 
 private fun haloSheenTop(dark: Boolean): Color =
-    if (dark) Color(0x3322D3EE) else Color(0x142563EB)
+    if (dark) Color(0x3322D3EE) else Color(0x292563EB)
 
 private fun haloSheenBottom(dark: Boolean): Color =
-    if (dark) Color(0x294F46E5) else Color(0x0F06B6D4)
+    if (dark) Color(0x294F46E5) else Color(0x1F06B6D4)

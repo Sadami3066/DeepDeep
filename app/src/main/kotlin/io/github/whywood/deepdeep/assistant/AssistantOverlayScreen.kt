@@ -48,6 +48,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -149,6 +150,7 @@ internal fun AssistantOverlayScreen(
     var micWasListening by remember { mutableStateOf(false) }
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
+    var laidOut by remember { mutableStateOf(false) }
     var panelMounted by remember { mutableStateOf(false) }
     var switcherOpen by remember { mutableStateOf(false) }
     var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
@@ -325,7 +327,12 @@ internal fun AssistantOverlayScreen(
         if (switcherOpen) switcherOpen = false else dismiss()
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().testTag("assistant_overlay")) {
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .onSizeChanged { if (it.width > 0 && it.height > 0) laidOut = true }
+            .testTag("assistant_overlay"),
+    ) {
         val imeBottomPx = with(density) { WindowInsets.imeAnimationTarget.getBottom(density) }
         val navigationBottomPx = with(density) { WindowInsets.navigationBars.getBottom(density) }
         val statusTopPx = with(density) { WindowInsets.statusBars.getTop(density) }
@@ -350,7 +357,11 @@ internal fun AssistantOverlayScreen(
             state.conversation.loaded &&
             imeBottomPx == 0
 
-        LaunchedEffect(Unit) { entered = true }
+        LaunchedEffect(laidOut, windowFocused) {
+            if (entered || !laidOut) return@LaunchedEffect
+            delay(if (windowFocused) 90 else 500)
+            entered = true
+        }
         LaunchedEffect(panelVisible) {
             if (panelVisible) panelMounted = true
         }
@@ -381,7 +392,9 @@ internal fun AssistantOverlayScreen(
                     onClick = ::dismiss,
                 ),
         )
-        OverlayEdgeGlow(glow, Modifier.fillMaxSize())
+        if (entered) {
+            OverlayScreenGlow(glow, Modifier.fillMaxSize())
+        }
         if (panelMounted) {
             Box(
                 Modifier
@@ -404,10 +417,6 @@ internal fun AssistantOverlayScreen(
                     onOpenInApp = { state.sessionId?.let(actions.onOpenInApp) },
                     onOpenWorkspaceSwitcher = {
                         switcherLevel = OverlaySwitcherLevel.Workspaces
-                        switcherOpen = true
-                    },
-                    onOpenSessionSwitcher = {
-                        switcherLevel = OverlaySwitcherLevel.Sessions(state.workspaceId)
                         switcherOpen = true
                     },
                     maxHeight = panelMaxHeight,

@@ -75,7 +75,6 @@ internal fun AssistantOverlayPanel(
     onQuote: (Long, String) -> Unit,
     onOpenInApp: () -> Unit,
     onOpenWorkspaceSwitcher: () -> Unit,
-    onOpenSessionSwitcher: () -> Unit,
     maxHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -150,8 +149,8 @@ internal fun AssistantOverlayPanel(
                 elevation = 12.dp,
                 shape = shape,
                 clip = false,
-                ambientColor = Color(0xFF071426),
-                spotColor = Color(0x4D0B2A4A),
+                ambientColor = if (colors.dark) Color(0xFF071426) else Color(0x332563EB),
+                spotColor = if (colors.dark) Color(0x4D0B2A4A) else Color(0x6638BDF8),
             )
             .clip(shape)
             .background(colors.surface)
@@ -159,7 +158,7 @@ internal fun AssistantOverlayPanel(
                 if (colors.paper.luminance() < 0.5f) {
                     Modifier.border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
                 } else {
-                    Modifier
+                    Modifier.border(1.dp, colors.accent.copy(alpha = 0.18f), shape)
                 },
             )
             .pointerInput(Unit) { detectTapGestures { } },
@@ -198,15 +197,6 @@ internal fun AssistantOverlayPanel(
                     onClick = onOpenWorkspaceSwitcher,
                     contentDescription = stringResource(R.string.assistant_overlay_switch_workspace),
                     modifier = Modifier.testTag("assistant_overlay_workspace_switch"),
-                    size = 36.dp,
-                    iconSize = 17.dp,
-                    tint = colors.inkTertiary,
-                )
-                DdIconButton(
-                    icon = DdIcons.Message,
-                    onClick = onOpenSessionSwitcher,
-                    contentDescription = stringResource(R.string.assistant_overlay_switch_session),
-                    modifier = Modifier.testTag("assistant_overlay_session_switch"),
                     size = 36.dp,
                     iconSize = 17.dp,
                     tint = colors.inkTertiary,

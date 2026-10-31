@@ -47,8 +47,49 @@ class AssistantOverlayGlowTest {
         questions = emptyList(),
     )
 
-    private fun idleSignal(sessionId: String? = "session-1") =
-        OverlayRunSignal(loaded = true, sessionId = sessionId)
+    private fun idleSignal(
+        sessionId: String? = "session-1",
+        workspaceId: String = "",
+    ) = OverlayRunSignal(loaded = true, sessionId = sessionId, workspaceId = workspaceId)
+
+    private fun thinkingSignal(
+        messageId: Long?,
+        sessionId: String? = "session-1",
+        workspaceId: String = "workspace-1",
+    ) = OverlayRunSignal(
+        loaded = true,
+        sessionId = sessionId,
+        workspaceId = workspaceId,
+        active = true,
+        phase = OverlayRunPhase.Thinking,
+        messageId = messageId,
+    )
+
+    private fun waitingSignal(
+        sessionId: String? = "session-1",
+        workspaceId: String = "workspace-1",
+    ) = OverlayRunSignal(
+        loaded = true,
+        sessionId = sessionId,
+        workspaceId = workspaceId,
+        active = true,
+        phase = OverlayRunPhase.Waiting,
+    )
+
+    private fun streamingSignal(
+        messageId: Long?,
+        runId: String = "",
+        sessionId: String? = "session-1",
+        workspaceId: String = "workspace-1",
+    ) = OverlayRunSignal(
+        loaded = true,
+        sessionId = sessionId,
+        workspaceId = workspaceId,
+        active = true,
+        phase = OverlayRunPhase.Streaming,
+        messageId = messageId,
+        runId = runId,
+    )
 
     private fun activeSignal(
         messageId: Long?,
@@ -283,5 +324,50 @@ class AssistantOverlayGlowTest {
         val tracker = OverlayStartTracker()
         assertFalse(tracker.update(OverlayRunSignal()))
         assertFalse(tracker.update(OverlayRunSignal(loaded = true, sessionId = null)))
+    }
+
+    @Test
+    fun firstLoadWithStreamingReplyDoesNotFlash() {
+        val tracker = OverlayReplyTracker()
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+    }
+
+    @Test
+    fun firstReplyTextFlashesOnce() {
+        val tracker = OverlayReplyTracker()
+        assertFalse(tracker.update(idleSignal(workspaceId = "workspace-1")))
+        assertFalse(tracker.update(thinkingSignal(messageId = 5L)))
+        assertTrue(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, runId = "run-6")))
+    }
+
+    @Test
+    fun sameMessageDoesNotFlashAgain() {
+        val tracker = OverlayReplyTracker()
+        assertFalse(tracker.update(idleSignal(workspaceId = "workspace-1")))
+        assertTrue(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+        assertFalse(tracker.update(thinkingSignal(messageId = 5L)))
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
+    }
+
+    @Test
+    fun sessionOrWorkspaceSwitchDoesNotFlash() {
+        val tracker = OverlayReplyTracker()
+        assertFalse(tracker.update(idleSignal(sessionId = "session-1", workspaceId = "workspace-1")))
+        assertTrue(tracker.update(streamingSignal(messageId = 5L, sessionId = "session-1", workspaceId = "workspace-1")))
+        assertFalse(tracker.update(streamingSignal(messageId = 5L, sessionId = "session-2", workspaceId = "workspace-1")))
+        assertFalse(tracker.update(streamingSignal(messageId = 6L, sessionId = "session-2", workspaceId = "workspace-2")))
+        assertTrue(tracker.update(streamingSignal(messageId = 7L, sessionId = "session-2", workspaceId = "workspace-2")))
+    }
+
+    @Test
+    fun thinkingOrWaitingDoesNotFlash() {
+        val tracker = OverlayReplyTracker()
+        assertFalse(tracker.update(idleSignal(workspaceId = "workspace-1")))
+        assertFalse(tracker.update(thinkingSignal(messageId = 5L)))
+        assertFalse(tracker.update(waitingSignal()))
+        assertTrue(tracker.update(streamingSignal(messageId = 5L, runId = "run-5")))
     }
 }
