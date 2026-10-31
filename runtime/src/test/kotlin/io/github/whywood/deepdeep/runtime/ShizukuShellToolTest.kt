@@ -37,7 +37,17 @@ class ShizukuShellToolTest {
         assertTrue(properties.containsKey("command"))
         assertTrue(properties.containsKey("timeout_ms"))
         assertEquals("shizuku_shell", tool().name)
-        assertTrue(tool().description.contains("uid 2000"))
+    }
+
+    @Test
+    fun toolDescribesSessionPrivilegesInsteadOfFixedUid() {
+        val tool = tool()
+
+        assertTrue(tool.description.contains("privileges follow the Shizuku session"))
+        assertTrue(tool.description.contains("uid 2000"))
+        assertTrue(tool.description.contains("root"))
+        assertFalse(tool.description.contains("as the ADB shell (uid 2000)"))
+        assertTrue(tool.promptGuidelines.orEmpty().any { it.contains("uid 2000") })
     }
 
     @Test

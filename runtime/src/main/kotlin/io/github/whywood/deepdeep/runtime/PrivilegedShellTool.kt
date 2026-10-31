@@ -20,7 +20,7 @@ private val shizukuShellParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run as the ADB shell (uid 2000) through Shizuku on the Android device")
+            put("description", "Shell command to run through Shizuku on the Android device; privileges follow the Shizuku session (usually ADB shell uid 2000, root when Shizuku runs as root)")
         }
         putJsonObject("timeout_ms") {
             put("type", "number")
@@ -83,12 +83,12 @@ fun shizukuShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "shizuku_shell",
-    description = "Run a shell command as the ADB shell (uid 2000) through Shizuku on the Android device and return its exit code, stdout and stderr. Only works while the app is in the foreground, Shizuku is running and the user has granted Shizuku permission.",
-    promptSnippet = "Run a command as the ADB shell",
+    description = "Run a shell command through Shizuku on the Android device and return its exit code, stdout and stderr. Only works while the app is in the foreground, Shizuku is running and the user has granted Shizuku permission; privileges follow the Shizuku session (usually ADB shell uid 2000, but equivalent to root when Shizuku was started by root).",
+    promptSnippet = "Run a command through Shizuku",
     promptGuidelines = listOf(
-        "Use shizuku_shell only when the user explicitly asks for a system-level operation that needs ADB shell privileges; prefer the regular bash tool for all other commands.",
+        "Use shizuku_shell only when the user explicitly asks for a system-level operation that needs Shizuku privileges; prefer the regular bash tool for all other commands.",
         "shizuku_shell runs only while the app is in the foreground and Shizuku permission is granted; it never persists an authorization.",
-        "ADB shell (uid 2000) is not root: do not use it for operations that require uid 0.",
+        "Commands run with whatever privileges the Shizuku session already has: usually the ADB shell (uid 2000), but equivalent to root when Shizuku was started by root. Never assume the command is unprivileged.",
         "Do not run destructive commands unless the user explicitly asked for that exact command.",
     ),
     parameters = shizukuShellParameters,
