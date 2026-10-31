@@ -577,6 +577,7 @@ private class HelperServer(private val socketName: String, private val nonce: St
 
         override fun getOpPackageName(): String = SHELL_PACKAGE
 
+        @android.annotation.TargetApi(Build.VERSION_CODES.S)
         override fun getAttributionSource(): android.content.AttributionSource =
             android.content.AttributionSource.Builder(VirtualScreenCommands.SHELL_UID)
                 .setPackageName(SHELL_PACKAGE)
