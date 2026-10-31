@@ -19,7 +19,8 @@
     <string name="assistant_overlay_suggestion_music">Recommend some music</string>
     <string name="assistant_overlay_suggestion_places">Where should I visit?</string>
     <string name="assistant_overlay_error_send">Could not send. Try again.</string>
-    <string name="assistant_overlay_error_busy">A reply is in progress. Try again shortly.</string>
+    <string name="assistant_overlay_error_start">Could not start. Try again.</string>
+    <string name="assistant_overlay_error_switch">Could not switch. Try again.</string>
     <string name="assistant_overlay_error_mic">Microphone permission is required for voice.</string>
     <string name="assistant_overlay_voice_unavailable">Speech recognition is unavailable.</string>
     <string name="assistant_overlay_open_settings">Open settings</string>

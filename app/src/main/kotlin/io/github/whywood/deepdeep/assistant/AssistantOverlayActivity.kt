@@ -46,6 +46,9 @@ class AssistantOverlayActivity : ComponentActivity() {
                     activeSessionId = { graph.activeSessionId.value },
                     homeWorkspaceId = AgentRuntimeHost.HOME_ID,
                     scope = graph.appScope,
+                    providers = graph.providerCatalog,
+                    configuredProviders = { graph.credentials.authKinds.value.keys },
+                    defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
                     strings = { chatUiStrings },
                 )
@@ -96,7 +99,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     onOpenQuestion = { openInApp(state.sessionId) },
                     onDismiss = { finish() },
                     onOpenInApp = ::openInApp,
-                    onAsk = controller::ask,
+                    onAsk = { text -> controller.send(text) },
                     onStop = controller::stop,
                     onRetry = controller::retry,
                     onToggleStep = controller::toggleStep,

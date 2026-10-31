@@ -19,7 +19,8 @@
     <string name="assistant_overlay_suggestion_music">推荐几首音乐</string>
     <string name="assistant_overlay_suggestion_places">有哪些好玩的地方</string>
     <string name="assistant_overlay_error_send">发送失败，请重试</string>
-    <string name="assistant_overlay_error_busy">正在回复中，请稍后再发</string>
+    <string name="assistant_overlay_error_start">启动失败，请重试</string>
+    <string name="assistant_overlay_error_switch">切换失败，请重试</string>
     <string name="assistant_overlay_error_mic">需要麦克风权限才能使用语音</string>
     <string name="assistant_overlay_voice_unavailable">此设备不支持语音识别</string>
     <string name="assistant_overlay_open_settings">去设置</string>

@@ -919,15 +919,16 @@ private fun OverlaySendError(
         Text(
             text = stringResource(
                 when (error) {
-                    AssistantOverlayError.Busy -> R.string.assistant_overlay_error_busy
+                    AssistantOverlayError.StartFailed -> R.string.assistant_overlay_error_start
                     AssistantOverlayError.SendFailed -> R.string.assistant_overlay_error_send
+                    AssistantOverlayError.SwitchFailed -> R.string.assistant_overlay_error_switch
                 },
             ),
             modifier = Modifier.weight(1f).testTag("assistant_overlay_error"),
             style = DdType.bodySmall,
             color = colors.danger,
         )
-        if (error == AssistantOverlayError.SendFailed) {
+        if (error == AssistantOverlayError.SendFailed || error == AssistantOverlayError.StartFailed) {
             DdTextAction(
                 text = stringResource(R.string.assistant_overlay_retry),
                 onClick = onRetry,

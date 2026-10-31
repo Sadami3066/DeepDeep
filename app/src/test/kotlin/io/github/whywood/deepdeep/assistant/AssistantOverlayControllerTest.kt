@@ -5,9 +5,17 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.ModelConfig
+import io.github.whywood.deepdeep.runtime.ModelOption
+import io.github.whywood.deepdeep.runtime.ProviderDirectory
+import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
+import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -28,6 +36,7 @@ import org.junit.Test
 class AssistantOverlayControllerTest {
     private val dispatcher = StandardTestDispatcher()
     private val strings = ChatUiStrings.fallback()
+    private val providers = FakeProviders()
 
     private fun session(id: String = "session-1", updatedAt: Long = 10L) = ConversationSummary(
         id = id,
@@ -47,6 +56,9 @@ class AssistantOverlayControllerTest {
         activeSessionId = { active },
         homeWorkspaceId = HOME_ID,
         scope = scope,
+        providers = providers,
+        configuredProviders = { setOf("deepseek") },
+        defaultModel = { ModelConfig("deepseek", "model", ThinkingLevel.OFF) },
         onSessionSelected = onSelected,
         ioDispatcher = dispatcher,
         strings = { strings },
@@ -140,13 +152,30 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun askBeginsTurnThenSendsOptimistically() = runTest(dispatcher) {
+    fun startSeedsQueuedInputsFromRuntime() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            queued = listOf(QueuedInput(InputQueueKind.STEER, "queued"))
+        }
+        val controller = controller(runtime, "session-1", this)
+
+        controller.start()
+        runCurrent()
+
+        assertEquals(
+            listOf(QueuedInput(InputQueueKind.STEER, "queued")),
+            controller.state.value.conversation.queuedInputs,
+        )
+        controller.reset()
+    }
+
+    @Test
+    fun sendBeginsTurnThenSendsOptimistically() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime().apply { onSend = { _, _ -> } }
         val controller = controller(runtime, "session-1", this)
         controller.start()
         runCurrent()
 
-        assertTrue(controller.ask("  hello  "))
+        assertTrue(controller.send("  hello  "))
         runCurrent()
 
         assertEquals(listOf("hello"), runtime.sent)
@@ -160,7 +189,7 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun askStreamsToDone() = runTest(dispatcher) {
+    fun sendStreamsToDone() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime().apply {
             onSend = { sessionId, _ ->
                 emitFor(sessionId, RuntimeEvent.RunStarted("run-1", 100L, prompt = "hello"))
@@ -173,7 +202,7 @@ class AssistantOverlayControllerTest {
         controller.start()
         runCurrent()
 
-        assertTrue(controller.ask("hello"))
+        assertTrue(controller.send("hello"))
         runCurrent()
 
         assertEquals(listOf("hello"), runtime.sent)
@@ -185,7 +214,7 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun askIgnoredWhileSendingAndBusyClearsWhenRunFinishes() = runTest(dispatcher) {
+    fun sendWhileBusySteersWithoutOptimisticMessage() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime().apply {
             onSend = { sessionId, _ -> emitFor(sessionId, RuntimeEvent.RunStarted("run-1", 100L, prompt = "one")) }
         }
@@ -193,21 +222,42 @@ class AssistantOverlayControllerTest {
         controller.start()
         runCurrent()
 
-        assertTrue(controller.ask("one"))
+        assertTrue(controller.send("one"))
         runCurrent()
-        assertFalse(controller.ask("two"))
+        val messageCount = controller.state.value.conversation.messages.size
+
+        assertTrue(controller.send("two"))
+        runCurrent()
+
         assertEquals(listOf("one"), runtime.sent)
-        assertEquals(AssistantOverlayError.Busy, controller.state.value.error)
-
-        runtime.emitFor("session-1", RuntimeEvent.RunFinished("run-1", "done", RunStatus.DONE, 300L))
-        runCurrent()
-
+        assertEquals(listOf("two"), runtime.steered)
+        assertTrue(runtime.followUps.isEmpty())
+        assertEquals(messageCount, controller.state.value.conversation.messages.size)
         assertNull(controller.state.value.error)
         controller.reset()
     }
 
     @Test
-    fun askIgnoredWhenRuntimeAlreadyRunsSession() = runTest(dispatcher) {
+    fun sendWhileBusyLongPressQueues() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            onSend = { sessionId, _ -> emitFor(sessionId, RuntimeEvent.RunStarted("run-1", 100L, prompt = "one")) }
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+        controller.send("one")
+        runCurrent()
+
+        controller.send("later", followUp = true)
+        runCurrent()
+
+        assertEquals(listOf("later"), runtime.followUps)
+        assertTrue(runtime.steered.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun sendSteersWhenRuntimeRunsSessionExternally() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val controller = controller(runtime, "session-1", this)
         controller.start()
@@ -215,9 +265,11 @@ class AssistantOverlayControllerTest {
 
         runtime.activeRuns.value = mapOf("session-1" to ActiveRunSnapshot("run-9", 0L))
 
-        assertFalse(controller.ask("hi"))
+        assertTrue(controller.send("hi"))
+        runCurrent()
+
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(AssistantOverlayError.Busy, controller.state.value.error)
+        assertEquals(listOf("hi"), runtime.steered)
         controller.reset()
     }
 
@@ -247,13 +299,11 @@ class AssistantOverlayControllerTest {
             RuntimeEvent.ToolFinished("run-7", "call-1", "bash", "output", isError = false, durationMs = 20L),
         )
         runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-7", "working"))
-        runtime.emitFor("session-1", RuntimeEvent.RunFinished("run-7", "done", RunStatus.DONE, 2_000L))
         runCurrent()
 
         val messages = controller.state.value.conversation.messages
         val tail = messages.last()
-        assertEquals("done", tail.text)
-        assertEquals(MessageStatus.DONE, tail.status)
+        assertTrue(tail.streaming)
         val reasoning = tail.steps.filterIsInstance<AssistantStep.Reasoning>().first()
         assertEquals("plan", reasoning.text)
         val tool = tail.steps.filterIsInstance<AssistantStep.Tool>().first()
@@ -339,7 +389,7 @@ class AssistantOverlayControllerTest {
         controller.start()
         runCurrent()
 
-        assertTrue(controller.ask("hello"))
+        assertTrue(controller.send("hello"))
         runCurrent()
 
         val tail = controller.state.value.conversation.messages.last()
@@ -377,26 +427,203 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun askBeforeStartIsIgnored() = runTest(dispatcher) {
+    fun openSessionSwitchesProjectionAndSelection() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+            histories = mapOf(
+                "session-1" to emptyList(),
+                "session-2" to listOf(AssistantMessage(0, AssistantRole.USER, "second")),
+            )
+        }
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, "session-1", this) { selected += it }
+        controller.start()
+        runCurrent()
+
+        controller.openSession("session-2")
+        runCurrent()
+
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertEquals("second", controller.state.value.conversation.messages.single().text)
+        assertEquals("session-2", selected.last())
+        assertTrue(runtime.openCalls.contains("session-2.jsonl"))
+        controller.reset()
+    }
+
+    @Test
+    fun newSessionCreatesAndOpensIt() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val selected = mutableListOf<String>()
+        val controller = controller(runtime, null, this) { selected += it }
+        controller.start()
+        runCurrent()
+
+        controller.newSession()
+        runCurrent()
+
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertEquals("session-2", selected.last())
+        controller.reset()
+    }
+
+    @Test
+    fun selectWorkspaceReloadsSessionList() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", updatedAt = 10L), session("session-2", updatedAt = 20L))
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        controller.selectWorkspace("workspace-x")
+        runCurrent()
+
+        assertEquals("workspace-x", controller.state.value.workspaceId)
+        assertEquals(2, controller.state.value.sessions.size)
+        assertEquals("session-1", controller.state.value.sessionId)
+        controller.reset()
+    }
+
+    @Test
+    fun selectModelCallsRuntimeAndReflectsTruth() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessionModels["session-1"] = SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF)
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        assertEquals("model", controller.state.value.modelId)
+        assertEquals(listOf(ThinkingLevel.OFF, ThinkingLevel.HIGH), controller.state.value.thinkingLevels)
+
+        controller.selectModel("model-2")
+        runCurrent()
+
+        assertEquals("model-2", controller.state.value.modelId)
+        assertEquals("DeepSeek 2", controller.state.value.modelLabel)
+        assertEquals(
+            SessionModelSnapshot("deepseek", "model-2", ThinkingLevel.OFF),
+            runtime.sessionModels["session-1"],
+        )
+        controller.reset()
+    }
+
+    @Test
+    fun selectThinkingCallsRuntimeAndReflectsTruth() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessionModels["session-1"] = SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF)
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        controller.selectThinking(ThinkingLevel.HIGH)
+        runCurrent()
+
+        assertEquals(ThinkingLevel.HIGH, controller.state.value.thinkingLevel)
+        assertEquals(
+            SessionModelSnapshot("deepseek", "model", ThinkingLevel.HIGH),
+            runtime.sessionModels["session-1"],
+        )
+        controller.reset()
+    }
+
+    @Test
+    fun modelSwitchIgnoredWhileBusy() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessionModels["session-1"] = SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF)
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        runtime.activeRuns.value = mapOf("session-1" to ActiveRunSnapshot("run-9", 0L))
+        controller.selectModel("model-2")
+        runCurrent()
+
+        assertEquals("model", controller.state.value.modelId)
+        assertEquals(
+            SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF),
+            runtime.sessionModels["session-1"],
+        )
+        controller.reset()
+    }
+
+    @Test
+    fun clearQueueReturnsDroppedTexts() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            queued = listOf(
+                QueuedInput(InputQueueKind.STEER, "s1"),
+                QueuedInput(InputQueueKind.FOLLOW_UP, "f1"),
+            )
+        }
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        assertEquals(listOf("s1", "f1"), controller.clearQueue())
+        controller.reset()
+    }
+
+    @Test
+    fun sendBeforeStartIsIgnored() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val controller = controller(runtime, null, this)
 
-        assertFalse(controller.ask("hi"))
+        assertFalse(controller.send("hi"))
         assertTrue(runtime.sent.isEmpty())
         controller.reset()
     }
 
     @Test
-    fun resetClearsState() = runTest(dispatcher) {
+    fun resetClearsStateWithoutStoppingRun() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val controller = controller(runtime, "session-1", this)
         controller.start()
         runCurrent()
-        controller.ask("hi")
+        controller.send("hi")
         runCurrent()
 
         controller.reset()
 
         assertEquals(AssistantOverlayState(), controller.state.value)
+        assertTrue(runtime.stopped.isEmpty())
+    }
+
+    private class FakeProviders(
+        private val options: List<ModelOption> = listOf(
+            ModelOption("deepseek", "model", "DeepSeek", listOf(ThinkingLevel.OFF, ThinkingLevel.HIGH)),
+            ModelOption("deepseek", "model-2", "DeepSeek 2", listOf(ThinkingLevel.OFF, ThinkingLevel.HIGH)),
+        ),
+    ) : ProviderDirectory {
+        override val summaries: List<ProviderSummary> = options
+            .map { it.providerId }
+            .distinct()
+            .map { providerId ->
+                ProviderSummary(
+                    id = providerId,
+                    name = providerId,
+                    modelCount = options.count { it.providerId == providerId },
+                    baseUrl = null,
+                    hasOAuth = false,
+                    supportsApiKey = true,
+                )
+            }
+
+        override fun summary(providerId: String): ProviderSummary? = summaries.firstOrNull { it.id == providerId }
+
+        override fun models(providerId: String): List<ModelOption> =
+            options.filter { it.providerId == providerId }
+
+        override fun resolveConfig(config: ModelConfig): ModelConfig {
+            val models = models(config.providerId)
+            val model = models.firstOrNull { it.id == config.modelId } ?: models.firstOrNull() ?: return config
+            val thinking = config.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
+            return ModelConfig(model.providerId, model.id, thinking)
+        }
+
+        override fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model? = null
+
+        override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
     }
 }

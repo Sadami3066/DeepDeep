@@ -60,7 +60,7 @@ internal class SessionProjection(
         }
     }
 
-    fun ask(prompt: String) {
+    fun sendTurn(prompt: String) {
         val sessionId = currentSessionId ?: return
         val text = prompt.trim()
         if (text.isEmpty()) return
@@ -68,6 +68,21 @@ internal class SessionProjection(
         scope.launch {
             try {
                 runtime.send(sessionId, text)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                fail(error.message)
+            }
+        }
+    }
+
+    fun enqueue(prompt: String, followUp: Boolean) {
+        val sessionId = currentSessionId ?: return
+        val text = prompt.trim()
+        if (text.isEmpty()) return
+        scope.launch {
+            try {
+                if (followUp) runtime.followUp(sessionId, text) else runtime.steer(sessionId, text)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

@@ -94,7 +94,7 @@ class SessionProjectionTest {
         projection.open("session-1")
         runCurrent()
 
-        projection.ask("  hello  ")
+        projection.sendTurn("  hello  ")
 
         assertEquals(2, projection.state.value.messages.size)
         assertEquals("hello", projection.state.value.messages[0].text)
@@ -115,7 +115,7 @@ class SessionProjectionTest {
         projection.open("session-1")
         runCurrent()
 
-        projection.ask("hello")
+        projection.sendTurn("hello")
         runCurrent()
 
         val tail = projection.state.value.messages.last()
