@@ -4,21 +4,28 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 object AppVisibility {
     private val startedActivities = AtomicInteger(0)
+    private val foregroundState = MutableStateFlow(false)
 
-    val foreground: Boolean get() = startedActivities.get() > 0
+    val foreground: Boolean get() = foregroundState.value
+
+    val foregroundFlow: StateFlow<Boolean> = foregroundState.asStateFlow()
 
     @Volatile
     var taskId: Int? = null
 
     fun activityStarted() {
-        startedActivities.incrementAndGet()
+        foregroundState.value = startedActivities.incrementAndGet() > 0
     }
 
     fun activityStopped() {
-        startedActivities.updateAndGet { count -> if (count > 0) count - 1 else 0 }
+        foregroundState.value =
+            startedActivities.updateAndGet { count -> if (count > 0) count - 1 else 0 } > 0
     }
 
     @Suppress("DEPRECATION")
