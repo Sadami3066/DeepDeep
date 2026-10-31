@@ -454,7 +454,7 @@ internal fun AssistantOverlayScreen(
                         switcherOpen = true
                     },
                     maxHeight = panelMaxHeight,
-                    snapHeight = state.conversation.sending || !panelSlideDone,
+                    snapHeight = !panelSlideDone,
                     modifier = Modifier.fillMaxWidth().onSizeChanged { panelLaidOut = true },
                 )
             }

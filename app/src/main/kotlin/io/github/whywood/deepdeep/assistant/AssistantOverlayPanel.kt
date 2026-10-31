@@ -28,10 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -63,7 +63,6 @@ import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantStep
-import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.ui.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
@@ -99,33 +98,45 @@ internal fun AssistantOverlayPanel(
     val workspaceName = state.workspaces.firstOrNull { it.id == state.workspaceId }?.name
         ?: stringResource(R.string.assistant_overlay_workspace)
     var headerHeightPx by remember { mutableIntStateOf(0) }
-    var contentLaidOut by remember { mutableStateOf(false) }
-    var stableContentHeightPx by remember { mutableIntStateOf(-1) }
-
-    val contentHeightPx by remember {
-        derivedStateOf {
-            if (!contentLaidOut) return@derivedStateOf -1
-            val info = listState.layoutInfo
-            if (info.totalItemsCount == 0) return@derivedStateOf 0
-            val last = info.visibleItemsInfo.lastOrNull()
-            if (last != null && info.visibleItemsInfo.size == info.totalItemsCount) {
-                val first = info.visibleItemsInfo.first()
-                last.offset + last.size - first.offset + info.beforeContentPadding +
-                    info.afterContentPadding
-            } else {
-                -1
+    val itemHeights = remember(state.sessionId) { mutableStateMapOf<Any, Int>() }
+    var lastContentHeightPx by remember(state.sessionId) { mutableIntStateOf(-1) }
+    val pendingItem = pendingQuestions.firstOrNull { pending ->
+        messages.none { message ->
+            message.steps.any { step ->
+                step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
             }
         }
     }
+    val pendingKey = pendingItem?.let { "pending-question-${it.requestId}" }
+    val itemKeys = messages.map { it.id as Any } + listOfNotNull(pendingKey)
+    val itemSpacingPx = with(density) { 18.dp.roundToPx() }
+    val contentPaddingPx = with(density) { 6.dp.roundToPx() + 18.dp.roundToPx() }
+    val firstUnmeasuredIndex = itemKeys.indexOfFirst { !itemHeights.containsKey(it) }
+    val suffixOnlyMissing = firstUnmeasuredIndex >= 0 &&
+        itemKeys.subList(firstUnmeasuredIndex, itemKeys.size).none {
+            itemHeights.containsKey(it)
+        }
+    val measuredContentHeightPx = when {
+        itemKeys.isEmpty() -> 0
+        firstUnmeasuredIndex < 0 -> contentPaddingPx +
+            itemKeys.sumOf { itemHeights.getValue(it) } + itemSpacingPx * (itemKeys.size - 1)
+        lastContentHeightPx >= 0 && suffixOnlyMissing -> contentPaddingPx +
+            itemKeys.take(firstUnmeasuredIndex).sumOf { itemHeights.getValue(it) } +
+            itemSpacingPx * (itemKeys.size - 1)
+        else -> -1
+    }
+    SideEffect {
+        if (measuredContentHeightPx >= 0) lastContentHeightPx = measuredContentHeightPx
+    }
+    val contentHeightPx =
+        if (measuredContentHeightPx >= 0) measuredContentHeightPx else lastContentHeightPx
     val headerHeight = with(density) { headerHeightPx.toDp() }
-    val running = state.conversation.sending ||
-        messages.any { it.streaming || it.status == MessageStatus.RUNNING } ||
-        pendingQuestions.isNotEmpty()
+    val contentClamped = contentHeightPx < 0 ||
+        headerHeight + with(density) { contentHeightPx.toDp() } + 2.dp >= maxHeight
     val targetHeight = when {
-        running -> maxHeight
-        messages.isEmpty() -> headerHeight + 8.dp
-        stableContentHeightPx < 0 -> maxHeight
-        else -> (headerHeight + with(density) { stableContentHeightPx.toDp() } + 2.dp)
+        itemKeys.isEmpty() -> headerHeight + 8.dp
+        contentHeightPx < 0 -> maxHeight
+        else -> (headerHeight + with(density) { contentHeightPx.toDp() } + 2.dp)
             .coerceIn(headerHeight + 8.dp, maxHeight)
     }
     val panelHeight = animateDpAsState(
@@ -134,27 +145,20 @@ internal fun AssistantOverlayPanel(
         label = "overlay-panel-height",
     )
 
-    LaunchedEffect(state.sessionId, messages.size, running) {
-        if (messages.isEmpty() || running) {
-            stableContentHeightPx = -1
-            return@LaunchedEffect
-        }
-        delay(250)
-        val measured = contentHeightPx
-        stableContentHeightPx = if (measured >= 0) measured else -1
-    }
-
     LaunchedEffect(state.sessionId, state.conversation.loaded) {
         if (state.conversation.loaded) scroll.jumpToBottom(animate = false)
     }
-    LaunchedEffect(messages) { scroll.followContent() }
+    LaunchedEffect(messages, contentClamped) {
+        if (contentClamped) scroll.followContent()
+    }
     LaunchedEffect(pendingQuestions.map { it.requestId }) {
         if (pendingQuestions.isNotEmpty()) {
             delay(60)
             scroll.jumpToBottom(animate = true)
         }
     }
-    LaunchedEffect(scroll) {
+    LaunchedEffect(scroll, contentClamped) {
+        if (!contentClamped) return@LaunchedEffect
         snapshotFlow { panelHeight.value }.collect { scroll.anchorToBottom() }
     }
 
@@ -250,47 +254,43 @@ internal fun AssistantOverlayPanel(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .onSizeChanged { contentLaidOut = true }
                             .testTag("assistant_overlay_transcript"),
                         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 18.dp),
                         verticalArrangement = Arrangement.spacedBy(18.dp),
                     ) {
                         items(messages, key = { it.id }) { message ->
-                            ChatTurn(
-                                message = message,
-                                onToggleStep = { stepId -> actions.onToggleStep(message.id, stepId) },
-                                onCopyOutput = copyOutput,
-                                onQuote = onQuote,
-                                onOpenAttachment = actions.onOpenPreview,
-                                onOpenFile = actions.onOpenFile,
-                                onRetry = actions.onRetry,
-                                attachmentRoot = config.attachmentRoot,
-                                autoCollapseProcess = config.autoCollapseProcess,
-                                pendingQuestions = pendingQuestions,
-                                onAnswerQuestion = actions.onAnswerQuestion,
-                                onOpenPresentFile = actions.onOpenFile,
-                                onSharePresentFile = actions.onShareFile,
-                                onOpenWorkshop = actions.onOpenWorkshop,
-                            )
+                            Box(Modifier.onSizeChanged { itemHeights[message.id] = it.height }) {
+                                ChatTurn(
+                                    message = message,
+                                    onToggleStep = { stepId -> actions.onToggleStep(message.id, stepId) },
+                                    onCopyOutput = copyOutput,
+                                    onQuote = onQuote,
+                                    onOpenAttachment = actions.onOpenPreview,
+                                    onOpenFile = actions.onOpenFile,
+                                    onRetry = actions.onRetry,
+                                    attachmentRoot = config.attachmentRoot,
+                                    autoCollapseProcess = config.autoCollapseProcess,
+                                    pendingQuestions = pendingQuestions,
+                                    onAnswerQuestion = actions.onAnswerQuestion,
+                                    onOpenPresentFile = actions.onOpenFile,
+                                    onSharePresentFile = actions.onShareFile,
+                                    onOpenWorkshop = actions.onOpenWorkshop,
+                                )
+                            }
                         }
-                        pendingQuestions
-                            .firstOrNull { pending ->
-                                messages.none { message ->
-                                    message.steps.any { step ->
-                                        step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
-                                    }
-                                }
+                        if (pendingItem != null && pendingKey != null) {
+                            item(key = pendingKey) {
+                                AskQuestionCard(
+                                    questions = pendingItem.questions,
+                                    answers = null,
+                                    submitted = false,
+                                    onAnswer = { answers -> actions.onAnswerQuestion(pendingItem, answers) },
+                                    modifier = Modifier.onSizeChanged {
+                                        itemHeights[pendingKey] = it.height
+                                    },
+                                )
                             }
-                            ?.let { pending ->
-                                item(key = "pending-question-${pending.requestId}") {
-                                    AskQuestionCard(
-                                        questions = pending.questions,
-                                        answers = null,
-                                        submitted = false,
-                                        onAnswer = { answers -> actions.onAnswerQuestion(pending, answers) },
-                                    )
-                                }
-                            }
+                        }
                     }
                 }
                 Box(
