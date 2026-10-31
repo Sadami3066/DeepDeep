@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.voice
+package io.github.whywood.deepdeep.ui.common
 
 import android.Manifest
 import android.app.Activity

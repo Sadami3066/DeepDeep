@@ -75,9 +75,9 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import java.io.File
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.ui.voice.rememberInlineVoiceInput
-import io.github.whywood.deepdeep.ui.voice.voiceFailureText
-import io.github.whywood.deepdeep.ui.voice.voiceMicGestures
+import io.github.whywood.deepdeep.ui.common.rememberInlineVoiceInput
+import io.github.whywood.deepdeep.ui.common.voiceFailureText
+import io.github.whywood.deepdeep.ui.common.voiceMicGestures
 
 @OptIn(ExperimentalFoundationApi::class)
 data class ChatComposerState(
