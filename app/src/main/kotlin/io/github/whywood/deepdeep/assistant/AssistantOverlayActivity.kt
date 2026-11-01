@@ -28,6 +28,9 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.ui.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
 import io.github.whywood.deepdeep.ui.shell.shareChooser
 
@@ -58,6 +61,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                     homeWorkspaceId = AgentRuntimeHost.HOME_ID,
                     scope = graph.appScope,
                     providers = graph.providerCatalog,
+                    attachmentStore = graph.attachmentStore,
+                    homeDir = graph.homeDir,
                     configuredProviders = { graph.credentials.authKinds.value.keys },
                     defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
@@ -93,6 +98,8 @@ class AssistantOverlayActivity : ComponentActivity() {
             val shareFailedMessage = stringResource(R.string.present_share_failed)
             val shareTitle = stringResource(R.string.assistant_attach_share)
             var preview by remember { mutableStateOf<AssistantOverlayPreview?>(null) }
+            var attachSheetOpen by remember { mutableStateOf(false) }
+            val attachmentPickers = rememberAttachmentPickers { uri -> controller.attach(uri) }
             val attachmentRoot = remember(state.conversationCwd) {
                 resolveAttachmentRoot(state.conversationCwd, graph.homeDir)
             }
@@ -155,6 +162,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                                 file = graph.attachmentStore.file(attachment, attachmentRoot),
                             )
                         },
+                        onPickAttachment = { attachSheetOpen = true },
+                        onRemoveAttachment = controller::removeAttachment,
                         onOpenFile = openFile,
                         onShareFile = shareFile,
                         onOpenWorkshop = { state.sessionId?.let(::openInApp) },
@@ -179,6 +188,19 @@ class AssistantOverlayActivity : ComponentActivity() {
                         },
                     ),
                 )
+                if (attachSheetOpen) {
+                    AttachmentSourceSheet(
+                        onDismiss = { attachSheetOpen = false },
+                        onPick = { source ->
+                            attachSheetOpen = false
+                            when (source) {
+                                AttachmentSource.IMAGE -> attachmentPickers.pickImages()
+                                AttachmentSource.FILE -> attachmentPickers.pickFiles()
+                                AttachmentSource.CAMERA -> attachmentPickers.takePhoto()
+                            }
+                        },
+                    )
+                }
             }
         }
     }

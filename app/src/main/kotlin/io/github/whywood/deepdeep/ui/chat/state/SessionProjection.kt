@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
 import io.github.whywood.deepdeep.runtime.AgentRuntime
+import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ConversationState
@@ -60,14 +61,14 @@ internal class SessionProjection(
         }
     }
 
-    fun sendTurn(prompt: String) {
+    fun sendTurn(prompt: String, images: List<ImagePart> = emptyList()) {
         val sessionId = currentSessionId ?: return
         val text = prompt.trim()
         if (text.isEmpty()) return
         mutableState.update { it.beginTurn(text, System.currentTimeMillis()) }
         scope.launch {
             try {
-                runtime.send(sessionId, text)
+                runtime.send(sessionId, text, images)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

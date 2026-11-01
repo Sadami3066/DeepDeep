@@ -1,8 +1,18 @@
 package io.github.whywood.deepdeep.assistant
 
+import android.net.Uri
+import io.github.whywood.deepdeep.core.resolveAttachmentRoot
+import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentKind
+import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.ImageNormalizer
+import io.github.whywood.deepdeep.data.NormalizedImage
+import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -13,7 +23,9 @@ import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
 import io.github.whywood.deepdeep.ui.chat.state.SessionProjection
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -26,8 +38,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
-enum class AssistantOverlayError { StartFailed, SendFailed, SwitchFailed }
+enum class AssistantOverlayError {
+    StartFailed,
+    SendFailed,
+    SwitchFailed,
+    AttachmentFailed,
+    AttachmentLimit,
+    AttachmentTooLarge,
+}
 
 data class AssistantOverlayState(
     val conversation: ConversationState = ConversationState(),
@@ -44,6 +64,8 @@ data class AssistantOverlayState(
     val models: List<ModelOption> = emptyList(),
     val thinkingLevel: ThinkingLevel = ThinkingLevel.OFF,
     val thinkingLevels: List<ThinkingLevel> = listOf(ThinkingLevel.OFF),
+    val attachments: List<AttachmentRef> = emptyList(),
+    val importingAttachment: Boolean = false,
     val error: AssistantOverlayError? = null,
 )
 
@@ -53,12 +75,17 @@ class AssistantOverlayController(
     private val homeWorkspaceId: String,
     private val scope: CoroutineScope,
     private val providers: ProviderDirectory,
+    private val attachmentStore: AttachmentStore,
+    private val homeDir: File,
     private val configuredProviders: () -> Set<String> = { emptySet() },
     private val defaultModel: suspend () -> ModelConfig = { ModelConfig() },
     private val onSessionSelected: (String) -> Unit = {},
     private val initialSessionId: () -> String? = { null },
-    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
+    private val normalizeImage: suspend (File, String) -> NormalizedImage? = { file, mime ->
+        ImageNormalizer.normalize(file, mime)
+    },
 ) {
     private val mutableState = MutableStateFlow(AssistantOverlayState())
     val state: StateFlow<AssistantOverlayState> = mutableState.asStateFlow()
@@ -91,18 +118,107 @@ class AssistantOverlayController(
     }
 
     fun send(text: String, followUp: Boolean = false): Boolean {
-        val prompt = text.trim()
-        if (prompt.isEmpty()) return false
         val current = mutableState.value
         val sessionId = current.sessionId ?: return false
         if (!current.conversation.loaded) return false
-        mutableState.update { it.copy(error = null) }
-        if (isBusy(sessionId, current)) {
-            enqueue(sessionId, prompt, followUp)
-            return true
+        val attachments = current.attachments
+        val prompt = buildPrompt(attachments, text.trim())
+        if (prompt.isEmpty()) return false
+        val root = resolveAttachmentRoot(current.conversationCwd, homeDir)
+        val imageRefs = attachments.filter { it.kind == AttachmentKind.IMAGE }
+        mutableState.update { it.copy(attachments = emptyList(), error = null) }
+        if (imageRefs.isEmpty()) {
+            dispatch(sessionId, prompt, emptyList(), followUp)
+        } else {
+            scope.launch {
+                val images = normalizeImages(imageRefs, root)
+                dispatch(sessionId, prompt, images, followUp)
+            }
         }
-        projection.sendTurn(prompt)
         return true
+    }
+
+    fun attach(uri: Uri) {
+        val current = mutableState.value
+        val sessionId = current.sessionId ?: return
+        val root = resolveAttachmentRoot(current.conversationCwd, homeDir)
+        importAttachment(sessionId, root) { attachmentStore.import(uri, root) }
+    }
+
+    fun removeAttachment(id: String) {
+        mutableState.update { current ->
+            current.copy(attachments = current.attachments.filterNot { attachment -> attachment.id == id })
+        }
+    }
+
+    internal fun importAttachment(sessionId: String, root: File, load: suspend () -> AttachmentImport) {
+        if (mutableState.value.attachments.size >= SessionDraftStore.MAX_ATTACHMENTS) {
+            setError(AssistantOverlayError.AttachmentLimit)
+            return
+        }
+        scope.launch {
+            mutableState.update { if (it.sessionId == sessionId) it.copy(importingAttachment = true) else it }
+            try {
+                val imported = withContext(ioDispatcher) { load() }
+                if (mutableState.value.sessionId != sessionId) {
+                    if (imported is AttachmentImport.Imported) {
+                        runCatching { attachmentStore.file(imported.ref, root).delete() }
+                    }
+                    return@launch
+                }
+                when (imported) {
+                    is AttachmentImport.Imported -> mutableState.update { current ->
+                        if (current.attachments.size >= SessionDraftStore.MAX_ATTACHMENTS) {
+                            current.copy(error = AssistantOverlayError.AttachmentLimit)
+                        } else {
+                            current.copy(attachments = current.attachments + imported.ref, error = null)
+                        }
+                    }
+
+                    AttachmentImport.TooLarge -> setError(AssistantOverlayError.AttachmentTooLarge)
+                    AttachmentImport.InsufficientSpace,
+                    AttachmentImport.UnsupportedImage,
+                    AttachmentImport.Failed,
+                    -> setError(AssistantOverlayError.AttachmentFailed)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (mutableState.value.sessionId == sessionId) {
+                    setError(AssistantOverlayError.AttachmentFailed)
+                }
+            } finally {
+                mutableState.update { if (it.sessionId == sessionId) it.copy(importingAttachment = false) else it }
+            }
+        }
+    }
+
+    private fun dispatch(sessionId: String, prompt: String, images: List<ImagePart>, followUp: Boolean) {
+        if (mutableState.value.sessionId != sessionId) return
+        if (isBusy(sessionId, mutableState.value)) {
+            enqueue(sessionId, prompt, followUp, images)
+        } else {
+            projection.sendTurn(prompt, images)
+        }
+    }
+
+    private suspend fun normalizeImages(refs: List<AttachmentRef>, root: File): List<ImagePart> =
+        withContext(ioDispatcher) {
+            refs.mapNotNull { ref ->
+                try {
+                    normalizeImage(attachmentStore.file(ref, root), ref.mime)
+                        ?.let { image -> ImagePart(image.data, image.mimeType) }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    null
+                }
+            }
+        }
+
+    private fun buildPrompt(attachments: List<AttachmentRef>, body: String): String {
+        if (attachments.isEmpty()) return body
+        return (encodeAttachmentBlock(attachments) + "\n\n" + body).trim()
     }
 
     fun stop() {
@@ -140,6 +256,8 @@ class AssistantOverlayController(
                         conversation = projection.state.value,
                         sessionId = target,
                         sessionTitle = "",
+                        attachments = emptyList(),
+                        importingAttachment = false,
                         error = null,
                     )
                 }
@@ -166,6 +284,8 @@ class AssistantOverlayController(
                         conversation = projection.state.value,
                         sessionId = opened.sessionId,
                         sessionTitle = "",
+                        attachments = emptyList(),
+                        importingAttachment = false,
                         error = null,
                     )
                 }
@@ -334,10 +454,14 @@ class AssistantOverlayController(
         }
     }
 
-    private fun enqueue(sessionId: String, prompt: String, followUp: Boolean) {
+    private fun enqueue(sessionId: String, prompt: String, followUp: Boolean, images: List<ImagePart>) {
         scope.launch {
             try {
-                if (followUp) runtime.followUp(sessionId, prompt) else runtime.steer(sessionId, prompt)
+                if (followUp) {
+                    runtime.followUp(sessionId, prompt, images)
+                } else {
+                    runtime.steer(sessionId, prompt, images)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
