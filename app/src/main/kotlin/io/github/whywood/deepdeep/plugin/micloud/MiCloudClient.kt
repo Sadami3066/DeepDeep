@@ -16,6 +16,7 @@ class MiCloudClient(
     private val baseUrl: String = DEFAULT_BASE_URL,
     private val connectTimeoutMs: Int = CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = READ_TIMEOUT_MS,
+    private val onAuthExpired: () -> Unit = {},
 ) {
     constructor(cookieStore: MiCloudCookieStore) : this({ cookieStore.read() })
 
@@ -30,14 +31,14 @@ class MiCloudClient(
             connection.setRequestProperty("Cookie", cookie)
             val status = connection.responseCode
             if (status == HttpURLConnection.HTTP_UNAUTHORIZED || status == HttpURLConnection.HTTP_FORBIDDEN) {
-                throw MiCloudAuthException(AUTH_EXPIRED)
+                authExpired()
             }
             if (status !in 200..299) throw IOException("HTTP $status")
-            if (connection.url.host != baseHost()) throw MiCloudAuthException(AUTH_EXPIRED)
+            if (connection.url.host != baseHost()) authExpired()
             val body = connection.inputStream.use { it.readBytes().decodeToString() }
             val json = runCatching { Json.parseToJsonElement(body) }.getOrNull()
                 ?: throw IOException("小米云返回了非 JSON 内容")
-            if (isMiCloudAuthFailure(json)) throw MiCloudAuthException(AUTH_EXPIRED)
+            if (isMiCloudAuthFailure(json)) authExpired()
             json
         } finally {
             connection.disconnect()
@@ -51,10 +52,10 @@ class MiCloudClient(
             connection.setRequestProperty("Cookie", cookie)
             val status = connection.responseCode
             if (status == HttpURLConnection.HTTP_UNAUTHORIZED || status == HttpURLConnection.HTTP_FORBIDDEN) {
-                throw MiCloudAuthException(AUTH_EXPIRED)
+                authExpired()
             }
             if (status !in 200..299) throw IOException("HTTP $status")
-            if (connection.url.host != baseHost()) throw MiCloudAuthException(AUTH_EXPIRED)
+            if (connection.url.host != baseHost()) authExpired()
             val target = dest.absoluteFile
             target.parentFile?.mkdirs()
             val temp = File(target.parentFile, "${target.name}.part")
@@ -79,6 +80,11 @@ class MiCloudClient(
 
     private suspend fun requireCookie(): String = cookieProvider()?.takeIf { it.isNotBlank() }
         ?: throw MiCloudAuthException("小米云未登录")
+
+    private fun authExpired(): Nothing {
+        onAuthExpired()
+        throw MiCloudAuthException(AUTH_EXPIRED)
+    }
 
     private fun baseHost(): String = runCatching { URL(baseUrl).host }.getOrDefault("i.mi.com")
 

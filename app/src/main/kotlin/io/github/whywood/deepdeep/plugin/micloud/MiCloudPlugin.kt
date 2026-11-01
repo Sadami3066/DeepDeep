@@ -24,9 +24,28 @@ import kotlinx.coroutines.withContext
 class MiCloudPlugin(
     private val context: Context,
     private val onCapabilitiesChanged: () -> Unit = {},
+    private val onSessionInvalidated: () -> Unit = {},
 ) : OfficialPlugin {
     private val cookieStore by lazy { MiCloudCookieStore(context) }
-    private val client by lazy { MiCloudClient(cookieStore) }
+    private val probeClient by lazy {
+        MiCloudClient(
+            cookieProvider = { cookieStore.read() },
+            connectTimeoutMs = 5_000,
+            readTimeoutMs = 8_000,
+        )
+    }
+    private val session by lazy {
+        MiCloudSession(
+            cookie = { cookieStore.read() },
+            probe = { probeClient.profile() },
+        )
+    }
+    private val client by lazy {
+        MiCloudClient(
+            cookieProvider = { cookieStore.read() },
+            onAuthExpired = ::invalidateSession,
+        )
+    }
     @Volatile private var writer: MiCloudWebWriter? = null
 
     val preferences: MiCloudPreferences by lazy { MiCloudPreferences(context, onCapabilitiesChanged) }
@@ -46,16 +65,32 @@ class MiCloudPlugin(
         cookieStore.clear()
         preferences.clear()
         withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
+        session.markSignedOut()
         writer?.destroy()
         writer = null
     }
 
     override suspend fun recover() = Unit
 
-    override suspend fun status(): PluginStatus = if (cookieStore.read().isNullOrBlank()) {
-        PluginStatus.NotReady(string(R.string.plugin_micloud_status_not_logged_in))
-    } else {
-        PluginStatus.Ready(string(R.string.plugin_micloud_status_ready_unknown))
+    override suspend fun status(): PluginStatus = miCloudStatusOf(session.status())
+
+    internal fun miCloudStatusOf(view: MiCloudSessionView): PluginStatus = when (view.state) {
+        MiCloudSessionState.SIGNED_OUT ->
+            PluginStatus.NotReady(string(R.string.plugin_micloud_status_not_logged_in))
+
+        MiCloudSessionState.VERIFIED -> PluginStatus.Ready(
+            view.nickname ?: string(R.string.plugin_micloud_status_ready_unknown),
+            view.nickname,
+        )
+
+        MiCloudSessionState.EXPIRED ->
+            PluginStatus.NotReady(string(R.string.plugin_micloud_status_expired))
+
+        MiCloudSessionState.UNVERIFIED -> if (view.nickname != null) {
+            PluginStatus.Ready(string(R.string.plugin_micloud_status_unverified), view.nickname)
+        } else {
+            PluginStatus.NotReady(string(R.string.plugin_micloud_status_unverifiable))
+        }
     }
 
     override suspend fun setup(ui: PluginUi) {
@@ -76,7 +111,9 @@ class MiCloudPlugin(
             verifyAttempts = 0
             ui.stage(R.string.plugin_micloud_stage_verifying)
             while (verifyAttempts < VERIFY_ATTEMPTS) {
-                if (verifySession()) {
+                val profile = verifySession()
+                if (profile != null) {
+                    session.markVerified(profile)
                     ui.progress(null, R.string.plugin_micloud_stage_signed_in)
                     return
                 }
@@ -114,12 +151,16 @@ class MiCloudPlugin(
                 ui.progress(null, R.string.plugin_micloud_stage_logging_out)
                 cookieStore.clear()
                 withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
+                session.markSignedOut()
             }
         }
     }
 
     override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = listOf(
-        PluginDetailRow(R.string.plugin_micloud_detail_account, status.label),
+        PluginDetailRow(
+            R.string.plugin_micloud_detail_account,
+            (status as? PluginStatus.Ready)?.account ?: status.label,
+        ),
         PluginDetailRow(
             R.string.plugin_micloud_detail_features,
             context.getString(
@@ -143,18 +184,23 @@ class MiCloudPlugin(
     override fun promptBody(status: PluginStatus): String =
         miCloudPromptBody(status, preferences.capabilities.value)
 
-    private fun string(id: Int): String = context.getString(id)
+    private fun string(id: Int): String = context.resources.getString(id)
 
-    private fun webWriter(): MiCloudWebWriter =
-        writer ?: MiCloudWebWriter(context, cookieStore).also { writer = it }
+    private fun webWriter(): MiCloudWebWriter = writer
+        ?: MiCloudWebWriter(context, cookieStore, onAuthExpired = ::invalidateSession)
+            .also { writer = it }
 
-    private suspend fun verifySession(): Boolean = try {
+    private fun invalidateSession() {
+        session.markExpired()
+        onSessionInvalidated()
+    }
+
+    private suspend fun verifySession(): MiCloudProfile? = try {
         client.profile()
-        true
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
-        false
+        null
     }
 
     private companion object {

@@ -249,6 +249,9 @@ class AppGraph(context: Context) : AppDependencies {
                     onCapabilitiesChanged = {
                         scope.launch { host.reconfigure() }
                     },
+                    onSessionInvalidated = {
+                        scope.launch { pluginManager.refresh() }
+                    },
                 ),
                 WecomPlugin(
                     context = appContext,
