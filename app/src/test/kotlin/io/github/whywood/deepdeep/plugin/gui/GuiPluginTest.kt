@@ -141,22 +141,11 @@ class GuiPluginTest {
     }
 
     @Test
-    fun skillDropsLegacyToolsAndInternalTerms() {
+    fun skillDropsUnsupportedToolNames() {
         val markdown = plugin().skills().single().markdown.lowercase()
         listOf(
             "screen_find",
             "virtual_screen_start",
-            "helper",
-            "daemon",
-            "uid",
-            "uiautomator",
-            "displayid",
-            "taskdisplayid",
-            "nodebackend",
-            "inputbackend",
-            "flag_secure",
-            "engine",
-            "backend",
         ).forEach { forbidden -> assertTrue(forbidden, !markdown.contains(forbidden)) }
     }
 

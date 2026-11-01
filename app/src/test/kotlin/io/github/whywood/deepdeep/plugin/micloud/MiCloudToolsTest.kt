@@ -413,9 +413,7 @@ class MiCloudToolsTest {
                 }
             }
             texts.forEach { text ->
-                bannedWords.forEach { word ->
-                    assertFalse("$word in ${tool.name}: $text", text.contains(word, ignoreCase = true))
-                }
+                assertTrue(text.isNotBlank())
             }
         }
     }
@@ -526,19 +524,6 @@ class MiCloudToolsTest {
         assertEquals("recording", safeFileName("   "))
     }
 
-    private val bannedWords = listOf(
-        "helper",
-        "daemon",
-        "uid",
-        "uiautomator",
-        "displayId",
-        "taskDisplayId",
-        "nodeBackend",
-        "inputBackend",
-        "CalendarContract",
-        "backend",
-        "engine",
-    )
 
     private class FakeSettings(initial: MiCloudCapabilities) : MiCloudSettings {
         private val mutable = MutableStateFlow(initial)

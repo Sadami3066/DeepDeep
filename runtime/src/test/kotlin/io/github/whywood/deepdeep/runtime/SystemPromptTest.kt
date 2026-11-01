@@ -97,4 +97,13 @@ class SystemPromptTest {
         assertFalse(rules.contains("virtual_screen"))
         assertFalse(rules.contains("fails twice"))
     }
+    @Test
+    fun androidShellRulesRemainAvailableWithoutLinux() {
+        val rules = buildToolRuleSection(setOf("root_shell")).getValue("rules")
+        assertTrue(rules.contains("Android system shell"))
+        assertTrue(rules.contains("upstream output may already be incomplete"))
+        assertTrue(rules.contains("do not automatically retry"))
+        assertFalse(rules.contains("Linux /bin/sh"))
+    }
+
 }

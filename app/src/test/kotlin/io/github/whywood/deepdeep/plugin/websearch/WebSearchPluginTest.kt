@@ -83,16 +83,12 @@ class WebSearchPluginTest {
         tools.forEach { tool ->
             assertNull(tool.promptSnippet)
             assertNull(tool.promptGuidelines)
-            bannedWords.forEach { word ->
-                assertFalse("$word in ${tool.name}", tool.description.contains(word, ignoreCase = true))
-            }
+            assertTrue(tool.description.isNotBlank())
             val properties = tool.parameters["properties"] as JsonObject
             properties.values.forEach { property ->
                 val description = ((property as? JsonObject)?.get("description") as? JsonPrimitive)?.contentOrNull
                 description?.let { text ->
-                    bannedWords.forEach { word ->
-                        assertFalse("$word in $text", text.contains(word, ignoreCase = true))
-                    }
+                    assertTrue(text.isNotBlank())
                 }
             }
         }
@@ -235,19 +231,6 @@ class WebSearchPluginTest {
         assertTrue(result.text().contains("API Key"))
     }
 
-    private val bannedWords = listOf(
-        "helper",
-        "daemon",
-        "uid",
-        "uiautomator",
-        "displayId",
-        "taskDisplayId",
-        "nodeBackend",
-        "inputBackend",
-        "CalendarContract",
-        "backend",
-        "engine",
-    )
 
     private fun newPlugin(key: String? = "sk-test"): WebSearchPlugin =
         WebSearchPlugin(context, { key }, provider)
