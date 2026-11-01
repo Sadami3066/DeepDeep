@@ -2,6 +2,10 @@
 
 ## HEAD (since m2)
 
+- refactor: 工具文本分层：固定全局规则、去掉 promptSnippet/guidelines、结果去内部字段 [工具]
+- refactor: 目标/后台任务/定时任务/虚拟屏收纳为 action 工具，屏幕合并为 10 个 [工具]
+- fix: plugin_setup 按外部插件列表生成参数；主屏输入/状态口径与选择器规则对齐 [工具]
+- docs: 记录工具文本分层与暴露粒度取舍 [docs]
 - feat: 统一 screen_* 屏幕工具层（ADB + 无障碍 + 虚拟屏） [屏幕]
 - fix: 虚拟屏注入 source、落屏诊断、root 冷启动探测、配对前台服务与单 shell 后端 [权限]
 - feat: 悬浮窗虚拟屏缩略预览与 content frame 坐标修复 [浮窗]

@@ -36,9 +36,9 @@
 - Alpine/proot 里的 `bash`：无 root 用户空间，**不是安全沙箱**
 - 权限分三档（设置 → 权限）：普通档只有 `bash`；无线调试（ADB）/Root 档按实际可用后端注册工具——ADB 守护可用时 `adb_shell`（App 内嵌守护，uid 2000），Root 可用时 `root_shell`；只注册 effective 的一个 shell 工具，某后端不可用时自动回落另一端。两个 shell 工具默认 15s、上限 120s，与 `bash` 共用输出格式（截断提示 + 退出码）；不限制前台与轮次来源，后台、定时、目标续跑与工坊 Agent 都能用。
 - 无线调试首次设置（无需安装其他 App）：开发者选项打开「无线调试」→ 权限页点「配对无线调试」→ 在系统「使用配对码配对设备」页面看到 6 位码 → 下拉通知并展开（部分系统需长按）输入配对码；配对成功后自动点火守护进程。重启后无线调试会关闭，重新打开后在权限页点「连接并启动守护进程」即可，无需重新配对。
-- 后台任务：`job_start` / `job_output`（增量）/ `job_list` / `job_kill`；运行中数量显示在聊天顶栏右侧（与上下文占用、定时任务、更多并列）
-- 定时任务：五段 cron（英文名、`*`/`/`/`,`/`-`、范围含 1827 天），绑定会话，到点投递回原对话；错过时下次打开补投一次；Service 被杀后不保证投递
-- 目标（goal）：自动续跑，可暂停/继续/完成/清除；轮数上限来自设置或显式参数；**只在进程内有效**，重启清空
+- 后台任务：`job(action=start|output|list|kill)`；`output` 返回增量与状态行；运行中数量显示在聊天顶栏右侧（与上下文占用、定时任务、更多并列）
+- 定时任务：`schedule(action=create|list|update|delete)`；五段 cron（英文名、`*`/`/`/`,`/`-`、范围含 1827 天），绑定会话，到点投递回原对话；错过时下次打开补投一次；Service 被杀后不保证投递
+- 目标（goal）：`goal(action=get|create|edit|pause|resume|complete|blocked)`；自动续跑，轮数上限来自设置或显式参数；**只在进程内有效**，重启清空
 - 交付：`present` 文件/图片/HTML/创意
 
 ## 悬浮窗
@@ -52,9 +52,9 @@
 ## 虚拟屏幕
 
 - 需要选中无线调试（ADB）或 Root 档，且对应后端实际可用（ADB 守护运行或 Root 已授权）；插件 → 虚拟屏幕 → 启动，浮窗面板出现实时缩略图，点开看全屏画面；虚拟屏始终竖屏，分辨率取手机真实屏幕的短边×长边（测试机 1220×2712），与手机当前方向无关
-- Agent 用统一的 `screen_*` 工具并指定 `target=virtual` 观察/点击/滑动/输入/截图/启动 App；`virtual_screen_start/stop/status` 管生命周期，不占用主屏
+- Agent 用统一的 `screen_*` 工具并指定 `target=virtual` 观察/点击/滑动/输入/截图/启动 App；`virtual_screen(action=start|stop|status)` 管生命周期，不占用主屏
 - 虚拟屏节点读取、ref 点击、中文输入、等待需要无障碍；无障碍关闭时仍可用坐标点击/滑动/按键/ASCII 输入/截图。主屏节点读取优先无障碍，缺失时退 uiautomator XML；虚拟屏在线时 uiautomator 可能读到副屏，因此主屏节点读取只走无障碍，关闭时会明确报错；主屏滑动、部分按键与 ASCII 输入需要无线调试
-- 虚拟屏还没画出新内容时截图会回退到最近一帧；helper 的 `screen_type` 无无障碍时只支持 ASCII；被系统挪到虚拟屏属于系统行为，`screen_launch` 会返回 `taskDisplayId`/`landedOnMain` 诊断
+- 虚拟屏还没画出新内容时截图会回退到最近一帧；无无障碍时 `screen_type` 只支持 ASCII；被系统挪到虚拟屏属于系统行为，`screen_app action=launch` 会返回 `onExpectedScreen` 与可执行提示
 - 停止用插件页「停止虚拟屏幕」；App 进程结束后 helper 自动退出并释放虚拟屏
 
 ## 接入
@@ -64,7 +64,7 @@
   - 外部（按需下载/安装/更新/卸载）：飞书、企业微信、小米云服务
   - 内部（内置，可单独启停）：目标、后台任务、定时任务、创意工坊、网络搜索、屏幕、安排
 - **屏幕**：一套 `screen_*` 工具（target=main/virtual）通过无障碍 + 无线调试 + 虚拟屏 helper 查看并操作主屏与虚拟屏
-- **虚拟屏幕**：特权 helper 建后台虚拟屏，Agent 用 `screen_*` 的 target=virtual 启动并操作 App；`virtual_screen_start/stop/status` 管生命周期（需无线调试或 Root 后端可用）
+- **虚拟屏幕**：特权 helper 建后台虚拟屏，Agent 用 `screen_*` 的 target=virtual 启动并操作 App；`virtual_screen(action=start|stop|status)` 管生命周期（需无线调试或 Root 后端可用）
 - **安排**：读写系统日历事件与提醒（需日历权限）
 - **小米云服务**：WebView 登录 i.mi.com，按开关读写账号、笔记、待办、短信与通话、联系人、相册、录音
 - **企业微信**：安装官方 `wecom-cli` 后扫码授权，操作消息/文档/日程/待办；**飞书**：安装 CLI 后走 device-flow 授权
@@ -79,12 +79,13 @@
 |---|---|
 | pi 原生 | `read` `write` `edit` `ls` `grep` `find` `bash` |
 | App 核心 | `ask_user_question` `plugin_setup` `present` |
-| 目标 | `get_goal` `create_goal` `update_goal` |
-| 后台任务 | `job_start` `job_output` `job_list` `job_kill` |
-| 定时任务 | `schedule_create` `schedule_list` `schedule_update` `schedule_delete` |
+| 目标 | `goal` |
+| 后台任务 | `job` |
+| 定时任务 | `schedule` |
 | 创意工坊 | `workshop_create` `workshop_load` `workshop_list` `workshop_edit` |
 | 网络搜索 | `web_search` `web_fetch` |
-| 屏幕操作 | `screen_*`（main/virtual） |
+| 屏幕操作 | `screen_status` `screen_observe` `screen_screenshot` `screen_app` `screen_tap` `screen_swipe` `screen_scroll` `screen_type` `screen_key` `screen_wait` |
+| 虚拟屏生命周期 | `virtual_screen` |
 | 无线调试（ADB，可选） | `adb_shell` |
 | Root（可选） | `root_shell` |
 | MCP | `<server>` 提供的工具，形如 `mcp__<server>__<tool>` |
