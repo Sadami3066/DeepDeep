@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.guessMime
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -66,6 +69,11 @@ internal sealed interface MarkdownImageState {
 
 @Composable
 internal fun MarkdownImage(alt: String, source: String, title: String?, colors: DeepDeepColors) {
+    val animated = remember(source) { animatedImageFile(source) }
+    if (animated != null) {
+        AnimatedMarkdownImage(file = animated, alt = alt, title = title, colors = colors)
+        return
+    }
     val context = LocalContext.current
     val shape = RoundedCornerShape(12.dp)
     BoxWithConstraints(Modifier.fillMaxWidth().clip(shape)) {
@@ -102,6 +110,74 @@ internal fun MarkdownImage(alt: String, source: String, title: String?, colors: 
 }
 
 @Composable
+private fun AnimatedMarkdownImage(
+    file: File,
+    alt: String,
+    title: String?,
+    colors: DeepDeepColors,
+) {
+    var previewVisible by remember(file.absolutePath) { mutableStateOf(false) }
+    val label = alt.ifBlank { title.orEmpty() }
+    val bounds by produceState<Pair<Int, Int>?>(
+        initialValue = null,
+        file.absolutePath,
+        file.lastModified(),
+    ) {
+        value = withContext(Dispatchers.IO) { imageBounds(file) }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val density = LocalDensity.current
+        val containerWidthPx = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth
+        } else {
+            with(density) { 360.dp.roundToPx() }
+        }
+        val maxHeightPx = with(density) { 420.dp.roundToPx() }
+        val dimensions = bounds?.let { (width, height) ->
+            imageDisplaySize(containerWidthPx, width, height, maxHeightPx)
+        } ?: imageDisplaySize(containerWidthPx, 3, 2, maxHeightPx)
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            AnimatedImage(
+                file = file,
+                modifier = Modifier
+                    .size(
+                        width = with(density) { dimensions.first.toDp() },
+                        height = with(density) { dimensions.second.toDp() },
+                    )
+                    .clip(RoundedCornerShape(12.dp))
+                    .testTag("markdown_animated_image_${file.name.hashCode()}"),
+                onClick = { previewVisible = true },
+            )
+        }
+    }
+    if (previewVisible) {
+        FileViewerDialog(
+            file = file,
+            name = label.ifBlank { file.name },
+            mime = guessMime(file.name),
+            onDismiss = { previewVisible = false },
+            onShare = null,
+        )
+    }
+}
+
+private fun imageDisplaySize(
+    containerWidthPx: Int,
+    width: Int,
+    height: Int,
+    maxHeightPx: Int,
+): Pair<Int, Int> {
+    val aspect = width.toFloat() / height.coerceAtLeast(1).toFloat()
+    var targetHeight = (containerWidthPx / aspect).toInt().coerceAtLeast(1)
+    var targetWidth = containerWidthPx
+    if (targetHeight > maxHeightPx) {
+        targetHeight = maxHeightPx
+        targetWidth = (targetHeight * aspect).toInt().coerceAtLeast(1)
+    }
+    return targetWidth to targetHeight
+}
+
+@Composable
 private fun LoadedImage(
     bitmap: Bitmap,
     alt: String,
@@ -129,6 +205,15 @@ private fun LoadedImage(
         widthPx = (heightPx * aspect).toInt().coerceAtLeast(1)
     }
     val label = alt.ifBlank { title.orEmpty() }
+    val context = LocalContext.current
+    val saveFile = remember(source) {
+        when {
+            source.startsWith("file://") -> Uri.parse(source).path?.let(::File)?.takeIf { it.isFile }
+            source.startsWith("http://", ignoreCase = true) ||
+                source.startsWith("https://", ignoreCase = true) -> null
+            else -> File(source).takeIf { it.isFile }
+        }
+    }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Image(
             bitmap = imageBitmap,
@@ -152,6 +237,10 @@ private fun LoadedImage(
             label = label,
             colors = colors,
             onDismiss = { previewVisible = false },
+            onSave = saveFile?.let { file ->
+                { saveMediaToDownloads(context, file, guessMime(file.name)) }
+            },
+            saveName = saveFile?.name ?: label,
         )
     }
 }
@@ -162,24 +251,32 @@ private fun MarkdownImagePreview(
     label: String,
     colors: DeepDeepColors,
     onDismiss: () -> Unit,
+    onSave: (() -> Unit)?,
+    saveName: String,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         var revealed by remember { mutableStateOf(false) }
+        var saveSheet by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { revealed = true }
         val fade by animateFloatAsState(
             targetValue = if (revealed) 1f else 0f,
             animationSpec = tween(durationMillis = DdMotion.FAST, easing = DdMotion.EaseOut),
             label = "markdown-image-preview",
         )
+        val surface = Modifier
+            .fillMaxSize()
+            .background(colors.scrim)
+            .graphicsLayer { alpha = fade }
         Box(
-            Modifier
-                .fillMaxSize()
-                .background(colors.scrim)
-                .graphicsLayer { alpha = fade }
-                .clickable(onClick = onDismiss),
+            surface.pointerInput(onSave) {
+                detectTapGestures(
+                    onTap = { onDismiss() },
+                    onLongPress = { if (onSave != null) saveSheet = true },
+                )
+            },
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -187,6 +284,16 @@ private fun MarkdownImagePreview(
                 contentDescription = label.ifBlank { null },
                 modifier = Modifier.fillMaxSize().padding(20.dp),
                 contentScale = ContentScale.Fit,
+            )
+        }
+        if (saveSheet && onSave != null) {
+            SaveToDownloadsSheet(
+                name = saveName,
+                onDismiss = { saveSheet = false },
+                onSave = {
+                    saveSheet = false
+                    onSave()
+                },
             )
         }
     }

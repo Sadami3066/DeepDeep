@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,19 +14,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +53,8 @@ import io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
 import java.io.File
 import java.net.URI
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -53,7 +63,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 
-enum class PresentedItemType { FILE, IMAGE, HTML, CREATIVE }
+enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, CREATIVE }
 
 data class PresentedItem(
     val type: PresentedItemType,
@@ -67,6 +77,7 @@ data class PresentedItem(
 )
 
 private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp", "heic", "heif", "avif")
+private val VIDEO_EXTENSIONS = setOf("mp4", "mov", "webm", "mkv", "m4v", "3gp")
 private val HTML_EXTENSIONS = setOf("html", "htm")
 
 fun parsePresentedItems(trace: ToolTrace): List<PresentedItem>? {
@@ -93,6 +104,7 @@ private fun parsePresentedItem(element: JsonElement): PresentedItem? {
     val type = when (item.stringOrNull("type")?.trim()?.lowercase(Locale.US)) {
         "file" -> PresentedItemType.FILE
         "image" -> PresentedItemType.IMAGE
+        "video" -> PresentedItemType.VIDEO
         "html" -> PresentedItemType.HTML
         "creative" -> PresentedItemType.CREATIVE
         else -> return null
@@ -137,6 +149,7 @@ private fun parseLegacyFiles(array: JsonArray?): List<PresentedItem> {
 
 private fun inferPresentedType(path: String): PresentedItemType = when {
     path.extension() in IMAGE_EXTENSIONS -> PresentedItemType.IMAGE
+    path.extension() in VIDEO_EXTENSIONS -> PresentedItemType.VIDEO
     path.extension() in HTML_EXTENSIONS -> PresentedItemType.HTML
     else -> PresentedItemType.FILE
 }
@@ -178,6 +191,13 @@ fun PresentCard(
         items.forEach { item ->
             when (item.type) {
                 PresentedItemType.IMAGE -> PresentedImageItem(item, attachmentRoot, colors)
+                PresentedItemType.VIDEO -> PresentedVideoItem(
+                    item = item,
+                    root = attachmentRoot,
+                    colors = colors,
+                    onOpen = { onOpenFile(item.path.orEmpty()) },
+                )
+
                 PresentedItemType.HTML -> PresentedHtmlItem(item, attachmentRoot, colors)
                 PresentedItemType.FILE -> PresentedFileItem(
                     item = item,
@@ -246,6 +266,94 @@ private fun PresentedHtmlItem(item: PresentedItem, root: File, colors: DeepDeepC
     if (fullscreen) {
         PresentedHtmlDialog(path = path, onDismiss = { fullscreen = false })
     }
+}
+
+@Composable
+private fun PresentedVideoItem(
+    item: PresentedItem,
+    root: File,
+    colors: DeepDeepColors,
+    onOpen: () -> Unit,
+) {
+    val path = remember(item.path, root) { resolvePresentedPath(item.path.orEmpty(), root) }
+    val label = item.title ?: item.name
+    val file = remember(path) { File(path) }
+    val available = remember(path) { file.isFile }
+    if (!available) {
+        PresentedFailureRow(name = label, colors = colors)
+        return
+    }
+    val cover by produceState<Bitmap?>(initialValue = null, path) {
+        value = withContext(Dispatchers.IO) { videoCover(path) }
+    }
+    val shape = RoundedCornerShape(12.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        DdPressable(
+            onClick = onOpen,
+            modifier = Modifier.fillMaxWidth().testTag("present_video"),
+            shape = shape,
+            contentDescription = stringResource(R.string.present_open),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(198.dp)
+                    .clip(shape)
+                    .background(colors.wash),
+                contentAlignment = Alignment.Center,
+            ) {
+                cover?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = label,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(colors.ink.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DdIcon(icon = DdIcons.Play, tint = colors.surface, size = 22.dp)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DdIcon(icon = DdIcons.Play, tint = colors.inkTertiary, size = 12.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private fun videoCover(path: String): Bitmap? = runCatching {
+    val retriever = MediaMetadataRetriever()
+    try {
+        retriever.setDataSource(path)
+        val frame = retriever.getFrameAtTime(1_000_000L) ?: retriever.getFrameAtTime(0L)
+        frame?.let(::scaleCover)
+    } finally {
+        runCatching { retriever.release() }
+    }
+}.getOrNull()
+
+private fun scaleCover(bitmap: Bitmap): Bitmap {
+    val maxWidth = 720
+    if (bitmap.width <= maxWidth) return bitmap
+    val height = (bitmap.height.toLong() * maxWidth / bitmap.width).toInt().coerceAtLeast(1)
+    val scaled = Bitmap.createScaledBitmap(bitmap, maxWidth, height, true)
+    if (scaled !== bitmap) bitmap.recycle()
+    return scaled
 }
 
 @Composable
@@ -352,6 +460,7 @@ private fun PresentedFailureRow(name: String, colors: DeepDeepColors) {
 private val PresentedItemType.icon: DdIcon
     get() = when (this) {
         PresentedItemType.IMAGE -> DdIcons.Image
+        PresentedItemType.VIDEO -> DdIcons.Play
         PresentedItemType.HTML -> DdIcons.Globe
         PresentedItemType.FILE, PresentedItemType.CREATIVE -> DdIcons.File
     }

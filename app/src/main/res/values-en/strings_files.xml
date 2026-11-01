@@ -15,4 +15,9 @@
     <string name="files_empty_file">Empty file</string>
     <string name="files_read_failed">Couldn\'t read this file</string>
     <string name="files_unsupported">Preview isn\'t supported</string>
+    <string name="files_download">Download</string>
+    <string name="files_save_to_downloads">Save to Downloads</string>
+    <string name="files_cancel">Cancel</string>
+    <string name="files_saved">Saved to Downloads</string>
+    <string name="files_save_failed">Couldn\'t save</string>
 </resources>

@@ -97,7 +97,7 @@ class PresentToolTest {
             entry.getValue("required").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
         assertEquals(
-            setOf("file", "image", "html", "creative"),
+            setOf("file", "image", "video", "html", "creative"),
             entry.getValue("properties").jsonObject.getValue("type").jsonObject
                 .getValue("enum").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
@@ -166,10 +166,54 @@ class PresentToolTest {
     }
 
     @Test
+    fun legacyFilesInferVideo() = runTest {
+        val clip = File(folder.root, "clips/demo.mov").apply {
+            parentFile.mkdirs()
+            writeText("content")
+        }
+        val (result, text) = run(tool(), filesArgs(clip.absolutePath))
+        assertNull(result.isError)
+        val item = outputItems(text).single()
+        assertEquals("video", item.string("type"))
+        assertEquals("video/quicktime", item.string("mime"))
+    }
+
+    @Test
+    fun acceptsVideoItems() = runTest {
+        val clip = folder.newFile("clip.mp4").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val (result, text) = run(
+            tool(),
+            itemsArgs(
+                item {
+                    put("type", "video")
+                    put("path", clip.absolutePath)
+                    put("title", "Demo")
+                },
+            ),
+        )
+        assertNull(result.isError)
+        val items = outputItems(text)
+        assertEquals("video", items.single().string("type"))
+        assertEquals("video/mp4", items.single().string("mime"))
+        assertEquals("Demo", items.single().string("title"))
+    }
+
+    @Test
+    fun rejectsVideoWithWrongExtension() = runTest {
+        folder.newFile("notes.md")
+        val (result, text) = run(
+            tool(),
+            itemsArgs(item { put("type", "video"); put("path", File(folder.root, "notes.md").absolutePath) }),
+        )
+        assertEquals(true, result.isError)
+        assertTrue(text.contains("not a video"))
+    }
+
+    @Test
     fun rejectsUnknownType() = runTest {
         val (result, text) = run(
             tool(),
-            itemsArgs(item { put("type", "video"); put("path", "clip.mp4") }),
+            itemsArgs(item { put("type", "audio"); put("path", "clip.mp3") }),
         )
         assertEquals(true, result.isError)
         assertTrue(text.contains("type must be one of"))

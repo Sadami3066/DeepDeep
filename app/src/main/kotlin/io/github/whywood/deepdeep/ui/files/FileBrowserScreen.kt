@@ -117,6 +117,13 @@ fun FileBrowserScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = stringResource(R.string.files_title),
+                modifier = Modifier.weight(1f),
+                style = DdType.heading,
+                color = colors.ink,
+            )
         },
         modifier = modifier,
     ) {
@@ -127,12 +134,6 @@ fun FileBrowserScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
         ) {
-            Text(
-                text = stringResource(R.string.files_title),
-                style = DdType.pageTitle,
-                color = colors.ink,
-            )
-            Spacer(Modifier.height(12.dp))
             PathRow(
                 label = label,
                 canGoUp = canGoUp,

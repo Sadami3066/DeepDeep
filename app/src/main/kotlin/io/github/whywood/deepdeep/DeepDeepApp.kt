@@ -451,7 +451,10 @@ internal fun DeepDeepApp(
                                                         attachmentMissingMessage,
                                                         Toast.LENGTH_SHORT,
                                                     ).show()
-                                                } else if (resolved.kind != AttachmentKind.OTHER) {
+                                                } else if (
+                                                    resolved.kind != AttachmentKind.OTHER ||
+                                                    resolved.mime.startsWith("video/")
+                                                ) {
                                                     previewRoot = attachmentRoot
                                                     previewAttachment = resolved
                                                 } else {

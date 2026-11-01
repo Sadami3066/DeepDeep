@@ -15,4 +15,9 @@
     <string name="files_empty_file">空文件</string>
     <string name="files_read_failed">无法读取此文件</string>
     <string name="files_unsupported">暂不支持预览</string>
+    <string name="files_download">下载</string>
+    <string name="files_save_to_downloads">保存到「下载」</string>
+    <string name="files_cancel">取消</string>
+    <string name="files_saved">已保存到「下载」</string>
+    <string name="files_save_failed">保存失败</string>
 </resources>

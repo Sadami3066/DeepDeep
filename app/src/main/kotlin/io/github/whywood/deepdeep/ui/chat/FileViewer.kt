@@ -10,6 +10,7 @@ import android.widget.VideoView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -65,7 +66,6 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPrimaryButton
-import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -99,11 +99,13 @@ internal fun FileViewerDialog(
     name: String,
     mime: String,
     onDismiss: () -> Unit,
-    onShare: () -> Unit,
+    onShare: (() -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     val kind = remember(name, mime) { filePreviewKind(name, mime) }
+    var showSource by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
+    var saveSheet by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     val openFailed = stringResource(R.string.present_open_failed)
     val openExternal = {
         val intent = fileViewIntent(context, file, mime)
@@ -124,7 +126,15 @@ internal fun FileViewerDialog(
                 .testTag("file_viewer"),
         ) {
             Column(Modifier.fillMaxSize()) {
-                ViewerTitleBar(name = name, onDismiss = onDismiss, onShare = onShare)
+                ViewerTitleBar(
+                    name = name,
+                    onDismiss = onDismiss,
+                    onShare = onShare,
+                    onDownload = { saveMediaToDownloads(context, file, mime) },
+                    textKind = kind == FilePreviewKind.MARKDOWN || kind == FilePreviewKind.HTML,
+                    showSource = showSource,
+                    onShowSource = { showSource = it },
+                )
                 DdHairline()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (kind) {
@@ -132,17 +142,20 @@ internal fun FileViewerDialog(
                             file = file,
                             name = name,
                             onOpenExternal = openExternal,
+                            onLongPress = { saveSheet = true },
                         )
 
                         FilePreviewKind.MARKDOWN -> TextFileBody(
                             file = file,
                             kind = kind,
+                            showSource = showSource,
                             onOpenExternal = openExternal,
                         )
 
                         FilePreviewKind.HTML -> TextFileBody(
                             file = file,
                             kind = kind,
+                            showSource = showSource,
                             onOpenExternal = openExternal,
                         )
 
@@ -166,12 +179,30 @@ internal fun FileViewerDialog(
                     }
                 }
             }
+            if (saveSheet) {
+                SaveToDownloadsSheet(
+                    name = name,
+                    onDismiss = { saveSheet = false },
+                    onSave = {
+                        saveSheet = false
+                        saveMediaToDownloads(context, file, mime)
+                    },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ViewerTitleBar(name: String, onDismiss: () -> Unit, onShare: () -> Unit) {
+private fun ViewerTitleBar(
+    name: String,
+    onDismiss: () -> Unit,
+    onShare: (() -> Unit)?,
+    onDownload: () -> Unit,
+    textKind: Boolean,
+    showSource: Boolean,
+    onShowSource: (Boolean) -> Unit,
+) {
     val colors = deepDeepColors()
     Row(
         modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
@@ -195,15 +226,46 @@ private fun ViewerTitleBar(name: String, onDismiss: () -> Unit, onShare: () -> U
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (textKind) {
+            DdIconButton(
+                icon = DdIcons.Eye,
+                onClick = { onShowSource(false) },
+                contentDescription = stringResource(R.string.files_preview),
+                modifier = Modifier.testTag("file_viewer_mode_preview"),
+                size = 40.dp,
+                iconSize = 17.dp,
+                tint = if (showSource) colors.inkTertiary else colors.ink,
+            )
+            DdIconButton(
+                icon = DdIcons.Raw,
+                onClick = { onShowSource(true) },
+                contentDescription = stringResource(R.string.files_source),
+                modifier = Modifier.testTag("file_viewer_mode_source"),
+                size = 40.dp,
+                iconSize = 17.dp,
+                tint = if (showSource) colors.ink else colors.inkTertiary,
+            )
+        }
         DdIconButton(
-            icon = DdIcons.Share,
-            onClick = onShare,
-            contentDescription = stringResource(R.string.assistant_attach_share),
-            modifier = Modifier.testTag("file_viewer_share"),
+            icon = DdIcons.Download,
+            onClick = onDownload,
+            contentDescription = stringResource(R.string.files_download),
+            modifier = Modifier.testTag("file_viewer_download"),
             size = 44.dp,
             iconSize = 17.dp,
             tint = colors.inkSecondary,
         )
+        if (onShare != null) {
+            DdIconButton(
+                icon = DdIcons.Share,
+                onClick = onShare,
+                contentDescription = stringResource(R.string.assistant_attach_share),
+                modifier = Modifier.testTag("file_viewer_share"),
+                size = 44.dp,
+                iconSize = 17.dp,
+                tint = colors.inkSecondary,
+            )
+        }
     }
 }
 
@@ -216,7 +278,20 @@ private fun rememberTextReadState(file: File): State<TextReadState> =
     }
 
 @Composable
-private fun ImageFileBody(file: File, name: String, onOpenExternal: () -> Unit) {
+private fun ImageFileBody(
+    file: File,
+    name: String,
+    onOpenExternal: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    if (animatedImageFile(file.absolutePath) != null) {
+        AnimatedImage(
+            file = file,
+            modifier = Modifier.fillMaxSize(),
+            onLongPress = onLongPress,
+        )
+        return
+    }
     val state by produceState<ImageReadState>(initialValue = ImageReadState.Loading, file.absolutePath) {
         value = withContext(Dispatchers.IO) {
             decodePreviewBitmap(file)?.let(ImageReadState::Ready) ?: ImageReadState.Failed
@@ -234,58 +309,54 @@ private fun ImageFileBody(file: File, name: String, onOpenExternal: () -> Unit) 
         is ImageReadState.Ready -> Image(
             bitmap = current.bitmap.asImageBitmap(),
             contentDescription = name,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(file.absolutePath) { detectTapGestures(onLongPress = { onLongPress() }) },
             contentScale = ContentScale.Fit,
         )
     }
 }
 
 @Composable
-private fun TextFileBody(file: File, kind: FilePreviewKind, onOpenExternal: () -> Unit) {
+private fun TextFileBody(
+    file: File,
+    kind: FilePreviewKind,
+    showSource: Boolean,
+    onOpenExternal: () -> Unit,
+) {
     val state by rememberTextReadState(file)
-    var selectedTab by rememberSaveable(file.absolutePath) { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        DdSegmented(
-            options = listOf(stringResource(R.string.files_preview), stringResource(R.string.files_source)),
-            selectedIndex = selectedTab,
-            onSelect = { selectedTab = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
-            testTags = listOf("file_viewer_tab_preview", "file_viewer_tab_source"),
+    when {
+        showSource -> when (val current = state) {
+            TextReadState.Loading -> LoadingBody()
+            TextReadState.Failed -> MessageFileBody(
+                file = file,
+                name = file.name,
+                message = stringResource(R.string.files_read_failed),
+                onOpenExternal = onOpenExternal,
+            )
+
+            is TextReadState.Ready -> CodeSourceView(
+                text = current.content.text,
+                language = if (kind == FilePreviewKind.HTML) "html" else null,
+                truncated = current.content.truncated,
+            )
+        }
+
+        kind == FilePreviewKind.HTML -> HtmlFileView(
+            path = file.absolutePath,
+            modifier = Modifier.fillMaxSize(),
         )
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (selectedTab) {
-                0 -> if (kind == FilePreviewKind.HTML) {
-                    HtmlFileView(path = file.absolutePath, modifier = Modifier.fillMaxSize())
-                } else {
-                    when (val current = state) {
-                        TextReadState.Loading -> LoadingBody()
-                        TextReadState.Failed -> MessageFileBody(
-                            file = file,
-                            name = file.name,
-                            message = stringResource(R.string.files_read_failed),
-                            onOpenExternal = onOpenExternal,
-                        )
 
-                        is TextReadState.Ready -> MarkdownBody(current.content.text)
-                    }
-                }
+        else -> when (val current = state) {
+            TextReadState.Loading -> LoadingBody()
+            TextReadState.Failed -> MessageFileBody(
+                file = file,
+                name = file.name,
+                message = stringResource(R.string.files_read_failed),
+                onOpenExternal = onOpenExternal,
+            )
 
-                else -> when (val current = state) {
-                    TextReadState.Loading -> LoadingBody()
-                    TextReadState.Failed -> MessageFileBody(
-                        file = file,
-                        name = file.name,
-                        message = stringResource(R.string.files_read_failed),
-                        onOpenExternal = onOpenExternal,
-                    )
-
-                    is TextReadState.Ready -> CodeSourceView(
-                        text = current.content.text,
-                        language = if (kind == FilePreviewKind.HTML) "html" else null,
-                        truncated = current.content.truncated,
-                    )
-                }
-            }
+            is TextReadState.Ready -> MarkdownBody(current.content.text)
         }
     }
 }

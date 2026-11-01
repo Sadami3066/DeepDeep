@@ -50,6 +50,7 @@ class PresentCardParseTest {
                           {"path":"slides.pptx"},
                           {"path":"out/demo/"},
                           {"path":"photo.png"},
+                          {"path":"clips/demo.mp4"},
                           {"path":"pages/index.htm"}
                         ]}
                     """.trimIndent(),
@@ -62,11 +63,15 @@ class PresentCardParseTest {
                 PresentedItemType.FILE,
                 PresentedItemType.FILE,
                 PresentedItemType.IMAGE,
+                PresentedItemType.VIDEO,
                 PresentedItemType.HTML,
             ),
             items.map { it.type },
         )
-        assertEquals(listOf("q3.md", "slides.pptx", "demo", "photo.png", "index.htm"), items.map { it.name })
+        assertEquals(
+            listOf("q3.md", "slides.pptx", "demo", "photo.png", "demo.mp4", "index.htm"),
+            items.map { it.name },
+        )
         assertEquals("out/demo/", items[2].path)
     }
 
@@ -88,11 +93,13 @@ class PresentCardParseTest {
                 ),
             ),
         )
-        assertEquals(2, items.size)
+        assertEquals(3, items.size)
         assertEquals(PresentedItemType.IMAGE, items[0].type)
         assertEquals("a.png", items[0].name)
-        assertEquals(PresentedItemType.CREATIVE, items[1].type)
-        assertEquals("flow", items[1].id)
+        assertEquals(PresentedItemType.VIDEO, items[1].type)
+        assertEquals("b.mp4", items[1].name)
+        assertEquals(PresentedItemType.CREATIVE, items[2].type)
+        assertEquals("flow", items[2].id)
     }
 
     @Test
@@ -124,6 +131,20 @@ class PresentCardParseTest {
                 ToolTrace(id = 1L, name = "present", arguments = emptyMap(), output = null),
             ),
         )
+    }
+
+    @Test
+    fun parsesVideoItems() {
+        val item = requireNotNull(
+            parsePresentedItems(
+                trace(
+                    output = """{"items":[{"type":"video","path":"/tmp/clip.mp4","name":"clip.mp4","mime":"video/mp4","title":"Demo"}]}""",
+                ),
+            ),
+        ).single()
+        assertEquals(PresentedItemType.VIDEO, item.type)
+        assertEquals("clip.mp4", item.name)
+        assertEquals("Demo", item.title)
     }
 
     @Test

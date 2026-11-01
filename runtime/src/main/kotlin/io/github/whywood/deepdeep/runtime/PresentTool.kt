@@ -21,6 +21,7 @@ private const val MAX_PRESENTED_ITEMS = 4
 
 private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp", "heic", "heif", "avif")
 private val HTML_EXTENSIONS = setOf("html", "htm")
+private val VIDEO_EXTENSIONS = setOf("mp4", "mov", "webm", "mkv", "m4v", "3gp")
 
 data class PresentedCreative(
     val id: String,
@@ -60,19 +61,20 @@ private val presentParameters: JsonObject = buildJsonObject {
                         putJsonArray("enum") {
                             add(JsonPrimitive("file"))
                             add(JsonPrimitive("image"))
+                            add(JsonPrimitive("video"))
                             add(JsonPrimitive("html"))
                             add(JsonPrimitive("creative"))
                         }
                         put(
                             "description",
-                            "file: any generated file; image: picture shown inline; html: web page shown inline; creative: installed Workshop mini app",
+                            "file: any generated file; image: picture shown inline; video: clip shown with a cover and player; html: web page shown inline; creative: installed Workshop mini app",
                         )
                     }
                     putJsonObject("path") {
                         put("type", "string")
                         put(
                             "description",
-                            "For file, image and html: explicit absolute path in the Android filesystem",
+                            "For file, image, video and html: explicit absolute path in the Android filesystem",
                         )
                     }
                     putJsonObject("id") {
@@ -96,7 +98,7 @@ fun presentTool(
     session: () -> BoundSession?,
 ): CodingTool = CodingTool(
     name = "present",
-    description = "Deliver one to four finished works to the user: files, images, web pages, or installed Workshop mini apps. Chat shows a delivery card for every item; images and web pages render inline.",
+    description = "Deliver one to four finished works to the user: files, images, videos, web pages, or installed Workshop mini apps. Chat shows a delivery card for every item; images and web pages render inline, videos show a cover that opens a player.",
     parameters = presentParameters,
     label = "present",
     execute = { _, args, signal, _ ->
@@ -155,10 +157,11 @@ private suspend fun normalizeItem(
     return when (type) {
         "file" -> fileItem(index, item, cwd, title, PresentKind.FILE)
         "image" -> fileItem(index, item, cwd, title, PresentKind.IMAGE)
+        "video" -> fileItem(index, item, cwd, title, PresentKind.VIDEO)
         "html" -> fileItem(index, item, cwd, title, PresentKind.HTML)
         "creative" -> creativeItem(index, item, title, creativeLookup)
         else -> throw IllegalArgumentException(
-            "items[$index].type must be one of file, image, html, creative",
+            "items[$index].type must be one of file, image, video, html, creative",
         )
     }
 }
@@ -166,6 +169,7 @@ private suspend fun normalizeItem(
 private enum class PresentKind(val json: String) {
     FILE("file"),
     IMAGE("image"),
+    VIDEO("video"),
     HTML("html"),
 }
 
@@ -183,6 +187,9 @@ private fun fileItem(
         val extension = file.extension.lowercase(Locale.US)
         if (kind == PresentKind.IMAGE && extension !in IMAGE_EXTENSIONS) {
             throw IllegalArgumentException("items[$index].path is not an image: $rawPath")
+        }
+        if (kind == PresentKind.VIDEO && extension !in VIDEO_EXTENSIONS) {
+            throw IllegalArgumentException("items[$index].path is not a video: $rawPath")
         }
         if (kind == PresentKind.HTML && extension !in HTML_EXTENSIONS) {
             throw IllegalArgumentException("items[$index].path is not an html page: $rawPath")
@@ -223,6 +230,7 @@ private fun normalizeLegacyFile(
     val extension = file.extension.lowercase(Locale.US)
     val kind = when {
         extension in IMAGE_EXTENSIONS -> PresentKind.IMAGE
+        extension in VIDEO_EXTENSIONS -> PresentKind.VIDEO
         extension in HTML_EXTENSIONS -> PresentKind.HTML
         else -> PresentKind.FILE
     }
@@ -291,6 +299,11 @@ private fun mimeOf(name: String): String = when (name.substringAfterLast('.', ""
     "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     "mp4" -> "video/mp4"
+    "mov" -> "video/quicktime"
+    "webm" -> "video/webm"
+    "mkv" -> "video/x-matroska"
+    "m4v" -> "video/x-m4v"
+    "3gp" -> "video/3gpp"
     "mp3" -> "audio/mpeg"
     else -> "application/octet-stream"
 }
