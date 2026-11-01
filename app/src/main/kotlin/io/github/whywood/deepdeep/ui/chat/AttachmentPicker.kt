@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -84,8 +84,7 @@ internal class AttachmentPickers(
 internal fun rememberAttachmentPickers(onPicked: (Uri) -> Unit): AttachmentPickers {
     val context = LocalContext.current
     val cameraUnavailable = stringResource(R.string.attach_camera_unavailable)
-    var pendingFile by remember { mutableStateOf<File?>(null) }
-    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingPath by rememberSaveable { mutableStateOf<String?>(null) }
     val pickImages = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(SessionDraftStore.MAX_ATTACHMENTS),
     ) { uris -> uris.forEach(onPicked) }
@@ -95,12 +94,10 @@ internal fun rememberAttachmentPickers(onPicked: (Uri) -> Unit): AttachmentPicke
     val takePicture = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture(),
     ) { saved ->
-        val uri = pendingUri
-        val file = pendingFile
-        pendingUri = null
-        pendingFile = null
-        if (saved && uri != null) {
-            onPicked(uri)
+        val file = pendingPath?.let(::File)
+        pendingPath = null
+        if (saved && file != null) {
+            onPicked(FileProvider.getUriForFile(context, "${context.packageName}.files", file))
         } else {
             runCatching { file?.delete() }
         }
@@ -114,12 +111,10 @@ internal fun rememberAttachmentPickers(onPicked: (Uri) -> Unit): AttachmentPicke
             directory.mkdirs()
             file.createNewFile()
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-            pendingFile = file
-            pendingUri = uri
+            pendingPath = file.absolutePath
             takePicture.launch(uri)
         }.onFailure {
-            pendingFile = null
-            pendingUri = null
+            pendingPath = null
             runCatching { file.delete() }
             Toast.makeText(context, cameraUnavailable, Toast.LENGTH_SHORT).show()
         }
