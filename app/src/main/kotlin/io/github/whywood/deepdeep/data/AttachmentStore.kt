@@ -132,17 +132,7 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
         }
     }
 
-    override fun viewIntent(ref: AttachmentRef, root: File): Intent? {
-        val target = file(ref, root)
-        if (!target.isFile) return null
-        val uri = runCatching {
-            FileProvider.getUriForFile(appContext, "${appContext.packageName}.files", target)
-        }.getOrNull() ?: return null
-        return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, ref.mime.ifBlank { "application/octet-stream" })
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
+    override fun viewIntent(ref: AttachmentRef, root: File): Intent? = fileViewIntent(appContext, file(ref, root), ref.mime)
 
     private fun isSupportedImage(resolver: ContentResolver, uri: Uri): Boolean {
         val input = runCatching { resolver.openInputStream(uri) }.getOrNull() ?: return false
@@ -186,6 +176,15 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
 }
 
 private const val IMPORT_SPACE_MARGIN_BYTES = 64L * 1024 * 1024
+
+internal fun fileViewIntent(context: Context, file: File, mime: String): Intent? = runCatching {
+    if (!file.isFile) return@runCatching null
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+    Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, mime.ifBlank { "application/octet-stream" })
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}.getOrNull()
 
 internal fun hasSpaceForImport(fileSize: Long, usableSpace: Long): Boolean =
     fileSize + IMPORT_SPACE_MARGIN_BYTES <= usableSpace

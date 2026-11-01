@@ -1,21 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
-import android.graphics.Color as AndroidColor
-import android.net.Uri
-import android.view.ViewGroup
-import android.webkit.ConsoleMessage
-import android.webkit.RenderProcessGoneDetail
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,10 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,7 +28,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.whywood.deepdeep.R
@@ -233,7 +215,7 @@ private fun PresentedHtmlItem(item: PresentedItem, root: File, colors: DeepDeepC
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        HtmlSurface(
+        HtmlFileView(
             path = path,
             modifier = Modifier
                 .fillMaxWidth()
@@ -374,110 +356,6 @@ private val PresentedItemType.icon: DdIcon
         PresentedItemType.FILE, PresentedItemType.CREATIVE -> DdIcons.File
     }
 
-private class HtmlWebViewHolder {
-    private var view: WebView? = null
-
-    fun attach(webView: WebView) {
-        view = webView
-    }
-
-    fun release(webView: WebView? = null) {
-        if (webView != null && view !== webView) return
-        val current = view ?: return
-        view = null
-        runCatching { current.stopLoading() }
-        runCatching { current.destroy() }
-    }
-}
-
-@Composable
-private fun HtmlSurface(
-    path: String,
-    modifier: Modifier,
-    onActivate: (() -> Unit)? = null,
-) {
-    val colors = deepDeepColors()
-    val holder = remember(path) { HtmlWebViewHolder() }
-    var crashKey by remember(path) { mutableIntStateOf(0) }
-    var renderFailed by remember(path) { mutableStateOf(false) }
-    DisposableEffect(path) {
-        onDispose { holder.release() }
-    }
-    Box(modifier) {
-        if (renderFailed) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.present_failed),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-            }
-        } else {
-            key(crashKey) {
-                AndroidView(
-                    factory = { context ->
-                        createHtmlWebView(context, path) {
-                            holder.release()
-                            if (crashKey == 0) crashKey++ else renderFailed = true
-                        }.also(holder::attach)
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    onRelease = { released -> holder.release(released) },
-                )
-            }
-        }
-        if (onActivate != null && !renderFailed) {
-            Box(Modifier.matchParentSize().clickable(onClick = onActivate))
-        }
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-private fun createHtmlWebView(context: Context, path: String, onRenderCrash: () -> Unit): WebView = WebView(context).apply {
-    setBackgroundColor(AndroidColor.TRANSPARENT)
-    settings.apply {
-        javaScriptEnabled = true
-        domStorageEnabled = true
-        allowFileAccess = true
-        allowContentAccess = false
-        @Suppress("DEPRECATION")
-        allowFileAccessFromFileURLs = false
-        @Suppress("DEPRECATION")
-        allowUniversalAccessFromFileURLs = false
-        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        mediaPlaybackRequiresUserGesture = false
-        setSupportZoom(false)
-        builtInZoomControls = false
-        displayZoomControls = false
-    }
-    webViewClient = object : WebViewClient() {
-        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            val uri = request.url
-            if (uri.scheme == "file") {
-                val folder = File(path).parentFile?.absolutePath ?: return true
-                val target = uri.path ?: return true
-                return !target.startsWith(folder)
-            }
-            val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            runCatching { context.startActivity(intent) }
-            return true
-        }
-
-        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
-            onRenderCrash()
-            return true
-        }
-    }
-    webChromeClient = object : WebChromeClient() {
-        override fun onConsoleMessage(message: ConsoleMessage): Boolean = true
-    }
-    layoutParams = ViewGroup.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        ViewGroup.LayoutParams.MATCH_PARENT,
-    )
-    loadUrl(Uri.fromFile(File(path)).toString())
-}
-
 @Composable
 private fun PresentedHtmlDialog(path: String, onDismiss: () -> Unit) {
     val colors = deepDeepColors()
@@ -486,7 +364,7 @@ private fun PresentedHtmlDialog(path: String, onDismiss: () -> Unit) {
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(Modifier.fillMaxSize().background(colors.paper)) {
-            HtmlSurface(path = path, modifier = Modifier.fillMaxSize())
+            HtmlFileView(path = path, modifier = Modifier.fillMaxSize())
             DdIconButton(
                 icon = DdIcons.Close,
                 onClick = onDismiss,

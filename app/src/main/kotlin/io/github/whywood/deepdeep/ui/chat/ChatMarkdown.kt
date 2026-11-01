@@ -262,17 +262,7 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
         if (live) {
             AnnotatedString(code)
         } else {
-            val tokens = highlightCode(code, language)
-            if (tokens.isEmpty()) {
-                AnnotatedString(code)
-            } else {
-                buildAnnotatedString {
-                    append(code)
-                    tokens.forEach { token ->
-                        addStyle(SpanStyle(color = codeColor(token.type, colors)), token.start, token.end)
-                    }
-                }
-            }
+            highlightedCode(code, language, colors)
         }
     }
     Column(
@@ -316,15 +306,6 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
             )
         }
     }
-}
-
-private fun codeColor(type: CodeTokenType, colors: DeepDeepColors): Color = when (type) {
-    CodeTokenType.KEYWORD, CodeTokenType.ANNOTATION -> colors.codeKeyword
-    CodeTokenType.STRING -> colors.codeString
-    CodeTokenType.COMMENT -> colors.codeComment
-    CodeTokenType.NUMBER -> colors.codeNumber
-    CodeTokenType.FUNCTION -> colors.codeFunction
-    CodeTokenType.TYPE -> colors.codeType
 }
 
 @Composable
