@@ -35,6 +35,12 @@ class SystemPromptTest {
     }
 
     @Test
+    fun defaultPromptExplainsWorkspacePathsAndExitCodes() {
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("/workspace/"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("[exit: N]"))
+    }
+
+    @Test
     fun keepsUserEditedSystemPrompt() {
         val file = File(directory, SYSTEM_PROMPT_FILE)
         file.writeText("custom prompt")
@@ -47,21 +53,25 @@ class SystemPromptTest {
     @Test
     fun migratesLegacyDefaultSystemPrompt() {
         val file = File(directory, SYSTEM_PROMPT_FILE)
-        file.writeText(LEGACY_SYSTEM_PROMPTS.single() + "\n")
+        LEGACY_SYSTEM_PROMPTS.forEach { legacy ->
+            file.writeText(legacy + "\n")
 
-        ensureSystemPromptFile(directory)
+            ensureSystemPromptFile(directory)
 
-        assertEquals(DEEP_DEEP_SYSTEM_PROMPT, file.readText().trimEnd())
+            assertEquals(DEEP_DEEP_SYSTEM_PROMPT, file.readText().trimEnd())
+        }
     }
 
     @Test
     fun keepsUserEditThatResemblesLegacyPrompt() {
         val file = File(directory, SYSTEM_PROMPT_FILE)
-        file.writeText(LEGACY_SYSTEM_PROMPTS.single() + "\nMy extra rule.\n")
+        LEGACY_SYSTEM_PROMPTS.forEach { legacy ->
+            file.writeText(legacy + "\nMy extra rule.\n")
 
-        ensureSystemPromptFile(directory)
+            ensureSystemPromptFile(directory)
 
-        assertTrue(file.readText().contains("My extra rule."))
+            assertTrue(file.readText().contains("My extra rule."))
+        }
     }
 
     @Test

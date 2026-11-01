@@ -125,14 +125,18 @@ class PiSessionEngine(
     fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding())
 
     private fun buildTools(activeShell: ShellExecutor?, binding: SessionBinding): List<CodingTool> = buildList {
-        addAll(
-            defaultCodingTools(
-                cwd = cwd,
-                fs = toolFs,
-                mutationQueue = FileMutationQueue(),
-                shellExecutor = activeShell,
-            ),
+        val defaults = defaultCodingTools(
+            cwd = cwd,
+            fs = toolFs,
+            mutationQueue = FileMutationQueue(),
+            shellExecutor = null,
         )
+        defaults.forEach { tool ->
+            when (tool.name) {
+                "bash" -> activeShell?.let { add(deepDeepBashTool(it)) }
+                else -> add(tool.withWorkspacePaths(cwd))
+            }
+        }
         toolContext?.let { context ->
             addAll(appTools(cwd, context, binding))
         }

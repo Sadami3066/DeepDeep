@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.ai.RunSignal
 import dev.pi.ai.TextContent
 import dev.pi.ai.auth.Credential
 import dev.pi.ai.auth.CredentialInfo
@@ -9,6 +10,8 @@ import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.agent.AgentToolResult
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.ShellExecutor
+import dev.pi.coding.tools.ShellResult
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -17,11 +20,13 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -146,6 +151,53 @@ class PiSessionEngineScopeTest {
                 tools.getValue("read").execute("call", buildJsonObject { put("path", "/etc/passwd") }, null, null)
             }.exceptionOrNull()
             assertTrue("expected IOException but got $absoluteEscape", absoluteEscape is IOException)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun engineRegistersCustomBashAndWorkspacePaths() = runTest {
+        val root = Files.createTempDirectory("deepdeep-engine-shell").toFile()
+        val workspace = File(root, "workspace").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        File(workspace, "notes.txt").writeText("hello")
+        val catalog = ProviderCatalog(transport, credentials)
+        val shell = object : ShellExecutor {
+            override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult =
+                ShellResult("ran $command\n", 0)
+        }
+        try {
+            val engine = PiSessionEngine(
+                workspace = workspace,
+                agentDir = agentDir,
+                credentials = credentials,
+                transport = transport,
+                shellExecutor = shell,
+                providers = catalog,
+            )
+            val tools = engine.availableTools().associateBy { it.name }
+            val bash = tools.getValue("bash")
+            assertTrue(bash.description.contains("[exit: N]"))
+            assertTrue(runTool(bash, buildJsonObject { put("command", "true") }).contains("[exit: 0]"))
+
+            val read = tools.getValue("read")
+            val prepared = read.prepareArguments!!.invoke(buildJsonObject { put("path", "/workspace/notes.txt") })
+            assertEquals(
+                File(workspace, "notes.txt").absolutePath,
+                prepared.getValue("path").jsonPrimitive.content,
+            )
+            assertEquals("hello", runTool(read, prepared).trim())
+
+            val withoutShell = PiSessionEngine(
+                workspace = workspace,
+                agentDir = agentDir,
+                credentials = credentials,
+                transport = transport,
+                shellExecutor = null,
+                providers = catalog,
+            )
+            assertNull(withoutShell.availableTools().firstOrNull { it.name == "bash" })
         } finally {
             root.deleteRecursively()
         }

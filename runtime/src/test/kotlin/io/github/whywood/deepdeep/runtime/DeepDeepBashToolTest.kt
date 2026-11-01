@@ -1,0 +1,172 @@
+package io.github.whywood.deepdeep.runtime
+
+import dev.pi.agent.AgentToolResult
+import dev.pi.ai.RequestAbortedException
+import dev.pi.ai.RunSignal
+import dev.pi.ai.TextContent
+import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.ShellExecutionException
+import dev.pi.coding.tools.ShellExecutor
+import dev.pi.coding.tools.ShellResult
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class DeepDeepBashToolTest {
+    private fun tool(executor: ShellExecutor): CodingTool = deepDeepBashTool(executor)
+
+    private fun executor(
+        handler: suspend (command: String, timeoutSeconds: Long?, signal: RunSignal?) -> ShellResult,
+    ): ShellExecutor = object : ShellExecutor {
+        override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult =
+            handler(command, timeoutSeconds, signal)
+    }
+
+    private fun args(command: String = "true", timeout: Double? = null): JsonObject = buildJsonObject {
+        put("command", command)
+        if (timeout != null) put("timeout", timeout)
+    }
+
+    private fun resultText(result: AgentToolResult): String =
+        result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
+
+    @Test
+    fun exposesBashSchema() {
+        val schema = tool(executor { _, _, _ -> ShellResult("", 0) })
+
+        assertEquals("bash", schema.name)
+        assertEquals(
+            listOf("command"),
+            schema.parameters.getValue("required").jsonArray.map { it.jsonPrimitive.content },
+        )
+        assertTrue(schema.parameters.getValue("properties").jsonObject.containsKey("timeout"))
+        assertTrue(schema.description.contains("[exit: N]"))
+    }
+
+    @Test
+    fun reportsZeroExitCodeWithOutput() = runBlocking {
+        val result = tool(executor { _, _, _ -> ShellResult("hello\n", 0) }).execute("call", args(), null, null)
+
+        assertTrue(resultText(result).startsWith("hello"))
+        assertTrue(resultText(result).contains("[exit: 0]"))
+        assertNull(result.isError)
+    }
+
+    @Test
+    fun reportsNonZeroExitCodeAsError() = runBlocking {
+        val result = tool(executor { _, _, _ -> ShellResult("boom\n", 3) }).execute("call", args("false"), null, null)
+
+        assertTrue(resultText(result).contains("boom"))
+        assertTrue(resultText(result).contains("[exit: 3]"))
+        assertEquals(true, result.isError)
+    }
+
+    @Test
+    fun reportsMissingExitCodeAsError() = runBlocking {
+        val result = tool(executor { _, _, _ -> ShellResult("killed", null) }).execute("call", args(), null, null)
+
+        assertTrue(resultText(result).contains("Command terminated without an exit code"))
+        assertEquals(true, result.isError)
+    }
+
+    @Test
+    fun reportsEmptyOutput() = runBlocking {
+        val result = tool(executor { _, _, _ -> ShellResult("", 0) }).execute("call", args(), null, null)
+
+        assertTrue(resultText(result).contains("(no output)"))
+        assertTrue(resultText(result).contains("[exit: 0]"))
+    }
+
+    @Test
+    fun truncatesLongOutputTail() = runBlocking {
+        val output = (1..3000).joinToString("\n") { "line $it" }
+        val result = tool(executor { _, _, _ -> ShellResult(output, 0) }).execute("call", args(), null, null)
+        val text = resultText(result)
+
+        assertTrue(text.contains("Showing lines 1001-3000 of 3000"))
+        assertTrue(text.contains("line 3000"))
+        assertTrue(!text.contains("line 1\n"))
+        assertTrue(text.contains("[exit: 0]"))
+    }
+
+    @Test
+    fun reportsExecutorTruncation() = runBlocking {
+        val result = tool(executor { _, _, _ -> ShellResult("tail", 0, truncated = true) })
+            .execute("call", args(), null, null)
+
+        assertTrue(resultText(result).contains("[Output truncated]"))
+    }
+
+    @Test
+    fun reportsTimeoutAsError() = runBlocking {
+        val result = tool(executor { _, _, _ -> throw ShellExecutionException("command timed out after 60s") })
+            .execute("call", args(), null, null)
+
+        assertEquals("command timed out after 60s", resultText(result))
+        assertEquals(true, result.isError)
+    }
+
+    @Test
+    fun passesTimeoutToExecutor() = runBlocking {
+        var seenTimeout: Long? = null
+        val result = tool(executor { _, timeout, _ ->
+            seenTimeout = timeout
+            ShellResult("ok", 0)
+        }).execute("call", args(timeout = 5.0), null, null)
+
+        assertEquals(5L, seenTimeout)
+        assertTrue(resultText(result).contains("[exit: 0]"))
+    }
+
+    @Test
+    fun rejectsInvalidTimeout() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                tool(executor { _, _, _ -> ShellResult("", 0) }).execute("call", args(timeout = 0.0), null, null)
+            }
+        }
+    }
+
+    @Test
+    fun requiresCommand() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                tool(executor { _, _, _ -> ShellResult("", 0) })
+                    .execute("call", buildJsonObject { }, null, null)
+            }
+        }
+    }
+
+    @Test
+    fun abortedSignalSkipsExecution() {
+        var called = false
+        val bashTool = tool(executor { _, _, _ ->
+            called = true
+            ShellResult("", 0)
+        })
+        val signal = RunSignal().apply { abort("stop") }
+
+        assertThrows(RequestAbortedException::class.java) {
+            runBlocking { bashTool.execute("call", args(), signal, null) }
+        }
+        assertTrue(!called)
+    }
+
+    @Test
+    fun executorAbortBecomesErrorResult() = runBlocking {
+        val result = tool(executor { _, _, _ -> throw RequestAbortedException("stop") })
+            .execute("call", args(), null, null)
+
+        assertEquals("Operation aborted: stop", resultText(result))
+        assertEquals(true, result.isError)
+    }
+}
