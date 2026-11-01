@@ -317,6 +317,42 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun observeToolAppliesLimitWithoutFilters() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("limit", 2) })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"count\":2"))
+        assertTrue(text.contains("\"total\":3"))
+        assertTrue(text.contains("\"ref\":\"0\""))
+        assertTrue(text.contains("\"ref\":\"1\""))
+        assertTrue(!text.contains("\"ref\":\"2\""))
+    }
+
+    @Test
+    fun observeToolReturnsAllMatchesOverTwentyWithoutLimit() = runTest {
+        controller.observeSnapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(
+                className = "root",
+                bounds = GuiBounds(0, 0, 1080, 2400),
+                children = (0 until 25).map { index ->
+                    GuiNode(
+                        className = "android.widget.Button",
+                        bounds = GuiBounds(0, index * 10, 100, index * 10 + 10),
+                        text = "OK",
+                    )
+                },
+            ),
+            packageName = "com.example",
+        )
+        val result = run("screen_observe", buildJsonObject { put("text", "OK") })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"count\":25"))
+        assertTrue(text.contains("\"total\":25"))
+        assertEquals(25, Regex("\"ref\":\"").findAll(text).count())
+    }
+
+    @Test
     fun observeToolHintsWhenFilterMatchesNothing() = runTest {
         val result = run("screen_observe", buildJsonObject { put("text", "不存在的文字") })
         assertNull(result.isError)
@@ -565,8 +601,9 @@ class ScreenToolsTest {
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"target\":\"main\""))
-        assertTrue(text.contains("\"path\":\"/gui/screenshots/screen-"))
-        assertTrue(text.contains("\"hostPath\""))
+        assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
+        assertTrue(text.contains("\"bashPath\":\"/gui/screenshots/screen-"))
+        assertTrue(!text.contains("\"hostPath\""))
         assertTrue(text.contains("\"width\":1080"))
         assertTrue(text.contains("\"height\":2400"))
         assertTrue(!text.contains("\"backend\""))

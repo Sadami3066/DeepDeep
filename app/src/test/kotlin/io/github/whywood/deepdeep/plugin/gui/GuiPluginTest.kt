@@ -100,9 +100,10 @@ class GuiPluginTest {
         val result = tool.execute("call", buildJsonObject { }, null, null)
         assertNull(result.isError)
         val text = (result.content.single() as TextContent).text
-        assertTrue(text.contains("\"path\":\"/workspace/shots/screen-"))
+        assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
+        assertTrue(text.contains("\"bashPath\":\"/workspace/shots/screen-"))
         assertTrue(text.contains("\"target\":\"main\""))
-        assertTrue(text.contains("\"hostPath\""))
+        assertTrue(!text.contains("\"hostPath\""))
         assertTrue(text.contains("\"width\":720"))
         assertTrue(text.contains("\"height\":1600"))
         assertTrue(!text.contains("\"backend\""))

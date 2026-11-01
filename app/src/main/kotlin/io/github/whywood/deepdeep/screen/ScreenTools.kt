@@ -33,8 +33,6 @@ private const val MAX_SCROLL_AMOUNT = 10
 private const val DEFAULT_WAIT_MILLIS = 5000
 private const val MIN_WAIT_MILLIS = 100
 private const val MAX_WAIT_MILLIS = 60000
-private const val DEFAULT_FIND_LIMIT = 20
-private const val MAX_FIND_LIMIT = 50
 
 private val SCREEN_KEYS = setOf(
     "back",
@@ -209,10 +207,10 @@ internal fun waitTimeoutOf(args: JsonObject): Long {
     return timeout.toLong()
 }
 
-internal fun filterLimitOf(args: JsonObject): Int {
-    val limit = args.intOrNull("limit") ?: DEFAULT_FIND_LIMIT
-    if (limit !in 1..MAX_FIND_LIMIT) {
-        throw IllegalArgumentException("limit 需要在 1..$MAX_FIND_LIMIT 之间")
+internal fun observeLimitOf(args: JsonObject): Int? {
+    val limit = args.intOrNull("limit") ?: return null
+    if (limit !in 1..50) {
+        throw IllegalArgumentException("limit 需要在 1..50 之间")
     }
     return limit
 }
@@ -282,7 +280,7 @@ private val observeParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("limit") {
             put("type", "integer")
-            put("description", "Maximum matches to return, 1-$MAX_FIND_LIMIT. Defaults to $DEFAULT_FIND_LIMIT.")
+            put("description", "Maximum nodes to return, 1-50. Omit to return all matches.")
         }
     }
 }
@@ -524,7 +522,7 @@ private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
             val (maxDepth, maxNodes) = observeLimitsOf(args)
             val expectedPackage = args.stringOrNull("packageName")?.trim()?.takeIf { it.isNotEmpty() }
             val filters = parseObserveFilters(args)
-            val limit = if (filters.isEmpty()) DEFAULT_FIND_LIMIT else filterLimitOf(args)
+            val limit = observeLimitOf(args)
             val observed = controller.observe(target, maxDepth, maxNodes, expectedPackage)
             textResult(observeJson(observed, filters, limit).toString())
         }
@@ -537,7 +535,7 @@ private fun screenshotTool(
     linuxScreenshotDir: String,
 ): CodingTool = CodingTool(
     name = "screen_screenshot",
-    description = "Save a screen as a PNG and report its /gui path, host path, width and height. Use it when visual layout matters and the node tree cannot answer the question.",
+    description = "Save the screen as a PNG. path is the image file for read; bashPath is the same file inside the bash environment. Returns width, height and size. Use it only when the node tree cannot answer a visual question.",
     parameters = screenshotParameters,
     label = "screen_screenshot",
     execute = { _, args, signal, _ ->
@@ -556,8 +554,8 @@ private fun screenshotTool(
             textResult(
                 buildJsonObject {
                     put("target", target.id)
-                    put("path", "$base/$fileName")
-                    put("hostPath", file.absolutePath)
+                    put("path", file.absolutePath)
+                    put("bashPath", "$base/$fileName")
                     put("width", capture.width)
                     put("height", capture.height)
                     put("sizeBytes", capture.png.size)
@@ -848,7 +846,7 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
 internal fun observeJson(
     observed: ScreenObserveResult,
     filters: List<GuiSelector> = emptyList(),
-    limit: Int = DEFAULT_FIND_LIMIT,
+    limit: Int? = null,
 ): JsonObject = buildJsonObject {
     observed.snapshot.packageName?.let { put("package", it) }
     observed.snapshot.windowTitle?.let { put("title", it) }
@@ -858,7 +856,7 @@ internal fun observeJson(
     } else {
         observedNodes.filter { node -> GuiNodeTree.matchesAll(node, filters) }
     }
-    val shown = if (filters.isEmpty()) total else total.take(limit)
+    val shown = if (limit == null) total else total.take(limit)
     put("count", shown.size)
     put("total", total.size)
     put("scanned", observed.snapshot.scanned)
