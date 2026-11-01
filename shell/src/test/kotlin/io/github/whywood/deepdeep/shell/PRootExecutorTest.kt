@@ -27,8 +27,8 @@ class PRootExecutorTest {
 
         assertTrue(command.containsAll(listOf("-0", "--link2symlink", "-r", fixture.rootfs.absolutePath)))
         assertTrue(command.containsAll(listOf("-b", "/dev", "/proc", "/sys")))
-        assertTrue(command.contains("${fixture.workspace.absolutePath}:/workspace"))
-        assertTrue(command.containsAll(listOf("-w", "/workspace", "--kill-on-exit", "/bin/sh", "-c", "echo hi")))
+        assertTrue(command.contains("${fixture.workspace.absolutePath}:${fixture.workspace.absolutePath}"))
+        assertTrue(command.containsAll(listOf("-w", fixture.workspace.absolutePath, "--kill-on-exit", "/bin/sh", "-c", "echo hi")))
     }
 
     @Test

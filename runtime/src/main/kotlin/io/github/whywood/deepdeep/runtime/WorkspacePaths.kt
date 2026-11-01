@@ -1,47 +1,70 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.AgentToolResult
+import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.truncateHead
+import java.io.File
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import okio.Path
-
-private const val WORKSPACE_ROOT = "/workspace"
+import okio.Path.Companion.toPath
 
 private val FILE_TOOL_NAMES = setOf("read", "write", "edit", "ls", "grep", "find")
 
-internal fun mapWorkspacePath(cwd: Path, path: String): String = when {
-    path == WORKSPACE_ROOT -> cwd.toString()
-    path.startsWith("$WORKSPACE_ROOT/") -> {
-        val remainder = path.removePrefix("$WORKSPACE_ROOT/").trimStart('/')
-        if (remainder.isEmpty()) cwd.toString() else cwd.resolve(remainder, normalize = true).toString()
-    }
-    else -> path
+internal fun requireAbsolutePath(path: String): String {
+    require(path.startsWith("/")) { "path must be an explicit absolute path: $path" }
+    return path.toPath(normalize = true).toString()
 }
 
-internal fun CodingTool.withWorkspacePaths(cwd: Path): CodingTool {
+internal fun CodingTool.withAbsolutePaths(): CodingTool {
     if (name !in FILE_TOOL_NAMES) return this
+    val original = this
+    val properties = parameters.getValue("properties").jsonObject.toMutableMap()
+    properties["path"] = buildJsonObject {
+        put("type", "string")
+        put("description", "Required absolute path in the Android filesystem; no relative paths or ~ expansion.")
+    }
+    val required = (parameters["required"] as? JsonArray).orEmpty().toMutableList()
+    if (JsonPrimitive("path") !in required) required += JsonPrimitive("path")
+    val schema = JsonObject(parameters + mapOf("properties" to JsonObject(properties), "required" to JsonArray(required)))
+    fun prepare(args: JsonObject): JsonObject {
+        val prepared = original.prepareArguments?.invoke(args) ?: args
+        val raw = (prepared["path"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            ?: throw IllegalArgumentException("path is required and must be an absolute path")
+        return JsonObject(prepared + ("path" to JsonPrimitive(requireAbsolutePath(raw))))
+    }
     return CodingTool(
         name = name,
-        description = "$description Paths beginning with $WORKSPACE_ROOT/ are resolved from the workspace root.",
-        parameters = parameters,
+        description = description.replace("relative to the search directory", "as absolute paths") +
+            " An explicit absolute path is required; file locations in results are absolute.",
+        parameters = schema,
         label = label,
-        promptSnippet = null,
-        promptGuidelines = null,
-        prepareArguments = { args ->
-            (prepareArguments?.invoke(args) ?: args).withWorkspacePath(cwd)
+        prepareArguments = ::prepare,
+        execute = { id, args, signal, update ->
+            val prepared = prepare(args)
+            val result = original.execute(id, prepared, signal, update)
+            if (name !in setOf("ls", "find", "grep") || result.isError == true) {
+                result
+            } else {
+                val path = (prepared.getValue("path") as JsonPrimitive).content
+                val base = if (File(path).isFile) File(path).parent.orEmpty() else path
+                AgentToolResult(details = result.details, isError = result.isError, content = result.content.map { block ->
+                    if (block !is TextContent || block.text.startsWith("No ") || block.text == "(empty directory)") block
+                    else {
+                        val split = block.text.indexOf("\n\n[")
+                        val body = if (split < 0) block.text else block.text.substring(0, split)
+                        val notice = if (split < 0) "" else block.text.substring(split)
+                        val absolute = body.lineSequence().joinToString("\n") { line -> "$base/$line" }
+                        val bounded = truncateHead(absolute + notice, maxLines = Int.MAX_VALUE)
+                        block.copy(text = bounded.text + if (bounded.truncated) "\n\n[Absolute-path output truncated; narrow the query.]" else "")
+                    }
+                })
+            }
         },
-        execute = execute,
     )
-}
-
-private fun JsonObject.withWorkspacePath(cwd: Path): JsonObject {
-    val raw = (this["path"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return this
-    val mapped = mapWorkspacePath(cwd, raw)
-    if (mapped == raw) return this
-    return buildJsonObject {
-        forEach { (key, value) -> if (key != "path") put(key, value) }
-        put("path", mapped)
-    }
 }

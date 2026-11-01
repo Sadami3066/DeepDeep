@@ -43,7 +43,7 @@ class LinuxEnvironment(
         val result = installer.install()
         if (result is LinuxInstallState.Installed) {
             workspaceDir.mkdirs()
-            File(rootfsDir, "workspace").mkdirs()
+            prepareBindDirectories(rootfsDir, listOf(workspaceDir to workspaceDir.absolutePath))
             prepareBindDirectories(rootfsDir, extraBinds)
             writeNotices()
             refreshDns()

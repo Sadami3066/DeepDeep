@@ -87,9 +87,9 @@ class PRootExecutor(
             add("${host.absolutePath}:$guest")
         }
         add("-b")
-        add("${workspaceDir.absolutePath}:/workspace")
+        add("${workspaceDir.absolutePath}:${workspaceDir.absolutePath}")
         add("-w")
-        add("/workspace")
+        add(workspaceDir.absolutePath)
         add("--kill-on-exit")
         add("/bin/sh")
         add("-c")
@@ -108,7 +108,7 @@ class PRootExecutor(
         require(rootfsDir.isDirectory) { "rootfs not installed: $rootfsDir" }
         workspaceDir.mkdirs()
         tempDir.mkdirs()
-        prepareBindDirectories(rootfsDir, extraBinds)
+        prepareBindDirectories(rootfsDir, extraBinds + (workspaceDir to workspaceDir.absolutePath))
         if (sharedStorageEnabled()) {
             File(rootfsDir, "storage/emulated/0").mkdirs()
             File(rootfsDir, "sdcard").mkdirs()

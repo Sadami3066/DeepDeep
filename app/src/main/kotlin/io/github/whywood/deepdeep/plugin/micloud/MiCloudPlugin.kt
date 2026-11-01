@@ -135,7 +135,6 @@ class MiCloudPlugin(
         settings = preferences,
         writer = webWriter(),
         downloadDir = File(context.filesDir, "micloud/recordings"),
-        downloadLinuxDir = "/micloud/recordings",
     )
 
     override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
@@ -191,7 +190,7 @@ class MiCloudPlugin(
             - `mi_cloud_sms`：短信会话列表（只读）。
             - `mi_cloud_contacts`：联系人列表与搜索（只读）。
             - `mi_cloud_gallery`：相册与媒体列表（只读）。
-            - `mi_cloud_recordings`：录音列表与下载（保存到 `/micloud/recordings`，可用 bash 访问）。
+            - `mi_cloud_recordings`：录音列表与下载（返回可直接读取、交付或供 bash 使用的绝对路径）。
 
             ## 规则
 

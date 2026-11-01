@@ -72,7 +72,7 @@ private val presentParameters: JsonObject = buildJsonObject {
                         put("type", "string")
                         put(
                             "description",
-                            "For file, image and html: absolute path, or path relative to the current working directory",
+                            "For file, image and html: explicit absolute path in the Android filesystem",
                         )
                     }
                     putJsonObject("id") {
@@ -191,7 +191,9 @@ private fun fileItem(
             throw IllegalArgumentException("items[$index].path does not exist: $rawPath")
         }
     }
-    if (file.exists() && !file.isFile) {
+    if (!file.exists()) throw IllegalArgumentException("path does not exist: $rawPath")
+    if (!file.canRead()) throw IllegalArgumentException("path is not readable: $rawPath")
+    if (!file.isFile) {
         throw IllegalArgumentException("items[$index].path is a directory: $rawPath")
     }
     return buildJsonObject {
@@ -213,7 +215,9 @@ private fun normalizeLegacyFile(
     val rawPath = item.argumentString("path")
         ?: throw IllegalArgumentException("files[$index].path must not be empty")
     val file = resolvePresentedFile(rawPath, cwd)
-    if (file.exists() && !file.isFile) {
+    if (!file.exists()) throw IllegalArgumentException("path does not exist: $rawPath")
+    if (!file.canRead()) throw IllegalArgumentException("path is not readable: $rawPath")
+    if (!file.isFile) {
         throw IllegalArgumentException("files[$index].path is a directory: $rawPath")
     }
     val extension = file.extension.lowercase(Locale.US)
@@ -254,11 +258,7 @@ private suspend fun creativeItem(
 }
 
 private fun resolvePresentedFile(rawPath: String, cwd: File): File {
-    val resolved = when {
-        rawPath.startsWith("/") -> File(rawPath)
-        else -> File(cwd, rawPath.removePrefix("workspace/"))
-    }
-    return resolved.toPath().normalize().toFile().absoluteFile
+    return File(requireAbsolutePath(rawPath))
 }
 
 private fun presentedItemsJson(items: List<JsonObject>): JsonObject = buildJsonObject {

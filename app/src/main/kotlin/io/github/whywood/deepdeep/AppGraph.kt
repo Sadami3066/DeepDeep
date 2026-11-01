@@ -142,13 +142,15 @@ class AppGraph(context: Context) : AppDependencies {
     override val shareStaging = ShareStaging(appContext)
 
     fun skillBinds(): List<Pair<File, String>> = listOf(
-        File(agentDir, "skills") to "/skills",
-        File(appContext.filesDir, "skills") to "/skill-repo",
+        File(agentDir, "skills").let { it to it.absolutePath },
+        File(appContext.filesDir, "skills").let { it to it.absolutePath },
     )
 
     fun linuxBinds(): List<Pair<File, String>> = skillBinds() + listOf(
-        File(appContext.filesDir, "gui") to "/gui",
-        File(appContext.filesDir, "micloud") to "/micloud",
+        File(appContext.filesDir, "gui").let { it to it.absolutePath },
+        File(appContext.filesDir, "micloud").let { it to it.absolutePath },
+        File(appContext.filesDir, "workshop").let { it to it.absolutePath },
+        File(appContext.cacheDir, "tool-output").let { it to it.absolutePath },
     )
 
     init {
@@ -236,7 +238,7 @@ class AppGraph(context: Context) : AppDependencies {
                 GuiPlugin(
                     context = appContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
-                    linuxScreenshotDir = "/gui/screenshots",
+                    linuxScreenshotDir = File(appContext.filesDir, "gui/screenshots").absolutePath,
                 ),
                 VirtualScreenPlugin(
                     context = appContext,

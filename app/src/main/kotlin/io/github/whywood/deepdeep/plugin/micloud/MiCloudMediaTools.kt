@@ -50,7 +50,6 @@ internal fun galleryTool(client: MiCloudReadApi): CodingTool = CodingTool(
 internal fun recordingsTool(
     client: MiCloudReadApi,
     downloadDir: File,
-    downloadLinuxDir: String,
 ): CodingTool = CodingTool(
     name = "mi_cloud_recordings",
     description = "List or download call recordings stored in Xiaomi Cloud. Downloads are saved into the workspace so the user can open them.",
@@ -84,13 +83,11 @@ internal fun recordingsTool(
                     downloadDir.mkdirs()
                     val target = uniqueFile(downloadDir, safeFileName(name))
                     val downloaded = client.download(recordingDownloadPath(userId, fileId), target)
-                    val linuxDirectory = downloadLinuxDir.trimEnd('/')
                     val result = buildJsonObject {
                         put("fileId", fileId)
                         put("name", downloaded.name)
                         put("size", downloaded.length())
-                        put("path", "$linuxDirectory/${downloaded.name}")
-                        put("hostPath", downloaded.absolutePath)
+                        put("path", downloaded.absolutePath)
                     }
                     textResult(result.toString())
                 }

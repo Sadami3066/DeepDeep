@@ -54,11 +54,19 @@ class PresentToolTest {
     }
 
     @Test
+    fun rejectsRelativeAndMissingFiles() = runTest {
+        for (path in listOf("relative.md", "~/report.md", File(folder.root, "missing.md").absolutePath)) {
+            val (result, _) = run(tool(), itemsArgs(item { put("type", "file"); put("path", path) }))
+            assertEquals(true, result.isError)
+        }
+    }
+
+    @Test
     fun unboundSessionReturnsErrorText() = runTest {
         val tool = presentTool { null }
         val result = tool.execute(
             "call-unbound",
-            itemsArgs(item { put("type", "file"); put("path", "report.md") }),
+            itemsArgs(item { put("type", "file"); put("path", File(folder.root, "report.md").absolutePath) }),
             null,
             null,
         )
@@ -105,7 +113,7 @@ class PresentToolTest {
             itemsArgs(
                 item {
                     put("type", "file")
-                    put("path", "report.md")
+                    put("path", File(folder.root, "report.md").absolutePath)
                     put("title", "  Q3 report  ")
                 },
                 item {
@@ -114,7 +122,7 @@ class PresentToolTest {
                 },
                 item {
                     put("type", "html")
-                    put("path", "page.html")
+                    put("path", File(folder.root, "page.html").absolutePath)
                 },
             ),
         )
@@ -135,10 +143,10 @@ class PresentToolTest {
 
     @Test
     fun legacyFilesInferItemTypes() = runTest {
-        val (result, text) = run(
-            tool(),
-            filesArgs("reports/q3.md", "photo.jpeg", "site/index.html", "build/demo/"),
-        )
+        val paths = listOf("reports/q3.md", "photo.jpeg", "site/index.html", "build/demo").map { name ->
+            File(folder.root, name).apply { parentFile.mkdirs(); writeText("content") }.absolutePath
+        }
+        val (result, text) = run(tool(), filesArgs(*paths.toTypedArray()))
         assertNull(result.isError)
         val root = Json.parseToJsonElement(text).jsonObject
         assertFalse(root.containsKey("files"))
@@ -169,7 +177,7 @@ class PresentToolTest {
 
     @Test
     fun rejectsMissingType() = runTest {
-        val (result, text) = run(tool(), itemsArgs(item { put("path", "report.md") }))
+        val (result, text) = run(tool(), itemsArgs(item { put("path", File(folder.root, "report.md").absolutePath) }))
         assertEquals(true, result.isError)
         assertTrue(text.contains("type is required"))
     }
@@ -186,7 +194,7 @@ class PresentToolTest {
         folder.newFile("notes.md")
         val (result, text) = run(
             tool(),
-            itemsArgs(item { put("type", "image"); put("path", "notes.md") }),
+            itemsArgs(item { put("type", "image"); put("path", File(folder.root, "notes.md").absolutePath) }),
         )
         assertEquals(true, result.isError)
         assertTrue(text.contains("not an image"))
@@ -196,13 +204,13 @@ class PresentToolTest {
     fun rejectsMissingImageAndHtml() = runTest {
         val (imageResult, imageText) = run(
             tool(),
-            itemsArgs(item { put("type", "image"); put("path", "missing.png") }),
+            itemsArgs(item { put("type", "image"); put("path", File(folder.root, "missing.png").absolutePath) }),
         )
         assertEquals(true, imageResult.isError)
         assertTrue(imageText.contains("does not exist"))
         val (htmlResult, htmlText) = run(
             tool(),
-            itemsArgs(item { put("type", "html"); put("path", "missing.html") }),
+            itemsArgs(item { put("type", "html"); put("path", File(folder.root, "missing.html").absolutePath) }),
         )
         assertEquals(true, htmlResult.isError)
         assertTrue(htmlText.contains("does not exist"))
@@ -303,7 +311,7 @@ class PresentToolTest {
         folder.newFile("data.json")
         val (result, text) = run(
             tool(),
-            itemsArgs(item { put("type", "file"); put("path", "data.json") }),
+            itemsArgs(item { put("type", "file"); put("path", File(folder.root, "data.json").absolutePath) }),
         )
         assertNull(result.isError)
         val entry = outputItems(text).single()

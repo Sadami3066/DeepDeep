@@ -134,7 +134,7 @@ class PiSessionEngine(
         defaults.forEach { tool ->
             when (tool.name) {
                 "bash" -> activeShell?.let { add(deepDeepBashTool(it)) }
-                else -> add(tool.withWorkspacePaths(cwd))
+                else -> add(tool.withAbsolutePaths())
             }
         }
         toolContext?.let { context ->

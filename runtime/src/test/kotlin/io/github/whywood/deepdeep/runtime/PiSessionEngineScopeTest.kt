@@ -120,33 +120,33 @@ class PiSessionEngineScopeTest {
                 .filter { tool -> workshopAgentToolVisible(tool.name) }
                 .associateBy { it.name }
 
-            assertTrue(runTool(tools.getValue("ls"), JsonObject(emptyMap())).contains("notes.txt"))
+            assertTrue(runTool(tools.getValue("ls"), buildJsonObject { put("path", workspace.absolutePath) }).contains("notes.txt"))
             assertTrue(
-                runTool(tools.getValue("find"), buildJsonObject { put("pattern", "*.html") })
+                runTool(tools.getValue("find"), buildJsonObject { put("pattern", "*.html"); put("path", workspace.absolutePath) })
                     .contains("draft/page.html"),
             )
             assertTrue(
-                runTool(tools.getValue("grep"), buildJsonObject { put("pattern", "hello scope") })
+                runTool(tools.getValue("grep"), buildJsonObject { put("pattern", "hello scope"); put("path", workspace.absolutePath) })
                     .contains("notes.txt"),
             )
             assertTrue(
                 runTool(
                     tools.getValue("write"),
                     buildJsonObject {
-                        put("path", "fresh.txt")
+                        put("path", File(workspace, "fresh.txt").absolutePath)
                         put("content", "written inside")
                     },
                 ).isNotEmpty(),
             )
             assertEquals(
                 "written inside",
-                runTool(tools.getValue("read"), buildJsonObject { put("path", "fresh.txt") }).trim(),
+                runTool(tools.getValue("read"), buildJsonObject { put("path", File(workspace, "fresh.txt").absolutePath) }).trim(),
             )
 
             val escape = runCatching {
                 tools.getValue("read").execute("call", buildJsonObject { put("path", "../outside.txt") }, null, null)
             }.exceptionOrNull()
-            assertTrue("expected IOException but got $escape", escape is IOException)
+            assertTrue("expected absolute-path rejection but got $escape", escape is IllegalArgumentException)
             val absoluteEscape = runCatching {
                 tools.getValue("read").execute("call", buildJsonObject { put("path", "/etc/passwd") }, null, null)
             }.exceptionOrNull()
@@ -182,7 +182,7 @@ class PiSessionEngineScopeTest {
             assertTrue(runTool(bash, buildJsonObject { put("command", "true") }).contains("[exit: 0]"))
 
             val read = tools.getValue("read")
-            val prepared = read.prepareArguments!!.invoke(buildJsonObject { put("path", "/workspace/notes.txt") })
+            val prepared = read.prepareArguments!!.invoke(buildJsonObject { put("path", File(workspace, "notes.txt").absolutePath) })
             assertEquals(
                 File(workspace, "notes.txt").absolutePath,
                 prepared.getValue("path").jsonPrimitive.content,

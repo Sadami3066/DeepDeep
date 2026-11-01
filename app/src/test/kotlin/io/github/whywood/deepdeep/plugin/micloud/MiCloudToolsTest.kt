@@ -48,7 +48,6 @@ class MiCloudToolsTest {
         settings = settings,
         writer = writeApi,
         downloadDir = ensureDownloadDir(),
-        downloadLinuxDir = "/micloud/recordings",
     )
 
     private fun tool(name: String): CodingTool = tools().first { it.name == name }
@@ -347,8 +346,9 @@ class MiCloudToolsTest {
         assertFalse(result.isError == true)
         val payload = result.json()
         assertEquals("call_01.amr", payload["name"]!!.jsonPrimitive.content)
-        assertEquals("/micloud/recordings/call_01.amr", payload["path"]!!.jsonPrimitive.content)
-        val hostPath = payload["hostPath"]!!.jsonPrimitive.content
+        assertTrue(payload["path"]!!.jsonPrimitive.content.startsWith("/"))
+        val hostPath = payload["path"]!!.jsonPrimitive.content
+        assertFalse(payload.containsKey("hostPath"))
         assertTrue(File(hostPath).isFile)
         assertTrue(hostPath.endsWith("call_01.amr"))
         assertTrue(readApi.requestedPaths.any { it.startsWith("/sfs/u1/ns/recorder/file/f1/storage") })

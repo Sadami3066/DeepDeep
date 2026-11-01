@@ -19,6 +19,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 
@@ -40,39 +41,32 @@ class WorkspacePathsTest {
     }
 
     @Test
-    fun mapsWorkspaceRootAndPrefixToCwd() {
-        assertEquals(cwd.toString(), mapWorkspacePath(cwd, "/workspace"))
-        assertEquals(cwd.toString(), mapWorkspacePath(cwd, "/workspace/"))
-        assertEquals(
-            cwd.resolve("tool-test/a.txt").toString(),
-            mapWorkspacePath(cwd, "/workspace/tool-test/a.txt"),
-        )
+    fun normalizesAbsolutePathsWithoutAliases() {
+        assertEquals("/workspace", requireAbsolutePath("/workspace"))
+        assertEquals("/workspace/a.txt", requireAbsolutePath("/workspace/sub/../a.txt"))
     }
 
     @Test
-    fun keepsRelativeAndHostAbsolutePaths() {
-        assertEquals("tool-test/a.txt", mapWorkspacePath(cwd, "tool-test/a.txt"))
-        assertEquals("~/notes/a.txt", mapWorkspacePath(cwd, "~/notes/a.txt"))
-        assertEquals(
-            "/data/user/0/io.github.whywood.deepdeep/files/home/a.txt",
-            mapWorkspacePath(cwd, "/data/user/0/io.github.whywood.deepdeep/files/home/a.txt"),
-        )
+    fun rejectsRelativeAndHomePaths() {
+        listOf("tool-test/a.txt", "~/notes/a.txt", "").forEach { path ->
+            assertThrows(IllegalArgumentException::class.java) { requireAbsolutePath(path) }
+        }
     }
 
     @Test
-    fun keepsLookalikeBroadPrefixes() {
-        assertEquals("/workspace2/a.txt", mapWorkspacePath(cwd, "/workspace2/a.txt"))
-        assertEquals("workspace/a.txt", mapWorkspacePath(cwd, "workspace/a.txt"))
+    fun keepsAbsolutePathsOutsideWorkspace() {
+        assertEquals("/another/a.txt", requireAbsolutePath("/another/a.txt"))
+        assertThrows(IllegalArgumentException::class.java) { requireAbsolutePath("workspace/a.txt") }
     }
 
     @Test
     fun wrapperKeepsToolIdentity() {
         defaultTools().filter { it.name in FILE_TOOLS }.forEach { tool ->
-            val wrapped = tool.withWorkspacePaths(cwd)
+            val wrapped = tool.withAbsolutePaths()
             assertEquals(tool.name, wrapped.name)
             assertEquals(tool.label, wrapped.label)
-            assertEquals(tool.parameters, wrapped.parameters)
-            assertTrue(wrapped.description.contains("/workspace/"))
+            assertTrue(wrapped.parameters.toString().contains("absolute path"))
+            assertTrue(wrapped.description.contains("absolute path"))
             assertNull(wrapped.promptSnippet)
             assertNull(wrapped.promptGuidelines)
         }
@@ -84,17 +78,17 @@ class WorkspacePathsTest {
             runTool(
                 "write",
                 buildJsonObject {
-                    put("path", "/workspace/sub/a.txt")
+                    put("path", File(workspace, "sub/a.txt").absolutePath)
                     put("content", "alpha")
                 },
             ).contains("Successfully wrote"),
         )
-        assertEquals("alpha", runTool("read", buildJsonObject { put("path", "/workspace/sub/a.txt") }).trim())
+        assertEquals("alpha", runTool("read", buildJsonObject { put("path", File(workspace, "sub/a.txt").absolutePath) }).trim())
 
         runTool(
             "edit",
             buildJsonObject {
-                put("path", "/workspace/sub/a.txt")
+                put("path", File(workspace, "sub/a.txt").absolutePath)
                 put("edits", buildJsonArray {
                     add(buildJsonObject {
                         put("oldText", "alpha")
@@ -103,7 +97,7 @@ class WorkspacePathsTest {
                 })
             },
         )
-        assertEquals("beta", runTool("read", buildJsonObject { put("path", "sub/a.txt") }).trim())
+        assertEquals("beta", runTool("read", buildJsonObject { put("path", File(workspace, "sub/a.txt").absolutePath) }).trim())
     }
 
     @Test
@@ -111,13 +105,13 @@ class WorkspacePathsTest {
         File(workspace, "sub").mkdirs()
         File(workspace, "sub/a.txt").writeText("needle\n")
 
-        assertTrue(runTool("ls", buildJsonObject { put("path", "/workspace/sub") }).contains("a.txt"))
+        assertTrue(runTool("ls", buildJsonObject { put("path", File(workspace, "sub").absolutePath) }).contains("a.txt"))
         assertTrue(
             runTool(
                 "grep",
                 buildJsonObject {
                     put("pattern", "needle")
-                    put("path", "/workspace")
+                    put("path", workspace.absolutePath)
                 },
             ).contains("sub/a.txt"),
         )
@@ -126,17 +120,29 @@ class WorkspacePathsTest {
                 "find",
                 buildJsonObject {
                     put("pattern", "*.txt")
-                    put("path", "/workspace")
+                    put("path", workspace.absolutePath)
                 },
             ).contains("sub/a.txt"),
         )
+    }
+
+    @Test
+    fun allFileToolsRequireExplicitAbsolutePath() = runBlocking {
+        defaultTools().filter { it.name in FILE_TOOLS }.forEach { raw ->
+            val tool = raw.withAbsolutePaths()
+            listOf(buildJsonObject {}, buildJsonObject { put("path", "a.txt") }).forEach { args ->
+                assertThrows(IllegalArgumentException::class.java) {
+                    runBlocking { tool.execute("call", args, null, null) }
+                }
+            }
+        }
     }
 
     private fun defaultTools(): List<CodingTool> =
         defaultCodingTools(cwd, FileSystem.SYSTEM, FileMutationQueue(), shellExecutor = null)
 
     private suspend fun runTool(name: String, args: JsonObject): String {
-        val tool = defaultTools().first { it.name == name }.withWorkspacePaths(cwd)
+        val tool = defaultTools().first { it.name == name }.withAbsolutePaths()
         val prepared = tool.prepareArguments?.invoke(args) ?: args
         val result: AgentToolResult = tool.execute("call", prepared, null, null)
         return result.content.filterIsInstance<TextContent>().joinToString("") { it.text }

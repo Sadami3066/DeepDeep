@@ -22,13 +22,11 @@ fun miCloudTools(
     settings: MiCloudSettings,
     writer: MiCloudWebWriter,
     downloadDir: File,
-    downloadLinuxDir: String,
 ): List<CodingTool> = buildMiCloudTools(
     client = ClientReadApi(client),
     settings = settings,
     writer = WriterWriteApi(writer),
     downloadDir = downloadDir,
-    downloadLinuxDir = downloadLinuxDir,
 )
 
 internal fun buildMiCloudTools(
@@ -36,7 +34,6 @@ internal fun buildMiCloudTools(
     settings: MiCloudSettings,
     writer: MiCloudWriteApi,
     downloadDir: File,
-    downloadLinuxDir: String,
 ): List<CodingTool> {
     val capabilities = settings.capabilities.value
     return buildList {
@@ -46,7 +43,7 @@ internal fun buildMiCloudTools(
         if (capabilities.smsRead) add(smsTool(client))
         if (capabilities.contactsRead) add(contactsTool(client))
         if (capabilities.galleryRead) add(galleryTool(client))
-        if (capabilities.recordingsRead) add(recordingsTool(client, downloadDir, downloadLinuxDir))
+        if (capabilities.recordingsRead) add(recordingsTool(client, downloadDir))
     }
 }
 
