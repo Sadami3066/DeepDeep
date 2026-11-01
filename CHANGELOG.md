@@ -2,6 +2,11 @@
 
 ## HEAD (since m2)
 
+- fix: 工坊草稿报错使用传入路径 [工坊]
+- fix: 日历列表回显可读区间 [日历]
+- fix: 截图路径与 observe limit 语义 [屏幕]
+- fix: goal resume 按实际状态报错 [目标]
+- fix: 后台作业结束时先冻结进程树 [作业]
 - fix: 收口失败提示、虚拟屏文案与 bash 超时 [工具]
 - feat: 工坊删除与工具文案修复 [插件]
 - feat: 文件工具支持 /workspace 路径与 bash 退出码 [工具]
