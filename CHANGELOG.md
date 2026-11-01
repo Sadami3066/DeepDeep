@@ -2,6 +2,9 @@
 
 ## HEAD (since m2)
 
+- feat: 工坊删除与工具文案修复 [插件]
+- feat: 文件工具支持 /workspace 路径与 bash 退出码 [工具]
+- fix: 修复主屏窗口选择、ADB 快照与等待信息 [屏幕]
 - refactor: 工具文本分层：固定全局规则、去掉 promptSnippet/guidelines、结果去内部字段 [工具]
 - refactor: 目标/后台任务/定时任务/虚拟屏收纳为 action 工具，屏幕合并为 10 个 [工具]
 - fix: plugin_setup 按外部插件列表生成参数；主屏输入/状态口径与选择器规则对齐 [工具]

@@ -82,7 +82,7 @@
 | 目标 | `goal` |
 | 后台任务 | `job` |
 | 定时任务 | `schedule` |
-| 创意工坊 | `workshop_create` `workshop_load` `workshop_list` `workshop_edit` |
+| 创意工坊 | `workshop_create` `workshop_load` `workshop_list` `workshop_edit` `workshop_delete` |
 | 网络搜索 | `web_search` `web_fetch` |
 | 屏幕操作 | `screen_status` `screen_observe` `screen_screenshot` `screen_app` `screen_tap` `screen_swipe` `screen_scroll` `screen_type` `screen_key` `screen_wait` |
 | 虚拟屏生命周期 | `virtual_screen` |
@@ -93,7 +93,7 @@
 ## 创意工坊
 
 - 每个创意是 Agent 按需求写的 HTML/CSS/JS 文件夹，WebView 渲染成可交互轻应用；没有分类/模板
-- 内置 workshop 技能可用 `/skill:workshop` 强制加载；建好后 `workshop_load` 装载、`present` 交付
+- 内置 workshop 技能可用 `/skill:workshop` 强制加载；建好后 `workshop_load` 装载、`present` 交付；`workshop_delete` 删除创意，连同页面数据一起清空
 - 页面经 bridge 读写自己的数据（SQLite，按创意隔离）；`workshop_edit` 可只改数据不重写页面；页面 JS 可用 `app.agent.*` 编排一次性 Agent
 - 边界：页面不能调用 App 内部函数、不能执行 shell、读不到 App 其他数据
 
