@@ -164,7 +164,12 @@ class GuiPlugin(
     )
 
     override fun tools(): List<CodingTool> =
-        screenTools(screenController, resolvedScreenshotDir, mainController)
+        screenTools(
+            screenController,
+            resolvedScreenshotDir,
+            mainController,
+            onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() },
+        )
 
     override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
 

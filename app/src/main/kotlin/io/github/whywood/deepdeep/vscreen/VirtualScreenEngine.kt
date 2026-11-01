@@ -67,6 +67,8 @@ class VirtualScreenEngine(
     @Volatile
     private var heartbeatJob: Job? = null
     @Volatile
+    private var idleJob: Job? = null
+    @Volatile
     private var commandInFlight = false
 
     @Volatile
@@ -78,6 +80,7 @@ class VirtualScreenEngine(
     private val heartbeat = HeartbeatPolicy()
     private val pongGate = PongGate()
     private val lifecycle = SessionLifecycle()
+    private val idlePolicy = IdlePolicy()
 
     @Volatile
     private var pendingResponse: CompletableDeferred<JsonObject>? = null
@@ -112,6 +115,10 @@ class VirtualScreenEngine(
         get() = connectedUid
 
     fun isOnline(): Boolean = _state.value is VirtualScreenState.Online
+
+    fun touch() {
+        idlePolicy.onActivity(nowMs())
+    }
 
     override suspend fun start(): VirtualScreenResult = lifecycleMutex.withLock {
         cancelRecovery()
@@ -373,6 +380,28 @@ class VirtualScreenEngine(
             )
             readerJob = scope.launch { readLoop(client) }
             heartbeatJob = scope.launch { heartbeatLoop(client) }
+            idlePolicy.onConnected(nowMs())
+            idleJob?.cancel()
+            idleJob = scope.launch {
+                watchIdle(
+                    policy = idlePolicy,
+                    nowMs = ::nowMs,
+                    isOnline = { _state.value is VirtualScreenState.Online },
+                    onIdle = {
+                        Log.i(
+                            TAG,
+                            VirtualScreenTransportLog.event(
+                                "idle_stop",
+                                "idleMs" to IdlePolicy.IDLE_TIMEOUT_MS,
+                                "backend" to connectedBackend,
+                                "helperPid" to connectedHelperPid,
+                            ),
+                        )
+                        idleJob = null
+                        stop()
+                    },
+                )
+            }
         } finally {
             runCatching { server.close() }
         }
@@ -759,6 +788,9 @@ class VirtualScreenEngine(
             readerJob = null
             heartbeatJob?.cancel()
             heartbeatJob = null
+            idleJob?.cancel()
+            idleJob = null
+            idlePolicy.reset()
             pendingResponse?.completeExceptionally(IOException("Virtual screen connection closed"))
             pendingResponse = null
             pendingScreenshotEpoch = 0L

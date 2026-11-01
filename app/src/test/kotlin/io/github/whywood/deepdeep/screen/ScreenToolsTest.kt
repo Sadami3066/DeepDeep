@@ -647,6 +647,17 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun virtualTargetOperationsReportActivity() = runTest {
+        var activity = 0
+        val main = FakeController()
+        val tools = screenTools(controller, screenshotDir, main, onVirtualActivity = { activity++ }).associateBy { it.name }
+        tools.getValue("screen_tap").execute("virtual", buildJsonObject { put("x", 10); put("y", 20) }, null, null)
+        assertEquals(1, activity)
+        tools.getValue("screen_tap").execute("main", buildJsonObject { put("target", "main"); put("x", 30); put("y", 40) }, null, null)
+        assertEquals(1, activity)
+    }
+
+    @Test
     fun virtualFailureNeverFallsBackToMain() = runTest {
         val virtual = object : ScreenController by controller {
             override suspend fun tap(selector: GuiSelector, durationMs: Int): String = error("virtual offline")
