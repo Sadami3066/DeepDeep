@@ -141,15 +141,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val voicePreferences = VoicePreferences(appContext)
     override val shareStaging = ShareStaging(appContext)
 
-    fun skillBinds(): List<Pair<File, String>> = listOf(
-        File(agentDir, "skills").let { it to it.absolutePath },
-        File(appContext.filesDir, "skills").let { it to it.absolutePath },
-    )
-
-    fun linuxBinds(): List<Pair<File, String>> = listOf(
-        appContext.filesDir.let { it to it.absolutePath },
-        appContext.cacheDir.let { it to it.absolutePath },
-    )
+    fun linuxBinds(): List<Pair<File, String>> = listOf(File("/data") to "/data")
 
     init {
         scope.launch {

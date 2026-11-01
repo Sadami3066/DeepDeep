@@ -114,6 +114,24 @@ class ToolContractDeviceTest {
     }
 
     @Test
+    fun linuxReadsAppDataThroughAndroidAliases() = runBlocking {
+        val tools = tools(linux())
+        val file = File(graph.homeDir, "alias-${UUID.randomUUID()}.txt")
+        try {
+            file.writeText("alias-marker\n")
+            val alias = "/data/data/${context.packageName}/files/home/${file.name}"
+            val aliased = run(tools.getValue("bash"), buildJsonObject { put("command", "cat '$alias'") })
+            assertNull(aliased.text(), aliased.isError)
+            assertTrue(aliased.text().contains("alias-marker"))
+            val native = run(tools.getValue("bash"), buildJsonObject { put("command", "ls '/data/user/0/${context.packageName}/files'") })
+            assertNull(native.text(), native.isError)
+            assertTrue(native.text().contains("home"))
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun timeoutCancellationAndBackgroundCleanupStopRealProcesses() = runBlocking {
         val environment = linux()
         val bash = tools(environment).getValue("bash")
