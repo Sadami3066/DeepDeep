@@ -87,7 +87,12 @@ class PiSessionEngine(
                 now = OffsetDateTime.now(),
                 sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                extra = mapOf("paths" to wrapPromptSection("paths", "技能目录：${agentDirectory / "skills"}。")) + extraSystemPromptSections + buildToolRuleSection(tools),
+                extra = mapOf(
+                    "paths" to wrapPromptSection(
+                        "paths",
+                        "技能目录：${agentDirectory / "skills"}。App 私有数据目录：${agentDirectory.parent?.parent ?: agentDirectory}（/data/data 等价），bash 与文件工具按同一真实路径读写。",
+                    ),
+                ) + extraSystemPromptSections + buildToolRuleSection(tools),
             )
         }
         val session = createAgentSession(
