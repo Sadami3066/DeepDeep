@@ -71,6 +71,7 @@ fun screenTools(
     controller: ScreenController,
     screenshotDir: File,
     mainController: ScreenController? = null,
+    onVirtualActivity: () -> Unit = {},
 ): List<CodingTool> {
     val mainTools = mainController?.let { toolsForScreen(it, screenshotDir).associateBy { tool -> tool.name } }
     return toolsForScreen(controller, screenshotDir).map { virtualTool ->
@@ -94,6 +95,7 @@ fun screenTools(
                         primitive.content.trim().lowercase()
                     } ?: "virtual"
                     require(target == "virtual" || target == "main") { "target must be virtual or main" }
+                    if (target == "virtual") onVirtualActivity()
                     val delegate = if (target == "main") mainTools?.get(virtualTool.name)
                         ?: error("Main screen tools are not available; no other screen was operated") else virtualTool
                     val selected = if (virtualTool.name == "screen_status") mainTools?.get(virtualTool.name) ?: delegate else delegate

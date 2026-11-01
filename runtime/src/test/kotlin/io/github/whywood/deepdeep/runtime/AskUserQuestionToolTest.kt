@@ -89,6 +89,26 @@ class AskUserQuestionToolTest {
     }
 
     @Test
+    fun unansweredQuestionTimesOut() = runTest {
+        val center = QuestionCenter()
+        val tool = askUserQuestionTool(center, boundBinding())
+        val result = tool.execute(
+            "call-timeout",
+            questionsArgs(
+                {
+                    put("id", "q1")
+                    put("question", "Still there?")
+                },
+            ),
+            null,
+            null,
+        )
+        assertNull(result.isError)
+        assertEquals("Timed out waiting for the user's answer.", resultText(result))
+        assertTrue(center.pending.value.isEmpty())
+    }
+
+    @Test
     fun invalidArgumentsReturnErrorText() = runTest {
         val tool = askUserQuestionTool(QuestionCenter(), boundBinding())
         val result = tool.execute(
