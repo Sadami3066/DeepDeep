@@ -202,6 +202,20 @@ class PRootExecutorTest {
         assertTrue(elapsed < 5000)
     }
 
+    @Test
+    fun cancellationDoesNotRunRemainingCommands() = runBlocking {
+        val fixture = fixture()
+        val job = launch(Dispatchers.Default) {
+            fixture.executor.execute("trap '' TERM; sleep 30; echo late-done > late.txt", timeoutMillis = 60_000)
+        }
+        delay(500)
+
+        job.cancelAndJoin()
+        delay(300)
+
+        assertFalse("cancelled command kept running", File(fixture.workspace, "late.txt").exists())
+    }
+
     private fun fixture(
         maxOutputBytes: Int = 1024,
         pidReader: ((File) -> Long)? = null,

@@ -220,7 +220,9 @@ class PRootExecutor(
         if (pid > 0) {
             val descendants = mutableListOf<Long>()
             collectChildren(pid, descendants, mutableSetOf())
-            descendants.forEach(::killPid)
+            val targets = listOf(pid) + descendants
+            signalPids(targets, SIGSTOP)
+            signalPids(targets, SIGKILL)
         }
         runCatching { process.destroy() }
         runCatching { process.waitFor(500, TimeUnit.MILLISECONDS) }
@@ -257,13 +259,18 @@ class PRootExecutor(
         }
     }
 
-    private fun killPid(pid: Long) {
+    private fun signalPids(pids: List<Long>, signal: Int) {
+        if (pids.isEmpty()) return
         val killBinary = listOf("/system/bin/kill", "/bin/kill").firstOrNull { File(it).isFile } ?: "kill"
         runCatching {
-            ProcessBuilder(killBinary, "-9", pid.toString())
+            ProcessBuilder(listOf(killBinary, signal.toString()) + pids.map { it.toString() })
                 .start()
                 .waitFor(500, TimeUnit.MILLISECONDS)
         }
+    }
+
+    private fun killPid(pid: Long) {
+        signalPids(listOf(pid), SIGKILL)
     }
 
     private data class RunningProcess(
@@ -343,6 +350,8 @@ private fun utf8Cut(bytes: ByteArray): Int {
 }
 
 private const val LINE_CHUNK_LIMIT = 8 * 1024
+private const val SIGSTOP = -19
+private const val SIGKILL = -9
 
 private fun readPidFile(pidFile: File): Long {
     repeat(50) {
