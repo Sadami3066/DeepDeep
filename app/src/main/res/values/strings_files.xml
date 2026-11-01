@@ -5,4 +5,14 @@
     <string name="files_up">上一级</string>
     <string name="files_unreadable">无法读取此目录</string>
     <string name="files_back">返回</string>
+    <string name="files_preview">预览</string>
+    <string name="files_source">源代码</string>
+    <string name="files_open_external">用其他应用打开</string>
+    <string name="files_truncated">文件较大，仅显示前 256 KB</string>
+    <string name="files_unplayable">无法播放此视频</string>
+    <string name="files_copy_source">复制源码</string>
+    <string name="files_copied">已复制</string>
+    <string name="files_empty_file">空文件</string>
+    <string name="files_read_failed">无法读取此文件</string>
+    <string name="files_unsupported">暂不支持预览</string>
 </resources>

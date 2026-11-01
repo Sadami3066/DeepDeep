@@ -84,6 +84,7 @@ internal fun ChatTurn(
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
     onOpenWorkshop: (String) -> Unit = {},
+    retryAttempt: Int? = null,
 ) {
     val notice = message.notice
     if (notice != null) {
@@ -117,6 +118,7 @@ internal fun ChatTurn(
             onOpenPresentFile = onOpenPresentFile,
             onSharePresentFile = onSharePresentFile,
             onOpenWorkshop = onOpenWorkshop,
+            retryAttempt = retryAttempt,
         )
     }
 }
@@ -404,6 +406,7 @@ private fun AssistantTurn(
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
     onOpenWorkshop: (String) -> Unit,
+    retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -499,7 +502,7 @@ private fun AssistantTurn(
                 color = colors.inkTertiary,
             )
 
-            MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry)
+            MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry, retryAttempt = retryAttempt)
 
             else -> Unit
         }
@@ -507,28 +510,41 @@ private fun AssistantTurn(
 }
 
 @Composable
-private fun FailedMark(message: AssistantMessage, onRetry: (Long) -> Unit) {
+private fun FailedMark(message: AssistantMessage, retryAttempt: Int?, onRetry: (Long) -> Unit) {
     val colors = deepDeepColors()
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(
-            text = message.error ?: stringResource(R.string.assistant_failed),
-            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-            color = colors.inkSecondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Box(
-            modifier = Modifier.fillMaxWidth().height(44.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (message.retrying) {
+        if (message.retrying) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 DdSpinner(
                     modifier = Modifier.testTag("assistant_retrying_spinner"),
                     color = colors.accent,
                     size = 16.dp,
                     strokeWidth = 1.8.dp,
                 )
-            } else {
+                if (retryAttempt != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.chat_status_retrying_format, retryAttempt),
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                        color = colors.inkSecondary,
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = message.error ?: stringResource(R.string.assistant_failed),
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                color = colors.inkSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
                 DdTextAction(
                     text = stringResource(R.string.assistant_retry),
                     onClick = { onRetry(message.id) },

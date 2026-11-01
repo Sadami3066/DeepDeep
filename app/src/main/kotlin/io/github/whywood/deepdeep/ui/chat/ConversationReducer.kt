@@ -78,7 +78,7 @@ internal fun reduce(
                 steps += AssistantStep.Text(nextStepId(steps), event.text)
             }
             message.copy(steps = steps).clearFailureOnProgress()
-        }
+        }.clearRetryActivity(now)
     }
 
     is RuntimeEvent.ReasoningDelta -> state.onRun(event.runId) {
@@ -91,7 +91,7 @@ internal fun reduce(
                 steps += AssistantStep.Reasoning(nextStepId(steps), event.text)
             }
             message.copy(steps = steps).clearFailureOnProgress()
-        }
+        }.clearRetryActivity(now)
     }
 
     is RuntimeEvent.ToolStarted -> state.onRun(event.runId) {
@@ -107,7 +107,7 @@ internal fun reduce(
                     ),
                 ),
             ).clearFailureOnProgress()
-        }
+        }.clearRetryActivity(now)
     }
 
     is RuntimeEvent.ToolFinished -> state.onRun(event.runId) {
@@ -369,6 +369,13 @@ private fun ConversationState.onRun(
     runId: String,
     transform: ConversationState.() -> ConversationState,
 ): ConversationState = if (matchesRun(runId)) transform() else this
+
+private fun ConversationState.clearRetryActivity(now: Long): ConversationState =
+    if (activity is RuntimeActivity.Retrying) {
+        copy(activity = RuntimeActivity.Thinking, activityStartedAt = activityStartedAt ?: now)
+    } else {
+        this
+    }
 
 private fun AssistantMessage.withToolResult(event: RuntimeEvent.ToolFinished): AssistantMessage {
     val index = steps.indexOfLast { step ->

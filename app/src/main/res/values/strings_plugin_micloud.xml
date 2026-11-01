@@ -5,6 +5,9 @@
 
     <string name="plugin_micloud_status_ready_unknown">已登录</string>
     <string name="plugin_micloud_status_not_logged_in">未登录</string>
+    <string name="plugin_micloud_status_expired">登录已失效，请重新登录</string>
+    <string name="plugin_micloud_status_unverified">已登录（未联网校验）</string>
+    <string name="plugin_micloud_status_unverifiable">无法验证登录状态</string>
 
     <string name="plugin_micloud_action_login">登录</string>
     <string name="plugin_micloud_action_relogin">重新登录</string>

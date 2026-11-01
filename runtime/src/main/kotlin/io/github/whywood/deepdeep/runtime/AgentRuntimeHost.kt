@@ -84,6 +84,9 @@ class AgentRuntimeHost internal constructor(
         @Volatile
         var lastActiveAt: Long = System.currentTimeMillis()
 
+        @Volatile
+        var activity: RuntimeActivity? = null
+
         fun touch() {
             lastActiveAt = System.currentTimeMillis()
         }
@@ -344,7 +347,7 @@ class AgentRuntimeHost internal constructor(
         }
         try {
             emit(handle, RuntimeEvent.RunStarted(start.runId, System.currentTimeMillis()))
-            emit(handle, RuntimeEvent.ActivityChanged(start.runId, RuntimeActivity.Thinking))
+            emitActivity(handle, start.runId, RuntimeActivity.Thinking)
             logInfo(TAG, "retry session=${handle.session.sessionId} run=${start.runId}")
             handle.session.retryLastAssistant()
             if (!handle.state.stopRequested) {
@@ -486,7 +489,7 @@ class AgentRuntimeHost internal constructor(
         handle.touch()
         publishBusy()
         publishActiveRun(handle)
-        emit(handle, RuntimeEvent.ActivityChanged(runId, null))
+        emitActivity(handle, runId, null)
         emit(handle, RuntimeEvent.SessionListChanged())
         try {
             runLedger.clear(runId)
@@ -516,7 +519,7 @@ class AgentRuntimeHost internal constructor(
             if (setTitle) ensureTitle(handle, text)
             val prompt = if (handle.state.turnSource == TurnSource.USER) text else ""
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis(), prompt))
-            emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+            emitActivity(handle, runId, RuntimeActivity.Thinking)
             logInfo(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
             handle.session.prompt(text, images)
             if (!handle.state.stopRequested) {
@@ -853,6 +856,12 @@ class AgentRuntimeHost internal constructor(
         backgroundScope.launch { eventsBuffer.emit(scoped) }
     }
 
+    private fun emitActivity(handle: Handle, runId: String, activity: RuntimeActivity?) {
+        if (handle.activity == activity) return
+        handle.activity = activity
+        emit(handle, RuntimeEvent.ActivityChanged(runId, activity))
+    }
+
     private suspend fun emitListChanged() {
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
@@ -970,7 +979,11 @@ class AgentRuntimeHost internal constructor(
         when (event) {
             is SessionEvent.AgentEventReceived -> if (active) onAgentEvent(handle, runId, event.event)
             is SessionEvent.RetryScheduled -> if (active) {
-                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Retrying(event.attempt)))
+                emitActivity(handle, runId, RuntimeActivity.Retrying(event.attempt))
+            }
+
+            is SessionEvent.RetrySucceeded -> if (active) {
+                emitActivity(handle, runId, RuntimeActivity.Thinking)
             }
 
             is SessionEvent.RetryExhausted -> if (active) {
@@ -984,17 +997,17 @@ class AgentRuntimeHost internal constructor(
             }
 
             is SessionEvent.CompactionStarted -> if (active) {
-                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Compacting))
+                emitActivity(handle, runId, RuntimeActivity.Compacting)
             }
 
             is SessionEvent.CompactionFinished -> {
-                if (active) emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+                if (active) emitActivity(handle, runId, RuntimeActivity.Thinking)
                 emit(handle, NoticeEvent(runId, TurnNotice.Compacted(event.tokensBefore, event.tokensAfter)))
                 emitUsage(handle, runId)
             }
 
             is SessionEvent.CompactionFailed -> if (active) {
-                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.CompactionFailed))
+                emitActivity(handle, runId, RuntimeActivity.CompactionFailed)
             }
 
             is SessionEvent.SessionError -> if (active) {
@@ -1018,11 +1031,22 @@ class AgentRuntimeHost internal constructor(
 
     private suspend fun onAgentEvent(handle: Handle, runId: String, event: AgentEvent) {
         when (event) {
-            is AgentEvent.MessageStart -> admitQueuedInput(handle, runId, event.message)
+            is AgentEvent.MessageStart -> {
+                admitQueuedInput(handle, runId, event.message)
+                emitActivity(handle, runId, RuntimeActivity.Thinking)
+            }
 
             is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
-                is TextDeltaEvent -> emit(handle, RuntimeEvent.TextDelta(runId, update.delta))
-                is ThinkingDeltaEvent -> emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
+                is TextDeltaEvent -> {
+                    emit(handle, RuntimeEvent.TextDelta(runId, update.delta))
+                    emitActivity(handle, runId, RuntimeActivity.Thinking)
+                }
+
+                is ThinkingDeltaEvent -> {
+                    emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
+                    emitActivity(handle, runId, RuntimeActivity.Thinking)
+                }
+
                 else -> Unit
             }
 
@@ -1039,7 +1063,7 @@ class AgentRuntimeHost internal constructor(
                         startedAt = System.currentTimeMillis(),
                     ),
                 )
-                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.RunningTool(event.toolName)))
+                emitActivity(handle, runId, RuntimeActivity.RunningTool(event.toolName))
             }
 
             is AgentEvent.ToolExecutionEnd -> {
@@ -1054,7 +1078,7 @@ class AgentRuntimeHost internal constructor(
                         durationMs = event.durationMs,
                     ),
                 )
-                emit(handle, RuntimeEvent.ActivityChanged(runId, RuntimeActivity.Thinking))
+                emitActivity(handle, runId, RuntimeActivity.Thinking)
                 emitUsage(handle, runId)
             }
 

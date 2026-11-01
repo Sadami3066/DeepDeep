@@ -5,6 +5,9 @@
 
     <string name="plugin_micloud_status_ready_unknown">Signed in</string>
     <string name="plugin_micloud_status_not_logged_in">Not signed in</string>
+    <string name="plugin_micloud_status_expired">Sign-in expired, sign in again</string>
+    <string name="plugin_micloud_status_unverified">Signed in (not verified online)</string>
+    <string name="plugin_micloud_status_unverifiable">Unable to verify sign-in status</string>
 
     <string name="plugin_micloud_action_login">Sign in</string>
     <string name="plugin_micloud_action_relogin">Sign in again</string>

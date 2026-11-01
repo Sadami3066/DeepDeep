@@ -16,7 +16,6 @@ enum class RunErrorKind {
 
 data class ChatUiStrings(
     val thinking: String,
-    val retrying: (Int) -> String,
     val compacting: String,
     val compactionFailed: String,
     val runningTool: (String) -> String,
@@ -45,7 +44,6 @@ data class ChatUiStrings(
     val insufficientBalance: String,
     val modelUnavailable: String,
     val retry: String,
-    val autoRetrying: (Int, Int) -> String,
     val withCode: (String, String) -> String,
     val nothingToCompact: String,
     val compactionBusy: String,
@@ -115,7 +113,6 @@ data class ChatUiStrings(
 
         fun fallback(): ChatUiStrings = ChatUiStrings(
             thinking = "Thinking",
-            retrying = { attempt -> "Retrying ($attempt)" },
             compacting = "Compacting context…",
             compactionFailed = "Compaction failed",
             runningTool = { name -> "Running $name" },
@@ -144,7 +141,6 @@ data class ChatUiStrings(
             insufficientBalance = "Insufficient balance. Top up and try again.",
             modelUnavailable = "Model unavailable. Switch models.",
             retry = "Retry",
-            autoRetrying = { attempt, max -> "Retrying $attempt/$max" },
             withCode = { base, code -> "$base ($code)" },
             nothingToCompact = "No compactable history",
             compactionBusy = "Cannot compact while a reply is running",

@@ -1,10 +1,18 @@
 package io.github.whywood.deepdeep.assistant
 
+import android.content.Intent
+import android.net.Uri
+import io.github.whywood.deepdeep.data.AttachmentImport
+import io.github.whywood.deepdeep.data.AttachmentKind
+import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
@@ -21,6 +29,8 @@ import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_ID
+import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -51,6 +61,8 @@ class AssistantOverlayControllerTest {
         active: String?,
         scope: CoroutineScope,
         requested: String? = null,
+        attachmentStore: AttachmentStore = FakeAttachmentStore(),
+        normalizeImage: suspend (File, String) -> NormalizedImage? = { _, _ -> null },
         onSelected: (String) -> Unit = {},
     ) = AssistantOverlayController(
         runtime = runtime,
@@ -58,12 +70,29 @@ class AssistantOverlayControllerTest {
         homeWorkspaceId = HOME_ID,
         scope = scope,
         providers = providers,
+        attachmentStore = attachmentStore,
+        homeDir = File(HOME_CWD),
         configuredProviders = { setOf("deepseek") },
         defaultModel = { ModelConfig("deepseek", "model", ThinkingLevel.OFF) },
         onSessionSelected = onSelected,
         initialSessionId = { requested },
         ioDispatcher = dispatcher,
         strings = { strings },
+        normalizeImage = normalizeImage,
+    )
+
+    private fun ref(
+        id: String = "a1",
+        name: String = "photo.png",
+        mime: String = "image/png",
+        kind: AttachmentKind = AttachmentKind.IMAGE,
+    ) = AttachmentRef(
+        id = id,
+        name = name,
+        mime = mime,
+        size = 10L,
+        path = "attachments/$id",
+        kind = kind,
     )
 
     @Test
@@ -681,6 +710,279 @@ class AssistantOverlayControllerTest {
 
         assertEquals(AssistantOverlayState(), controller.state.value)
         assertTrue(runtime.stopped.isEmpty())
+    }
+
+    @Test
+    fun importedAttachmentAppendsAndClearsImportingFlag() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        val pending = CompletableDeferred<AttachmentImport>()
+        controller.importAttachment("session-1", File(HOME_CWD)) { pending.await() }
+        runCurrent()
+        assertTrue(controller.state.value.importingAttachment)
+
+        pending.complete(AttachmentImport.Imported(ref()))
+        runCurrent()
+
+        assertFalse(controller.state.value.importingAttachment)
+        assertEquals(listOf(ref()), controller.state.value.attachments)
+        assertNull(controller.state.value.error)
+        controller.reset()
+    }
+
+    @Test
+    fun importStopsAtTwentyAttachments() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        repeat(20) { index ->
+            controller.importAttachment("session-1", File(HOME_CWD)) {
+                AttachmentImport.Imported(ref(id = "a$index", name = "file$index.txt", mime = "text/plain", kind = AttachmentKind.TEXT))
+            }
+        }
+        runCurrent()
+        assertEquals(20, controller.state.value.attachments.size)
+
+        controller.importAttachment("session-1", File(HOME_CWD)) {
+            AttachmentImport.Imported(ref(id = "over"))
+        }
+        runCurrent()
+
+        assertEquals(20, controller.state.value.attachments.size)
+        assertEquals(AssistantOverlayError.AttachmentLimit, controller.state.value.error)
+        controller.reset()
+    }
+
+    @Test
+    fun tooLargeAttachmentReportsTooLarge() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.TooLarge }
+        runCurrent()
+
+        assertEquals(AssistantOverlayError.AttachmentTooLarge, controller.state.value.error)
+        assertTrue(controller.state.value.attachments.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun failedAttachmentReportsFailed() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.UnsupportedImage }
+        runCurrent()
+
+        assertEquals(AssistantOverlayError.AttachmentFailed, controller.state.value.error)
+        assertTrue(controller.state.value.attachments.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun removeAttachmentDropsIt() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+
+        controller.removeAttachment("a1")
+
+        assertTrue(controller.state.value.attachments.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun sendIncludesAttachmentBlockAndImages() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply { onSend = { _, _ -> } }
+        val controller = controller(
+            runtime = runtime,
+            active = "session-1",
+            scope = this,
+            normalizeImage = { _, _ -> NormalizedImage("BASE64", "image/jpeg", 1, 1) },
+        )
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+
+        assertTrue(controller.send("hello"))
+        runCurrent()
+
+        val prompt = runtime.sent.single()
+        assertTrue(prompt.startsWith("<attachments>"))
+        assertTrue(prompt.contains("attachments/a1"))
+        assertTrue(prompt.endsWith("hello"))
+        assertEquals(listOf(ImagePart("BASE64", "image/jpeg")), runtime.sentImages.single())
+        assertTrue(controller.state.value.attachments.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun sendWhileBusySteersWithAttachments() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            onSend = { sessionId, _ -> emitFor(sessionId, RuntimeEvent.RunStarted("run-1", 100L, prompt = "one")) }
+        }
+        val controller = controller(
+            runtime = runtime,
+            active = "session-1",
+            scope = this,
+            normalizeImage = { _, _ -> NormalizedImage("BASE64", "image/jpeg", 1, 1) },
+        )
+        controller.start()
+        runCurrent()
+        controller.send("one")
+        runCurrent()
+        assertTrue(controller.state.value.conversation.sending)
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+
+        assertTrue(controller.send("two"))
+        runCurrent()
+
+        val steer = runtime.steered.single()
+        assertTrue(steer.startsWith("<attachments>"))
+        assertTrue(steer.endsWith("two"))
+        assertEquals(listOf(ImagePart("BASE64", "image/jpeg")), runtime.sentImages.last())
+        controller.reset()
+    }
+
+    @Test
+    fun switchingSessionDuringImagePreparationKeepsOriginalRecipient() = runTest(dispatcher) {
+        val recipients = mutableListOf<String>()
+        val runtime = FakeAgentRuntime().apply { onSend = { sessionId, _ -> recipients += sessionId } }
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        assertTrue(controller.state.value.conversation.sending)
+        controller.openSession("session-2")
+        runCurrent()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertEquals(listOf("session-1"), recipients)
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertTrue(controller.state.value.conversation.messages.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun stopDuringImagePreparationPreventsLateSend() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        controller.stop()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertTrue(runtime.sent.isEmpty())
+        assertFalse(controller.state.value.conversation.sending)
+        assertEquals(MessageStatus.STOPPED, controller.state.value.conversation.messages.last().status)
+        assertEquals(listOf("session-1"), runtime.stopped)
+        controller.reset()
+    }
+
+    @Test
+    fun stopDuringQueuedImagePreparationPreventsLateSteer() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            activeRuns.value = mapOf("session-1" to ActiveRunSnapshot("run-live", 1L))
+        }
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        controller.stop()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertTrue(runtime.steered.isEmpty())
+        assertTrue(runtime.followUps.isEmpty())
+        assertEquals(listOf("session-1"), runtime.stopped)
+        controller.reset()
+    }
+
+    @Test
+    fun switchingSessionClearsAttachments() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val controller = controller(runtime, "session-1", this)
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertEquals(1, controller.state.value.attachments.size)
+
+        controller.openSession("session-2")
+        runCurrent()
+
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertTrue(controller.state.value.attachments.isEmpty())
+        assertFalse(controller.state.value.importingAttachment)
+        controller.reset()
+    }
+
+    @Test
+    fun switchingSessionDiscardsLateImport() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val store = FakeAttachmentStore()
+        val controller = controller(runtime, "session-1", this, attachmentStore = store)
+        controller.start()
+        runCurrent()
+        val pending = CompletableDeferred<AttachmentImport>()
+        controller.importAttachment("session-1", File(HOME_CWD)) { pending.await() }
+        runCurrent()
+
+        controller.openSession("session-2")
+        runCurrent()
+        pending.complete(AttachmentImport.Imported(ref()))
+        runCurrent()
+
+        assertTrue(controller.state.value.attachments.isEmpty())
+        assertEquals(listOf("attachments/a1"), store.deletedPaths)
+        controller.reset()
+    }
+
+    private class FakeAttachmentStore : AttachmentStore {
+        val deletedPaths = mutableListOf<String>()
+
+        override suspend fun import(uri: Uri, root: File): AttachmentImport = AttachmentImport.Failed
+
+        override fun file(ref: AttachmentRef, root: File): File =
+            object : File(root, ref.path) {
+                override fun delete(): Boolean {
+                    deletedPaths += ref.path
+                    return true
+                }
+            }
+
+        override fun shareIntent(ref: AttachmentRef, root: File): Intent? = null
+
+        override fun resolve(raw: String, root: File): AttachmentRef? = null
     }
 
     private class FakeProviders(

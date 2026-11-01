@@ -5,4 +5,14 @@
     <string name="files_up">Up</string>
     <string name="files_unreadable">Could not read this folder</string>
     <string name="files_back">Back</string>
+    <string name="files_preview">Preview</string>
+    <string name="files_source">Source</string>
+    <string name="files_open_external">Open in another app</string>
+    <string name="files_truncated">Large file — showing first 256 KB</string>
+    <string name="files_unplayable">Can\'t play this video</string>
+    <string name="files_copy_source">Copy source</string>
+    <string name="files_copied">Copied</string>
+    <string name="files_empty_file">Empty file</string>
+    <string name="files_read_failed">Couldn\'t read this file</string>
+    <string name="files_unsupported">Preview isn\'t supported</string>
 </resources>

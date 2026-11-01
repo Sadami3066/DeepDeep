@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.chat.state
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -14,6 +15,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -48,13 +50,15 @@ class AutoRetryControllerTest {
         scope: CoroutineScope,
         enabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
         writeTarget: ConversationWriteTarget = target(),
+        runtime: FakeAgentRuntime = FakeAgentRuntime(),
+        awaitSession: suspend (String) -> Unit = {},
     ): AutoRetryController = AutoRetryController(
         scope = scope,
         writeTarget = writeTarget,
-        runtime = FakeAgentRuntime(),
+        runtime = runtime,
         enabledFlow = enabled,
         canRetry = { message -> strings.canAutoRetry(strings.runErrorKind(message)) },
-        awaitSession = {},
+        awaitSession = awaitSession,
         onBegin = { begins += it },
         onActiveError = { state, error -> activeErrors += state to error },
         onFailure = { sessionId, message -> failures += sessionId to message },
@@ -76,6 +80,92 @@ class AutoRetryControllerTest {
         assertEquals(1, controller.attempts("session-1"))
         assertFalse(controller.isRetrying("session-1"))
         assertTrue(activeWrites.isNotEmpty())
+    }
+
+
+    @Test
+    fun countdownMarksFailedTailRetrying() = runTest {
+        val controller = controller(backgroundScope)
+        runCurrent()
+
+        assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
+        runCurrent()
+
+        val tail = activeState.messages.single()
+        assertTrue(tail.retrying)
+        assertFalse(tail.streaming)
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertTrue(activeState.sending)
+        assertEquals(RuntimeActivity.Retrying(1), activeState.activity)
+        assertTrue(begins.isEmpty())
+    }
+
+    @Test
+    fun busySessionDefersRetryUntilIdle() = runTest {
+        val runtime = FakeAgentRuntime()
+        runtime.setBusy(setOf("session-1"))
+        val controller = controller(backgroundScope, runtime = runtime)
+        runCurrent()
+        assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
+        advanceTimeBy(2_001L)
+        runCurrent()
+
+        assertTrue(begins.isEmpty())
+        assertTrue(controller.isRetrying("session-1"))
+        assertEquals(RuntimeActivity.Retrying(1), activeState.activity)
+
+        runtime.setBusy(emptySet())
+        advanceTimeBy(501L)
+        runCurrent()
+        assertEquals(listOf("session-1"), begins)
+        val resumed = activeState.messages.single()
+        assertTrue(resumed.retrying)
+        assertTrue(resumed.streaming)
+        assertEquals(MessageStatus.RUNNING, resumed.status)
+        assertEquals(RuntimeActivity.Thinking, activeState.activity)
+    }
+
+    @Test
+    fun busySessionTimeoutRestoresFailedTail() = runTest {
+        val runtime = FakeAgentRuntime()
+        runtime.setBusy(setOf("session-1"))
+        val controller = controller(backgroundScope, runtime = runtime)
+        runCurrent()
+        assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
+        advanceTimeBy(2_001L)
+        runCurrent()
+        assertTrue(begins.isEmpty())
+
+        advanceTimeBy(20_001L)
+        runCurrent()
+
+        assertTrue(begins.isEmpty())
+        assertFalse(controller.isRetrying("session-1"))
+        assertFalse(activeState.sending)
+        assertNull(activeState.activity)
+        assertNull(activeState.activityStartedAt)
+        val tail = activeState.messages.single()
+        assertFalse(tail.retrying)
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertEquals(listOf("session-1"), failures.map { it.first })
+        assertNull(failures.single().second)
+    }
+
+    @Test
+    fun failedRetryStartupRestoresRetryableFailedMessage() = runTest {
+        val controller = controller(backgroundScope, awaitSession = { error("session unavailable") })
+        runCurrent()
+        assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
+        advanceTimeBy(2_001L)
+        runCurrent()
+
+        val tail = activeState.messages.single()
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertFalse(tail.streaming)
+        assertFalse(tail.retrying)
+        assertFalse(activeState.sending)
+        assertNull(activeState.activity)
+        assertEquals(listOf("session-1" to "session unavailable"), failures)
     }
 
     @Test

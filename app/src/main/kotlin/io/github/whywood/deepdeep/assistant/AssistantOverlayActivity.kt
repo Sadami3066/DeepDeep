@@ -19,7 +19,6 @@ import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
-import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
@@ -28,6 +27,9 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.ui.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
 import io.github.whywood.deepdeep.ui.shell.shareChooser
 
@@ -58,6 +60,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                     homeWorkspaceId = AgentRuntimeHost.HOME_ID,
                     scope = graph.appScope,
                     providers = graph.providerCatalog,
+                    attachmentStore = graph.attachmentStore,
+                    homeDir = graph.homeDir,
                     configuredProviders = { graph.credentials.authKinds.value.keys },
                     defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
@@ -89,10 +93,11 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
             val context = LocalContext.current
             val missingFileMessage = stringResource(R.string.assistant_attach_missing)
-            val openFailedMessage = stringResource(R.string.present_open_failed)
             val shareFailedMessage = stringResource(R.string.present_share_failed)
             val shareTitle = stringResource(R.string.assistant_attach_share)
             var preview by remember { mutableStateOf<AssistantOverlayPreview?>(null) }
+            var attachSheetOpen by remember { mutableStateOf(false) }
+            val attachmentPickers = rememberAttachmentPickers { uri -> controller.attach(uri) }
             val attachmentRoot = remember(state.conversationCwd) {
                 resolveAttachmentRoot(state.conversationCwd, graph.homeDir)
             }
@@ -101,15 +106,11 @@ class AssistantOverlayActivity : ComponentActivity() {
                 val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                 if (resolved == null) {
                     Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
-                } else if (resolved.kind != AttachmentKind.OTHER) {
+                } else {
                     preview = AssistantOverlayPreview(
                         attachment = resolved,
                         file = graph.attachmentStore.file(resolved, attachmentRoot),
                     )
-                } else {
-                    val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
-                    val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
-                    if (!opened) Toast.makeText(context, openFailedMessage, Toast.LENGTH_SHORT).show()
                 }
             }
             val shareFile: (String) -> Unit = { raw ->
@@ -155,6 +156,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                                 file = graph.attachmentStore.file(attachment, attachmentRoot),
                             )
                         },
+                        onPickAttachment = { attachSheetOpen = true },
+                        onRemoveAttachment = controller::removeAttachment,
                         onOpenFile = openFile,
                         onShareFile = shareFile,
                         onOpenWorkshop = { state.sessionId?.let(::openInApp) },
@@ -179,6 +182,19 @@ class AssistantOverlayActivity : ComponentActivity() {
                         },
                     ),
                 )
+                if (attachSheetOpen) {
+                    AttachmentSourceSheet(
+                        onDismiss = { attachSheetOpen = false },
+                        onPick = { source ->
+                            attachSheetOpen = false
+                            when (source) {
+                                AttachmentSource.IMAGE -> attachmentPickers.pickImages()
+                                AttachmentSource.FILE -> attachmentPickers.pickFiles()
+                                AttachmentSource.CAMERA -> attachmentPickers.takePhoto()
+                            }
+                        },
+                    )
+                }
             }
         }
     }

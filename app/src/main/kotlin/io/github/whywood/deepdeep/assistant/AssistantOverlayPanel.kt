@@ -64,6 +64,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
@@ -89,6 +90,8 @@ internal fun AssistantOverlayPanel(
         Density(density = density.density, fontScale = density.fontScale * config.chatFontScale)
     }
     val messages = state.conversation.messages
+    val retryActivity = state.conversation.activity as? RuntimeActivity.Retrying
+    val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = (messages.size - 4).coerceAtLeast(0),
     )
@@ -275,6 +278,11 @@ internal fun AssistantOverlayPanel(
                                     onOpenPresentFile = actions.onOpenFile,
                                     onSharePresentFile = actions.onShareFile,
                                     onOpenWorkshop = actions.onOpenWorkshop,
+                                    retryAttempt = if (message.id == retryTargetId) {
+                                        retryActivity?.attempt
+                                    } else {
+                                        null
+                                    },
                                 )
                             }
                         }

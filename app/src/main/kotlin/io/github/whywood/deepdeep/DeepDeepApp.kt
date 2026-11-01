@@ -1,8 +1,6 @@
 package io.github.whywood.deepdeep
 
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,11 +33,14 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
+import io.github.whywood.deepdeep.ui.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
+import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
@@ -113,9 +114,8 @@ internal fun DeepDeepApp(
         onActiveSessionChanged(state.conversationId)
     }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
-    val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        uris.forEach(chatViewModel::attach)
-    }
+    val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
+    var attachmentSheetOpen by remember { mutableStateOf(false) }
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
@@ -413,7 +413,7 @@ internal fun DeepDeepApp(
                         onToggleStep = chatViewModel::toggleStep,
                         onQuoteMessage = chatViewModel::quote,
                         onClearQuote = chatViewModel::clearQuote,
-                        onPickAttachment = { attachmentPicker.launch(arrayOf("*/*")) },
+                        onPickAttachment = { attachmentSheetOpen = true },
                         onRemoveAttachment = chatViewModel::removeAttachment,
                         onOpenAttachment = {
                                                 previewRoot = attachmentRoot
@@ -621,6 +621,19 @@ internal fun DeepDeepApp(
             ),
             pluginSetupContent = { interaction -> PluginSetupSheet(graph.pluginManager, interaction) },
         )
+        if (attachmentSheetOpen) {
+            AttachmentSourceSheet(
+                onDismiss = { attachmentSheetOpen = false },
+                onPick = { source ->
+                    attachmentSheetOpen = false
+                    when (source) {
+                        AttachmentSource.IMAGE -> attachmentPickers.pickImages()
+                        AttachmentSource.FILE -> attachmentPickers.pickFiles()
+                        AttachmentSource.CAMERA -> attachmentPickers.takePhoto()
+                    }
+                },
+            )
+        }
     }
     }
 }

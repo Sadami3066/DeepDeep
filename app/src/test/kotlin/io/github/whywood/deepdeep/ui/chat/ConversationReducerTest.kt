@@ -281,6 +281,103 @@ class ConversationReducerTest {
     }
 
     @Test
+    fun retryingActivityResetsOnTextDelta() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-1",
+                ),
+            ),
+            sending = true,
+            activity = RuntimeActivity.Retrying(2),
+            activityStartedAt = 1000L,
+        )
+        val reduced = reduce(state, RuntimeEvent.TextDelta("run-1", "back"), strings, now = 2000L)
+        assertEquals(RuntimeActivity.Thinking, reduced.activity)
+        assertEquals(1000L, reduced.activityStartedAt)
+    }
+
+    @Test
+    fun markRetryScheduledFlagsFailedTailForCountdown() {
+        val failed = AssistantMessage(
+            id = 1,
+            role = AssistantRole.ASSISTANT,
+            text = "partial",
+            status = MessageStatus.FAILED,
+            error = "boom",
+            startedAt = 500L,
+            finishedAt = 900L,
+            runId = "run-1",
+        )
+        val scheduled = ConversationState(messages = listOf(failed)).markRetryScheduled(2, now = 1000L)
+        val tail = scheduled.messages.single()
+        assertTrue(tail.retrying)
+        assertFalse(tail.streaming)
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertEquals("boom", tail.error)
+        assertEquals("run-1", tail.runId)
+        assertTrue(scheduled.sending)
+        assertEquals(RuntimeActivity.Retrying(2), scheduled.activity)
+        assertEquals(1000L, scheduled.activityStartedAt)
+    }
+
+    @Test
+    fun markRetryingTailResumesFailedTail() {
+        val failed = AssistantMessage(
+            id = 1,
+            role = AssistantRole.ASSISTANT,
+            text = "partial",
+            status = MessageStatus.FAILED,
+            error = "boom",
+            startedAt = 500L,
+            finishedAt = 900L,
+            runId = "run-1",
+        )
+        val resumed = ConversationState(messages = listOf(failed))
+            .markRetryScheduled(1, now = 1000L)
+            .markRetryingTail(now = 2000L)
+        val tail = resumed.messages.single()
+        assertTrue(tail.streaming)
+        assertTrue(tail.retrying)
+        assertEquals(MessageStatus.RUNNING, tail.status)
+        assertEquals("", tail.runId)
+        assertNull(tail.finishedAt)
+        assertTrue(resumed.sending)
+        assertEquals(RuntimeActivity.Thinking, resumed.activity)
+        assertEquals(2000L, resumed.activityStartedAt)
+    }
+
+    @Test
+    fun cancelRetryRestoresFailedTail() {
+        val failed = AssistantMessage(
+            id = 1,
+            role = AssistantRole.ASSISTANT,
+            text = "partial",
+            status = MessageStatus.FAILED,
+            error = "boom",
+            startedAt = 500L,
+            finishedAt = 900L,
+            runId = "run-1",
+        )
+        val cancelled = ConversationState(messages = listOf(failed))
+            .markRetryScheduled(1, now = 1000L)
+            .cancelRetry(now = 2000L)
+        val tail = cancelled.messages.single()
+        assertFalse(tail.retrying)
+        assertFalse(tail.streaming)
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertEquals("boom", tail.error)
+        assertFalse(cancelled.sending)
+        assertNull(cancelled.activity)
+        assertNull(cancelled.activityStartedAt)
+    }
+
+    @Test
     fun queueChangedFillsQueuedInputsInOrder() {
         val reduced = reduce(
             ConversationState(),

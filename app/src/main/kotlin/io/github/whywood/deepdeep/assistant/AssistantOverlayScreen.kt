@@ -105,6 +105,8 @@ internal data class AssistantOverlayActions(
     val onToggleStep: (Long, Long) -> Unit,
     val onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
     val onOpenPreview: (AttachmentRef) -> Unit,
+    val onPickAttachment: () -> Unit,
+    val onRemoveAttachment: (String) -> Unit,
     val onOpenFile: (String) -> Unit,
     val onShareFile: (String) -> Unit,
     val onOpenWorkshop: (String) -> Unit,
@@ -587,6 +589,9 @@ private fun OverlaySendError(
                     AssistantOverlayError.StartFailed -> R.string.assistant_overlay_error_start
                     AssistantOverlayError.SendFailed -> R.string.assistant_overlay_error_send
                     AssistantOverlayError.SwitchFailed -> R.string.assistant_overlay_error_switch
+                    AssistantOverlayError.AttachmentFailed -> R.string.chat_error_attachment_failed
+                    AssistantOverlayError.AttachmentLimit -> R.string.chat_error_max_attachments
+                    AssistantOverlayError.AttachmentTooLarge -> R.string.chat_error_attachment_too_large
                 },
             ),
             modifier = Modifier.testTag("assistant_overlay_error"),

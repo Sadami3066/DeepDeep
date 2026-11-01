@@ -757,7 +757,7 @@ class ChatViewModelTest {
         assertEquals(2, messages.size)
         assertEquals(AssistantRole.USER, messages[0].role)
         assertTrue(messages[1].retrying)
-        assertEquals(MessageStatus.FAILED, messages[1].status)
+        assertEquals(MessageStatus.RUNNING, messages[1].status)
 
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted("run-2", 5000L))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-2", "world"))
@@ -786,7 +786,7 @@ class ChatViewModelTest {
         val messages = viewModel.state.value.messages
         assertEquals(2, messages.size)
         assertTrue(messages.last().retrying)
-        assertEquals(MessageStatus.FAILED, messages.last().status)
+        assertEquals(MessageStatus.RUNNING, messages.last().status)
         assertTrue(viewModel.state.value.sending)
     }
 

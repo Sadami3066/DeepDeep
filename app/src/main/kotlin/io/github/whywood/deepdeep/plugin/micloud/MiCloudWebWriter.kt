@@ -72,6 +72,7 @@ internal fun isAuthFailure(status: Int, body: String): Boolean {
 class MiCloudWebWriter(
     context: Context,
     private val cookieStore: MiCloudCookieStore,
+    private val onAuthExpired: () -> Unit = {},
 ) {
     private val appContext = context.applicationContext
     private val mutex = Mutex()
@@ -127,8 +128,10 @@ class MiCloudWebWriter(
             view.evaluateJavascript(fetchScript(id, url, body), null)
             val response = deferred.await()
             when {
-                isAuthFailure(response.status, response.body) ->
+                isAuthFailure(response.status, response.body) -> {
+                    onAuthExpired()
                     throw MiCloudAuthException("MiCloud session expired, sign in again")
+                }
 
                 response.status == 0 ->
                     throw IOException(response.body.ifBlank { "network error" })

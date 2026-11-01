@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.chat.state
 import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
+import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -104,6 +105,21 @@ class SessionProjectionTest {
 
         runCurrent()
         assertEquals(listOf("hello"), runtime.sent)
+    }
+
+    @Test
+    fun sendTurnPassesImagesToRuntime() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val projection = projection(runtime, backgroundScope)
+        projection.open("session-1")
+        runCurrent()
+        val images = listOf(ImagePart("BASE64", "image/jpeg"))
+
+        projection.sendTurn("hello", images)
+        runCurrent()
+
+        assertEquals(listOf("hello"), runtime.sent)
+        assertEquals(listOf(images), runtime.sentImages)
     }
 
     @Test

@@ -1,5 +1,11 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import io.github.whywood.deepdeep.design.DeepDeepColors
+
 internal enum class CodeTokenType {
     KEYWORD,
     STRING,
@@ -270,6 +276,26 @@ internal fun highlightCode(code: String, language: String?): List<CodeToken> {
     if (key == "diff" || key == "patch") return diffTokens(code)
     val spec = languages[key] ?: return emptyList()
     return lex(code, spec)
+}
+
+internal fun highlightedCode(code: String, language: String?, colors: DeepDeepColors): AnnotatedString {
+    val tokens = highlightCode(code, language)
+    if (tokens.isEmpty()) return AnnotatedString(code)
+    return buildAnnotatedString {
+        append(code)
+        tokens.forEach { token ->
+            addStyle(SpanStyle(color = codeColor(token.type, colors)), token.start, token.end)
+        }
+    }
+}
+
+internal fun codeColor(type: CodeTokenType, colors: DeepDeepColors): Color = when (type) {
+    CodeTokenType.KEYWORD, CodeTokenType.ANNOTATION -> colors.codeKeyword
+    CodeTokenType.STRING -> colors.codeString
+    CodeTokenType.COMMENT -> colors.codeComment
+    CodeTokenType.NUMBER -> colors.codeNumber
+    CodeTokenType.FUNCTION -> colors.codeFunction
+    CodeTokenType.TYPE -> colors.codeType
 }
 
 private fun lex(code: String, language: CodeLanguage): List<CodeToken> {

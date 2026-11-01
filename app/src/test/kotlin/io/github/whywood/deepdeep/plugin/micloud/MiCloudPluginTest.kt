@@ -24,6 +24,35 @@ class MiCloudPluginTest {
     }
 
     @Test
+    fun statusMappingCoversAllSessionStates() {
+        val plugin = plugin()
+        assertEquals(
+            PluginStatus.NotReady("res:${R.string.plugin_micloud_status_not_logged_in}"),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.SIGNED_OUT, null, null)),
+        )
+        assertEquals(
+            PluginStatus.Ready("小明", "小明"),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.VERIFIED, "小明", 1L)),
+        )
+        assertEquals(
+            PluginStatus.Ready("res:${R.string.plugin_micloud_status_ready_unknown}", null),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.VERIFIED, null, 1L)),
+        )
+        assertEquals(
+            PluginStatus.NotReady("res:${R.string.plugin_micloud_status_expired}"),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.EXPIRED, "小明", 1L)),
+        )
+        assertEquals(
+            PluginStatus.Ready("res:${R.string.plugin_micloud_status_unverified}", "小明"),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.UNVERIFIED, "小明", 1L)),
+        )
+        assertEquals(
+            PluginStatus.NotReady("res:${R.string.plugin_micloud_status_unverifiable}"),
+            plugin.miCloudStatusOf(MiCloudSessionView(MiCloudSessionState.UNVERIFIED, null, null)),
+        )
+    }
+
+    @Test
     fun signedOutActionsOfferSignIn() {
         val actions = plugin().actions(PluginStatus.NotReady("x"))
         assertEquals(listOf("login"), actions.map { it.id })
