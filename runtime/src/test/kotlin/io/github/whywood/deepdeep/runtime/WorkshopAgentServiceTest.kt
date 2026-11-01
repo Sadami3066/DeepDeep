@@ -33,6 +33,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okio.Buffer
+import okio.Path.Companion.toPath
 import java.nio.file.Files
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -622,6 +623,28 @@ class WorkshopAgentServiceTest {
             assertTrue(methods.contains("initialize"))
             assertTrue(methods.contains("tools/list"))
             assertTrue(File(root, "runs").listFiles().orEmpty().isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun mcpCredentialRefreshUsesSharedStorageAndSurvivesSessionCleanup() {
+        val root = tempDir("one-shot-shared-mcp-auth")
+        val agent = File(root, "agent").apply { mkdirs() }
+        val temporary = File(root, "run/agent").apply { mkdirs() }
+        val workspace = File(root, "home").apply { mkdirs() }
+        val fs = workshopResourceFileSystem(workspace, agent, temporary)
+        try {
+            File(agent, "mcp-auth.json").writeText("original")
+            val auth = File(temporary, "mcp-auth.json").absolutePath.toPath()
+            val pending = File(temporary, "mcp-auth.json.tmp").absolutePath.toPath()
+            assertEquals("original", fs.read(auth) { readUtf8() })
+            fs.write(pending) { writeUtf8("refreshed") }
+            fs.atomicMove(pending, auth)
+            temporary.parentFile!!.deleteRecursively()
+            assertEquals("refreshed", File(agent, "mcp-auth.json").readText())
+            assertFalse(File(temporary, "mcp-auth.json").exists())
+            val outside = File(root, "outside.txt").apply { writeText("unrestricted") }
+            assertEquals("unrestricted", fs.read(outside.absolutePath.toPath()) { readUtf8() })
         } finally { root.deleteRecursively() }
     }
 

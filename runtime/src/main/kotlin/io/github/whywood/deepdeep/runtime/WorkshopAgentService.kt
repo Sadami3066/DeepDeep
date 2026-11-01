@@ -246,7 +246,7 @@ class WorkshopAgentService(
 
     private fun prepareAgentDirectory(root: File): File {
         val directory = File(root, AGENT_DIR).apply { mkdirs() }
-        listOf("SYSTEM.md", "APPEND_SYSTEM.md", "AGENTS.md", "settings.json", "models.json", "mcp.json", "mcp-auth.json").forEach { name ->
+        listOf("SYSTEM.md", "APPEND_SYSTEM.md", "AGENTS.md", "settings.json", "models.json", "mcp.json").forEach { name ->
             val source = File(agentDir, name)
             if (source.isFile) source.copyTo(File(directory, name), overwrite = true)
         }
@@ -264,11 +264,7 @@ class WorkshopAgentService(
         sharedStorage = sharedStorage,
         pluginPromptBody = pluginPromptBody,
         toolContext = oneShotToolContext(appToolContext, registry),
-        fs = object : ForwardingFileSystem(FileSystem.SYSTEM) {
-            private val projectSkills = workspace.absolutePath.toPath() / ".pi" / "skills"
-            override fun list(dir: Path): List<Path> = if (dir == projectSkills) emptyList() else super.list(dir)
-            override fun listOrNull(dir: Path): List<Path>? = if (dir == projectSkills) emptyList() else super.listOrNull(dir)
-        },
+        fs = workshopResourceFileSystem(workspace, agentDir, tempAgentDir),
         toolFs = FileSystem.SYSTEM,
         supportsChatDelivery = false,
     )
@@ -293,6 +289,17 @@ class WorkshopAgentService(
         return directory
     }
 }
+
+internal fun workshopResourceFileSystem(workspace: File, agentDir: File, temporaryAgentDir: File): FileSystem =
+    object : ForwardingFileSystem(FileSystem.SYSTEM) {
+        private val projectSkills = workspace.absolutePath.toPath() / ".pi" / "skills"
+        private val temporaryRoot = temporaryAgentDir.absolutePath.toPath()
+        private val sharedRoot = agentDir.absolutePath.toPath()
+        override fun list(dir: Path): List<Path> = if (dir == projectSkills) emptyList() else super.list(dir)
+        override fun listOrNull(dir: Path): List<Path>? = if (dir == projectSkills) emptyList() else super.listOrNull(dir)
+        override fun onPathParameter(path: Path, functionName: String, parameterName: String): Path =
+            if (path.parent == temporaryRoot && path.name in setOf("mcp-auth.json", "mcp-auth.json.tmp")) sharedRoot / path.name else path
+    }
 
 internal fun buildWorkshopAgentModels(
     providers: ProviderCatalog,
