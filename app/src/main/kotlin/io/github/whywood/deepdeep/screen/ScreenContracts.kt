@@ -1,7 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiGlobalAction
-import io.github.whywood.deepdeep.plugin.gui.GuiScreenshot
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
@@ -11,8 +9,6 @@ import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
-
-const val MAIN_DISPLAY_ID = 0
 
 internal const val VIRTUAL_FAILURE_TRANSPORT = "transport"
 internal const val VIRTUAL_FAILURE_BACKEND = "backend"
@@ -25,23 +21,6 @@ data class ScreenVirtualFailure(
     val reason: String? = null,
 )
 
-enum class ScreenTarget(val id: String) {
-    MAIN("main"),
-    VIRTUAL("virtual"),
-    ;
-
-    companion object {
-        fun parse(value: String?): ScreenTarget = parseOrNull(value)
-            ?: throw IllegalArgumentException("target 只支持 main 或 virtual")
-
-        fun parseOrNull(value: String?): ScreenTarget? = when (value?.trim()?.lowercase()) {
-            null, "", MAIN.id -> MAIN
-            VIRTUAL.id -> VIRTUAL
-            else -> null
-        }
-    }
-}
-
 data class ScreenCapture(
     val png: ByteArray,
     val width: Int,
@@ -50,7 +29,6 @@ data class ScreenCapture(
 )
 
 data class ScreenDisplayInfo(
-    val target: ScreenTarget,
     val displayId: Int,
     val width: Int,
     val height: Int,
@@ -62,14 +40,13 @@ data class ScreenDisplayInfo(
 data class ScreenStatusSnapshot(
     val accessibilityConnected: Boolean,
     val accessibilityEnabled: Boolean,
-    val adbAvailable: Boolean,
-    val main: ScreenDisplayInfo,
     val virtualState: String,
     val virtual: ScreenDisplayInfo? = null,
     val virtualBackend: String? = null,
     val virtualUid: Int? = null,
     val virtualFailure: ScreenVirtualFailure? = null,
     val virtualTransportNotice: String? = null,
+    val reconnecting: Boolean = false,
 )
 
 data class ScreenObserveResult(
@@ -99,7 +76,6 @@ data class ScreenWaitOutcome(
 data class ScreenLaunchReport(
     val ok: Boolean,
     val message: String,
-    val target: ScreenTarget,
     val packageName: String,
     val displayId: Int = INVALID_DISPLAY,
     val taskDisplayId: Int = INVALID_DISPLAY,
@@ -127,7 +103,9 @@ interface ScreenAccessibilityBackend {
 
     suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int)
 
-    suspend fun scroll(direction: GuiScrollDirection, amount: Int, target: GuiSelector?)
+    fun invalidateSnapshots()
+
+    fun bounds(displayId: Int, selector: GuiSelector): io.github.whywood.deepdeep.plugin.gui.GuiBounds
 
     suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult
 
@@ -139,31 +117,12 @@ interface ScreenAccessibilityBackend {
         timeoutMs: Long,
     ): GuiWaitOutcome
 
-    suspend fun screenshotMain(): GuiScreenshot
-
-    suspend fun global(action: GuiGlobalAction)
-}
-
-interface ScreenAdbBackend {
-    suspend fun available(): Boolean
-
-    suspend fun observeMain(maxDepth: Int, maxNodes: Int): GuiSnapshot
-
-    suspend fun tap(x: Int, y: Int)
-
-    suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long)
-
-    suspend fun keyEvent(keyCode: Int)
-
-    suspend fun typeText(text: String)
-
-    suspend fun shell(command: String): String
 }
 
 interface ScreenVirtualBackend {
     suspend fun state(): VirtualScreenState
 
-    suspend fun tap(x: Int, y: Int): VirtualScreenResult
+    suspend fun tap(x: Int, y: Int, durationMs: Int = 60): VirtualScreenResult
 
     suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): VirtualScreenResult
 
@@ -180,54 +139,52 @@ interface ScreenVirtualBackend {
     fun lastFailure(): ScreenVirtualFailure? = null
 
     fun lastTransportNotice(): String? = null
+
+    fun reconnecting(): Boolean = false
 }
 
 interface ScreenAppCatalog {
     fun launchableApps(): List<ScreenApp>
 
-    fun launchOnMain(packageName: String): ScreenApp
 }
 
 interface ScreenController {
     suspend fun status(): ScreenStatusSnapshot
 
     suspend fun observe(
-        target: ScreenTarget,
         maxDepth: Int,
         maxNodes: Int,
         expectedPackage: String?,
     ): ScreenObserveResult
 
-    suspend fun find(target: ScreenTarget, selectors: List<GuiSelector>, limit: Int): ScreenFindResult
+    suspend fun find(selectors: List<GuiSelector>, limit: Int): ScreenFindResult
 
-    suspend fun tap(target: ScreenTarget, selector: GuiSelector, durationMs: Int): String
+    suspend fun tap(selector: GuiSelector, durationMs: Int): String
 
-    suspend fun swipe(target: ScreenTarget, x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): String
+    suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): String
 
     suspend fun scroll(
-        target: ScreenTarget,
         direction: GuiScrollDirection,
         amount: Int,
         selector: GuiSelector?,
     ): String
 
-    suspend fun typeText(target: ScreenTarget, selector: GuiSelector?, text: String): ScreenTextResult
+    suspend fun typeText(selector: GuiSelector?, text: String): ScreenTextResult
 
-    suspend fun key(target: ScreenTarget, name: String): String
+    suspend fun key(name: String): String
 
     suspend fun waitFor(
-        target: ScreenTarget,
         packageName: String?,
         text: String?,
         textGone: String?,
         timeoutMs: Long,
     ): ScreenWaitOutcome
 
-    suspend fun screenshot(target: ScreenTarget): ScreenCapture
+    suspend fun screenshot(): ScreenCapture
 
-    suspend fun launch(target: ScreenTarget, packageName: String): ScreenLaunchReport
+    suspend fun launch(packageName: String): ScreenLaunchReport
 
-    suspend fun listApps(target: ScreenTarget): List<ScreenApp>
+    suspend fun listApps(): List<ScreenApp>
 }
 
 internal const val BACKEND_ACCESSIBILITY = "accessibility"

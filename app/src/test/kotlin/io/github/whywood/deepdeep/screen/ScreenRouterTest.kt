@@ -2,10 +2,8 @@ package io.github.whywood.deepdeep.screen
 
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiGlobalAction
 import io.github.whywood.deepdeep.plugin.gui.GuiNode
 import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScreenshot
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
@@ -23,7 +21,6 @@ import org.junit.Test
 
 class ScreenRouterTest {
     private val accessibility = FakeAccessibility()
-    private val adb = FakeAdb()
     private val virtual = FakeVirtual()
     private val apps = FakeApps()
 
@@ -31,62 +28,51 @@ class ScreenRouterTest {
         accessibilityEnabled: () -> Boolean = { accessibility.connected },
     ): ScreenRouter = ScreenRouter(
         accessibility = accessibility,
-        adb = adb,
         virtual = virtual,
         apps = apps,
-        mainDisplaySize = { 1080 to 2400 },
         accessibilityEnabled = accessibilityEnabled,
     )
 
     @Test
-    fun mainObserveUsesAccessibilityWhenConnected() = runBlocking {
+    fun observeUsesVirtualAccessibilityDisplay() = runBlocking {
         accessibility.connected = true
-        val observed = router().observe(ScreenTarget.MAIN, 8, 120, null)
+        val observed = router().observe(8, 120, null)
         assertEquals(BACKEND_ACCESSIBILITY, observed.backend)
         assertEquals(1, accessibility.observeCalls)
-        assertEquals(0, adb.observeCalls)
-        assertEquals(MAIN_DISPLAY_ID, accessibility.lastObserveDisplayId)
+        assertEquals(VIRTUAL_DISPLAY_ID, accessibility.lastObserveDisplayId)
     }
 
     @Test
-    fun mainObserveFallsBackToAdbWhenAccessibilityOff() = runBlocking {
-        accessibility.connected = false
+    fun offlineObserveRejectsEvenWithAccessibility() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        adb.availableState = true
-        val observed = router().observe(ScreenTarget.MAIN, 8, 120, null)
-        assertEquals(BACKEND_ADB, observed.backend)
-        assertEquals(1, adb.observeCalls)
+        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("virtual_screen(action=start)"))
         assertEquals(0, accessibility.observeCalls)
     }
 
     @Test
-    fun mainAdbObservationRefusesWhileVirtualScreenIsOnline() = runBlocking {
+    fun observeWithoutAccessibilityDoesNotFallBack() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
-        val error = expectFailure { router().observe(ScreenTarget.MAIN, 8, 120, null) }
-        assertTrue(error.message.orEmpty().contains("虚拟屏在线"))
+        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("无障碍"))
+        assertEquals(0, accessibility.observeCalls)
     }
 
     @Test
-    fun mainObserveFailsWhenNoBackendIsAvailable() = runBlocking {
-        accessibility.connected = false
-        adb.availableState = false
-        adb.observeFailure = IllegalStateException("无线调试（ADB）未就绪")
-        expectFailure { router().observe(ScreenTarget.MAIN, 8, 120, null) }
-        Unit
+    fun startingObserveReportsStarting() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Starting
+        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("正在启动"))
     }
 
     @Test
-    fun mainObserveRejectsUnexpectedPackage() = runBlocking {
+    fun observeRejectsUnexpectedPackage() = runBlocking {
         accessibility.connected = true
-        expectFailure { router().observe(ScreenTarget.MAIN, 8, 120, "com.other") }
+        expectFailure { router().observe(8, 120, "com.other") }
         Unit
     }
 
     @Test
     fun virtualCoordinateTapUsesHelperEvenWithoutAccessibility() = runBlocking {
         accessibility.connected = false
-        val message = router().tap(ScreenTarget.VIRTUAL, GuiSelector.Point(10, 20), 60)
+        val message = router().tap(GuiSelector.Point(10, 20), 60)
         assertEquals(10 to 20, virtual.tapped)
         assertNull(accessibility.lastTapSelector)
         assertTrue(message.contains("虚拟屏"))
@@ -95,7 +81,7 @@ class ScreenRouterTest {
     @Test
     fun virtualNodeTapUsesAccessibilityDisplay() = runBlocking {
         accessibility.connected = true
-        router().tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60)
+        router().tap(GuiSelector.Text("OK"), 60)
         assertEquals(VIRTUAL_DISPLAY_ID, accessibility.lastTapDisplayId)
         assertEquals(GuiSelector.Text("OK"), accessibility.lastTapSelector)
         assertNull(virtual.tapped)
@@ -104,101 +90,89 @@ class ScreenRouterTest {
     @Test
     fun virtualNodeTapWithoutAccessibilityFailsReadable() = runBlocking {
         accessibility.connected = false
-        val error = expectFailure { router().tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60) }
+        val error = expectFailure { router().tap(GuiSelector.Text("OK"), 60) }
         assertTrue(error.message.orEmpty().contains("无障碍"))
     }
 
     @Test
     fun virtualObserveRequiresAccessibility() = runBlocking {
         accessibility.connected = false
-        val error = expectFailure { router().observe(ScreenTarget.VIRTUAL, 8, 120, null) }
+        val error = expectFailure { router().observe(8, 120, null) }
         assertTrue(error.message.orEmpty().contains("无障碍"))
     }
 
     @Test
     fun offlineVirtualScreenFailsReadable() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        val error = expectFailure { router().observe(ScreenTarget.VIRTUAL, 8, 120, null) }
+        val error = expectFailure { router().observe(8, 120, null) }
         assertTrue(error.message.orEmpty().contains("虚拟屏未启动"))
     }
 
     @Test
-    fun mainPointTapPrefersAdbWhenAvailable() = runBlocking {
+    fun pointTapUsesHelper() = runBlocking {
         accessibility.connected = true
-        adb.availableState = true
-        router().tap(ScreenTarget.MAIN, GuiSelector.Point(5, 6), 60)
-        assertEquals(5 to 6, adb.tapped)
+        router().tap(GuiSelector.Point(5, 6), 60)
         assertNull(accessibility.lastTapSelector)
     }
 
     @Test
-    fun mainNamedTapWithoutAccessibilityResolvesThroughAdbSnapshot() = runBlocking {
-        accessibility.connected = false
+    fun offlineNodeTapFailsBeforeAccessibility() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        adb.availableState = true
-        router().tap(ScreenTarget.MAIN, GuiSelector.Text("OK"), 60)
-        assertEquals(200 to 100, adb.tapped)
+        expectFailure { router().tap(GuiSelector.Text("OK"), 60) }
+        assertNull(accessibility.lastTapSelector)
     }
 
     @Test
-    fun mainNamedTapUsesAccessibilityWhenConnected() = runBlocking {
+    fun namedTapUsesVirtualDisplay() = runBlocking {
         accessibility.connected = true
-        router().tap(ScreenTarget.MAIN, GuiSelector.Text("OK"), 60)
-        assertEquals(MAIN_DISPLAY_ID, accessibility.lastTapDisplayId)
-        assertNull(adb.tapped)
+        router().tap(GuiSelector.Text("OK"), 60)
+        assertEquals(VIRTUAL_DISPLAY_ID, accessibility.lastTapDisplayId)
     }
 
     @Test
-    fun mainSwipeUsesAdbAndFailsWithoutIt() = runBlocking {
-        adb.availableState = true
-        val message = router().swipe(ScreenTarget.MAIN, 1, 2, 3, 4, 300)
-        assertEquals("已通过 ADB 在主屏滑动 (1, 2) → (3, 4)", message)
-        assertEquals(listOf(1, 2, 3, 4, 300), adb.swiped)
-        adb.availableState = false
-        expectFailure { router().swipe(ScreenTarget.MAIN, 1, 2, 3, 4, 300) }
-        Unit
+    fun offlineSwipeDoesNotInject() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Offline
+        expectFailure { router().swipe(1, 2, 3, 4, 300) }
+        assertNull(virtual.swiped)
     }
 
     @Test
     fun virtualSwipeUsesHelper() = runBlocking {
-        router().swipe(ScreenTarget.VIRTUAL, 1, 2, 3, 4, 300)
+        router().swipe(1, 2, 3, 4, 300)
         assertEquals(listOf(1L, 2L, 3L, 4L, 300L), virtual.swiped)
     }
 
     @Test
     fun scrollOnVirtualScreenSwipesHelper() = runBlocking {
-        val message = router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 2, null)
+        val message = router().scroll(GuiScrollDirection.DOWN, 2, null)
         assertEquals(2, virtual.swipeCount)
         assertEquals("已在虚拟屏向 down 滚动 2 次", message)
     }
 
     @Test
-    fun scrollOnMainScreenFallsBackToAccessibilityWithoutAdb() = runBlocking {
-        accessibility.connected = true
-        adb.availableState = false
-        router().scroll(ScreenTarget.MAIN, GuiScrollDirection.DOWN, 1, null)
-        assertEquals(GuiScrollDirection.DOWN, accessibility.lastScrollDirection)
+    fun scrollWithRefUsesCachedBoundsWithoutObserving() = runBlocking {
+        val router = router()
+        router.observe(8, 120, null)
+        router.scroll(GuiScrollDirection.DOWN, 1, GuiSelector.Ref("1"))
+        assertEquals(1, accessibility.observeCalls)
+        assertEquals(1, virtual.swipeCount)
     }
 
     @Test
-    fun mainScreenshotRequiresAccessibility() = runBlocking {
+    fun screenshotDoesNotRequireAccessibility() = runBlocking {
         accessibility.connected = false
-        val error = expectFailure { router().screenshot(ScreenTarget.MAIN) }
-        assertTrue(error.message.orEmpty().contains("无障碍"))
+        assertEquals(BACKEND_HELPER, router().screenshot().backend)
     }
 
     @Test
-    fun mainScreenshotUsesAccessibility() = runBlocking {
-        accessibility.connected = true
-        val capture = router().screenshot(ScreenTarget.MAIN)
-        assertEquals(BACKEND_ACCESSIBILITY, capture.backend)
-        assertEquals(1080, capture.width)
-        assertEquals(2400, capture.height)
+    fun offlineScreenshotFails() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Offline
+        assertTrue(expectFailure { router().screenshot() }.message.orEmpty().contains("未启动"))
     }
 
     @Test
     fun virtualScreenshotUsesHelper() = runBlocking {
-        val capture = router().screenshot(ScreenTarget.VIRTUAL)
+        val capture = router().screenshot()
         assertEquals(BACKEND_HELPER, capture.backend)
         assertEquals(VIRTUAL_DISPLAY_ID, capture.width / 100)
         assertEquals(byteArrayOf(1, 2, 3).toList(), capture.png.toList())
@@ -213,8 +187,7 @@ class ScreenRouterTest {
             taskDisplayId = 0,
             landedOnMain = true,
         )
-        val report = router().launch(ScreenTarget.VIRTUAL, "com.example")
-        assertEquals(ScreenTarget.VIRTUAL, report.target)
+        val report = router().launch("com.example")
         assertEquals(VIRTUAL_DISPLAY_ID, report.displayId)
         assertEquals(0, report.taskDisplayId)
         assertTrue(report.landedOnMain)
@@ -222,17 +195,15 @@ class ScreenRouterTest {
     }
 
     @Test
-    fun mainLaunchUsesAppCatalog() = runBlocking {
-        val report = router().launch(ScreenTarget.MAIN, "com.example")
-        assertEquals("com.example", apps.launched)
-        assertTrue(report.ok)
-        assertEquals(MAIN_DISPLAY_ID, report.displayId)
-        assertTrue(report.landedOnMain)
+    fun offlineLaunchDoesNotLaunchApp() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Offline
+        expectFailure { router().launch("com.example") }
+        assertEquals(0, virtual.launchCalls)
     }
 
     @Test
     fun typeAsciiOnVirtualScreenUsesHelper() = runBlocking {
-        val result = router().typeText(ScreenTarget.VIRTUAL, null, "hello")
+        val result = router().typeText(null, "hello")
         assertEquals("hello", virtual.typed)
         assertEquals(BACKEND_HELPER, result.backend)
     }
@@ -240,123 +211,83 @@ class ScreenRouterTest {
     @Test
     fun typeUnicodeOnVirtualScreenWithoutAccessibilityFails() = runBlocking {
         accessibility.connected = false
-        val error = expectFailure { router().typeText(ScreenTarget.VIRTUAL, null, "你好") }
+        val error = expectFailure { router().typeText(null, "你好") }
         assertTrue(error.message.orEmpty().contains("非 ASCII"))
     }
 
     @Test
     fun typeUnicodeOnVirtualScreenUsesAccessibilityWithRef() = runBlocking {
         accessibility.connected = true
-        val result = router().typeText(ScreenTarget.VIRTUAL, GuiSelector.Ref("1"), "你好")
+        val result = router().typeText(GuiSelector.Ref("1"), "你好")
         assertEquals(VIRTUAL_DISPLAY_ID, accessibility.lastSetTextDisplayId)
         assertEquals("你好", accessibility.lastSetTextValue)
         assertEquals(BACKEND_ACCESSIBILITY, result.backend)
     }
 
     @Test
-    fun typeAsciiOnMainScreenUsesAdb() = runBlocking {
+    fun asciiEntryUsesHelper() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
-        val result = router().typeText(ScreenTarget.MAIN, null, "hello")
-        assertEquals("hello", adb.typed)
-        assertEquals(BACKEND_ADB, result.backend)
+        val result = router().typeText(null, "hello")
+        assertEquals(BACKEND_HELPER, result.backend)
     }
 
     @Test
-    fun typeUnicodeOnMainScreenWithoutAccessibilityFails() = runBlocking {
+    fun unicodeEntryWithoutFieldFails() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
-        val error = expectFailure { router().typeText(ScreenTarget.MAIN, null, "你好") }
+        val error = expectFailure { router().typeText(null, "你好") }
         assertTrue(error.message.orEmpty().contains("非 ASCII"))
     }
 
     @Test
-    fun mainTextEntryMatrixFollowsAvailableChannels() = runBlocking {
-        data class Case(
-            val accessibilityOn: Boolean,
-            val adbOn: Boolean,
-            val ref: String?,
-            val text: String,
-            val expectedBackend: String?,
-            val expectedError: String?,
-        )
-
-        val cases = listOf(
-            Case(true, true, null, "hello", BACKEND_ADB, null),
-            Case(true, true, "1", "你好", BACKEND_ACCESSIBILITY, null),
-            Case(true, false, "1", "你好", BACKEND_ACCESSIBILITY, null),
-            Case(true, false, null, "hello", null, "无线调试（ADB）"),
-            Case(true, false, null, "你好", null, "非 ASCII"),
-            Case(false, true, null, "hello", BACKEND_ADB, null),
-            Case(false, true, "1", "你好", null, "无障碍"),
-            Case(false, false, null, "hello", null, "无线调试（ADB）"),
-            Case(false, false, "1", "你好", null, "无障碍"),
-        )
-
-        cases.forEach { case ->
-            accessibility.connected = case.accessibilityOn
-            adb.availableState = case.adbOn
-            val selector = case.ref?.let { GuiSelector.Ref(it) }
-            if (case.expectedBackend != null) {
-                val result = router().typeText(ScreenTarget.MAIN, selector, case.text)
-                assertEquals(case.toString(), case.expectedBackend, result.backend)
-            } else {
-                val error = expectFailure { router().typeText(ScreenTarget.MAIN, selector, case.text) }
-                assertTrue(case.toString(), error.message.orEmpty().contains(case.expectedError!!))
-            }
+    fun virtualTextEntryMatrixFollowsAvailableChannels() = runBlocking {
+        for (connected in listOf(true, false)) {
+            accessibility.connected = connected
+            assertEquals(BACKEND_HELPER, router().typeText(null, "hello").backend)
+            if (connected) assertEquals(BACKEND_ACCESSIBILITY, router().typeText(GuiSelector.Ref("1"), "你好").backend)
+            else assertTrue(expectFailure { router().typeText(GuiSelector.Ref("1"), "你好") }.message.orEmpty().contains("无障碍"))
+            assertTrue(expectFailure { router().typeText(null, "你好") }.message.orEmpty().contains("非 ASCII"))
         }
     }
 
     @Test
-    fun mainAsciiEntryWithoutAdbPointsToRefOrWirelessDebugging() = runBlocking {
-        accessibility.connected = true
-        adb.availableState = false
-        val error = expectFailure { router().typeText(ScreenTarget.MAIN, null, "hello") }
-        assertEquals(
-            "直接注入文本需要无线调试（ADB）；请提供输入框 ref 或 fieldText 以通过无障碍输入",
-            error.message,
-        )
-        assertFalse(error.message.orEmpty().contains("请开启无障碍"))
+    fun offlineAsciiEntryDoesNotInject() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Offline
+        expectFailure { router().typeText(null, "hello") }
+        assertNull(virtual.typed)
     }
 
     @Test
-    fun backKeyUsesAccessibilityGlobalWhenConnected() = runBlocking {
-        accessibility.connected = true
-        router().key(ScreenTarget.MAIN, "back")
-        assertEquals(GuiGlobalAction.BACK, accessibility.lastGlobal)
-        assertNull(adb.lastKeyEvent)
+    fun backKeyUsesVirtualHelperWhenConnected() = runBlocking {
+        router().key("back")
+        assertEquals("back", virtual.lastKey)
     }
 
     @Test
-    fun backKeyFallsBackToAdbWithoutAccessibility() = runBlocking {
+    fun backKeyWorksWithoutAccessibility() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
-        router().key(ScreenTarget.MAIN, "back")
-        assertEquals(4, adb.lastKeyEvent)
+        router().key("back")
+        assertEquals("back", virtual.lastKey)
     }
 
     @Test
-    fun enterKeyUsesAdb() = runBlocking {
-        adb.availableState = true
-        router().key(ScreenTarget.MAIN, "enter")
-        assertEquals(66, adb.lastKeyEvent)
+    fun unsupportedKeysNeverReachHelper() = runBlocking {
+        for (key in listOf("home", "recents", "notifications", "volume_up", "volume_down")) {
+            expectFailure { router().key(key) }
+            assertNull(virtual.lastKey)
+        }
     }
 
     @Test
     fun virtualKeyUsesHelper() = runBlocking {
-        router().key(ScreenTarget.VIRTUAL, "back")
+        router().key("back")
         assertEquals("back", virtual.lastKey)
     }
 
     @Test
     fun statusReportsBackendsAndVirtualState() = runBlocking {
-        adb.availableState = true
         val status = router().status()
         assertTrue(status.accessibilityConnected)
-        assertTrue(status.adbAvailable)
-        assertEquals(MAIN_DISPLAY_ID, status.main.displayId)
-        assertEquals(BACKEND_ACCESSIBILITY, status.main.backend)
-        assertEquals("online", status.virtualState)
+                assertEquals("online", status.virtualState)
         assertEquals(VIRTUAL_DISPLAY_ID, status.virtual?.displayId)
         assertEquals(2000, status.virtualUid)
     }
@@ -364,25 +295,22 @@ class ScreenRouterTest {
     @Test
     fun waitOnVirtualScreenRequiresAccessibility() = runBlocking {
         accessibility.connected = false
-        val error = expectFailure { router().waitFor(ScreenTarget.VIRTUAL, null, "OK", null, 100) }
+        val error = expectFailure { router().waitFor(null, "OK", null, 100) }
         assertTrue(error.message.orEmpty().contains("无障碍"))
     }
 
     @Test
-    fun waitOnMainScreenFallsBackToAdbPolling() = runBlocking {
-        accessibility.connected = false
+    fun offlineWaitDoesNotPollAnotherScreen() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        adb.availableState = true
-        val outcome = router().waitFor(ScreenTarget.MAIN, null, "OK", null, 1_000)
-        assertTrue(outcome.matched)
-        assertEquals("com.example", outcome.packageName)
+        expectFailure { router().waitFor(null, "OK", null, 100) }
+        assertEquals(0, accessibility.waitCalls)
     }
 
     @Test
     fun waitOnMainScreenReportsCurrentWindowFromAccessibility() = runBlocking {
         accessibility.connected = true
         accessibility.waitOutcome = GuiWaitOutcome(matched = false, packageName = "com.example", windowTitle = "设置")
-        val outcome = router().waitFor(ScreenTarget.MAIN, "com.example", "文件管理", null, 10)
+        val outcome = router().waitFor("com.example", "文件管理", null, 10)
         assertEquals(false, outcome.matched)
         assertEquals("com.example", outcome.packageName)
         assertEquals("设置", outcome.windowTitle)
@@ -392,28 +320,22 @@ class ScreenRouterTest {
     fun virtualWaitUsesAccessibilityOutcome() = runBlocking {
         accessibility.connected = true
         accessibility.waitOutcome = GuiWaitOutcome(matched = true, packageName = "com.android.documentsui", windowTitle = "文件管理")
-        val outcome = router().waitFor(ScreenTarget.VIRTUAL, null, "文件管理", null, 10)
+        val outcome = router().waitFor(null, "文件管理", null, 10)
         assertTrue(outcome.matched)
         assertEquals("文件管理", outcome.windowTitle)
     }
 
     @Test
-    fun listsLaunchableAppsOnMainScreen() = runBlocking {
-        assertEquals(listOf("com.example"), router().listApps(ScreenTarget.MAIN).map { it.packageName })
+    fun listsLaunchableApps() = runBlocking {
+        assertEquals(listOf("com.example"), router().listApps().map { it.packageName })
     }
 
     @Test
-    fun virtualAppListRequiresOnlineVirtualScreen() = runBlocking {
+    fun appListWorksWhileOfflineAndFailed() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        val error = expectFailure { router().listApps(ScreenTarget.VIRTUAL) }
-        assertTrue(error.message.orEmpty().contains("虚拟屏未启动"))
-        virtual.stateValue = VirtualScreenState.Online(
-            displayId = VIRTUAL_DISPLAY_ID,
-            width = 700,
-            height = 1200,
-            backend = "adb",
-        )
-        assertEquals(1, router().listApps(ScreenTarget.VIRTUAL).size)
+        assertEquals(1, router().listApps().size)
+        virtual.stateValue = VirtualScreenState.Failed("unavailable")
+        assertEquals(1, router().listApps().size)
     }
 
     @Test
@@ -462,7 +384,7 @@ class ScreenRouterTest {
     fun observeDropsUnusableBoundsAndReportsFilteredCount() = runBlocking {
         accessibility.connected = true
         accessibility.snapshot = viewPagerSnapshot()
-        val observed = router().observe(ScreenTarget.MAIN, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+        val observed = router().observe(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         assertEquals(listOf("0", "2"), observed.snapshot.nodes.map { it.ref })
         assertEquals(1, observed.filteredNodes)
         assertEquals(3, observed.snapshot.scanned)
@@ -474,7 +396,7 @@ class ScreenRouterTest {
         accessibility.snapshotForDepth = { maxDepth, maxNodes ->
             GuiNodeTree.buildSnapshot(deepRoot(), maxDepth = maxDepth, maxNodes = maxNodes)
         }
-        val found = router().find(ScreenTarget.MAIN, listOf(GuiSelector.Text("深层目标")), 20)
+        val found = router().find(listOf(GuiSelector.Text("深层目标")), 20)
         assertEquals(1, found.matches.size)
         assertEquals(SCREEN_DEFAULT_MAX_DEPTH, accessibility.lastObserveMaxDepth)
     }
@@ -483,7 +405,7 @@ class ScreenRouterTest {
     fun findUsesPrunedSnapshotAndReportsMatches() = runBlocking {
         accessibility.connected = true
         accessibility.snapshot = viewPagerSnapshot()
-        val found = router().find(ScreenTarget.MAIN, listOf(GuiSelector.Text("OK")), 20)
+        val found = router().find(listOf(GuiSelector.Text("OK")), 20)
         assertEquals(1, found.matches.size)
         assertEquals("2", found.matches.single().ref)
     }
@@ -493,32 +415,32 @@ class ScreenRouterTest {
         accessibility.connected = true
         accessibility.snapshot = viewPagerSnapshot()
         val error = expectFailure {
-            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, GuiSelector.Ref("1"))
+            router().scroll(GuiScrollDirection.DOWN, 1, GuiSelector.Ref("1"))
         }
-        assertTrue(error.message.orEmpty().contains("找不到滚动目标节点"))
+        assertTrue(error.message.orEmpty().contains("不可见"))
     }
 
     @Test
     fun scrollPathIsClampedIntoVirtualDisplay() = runBlocking {
         accessibility.connected = true
         accessibility.snapshot = wideNodeSnapshot()
-        router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.RIGHT, 1, GuiSelector.Ref("1"))
+        router().scroll(GuiScrollDirection.RIGHT, 1, GuiSelector.Ref("1"))
         assertEquals(listOf(660L, 600L, 699L, 600L, 300L), virtual.swiped)
     }
 
     @Test
     fun swipeRejectsCoordinatesOutsideDisplay() = runBlocking {
         val virtualError = expectFailure {
-            router().swipe(ScreenTarget.VIRTUAL, 0, 0, 700, 1200, 300)
+            router().swipe(0, 0, 700, 1200, 300)
         }
         assertTrue(virtualError.message.orEmpty().contains("滑动坐标超出屏幕范围"))
         assertTrue(virtualError.message.orEmpty().contains("700×1200"))
         val mainError = expectFailure {
-            router().swipe(ScreenTarget.MAIN, 0, 0, 1080, 10, 300)
+            router().swipe(0, 0, 1080, 10, 300)
         }
-        assertTrue(mainError.message.orEmpty().contains("1080×2400"))
+        assertTrue(mainError.message.orEmpty().contains("700×1200"))
         val samePoint = expectFailure {
-            router().swipe(ScreenTarget.VIRTUAL, 10, 10, 10, 10, 300)
+            router().swipe(10, 10, 10, 10, 300)
         }
         assertTrue(samePoint.message.orEmpty().contains("起点与终点相同"))
     }
@@ -526,35 +448,31 @@ class ScreenRouterTest {
     @Test
     fun tapByPointRejectsCoordinatesOutsideDisplay() = runBlocking {
         val mainError = expectFailure {
-            router().tap(ScreenTarget.MAIN, GuiSelector.Point(1080, 10), 60)
+            router().tap(GuiSelector.Point(1080, 10), 60)
         }
         assertTrue(mainError.message.orEmpty().contains("点击坐标超出屏幕范围"))
         val virtualError = expectFailure {
-            router().tap(ScreenTarget.VIRTUAL, GuiSelector.Point(10, 1200), 60)
+            router().tap(GuiSelector.Point(10, 1200), 60)
         }
         assertTrue(virtualError.message.orEmpty().contains("700×1200"))
     }
 
     @Test
-    fun adbTapResolvesRefsAgainstPrunedSnapshot() = runBlocking {
-        accessibility.connected = false
-        virtual.stateValue = VirtualScreenState.Offline
-        adb.availableState = true
-        adb.snapshot = viewPagerSnapshot()
-        router().tap(ScreenTarget.MAIN, GuiSelector.Ref("2"), 60)
-        assertEquals(200 to 100, adb.tapped)
+    fun screenInstanceChangeInvalidatesCachedRefs() = runBlocking {
+        val router = router()
+        router.observe(8, 120, null)
+        val before = accessibility.invalidations
+        virtual.stateValue = VirtualScreenState.Online(VIRTUAL_DISPLAY_ID, 700, 1200, "adb")
+        router.tap(GuiSelector.Point(1, 2), 60)
+        assertEquals(before + 1, accessibility.invalidations)
     }
 
     @Test
     fun statusSeparatesEnabledFromConnectedAndReportsChannels() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
         val status = router(accessibilityEnabled = { true }).status()
         assertEquals(false, status.accessibilityConnected)
         assertEquals(true, status.accessibilityEnabled)
-        assertEquals(BACKEND_NONE, status.main.backend)
-        assertEquals(BACKEND_NONE, status.main.nodeBackend)
-        assertEquals(BACKEND_ADB, status.main.inputBackend)
         assertEquals(BACKEND_NONE, status.virtual?.nodeBackend)
         assertEquals(BACKEND_HELPER, status.virtual?.inputBackend)
     }
@@ -562,7 +480,6 @@ class ScreenRouterTest {
     @Test
     fun statusReportsMainNodeChannelNoneWhileVirtualScreenIsOnline() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
         virtual.stateValue = VirtualScreenState.Online(
             displayId = VIRTUAL_DISPLAY_ID,
             width = 700,
@@ -571,28 +488,21 @@ class ScreenRouterTest {
         )
         val status = router(accessibilityEnabled = { false }).status()
         assertEquals("online", status.virtualState)
-        assertEquals(BACKEND_NONE, status.main.nodeBackend)
-        assertEquals(BACKEND_ADB, status.main.inputBackend)
     }
 
     @Test
     fun statusReportsMainNodeChannelAdbWhenVirtualScreenIsOffline() = runBlocking {
         accessibility.connected = false
-        adb.availableState = true
         virtual.stateValue = VirtualScreenState.Offline
         val status = router(accessibilityEnabled = { false }).status()
         assertEquals("offline", status.virtualState)
-        assertEquals(BACKEND_ADB, status.main.nodeBackend)
         assertNull(status.virtual)
     }
 
     @Test
     fun statusReportsAccessibilityChannelsWhenConnected() = runBlocking {
         accessibility.connected = true
-        adb.availableState = true
         val status = router(accessibilityEnabled = { true }).status()
-        assertEquals(BACKEND_ACCESSIBILITY, status.main.nodeBackend)
-        assertEquals(BACKEND_ADB, status.main.inputBackend)
         assertEquals(BACKEND_ACCESSIBILITY, status.virtual?.nodeBackend)
         assertEquals(BACKEND_HELPER, status.virtual?.inputBackend)
     }
@@ -601,28 +511,28 @@ class ScreenRouterTest {
     fun virtualNodeErrorsWhileRebindingAskToWait() = runBlocking {
         accessibility.connected = false
         val error = expectFailure {
-            router(accessibilityEnabled = { true }).tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60)
+            router(accessibilityEnabled = { true }).tap(GuiSelector.Text("OK"), 60)
         }
-        assertTrue(error.message.orEmpty().contains("正在重新绑定"))
-        assertTrue(error.message.orEmpty().contains("等待几秒"))
+        assertTrue(error.message.orEmpty().contains("服务未连接"))
+        assertTrue(error.message.orEmpty().contains("稍等"))
     }
 
     @Test
     fun virtualNodeErrorsWhenDisabledPointToSettings() = runBlocking {
         accessibility.connected = false
         val error = expectFailure {
-            router(accessibilityEnabled = { false }).tap(ScreenTarget.VIRTUAL, GuiSelector.Text("OK"), 60)
+            router(accessibilityEnabled = { false }).tap(GuiSelector.Text("OK"), 60)
         }
         assertTrue(error.message.orEmpty().contains("请到系统设置开启"))
     }
 
     @Test
-    fun mainObserveWhileRebindingWithVirtualOnlineAsksToWait() = runBlocking {
+    fun observeWithEnabledButDisconnectedServiceExplainsRecovery() = runBlocking {
         accessibility.connected = false
         val error = expectFailure {
-            router(accessibilityEnabled = { true }).observe(ScreenTarget.MAIN, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+            router(accessibilityEnabled = { true }).observe(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         }
-        assertTrue(error.message.orEmpty().contains("正在重新绑定"))
+        assertTrue(error.message.orEmpty().contains("服务未连接"))
     }
 
     @Test
@@ -653,13 +563,13 @@ class ScreenRouterTest {
             reason = "eof",
         )
         val error = expectFailure {
-            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
+            router().scroll(GuiScrollDirection.DOWN, 1, null)
         }
         val message = error.message.orEmpty()
-        assertTrue(message.contains("screen_app"))
-        assertTrue(message.contains("screen_observe"))
+        assertTrue(message.contains("virtual_screen(action=start)"))
+        assertTrue(message.contains("权限"))
         assertTrue(message.contains("连接被对端关闭"))
-        assertFalse(message.contains("启动失败"))
+        assertFalse(message.contains("主屏"))
         assertFalse(message.contains("transport"))
     }
 
@@ -672,10 +582,10 @@ class ScreenRouterTest {
             recoverable = false,
         )
         val error = expectFailure {
-            router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
+            router().scroll(GuiScrollDirection.DOWN, 1, null)
         }
-        assertTrue(error.message.orEmpty().contains("Root"))
-        assertTrue(error.message.orEmpty().contains("权限设置"))
+        assertTrue(error.message.orEmpty().contains("权限"))
+        assertTrue(error.message.orEmpty().contains("权限"))
     }
 
     private suspend fun expectFailure(block: suspend () -> Unit): Throwable {
@@ -689,6 +599,11 @@ class ScreenRouterTest {
 
     private class FakeAccessibility : ScreenAccessibilityBackend {
         override var connected = true
+        var invalidations = 0
+        var waitCalls = 0
+        override fun invalidateSnapshots() { invalidations++ }
+        override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds =
+            GuiNodeTree.find(snapshot, selector)?.bounds ?: error("无匹配节点")
         var observeCalls = 0
         var lastObserveDisplayId = -1
         var lastObserveMaxDepth = -1
@@ -698,8 +613,6 @@ class ScreenRouterTest {
         var lastTapSelector: GuiSelector? = null
         var lastSetTextDisplayId = -1
         var lastSetTextValue = ""
-        var lastScrollDirection: GuiScrollDirection? = null
-        var lastGlobal: GuiGlobalAction? = null
         var waitOutcome = GuiWaitOutcome(matched = true)
 
         override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
@@ -714,10 +627,6 @@ class ScreenRouterTest {
             lastTapSelector = selector
         }
 
-        override suspend fun scroll(direction: GuiScrollDirection, amount: Int, target: GuiSelector?) {
-            lastScrollDirection = direction
-        }
-
         override suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult {
             lastSetTextDisplayId = displayId
             lastSetTextValue = text
@@ -730,51 +639,8 @@ class ScreenRouterTest {
             text: String?,
             textGone: String?,
             timeoutMs: Long,
-        ): GuiWaitOutcome = waitOutcome
+        ): GuiWaitOutcome { waitCalls++; return waitOutcome }
 
-        override suspend fun screenshotMain(): GuiScreenshot =
-            GuiScreenshot(byteArrayOf(9, 9), 1080, 2400)
-
-        override suspend fun global(action: GuiGlobalAction) {
-            lastGlobal = action
-        }
-    }
-
-    private class FakeAdb : ScreenAdbBackend {
-        var availableState = true
-        var observeCalls = 0
-        var observeFailure: Throwable? = null
-        var snapshot: GuiSnapshot = testSnapshot()
-        var tapped: Pair<Int, Int>? = null
-        var swiped: List<Int>? = null
-        var lastKeyEvent: Int? = null
-        var typed: String? = null
-
-        override suspend fun available(): Boolean = availableState
-
-        override suspend fun observeMain(maxDepth: Int, maxNodes: Int): GuiSnapshot {
-            observeCalls++
-            observeFailure?.let { throw it }
-            return snapshot
-        }
-
-        override suspend fun tap(x: Int, y: Int) {
-            tapped = x to y
-        }
-
-        override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long) {
-            swiped = listOf(x1, y1, x2, y2, durationMs.toInt())
-        }
-
-        override suspend fun keyEvent(keyCode: Int) {
-            lastKeyEvent = keyCode
-        }
-
-        override suspend fun typeText(text: String) {
-            typed = text
-        }
-
-        override suspend fun shell(command: String): String = ""
     }
 
     private class FakeVirtual : ScreenVirtualBackend {
@@ -800,7 +666,7 @@ class ScreenRouterTest {
 
         override suspend fun state(): VirtualScreenState = stateValue
 
-        override suspend fun tap(x: Int, y: Int): VirtualScreenResult {
+        override suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult {
             tapped = x to y
             return VirtualScreenResult(true, "已点击")
         }
@@ -829,7 +695,8 @@ class ScreenRouterTest {
 
         override suspend fun screenshot(): ByteArray? = byteArrayOf(1, 2, 3)
 
-        override suspend fun launch(packageName: String): VirtualScreenLaunchReport = launchReport
+        var launchCalls = 0
+        override suspend fun launch(packageName: String): VirtualScreenLaunchReport { launchCalls++; return launchReport }
 
         override fun helperUid(): Int? = 2000
 
@@ -845,10 +712,6 @@ class ScreenRouterTest {
             ScreenApp("com.example", "Example", "com.example/.Main"),
         )
 
-        override fun launchOnMain(packageName: String): ScreenApp {
-            launched = packageName
-            return launchableApps().first()
-        }
     }
 
     private companion object {

@@ -1,106 +1,74 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
+import io.github.whywood.deepdeep.plugin.gui.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 
 class AdbUiAutomatorParserTest {
-    private val xml = """
-        <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-        <hierarchy rotation="0">
-          <node index="0" text="" resource-id="" class="android.widget.FrameLayout" package="com.example" content-desc="" clickable="false" enabled="true" bounds="[0,0][1080,2400]">
-            <node index="0" text="设置" resource-id="com.example:id/title" class="android.widget.TextView" package="com.example" content-desc="设置按钮" clickable="true" enabled="true" bounds="[100,200][300,280]" />
-            <node index="1" text="" resource-id="" class="android.widget.EditText" package="com.example" content-desc="" clickable="false" enabled="true" bounds="[50,300][1000,400]" />
-          </node>
-        </hierarchy>
-    """.trimIndent()
+    private fun snapshot() = GuiNodeTree.buildSnapshot(
+        GuiNode("EditText", GuiBounds(0, 0, 100, 100), text = "设置", desc = "设置按钮", resourceId = "com.example:id/title", editable = true),
+        packageName = "com.example",
+    )
 
     @Test
-    fun parsesHierarchyIntoNodeTree() {
-        val parsed = AdbUiAutomatorParser.parse(xml) ?: error("expected parsed hierarchy")
-        assertEquals("com.example", parsed.packageName)
-        assertEquals("android.widget.FrameLayout", parsed.root.className)
-        assertEquals(2, parsed.root.children.size)
-        val title = parsed.root.children[0]
-        assertEquals("设置", title.text)
-        assertEquals("设置按钮", title.desc)
-        assertEquals("com.example:id/title", title.resourceId)
-        assertTrue(title.clickable)
-        assertEquals(100, title.bounds.left)
-        assertEquals(280, title.bounds.bottom)
-        val edit = parsed.root.children[1]
-        assertTrue(edit.editable)
+    fun virtualSnapshotPreservesNodeFields() {
+        val cached = GuiSnapshotCache().store(7, snapshot())
+        assertEquals("com.example", cached.packageName)
+        assertEquals("设置", cached.nodes.single().text)
+        assertEquals("设置按钮", cached.nodes.single().desc)
+        assertEquals("com.example:id/title", cached.nodes.single().resourceId)
+        assertTrue(cached.nodes.single().editable)
     }
 
     @Test
-    fun buildsSnapshotWithStableRefs() {
-        val parsed = AdbUiAutomatorParser.parse(xml) ?: error("expected parsed hierarchy")
-        val snapshot = GuiNodeTree.buildSnapshot(
-            root = parsed.root,
-            packageName = parsed.packageName,
-            maxDepth = 8,
-            maxNodes = 120,
-        )
-        assertEquals(3, snapshot.nodes.size)
-        assertEquals("0", snapshot.nodes[0].ref)
-        assertEquals("1", snapshot.nodes[1].ref)
-        assertEquals("设置", snapshot.nodes[1].text)
-        val found = GuiNodeTree.find(snapshot, GuiSelector.Text("设置"))
-        assertEquals("1", found?.ref)
-        val byPoint = GuiNodeTree.find(snapshot, GuiSelector.Point(200, 240))
-        assertTrue(byPoint?.bounds?.contains(200, 240) == true)
+    fun refsAreStableWithinSnapshotAndChangeOnObserve() {
+        val cache = GuiSnapshotCache()
+        val first = cache.store(7, snapshot()).nodes.single().ref
+        assertEquals(first, cache.find(7, GuiSelector.Ref(first)).ref)
+        val second = cache.store(7, snapshot()).nodes.single().ref
+        assertNotEquals(first, second)
+        assertThrows(IllegalArgumentException::class.java) { cache.find(7, GuiSelector.Ref(first)) }
     }
 
     @Test
-    fun missingPackageFallsBackToChildPackage() {
-        val nested = """
-            <hierarchy>
-              <node text="" class="android.widget.FrameLayout" bounds="[0,0][10,10]">
-                <node text="hi" class="android.widget.TextView" package="com.nested" bounds="[0,0][5,5]" />
-              </node>
-            </hierarchy>
-        """.trimIndent()
-        val parsed = AdbUiAutomatorParser.parse(nested) ?: error("expected parsed hierarchy")
-        assertEquals("com.nested", parsed.packageName)
+    fun refCannotCrossDisplay() {
+        val cache = GuiSnapshotCache()
+        val ref = cache.store(7, snapshot()).nodes.single().ref
+        cache.store(8, snapshot())
+        assertThrows(IllegalArgumentException::class.java) { cache.find(8, GuiSelector.Ref(ref)) }
     }
 
     @Test
-    fun invalidXmlReturnsNull() {
-        assertNull(AdbUiAutomatorParser.parse(""))
-        assertNull(AdbUiAutomatorParser.parse("not xml at all"))
+    fun numericLegacyRefCannotSelectNewNode() {
+        val cache = GuiSnapshotCache()
+        cache.store(7, snapshot())
+        assertThrows(IllegalArgumentException::class.java) { cache.find(7, GuiSelector.Ref("0")) }
     }
 
     @Test
-    fun uiDumpCommandDropsStaleSnapshotBeforeDumping() {
-        val command = adbUiDumpCommand()
-        assertTrue(command.startsWith("rm -f $ADB_UI_DUMP_PATH; "))
-        assertTrue(command.contains("uiautomator dump $ADB_UI_DUMP_PATH"))
-        assertTrue(command.contains("&& cat $ADB_UI_DUMP_PATH"))
-        assertFalse(command.contains("; cat"))
+    fun clearedScreenCannotReuseRefs() {
+        val cache = GuiSnapshotCache()
+        val ref = cache.store(7, snapshot()).nodes.single().ref
+        cache.clear()
+        assertThrows(IllegalStateException::class.java) { cache.find(7, GuiSelector.Ref(ref)) }
+        cache.store(7, snapshot())
+        assertThrows(IllegalArgumentException::class.java) { cache.find(7, GuiSelector.Ref(ref)) }
     }
 
     @Test
-    fun buildsSafeAdbInputCommand() {
-        assertEquals("input text 'hello%sworld'", adbInputTextCommand("hello world"))
-        assertEquals("input text 'it'\\''s'", adbInputTextCommand("it's"))
+    fun snapshotRejectsMainDisplay() {
+        assertThrows(IllegalArgumentException::class.java) { GuiSnapshotCache().store(0, snapshot()) }
     }
 
     @Test
-    fun parsesTargetAndDurations() {
-        assertEquals(ScreenTarget.MAIN, targetOf(buildJsonObject { }))
-        assertEquals(ScreenTarget.MAIN, targetOf(buildJsonObject { put("target", "main") }))
-        assertEquals(ScreenTarget.VIRTUAL, targetOf(buildJsonObject { put("target", "VIRTUAL") }))
-        try {
-            targetOf(buildJsonObject { put("target", "second") })
-            error("expected IllegalArgumentException")
-        } catch (expected: IllegalArgumentException) {
-            assertTrue(expected.message!!.contains("target"))
+    fun parsesSupportedKeysAndDurations() {
+        assertEquals("back", parseScreenKey(buildJsonObject { put("key", "BACK") }))
+        assertEquals(60, tapDurationOf(buildJsonObject {}))
+        assertEquals(300L, swipeDurationOf(buildJsonObject {}))
+        for (name in listOf("home", "recents", "notifications", "volume_up", "volume_down")) {
+            assertThrows(IllegalArgumentException::class.java) { parseScreenKey(buildJsonObject { put("key", name) }) }
         }
     }
 }

@@ -152,6 +152,7 @@ internal fun virtualScreenAvailability(
 
 internal interface VirtualScreenAccess {
     val state: StateFlow<VirtualScreenState>
+    val reconnecting: Boolean get() = false
     val lastFailure: VirtualScreenFailureInfo?
     val lastTransportNotice: String?
 
@@ -161,6 +162,7 @@ internal interface VirtualScreenAccess {
 }
 
 private class EngineScreen(private val engine: VirtualScreenEngine) : VirtualScreenAccess {
+    override val reconnecting: Boolean get() = engine.reconnecting
     override val state: StateFlow<VirtualScreenState>
         get() = engine.state
 
@@ -205,6 +207,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         virtualScreenResult {
+            require(args.keys.all { it == "action" }) { "virtual_screen only accepts action; target 已移除" }
             when (val action = args.requiredString("action").lowercase()) {
                 "start" -> {
                     screen.start()
@@ -228,6 +231,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
 )
 
 private fun stateJson(screen: VirtualScreenAccess): JsonObject = buildJsonObject {
+    put("reconnecting", screen.reconnecting)
     screen.lastTransportNotice?.let { put("notice", it) }
     when (val state = screen.state.value) {
         VirtualScreenState.Offline -> put("state", "offline")
@@ -239,7 +243,7 @@ private fun stateJson(screen: VirtualScreenAccess): JsonObject = buildJsonObject
             putJsonObject("failure") {
                 put("category", category)
                 put("message", failure?.message ?: state.message)
-                put("hint", failureHint(category))
+                put("hint", if (screen.reconnecting) "正在自动重连，请稍后检查状态" else failureHint(category))
             }
         }
 
@@ -260,7 +264,7 @@ private fun failureCategory(category: VirtualScreenFailureCategory?): String = w
 private fun failureHint(category: String): String = when (category) {
     "privilege" -> "请用户在权限设置里开启无线调试（ADB）或 Root 后再试。"
     "start" -> "可以直接重试启动。"
-    else -> "正在自动重连；若仍未恢复，可以重新启动虚拟屏。"
+    else -> "自动重连未恢复，请调用 virtual_screen(action=start)，再 screen_launch 并重新观察。"
 }
 
 private suspend fun virtualScreenResult(block: suspend () -> AgentToolResult): AgentToolResult = try {

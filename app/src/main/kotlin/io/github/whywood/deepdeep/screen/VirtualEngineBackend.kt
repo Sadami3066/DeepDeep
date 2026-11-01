@@ -12,7 +12,7 @@ class VirtualEngineBackend(
 ) : ScreenVirtualBackend {
     override suspend fun state(): VirtualScreenState = requireEngine().state.value
 
-    override suspend fun tap(x: Int, y: Int): VirtualScreenResult = requireEngine().tap(x, y)
+    override suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult = requireEngine().tap(x, y, durationMs)
 
     override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): VirtualScreenResult =
         requireEngine().swipe(x1, y1, x2, y2, durationMs)
@@ -24,6 +24,8 @@ class VirtualEngineBackend(
     override suspend fun screenshot(): ByteArray? = requireEngine().screenshot()
 
     override suspend fun launch(packageName: String): VirtualScreenLaunchReport = requireEngine().launchWithReport(packageName)
+
+    override fun reconnecting(): Boolean = engineProvider()?.reconnecting == true
 
     override fun helperUid(): Int? = runCatching { requireEngine().helperUid }.getOrNull()
 

@@ -6,7 +6,6 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.screen.SCREEN_DEFAULT_LINUX_SCREENSHOT_DIR
 import io.github.whywood.deepdeep.screen.screenToolNames
 import dev.pi.ai.TextContent
 import java.io.File
@@ -38,7 +37,7 @@ class GuiPluginTest {
         assertEquals(R.string.plugin_screen_summary, plugin.summaryRes)
         assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)
         assertEquals(screenToolNames(), plugin.tools().map { it.name })
-        assertEquals(10, plugin.tools().size)
+        assertEquals(11, plugin.tools().size)
     }
 
     @Test
@@ -92,30 +91,17 @@ class GuiPluginTest {
     }
 
     @Test
-    fun screenshotToolUsesConfiguredDirectories() = runTest {
-        val png = byteArrayOf(5, 6, 7)
-        val actions = FakeActions().apply { screenshotResult = GuiScreenshot(png, 720, 1600) }
-        val plugin = plugin(actions = actions, linuxScreenshotDir = "/workspace/shots")
-        val tool = plugin.tools().first { it.name == "screen_screenshot" }
-        val result = tool.execute("call", buildJsonObject { }, null, null)
-        assertNull(result.isError)
-        val text = (result.content.single() as TextContent).text
-        assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
-        assertTrue(text.contains("\"bashPath\":\"/workspace/shots/screen-"))
-        assertTrue(text.contains("\"target\":\"main\""))
-        assertTrue(!text.contains("\"hostPath\""))
-        assertTrue(text.contains("\"width\":720"))
-        assertTrue(text.contains("\"height\":1600"))
-        assertTrue(!text.contains("\"backend\""))
-        val file = screenshotDir.listFiles()!!.single()
-        assertTrue(file.name.startsWith("screen-"))
-        assertArrayEquals(png, file.readBytes())
+    fun legacyMainScreenshotNeverCaptures() = runTest {
+        val tool = plugin().tools().first { it.name == "screen_screenshot" }
+        val result = tool.execute("legacy", buildJsonObject { put("target", "main") }, null, null)
+        assertEquals(true, result.isError)
+        assertTrue((result.content.single() as TextContent).text.contains("target 已移除"))
+        assertTrue(!screenshotDir.exists())
     }
 
     @Test
     fun screenshotToolWritesVirtualCapture() = runTest {
-        val png = byteArrayOf(9, 9)
-        val actions = FakeActions().apply { screenshotResult = GuiScreenshot(png, 1080, 2400) }
+        val actions = FakeActions()
         val plugin = plugin(actions = actions)
         val tool = plugin.tools().first { it.name == "screen_screenshot" }
         val result = tool.execute(
@@ -137,14 +123,10 @@ class GuiPluginTest {
         assertTrue(skill.markdown.startsWith("---\n"))
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
         assertTrue(frontmatter.contains("name: deepdeep-gui"))
-        assertTrue(frontmatter.contains("description: 操作手机主屏与后台虚拟屏"))
+        assertTrue(frontmatter.contains("description: 操作后台虚拟屏"))
         screenToolNames().forEach { toolName -> assertTrue(toolName, skill.markdown.contains(toolName)) }
         listOf(
-            "target=main",
-            "target=virtual",
             "virtual_screen(action=start)",
-            "action=list",
-            "action=launch",
             "onExpectedScreen",
             "forTextGone",
             "verified",
@@ -163,8 +145,6 @@ class GuiPluginTest {
         val markdown = plugin().skills().single().markdown.lowercase()
         listOf(
             "screen_find",
-            "screen_launch",
-            "screen_list_apps",
             "virtual_screen_start",
             "helper",
             "daemon",
@@ -182,36 +162,29 @@ class GuiPluginTest {
 
     private fun plugin(
         actions: GuiActions = FakeActions(),
-        linuxScreenshotDir: String = SCREEN_DEFAULT_LINUX_SCREENSHOT_DIR,
-    ): GuiPlugin = GuiPlugin(context, actions, screenshotDir, linuxScreenshotDir)
+    ): GuiPlugin = GuiPlugin(context, actions, screenshotDir)
 
     private class FakeActions(
         var disconnected: Boolean = false,
     ) : GuiActions {
-        var screenshotResult: GuiScreenshot = GuiScreenshot(byteArrayOf(1), 1, 1)
 
         override val connected: Boolean
             get() = !disconnected
 
-        override suspend fun observe(maxDepth: Int, maxNodes: Int): GuiSnapshot =
+        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot =
             throw UnsupportedOperationException()
 
-        override suspend fun tap(selector: GuiSelector, durationMs: Int) =
+        override suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int) =
             throw UnsupportedOperationException()
 
-        override suspend fun setText(selector: GuiSelector, text: String): GuiTextResult =
+        override suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult =
             throw UnsupportedOperationException()
 
-        override suspend fun scroll(direction: GuiScrollDirection, amount: Int, target: GuiSelector?) =
+        override suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome =
             throw UnsupportedOperationException()
 
-        override suspend fun global(action: GuiGlobalAction) =
-            throw UnsupportedOperationException()
-
-        override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome =
-            throw UnsupportedOperationException()
-
-        override suspend fun screenshot(): GuiScreenshot = screenshotResult
+        override fun invalidateSnapshots() = Unit
+        override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds = throw UnsupportedOperationException()
     }
 
     private class FakeContext : ContextWrapper(null) {

@@ -81,7 +81,7 @@ class VirtualScreenPluginTest {
         val result = run("status")
         assertNull(result.isError)
         val payload = result.json()
-        assertEquals(setOf("state"), payload.keys)
+        assertEquals(setOf("state", "reconnecting"), payload.keys)
         assertEquals("offline", payload["state"]!!.jsonPrimitive.content)
     }
 
@@ -92,7 +92,7 @@ class VirtualScreenPluginTest {
         assertNull(result.isError)
         val payload = result.json()
         assertEquals(
-            setOf("state", "width", "height"),
+            setOf("state", "width", "height", "reconnecting"),
             payload.keys,
         )
         assertEquals("online", payload["state"]!!.jsonPrimitive.content)

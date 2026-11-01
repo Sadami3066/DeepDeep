@@ -1,7 +1,7 @@
 <resources>
     <string name="plugin_screen_name">Screen</string>
-    <string name="plugin_screen_summary">Inspect and control the phone screen and the virtual screen: accessibility + ADB wireless debugging</string>
+    <string name="plugin_screen_summary">Inspect and control the background virtual screen</string>
 
     <string name="plugin_screen_detail_virtual">Virtual screen control</string>
-    <string name="plugin_screen_detail_virtual_value">Use the screen_* tools with target=virtual</string>
+    <string name="plugin_screen_detail_virtual_value">Use the screen_* tools on the running virtual screen</string>
 </resources>

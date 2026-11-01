@@ -71,6 +71,7 @@ class VirtualScreenEngine(
 
     @Volatile
     private var recoveryJob: Job? = null
+    val reconnecting: Boolean get() = recoveryJob?.isActive == true
 
     private val correlator = ResponseCorrelator()
     private val screenshotGate = ScreenshotGate()
@@ -192,13 +193,16 @@ class VirtualScreenEngine(
         }
     }
 
-    override suspend fun tap(x: Int, y: Int): VirtualScreenResult {
+    override suspend fun tap(x: Int, y: Int): VirtualScreenResult = tap(x, y, 60)
+
+    suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult {
         if (x < 0 || y < 0) return VirtualScreenResult(false, "坐标不能为负数")
         return executeCommand(
             VirtualScreenCommands.TAP,
             buildJsonObject {
                 put("x", x)
                 put("y", y)
+                put("durationMs", durationMs)
             },
         )
     }

@@ -14,6 +14,7 @@ sealed interface VirtualScreenState {
         val height: Int,
         val backend: String,
         val frame: Bitmap? = null,
+        val instanceId: String = java.util.UUID.randomUUID().toString(),
     ) : VirtualScreenState
 
     data class Failed(val message: String) : VirtualScreenState

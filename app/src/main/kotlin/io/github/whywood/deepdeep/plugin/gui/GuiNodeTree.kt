@@ -118,7 +118,7 @@ object GuiNodeTree {
             windowTitle = windowTitle,
             nodes = nodes,
             truncated = truncated,
-            scanned = countNodes(root),
+            scanned = nodes.size,
         )
     }
 
@@ -152,9 +152,8 @@ object GuiNodeTree {
     }
 
     fun findRef(snapshot: GuiSnapshot, ref: String): GuiSnapshotNode? {
-        val index = parseRef(ref) ?: return null
-        val node = snapshot.nodes.getOrNull(index) ?: return null
-        return node.takeIf { it.ref == index.toString() }
+        val key = ref.trim().removePrefix("#")
+        return snapshot.nodes.firstOrNull { it.ref == key }
     }
 
     fun find(snapshot: GuiSnapshot, selector: GuiSelector): GuiSnapshotNode? = when (selector) {
@@ -163,7 +162,7 @@ object GuiNodeTree {
     }
 
     fun matches(node: GuiSnapshotNode, selector: GuiSelector): Boolean = when (selector) {
-        is GuiSelector.Ref -> parseRef(selector.ref)?.toString() == node.ref
+        is GuiSelector.Ref -> selector.ref.trim().removePrefix("#") == node.ref
         is GuiSelector.Text -> node.text?.contains(selector.text, ignoreCase = true) == true
         is GuiSelector.Desc -> node.desc?.contains(selector.desc, ignoreCase = true) == true
         is GuiSelector.ResourceId -> matchesResourceId(node.resourceId, selector.id)

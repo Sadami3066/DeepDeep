@@ -238,7 +238,6 @@ class AppGraph(context: Context) : AppDependencies {
                 GuiPlugin(
                     context = appContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
-                    linuxScreenshotDir = File(appContext.filesDir, "gui/screenshots").absolutePath,
                 ),
                 VirtualScreenPlugin(
                     context = appContext,

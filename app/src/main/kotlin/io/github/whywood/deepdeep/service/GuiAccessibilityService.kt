@@ -6,14 +6,6 @@ import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 
 class GuiAccessibilityService : AccessibilityService() {
-    @Volatile
-    var currentPackageName: String? = null
-        private set
-
-    @Volatile
-    var currentWindowTitle: String? = null
-        private set
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         serviceInfo?.let { info ->
@@ -25,15 +17,7 @@ class GuiAccessibilityService : AccessibilityService() {
         GuiAccessibilityState.attach(this)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        event.packageName?.toString()?.takeIf { it.isNotBlank() }?.let { currentPackageName = it }
-        currentWindowTitle = event.text
-            .firstOrNull { it.isNotBlank() }
-            ?.toString()
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-    }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
     override fun onInterrupt() = Unit
 

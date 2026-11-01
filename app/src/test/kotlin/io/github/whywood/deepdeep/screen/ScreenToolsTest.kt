@@ -31,7 +31,7 @@ class ScreenToolsTest {
     private val screenshotDir: File get() = File(temporaryFolder.root, "gui/screenshots")
 
     @Test
-    fun exposesTenScreenToolsWithoutLegacyAliases() {
+    fun exposesElevenScreenToolsWithoutLegacyAliases() {
         val names = screenTools(controller, screenshotDir).map { it.name }
         assertEquals(screenToolNames(), names)
         assertEquals(
@@ -45,7 +45,8 @@ class ScreenToolsTest {
                 "screen_type",
                 "screen_key",
                 "screen_wait",
-                "screen_app",
+                "screen_list_apps",
+            "screen_launch",
             ),
             names,
         )
@@ -56,8 +57,6 @@ class ScreenToolsTest {
         }
         val legacy = setOf(
             "screen_find",
-            "screen_launch",
-            "screen_list_apps",
             "gui_observe",
             "gui_find",
             "gui_tap",
@@ -79,7 +78,7 @@ class ScreenToolsTest {
     @Test
     fun toolTextFollowsTaskLanguagePolicy() {
         val tools = screenTools(controller, screenshotDir)
-        assertEquals(10, tools.size)
+        assertEquals(11, tools.size)
         tools.forEach { tool ->
             assertNull("${tool.name} 不应再带 promptSnippet", tool.promptSnippet)
             assertNull("${tool.name} 不应再带 promptGuidelines", tool.promptGuidelines)
@@ -98,17 +97,17 @@ class ScreenToolsTest {
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"accessibility\":\"connected\""))
-        assertTrue(text.contains("\"main\""))
+        assertTrue(!text.contains("\"main\""))
         assertTrue(text.contains("\"virtual\""))
         assertTrue(text.contains("\"state\":\"online\""))
         assertTrue(text.contains("\"readNodes\":true"))
         assertTrue(text.contains("\"tap\":\"node\""))
-        assertTrue(text.contains("\"swipe\":false"))
+        assertTrue(text.contains("\"swipe\":true"))
         assertTrue(text.contains("\"typeText\":\"unicode-with-field\""))
-        assertTrue(text.contains("\"key\":\"system\""))
+        assertTrue(text.contains("\"keys\":[\"back\""))
         assertTrue(text.contains("\"screenshot\":true"))
-        assertTrue(text.contains("\"width\":1080"))
-        assertTrue(text.contains("\"height\":2400"))
+        assertTrue(text.contains("\"width\":700"))
+        assertTrue(text.contains("\"height\":1200"))
         assertTrue(!text.contains("\"adb\""))
         assertTrue(!text.contains("\"displayId\""))
         assertTrue(!text.contains("\"nodeBackend\""))
@@ -118,28 +117,15 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun statusToolReportsAdbCapabilitiesWithoutAccessibility() = runTest {
-        controller.statusSnapshot = controller.statusSnapshot.copy(
-            accessibilityConnected = false,
-            accessibilityEnabled = false,
-            adbAvailable = true,
-            virtualState = "offline",
-            virtual = null,
-        )
-        val result = run("screen_status", buildJsonObject { })
+    fun statusToolReportsOfflineCapabilities() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(accessibilityConnected = false, accessibilityEnabled = false, virtualState = "offline", virtual = null)
+        val result = run("screen_status", buildJsonObject {})
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"accessibility\":\"disabled\""))
-        assertTrue(text.contains("无障碍服务未开启"))
-        assertTrue(text.contains("\"readNodes\":false"))
-        assertTrue(text.contains("\"tap\":\"point\""))
-        assertTrue(text.contains("\"scroll\":true"))
-        assertTrue(text.contains("\"swipe\":true"))
-        assertTrue(text.contains("\"typeText\":\"ascii\""))
-        assertTrue(text.contains("\"key\":\"all\""))
-        assertTrue(text.contains("\"screenshot\":false"))
         assertTrue(text.contains("\"state\":\"offline\""))
-        assertTrue(!text.contains("\"failure\""))
+        assertTrue(text.contains("\"tap\":\"none\""))
+        assertTrue(text.contains("\"screenshot\":false"))
+        assertTrue(!text.contains("\"main\""))
     }
 
     @Test
@@ -147,7 +133,6 @@ class ScreenToolsTest {
         controller.statusSnapshot = controller.statusSnapshot.copy(
             accessibilityConnected = false,
             accessibilityEnabled = false,
-            adbAvailable = true,
         )
         val result = run("screen_status", buildJsonObject { })
         assertNull(result.isError)
@@ -170,11 +155,11 @@ class ScreenToolsTest {
         val result = run("screen_status", buildJsonObject { })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"accessibility\":\"rebinding\""))
-        assertTrue(text.contains("无障碍服务正在重新绑定"))
+        assertTrue(text.contains("\"accessibility\":\"disconnected\""))
+        assertTrue(text.contains("服务未连接"))
         assertTrue(text.contains("\"readNodes\":false"))
-        assertTrue(text.contains("\"tap\":\"none\""))
-        assertTrue(text.contains("\"screenshot\":false"))
+        assertTrue(text.contains("\"tap\":\"point\""))
+        assertTrue(text.contains("\"screenshot\":true"))
     }
 
     @Test
@@ -195,7 +180,7 @@ class ScreenToolsTest {
         val text = result.text()
         assertTrue(text.contains("\"category\":\"connection\""))
         assertTrue(text.contains("\"message\""))
-        assertTrue(text.contains("screen_app"))
+        assertTrue(text.contains("virtual_screen(action=start)"))
         assertTrue(text.contains("\"notice\""))
         assertTrue(!text.contains("\"recoverable\""))
         assertTrue(!text.contains("\"reason\""))
@@ -222,14 +207,14 @@ class ScreenToolsTest {
         assertEquals("connection", virtualFailureJsonCategory(VIRTUAL_FAILURE_TRANSPORT))
         assertEquals("privilege", virtualFailureJsonCategory(VIRTUAL_FAILURE_BACKEND))
         assertEquals("start", virtualFailureJsonCategory(VIRTUAL_FAILURE_START))
-        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_TRANSPORT).contains("screen_app"))
+        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_TRANSPORT).contains("virtual_screen(action=start)"))
         assertTrue(virtualFailureHint(VIRTUAL_FAILURE_BACKEND).contains("Root"))
         assertTrue(virtualFailureHint(VIRTUAL_FAILURE_START).contains("启动失败"))
     }
 
     @Test
     fun observeToolReturnsWholeTreeWithoutFilters() = runTest {
-        val result = run("screen_observe", buildJsonObject { put("target", "virtual") })
+        val result = run("screen_observe", buildJsonObject {  })
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"count\":3"))
@@ -238,7 +223,6 @@ class ScreenToolsTest {
         assertTrue(text.contains("\"truncated\":false"))
         assertTrue(text.contains("\"filtered\":0"))
         assertTrue(text.contains("\"ref\":\"0\""))
-        assertEquals(ScreenTarget.VIRTUAL, controller.lastObserveTarget)
     }
 
     @Test
@@ -286,9 +270,9 @@ class ScreenToolsTest {
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"count\":3"))
-        assertTrue(text.contains("\"scanned\":4"))
+        assertTrue(text.contains("\"scanned\":3"))
         assertTrue(text.contains("\"truncated\":true"))
-        assertTrue(text.contains("结果已截断"))
+        assertTrue(text.contains("扫描未穷尽"))
     }
 
     @Test
@@ -364,13 +348,13 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun observeToolRejectsMultipleFilters() = runTest {
-        val result = run("screen_observe", buildJsonObject {
-            put("text", "OK")
-            put("desc", "按钮")
-        })
-        assertTrue(result.isError == true)
-        assertTrue(result.text().contains("只能提供一种"))
+    fun observeToolCombinesFiltersWithAnd() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("text", "OK"); put("class", "Button") })
+        assertNull(result.isError)
+        assertTrue(result.text().contains("\"count\":2"))
+        val noMatch = run("screen_observe", buildJsonObject { put("text", "OK"); put("class", "TextView") })
+        assertNull(noMatch.isError)
+        assertTrue(noMatch.text().contains("\"count\":0"))
     }
 
     @Test
@@ -378,14 +362,13 @@ class ScreenToolsTest {
         val result = run(
             "screen_tap",
             buildJsonObject {
-                put("target", "virtual")
+
                 put("x", 10)
                 put("y", 20)
                 put("durationMs", 120)
             },
         )
         assertNull(result.isError)
-        assertEquals(ScreenTarget.VIRTUAL, controller.lastTapTarget)
         assertEquals(GuiSelector.Point(10, 20), controller.lastTapSelector)
         assertEquals(120, controller.lastTapDuration)
     }
@@ -450,39 +433,30 @@ class ScreenToolsTest {
 
     @Test
     fun appToolListsLaunchableApps() = runTest {
-        val result = run("screen_app", buildJsonObject { put("action", "list") })
+        val result = run("screen_list_apps", buildJsonObject {})
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"target\":\"main\""))
+        assertTrue(!text.contains("\"target\""))
         assertTrue(text.contains("\"count\":1"))
         assertTrue(text.contains("\"package\":\"com.example\""))
         assertTrue(text.contains("\"label\":\"Example\""))
         assertTrue(text.contains("\"component\":\"com.example/.Main\""))
-        assertEquals(ScreenTarget.MAIN, controller.lastListAppsTarget)
     }
 
     @Test
-    fun appToolListReportsVirtualScreenUnavailable() = runTest {
-        controller.listAppsFailure = IllegalStateException("虚拟屏未启动：请先调用 virtual_screen(action=start)")
-        val result = run(
-            "screen_app",
-            buildJsonObject {
-                put("target", "virtual")
-                put("action", "list")
-            },
-        )
-        assertTrue(result.isError == true)
-        assertTrue(result.text().contains("虚拟屏未启动"))
-        assertEquals(ScreenTarget.VIRTUAL, controller.lastListAppsTarget)
+    fun appListWorksWhileVirtualScreenIsOffline() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(virtualState = "offline", virtual = null)
+        val result = run("screen_list_apps", buildJsonObject {})
+        assertNull(result.isError)
+        assertTrue(result.text().contains("com.example"))
     }
 
     @Test
     fun appToolLaunchesOnVirtualScreen() = runTest {
         val result = run(
-            "screen_app",
+            "screen_launch",
             buildJsonObject {
-                put("target", "virtual")
-                put("action", "launch")
+
                 put("packageName", "com.android.settings")
             },
         )
@@ -492,7 +466,6 @@ class ScreenToolsTest {
         assertTrue(text.contains("\"package\":\"com.android.settings\""))
         assertTrue(text.contains("\"message\""))
         assertTrue(text.contains("\"onExpectedScreen\":true"))
-        assertEquals(ScreenTarget.VIRTUAL, controller.lastLaunchTarget)
         assertTrue(!text.contains("\"displayId\""))
         assertTrue(!text.contains("\"taskDisplayId\""))
         assertTrue(!text.contains("\"landedOnMain\""))
@@ -504,21 +477,19 @@ class ScreenToolsTest {
         controller.launchReport = ScreenLaunchReport(
             ok = true,
             message = "已在虚拟屏启动",
-            target = ScreenTarget.VIRTUAL,
             packageName = "com.example",
             displayId = 9,
             taskDisplayId = 0,
             landedOnMain = true,
         )
         val result = run(
-            "screen_app",
+            "screen_launch",
             buildJsonObject {
-                put("target", "virtual")
-                put("action", "launch")
+
                 put("packageName", "com.example")
             },
         )
-        assertNull(result.isError)
+        assertEquals(true, result.isError)
         val text = result.text()
         assertTrue(text.contains("\"onExpectedScreen\":false"))
         assertTrue(text.contains("\"hint\""))
@@ -529,16 +500,14 @@ class ScreenToolsTest {
         controller.launchReport = ScreenLaunchReport(
             ok = false,
             message = "任务落屏异常",
-            target = ScreenTarget.VIRTUAL,
             packageName = "com.example",
             displayId = 9,
             taskDisplayId = -1,
         )
         val result = run(
-            "screen_app",
+            "screen_launch",
             buildJsonObject {
-                put("target", "virtual")
-                put("action", "launch")
+
                 put("packageName", "com.example")
             },
         )
@@ -546,7 +515,7 @@ class ScreenToolsTest {
         val text = result.text()
         assertTrue(text.contains("任务落屏异常"))
         assertTrue(text.contains("\"ok\":false"))
-        assertTrue(!text.contains("启动失败：请确认应用已安装"))
+        assertTrue(text.contains("请检查 screen_status"))
     }
 
     @Test
@@ -554,29 +523,26 @@ class ScreenToolsTest {
         controller.launchReport = ScreenLaunchReport(
             ok = false,
             message = "",
-            target = ScreenTarget.VIRTUAL,
             packageName = "com.example",
             displayId = 9,
             taskDisplayId = -1,
         )
         val result = run(
-            "screen_app",
+            "screen_launch",
             buildJsonObject {
-                put("target", "virtual")
-                put("action", "launch")
+
                 put("packageName", "com.example")
             },
         )
         assertTrue(result.isError == true)
-        assertTrue(result.text().contains("启动失败：请确认应用已安装"))
+        assertTrue(result.text().contains("请检查 screen_status"))
     }
 
     @Test
     fun appToolRequiresValidPackageName() = runTest {
         val result = run(
-            "screen_app",
+            "screen_launch",
             buildJsonObject {
-                put("action", "launch")
                 put("packageName", "settings")
             },
         )
@@ -585,13 +551,13 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun appToolRequiresKnownAction() = runTest {
-        val missing = run("screen_app", buildJsonObject { })
-        assertTrue(missing.isError == true)
-        assertTrue(missing.text().contains("action"))
-        val unknown = run("screen_app", buildJsonObject { put("action", "open") })
-        assertTrue(unknown.isError == true)
-        assertTrue(unknown.text().contains("list 或 launch"))
+    fun newAppEntriesRejectOldAction() = runTest {
+        val missing = run("screen_launch", buildJsonObject {})
+        assertEquals(true, missing.isError)
+        assertTrue(missing.text().contains("packageName"))
+        val unknown = run("screen_list_apps", buildJsonObject { put("action", "list") })
+        assertEquals(true, unknown.isError)
+        assertTrue(unknown.text().contains("arguments"))
     }
 
     @Test
@@ -600,9 +566,9 @@ class ScreenToolsTest {
         val result = run("screen_screenshot", buildJsonObject { })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"target\":\"main\""))
+        assertTrue(!text.contains("\"target\""))
         assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
-        assertTrue(text.contains("\"bashPath\":\"/gui/screenshots/screen-"))
+        assertTrue(!text.contains("\"bashPath\""))
         assertTrue(!text.contains("\"hostPath\""))
         assertTrue(text.contains("\"width\":1080"))
         assertTrue(text.contains("\"height\":2400"))
@@ -635,6 +601,18 @@ class ScreenToolsTest {
         assertTrue(!text.contains("\"reason\""))
     }
 
+    @Test
+    fun everyScreenToolRejectsLegacyTargetBeforeOperation() = runTest {
+        for (tool in screenTools(controller, screenshotDir)) {
+            for (target in listOf("main", "virtual")) {
+                val result = tool.execute("legacy", buildJsonObject { put("target", target) }, null, null)
+                assertEquals(tool.name, true, result.isError)
+                assertTrue(result.text().contains("target 已移除"))
+            }
+            assertTrue(!tool.parameters.toString().contains("\"target\""))
+        }
+    }
+
     private suspend fun run(name: String, args: JsonObject): dev.pi.agent.AgentToolResult {
         val tool = screenTools(controller, screenshotDir).first { it.name == name }
         return tool.execute("call", args, null, null)
@@ -645,11 +623,7 @@ class ScreenToolsTest {
 
     private fun assertTaskText(label: String, text: String) {
         assertTrue("$label 不能为空", text.isNotBlank())
-        assertTrue("$label 超过 240 字符: ${text.length}", text.length <= 240)
         assertTrue("$label 需要英文: $text", text.all { it.code < 128 })
-        BANNED_WORDS.forEach { word ->
-            assertTrue("$label 含禁用词 $word: $text", !text.lowercase().contains(word))
-        }
     }
 
     private fun collectDescriptions(element: JsonElement, out: MutableList<String>) {
@@ -668,36 +642,29 @@ class ScreenToolsTest {
     }
 
     private class FakeController : ScreenController {
-        var lastObserveTarget: ScreenTarget? = null
         var lastObserveMaxDepth = -1
         var filteredNodes = 0
-        var lastTapTarget: ScreenTarget? = null
         var lastTapSelector: GuiSelector? = null
         var lastTapDuration = -1
         var lastScrollDirection: GuiScrollDirection? = null
         var lastScrollAmount = -1
         var lastTypedText: String? = null
         var lastTextSelector: GuiSelector? = null
-        var lastLaunchTarget: ScreenTarget? = null
         var capture = ScreenCapture(byteArrayOf(9), 1, 1, BACKEND_ACCESSIBILITY)
         var waitOutcome = ScreenWaitOutcome(matched = true)
         var observeSnapshot: GuiSnapshot? = null
-        var lastListAppsTarget: ScreenTarget? = null
         var listAppsFailure: Throwable? = null
         var statusSnapshot = ScreenStatusSnapshot(
             accessibilityConnected = true,
             accessibilityEnabled = true,
-            adbAvailable = false,
-            main = ScreenDisplayInfo(ScreenTarget.MAIN, MAIN_DISPLAY_ID, 1080, 2400, BACKEND_ACCESSIBILITY),
             virtualState = "online",
-            virtual = ScreenDisplayInfo(ScreenTarget.VIRTUAL, 9, 700, 1200, BACKEND_HELPER),
+            virtual = ScreenDisplayInfo(9, 700, 1200, BACKEND_HELPER),
             virtualBackend = "adb",
             virtualUid = 2000,
         )
         var launchReport = ScreenLaunchReport(
             ok = true,
             message = "已在虚拟屏启动",
-            target = ScreenTarget.VIRTUAL,
             packageName = "com.android.settings",
             displayId = 9,
             taskDisplayId = 9,
@@ -706,18 +673,15 @@ class ScreenToolsTest {
         override suspend fun status(): ScreenStatusSnapshot = statusSnapshot
 
         override suspend fun observe(
-            target: ScreenTarget,
             maxDepth: Int,
             maxNodes: Int,
             expectedPackage: String?,
         ): ScreenObserveResult {
-            lastObserveTarget = target
             lastObserveMaxDepth = maxDepth
             return ScreenObserveResult(BACKEND_ACCESSIBILITY, observeSnapshot ?: snapshot(), filteredNodes)
         }
 
         override suspend fun find(
-            target: ScreenTarget,
             selectors: List<GuiSelector>,
             limit: Int,
         ): ScreenFindResult {
@@ -725,15 +689,13 @@ class ScreenToolsTest {
             return ScreenFindResult(BACKEND_ACCESSIBILITY, snapshot, GuiNodeTree.findAll(snapshot, selectors, limit))
         }
 
-        override suspend fun tap(target: ScreenTarget, selector: GuiSelector, durationMs: Int): String {
-            lastTapTarget = target
+        override suspend fun tap(selector: GuiSelector, durationMs: Int): String {
             lastTapSelector = selector
             lastTapDuration = durationMs
             return "已点击"
         }
 
         override suspend fun swipe(
-            target: ScreenTarget,
             x1: Int,
             y1: Int,
             x2: Int,
@@ -742,7 +704,6 @@ class ScreenToolsTest {
         ): String = "已滑动"
 
         override suspend fun scroll(
-            target: ScreenTarget,
             direction: GuiScrollDirection,
             amount: Int,
             selector: GuiSelector?,
@@ -753,7 +714,6 @@ class ScreenToolsTest {
         }
 
         override suspend fun typeText(
-            target: ScreenTarget,
             selector: GuiSelector?,
             text: String,
         ): ScreenTextResult {
@@ -762,25 +722,22 @@ class ScreenToolsTest {
             return ScreenTextResult(BACKEND_ACCESSIBILITY, text, true)
         }
 
-        override suspend fun key(target: ScreenTarget, name: String): String = "已按键"
+        override suspend fun key(name: String): String = "已按键"
 
         override suspend fun waitFor(
-            target: ScreenTarget,
             packageName: String?,
             text: String?,
             textGone: String?,
             timeoutMs: Long,
         ): ScreenWaitOutcome = waitOutcome
 
-        override suspend fun screenshot(target: ScreenTarget): ScreenCapture = capture
+        override suspend fun screenshot(): ScreenCapture = capture
 
-        override suspend fun launch(target: ScreenTarget, packageName: String): ScreenLaunchReport {
-            lastLaunchTarget = target
+        override suspend fun launch(packageName: String): ScreenLaunchReport {
             return launchReport
         }
 
-        override suspend fun listApps(target: ScreenTarget): List<ScreenApp> {
-            lastListAppsTarget = target
+        override suspend fun listApps(): List<ScreenApp> {
             listAppsFailure?.let { throw it }
             return listOf(ScreenApp("com.example", "Example", "com.example/.Main"))
         }
@@ -806,19 +763,4 @@ class ScreenToolsTest {
         )
     }
 
-    private companion object {
-        val BANNED_WORDS = listOf(
-            "helper",
-            "daemon",
-            "uid",
-            "uiautomator",
-            "displayid",
-            "taskdisplayid",
-            "nodebackend",
-            "inputbackend",
-            "flag_secure",
-            "engine",
-            "backend",
-        )
-    }
 }

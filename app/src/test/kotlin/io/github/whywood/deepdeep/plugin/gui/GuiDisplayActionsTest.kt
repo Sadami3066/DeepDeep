@@ -30,7 +30,7 @@ class GuiDisplayActionsTest {
         val actions = GuiAccessibilityActions { null }
 
         assertTrue(actions is GuiActions)
-        assertTrue(actions is GuiDisplayActions)
+        assertTrue(GuiActions::class.java.methods.none { it.name == "screenshot" || it.name == "global" })
         assertFalse(actions.connected)
     }
 
@@ -46,19 +46,19 @@ class GuiDisplayActionsTest {
     }
 
     @Test
-    fun mainScreenObserveWithoutServiceFailsWithUnavailableMessage() {
+    fun mainScreenObserveIsRejected() {
         val actions = GuiAccessibilityActions { null }
 
-        val error = assertThrows(GuiUnavailableException::class.java) {
-            runBlocking { actions.observe(GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { actions.observe(0, GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
         }
 
-        assertTrue(error.message.orEmpty().contains("无障碍服务未连接"))
+        assertTrue(error.message.orEmpty().contains("虚拟屏"))
     }
 
     @Test
     fun missingSnapshotMessageNamesTheDisplay() {
-        assertEquals("请先调用 screen_observe 读取主屏界面", missingSnapshotMessage(GUI_MAIN_DISPLAY))
+        assertTrue(missingSnapshotMessage(7).contains("快照已失效"))
         assertTrue(missingSnapshotMessage(7).contains("虚拟屏"))
     }
 

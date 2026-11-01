@@ -69,7 +69,7 @@ class GuiNodeTreeTest {
     }
 
     @Test
-    fun scannedCountsNodesBeyondDepthBudget() {
+    fun scannedCountsOnlyVisitedNodes() {
         val tree = node(
             className = "root",
             children = listOf(
@@ -82,7 +82,7 @@ class GuiNodeTreeTest {
         )
         val snapshot = GuiNodeTree.buildSnapshot(root = tree, maxDepth = 1, maxNodes = 10)
         assertEquals(3, snapshot.nodes.size)
-        assertEquals(5, snapshot.scanned)
+        assertEquals(snapshot.nodes.size, snapshot.scanned)
         assertTrue(snapshot.truncated)
     }
 
