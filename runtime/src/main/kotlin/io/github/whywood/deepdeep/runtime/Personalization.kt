@@ -28,9 +28,7 @@ internal fun buildPersonalizationSections(
         buildString {
             appendLine("当前日期：${escapePromptXml(now.toLocalDate().toString())}（UTC${escapePromptXml(now.offset.id)}）。")
             appendLine("模型：${escapePromptXml(providerId)}/${escapePromptXml(modelId)}。")
-            appendLine("工作区：${escapePromptXml(cwd)}。")
-            appendLine("Linux：/skills 是全局生效技能目录，/skill-repo 是技能仓库，均可直接用 bash 读写。")
-            appendLine("写入 /skills 的新技能会在打开 App 技能页时自动导入仓库，并对新会话生效。")
+            appendLine("默认工作位置：${escapePromptXml(cwd)}。这只是提醒，不限制文件访问；文件工具仍须显式提供绝对路径。")
             if (nickname.isEmpty()) {
                 appendLine("直接称呼「你」，不要使用名字。")
             } else {

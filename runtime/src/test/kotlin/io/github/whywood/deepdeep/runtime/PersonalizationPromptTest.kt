@@ -27,10 +27,10 @@ class PersonalizationPromptTest {
         assertTrue(environment.endsWith("</environment>"))
         assertTrue(environment.contains("当前日期：2026-10-23（UTC+08:00）"))
         assertTrue(environment.contains("模型：deepseek/deepseek-v4.1-flash"))
-        assertTrue(environment.contains("工作区：/data/user/0/io.github.whywood.deepdeep/files/home"))
-        assertTrue(environment.contains("/skills 是全局生效技能目录"))
-        assertTrue(environment.contains("/skill-repo 是技能仓库"))
-        assertTrue(environment.contains("自动导入仓库"))
+        assertTrue(environment.contains("默认工作位置：/data/user/0/io.github.whywood.deepdeep/files/home"))
+        assertTrue(environment.contains("不限制文件访问"))
+        assertTrue(!environment.contains("/skill-repo"))
+        assertTrue(environment.contains("文件工具仍须显式提供绝对路径"))
         assertTrue(environment.contains("称呼用户为「Milous」"))
         assertTrue(environment.contains("主动"))
         assertFalse(result.containsKey("instruction"))
@@ -41,8 +41,8 @@ class PersonalizationPromptTest {
         val morning = sectionAt("2026-10-23T08:00:00+08:00")
         val evening = sectionAt("2026-10-23T23:59:59+08:00")
         assertEquals(morning, evening)
-        assertTrue(morning.contains("/skills 是全局生效技能目录"))
-        assertTrue(evening.contains("/skill-repo 是技能仓库"))
+        assertTrue(morning.contains("绝对路径"))
+        assertTrue(evening.contains("不限制文件访问"))
     }
 
     @Test

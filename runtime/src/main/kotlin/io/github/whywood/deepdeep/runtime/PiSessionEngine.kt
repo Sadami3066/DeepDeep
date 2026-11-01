@@ -86,7 +86,7 @@ class PiSessionEngine(
                 now = OffsetDateTime.now(),
                 sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                extra = extraSystemPromptSections,
+                extra = mapOf("paths" to wrapPromptSection("paths", "技能目录：${agentDirectory / "skills"}。文件工具路径必须为绝对路径。")) + extraSystemPromptSections + buildToolRuleSection(tools.map { it.name }.toSet()),
             )
         }
         val session = createAgentSession(
@@ -102,7 +102,7 @@ class PiSessionEngine(
                 shellExecutor = activeShell,
                 hooks = CodingHooks(extraSystemPromptSections = { currentSections() }),
                 credentials = credentials,
-                extraSystemPromptSections = buildToolRuleSection(),
+                extraSystemPromptSections = buildToolRuleSection(tools.map { it.name }.toSet()),
                 initialSystemPromptSections = currentSections(),
                 projectTrusted = true,
                 mcp = McpOptions(

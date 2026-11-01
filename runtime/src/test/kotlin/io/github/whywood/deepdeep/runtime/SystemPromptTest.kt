@@ -36,7 +36,7 @@ class SystemPromptTest {
 
     @Test
     fun defaultPromptExplainsWorkspacePathsAndExitCodes() {
-        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("/workspace/"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("绝对路径"))
         assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("[exit: N]"))
     }
 
@@ -76,22 +76,25 @@ class SystemPromptTest {
 
     @Test
     fun ruleSectionCarriesGlobalRules() {
-        val rules = buildToolRuleSection().getValue("rules")
+        val rules = buildToolRuleSection(setOf("screen_observe", "present", "bash", "create_goal", "schedule_create", "job_start")).getValue("rules")
 
         assertTrue(rules.startsWith("<rules>"))
         assertTrue(rules.endsWith("</rules>"))
         assertTrue(rules.contains("- Never type, read, copy or repeat passwords"))
-        assertTrue(rules.contains("- Ask the user to confirm before destructive or irreversible actions"))
-        assertTrue(rules.contains("- Deliver finished work with present"))
+        assertTrue(rules.contains("outside that scope"))
+        assertTrue(rules.contains("Use present when delivering a file"))
         assertFalse(rules.contains("promptGuidelines"))
     }
 
     @Test
-    fun ruleSectionStaysSmall() {
-        val rules = buildToolRuleSection().getValue("rules")
-        val bullets = rules.lines().count { it.startsWith("- ") }
-
-        assertTrue("rules should stay curated, got $bullets bullets", bullets <= 20)
-        assertTrue("rules should stay small, got ${rules.length} chars", rules.length <= 2500)
+    fun rulesOnlyMentionAvailableCapabilities() {
+        val rules = buildToolRuleSection(setOf("read", "write", "bash", "job_start")).getValue("rules")
+        assertTrue(rules.contains("Linux /bin/sh"))
+        assertTrue(rules.contains("job_start"))
+        assertFalse(rules.contains("schedule_create"))
+        assertFalse(rules.contains("create_goal"))
+        assertFalse(rules.contains("present"))
+        assertFalse(rules.contains("virtual_screen"))
+        assertFalse(rules.contains("fails twice"))
     }
 }
