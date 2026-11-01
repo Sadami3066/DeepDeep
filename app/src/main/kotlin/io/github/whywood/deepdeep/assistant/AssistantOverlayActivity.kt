@@ -19,7 +19,6 @@ import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
-import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
@@ -94,7 +93,6 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
             val context = LocalContext.current
             val missingFileMessage = stringResource(R.string.assistant_attach_missing)
-            val openFailedMessage = stringResource(R.string.present_open_failed)
             val shareFailedMessage = stringResource(R.string.present_share_failed)
             val shareTitle = stringResource(R.string.assistant_attach_share)
             var preview by remember { mutableStateOf<AssistantOverlayPreview?>(null) }
@@ -108,15 +106,11 @@ class AssistantOverlayActivity : ComponentActivity() {
                 val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
                 if (resolved == null) {
                     Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
-                } else if (resolved.kind != AttachmentKind.OTHER) {
+                } else {
                     preview = AssistantOverlayPreview(
                         attachment = resolved,
                         file = graph.attachmentStore.file(resolved, attachmentRoot),
                     )
-                } else {
-                    val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
-                    val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
-                    if (!opened) Toast.makeText(context, openFailedMessage, Toast.LENGTH_SHORT).show()
                 }
             }
             val shareFile: (String) -> Unit = { raw ->
