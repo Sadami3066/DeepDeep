@@ -25,61 +25,74 @@ class MiCloudSession(
     private val expiredTtlMillis: Long = 600_000L,
 ) {
     private val mutex = Mutex()
-    @Volatile private var cache: MiCloudSessionView? = null
-    @Volatile private var lastVerified: MiCloudSessionView? = null
-    @Volatile private var fingerprint: String? = null
-    @Volatile private var fingerprintKnown = false
+    private val stateLock = Any()
+    private var cache: MiCloudSessionView? = null
+    private var lastVerified: MiCloudSessionView? = null
+    private var fingerprint: String? = null
+    private var fingerprintKnown = false
+    private var revision = 0L
 
     suspend fun status(force: Boolean = false): MiCloudSessionView = mutex.withLock {
-        val current = cookie()?.takeIf { it.isNotBlank() }
-        if (current == null) return@withLock signedOut()
-        if (fingerprintKnown && fingerprint != current) {
-            cache = null
-            lastVerified = null
+        resolveStatus(force)
+    }
+
+    private suspend fun resolveStatus(force: Boolean): MiCloudSessionView {
+        while (true) {
+            val current = cookie()?.takeIf { it.isNotBlank() }
+            val (version, previous) = synchronized(stateLock) {
+                if (current == null) return signedOut()
+                if (fingerprintKnown && fingerprint != current) {
+                    cache = null
+                    lastVerified = null
+                    revision++
+                }
+                fingerprint = current
+                fingerprintKnown = true
+                cache?.let { if (!force && isFresh(it)) return it }
+                revision to (lastVerified ?: cache)
+            }
+            val view = try {
+                val profile = probe()
+                MiCloudSessionView(MiCloudSessionState.VERIFIED, profile.nickname, now())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: MiCloudAuthException) {
+                MiCloudSessionView(MiCloudSessionState.EXPIRED, previous?.nickname, now())
+            } catch (_: Exception) {
+                MiCloudSessionView(MiCloudSessionState.UNVERIFIED, previous?.nickname, previous?.checkedAt)
+            }
+            if (cookie()?.takeIf { it.isNotBlank() } != current) continue
+            return synchronized(stateLock) {
+                if (revision != version) return@synchronized checkNotNull(cache)
+                cache = view
+                if (view.state == MiCloudSessionState.VERIFIED) lastVerified = view
+                view
+            }
         }
-        fingerprint = current
-        fingerprintKnown = true
-        val cached = cache
-        if (cached != null && !force && isFresh(cached)) return@withLock cached
-        val view = try {
-            val profile = probe()
-            MiCloudSessionView(MiCloudSessionState.VERIFIED, profile.nickname, now())
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: MiCloudAuthException) {
-            MiCloudSessionView(
-                MiCloudSessionState.EXPIRED,
-                lastVerified?.nickname ?: cached?.nickname,
-                now(),
-            )
-        } catch (_: Exception) {
-            MiCloudSessionView(
-                MiCloudSessionState.UNVERIFIED,
-                lastVerified?.nickname,
-                lastVerified?.checkedAt,
-            )
-        }
-        cache = view
-        if (view.state == MiCloudSessionState.VERIFIED) lastVerified = view
-        view
     }
 
     fun markVerified(profile: MiCloudProfile) {
-        val view = MiCloudSessionView(MiCloudSessionState.VERIFIED, profile.nickname, now())
-        cache = view
-        lastVerified = view
+        synchronized(stateLock) {
+            val view = MiCloudSessionView(MiCloudSessionState.VERIFIED, profile.nickname, now())
+            cache = view
+            lastVerified = view
+            revision++
+        }
     }
 
     fun markExpired() {
-        cache = MiCloudSessionView(
-            MiCloudSessionState.EXPIRED,
-            lastVerified?.nickname ?: cache?.nickname,
-            now(),
-        )
+        synchronized(stateLock) {
+            cache = MiCloudSessionView(
+                MiCloudSessionState.EXPIRED,
+                lastVerified?.nickname ?: cache?.nickname,
+                now(),
+            )
+            revision++
+        }
     }
 
     fun markSignedOut() {
-        signedOut()
+        synchronized(stateLock) { signedOut() }
     }
 
     private fun signedOut(): MiCloudSessionView {
@@ -88,6 +101,7 @@ class MiCloudSession(
         lastVerified = null
         fingerprint = null
         fingerprintKnown = false
+        revision++
         return view
     }
 

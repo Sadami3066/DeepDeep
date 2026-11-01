@@ -2,8 +2,10 @@ package io.github.whywood.deepdeep.plugin.micloud
 
 import java.io.IOException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -132,6 +134,53 @@ class MiCloudSessionTest {
         session.markSignedOut()
         assertEquals(MiCloudSessionState.SIGNED_OUT, session.status().state)
         assertEquals(1, probes)
+    }
+
+    @Test
+    fun inFlightProbeCannotOverwriteExpiredState() = runTest {
+        val result = CompletableDeferred<MiCloudProfile>()
+        val session = MiCloudSession(cookie = { cookie }, probe = { result.await() }, now = { clock })
+        val status = async { session.status() }
+        runCurrent()
+        session.markExpired()
+        result.complete(MiCloudProfile("小明", "1", null))
+
+        assertEquals(MiCloudSessionState.EXPIRED, status.await().state)
+        assertEquals(MiCloudSessionState.EXPIRED, session.status().state)
+    }
+
+    @Test
+    fun cookieChangeDuringProbeDiscardsOldAccount() = runTest {
+        val first = CompletableDeferred<MiCloudProfile>()
+        val session = MiCloudSession(
+            cookie = { cookie },
+            probe = {
+                probes++
+                if (probes == 1) first.await() else MiCloudProfile("小红", "2", null)
+            },
+            now = { clock },
+        )
+        val status = async { session.status() }
+        runCurrent()
+        cookie = "userId=2; serviceToken=other"
+        first.complete(MiCloudProfile("小明", "1", null))
+
+        assertEquals("小红", status.await().nickname)
+        assertEquals(2, probes)
+        assertEquals("小红", session.status().nickname)
+    }
+
+    @Test
+    fun lateProbeCannotOverwriteNewLogin() = runTest {
+        val result = CompletableDeferred<MiCloudProfile>()
+        val session = MiCloudSession(cookie = { cookie }, probe = { result.await() }, now = { clock })
+        val status = async { session.status() }
+        runCurrent()
+        session.markVerified(MiCloudProfile("小红", "2", null))
+        result.complete(MiCloudProfile("小明", "1", null))
+
+        assertEquals("小红", status.await().nickname)
+        assertEquals("小红", session.status().nickname)
     }
 
     @Test
