@@ -183,7 +183,7 @@ class GoalServiceTest {
         assertEquals(1, first.round)
         assertEquals(
             "<goal_round>\nObjective: Finish the task\nRound: 1/2\n" +
-                "Continue working toward the objective. Call goal with action=complete when it is achieved, or action=blocked with a concrete reason when the same blocker persisted for at least 3 rounds.\n" +
+                "Continue working toward the objective. Call update_goal with action=complete when it is achieved, or action=blocked with a concrete reason when the same blocker persisted for at least 3 rounds.\n" +
                 "</goal_round>",
             first.prompt,
         )

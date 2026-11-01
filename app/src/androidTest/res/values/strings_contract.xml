@@ -1,0 +1,9 @@
+<resources>
+    <string name="contract_fixture_label">DeepDeep Contract Fixture</string>
+    <string name="contract_input">Contract input</string>
+    <string name="contract_initial">Initial neutral</string>
+    <string name="contract_ready">Ready for contract test</string>
+    <string name="contract_confirm">确认测试</string>
+    <string name="contract_confirmed">已确认：%1$s</string>
+    <string name="contract_row">Neutral row %1$d</string>
+</resources>
