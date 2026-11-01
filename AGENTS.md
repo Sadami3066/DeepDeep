@@ -18,7 +18,7 @@ DeepDeep：Android 个人 agent App（Kotlin + Compose）。模块：`:app`（UI
 - 新行为加测试；不删测试、不改断言凑绿。
 - 开发中按改动选择编译、相关测试或真机检查；完整代码交付或集成结束时统一跑一次 `check.sh`，仅改文档不构建。
 - 代码文件不写注释；用户可见文案走 `res/values*/strings_*.xml`。
-- 不加第三方依赖；不改模块依赖图、`settings.gradle.kts`、签名配置、`.gitignore`。已批准的依赖/settings 破例见 [docs/DECISIONS.md](docs/DECISIONS.md)（当前为 #28）；除已批准项外仍按本规则。
+- 第三方依赖按需判断，不预设倾向：有合适的成熟库就用，自己实现更简单就不引入；新增依赖在 [docs/DECISIONS.md](docs/DECISIONS.md) 记录用途、许可与体积。不改模块依赖图、`settings.gradle.kts`、签名配置、`.gitignore`。
 - 设计取舍见 [docs/DECISIONS.md](docs/DECISIONS.md)，按它来，不要「顺手修正」。
 - 改 UI：直接改对应 Screen 和 `design/` 组件，编译过 + 手机上截一张图就算验收，不要求写测试。
 - 可能删除真实数据、不可逆迁移、换签名、发布或改变关键产品取舍时先确认；已授权需求内的常规持久化与权限接线直接完成。
