@@ -151,9 +151,6 @@ internal fun AssistantOverlayPanel(
     LaunchedEffect(state.sessionId, state.conversation.loaded) {
         if (state.conversation.loaded) scroll.jumpToBottom(animate = false)
     }
-    LaunchedEffect(messages, contentClamped) {
-        if (contentClamped) scroll.followContent()
-    }
     LaunchedEffect(pendingQuestions.map { it.requestId }) {
         if (pendingQuestions.isNotEmpty()) {
             delay(60)

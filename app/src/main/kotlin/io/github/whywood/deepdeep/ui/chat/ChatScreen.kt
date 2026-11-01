@@ -240,7 +240,6 @@ fun ChatScreen(
     val thinkingLevels = remember(state.models, state.modelId) {
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
     }
-    val latestMessages by rememberUpdatedState(state.messages)
     val latestScrollAnchorFor by rememberUpdatedState(scrollAnchorFor)
     val latestScrollAnchorChange by rememberUpdatedState(onScrollAnchorChange)
     val selectionCoordinator = remember { SelectionCoordinator() }
@@ -276,12 +275,6 @@ fun ChatScreen(
             }
     }
 
-    LaunchedEffect(controller) {
-        snapshotFlow { latestMessages }.collect {
-            controller.followContent()
-        }
-    }
-
     LaunchedEffect(state.conversationId, state.messages.size) {
         val size = state.messages.size
         val grew = state.conversationId == knownSessionId && size > knownCount
@@ -307,10 +300,6 @@ fun ChatScreen(
         snapshotFlow { animatedBottomInset.value to overlayHeightPx }.collect {
             controller.anchorToBottom()
         }
-    }
-
-    LaunchedEffect(state.sending) {
-        if (state.sending) controller.followContent()
     }
 
     LaunchedEffect(pendingQuestions.map { it.requestId }) {
