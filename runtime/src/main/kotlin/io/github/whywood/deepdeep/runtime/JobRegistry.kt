@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,21 +121,26 @@ class JobRegistry(
         publish()
     }
 
-    override fun clearSession(sessionId: String) {
+    override fun clearSession(sessionId: String) { cancelSession(sessionId) }
+
+    suspend fun finishSession(sessionId: String) { cancelSession(sessionId).joinAll() }
+
+    private fun cancelSession(sessionId: String): List<Job> {
         val removed = synchronized(lock) {
             val matches = records.values.filter { it.sessionId == sessionId }
             matches.forEach { records.remove(it.id) }
             matches
         }
-        removed.forEach { record ->
+        val running = removed.mapNotNull { record ->
             synchronized(record.lock) {
                 record.killRequested = true
                 record.awaited = true
             }
-            record.coroutine?.cancel()
             record.change.trySend(Unit)
+            record.coroutine?.also { it.cancel() }
         }
         publish()
+        return running
     }
 
     private fun runnerFor(cwd: String?): BackgroundCommandRunner =

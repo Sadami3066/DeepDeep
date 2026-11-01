@@ -52,7 +52,7 @@ class PiSessionEngineScopeTest {
     }
 
     @Test
-    fun workshopToolsAreScopedWhileSessionFilesStayOutsideWorkspace() = runTest {
+    fun temporarySessionFilesStayOutsideWorkspace() = runTest {
         val root = Files.createTempDirectory("deepdeep-engine-scope").toFile()
         val workspace = File(root, "workspace").apply { mkdirs() }
         val agentDir = File(root, "agent").apply { mkdirs() }
@@ -64,7 +64,6 @@ class PiSessionEngineScopeTest {
             transport = transport,
             shellExecutor = null,
             providers = catalog,
-            toolFs = ScopedFileSystem(FileSystem.SYSTEM, listOf(workspace.absolutePath.toPath())),
             fs = FileSystem.SYSTEM,
         )
         try {
@@ -92,7 +91,7 @@ class PiSessionEngineScopeTest {
     }
 
     @Test
-    fun workshopCapabilitiesAndFileToolsStayInsideWorkspace() = runTest {
+    fun fileToolsAccessAbsolutePathsOutsideWorkspace() = runTest {
         val root = Files.createTempDirectory("deepdeep-engine-tools").toFile()
         val workspace = File(root, "workspace").apply { mkdirs() }
         val agentDir = File(root, "agent").apply { mkdirs() }
@@ -105,7 +104,6 @@ class PiSessionEngineScopeTest {
             transport = transport,
             shellExecutor = null,
             providers = catalog,
-            toolFs = ScopedFileSystem(FileSystem.SYSTEM, listOf(workspace.absolutePath.toPath())),
             fs = FileSystem.SYSTEM,
         )
         try {
@@ -147,10 +145,10 @@ class PiSessionEngineScopeTest {
                 tools.getValue("read").execute("call", buildJsonObject { put("path", "../outside.txt") }, null, null)
             }.exceptionOrNull()
             assertTrue("expected absolute-path rejection but got $escape", escape is IllegalArgumentException)
-            val absoluteEscape = runCatching {
-                tools.getValue("read").execute("call", buildJsonObject { put("path", "/etc/passwd") }, null, null)
-            }.exceptionOrNull()
-            assertTrue("expected IOException but got $absoluteEscape", absoluteEscape is IOException)
+            assertEquals("outside secret", runTool(tools.getValue("read"), buildJsonObject {
+                put("path", File(root, "outside.txt").absolutePath)
+            }).trim())
+
         } finally {
             root.deleteRecursively()
         }

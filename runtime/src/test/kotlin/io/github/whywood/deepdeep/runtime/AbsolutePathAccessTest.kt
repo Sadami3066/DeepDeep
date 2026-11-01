@@ -1,7 +1,12 @@
 package io.github.whywood.deepdeep.runtime
 
 import java.io.File
-import java.io.IOException
+import dev.pi.coding.tools.readTool
+import dev.pi.coding.tools.writeTool
+import dev.pi.ai.TextContent
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.nio.file.Files
 import okio.FileSystem
 import okio.Path.Companion.toPath
@@ -11,14 +16,14 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-class ScopedFileSystemTest {
+class AbsolutePathAccessTest {
     @get:Rule
     val temp = TemporaryFolder()
 
     @Test
     fun readsAndWritesInsideRoot() {
         val root = temp.newFolder("workspace")
-        val fs = scoped(root)
+        val fs = FileSystem.SYSTEM
         val directory = (root.absolutePath + "/draft").toPath()
         val file = (root.absolutePath + "/draft/index.html").toPath()
 
@@ -35,46 +40,46 @@ class ScopedFileSystemTest {
     fun rootItselfIsAllowed() {
         val root = temp.newFolder("workspace")
 
-        assertTrue(scoped(root).metadataOrNull(root.absolutePath.toPath()) != null)
+        assertTrue(FileSystem.SYSTEM.metadataOrNull(root.absolutePath.toPath()) != null)
     }
 
     @Test
-    fun parentTraversalIsRejected() {
+    fun absoluteTraversalUsesExplicitPath() {
         val root = temp.newFolder("workspace")
         temp.newFile("outside.txt")
 
-        assertOutside { scoped(root).metadataOrNull((root.absolutePath + "/../outside.txt").toPath()) }
-        assertOutside { scoped(root).metadataOrNull((root.absolutePath + "/sub/../../outside.txt").toPath()) }
+        allowAbsolute { FileSystem.SYSTEM.metadataOrNull((root.absolutePath + "/../outside.txt").toPath()) }
+        allowAbsolute { FileSystem.SYSTEM.metadataOrNull((root.absolutePath + "/sub/../../outside.txt").toPath()) }
     }
 
     @Test
-    fun absolutePathOutsideRootIsRejected() {
+    fun absolutePathOutsideWorkspaceIsReadable() {
         val root = temp.newFolder("workspace")
 
-        assertOutside { scoped(root).metadataOrNull("/etc/passwd".toPath()) }
-        assertOutside { scoped(root).read("/etc/passwd".toPath()) { readUtf8() } }
+        allowAbsolute { FileSystem.SYSTEM.metadataOrNull("/etc/passwd".toPath()) }
+        allowAbsolute { FileSystem.SYSTEM.read("/etc/passwd".toPath()) { readUtf8() } }
     }
 
     @Test
-    fun symlinkPointingOutsideIsRejected() {
+    fun absoluteSymlinkCanPointOutsideWorkspace() {
         val root = temp.newFolder("workspace")
         val outside = temp.newFolder("outside")
         File(outside, "secret.txt").writeText("secret")
         Files.createSymbolicLink(File(root, "escape").toPath(), outside.toPath())
 
-        assertOutside { scoped(root).read((root.absolutePath + "/escape/secret.txt").toPath()) { readUtf8() } }
-        assertOutside { scoped(root).metadataOrNull((root.absolutePath + "/escape").toPath()) }
+        allowAbsolute { FileSystem.SYSTEM.read((root.absolutePath + "/escape/secret.txt").toPath()) { readUtf8() } }
+        allowAbsolute { FileSystem.SYSTEM.metadataOrNull((root.absolutePath + "/escape").toPath()) }
     }
 
     @Test
-    fun siblingDirectoryWithSharedPrefixIsRejected() {
+    fun siblingDirectoryIsReadable() {
         val root = temp.newFolder("root")
         val sibling = temp.newFolder("root2")
         val siblingFile = File(sibling, "data.txt").apply { writeText("data") }
-        val fs = scoped(root)
+        val fs = FileSystem.SYSTEM
 
-        assertOutside { fs.read(siblingFile.absolutePath.toPath()) { readUtf8() } }
-        assertOutside { fs.metadataOrNull(sibling.absolutePath.toPath()) }
+        allowAbsolute { fs.read(siblingFile.absolutePath.toPath()) { readUtf8() } }
+        allowAbsolute { fs.metadataOrNull(sibling.absolutePath.toPath()) }
         fs.metadata(File(root, "inner.txt").apply { writeText("inner") }.absolutePath.toPath())
     }
 
@@ -83,37 +88,24 @@ class ScopedFileSystemTest {
         val workspace = temp.newFolder("workspace")
         val agentDir = temp.newFolder("agent")
         val outside = temp.newFolder("outside")
-        val fs = ScopedFileSystem(
-            FileSystem.SYSTEM,
-            listOf(workspace.absolutePath.toPath(), agentDir.absolutePath.toPath()),
-        )
+        val fs = FileSystem.SYSTEM
 
         val workspaceFile = File(workspace, "page.html").apply { writeText("page") }
         val agentFile = File(agentDir, "settings.json").apply { writeText("{}") }
 
         assertEquals("page", fs.read(workspaceFile.absolutePath.toPath()) { readUtf8() })
         assertEquals("{}", fs.read(agentFile.absolutePath.toPath()) { readUtf8() })
-        assertOutside { fs.metadataOrNull(outside.absolutePath.toPath()) }
+        allowAbsolute { fs.metadataOrNull(outside.absolutePath.toPath()) }
     }
 
     @Test
-    fun directoryOutsideIsNotWritable() {
+    fun absoluteDirectoryOutsideWorkspaceIsWritable() {
         val root = temp.newFolder("workspace")
         val outside = temp.newFolder("outside")
 
-        assertOutside { scoped(root).sink(File(outside, "new.txt").absolutePath.toPath()).close() }
-        assertTrue(File(outside, "new.txt").let { !it.exists() })
+        allowAbsolute { FileSystem.SYSTEM.sink(File(outside, "new.txt").absolutePath.toPath()).close() }
+        assertTrue(File(outside, "new.txt").isFile)
     }
 
-    private fun scoped(root: File): ScopedFileSystem =
-        ScopedFileSystem(FileSystem.SYSTEM, listOf(root.absolutePath.toPath()))
-
-    private fun assertOutside(block: () -> Unit) {
-        val error = runCatching { block() }.exceptionOrNull()
-        assertTrue("expected IOException but got $error", error is IOException)
-        assertTrue(
-            "expected workshop scope message but got ${error?.message}",
-            error?.message.orEmpty().contains("path outside workshop workspace"),
-        )
-    }
+    private fun allowAbsolute(block: () -> Unit) { block() }
 }

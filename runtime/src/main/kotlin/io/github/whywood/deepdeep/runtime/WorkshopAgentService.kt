@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.asAssistantMessage
+import dev.pi.ai.StopReason
 import dev.pi.agent.AgentEvent
 import dev.pi.ai.TextDeltaEvent
 import dev.pi.ai.ThinkingDeltaEvent
@@ -10,6 +12,15 @@ import dev.pi.coding.prompt.loadSkills
 import dev.pi.coding.session.AgentSession
 import dev.pi.coding.session.SessionEvent
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.ShellExecutor
+import dev.pi.mcp.config.McpExposure
+import dev.pi.mcp.config.McpServerConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import okio.ForwardingFileSystem
+import okio.Path
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,12 +43,12 @@ private const val RUN_TIMEOUT_MS = 180_000L
 private const val SETTLE_TIMEOUT_MS = 2_000L
 private const val SKILL_FILE = "SKILL.md"
 private const val SKILLS_DIR = "skills"
-private const val WORKSPACE_DIR = "workspace"
 private const val AGENT_DIR = "agent"
 private const val APPEND_SYSTEM_PROMPT_FILE = "APPEND_SYSTEM.md"
 
-internal val WORKSHOP_AGENT_TOOL_NAMES =
-    setOf("read", "ls", "grep", "find", "write", "edit", "web_search", "web_fetch")
+internal val ONE_SHOT_UNAVAILABLE_TOOLS = setOf(
+    "get_goal", "create_goal", "update_goal", "schedule_create", "schedule_list", "schedule_update", "schedule_delete", "present",
+)
 
 class WorkshopAgentService(
     private val providers: ProviderCatalog,
@@ -52,27 +63,30 @@ class WorkshopAgentService(
     private val pluginPromptBody: suspend () -> String?,
     private val sharedStorage: suspend () -> Boolean,
     private val defaultMaxTurns: () -> Int = { DEFAULT_MAX_TURNS },
+    private val workspace: File = File(runRoot.parentFile, "home"),
+    private val shellExecutorFor: suspend (File) -> ShellExecutor? = { null },
+    private val backgroundRunnerFactory: ((String?) -> BackgroundCommandRunner)? = null,
 ) : WorkshopAgentGateway {
     override suspend fun models(): List<WorkshopAgentModel> =
         buildWorkshopAgentModels(providers, configuredProviders())
 
     override suspend fun capabilities(): WorkshopAgentCapabilities {
         val root = createRunDirectory()
+        var session: AgentSession? = null
         try {
-            val workspace = File(root, WORKSPACE_DIR).apply { mkdirs() }
-            val tempAgentDir = File(root, AGENT_DIR).apply { mkdirs() }
-            val engine = createEngine(workspace, tempAgentDir)
-            val tools = buildWorkshopAgentTools(engine.availableTools())
-            val skills = discoverSkills(workspace)
-                .map { WorkshopAgentSkill(it.name, it.description) }
-                .sortedBy { it.name }
+            val tempAgentDir = prepareAgentDirectory(root)
+            val registry = runJobs()
+            val engine = createEngine(tempAgentDir, registry)
+            val created = engine.createSession(null, defaultConfig(), toolsFilter = { workshopAgentToolVisible(it.name) })
+            session = created
+            val tools = (buildWorkshopAgentTools(engine.availableTools()) + created.mcp.tools()
+                .filter { it.exposure != McpExposure.Hidden }
+                .map { WorkshopAgentTool(it.exposedName, it.description.orEmpty()) })
+                .distinctBy { it.name }.sortedBy { it.name }
+            val skills = discoverSkills(workspace).map { WorkshopAgentSkill(it.name, it.description) }.sortedBy { it.name }
             return WorkshopAgentCapabilities(tools, skills)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            throw IllegalStateException(error.message ?: "cannot read workshop agent capabilities", error)
         } finally {
-            root.deleteRecursively()
+            withContext(NonCancellable) { try { session?.close() } finally { root.deleteRecursively() } }
         }
     }
 
@@ -89,12 +103,25 @@ class WorkshopAgentService(
         )
         val maxTurns = workshopAgentMaxTurns(request.maxTurns, defaultMaxTurns())
         val root = createRunDirectory()
+        val registry = runJobs()
         var session: AgentSession? = null
         var unsubscribe: (() -> Unit)? = null
         val settled = CompletableDeferred<Unit>()
         val terminal = AtomicBoolean(false)
         val truncated = AtomicBoolean(false)
         val sessionError = AtomicReference<String?>(null)
+
+        suspend fun closeRun() {
+            withContext(NonCancellable) {
+                try {
+                    unsubscribe?.invoke()
+                    unsubscribe = null
+                    session?.let { created ->
+                        try { created.close() } finally { registry.finishSession(created.sessionId); session = null }
+                    }
+                } finally { root.deleteRecursively() }
+            }
+        }
 
         suspend fun emit(event: WorkshopAgentEvent) {
             if (event.type == WorkshopAgentEventType.RUN_END || event.type == WorkshopAgentEventType.RUN_ERROR) {
@@ -108,12 +135,11 @@ class WorkshopAgentService(
         }
 
         try {
-            val workspace = File(root, WORKSPACE_DIR).apply { mkdirs() }
-            val tempAgentDir = File(root, AGENT_DIR).apply { mkdirs() }
-            val engine = createEngine(workspace, tempAgentDir)
+            workspace.mkdirs()
+            val tempAgentDir = prepareAgentDirectory(root)
+            val engine = createEngine(tempAgentDir, registry)
             val tools = visibleWorkshopAgentTools(engine.availableTools())
             val skills = discoverSkills(workspace)
-            val selectedTools = selectWorkshopAgentNames("tool", request.tools, tools.map { it.name })
             val selectedSkills = selectWorkshopAgentNames("skill", request.skills, skills.map { it.name })
             copySelectedSkills(
                 skills = selectedSkills?.let { names -> skills.filter { it.name in names } } ?: skills,
@@ -121,17 +147,30 @@ class WorkshopAgentService(
                 targetSkillsRoot = File(tempAgentDir, SKILLS_DIR),
             )
             writeAppendSystemPrompt(tempAgentDir, request.systemPrompt)
-            val toolsFilter: (CodingTool) -> Boolean = { tool ->
-                workshopAgentToolVisible(tool.name) && (selectedTools == null || tool.name in selectedTools)
-            }
+            val requested = request.tools?.toSet()
+            val mcpEnabled = requested == null || requested.any { it.startsWith("mcp__") }
             val created = engine.createSession(
                 file = null,
                 config = config,
-                shellEnabled = false,
-                toolsFilter = toolsFilter,
-                mcpEnabled = false,
+                toolsFilter = { workshopAgentToolVisible(it.name) && (requested == null || it.name in requested) },
+                mcpEnabled = mcpEnabled,
+                extraSystemPromptSections = mapOf("run_lifetime" to wrapPromptSection("run_lifetime", "This is a one-shot page run. Return final text and retain work files. Parallel jobs exist only for this run and will be stopped on completion or cancellation.")),
             )
             session = created
+            val mcpTools = if (mcpEnabled) created.mcp.tools().filter { it.exposure != McpExposure.Hidden } else emptyList()
+            val selectedTools = selectWorkshopAgentNames("tool", request.tools, tools.map { it.name } + mcpTools.map { it.exposedName })
+            if (selectedTools != null && mcpTools.isNotEmpty()) {
+                val configs = engine.loadMcpServers().mapValues { (server, config) ->
+                    val selected = mcpTools.filter { it.server == server && it.exposedName in selectedTools }
+                        .associate { it.name to McpExposure.Direct }
+                    when (config) {
+                        is McpServerConfig.Stdio -> config.copy(enabled = config.enabled && selected.isNotEmpty(), exposure = McpExposure.Hidden, toolExposure = selected)
+                        is McpServerConfig.Http -> config.copy(enabled = config.enabled && selected.isNotEmpty(), exposure = McpExposure.Hidden, toolExposure = selected)
+                    }
+                }
+                created.mcp.reload(configs)
+                created.agent.state.tools = created.agent.state.tools.filter { it.name in selectedTools }.toMutableList()
+            }
             val turns = AtomicInteger(0)
             unsubscribe = created.subscribe { sessionEvent ->
                 when (sessionEvent) {
@@ -153,7 +192,10 @@ class WorkshopAgentService(
             withTimeout(RUN_TIMEOUT_MS) { created.prompt(request.prompt) }
             awaitSettled()
             sessionError.get()?.let { message -> throw IllegalStateException(message) }
+            val last = created.messages.lastOrNull()?.asAssistantMessage()
+            if (last?.stopReason == StopReason.Error) throw IllegalStateException(last.errorMessage ?: "agent model request failed")
             val text = created.getLastAssistantText() ?: throw IllegalStateException("agent returned no text")
+            closeRun()
             emit(
                 WorkshopAgentEvent(
                     type = WorkshopAgentEventType.RUN_END,
@@ -192,29 +234,42 @@ class WorkshopAgentService(
             )
             if (error is IllegalStateException) throw error
             throw IllegalStateException(error.message ?: "workshop agent run failed", error)
-        } finally {
-            runCatching { unsubscribe?.invoke() }
-            session?.let { created -> runCatching { created.close() } }
-            root.deleteRecursively()
-        }
+        } finally { closeRun() }
     }
 
-    private fun createEngine(
-        workspace: File,
-        tempAgentDir: File,
-    ): PiSessionEngine = PiSessionEngine(
+    private suspend fun runJobs() = JobRegistry(
+        scope = CoroutineScope(currentCoroutineContext()),
+        runnerFactory = backgroundRunnerFactory,
+        notifier = { _, _, _ -> },
+        wakeEnabled = { false },
+    )
+
+    private fun prepareAgentDirectory(root: File): File {
+        val directory = File(root, AGENT_DIR).apply { mkdirs() }
+        listOf("SYSTEM.md", "APPEND_SYSTEM.md", "AGENTS.md", "settings.json", "models.json", "mcp.json", "mcp-auth.json").forEach { name ->
+            val source = File(agentDir, name)
+            if (source.isFile) source.copyTo(File(directory, name), overwrite = true)
+        }
+        return directory
+    }
+
+    private suspend fun createEngine(tempAgentDir: File, registry: JobRegistry): PiSessionEngine = PiSessionEngine(
         workspace = workspace,
         agentDir = tempAgentDir,
         credentials = credentials,
         transport = transport,
-        shellExecutor = null,
+        shellExecutor = shellExecutorFor(workspace),
         providers = providers,
         personalization = personalization,
         sharedStorage = sharedStorage,
         pluginPromptBody = pluginPromptBody,
-        toolContext = appToolContext,
-        fs = FileSystem.SYSTEM,
-        toolFs = ScopedFileSystem(FileSystem.SYSTEM, listOf(workspace.absolutePath.toPath())),
+        toolContext = oneShotToolContext(appToolContext, registry),
+        fs = object : ForwardingFileSystem(FileSystem.SYSTEM) {
+            private val projectSkills = workspace.absolutePath.toPath() / ".pi" / "skills"
+            override fun list(dir: Path): List<Path> = if (dir == projectSkills) emptyList() else super.list(dir)
+            override fun listOrNull(dir: Path): List<Path>? = if (dir == projectSkills) emptyList() else super.listOrNull(dir)
+        },
+        toolFs = FileSystem.SYSTEM,
     )
 
     private suspend fun discoverSkills(cwd: File): List<Skill> = runCatching {
@@ -222,7 +277,7 @@ class WorkshopAgentService(
             cwd = cwd.absolutePath.toPath(),
             agentDir = agentDir.absolutePath.toPath(),
             fs = FileSystem.SYSTEM,
-            projectTrusted = false,
+            projectTrusted = true,
         )
     }.getOrDefault(emptyList())
 
@@ -260,7 +315,16 @@ internal fun buildWorkshopAgentTools(tools: List<CodingTool>): List<WorkshopAgen
 internal fun visibleWorkshopAgentTools(tools: List<CodingTool>): List<CodingTool> =
     tools.filter { workshopAgentToolVisible(it.name) }
 
-internal fun workshopAgentToolVisible(name: String): Boolean = name in WORKSHOP_AGENT_TOOL_NAMES
+internal fun workshopAgentToolVisible(name: String): Boolean = name !in ONE_SHOT_UNAVAILABLE_TOOLS
+
+internal fun oneShotToolContext(context: AppToolContext, registry: JobRegistry): AppToolContext = context.copy(
+    pluginTools = { binding ->
+        context.pluginTools(binding).filter { workshopAgentToolVisible(it.name) && !it.name.startsWith("job_") } + jobTools(binding, registry)
+    },
+    extraToolFactories = context.extraToolFactories.map { factory ->
+        { cwd, binding -> factory(cwd, binding).filter { workshopAgentToolVisible(it.name) && !it.name.startsWith("job_") } }
+    },
+)
 
 internal fun workshopAgentEventOf(sessionEvent: SessionEvent): WorkshopAgentEvent? = when (sessionEvent) {
     is SessionEvent.AgentEventReceived -> workshopAgentEventOf(sessionEvent.event)
@@ -403,5 +467,7 @@ internal fun writeAppendSystemPrompt(agentDir: File, systemPrompt: String?) {
     if (!agentDir.isDirectory && !agentDir.mkdirs() && !agentDir.isDirectory) {
         throw IllegalStateException("cannot create workshop agent directory")
     }
-    File(agentDir, APPEND_SYSTEM_PROMPT_FILE).writeText(content)
+    val file = File(agentDir, APPEND_SYSTEM_PROMPT_FILE)
+    val existing = if (file.isFile) file.readText().trim() else ""
+    file.writeText(listOf(existing, content).filter { it.isNotEmpty() }.joinToString("\n\n"))
 }

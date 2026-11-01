@@ -18,6 +18,21 @@ import dev.pi.coding.prompt.Skill
 import dev.pi.coding.session.SessionEvent
 import dev.pi.coding.tools.CodingTool
 import java.io.File
+import dev.pi.ai.TextContent
+import dev.pi.coding.tools.ShellExecutor
+import dev.pi.coding.tools.ShellResult
+import dev.pi.ai.RunSignal
+import dev.pi.coding.tools.textResult
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okio.Buffer
 import java.nio.file.Files
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -34,12 +49,12 @@ class WorkshopAgentServiceTest {
     }
 
     private val credentials = object : CredentialStore {
-        override fun read(providerId: String): Credential? = null
-        override fun readAll(): Map<String, Credential> = emptyMap()
-        override fun readApiKey(providerId: String): String? = null
+        override fun read(providerId: String): Credential? = dev.pi.ai.auth.ApiKeyCredential(key = "test-key")
+        override fun readAll(): Map<String, Credential> = mapOf("deepseek" to dev.pi.ai.auth.ApiKeyCredential(key = "test-key"))
+        override fun readApiKey(providerId: String): String? = "test-key"
         override fun readEnv(providerId: String): Map<String, String>? = null
         override fun list(): List<CredentialInfo> = emptyList()
-        override fun keys(): List<String> = emptyList()
+        override fun keys(): List<String> = listOf("deepseek")
         override fun modify(providerId: String, transform: (Credential?) -> Credential?): Credential? = null
         override fun writeApiKey(providerId: String, key: String, env: Map<String, String>?) = Unit
         override fun write(providerId: String, credential: Credential) = Unit
@@ -333,7 +348,7 @@ class WorkshopAgentServiceTest {
     }
 
     @Test
-    fun workshopToolsUseWhitelistWithoutShellOrGui() {
+    fun workshopToolsIncludeConfiguredCapabilitiesAndExcludePersistentLifecycle() {
         val tools = listOf(
             tool("read", "Read a file"),
             tool("ls", "List files"),
@@ -350,27 +365,23 @@ class WorkshopAgentServiceTest {
         )
 
         assertEquals(
-            listOf("edit", "find", "grep", "ls", "read", "web_fetch", "web_search", "write"),
+            listOf("arrange_alarm", "bash", "edit", "find", "grep", "gui_tap", "ls", "mi_cloud_notes", "read", "web_fetch", "web_search", "write"),
             visibleWorkshopAgentTools(tools).map { it.name }.sorted(),
         )
         assertEquals(
-            listOf("edit", "find", "grep", "ls", "read", "web_fetch", "web_search", "write"),
+            listOf("arrange_alarm", "bash", "edit", "find", "grep", "gui_tap", "ls", "mi_cloud_notes", "read", "web_fetch", "web_search", "write"),
             buildWorkshopAgentTools(tools).map { it.name },
         )
-        assertEquals(
-            WORKSHOP_AGENT_TOOL_NAMES,
-            setOf("read", "ls", "grep", "find", "write", "edit", "web_search", "web_fetch"),
-        )
         assertTrue(workshopAgentToolVisible("web_search"))
-        assertTrue(workshopAgentToolVisible("web_fetch"))
-        assertFalse(workshopAgentToolVisible("bash"))
-        assertFalse(workshopAgentToolVisible("arrange_alarm"))
-        assertFalse(workshopAgentToolVisible("gui_tap"))
-        assertFalse(workshopAgentToolVisible("mi_cloud_notes"))
+        assertTrue(workshopAgentToolVisible("bash"))
+        assertTrue(workshopAgentToolVisible("arrange_alarm"))
+        assertTrue(workshopAgentToolVisible("screen_tap"))
+        assertTrue(workshopAgentToolVisible("mi_cloud_notes"))
+        ONE_SHOT_UNAVAILABLE_TOOLS.forEach { assertFalse(workshopAgentToolVisible(it)) }
     }
 
     @Test
-    fun webToolsCanBeSelectedWhileShellAndGuiStayRejected() {
+    fun callerMaySelectWebShellAndGuiTools() {
         val available = visibleWorkshopAgentTools(
             listOf(
                 tool("read", "Read a file"),
@@ -385,8 +396,8 @@ class WorkshopAgentServiceTest {
             setOf("web_search", "web_fetch"),
             selectWorkshopAgentNames("tool", listOf("web_search", "web_fetch"), available),
         )
-        assertRejected { selectWorkshopAgentNames("tool", listOf("bash"), available) }
-        assertRejected { selectWorkshopAgentNames("tool", listOf("gui_click"), available) }
+        assertEquals(setOf("bash"), selectWorkshopAgentNames("tool", listOf("bash"), available))
+        assertEquals(setOf("gui_click"), selectWorkshopAgentNames("tool", listOf("gui_click"), available))
         assertNull(selectWorkshopAgentNames("tool", null, available))
     }
 
@@ -485,12 +496,141 @@ class WorkshopAgentServiceTest {
         skills = skills,
     )
 
-    private fun tool(name: String, description: String): CodingTool = CodingTool(
+    @Test
+    fun oneShotUsesCurrentToolsReadsOutsideAndRetainsArtifactsWhileJoiningJobs() = runBlocking {
+        val root = tempDir("one-shot-integration")
+        val workspace = File(root, "home").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        val outside = File(root, "outside.txt").apply { writeText("outside content") }
+        val artifact = File(workspace, "artifact.txt")
+        val runRoot = File(root, "runs")
+        var shellCalled = false
+        var pluginCalled = false
+        var jobStopped = false
+        val jobStarted = CompletableDeferred<Unit>()
+        var modelCalls = 0
+        var cancelOnReply = false
+        var selectedOnly = false
+        val replyRequested = CompletableDeferred<Unit>()
+        val modelRequests = mutableListOf<JsonObject>()
+        val scriptedTransport = object : HttpTransport {
+            override suspend fun execute(request: HttpRequest): HttpResponse {
+                val body = Json.parseToJsonElement(request.body!!.toString(Charsets.UTF_8)).jsonObject
+                modelRequests += body
+                val payload = if (!selectedOnly && modelCalls++ == 0) {
+                    val calls = listOf(
+                        "read" to "{\"path\":${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(outside.absolutePath))}}",
+                        "write" to "{\"path\":${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(artifact.absolutePath))},\"content\":\"retained\"}",
+                        "bash" to "{\"command\":\"printf ready\"}",
+                        "current_plugin" to "{}",
+                        "job_start" to "{\"command\":\"slow command\"}",
+                    )
+                    val toolCalls = calls.mapIndexed { index, (name, args) ->
+                        "{\"index\":$index,\"id\":\"call_$index\",\"type\":\"function\",\"function\":{\"name\":\"$name\",\"arguments\":${Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(args))}}}"
+                    }.joinToString(",")
+                    "{\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"tool_calls\":[$toolCalls]},\"finish_reason\":\"tool_calls\"}]}"
+                } else {
+                    if (!selectedOnly) jobStarted.await()
+                    if (cancelOnReply) { replyRequested.complete(Unit); awaitCancellation() }
+                    "{\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"finished\"},\"finish_reason\":\"stop\"}]}"
+                }
+                return HttpResponse(200, mapOf("content-type" to "text/event-stream"), Buffer().writeUtf8("data: $payload\n\ndata: [DONE]\n\n"))
+            }
+        }
+        val shell = object : ShellExecutor {
+            override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
+                shellCalled = command == "printf ready"
+                return ShellResult("ready", 0)
+            }
+        }
+        val context = AppToolContext(QuestionCenter(), pluginTools = {
+            listOf(tool("current_plugin", "Configured plugin") { pluginCalled = true; textResult("plugin ready") }) +
+                goalTools(SessionBinding(), GoalService()) + listOf(presentTool(null) { null })
+        })
+        val catalog = ProviderCatalog(scriptedTransport, credentials)
+        val service = WorkshopAgentService(
+            providers = catalog, credentials = credentials, transport = scriptedTransport, agentDir = agentDir, runRoot = runRoot,
+            appToolContext = context, defaultConfig = { ModelConfig("deepseek", catalog.defaultModel("deepseek")!!.id, ThinkingLevel.OFF) },
+            configuredProviders = { setOf("deepseek") }, personalization = { Personalization() }, pluginPromptBody = { null }, sharedStorage = { false },
+            workspace = workspace, shellExecutorFor = { shell }, backgroundRunnerFactory = {
+                BackgroundCommandRunner { _, _ ->
+                    jobStarted.complete(Unit)
+                    try { awaitCancellation() } finally { jobStopped = true }
+                }
+            },
+        )
+        try {
+            val events = mutableListOf<WorkshopAgentEvent>()
+            assertEquals("finished", service.run(request(prompt = "neutral integration check")) { events += it })
+            assertEquals("retained", artifact.readText())
+            assertTrue(shellCalled)
+            assertTrue(pluginCalled)
+            assertTrue(jobStopped)
+            assertTrue(runRoot.listFiles().orEmpty().isEmpty())
+            assertEquals(1, events.count { it.type == WorkshopAgentEventType.RUN_END })
+            val transcript = modelRequests.last().toString()
+            assertTrue(transcript.contains("outside content"))
+            assertFalse(transcript.contains("create_goal"))
+            assertFalse(transcript.contains("schedule_create"))
+            assertFalse(transcript.contains("Deliver finished work with present"))
+            modelCalls = 0
+            cancelOnReply = true
+            jobStopped = false
+            val running = async { service.run(request(prompt = "cancel neutral run")) {} }
+            replyRequested.await()
+            running.cancelAndJoin()
+            assertTrue(jobStopped)
+            assertTrue(runRoot.listFiles().orEmpty().isEmpty())
+            assertEquals("retained", artifact.readText())
+            cancelOnReply = false
+            selectedOnly = true
+            service.run(request(prompt = "selected tools", tools = listOf("read"), skills = emptyList())) {}
+            val toolNames = modelRequests.last().getValue("tools").let { it as kotlinx.serialization.json.JsonArray }
+                .map { it.jsonObject.getValue("function").jsonObject.getValue("name").jsonPrimitive.content }
+            assertEquals(listOf("read"), toolNames)
+
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun capabilitiesLoadConfiguredMcpTools() = runBlocking {
+        val root = tempDir("one-shot-mcp")
+        val agent = File(root, "agent").apply { mkdirs() }
+        File(agent, "mcp.json").writeText("""{"mcpServers":{"fixture":{"url":"https://mcp.invalid/rpc","exposure":"direct"}}}""")
+        val methods = mutableListOf<String>()
+        val mcpTransport = object : HttpTransport {
+            override suspend fun execute(request: HttpRequest): HttpResponse {
+                if (request.method != "POST") return HttpResponse(405, emptyMap(), Buffer())
+                val body = Json.parseToJsonElement(request.body!!.toString(Charsets.UTF_8)).jsonObject
+                val method = body.getValue("method").jsonPrimitive.content
+                methods += method
+                val id = body["id"] ?: return HttpResponse(202, emptyMap(), Buffer())
+                val result = when (method) {
+                    "initialize" -> """{"protocolVersion":"2025-03-26","capabilities":{"tools":{}},"serverInfo":{"name":"fixture","version":"1"}}"""
+                    "tools/list" -> """{"tools":[{"name":"probe","description":"Configured MCP probe","inputSchema":{"type":"object","properties":{}}}]}"""
+                    else -> "{}"
+                }
+                return HttpResponse(200, mapOf("content-type" to "application/json"), Buffer().writeUtf8("{\"jsonrpc\":\"2.0\",\"id\":$id,\"result\":$result}"))
+            }
+        }
+        val catalog = ProviderCatalog(mcpTransport, credentials)
+        val service = WorkshopAgentService(catalog, credentials, mcpTransport, agent, File(root, "runs"), AppToolContext(QuestionCenter()),
+            defaultConfig = { ModelConfig() }, configuredProviders = { setOf("deepseek") }, personalization = { Personalization() }, pluginPromptBody = { null }, sharedStorage = { false })
+        try {
+            val capabilities = service.capabilities()
+            assertTrue(capabilities.tools.toString(), capabilities.tools.any { it.name == "mcp__fixture__probe" })
+            assertTrue(methods.contains("initialize"))
+            assertTrue(methods.contains("tools/list"))
+            assertTrue(File(root, "runs").listFiles().orEmpty().isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
+    private fun tool(name: String, description: String, run: (suspend () -> AgentToolResult)? = null): CodingTool = CodingTool(
         name = name,
         description = description,
         parameters = JsonObject(emptyMap()),
         label = name,
-        execute = { _, _, _, _ -> error("not executed in catalog tests") },
+        execute = { _, _, _, _ -> run?.invoke() ?: error("not executed in catalog tests") },
     )
 
     private fun skillFile(name: String, description: String): String =

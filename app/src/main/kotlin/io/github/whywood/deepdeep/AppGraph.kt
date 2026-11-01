@@ -150,6 +150,7 @@ class AppGraph(context: Context) : AppDependencies {
         File(appContext.filesDir, "gui").let { it to it.absolutePath },
         File(appContext.filesDir, "micloud").let { it to it.absolutePath },
         File(appContext.filesDir, "workshop").let { it to it.absolutePath },
+        File(appContext.filesDir, "agent-runs").let { it to it.absolutePath },
         File(appContext.cacheDir, "tool-output").let { it to it.absolutePath },
     )
 
@@ -368,6 +369,9 @@ class AppGraph(context: Context) : AppDependencies {
             pluginPromptBody = { pluginManager.promptBody() },
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             defaultMaxTurns = { pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            workspace = homeDir,
+            shellExecutorFor = shellExecutorFor,
+            backgroundRunnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
         )
     }
 
