@@ -4,6 +4,13 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
+import java.io.IOException
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +26,7 @@ class ShellClient(
         .build()
 
     private val execHttp: OkHttpClient = http.newBuilder()
+        .retryOnConnectionFailure(false)
         .readTimeout(MAX_EXEC_READ_SECONDS, TimeUnit.SECONDS)
         .build()
 
@@ -31,7 +39,7 @@ class ShellClient(
                 .header(TOKEN_HEADER, token)
                 .build()
             http.newCall(request).execute().use { response ->
-                response.isSuccessful && response.body.string().contains("uid=2000")
+                response.isSuccessful && response.body.string().let { it.contains("uid=2000") && it.contains("protocol=2") }
             }
         }.getOrDefault(false)
     }
@@ -43,9 +51,25 @@ class ShellClient(
             .header(TIMEOUT_HEADER, timeoutSeconds.toString())
             .post(command.toRequestBody(TEXT_PLAIN))
             .build()
-        execHttp.newCall(request).execute().use { response ->
-            if (response.code == 403) error("daemon token rejected")
-            response.body.string()
+        suspendCancellableCoroutine { continuation ->
+            val call = execHttp.newCall(request)
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, error: IOException) {
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    try {
+                        val text = response.use {
+                            check(it.isSuccessful) { "daemon request failed: ${it.code}" }
+                            it.body.string()
+                        }
+                        if (continuation.isActive) continuation.resume(text)
+                    } catch (error: Exception) {
+                        if (continuation.isActive) continuation.resumeWithException(error)
+                    }
+                }
+            })
         }
     }
 

@@ -72,8 +72,8 @@ object ShellDaemon {
         val route = path.substringBefore('?')
         val (code, response) = try {
             when (route) {
-                "/health" -> 200 to "uid=${android.os.Process.myUid()} ok\n"
-                "/exec" -> 200 to execShell(body, timeoutSeconds)
+                "/health" -> 200 to "uid=${android.os.Process.myUid()} ok protocol=2\n"
+                "/exec" -> 200 to execShell(body, timeoutSeconds, socket)
                 "/start-helper" -> 200 to handleStartHelper(path)
                 "/kill-helper" -> 200 to handleKillHelper(path)
                 else -> 404 to "not found\n"
@@ -84,37 +84,47 @@ object ShellDaemon {
         sendHttp(socket, code, response)
     }
 
-    private fun execShell(command: String, timeoutSeconds: Long): String {
+    private fun execShell(command: String, timeoutSeconds: Long, socket: Socket): String {
         if (command.isBlank()) return "[EXIT=2]\n"
         val builder = ProcessBuilder("/system/bin/setsid", "/system/bin/sh", "-c", command)
         builder.environment().remove("CLASSPATH")
         builder.redirectErrorStream(true)
         val process = builder.start()
-        val output = StringBuilder()
-        val reader = thread(isDaemon = true) {
+        val complete = java.util.concurrent.atomic.AtomicBoolean(false)
+        fun killCommand() {
+            val pid = process.processId()
+            if (pid > 0) runCatching { android.system.Os.kill(-pid, android.system.OsConstants.SIGKILL) }
+            runCatching { process.destroyForcibly() }
+        }
+        socket.soTimeout = 0
+        thread(isDaemon = true, name = "shell-disconnect") {
+            runCatching { socket.getInputStream().read() }
+            if (!complete.get()) killCommand()
+        }
+        val output = ByteArrayOutputStream()
+        val truncated = java.util.concurrent.atomic.AtomicBoolean(false)
+        val reader = thread(isDaemon = true, name = "shell-output") {
             runCatching {
-                process.inputStream.bufferedReader(Charsets.UTF_8).forEachLine { line ->
-                    synchronized(output) {
-                        if (output.length < MAX_OUTPUT_CHARS) {
-                            output.append(line).append('\n')
-                        }
+                process.inputStream.use { input ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        val allowed = minOf(read, MAX_OUTPUT_CHARS - output.size()).coerceAtLeast(0)
+                        if (allowed > 0) output.write(buffer, 0, allowed)
+                        if (allowed < read) truncated.set(true)
                     }
                 }
             }
         }
         val finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
-        if (!finished) {
-            val pid = process.processId()
-            if (pid > 0) {
-                runCatching { android.system.Os.kill(-pid, android.system.OsConstants.SIGKILL) }
-            }
-            runCatching { process.destroyForcibly() }
-            reader.join(500)
-            return "[TIMEOUT]\n[EXIT=-9]\n"
-        }
+        if (!finished) killCommand()
         reader.join(1000)
-        val text = synchronized(output) { output.toString() }
-        return "$text[EXIT=${process.exitValue()}]\n"
+        if (reader.isAlive) { truncated.set(true); runCatching { process.inputStream.close() }; reader.join(1000) }
+        complete.set(true)
+        val text = output.toString("UTF-8")
+        return text + (if (truncated.get()) "\n[OUTPUT_TRUNCATED]\n" else "") +
+            (if (!finished) "\n[TIMEOUT]\n[EXIT=-9]\n" else "\n[EXIT=${process.exitValue()}]\n")
     }
 
     private fun handleStartHelper(path: String): String {
@@ -145,7 +155,7 @@ object ShellDaemon {
         val pid = queryParam(path, "pid")?.toIntOrNull() ?: return "need pid\n"
         val process = ProcessBuilder("/system/bin/kill", "-9", pid.toString()).start()
         process.waitFor(2, TimeUnit.SECONDS)
-        return "ok\n"
+        return "ok protocol=2\n"
     }
 
     private fun readBody(input: InputStream, length: Int): String {

@@ -41,7 +41,7 @@ internal fun privilegedShellTool(
     unavailableMessage: String,
     failureMessage: String,
 ): CodingTool {
-    val delegate = bashTool("/".toPath(), RootShellAdapter(executor))
+    val delegate = deepDeepBashTool(RootShellAdapter(executor))
     return CodingTool(
         name = name,
         description = description,

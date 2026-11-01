@@ -96,7 +96,7 @@ class AdbShellToolTest {
 
         assertTrue(called)
         assertEquals(true, result.isError)
-        assertEquals("permission denied\n\nCommand exited with code 1", resultText(result))
+        assertEquals("permission denied\n\n[exit: 1]", resultText(result))
     }
 
     @Test
@@ -116,7 +116,7 @@ class AdbShellToolTest {
         assertEquals("pm list packages", seenCommand)
         assertEquals(15_000L, seenTimeout)
         assertNull(result.isError)
-        assertEquals("out", resultText(result))
+        assertEquals("out\n\n[exit: 0]", resultText(result))
     }
 
     @Test
@@ -126,7 +126,7 @@ class AdbShellToolTest {
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertNull(result.isError)
-        assertEquals("out\nerr\n\n[Output truncated]", resultText(result))
+        assertEquals("out\nerr\n\n[Output incomplete: upstream truncated it; no complete log is available]\n\n[exit: 0]", resultText(result))
     }
 
     @Test

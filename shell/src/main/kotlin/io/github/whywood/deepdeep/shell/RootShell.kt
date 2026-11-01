@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.shell
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.Locale
@@ -24,6 +25,7 @@ data class RootResult(
     val stdout: String,
     val stderr: String,
     val truncated: Boolean,
+    val timedOut: Boolean = false,
 )
 
 internal data class RootProcessResult(
@@ -73,6 +75,7 @@ class RootShell internal constructor(
             exitCode = if (process.timedOut) NO_EXIT_CODE else process.exitCode,
             stdout = boundedStdout,
             stderr = boundedStderr,
+            timedOut = process.timedOut,
             truncated = boundedStdout.length < process.stdout.length ||
                 boundedStderr.length < process.stderr.length,
         )
@@ -82,7 +85,8 @@ class RootShell internal constructor(
 private class ProcessRootCommandRunner : RootCommandRunner {
     override suspend fun run(command: String, timeoutMillis: Long): RootProcessResult =
         runInterruptible(Dispatchers.IO) {
-            val process = startRootProcess(wrapRootCommand(command, timeoutMillis))
+            val commandPid = File.createTempFile("deepdeep-root-", ".pid")
+            val process = startRootProcess(wrapRootCommand(command, timeoutMillis, commandPid))
                 ?: return@runInterruptible RootProcessResult(NO_EXIT_CODE, "", "", false, false)
             runCatching { process.outputStream.close() }
             val budget = AtomicInteger(MAX_OUTPUT_BYTES + 1)
@@ -91,14 +95,16 @@ private class ProcessRootCommandRunner : RootCommandRunner {
             val stdoutReader = startReader("root-shell-stdout", process.inputStream, stdout, budget)
             val stderrReader = startReader("root-shell-stderr", process.errorStream, stderr, budget)
             val timedOut = try {
-                !process.waitFor(timeoutMillis + OUTER_TIMEOUT_GRACE_MILLIS, TimeUnit.MILLISECONDS)
+                !process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
             } catch (interrupted: InterruptedException) {
-                kill(process)
+                kill(process, commandPid)
                 joinReaders(stdoutReader, stderrReader)
+                commandPid.delete()
                 throw interrupted
             }
-            if (timedOut) kill(process)
+            if (timedOut) kill(process, commandPid)
             joinReaders(stdoutReader, stderrReader)
+            commandPid.delete()
             RootProcessResult(
                 exitCode = runCatching { process.exitValue() }.getOrDefault(NO_EXIT_CODE),
                 stdout = stdout.toByteArray().toString(Charsets.UTF_8),
@@ -118,7 +124,11 @@ private class ProcessRootCommandRunner : RootCommandRunner {
         return null
     }
 
-    private fun kill(process: Process) {
+    private fun kill(process: Process, commandPid: File) {
+        val pid = runCatching { commandPid.readText().trim().toLongOrNull() }.getOrNull()
+        if (pid != null && pid > 1) runCatching {
+            startRootProcess("kill -KILL -- -$pid")?.waitFor(PROCESS_KILL_WAIT_MILLIS, TimeUnit.MILLISECONDS)
+        }
         runCatching { process.destroyForcibly() }
         runCatching { process.waitFor(PROCESS_KILL_WAIT_MILLIS, TimeUnit.MILLISECONDS) }
     }
@@ -181,9 +191,13 @@ private const val DEFAULT_PROBE_TIMEOUT_MILLIS = 60_000L
 private const val READER_BUFFER_BYTES = 8 * 1024
 private const val READER_JOIN_TIMEOUT_MILLIS = 1_000L
 private const val PROCESS_KILL_WAIT_MILLIS = 1_000L
-internal fun wrapRootCommand(command: String, timeoutMillis: Long): String {
+internal fun wrapRootCommand(command: String, timeoutMillis: Long, pidFile: File? = null): String {
     val seconds = String.format(Locale.US, "%.1fs", timeoutMillis / 1000.0)
     val escaped = command.replace("'", "'\\''")
+    if (pidFile != null) {
+        val body = "echo ${'$'}${'$'} > '${pidFile.absolutePath.replace("'", "'\\''")}'; exec sh -c '$escaped'"
+        return "exec setsid sh -c '${body.replace("'", "'\\''")}'"
+    }
     return "timeout -s KILL $seconds sh -c '$escaped'"
 }
 

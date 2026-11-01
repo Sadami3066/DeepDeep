@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentToolResult
+import dev.pi.ai.RequestAbortedException
 import dev.pi.ai.JsonValue
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.ShellExecutor
@@ -43,7 +44,7 @@ private val bashParameters: JsonObject = buildJsonObject {
 
 internal fun deepDeepBashTool(shellExecutor: ShellExecutor): CodingTool = CodingTool(
     name = "bash",
-    description = "Execute a bash command in the current working directory. Returns merged stdout and stderr, ending with the exit code as [exit: N]. Output is truncated to the last $BASH_MAX_LINES lines or ${BASH_MAX_BYTES / 1024}KB (whichever is hit first). Optionally provide a timeout in seconds.",
+    description = "Execute a command using the Linux /bin/sh shell in the current working directory. Returns merged stdout and stderr, ending with the exit code as [exit: N]. Output is truncated to the last $BASH_MAX_LINES lines or ${BASH_MAX_BYTES / 1024}KB (whichever is hit first). Oversized output is saved to a complete log when available. Cancellation stops execution and is not retried. Optionally provide a timeout in seconds.",
     parameters = bashParameters,
     label = "bash",
     execute = { _toolCallId, args, signal, _onUpdate ->
@@ -52,10 +53,13 @@ internal fun deepDeepBashTool(shellExecutor: ShellExecutor): CodingTool = Coding
         signal?.throwIfAborted()
         var failure: String? = null
         val result = try {
-            shellExecutor.run(command, timeoutSeconds, signal)
+            if (shellExecutor is DetailedShellExecutor) shellExecutor.runDetailed(command, timeoutSeconds, signal)
+            else shellExecutor.run(command, timeoutSeconds, signal).let { CommandResult(it.output, it.exitCode, truncated = it.truncated) }
+        } catch (aborted: RequestAbortedException) {
+            throw aborted
         } catch (cancellation: CancellationException) {
             throw cancellation
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             failure = error.message ?: error.toString()
             null
         }
@@ -67,7 +71,7 @@ internal fun deepDeepBashTool(shellExecutor: ShellExecutor): CodingTool = Coding
     },
 )
 
-private fun formatBashResult(result: ShellResult): AgentToolResult {
+private fun formatBashResult(result: CommandResult): AgentToolResult {
     val truncation = truncateTail(result.output, maxLines = BASH_MAX_LINES, maxBytes = BASH_MAX_BYTES)
     var text = truncation.text.ifEmpty { "(no output)" }
     val notices = mutableListOf<String>()
@@ -80,9 +84,10 @@ private fun formatBashResult(result: ShellResult): AgentToolResult {
         } else {
             "Showing lines $startLine-$totalLines of $totalLines"
         }
-    } else if (result.truncated) {
-        notices += "Output truncated"
     }
+    if (result.fullOutputPath != null) notices += "Full output: ${result.fullOutputPath}"
+    else if (result.truncated) notices += "Output incomplete: upstream truncated it; no complete log is available"
+    if (result.timedOut) notices += "Command timed out; it was terminated and was not retried"
     if (notices.isNotEmpty()) {
         text += "\n\n[" + notices.joinToString(". ") + "]"
     }
@@ -92,13 +97,15 @@ private fun formatBashResult(result: ShellResult): AgentToolResult {
     } else {
         text += "\n\n[exit: $exitCode]"
     }
-    val isError = exitCode == null || exitCode != 0
+    val isError = result.timedOut || exitCode == null || exitCode != 0
     return textResult(text, bashDetails(truncation, result), isError)
 }
 
-private fun bashDetails(truncation: Truncated, result: ShellResult): JsonValue? {
-    if (!truncation.truncated && !result.truncated) return null
+private fun bashDetails(truncation: Truncated, result: CommandResult): JsonValue? {
+    if (!truncation.truncated && !result.truncated && !result.timedOut && result.fullOutputPath == null) return null
     return buildJsonObject {
+        put("timedOut", result.timedOut)
+        result.fullOutputPath?.let { put("fullOutputPath", it) }
         if (truncation.truncated) {
             putJsonObject("truncation") {
                 put("truncated", true)

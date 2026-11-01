@@ -114,12 +114,13 @@ class AdbBootstrap(context: Context) {
         val match = EXIT_PATTERN.find(raw)
         val exitCode = match?.groupValues?.get(1)?.toIntOrNull() ?: -1
         val output = if (match == null) raw else raw.removeRange(match.range)
-        val truncated = utf8ByteLength(output) > MAX_OUTPUT_BYTES
+        val truncated = raw.contains("[OUTPUT_TRUNCATED]") || utf8ByteLength(output) > MAX_OUTPUT_BYTES
         RootCommandResult(
             exitCode = exitCode,
             stdout = if (truncated) takeUtf8(output, MAX_OUTPUT_BYTES) else output,
             stderr = "",
             truncated = truncated,
+            timedOut = raw.contains("[TIMEOUT]"),
         )
     }
 

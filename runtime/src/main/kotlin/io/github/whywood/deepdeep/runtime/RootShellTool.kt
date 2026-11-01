@@ -1,6 +1,10 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.ai.RequestAbortedException
 import dev.pi.ai.RunSignal
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.ShellResult
@@ -25,6 +29,7 @@ data class RootCommandResult(
     val stdout: String,
     val stderr: String,
     val truncated: Boolean,
+    val timedOut: Boolean = false,
 )
 
 fun interface RootCommandExecutor {
@@ -46,17 +51,25 @@ private val rootShellParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("command")) })
 }
 
-internal class RootShellAdapter(private val executor: RootCommandExecutor) : ShellExecutor {
-    override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
+internal class RootShellAdapter(private val executor: RootCommandExecutor) : DetailedShellExecutor {
+    override suspend fun runDetailed(command: String, timeoutSeconds: Long?, signal: RunSignal?): CommandResult {
         signal?.throwIfAborted()
         val seconds = (timeoutSeconds ?: DEFAULT_SHELL_TIMEOUT_SECONDS)
             .coerceIn(MIN_SHELL_TIMEOUT_SECONDS, MAX_SHELL_TIMEOUT_SECONDS)
-        val result = executor.execute(command, seconds * 1000)
+        val result = coroutineScope {
+            val execution = async { executor.execute(command, seconds * 1000) }
+            val unsubscribe = signal?.onAbort { execution.cancel() }
+            try { execution.await() } catch (error: CancellationException) {
+                if (signal?.isAborted == true) throw RequestAbortedException(signal.reason)
+                throw error
+            } finally { unsubscribe?.invoke() }
+        }
+        signal?.throwIfAborted()
         val output = listOfNotNull(
             result.stdout.takeIf { it.isNotEmpty() },
             result.stderr.takeIf { it.isNotEmpty() },
         ).joinToString("\n")
-        return ShellResult(output = output, exitCode = result.exitCode, truncated = result.truncated)
+        return CommandResult(output = output, exitCode = result.exitCode.takeIf { it >= 0 }, truncated = result.truncated, timedOut = result.timedOut)
     }
 }
 

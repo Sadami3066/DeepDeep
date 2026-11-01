@@ -29,6 +29,7 @@ class LinuxEnvironment(
         rootfsDir = rootfsDir,
         workspaceDir = workspaceDir,
         tempDir = File(appContext.cacheDir, "proot-tmp"),
+        logDir = File(appContext.cacheDir, "tool-output"),
         sharedStorageEnabled = sharedStorageEnabled,
         extraBinds = extraBinds,
     )

@@ -8,6 +8,9 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 class PRootExecutor(
@@ -20,6 +23,7 @@ class PRootExecutor(
     private val extraBinds: List<Pair<File, String>> = emptyList(),
     private val maxOutputBytes: Int = 64 * 1024,
     private val pidReader: (File) -> Long = ::readPidFile,
+    private val logDir: File = File(tempDir, "tool-output"),
 ) : LinuxExecutor {
     init {
         require(maxOutputBytes > 0) { "maxOutputBytes must be positive" }
@@ -36,7 +40,8 @@ class PRootExecutor(
         require(command.isNotBlank()) { "command must not be blank" }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
 
-        return suspendCancellableCoroutine { continuation ->
+        val workerRef = AtomicReference<Thread?>()
+        return try { suspendCancellableCoroutine { continuation ->
             val runningRef = AtomicReference<RunningProcess?>()
             val cancelled = AtomicBoolean(false)
             val worker = Thread({
@@ -53,6 +58,7 @@ class PRootExecutor(
                     runningRef.set(null)
                 }
             }, "linux-command")
+            workerRef.set(worker)
             worker.isDaemon = true
 
             continuation.invokeOnCancellation {
@@ -61,6 +67,8 @@ class PRootExecutor(
                 worker.interrupt()
             }
             if (continuation.isActive) worker.start()
+        } } finally {
+            withContext(NonCancellable + Dispatchers.IO) { workerRef.get()?.join() }
         }
     }
 
@@ -133,9 +141,8 @@ class PRootExecutor(
         watchdog.isDaemon = true
         watchdog.start()
 
-        val output = ByteArrayOutputStream()
+        val output = CommandOutput(maxOutputBytes, logDir)
         val lineBuffer = onOutputLine?.let { LineChunkBuffer() }
-        var truncated = false
         try {
             process.inputStream.use { input ->
                 val buffer = ByteArray(8192)
@@ -146,17 +153,14 @@ class PRootExecutor(
                         break
                     }
                     if (read < 0) break
-                    val remaining = maxOutputBytes - output.size()
-                    if (remaining > 0) {
-                        output.write(buffer, 0, minOf(read, remaining))
-                    }
-                    if (read > remaining) truncated = true
+                    output.append(buffer, read)
                     if (lineBuffer != null) lineBuffer.accept(buffer, read, onOutputLine)
                 }
                 if (lineBuffer != null) lineBuffer.finish(onOutputLine)
             }
             process.waitFor()
         } finally {
+            output.close()
             if (process.isAlive) killTree(process, running.pid)
             watchdog.interrupt()
             runCatching { watchdog.join(500) }
@@ -165,9 +169,10 @@ class PRootExecutor(
 
         return LinuxResult(
             exitCode = if (timedOut.get()) -1 else process.exitValue(),
-            output = output.toByteArray().toString(Charsets.UTF_8),
-            truncated = truncated,
+            output = output.text(),
+            truncated = output.truncated,
             timedOut = timedOut.get(),
+            fullOutputPath = output.logFile?.absolutePath,
             durationMillis = (System.nanoTime() - startedAt) / 1_000_000,
         )
     }

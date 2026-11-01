@@ -7,6 +7,12 @@ import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.ShellResult
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -18,6 +24,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RootShellToolTest {
     private fun tool(
         executor: RootCommandExecutor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
@@ -84,7 +91,7 @@ class RootShellToolTest {
 
         assertTrue(called)
         assertEquals(true, result.isError)
-        assertEquals("permission denied\n\nCommand exited with code 1", resultText(result))
+        assertEquals("permission denied\n\n[exit: 1]", resultText(result))
     }
 
     @Test
@@ -102,7 +109,7 @@ class RootShellToolTest {
 
         assertTrue(called)
         assertNull(result.isError)
-        assertEquals("ok", resultText(result))
+        assertEquals("ok\n\n[exit: 0]", resultText(result))
     }
 
     @Test
@@ -120,7 +127,7 @@ class RootShellToolTest {
 
         assertTrue(called)
         assertNull(result.isError)
-        assertEquals("(no output)", resultText(result))
+        assertEquals("(no output)\n\n[exit: 0]", resultText(result))
     }
 
     @Test
@@ -140,17 +147,17 @@ class RootShellToolTest {
         assertEquals("id /data", seenCommand)
         assertEquals(15_000L, seenTimeout)
         assertEquals(true, result.isError)
-        assertEquals("out\nerr\n\n[Output truncated]\n\nCommand exited with code 3", resultText(result))
+        assertEquals("out\nerr\n\n[Output incomplete: upstream truncated it; no complete log is available]\n\n[exit: 3]", resultText(result))
     }
 
     @Test
-    fun zeroExitOutputHasNoExitCodeLine() = runBlocking {
+    fun zeroExitOutputHasExplicitExitCode() = runBlocking {
         val tool = tool(executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "out", "err", false) })
 
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertNull(result.isError)
-        assertEquals("out\nerr", resultText(result))
+        assertEquals("out\nerr\n\n[exit: 0]", resultText(result))
     }
 
     @Test
@@ -186,7 +193,7 @@ class RootShellToolTest {
     }
 
     @Test
-    fun executionTimeoutIsReportedAsMinusOneExitCode() = runBlocking {
+    fun missingExitCodeIsExplicitlyReported() = runBlocking {
         val tool = tool(
             executor = RootCommandExecutor { _, _ -> RootCommandResult(-1, "partial", "", false) },
         )
@@ -194,7 +201,7 @@ class RootShellToolTest {
         val result = tool.execute("call-1", args("sleep 60"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("partial\n\nCommand exited with code -1", resultText(result))
+        assertEquals("partial\n\nCommand terminated without an exit code", resultText(result))
     }
 
     @Test
@@ -315,7 +322,28 @@ class RootShellToolTest {
     fun adapterPassesExitCodeAndTruncation() = runBlocking {
         val adapter = adapter(RootCommandExecutor { _, _ -> RootCommandResult(-1, "partial", "", true) })
 
-        assertEquals(ShellResult(output = "partial", exitCode = -1, truncated = true), adapter.run("id", 5, null))
+        assertEquals(ShellResult(output = "partial", exitCode = null, truncated = true), adapter.run("id", 5, null))
+    }
+
+    @Test
+    fun abortDuringExecutionWaitsForCleanupAndDoesNotRetry() = runTest {
+        val started = CompletableDeferred<Unit>()
+        var cleanup = false
+        var calls = 0
+        val signal = RunSignal()
+        val tool = tool(executor = RootCommandExecutor { _, _ ->
+            calls++
+            started.complete(Unit)
+            try { awaitCancellation() } finally { cleanup = true }
+        })
+        val run = async { runCatching { tool.execute("cancel", args("sleep 60"), signal, null) } }
+        runCurrent()
+        started.await()
+        signal.abort("stop")
+        runCurrent()
+        assertTrue(run.await().exceptionOrNull() is RequestAbortedException)
+        assertTrue(cleanup)
+        assertEquals(1, calls)
     }
 
     @Test

@@ -6,6 +6,7 @@ data class LinuxResult(
     val truncated: Boolean,
     val timedOut: Boolean,
     val durationMillis: Long,
+    val fullOutputPath: String? = null,
 )
 
 interface LinuxExecutor {

@@ -14,6 +14,12 @@ class LinuxShellExecutor(
     private val defaultTimeoutSeconds: Long = 60,
 ) : ShellExecutor {
     override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
+        val result = runDetailed(command, timeoutSeconds, signal)
+        if (result.timedOut) throw ShellExecutionException("command timed out after ${timeoutSeconds ?: defaultTimeoutSeconds}s")
+        return ShellResult(result.output, result.exitCode, result.truncated)
+    }
+
+    suspend fun runDetailed(command: String, timeoutSeconds: Long?, signal: RunSignal?): LinuxResult {
         signal?.throwIfAborted()
         val timeout = (timeoutSeconds ?: defaultTimeoutSeconds).coerceIn(1, 600)
         return coroutineScope {
@@ -28,14 +34,7 @@ class LinuxShellExecutor(
                 unsubscribe?.invoke()
             }
             if (signal?.isAborted == true) throw RequestAbortedException(signal.reason)
-            if (result.timedOut) {
-                throw ShellExecutionException("command timed out after ${timeout}s")
-            }
-            ShellResult(
-                output = result.output,
-                exitCode = result.exitCode,
-                truncated = result.truncated,
-            )
+            result
         }
     }
 }

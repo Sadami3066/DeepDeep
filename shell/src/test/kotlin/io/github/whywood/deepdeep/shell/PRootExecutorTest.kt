@@ -97,6 +97,25 @@ class PRootExecutorTest {
     }
 
     @Test
+    fun preservesFinalErrorAndCompleteLogBeyond64KiB() = runBlocking {
+        val result = fixture().executor.execute("head -c 180000 /dev/zero | tr '\\0' x; printf '\\nFINAL_ERROR\\n'; exit 9")
+        assertEquals(9, result.exitCode)
+        assertTrue(result.output.endsWith("FINAL_ERROR\n"))
+        val log = File(requireNotNull(result.fullOutputPath))
+        assertTrue(log.isAbsolute)
+        assertEquals(180013L, log.length())
+        assertTrue(log.readText().startsWith("xxx"))
+        assertTrue(log.readText().endsWith("FINAL_ERROR\n"))
+    }
+
+    @Test
+    fun lineBudgetSpillsCompleteOutputEvenBelowByteLimit() = runBlocking {
+        val result = fixture().executor.execute("seq 1 3000")
+        assertEquals(3000, File(requireNotNull(result.fullOutputPath)).readLines().size)
+        assertTrue(result.output.endsWith("3000\n"))
+    }
+
+    @Test
     fun capsUnterminatedOutputChunks() = runBlocking {
         val fixture = fixture(maxOutputBytes = 64 * 1024)
         val chunks = mutableListOf<String>()

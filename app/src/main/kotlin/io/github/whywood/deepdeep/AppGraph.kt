@@ -90,7 +90,7 @@ import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
 import io.github.whywood.deepdeep.shell.RootStatus
-import io.github.whywood.deepdeep.shell.LinuxShellExecutor
+import io.github.whywood.deepdeep.service.AppShellExecutor
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -306,6 +306,7 @@ class AppGraph(context: Context) : AppDependencies {
                                                 stdout = result.stdout,
                                                 stderr = result.stderr,
                                                 truncated = result.truncated,
+                                                timedOut = result.timedOut,
                                             )
                                         },
                                         enabled = { PrivilegeLevel.ROOT in privilege.state.value.availableBackends },
@@ -345,11 +346,11 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
-    private val shellExecutorFor: suspend (File) -> LinuxShellExecutor? = { cwd ->
+    private val shellExecutorFor: suspend (File) -> AppShellExecutor? = { cwd ->
         if (!linuxSettings.isEnabled()) {
             null
         } else {
-            LinuxShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
+            AppShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
         }
     }
 

@@ -108,7 +108,7 @@ class DeepDeepBashToolTest {
         val result = tool(executor { _, _, _ -> ShellResult("tail", 0, truncated = true) })
             .execute("call", args(), null, null)
 
-        assertTrue(resultText(result).contains("[Output truncated]"))
+        assertTrue(resultText(result).contains("Output incomplete: upstream truncated"))
     }
 
     @Test
@@ -191,11 +191,26 @@ class DeepDeepBashToolTest {
     }
 
     @Test
-    fun executorAbortBecomesErrorResult() = runBlocking {
-        val result = tool(executor { _, _, _ -> throw RequestAbortedException("stop") })
-            .execute("call", args(), null, null)
-
-        assertEquals("Operation aborted: stop", resultText(result))
+    fun detailedTimeoutKeepsOutputAndFullLogPath() = runBlocking {
+        val executor = object : DetailedShellExecutor {
+            override suspend fun runDetailed(command: String, timeoutSeconds: Long?, signal: RunSignal?) =
+                CommandResult("last error", null, timedOut = true, truncated = true, fullOutputPath = "/tmp/full.log")
+        }
+        val result = tool(executor).execute("timeout", args(), null, null)
         assertEquals(true, result.isError)
+        assertTrue(resultText(result).contains("last error"))
+        assertTrue(resultText(result).contains("Command timed out"))
+        assertTrue(resultText(result).contains("Full output: /tmp/full.log"))
+        assertEquals("/tmp/full.log", result.details!!.jsonObject.getValue("fullOutputPath").jsonPrimitive.content)
+    }
+
+    @Test
+    fun executorAbortPropagates() {
+        assertThrows(RequestAbortedException::class.java) {
+            runBlocking {
+                tool(executor { _, _, _ -> throw RequestAbortedException("stop") })
+                    .execute("call", args(), null, null)
+            }
+        }
     }
 }
