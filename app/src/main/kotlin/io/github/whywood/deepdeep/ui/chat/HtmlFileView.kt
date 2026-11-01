@@ -75,7 +75,7 @@ internal fun HtmlFileView(
         if (renderFailed || loadFailed) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = stringResource(R.string.files_read_failed),
+                    text = stringResource(R.string.present_failed),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
