@@ -29,12 +29,12 @@ class PrivilegedLauncher(
     suspend fun start(backend: String, port: Int, nonce: String): HelperProcess = when (backend) {
         BACKEND_ADB -> startAdb(port, nonce)
         BACKEND_ROOT -> startRoot(port, nonce)
-        else -> throw IllegalArgumentException("未知特权后端：$backend")
+        else -> throw IllegalArgumentException("Unknown privileged backend: $backend")
     }
 
     private suspend fun startAdb(port: Int, nonce: String): HelperProcess {
         val pid = adb.startHelper(port, nonce)
-            ?: throw IllegalStateException("无线调试守护进程启动虚拟屏 helper 失败")
+            ?: throw IllegalStateException("Wireless debugging daemon failed to start the virtual screen helper")
         return HelperProcess(BACKEND_ADB, pid = pid.takeIf { it > 0 }) {
             if (pid > 0) cleanupScope.launch { adb.killHelper(pid) }
         }

@@ -11,7 +11,7 @@ import kotlinx.serialization.json.putJsonObject
 
 private const val MAX_SNIPPET_CHARS = 200
 
-private const val TOOL_NOTE_WRITE_OFF = "笔记写入未开启，请先在插件详情打开写开关"
+private const val TOOL_NOTE_WRITE_OFF = "Note writing is off; enable the write switch in plugin details"
 
 internal fun notesTool(
     client: MiCloudReadApi,
@@ -67,7 +67,7 @@ internal fun notesTool(
                     val content = args.argString("content")
                     if (subject == null && content == null) {
                         throw IllegalArgumentException(
-                            "update 需要 subject 或 content",
+                            "update requires subject or content",
                         )
                     }
                     val existing = noteDetail(client, id)
@@ -80,12 +80,12 @@ internal fun notesTool(
                     val id = args.requiredArgString("id")
                     val entry = noteDetail(client, id)
                     val tag = entry.stringOrNull("tag")
-                        ?: throw IllegalArgumentException("笔记缺少 tag，无法删除")
+                        ?: throw IllegalArgumentException("Note has no tag; cannot delete")
                     val purge = args.argBool("purge") ?: true
                     writeResult(writer.post(noteDeletePath(id), noteDeleteForm(tag, purge)))
                 }
 
-                else -> throw IllegalArgumentException("action 无效：$action")
+                else -> throw IllegalArgumentException("action must be list, read, create, update or delete")
             }
         }
     },
@@ -93,7 +93,7 @@ internal fun notesTool(
 
 private suspend fun noteDetail(client: MiCloudReadApi, id: String): JsonObject {
     val payload = client.getJson(noteDetailPath(id, now())).payloadObject()
-    return payload.objectOrNull("entry") ?: payload ?: throw IOException("笔记数据格式异常")
+    return payload.objectOrNull("entry") ?: payload ?: throw IOException("Note data format is invalid")
 }
 
 private fun noteEntry(item: JsonObject): JsonObject = buildJsonObject {

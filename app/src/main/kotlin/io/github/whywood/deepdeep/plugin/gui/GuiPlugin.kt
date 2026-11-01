@@ -59,7 +59,7 @@ class GuiPlugin(
             displaySize = {
                 val manager = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
                 val metrics = DisplayMetrics()
-                checkNotNull(manager?.getDisplay(0)) { "主屏不可用" }.getRealMetrics(metrics)
+                checkNotNull(manager?.getDisplay(0)) { "Main screen is unavailable" }.getRealMetrics(metrics)
                 metrics.widthPixels to metrics.heightPixels
             },
             virtualStatus = { screenController.status() },

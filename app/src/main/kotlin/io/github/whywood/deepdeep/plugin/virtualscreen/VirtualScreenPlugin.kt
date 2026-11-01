@@ -211,7 +211,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         virtualScreenResult {
-            require(args.keys.all { it == "action" }) { "virtual_screen only accepts action；请在 screen_* 工具中选择 target" }
+            require(args.keys.all { it == "action" }) { "virtual_screen only accepts action; choose target with the screen_* tools" }
             when (val action = args.requiredString("action").lowercase()) {
                 "start" -> {
                     screen.start()
@@ -228,7 +228,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
 
                 "status" -> textResult(stateJson(screen).toString())
 
-                else -> throw IllegalArgumentException("action 只支持 start、stop、status")
+                else -> throw IllegalArgumentException("action must be start, stop or status")
             }
         }
     },
@@ -247,7 +247,7 @@ private fun stateJson(screen: VirtualScreenAccess): JsonObject = buildJsonObject
             putJsonObject("failure") {
                 put("category", category)
                 put("message", failure?.message ?: state.message)
-                put("hint", if (screen.reconnecting) "正在自动重连，请稍后检查状态" else failureHint(category))
+                put("hint", if (screen.reconnecting) "Reconnecting automatically; check status again shortly" else failureHint(category))
             }
         }
 
@@ -266,9 +266,9 @@ private fun failureCategory(category: VirtualScreenFailureCategory?): String = w
 }
 
 private fun failureHint(category: String): String = when (category) {
-    "privilege" -> "请用户在权限设置里开启无线调试（ADB）或 Root 后再试。"
-    "start" -> "可以直接重试启动。"
-    else -> "自动重连未恢复，请调用 virtual_screen(action=start)，再 screen_launch 并重新观察。"
+    "privilege" -> "Ask the user to enable wireless debugging (ADB) or root in permission settings, then retry"
+    "start" -> "Retry start now"
+    else -> "Automatic reconnect did not recover; call virtual_screen(action=start), then screen_launch and observe again"
 }
 
 private suspend fun virtualScreenResult(block: suspend () -> AgentToolResult): AgentToolResult = try {
@@ -278,9 +278,9 @@ private suspend fun virtualScreenResult(block: suspend () -> AgentToolResult): A
 } catch (error: CancellationException) {
     throw error
 } catch (error: Exception) {
-    textResult(error.message ?: "虚拟屏操作失败", isError = true)
+    textResult(error.message ?: "Virtual screen action failed", isError = true)
 }
 
 private fun JsonObject.requiredString(name: String): String =
     (this[name] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw IllegalArgumentException("缺少参数 $name")
+        ?: throw IllegalArgumentException("Missing required argument: $name")

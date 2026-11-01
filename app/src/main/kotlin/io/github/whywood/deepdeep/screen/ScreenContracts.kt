@@ -151,9 +151,9 @@ interface ScreenAppCatalog {
     fun launchableApps(): List<ScreenApp>
 
     fun app(packageName: String): ScreenApp = launchableApps().firstOrNull { it.packageName == packageName }
-        ?: error("找不到应用：$packageName")
+        ?: error("App not found: $packageName")
 
-    fun launchOnMain(packageName: String): ScreenApp = error("主屏应用启动不可用")
+    fun launchOnMain(packageName: String): ScreenApp = error("Main screen app launch is unavailable")
 
 }
 
@@ -206,9 +206,9 @@ internal fun isAsciiText(text: String): Boolean =
 
 internal fun GuiSelector.describeSelector(): String = when (this) {
     is GuiSelector.Ref -> "ref=$ref"
-    is GuiSelector.Text -> "text=「$text」"
-    is GuiSelector.Desc -> "desc=「$desc」"
+    is GuiSelector.Text -> "text=\"$text\""
+    is GuiSelector.Desc -> "desc=\"$desc\""
     is GuiSelector.ResourceId -> "resourceId=$id"
     is GuiSelector.ClassName -> "class=$name"
-    is GuiSelector.Point -> "坐标 ($x, $y)"
+    is GuiSelector.Point -> "point ($x, $y)"
 }

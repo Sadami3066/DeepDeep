@@ -89,14 +89,14 @@ fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding)
                 val questions = parseQuestions(args)
                 when (val outcome = questionCenter.ask(sessionId, toolCallId, questions, signal)) {
                     is QuestionOutcome.Answered -> textResult(answersJson(questions, outcome.answers).toString())
-                    QuestionOutcome.Cancelled -> textResult("用户取消了提问", isError = true)
+                    QuestionOutcome.Cancelled -> textResult("The user cancelled the question", isError = true)
                 }
             } catch (error: RequestAbortedException) {
                 throw error
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                textResult(error.message ?: "提问参数无效", isError = true)
+                textResult(error.message ?: "Invalid question parameters", isError = true)
             }
         }
     },
@@ -104,35 +104,35 @@ fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding)
 
 private fun parseQuestions(args: JsonObject): List<UserQuestion> {
     val array = args["questions"] as? JsonArray
-        ?: throw IllegalArgumentException("questions 必须是数组")
+        ?: throw IllegalArgumentException("questions must be an array")
     if (array.size !in 1..MAX_QUESTIONS) {
-        throw IllegalArgumentException("questions 需要 1..$MAX_QUESTIONS 个问题")
+        throw IllegalArgumentException("questions needs 1..$MAX_QUESTIONS items")
     }
     val ids = mutableSetOf<String>()
     return array.mapIndexed { index, element ->
         val item = element as? JsonObject
-            ?: throw IllegalArgumentException("questions[$index] 必须是对象")
+            ?: throw IllegalArgumentException("questions[$index] must be an object")
         val id = item.stringOrNull("id")?.trim().orEmpty()
         if (id.isEmpty()) {
-            throw IllegalArgumentException("questions[$index].id 不能为空")
+            throw IllegalArgumentException("questions[$index].id must not be empty")
         }
         if (!ids.add(id)) {
-            throw IllegalArgumentException("问题 id 重复：$id")
+            throw IllegalArgumentException("Duplicate question id: $id")
         }
         val question = item.stringOrNull("question")?.trim().orEmpty()
         if (question.isEmpty()) {
-            throw IllegalArgumentException("questions[$index].question 不能为空")
+            throw IllegalArgumentException("questions[$index].question must not be empty")
         }
         val optionElements = item["options"] as? JsonArray
         if (optionElements != null && optionElements.size > MAX_OPTIONS) {
-            throw IllegalArgumentException("问题 $id 的选项不能超过 $MAX_OPTIONS 个")
+            throw IllegalArgumentException("Question $id has more than $MAX_OPTIONS options")
         }
         val options = optionElements.orEmpty().mapIndexed { optionIndex, optionElement ->
             val option = optionElement as? JsonObject
-                ?: throw IllegalArgumentException("问题 $id 的 options[$optionIndex] 必须是对象")
+                ?: throw IllegalArgumentException("Question $id options[$optionIndex] must be an object")
             val label = option.stringOrNull("label")?.trim().orEmpty()
             if (label.isEmpty()) {
-                throw IllegalArgumentException("问题 $id 的 options[$optionIndex].label 不能为空")
+                throw IllegalArgumentException("Question $id options[$optionIndex].label must not be empty")
             }
             QuestionOption(
                 label = label,

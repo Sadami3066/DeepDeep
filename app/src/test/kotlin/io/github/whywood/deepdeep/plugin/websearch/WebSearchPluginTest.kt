@@ -119,14 +119,14 @@ class WebSearchPluginTest {
         assertTrue(text.contains("https://example.com/b"))
         assertTrue(text.contains("Snippet A"))
         assertTrue(text.contains("2026-10-24T00:00:00Z"))
-        assertTrue(text.contains("外部网页内容"))
+        assertTrue(text.contains("External web content"))
     }
 
     @Test
     fun searchReportsNoResults() = runTest {
         val result = newPlugin().runTool("web_search", buildJsonObject { put("query", "nothing") })
         assertNull(result.isError)
-        assertTrue(result.text().contains("没有找到"))
+        assertTrue(result.text().contains("No results found"))
     }
 
     @Test
@@ -179,7 +179,7 @@ class WebSearchPluginTest {
         val text = result.text()
         assertTrue(text.contains("https://example.com/page"))
         assertTrue(text.contains("Body text."))
-        assertTrue(text.contains("外部网页内容"))
+        assertTrue(text.contains("External web content"))
         assertEquals("https://example.com/page" to 12_000, provider.lastFetch)
     }
 
@@ -212,7 +212,7 @@ class WebSearchPluginTest {
             buildJsonObject { put("url", "https://example.com/page") },
         )
         assertEquals(true, result.isError)
-        assertTrue(result.text().contains("抓取失败"))
+        assertTrue(result.text().contains("Fetch failed"))
     }
 
     @Test
@@ -221,7 +221,7 @@ class WebSearchPluginTest {
         assertTrue(plugin.status() is PluginStatus.NotReady)
         val result = plugin.runTool("web_search", buildJsonObject { put("query", "q") })
         assertEquals(true, result.isError)
-        assertTrue(result.text().contains("API Key"))
+        assertTrue(result.text().contains("API key"))
     }
 
 

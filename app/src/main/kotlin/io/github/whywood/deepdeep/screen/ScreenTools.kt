@@ -90,12 +90,12 @@ fun screenTools(
                 screenTool(JsonObject(emptyMap())) {
                     val target = args["target"]?.let {
                         val primitive = it as? JsonPrimitive
-                        require(primitive?.isString == true) { "target 必须是 virtual 或 main 字符串" }
+                        require(primitive?.isString == true) { "target must be a virtual or main string" }
                         primitive.content.trim().lowercase()
                     } ?: "virtual"
-                    require(target == "virtual" || target == "main") { "target 只支持 virtual 或 main" }
+                    require(target == "virtual" || target == "main") { "target must be virtual or main" }
                     val delegate = if (target == "main") mainTools?.get(virtualTool.name)
-                        ?: error("主屏工具尚未接入，未操作其他屏幕") else virtualTool
+                        ?: error("Main screen tools are not available; no other screen was operated") else virtualTool
                     val selected = if (virtualTool.name == "screen_status") mainTools?.get(virtualTool.name) ?: delegate else delegate
                     val result = coroutineScope {
                         val execution = async { selected.execute(id, JsonObject(args - "target"), signal, update) }
@@ -157,15 +157,15 @@ internal fun parseScreenTapSelector(args: JsonObject): GuiSelector {
     val y = args.intOrNull("y")
     val named = listOfNotNull(ref, text, desc, resourceId, className)
     if (x != null || y != null) {
-        if (x == null || y == null) throw IllegalArgumentException("坐标选择需要同时提供 x 和 y")
+        if (x == null || y == null) throw IllegalArgumentException("Point selection requires both x and y")
         if (named.isNotEmpty()) {
-            throw IllegalArgumentException("ref、text、desc、resourceId、class 与 x、y 不能同时使用")
+            throw IllegalArgumentException("ref, text, desc, resourceId and class cannot be combined with x and y")
         }
-        if (x < 0 || y < 0) throw IllegalArgumentException("坐标 x、y 不能为负数")
+        if (x < 0 || y < 0) throw IllegalArgumentException("Coordinates x and y must not be negative")
         return GuiSelector.Point(x, y)
     }
     if (named.size > 1) {
-        throw IllegalArgumentException("ref、text、desc、resourceId、class 只能提供一种")
+        throw IllegalArgumentException("Provide only one of ref, text, desc, resourceId or class")
     }
     return when {
         ref != null -> GuiSelector.Ref(ref)
@@ -173,7 +173,7 @@ internal fun parseScreenTapSelector(args: JsonObject): GuiSelector {
         desc != null -> GuiSelector.Desc(desc)
         resourceId != null -> GuiSelector.ResourceId(resourceId)
         className != null -> GuiSelector.ClassName(className)
-        else -> throw IllegalArgumentException("需要提供 ref、text、desc、resourceId、class 或 x、y 之一作为目标")
+        else -> throw IllegalArgumentException("Provide one of ref, text, desc, resourceId, class or x and y as the target")
     }
 }
 
@@ -191,7 +191,7 @@ internal fun parseScreenTextSelector(args: JsonObject): GuiSelector? {
     val ref = args.stringOrNull("ref")?.trim()?.takeIf { it.isNotEmpty() }
     val fieldText = args.stringOrNull("fieldText")?.trim()?.takeIf { it.isNotEmpty() }
     if (ref != null && fieldText != null) {
-        throw IllegalArgumentException("ref 与 fieldText 只能提供一种")
+        throw IllegalArgumentException("Provide only one of ref or fieldText")
     }
     return when {
         ref != null -> GuiSelector.Ref(ref)
@@ -206,38 +206,38 @@ internal fun parseScrollDirection(args: JsonObject): GuiScrollDirection =
         "down" -> GuiScrollDirection.DOWN
         "left" -> GuiScrollDirection.LEFT
         "right" -> GuiScrollDirection.RIGHT
-        else -> throw IllegalArgumentException("direction 只支持 up、down、left、right")
+        else -> throw IllegalArgumentException("Unsupported direction; available: up, down, left, right")
     }
 
 internal fun parseScreenKey(args: JsonObject): String {
     val name = args.stringOrNull("key")?.trim()?.lowercase().orEmpty()
-    if (name.isEmpty()) throw IllegalArgumentException("缺少参数 key")
+    if (name.isEmpty()) throw IllegalArgumentException("Missing required parameter: key")
     if (name !in MAIN_SCREEN_KEYS) {
-        throw IllegalArgumentException("不支持的 key：$name；可用：${MAIN_SCREEN_KEYS.joinToString(", ")}")
+        throw IllegalArgumentException("Unsupported key: $name; available: ${MAIN_SCREEN_KEYS.joinToString(", ")}")
     }
     return name
 }
 
 internal fun parseScreenLaunchPackage(args: JsonObject): String {
     val packageName = args.stringOrNull("packageName")?.trim().orEmpty()
-    if (packageName.isEmpty()) throw IllegalArgumentException("缺少参数 packageName")
+    if (packageName.isEmpty()) throw IllegalArgumentException("Missing required parameter: packageName")
     if (!PACKAGE_NAME.matches(packageName)) {
-        throw IllegalArgumentException("packageName 不是合法的 Android 包名：$packageName")
+        throw IllegalArgumentException("packageName is not a valid Android package name: $packageName")
     }
     return packageName
 }
 
 internal fun parseScreenTypeText(args: JsonObject): String {
     val text = args.stringOrNull("text")
-        ?: throw IllegalArgumentException("缺少参数 text")
-    if (text.isEmpty()) throw IllegalArgumentException("text 不能为空")
+        ?: throw IllegalArgumentException("Missing required parameter: text")
+    if (text.isEmpty()) throw IllegalArgumentException("text must not be empty")
     return text
 }
 
 internal fun tapDurationOf(args: JsonObject): Int {
     val duration = args.intOrNull("durationMs") ?: DEFAULT_TAP_MILLIS
     if (duration !in 0..MAX_TAP_MILLIS) {
-        throw IllegalArgumentException("durationMs 需要在 0..$MAX_TAP_MILLIS 之间")
+        throw IllegalArgumentException("durationMs must be in 0..$MAX_TAP_MILLIS")
     }
     return duration
 }
@@ -245,7 +245,7 @@ internal fun tapDurationOf(args: JsonObject): Int {
 internal fun swipeDurationOf(args: JsonObject): Long {
     val duration = args.longOrNull("durationMs") ?: DEFAULT_SWIPE_MILLIS.toLong()
     if (duration !in MIN_SWIPE_MILLIS..MAX_SWIPE_MILLIS) {
-        throw IllegalArgumentException("durationMs 需要在 $MIN_SWIPE_MILLIS..$MAX_SWIPE_MILLIS 之间")
+        throw IllegalArgumentException("durationMs must be in $MIN_SWIPE_MILLIS..$MAX_SWIPE_MILLIS")
     }
     return duration
 }
@@ -253,7 +253,7 @@ internal fun swipeDurationOf(args: JsonObject): Long {
 internal fun scrollAmountOf(args: JsonObject): Int {
     val amount = args.intOrNull("amount") ?: DEFAULT_SCROLL_AMOUNT
     if (amount !in 1..MAX_SCROLL_AMOUNT) {
-        throw IllegalArgumentException("amount 需要在 1..$MAX_SCROLL_AMOUNT 之间")
+        throw IllegalArgumentException("amount must be in 1..$MAX_SCROLL_AMOUNT")
     }
     return amount
 }
@@ -261,7 +261,7 @@ internal fun scrollAmountOf(args: JsonObject): Int {
 internal fun waitTimeoutOf(args: JsonObject): Long {
     val timeout = args.intOrNull("timeoutMs") ?: DEFAULT_WAIT_MILLIS
     if (timeout !in MIN_WAIT_MILLIS..MAX_WAIT_MILLIS) {
-        throw IllegalArgumentException("timeoutMs 需要在 $MIN_WAIT_MILLIS..$MAX_WAIT_MILLIS 之间")
+        throw IllegalArgumentException("timeoutMs must be in $MIN_WAIT_MILLIS..$MAX_WAIT_MILLIS")
     }
     return timeout.toLong()
 }
@@ -269,7 +269,7 @@ internal fun waitTimeoutOf(args: JsonObject): Long {
 internal fun observeLimitOf(args: JsonObject): Int? {
     val limit = args.intOrNull("limit") ?: return null
     if (limit !in 1..50) {
-        throw IllegalArgumentException("limit 需要在 1..50 之间")
+        throw IllegalArgumentException("limit must be in 1..50")
     }
     return limit
 }
@@ -278,10 +278,10 @@ internal fun observeLimitsOf(args: JsonObject): Pair<Int, Int> {
     val maxDepth = args.intOrNull("maxDepth") ?: SCREEN_DEFAULT_MAX_DEPTH
     val maxNodes = args.intOrNull("maxNodes") ?: GUI_MAX_NODES
     if (maxDepth !in 1..GUI_MAX_DEPTH) {
-        throw IllegalArgumentException("maxDepth 需要在 1..$GUI_MAX_DEPTH 之间")
+        throw IllegalArgumentException("maxDepth must be in 1..$GUI_MAX_DEPTH")
     }
     if (maxNodes !in 1..GUI_MAX_NODES) {
-        throw IllegalArgumentException("maxNodes 需要在 1..$GUI_MAX_NODES 之间")
+        throw IllegalArgumentException("maxNodes must be in 1..$GUI_MAX_NODES")
     }
     return maxDepth to maxNodes
 }
@@ -550,9 +550,9 @@ private fun screenshotTool(
         signal?.throwIfAborted()
         screenTool(args) {
             val capture = controller.screenshot()
-            if (capture.png.isEmpty()) throw IllegalStateException("截图内容为空，请稍后重试")
+            if (capture.png.isEmpty()) throw IllegalStateException("Screenshot content is empty; retry later")
             if (!screenshotDir.isDirectory && !screenshotDir.mkdirs()) {
-                throw IllegalStateException("截图目录不可写：${screenshotDir.absolutePath}")
+                throw IllegalStateException("Screenshot directory is not writable: ${screenshotDir.absolutePath}")
             }
             val fileName = "screen-${java.util.UUID.randomUUID()}.png"
             val file = File(screenshotDir, fileName)
@@ -596,7 +596,7 @@ private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
             val y1 = args.requiredInt("y1")
             val x2 = args.requiredInt("x2")
             val y2 = args.requiredInt("y2")
-            if (listOf(x1, y1, x2, y2).any { it < 0 }) throw IllegalArgumentException("坐标不能为负数")
+            if (listOf(x1, y1, x2, y2).any { it < 0 }) throw IllegalArgumentException("Coordinates must not be negative")
             val durationMs = swipeDurationOf(args)
             textResult(controller.swipe(x1, y1, x2, y2, durationMs))
         }
@@ -636,7 +636,7 @@ private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
                     put("verified", outcome.verified)
                     put("text", outcome.text)
                     if (!outcome.verified) {
-                        put("hint", "未验证写入结果：请重新 screen_observe 确认输入框内容")
+                        put("hint", "Write not verified: call screen_observe again to check the field content")
                     }
                 }.toString(),
             )
@@ -670,7 +670,7 @@ private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
             val text = args.stringOrNull("forText")?.trim()?.takeIf { it.isNotEmpty() }
             val textGone = args.stringOrNull("forTextGone")?.trim()?.takeIf { it.isNotEmpty() }
             if (packageName == null && text == null && textGone == null) {
-                throw IllegalArgumentException("需要提供 forPackage、forText 或 forTextGone 至少一个条件")
+                throw IllegalArgumentException("Provide at least one of forPackage, forText or forTextGone")
             }
             val timeoutMs = waitTimeoutOf(args)
             val startedAt = System.currentTimeMillis()
@@ -687,7 +687,7 @@ private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
                     }
                     if (!outcome.matched) {
                         put("reason", "timeout")
-                        put("hint", "等待超时：界面没有出现预期变化，请用 screen_observe 判断当前状态后再决定下一步")
+                        put("hint", "Wait timed out: the expected change did not appear; use screen_observe to check the current state before deciding the next step")
                     }
                 }.toString(),
             )
@@ -734,7 +734,7 @@ private fun launchTool(controller: ScreenController): CodingTool = CodingTool(
                 put("package", report.packageName)
                 put("message", report.message)
                 put("onExpectedScreen", report.landedOnExpectedDisplay)
-                if (!report.ok || !report.landedOnExpectedDisplay) put("hint", "请检查 screen_status（使用相同 target）和实际页面；只有 target=virtual 离线时才调用 virtual_screen(action=start)，再决定是否重新启动应用")
+                if (!report.ok || !report.landedOnExpectedDisplay) put("hint", "Check screen_status with the same target and the actual screen; call virtual_screen(action=start) only when target=virtual is offline, then decide whether to relaunch the app")
             }.toString(), isError = !report.ok || !report.landedOnExpectedDisplay)
         }
     },
@@ -765,12 +765,12 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
     when (accessibilityState) {
         "disconnected" -> put(
             "hint",
-            "无障碍开关已开启但服务未连接：先稍等重试，仍未连接时请到系统设置关闭再开启；虚拟屏在线时坐标操作与截图仍可用",
+            "Accessibility is enabled but the service is not connected: wait briefly and retry, or toggle it off and on in system settings if it stays disconnected. Virtual screen coordinate gestures and screenshots still work while it is online",
         )
 
         "disabled" -> put(
             "hint",
-            "无障碍服务未开启：请到权限设置开启 DeepDeep 无障碍；开启后可读取节点与按节点操作",
+            "Accessibility service is off: enable DeepDeep accessibility in settings; once enabled, nodes can be read and operated by ref",
         )
     }
     val virtualInfo = status.virtual
@@ -803,7 +803,7 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
                 putJsonObject("failure") {
                     put("category", virtualFailureJsonCategory(failure.category))
                     put("message", failure.message)
-                    put("hint", if (status.reconnecting) "正在重新连接，请稍后检查 screen_status" else virtualFailureHint(failure.category))
+                    put("hint", if (status.reconnecting) "Reconnecting; check screen_status shortly" else virtualFailureHint(failure.category))
                 }
             }
         }
@@ -833,17 +833,17 @@ internal fun observeJson(
     put("nodes", buildJsonArray { shown.forEach { node -> add(GuiNodeTree.nodeJson(node)) } })
     val hints = buildList {
         if (observed.snapshot.truncated) {
-            add("扫描未穷尽，不能据此断言目标不存在；可提高 maxDepth/maxNodes，过滤条件只筛选已扫描节点")
+            add("Scan was not exhaustive, so absence is not proof; raise maxDepth/maxNodes, and filters only apply to scanned nodes")
         }
-        if (shown.size < total.size) add("返回数量达到 limit；可提高或省略 limit")
+        if (shown.size < total.size) add("Result count reached limit; raise or omit limit")
         if (filters.isNotEmpty() && total.isEmpty()) {
             add(
-                "未命中：已检索 ${observed.snapshot.scanned} 个节点；text 只匹配可见文本、desc 只匹配内容描述，" +
-                    "可分别尝试或改用 resourceId/class 后重试",
+                "No match: scanned ${observed.snapshot.scanned} nodes; text matches visible text only and desc matches " +
+                    "content descriptions only, so try them separately or use resourceId/class and retry",
             )
         }
     }
-    if (hints.isNotEmpty()) put("hint", hints.joinToString("；"))
+    if (hints.isNotEmpty()) put("hint", hints.joinToString("; "))
 }
 
 internal fun virtualFailureJsonCategory(category: String): String = when (category) {
@@ -853,9 +853,9 @@ internal fun virtualFailureJsonCategory(category: String): String = when (catego
 }
 
 internal fun virtualFailureHint(category: String): String = when (category) {
-    VIRTUAL_FAILURE_TRANSPORT -> "连接中断后未能自动恢复：请先 virtual_screen(action=start)，再 screen_launch 并 screen_observe 确认当前页面"
-    VIRTUAL_FAILURE_BACKEND -> "无线调试（ADB）或 Root 当前不可用：请在权限设置里检查后重试"
-    else -> "虚拟屏启动失败：请稍后重试"
+    VIRTUAL_FAILURE_TRANSPORT -> "Connection lost and did not recover automatically; call virtual_screen(action=start), then screen_launch and screen_observe to confirm the current screen"
+    VIRTUAL_FAILURE_BACKEND -> "Wireless debugging (ADB) or Root is currently unavailable; check privileges in settings and retry"
+    else -> "Virtual screen failed to start; retry later"
 }
 
 private suspend fun screenTool(args: JsonObject, block: suspend () -> AgentToolResult): AgentToolResult = try {
@@ -865,7 +865,7 @@ private suspend fun screenTool(args: JsonObject, block: suspend () -> AgentToolR
 } catch (error: CancellationException) {
     throw error
 } catch (error: Exception) {
-    textResult(error.message ?: "屏幕操作失败", isError = true)
+    textResult(error.message ?: "Screen operation failed", isError = true)
 }
 
 private fun JsonObject.stringOrNull(name: String): String? = (this[name] as? JsonPrimitive)?.contentOrNull
@@ -878,7 +878,7 @@ private fun JsonObject.longOrNull(name: String): Long? =
 
 private fun JsonObject.requiredString(name: String): String =
     stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw IllegalArgumentException("缺少参数 $name")
+        ?: throw IllegalArgumentException("Missing required parameter: $name")
 
 private fun JsonObject.requiredInt(name: String): Int =
-    intOrNull(name) ?: throw IllegalArgumentException("缺少参数 $name")
+    intOrNull(name) ?: throw IllegalArgumentException("Missing or invalid required parameter: $name")

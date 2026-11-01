@@ -35,7 +35,7 @@ class GuiAccessibilityActions(
     override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds = requireNode(displayId, selector).bounds
 
     override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
-        require(displayId >= 0) { "屏幕编号不能为负数" }
+        require(displayId >= 0) { "Display id must not be negative" }
         snapshots.remove(displayId)
         val result = snapshotDisplayWindow(requireService(), displayId, maxDepth, maxNodes)
         return snapshots.store(displayId, result)
@@ -48,9 +48,9 @@ class GuiAccessibilityActions(
         maxNodes: Int,
     ): GuiSnapshot {
         val window = selectDisplayWindow(service, displayId)
-            ?: throw IllegalStateException("无法读取所选屏幕界面：请在该屏幕打开目标应用后重试")
+            ?: throw IllegalStateException("Cannot read the selected screen window; open the target app on that screen and retry")
         val root = window.root
-            ?: throw IllegalStateException("无法读取所选屏幕内容：请确认无障碍服务可以读取该窗口")
+            ?: throw IllegalStateException("Cannot read the selected screen content; check that accessibility can read that window")
         val generation = java.util.UUID.randomUUID().toString()
         val nodes = ArrayList<GuiSnapshotNode>()
         var truncated = false
@@ -96,7 +96,7 @@ class GuiAccessibilityActions(
         }
         val node = requireNode(displayId, selector)
         if (node.bounds.width <= 0 || node.bounds.height <= 0) {
-            throw IllegalStateException("目标节点当前不可见，请重新 screen_observe")
+            throw IllegalStateException("Target node is not visible; call screen_observe again")
         }
         val info = node.token as? AccessibilityNodeInfo
         if (durationMs >= LONG_PRESS_MILLIS) {
@@ -112,20 +112,20 @@ class GuiAccessibilityActions(
     override suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult {
         requireService()
         if (selector is GuiSelector.Point) {
-            throw IllegalArgumentException("输入文本需要 ref 或 text 选择器，不能使用坐标")
+            throw IllegalArgumentException("Text input needs a ref or text selector, not coordinates")
         }
         val info = requireNode(displayId, selector).token as? AccessibilityNodeInfo
-            ?: throw IllegalStateException("无法编辑该节点，请重新 screen_observe")
-        if (!info.refresh()) throw IllegalArgumentException("输入框已失效，请重新 screen_observe")
-        if (!info.isEditable) throw IllegalArgumentException("目标节点不是输入框，请选择可编辑的节点")
+            ?: throw IllegalStateException("Cannot edit that node; call screen_observe again")
+        if (!info.refresh()) throw IllegalArgumentException("The field is stale; call screen_observe again")
+        if (!info.isEditable) throw IllegalArgumentException("Target node is not a text field; choose an editable node")
         info.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
         val arguments = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
         if (!info.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)) {
-            throw IllegalStateException("写入文本失败：输入框可能不接受程序输入")
+            throw IllegalStateException("Failed to write text: the field may not accept programmatic input")
         }
-        if (!info.refresh()) throw IllegalStateException("写入后无法回读输入框，请重新 screen_observe 确认")
+        if (!info.refresh()) throw IllegalStateException("Cannot read the field back after writing; call screen_observe again to confirm")
         val actual = info.text?.toString().orEmpty()
         return GuiTextResult(actual, actual == text)
     }
@@ -140,7 +140,7 @@ class GuiAccessibilityActions(
         val service = requireService()
         val deadline = System.currentTimeMillis() + timeoutMs
         while (true) {
-            require(displayId >= 0) { "屏幕编号不能为负数" }
+            require(displayId >= 0) { "Display id must not be negative" }
             val window = selectDisplayWindow(service, displayId)
             val root = window?.root
             val currentPackage = root?.packageName?.toString()?.takeIf { it.isNotBlank() }
@@ -160,15 +160,15 @@ class GuiAccessibilityActions(
 
     private fun requireService(): GuiAccessibilityService =
         serviceProvider() ?: throw GuiUnavailableException(
-            "无障碍服务未连接：请到系统设置的无障碍中启用 DeepDeep；如果开关已打开，请关闭再重新打开（服务被系统结束后不会自动重连，也可重启手机）",
+            "Accessibility service is not connected: enable DeepDeep in system accessibility settings; if it is already on, turn it off and on again (the service does not reconnect after being stopped by the system; a reboot also works)",
         )
 
     private fun requireNode(displayId: Int, selector: GuiSelector): GuiSnapshotNode {
         val cached = snapshots.find(displayId, selector)
-        val node = cached.token as? AccessibilityNodeInfo ?: throw IllegalStateException("节点已失效，请重新 screen_observe")
+        val node = cached.token as? AccessibilityNodeInfo ?: throw IllegalStateException("Node is stale; call screen_observe again")
         if (!node.refresh() || selectDisplayWindow(requireService(), displayId)?.id != node.windowId) {
             snapshots.remove(displayId)
-            throw IllegalStateException("所选屏幕窗口已变化，请重新 screen_observe")
+            throw IllegalStateException("The selected screen window changed; call screen_observe again")
         }
         val rect = Rect()
         node.getBoundsInScreen(rect)
@@ -273,9 +273,9 @@ class GuiAccessibilityActions(
     ) {
         val builder = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0L, durationMillis))
-        require(displayId >= 0) { "屏幕编号不能为负数" }
+        require(displayId >= 0) { "Display id must not be negative" }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) builder.setDisplayId(displayId)
-        else check(displayId == 0) { "虚拟屏手势需要 Android 11 及以上系统" }
+        else check(displayId == 0) { "Virtual screen gestures require Android 11 or later" }
         val gesture = builder.build()
         val completed = withTimeoutOrNull(durationMillis + 5000L) {
             suspendCancellableCoroutine<Unit> { continuation ->
@@ -284,15 +284,15 @@ class GuiAccessibilityActions(
                         if (continuation.isActive) continuation.resume(Unit)
                     }
                     override fun onCancelled(gestureDescription: GestureDescription?) {
-                        if (continuation.isActive) continuation.resumeWithException(IllegalStateException("手势被系统取消；请观察当前页面后再决定下一步"))
+                        if (continuation.isActive) continuation.resumeWithException(IllegalStateException("Gesture was cancelled by the system; observe the current screen before deciding the next step"))
                     }
                 }
                 if (!service.dispatchGesture(gesture, callback, null) && continuation.isActive) {
-                    continuation.resumeWithException(IllegalStateException("手势派发失败：无障碍服务可能已断开"))
+                    continuation.resumeWithException(IllegalStateException("Failed to dispatch gesture: accessibility may be disconnected"))
                 }
             }
         }
-        check(completed != null) { "未确认手势完成，请先观察当前屏幕；不要自动重试" }
+        check(completed != null) { "Gesture completion was not confirmed; observe the current screen and do not retry automatically" }
         delay(GESTURE_SETTLE_MILLIS)
     }
 
@@ -304,15 +304,15 @@ class GuiAccessibilityActions(
     override suspend fun keyMain(name: String) {
         val service = requireService()
         if (name == "enter" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val root = selectDisplayWindow(service, 0)?.root ?: error("主屏没有可读窗口")
-            val field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: error("主屏没有获得焦点的输入框")
-            check(field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)) { "输入框不支持确认，请按节点点击确认按钮" }
+            val root = selectDisplayWindow(service, 0)?.root ?: error("Main screen has no readable window")
+            val field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: error("Main screen has no focused input field")
+            check(field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)) { "The field does not support enter; tap the confirm button node instead" }
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val displays = service.windowsOnAllDisplays
             check((0 until displays.size()).none { index -> displays.keyAt(index) != 0 && displays.valueAt(index).any { it.isFocused } }) {
-                "另一块屏幕拥有焦点，无法安全执行全局按键；请启用 ADB 或 Root 后重试"
+                "Another screen has focus, so a global key cannot run safely; enable ADB or Root and retry"
             }
         }
         val action = when (name) {
@@ -320,15 +320,15 @@ class GuiAccessibilityActions(
             "home" -> AccessibilityService.GLOBAL_ACTION_HOME
             "recents" -> AccessibilityService.GLOBAL_ACTION_RECENTS
             "notifications" -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
-            else -> error("此主屏按键需要 ADB 或 Root；文本编辑可改用 screen_type 的输入框 ref")
+            else -> error("This main screen key needs ADB or Root; for text editing use a field ref with screen_type")
         }
-        check(service.performGlobalAction(action)) { "系统拒绝了主屏按键，请观察当前状态后再决定下一步" }
+        check(service.performGlobalAction(action)) { "The system rejected the main screen key; observe the current state before deciding the next step" }
     }
 
     override suspend fun screenshotMain(): GuiScreenshot {
         val service = requireService()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) error("主屏截图需要 Android 11 或以上系统")
-        check((service.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.isKeyguardLocked != true) { "请先解锁屏幕后重试" }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) error("Main screen screenshots require Android 11 or later")
+        check((service.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.isKeyguardLocked != true) { "Unlock the screen and retry" }
         return withTimeoutOrNull(10000L) {
             suspendCancellableCoroutine { continuation ->
                 service.takeScreenshot(0, Dispatchers.IO.asExecutor(), object : AccessibilityService.TakeScreenshotCallback {
@@ -336,10 +336,10 @@ class GuiAccessibilityActions(
                         val buffer = result.hardwareBuffer
                         try {
                             if (!continuation.isActive) return
-                            val bitmap = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace) ?: error("无法解析截图")
+                            val bitmap = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace) ?: error("Cannot decode the screenshot")
                             try {
                                 val output = ByteArrayOutputStream()
-                                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) { "截图编码失败" }
+                                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) { "Screenshot encoding failed" }
                                 val capture = GuiScreenshot(output.toByteArray(), bitmap.width, bitmap.height)
                                 continuation.resume(capture)
                             } finally { bitmap.recycle() }
@@ -349,15 +349,15 @@ class GuiAccessibilityActions(
                     }
                     override fun onFailure(errorCode: Int) {
                         val message = when (errorCode) {
-                            AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW -> "当前界面受保护，不能截图，请用户自行查看"
-                            AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT -> "截图过于频繁，请稍后重试"
-                            else -> "主屏截图失败（$errorCode），请检查无障碍连接与当前屏幕状态"
+                            AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW -> "The current screen is protected and cannot be captured; ask the user to look at it directly"
+                            AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT -> "Screenshots are too frequent; retry later"
+                            else -> "Main screen screenshot failed ($errorCode); check the accessibility connection and current screen state"
                         }
                         if (continuation.isActive) continuation.resumeWithException(IllegalStateException(message))
                     }
                 })
             }
-        } ?: error("主屏截图超时，请检查无障碍连接后重新观察")
+        } ?: error("Main screen screenshot timed out; check the accessibility connection and observe again")
     }
 
     private companion object {
@@ -421,4 +421,4 @@ internal object GuiWindowSelection {
 }
 
 internal fun missingSnapshotMessage(displayId: Int): String =
-    "屏幕 $displayId 的快照已失效，请对同一 target 调用 screen_observe 后再使用 ref 或文本选择器"
+    "The snapshot for display $displayId is stale; call screen_observe for the same target before using a ref or text selector"

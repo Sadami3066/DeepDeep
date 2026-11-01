@@ -79,6 +79,7 @@ sealed interface FloatingFeedEvent {
         val status: RunStatus,
         val text: String,
         val error: String?,
+        val whileForeground: Boolean = false,
     ) : FloatingFeedEvent
 
     data class DismissCard(val key: String) : FloatingFeedEvent
@@ -133,9 +134,13 @@ fun reduceFloatingFeed(
         )
         val completed = (listOf(completion) + state.completed.filterNot { it.sessionId == event.sessionId })
             .take(FLOATING_COMPLETED_LIMIT)
+        val dismissed = (liveDismissedKeys(state.dismissedCardKeys, completed).toList() +
+            listOfNotNull(completion.key.takeIf { event.whileForeground }))
+            .takeLast(FLOATING_DISMISSED_LIMIT)
+            .toCollection(LinkedHashSet())
         state.copy(
             completed = completed,
-            dismissedCardKeys = liveDismissedKeys(state.dismissedCardKeys, completed),
+            dismissedCardKeys = dismissed,
             stagedDeliveries = state.stagedDeliveries - event.sessionId,
             lastEventAt = now,
         )

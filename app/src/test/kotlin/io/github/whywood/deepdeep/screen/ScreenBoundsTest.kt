@@ -111,17 +111,17 @@ class ScreenBoundsTest {
         listOf(1080 to 0, -1 to 0, 0 to 2400, 0 to -1).forEach { (x, y) ->
             val error = invalidTapCoordinate(x, y, display)
             assertNotNull(error)
-            assertTrue(error.orEmpty().contains("1080×2400"))
-            assertTrue(error.orEmpty().contains("点击坐标超出屏幕范围"))
+            assertTrue(error.orEmpty().contains("1080x2400"))
+            assertTrue(error.orEmpty().contains("Tap coordinate is outside the screen"))
         }
     }
 
     @Test
     fun swipeCoordinateValidationRejectsOutOfRangeAndZeroLength() {
         assertNull(invalidSwipeCoordinates(0, 0, 1080 - 1, 2400 - 1, display))
-        assertEquals("滑动坐标超出屏幕范围", invalidSwipeCoordinates(0, 0, 1080, 10, display)?.substringBefore("："))
-        assertTrue(invalidSwipeCoordinates(0, 0, 1080, 10, display).orEmpty().contains("1080×2400"))
-        assertTrue(invalidSwipeCoordinates(10, 10, 10, 10, display).orEmpty().contains("起点与终点相同"))
+        assertEquals("Swipe coordinates are outside the screen", invalidSwipeCoordinates(0, 0, 1080, 10, display)?.substringBefore(":"))
+        assertTrue(invalidSwipeCoordinates(0, 0, 1080, 10, display).orEmpty().contains("1080x2400"))
+        assertTrue(invalidSwipeCoordinates(10, 10, 10, 10, display).orEmpty().contains("start and end are the same"))
     }
 
     @Test

@@ -173,7 +173,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val id = json.intField("id") ?: 0
         val command = json.stringField("cmd")
         if (command == null) {
-            respondError(id, "缺少 cmd")
+            respondError(id, "Missing cmd")
             return true
         }
         try {
@@ -191,7 +191,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 VirtualScreenCommands.KEY -> handleKey(json, id)
                 VirtualScreenCommands.TEXT -> handleText(json, id)
                 VirtualScreenCommands.SCREENSHOT -> handleScreenshot(id)
-                else -> respondError(id, "未知命令：$command")
+                else -> respondError(id, "Unknown command: $command")
             }
         } catch (t: Throwable) {
             Log.w(TAG, "$command 执行失败", t)
@@ -201,7 +201,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     }
 
     private fun handleStart(id: Int) {
-        if (session != null) throw IllegalStateException("虚拟屏已启动")
+        if (session != null) throw IllegalStateException("Virtual screen is already running")
         val screen = realScreenMetrics()
         val size = portraitScreenSize(screen.widthPixels, screen.heightPixels)
         val dpi = screen.densityDpi
@@ -229,9 +229,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     }
 
     private fun handleLaunch(json: JsonObject, id: Int) {
-        val display = session ?: throw IllegalStateException("虚拟屏未启动")
+        val display = session ?: throw IllegalStateException("Virtual screen is not running")
         val packageName = json.stringField("packageName")?.trim().orEmpty()
-        if (packageName.isEmpty()) throw IllegalArgumentException("缺少 packageName")
+        if (packageName.isEmpty()) throw IllegalArgumentException("Missing packageName")
         val conflict = occupancyConflict(packageName, display.displayId)
         if (conflict != null) throw IllegalStateException(conflict)
         launchOnDisplay(packageName, display.displayId)
@@ -250,11 +250,11 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     }
 
     private fun handleTap(json: JsonObject, id: Int) {
-        val display = session ?: throw IllegalStateException("虚拟屏未启动")
+        val display = session ?: throw IllegalStateException("Virtual screen is not running")
         val displayId = display.displayId
-        val x = json.intField("x") ?: throw IllegalArgumentException("缺少 x")
-        val y = json.intField("y") ?: throw IllegalArgumentException("缺少 y")
-        outOfBoundsReason("点击", x, y, display.width, display.height)?.let {
+        val x = json.intField("x") ?: throw IllegalArgumentException("Missing x")
+        val y = json.intField("y") ?: throw IllegalArgumentException("Missing y")
+        outOfBoundsReason("tap", x, y, display.width, display.height)?.let {
             throw IllegalArgumentException(it)
         }
         val duration = (json.longField("durationMs") ?: DEFAULT_TAP_MILLIS).coerceIn(0L, MAX_TAP_MILLIS)
@@ -262,7 +262,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
         if (!inject(down, displayId)) {
             down.recycle()
-            throw IllegalStateException("按下事件注入失败：($x, $y) display=$displayId")
+            throw IllegalStateException("Failed to inject press event: ($x, $y) display=$displayId")
         }
         down.recycle()
         if (duration > 0) Thread.sleep(duration)
@@ -270,23 +270,23 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
         if (!inject(up, displayId)) {
             up.recycle()
-            throw IllegalStateException("抬起事件注入失败：($x, $y) display=$displayId")
+            throw IllegalStateException("Failed to inject release event: ($x, $y) display=$displayId")
         }
         up.recycle()
-        respond(id) { put("message", "已点击 ($x, $y)") }
+        respond(id) { put("message", "Tapped ($x, $y)") }
     }
 
     private fun handleSwipe(json: JsonObject, id: Int) {
-        val display = session ?: throw IllegalStateException("虚拟屏未启动")
+        val display = session ?: throw IllegalStateException("Virtual screen is not running")
         val displayId = display.displayId
-        val x1 = json.intField("x1") ?: throw IllegalArgumentException("缺少 x1")
-        val y1 = json.intField("y1") ?: throw IllegalArgumentException("缺少 y1")
-        val x2 = json.intField("x2") ?: throw IllegalArgumentException("缺少 x2")
-        val y2 = json.intField("y2") ?: throw IllegalArgumentException("缺少 y2")
-        outOfBoundsReason("滑动起点", x1, y1, display.width, display.height)?.let {
+        val x1 = json.intField("x1") ?: throw IllegalArgumentException("Missing x1")
+        val y1 = json.intField("y1") ?: throw IllegalArgumentException("Missing y1")
+        val x2 = json.intField("x2") ?: throw IllegalArgumentException("Missing x2")
+        val y2 = json.intField("y2") ?: throw IllegalArgumentException("Missing y2")
+        outOfBoundsReason("swipe start", x1, y1, display.width, display.height)?.let {
             throw IllegalArgumentException(it)
         }
-        outOfBoundsReason("滑动终点", x2, y2, display.width, display.height)?.let {
+        outOfBoundsReason("swipe end", x2, y2, display.width, display.height)?.let {
             throw IllegalArgumentException(it)
         }
         val duration = (json.longField("durationMs") ?: DEFAULT_SWIPE_MILLIS).coerceIn(50L, MAX_SWIPE_MILLIS)
@@ -296,7 +296,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat(), 0)
         if (!inject(down, displayId)) {
             down.recycle()
-            throw IllegalStateException("按下事件注入失败：($x1, $y1) display=$displayId")
+            throw IllegalStateException("Failed to inject press event: ($x1, $y1) display=$displayId")
         }
         down.recycle()
         for (index in 1..steps) {
@@ -307,51 +307,51 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             val move = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0)
             val injected = inject(move, displayId)
             move.recycle()
-            if (!injected) throw IllegalStateException("滑动事件注入失败：(${x.toInt()}, ${y.toInt()}) display=$displayId")
+            if (!injected) throw IllegalStateException("Failed to inject move event: (${x.toInt()}, ${y.toInt()}) display=$displayId")
             Thread.sleep(stepDelay)
         }
         val upTime = SystemClock.uptimeMillis()
         val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat(), 0)
         if (!inject(up, displayId)) {
             up.recycle()
-            throw IllegalStateException("抬起事件注入失败：($x2, $y2) display=$displayId")
+            throw IllegalStateException("Failed to inject release event: ($x2, $y2) display=$displayId")
         }
         up.recycle()
-        respond(id) { put("message", "已滑动 ($x1, $y1) → ($x2, $y2)") }
+        respond(id) { put("message", "Swiped ($x1, $y1) -> ($x2, $y2)") }
     }
 
     private fun handleKey(json: JsonObject, id: Int) {
         val displayId = requireDisplayId()
         val name = json.stringField("key")?.trim()?.lowercase()
-            ?: throw IllegalArgumentException("缺少 key")
+            ?: throw IllegalArgumentException("Missing key")
         val keyCode = KEY_CODES[name]
-            ?: throw IllegalArgumentException("不支持的按键：$name；可用：${KEY_CODES.keys.joinToString(", ")}")
+            ?: throw IllegalArgumentException("Unsupported key: $name; available: ${KEY_CODES.keys.joinToString(", ")}")
         injectKey(displayId, keyCode)
-        respond(id) { put("message", "已按键 $name") }
+        respond(id) { put("message", "Sent key $name") }
     }
 
     private fun handleText(json: JsonObject, id: Int) {
         val displayId = requireDisplayId()
-        val value = json.stringField("text") ?: throw IllegalArgumentException("缺少 text")
-        if (value.isEmpty()) throw IllegalArgumentException("text 不能为空")
+        val value = json.stringField("text") ?: throw IllegalArgumentException("Missing text")
+        if (value.isEmpty()) throw IllegalArgumentException("text must not be empty")
         val map = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
         val events = map.getEvents(value.toCharArray())
-        if (events.isNullOrEmpty()) throw IllegalStateException("无法输入该文本，只支持键盘可映射的 ASCII 字符")
+        if (events.isNullOrEmpty()) throw IllegalStateException("Cannot type this text; only keyboard-mappable ASCII characters are supported")
         var injected = 0
         for (event in events) {
             if (event.keyCode == 0) continue
-            if (!inject(event, displayId)) throw IllegalStateException("文本事件注入失败")
+            if (!inject(event, displayId)) throw IllegalStateException("Failed to inject text event")
             injected++
         }
-        if (injected == 0) throw IllegalStateException("无法输入该文本，只支持键盘可映射的 ASCII 字符")
-        respond(id) { put("message", "已输入 ${injected / 2} 个字符") }
+        if (injected == 0) throw IllegalStateException("Cannot type this text; only keyboard-mappable ASCII characters are supported")
+        respond(id) { put("message", "Typed ${injected / 2} characters") }
     }
 
     private fun handleScreenshot(id: Int) {
-        val display = session ?: throw IllegalStateException("虚拟屏未启动")
-        val png = display.screenshotPng() ?: throw IllegalStateException("暂无画面，请稍后再试")
+        val display = session ?: throw IllegalStateException("Virtual screen is not running")
+        val png = display.screenshotPng() ?: throw IllegalStateException("No frame available yet; try again later")
         if (screenshotFrameExceedsLimit(png.size)) {
-            throw IllegalStateException("截图过大：${png.size} 字节，超过帧上限 ${VirtualScreenProtocol.MAX_FRAME_BYTES}")
+            throw IllegalStateException("Screenshot too large: ${png.size} bytes exceeds the frame limit of ${VirtualScreenProtocol.MAX_FRAME_BYTES}")
         }
         respond(id) {
             put("kind", "screenshot")
@@ -362,7 +362,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         writeFrame(VirtualScreenProtocol.screenshot(png))
     }
 
-    private fun requireDisplayId(): Int = session?.displayId ?: throw IllegalStateException("虚拟屏未启动")
+    private fun requireDisplayId(): Int = session?.displayId ?: throw IllegalStateException("Virtual screen is not running")
 
     private fun taskDisplayOf(packageName: String): Int {
         repeat(TASK_DISPLAY_RETRIES) { attempt ->
@@ -387,17 +387,17 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun occupancyConflict(packageName: String, displayId: Int): String? {
         val tasks = runCatching { tasksOf(packageName) }.getOrElse {
             Log.w(TAG, "读取任务列表失败", it)
-            throw IllegalStateException("无法确认应用当前所在屏幕，拒绝启动以避免移动主屏应用", it)
+            throw IllegalStateException("Cannot confirm which screen the app is on; refusing to launch to avoid moving a main-screen app", it)
         }
         for (task in tasks) {
             if (task.displayId == displayId) continue
             if (task.displayId == Display.DEFAULT_DISPLAY) {
                 if (task.visible) {
-                    return "$packageName 正在主屏使用，未在虚拟屏启动；请先离开该应用"
+                    return "$packageName is in use on the main screen; not launched on the virtual screen. Leave that app first"
                 }
                 continue
             }
-            return "$packageName 已在另一块屏幕上运行，未在虚拟屏启动"
+            return "$packageName is already running on another screen; not launched on the virtual screen"
         }
         return null
     }
@@ -410,7 +410,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 .invoke(service, MAX_TASKS, false, false, Display.INVALID_DISPLAY) as List<*>
             methods.any { it.parameterTypes.size == 3 } -> methods.first { it.parameterTypes.size == 3 }
                 .invoke(service, MAX_TASKS, false, false) as List<*>
-            else -> throw IllegalStateException("系统未提供可用的任务查询接口")
+            else -> throw IllegalStateException("The system provides no usable task query interface")
         }
         val taskClass = Class.forName("android.app.TaskInfo")
         val displayField = taskClass.getField("displayId")
@@ -434,7 +434,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     private fun launchOnDisplay(packageName: String, displayId: Int) {
         val intent = context().packageManager.getLaunchIntentForPackage(packageName)
-            ?: throw IllegalStateException("找不到应用：$packageName")
+            ?: throw IllegalStateException("App not found: $packageName")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
         val started = runCatching { startActivityAsUser(intent, options) }.getOrElse {
@@ -443,7 +443,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         }
         if (started) return
         val component = intent.component
-            ?: throw IllegalStateException("无法解析启动入口：$packageName")
+            ?: throw IllegalStateException("Cannot resolve a launch entry for: $packageName")
         val code = exec(
             "am",
             "start",
@@ -452,7 +452,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             "-n",
             component.flattenToShortString(),
         )
-        if (code != 0) throw IllegalStateException("启动失败（am 退出码 $code）：$packageName")
+        if (code != 0) throw IllegalStateException("Launch failed (am exit code $code): $packageName")
     }
 
     private fun startActivityAsUser(intent: Intent, options: Bundle): Boolean {
@@ -481,9 +481,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun injectKey(displayId: Int, keyCode: Int) {
         val downTime = SystemClock.uptimeMillis()
         val down = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
-        if (!inject(down, displayId)) throw IllegalStateException("按键按下事件注入失败")
+        if (!inject(down, displayId)) throw IllegalStateException("Failed to inject key-down event")
         val up = KeyEvent(downTime, downTime + 40, KeyEvent.ACTION_UP, keyCode, 0)
-        if (!inject(up, displayId)) throw IllegalStateException("按键抬起事件注入失败")
+        if (!inject(up, displayId)) throw IllegalStateException("Failed to inject key-up event")
     }
 
     private fun inject(event: InputEvent, displayId: Int): Boolean {
@@ -969,14 +969,14 @@ internal fun portraitScreenSize(width: Int, height: Int): PortraitScreenSize =
 
 internal fun virtualLaunchMessage(packageName: String, displayId: Int, taskDisplayId: Int): String =
     if (taskDisplayId == displayId) {
-        "已在虚拟屏启动 $packageName"
+        "Launched $packageName on the virtual screen"
     } else {
-        "已启动 $packageName，但任务没有落在虚拟屏，请重新 screen_observe 确认真实页面"
+        "Launched $packageName but the task did not land on the virtual screen; run screen_observe again to confirm the actual page"
     }
 
 internal fun outOfBoundsReason(label: String, x: Int, y: Int, width: Int, height: Int): String? =
     if (x >= 0 && y >= 0 && x < width && y < height) {
         null
     } else {
-        "${label}坐标超出虚拟屏范围：($x, $y)，虚拟屏 ${width}×${height}"
+        "$label coordinates out of virtual screen bounds: ($x, $y), virtual screen ${width}x${height}"
     }

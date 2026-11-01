@@ -72,7 +72,7 @@ class ArrangeCalendarPermissionException(
 ) : SecurityException(message)
 
 class ArrangeNoWritableCalendarException(
-    message: String = "没有可写的系统日历，请先在日历应用中创建或同步一个可写日历",
+    message: String = "No writable system calendar; create or sync one in a calendar app first",
 ) : IllegalStateException(message)
 
 interface ArrangeCalendarGateway {
@@ -96,12 +96,12 @@ interface ArrangeCalendarGateway {
 internal fun accessLevelIsWritable(accessLevel: Int): Boolean = accessLevel >= ARRANGE_WRITABLE_ACCESS_LEVEL
 
 internal fun calendarDisplayName(raw: String): String = when (raw.trim()) {
-    "calendar_displayname_xiaomi" -> "小米日历"
+    "calendar_displayname_xiaomi" -> "Xiaomi Calendar"
     else -> raw.trim()
 }
 
 internal fun limitedSortOrder(sortOrder: String, limit: Int): String {
-    require(limit in 1..ARRANGE_EVENT_LIMIT_MAX) { "limit 需要在 1..$ARRANGE_EVENT_LIMIT_MAX 之间" }
+    require(limit in 1..ARRANGE_EVENT_LIMIT_MAX) { "limit must be between 1 and $ARRANGE_EVENT_LIMIT_MAX" }
     return "$sortOrder LIMIT $limit"
 }
 
@@ -118,13 +118,13 @@ internal fun resolveEventRange(
         return utcMidnight(startDate) to utcMidnight(lastDate.plusDays(1))
     }
     val end = endMillis ?: (startMillis + ARRANGE_HOUR_MILLIS)
-    require(end > startMillis) { "结束时间必须晚于开始时间" }
+    require(end > startMillis) { "End time must be after start time" }
     return startMillis to end
 }
 
 internal fun validatedReminderMinutes(minutes: List<Int>): List<Int> {
-    require(minutes.size <= ARRANGE_MAX_REMINDERS) { "提醒最多 $ARRANGE_MAX_REMINDERS 条" }
-    require(minutes.all { it >= 0 }) { "提醒分钟数不能为负" }
+    require(minutes.size <= ARRANGE_MAX_REMINDERS) { "At most $ARRANGE_MAX_REMINDERS reminders are allowed" }
+    require(minutes.all { it >= 0 }) { "Reminder minutes must not be negative" }
     return minutes
 }
 
@@ -256,9 +256,9 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
         limit: Int,
     ): List<ArrangeCalendarEvent> {
         requireReadPermission()
-        require(endMillis > startMillis) { "查询结束时间必须晚于开始时间" }
+        require(endMillis > startMillis) { "Range end must be after range start" }
         val safeLimit = limit.also {
-            require(it in 1..ARRANGE_EVENT_LIMIT_MAX) { "limit 需要在 1..$ARRANGE_EVENT_LIMIT_MAX 之间" }
+            require(it in 1..ARRANGE_EVENT_LIMIT_MAX) { "limit must be between 1 and $ARRANGE_EVENT_LIMIT_MAX" }
         }
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
             .appendPath(startMillis.toString())
@@ -302,7 +302,7 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
     override fun create(draft: ArrangeEventDraft): ArrangeCalendarEvent {
         requireWritePermission()
         val title = draft.title.trim()
-        require(title.isNotEmpty()) { "事件标题不能为空" }
+        require(title.isNotEmpty()) { "Event title must not be empty" }
         val reminders = draft.reminderMinutes?.let { validatedReminderMinutes(it) }.orEmpty()
         val calendarId = draft.calendarId ?: defaultWritableCalendarId()
         requireWritableCalendar(calendarId)
@@ -348,7 +348,7 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
                 }
             }
             val uri = resolver.insert(CalendarContract.Events.CONTENT_URI, values)
-                ?: throw IllegalStateException("创建日历事件失败：系统日历未返回事件地址")
+                ?: throw IllegalStateException("Failed to create calendar event: system calendar returned no event URI")
             return ContentUris.parseId(uri)
         }
 
@@ -418,7 +418,7 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
                     put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
                 }
                 resolver.insert(CalendarContract.Reminders.CONTENT_URI, values)
-                    ?: throw IllegalStateException("写入事件提醒失败")
+                    ?: throw IllegalStateException("Failed to write event reminders")
             }
         }
 
@@ -450,20 +450,20 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
 
     private fun requireReadPermission() {
         if (!hasReadPermission()) {
-            throw ArrangeCalendarPermissionException("缺少日历读取权限，请先授予 READ_CALENDAR")
+            throw ArrangeCalendarPermissionException("Missing READ_CALENDAR permission; grant calendar read access first")
         }
     }
 
     private fun requireWritePermission() {
         if (!hasWritePermission()) {
-            throw ArrangeCalendarPermissionException("缺少日历写入权限，请先授予 WRITE_CALENDAR")
+            throw ArrangeCalendarPermissionException("Missing WRITE_CALENDAR permission; grant calendar write access first")
         }
     }
 
     private fun requireWritableCalendar(calendarId: Long) {
         val calendar = calendars().firstOrNull { it.id == calendarId }
-            ?: throw IllegalArgumentException("找不到日历 $calendarId")
-        require(calendar.writable) { "日历不可写：${calendar.name}" }
+            ?: throw IllegalArgumentException("Calendar $calendarId not found")
+        require(calendar.writable) { "Calendar is not writable: ${calendar.name}" }
     }
 
     private fun eventTimezone(allDay: Boolean): String =
@@ -491,7 +491,7 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
         val id = cursor.long(CalendarContract.Events._ID)
         val allDay = cursor.int(CalendarContract.Events.ALL_DAY) != 0
         val start = cursor.longOrNull(CalendarContract.Events.DTSTART)
-            ?: throw IllegalStateException("日历事件缺少开始时间：$id")
+            ?: throw IllegalStateException("Calendar event $id has no start time")
         val end = cursor.longOrNull(CalendarContract.Events.DTEND)
             ?: (start + if (allDay) ARRANGE_DAY_MILLIS else ARRANGE_HOUR_MILLIS)
         return ArrangeCalendarEvent(

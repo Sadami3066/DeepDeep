@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -123,11 +124,31 @@ class FloatingFeedTest {
         feed.stop()
     }
 
-    private fun feed(runtime: FakeAgentRuntime): FloatingFeed = FloatingFeed(
+    @Test
+    fun foregroundCompletionKeepsPanelEntryWithoutCard() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            sessions = listOf(session("session-1", "会话"))
+        }
+        val feed = feed(runtime) { true }
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-1", RuntimeEvent.RunFinished("run-1", "答复内容", RunStatus.DONE, 100L))
+        runCurrent()
+
+        val state = feed.state.value
+        assertEquals("答复内容", state.completed.single().text)
+        assertNull(floatingEventCard(state))
+        assertEquals(1, floatingPendingCount(state))
+        feed.stop()
+    }
+
+    private fun feed(runtime: FakeAgentRuntime, isForeground: () -> Boolean = { false }): FloatingFeed = FloatingFeed(
         runtime = runtime,
         activeRuns = MutableStateFlow<Map<String, ActiveRunView>>(emptyMap()),
         pendingQuestions = MutableStateFlow(emptyList()),
         scope = kotlinx.coroutines.CoroutineScope(dispatcher),
+        isForeground = isForeground,
     )
 
     private fun session(id: String, title: String): ConversationSummary = ConversationSummary(

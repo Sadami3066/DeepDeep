@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.plugin.gui
 
 class GuiUnavailableException(
-    message: String = "无障碍服务未开启",
+    message: String = "Accessibility service is not enabled",
 ) : IllegalStateException(message)
 
 data class GuiTextResult(
@@ -33,15 +33,15 @@ interface GuiActions {
     suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome
 
     suspend fun swipeMain(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long) {
-        throw GuiUnavailableException("主屏手势不可用")
+        throw GuiUnavailableException("Main screen gestures are unavailable")
     }
 
     suspend fun keyMain(name: String) {
-        throw GuiUnavailableException("主屏按键不可用")
+        throw GuiUnavailableException("Main screen keys are unavailable")
     }
 
     suspend fun screenshotMain(): GuiScreenshot {
-        throw GuiUnavailableException("主屏截图不可用")
+        throw GuiUnavailableException("Main screen screenshots are unavailable")
     }
 }
 

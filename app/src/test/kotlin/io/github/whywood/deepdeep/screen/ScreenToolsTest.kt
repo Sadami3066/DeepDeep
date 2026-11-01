@@ -187,7 +187,7 @@ class ScreenToolsTest {
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"accessibility\":\"disconnected\""))
-        assertTrue(text.contains("服务未连接"))
+        assertTrue(text.contains("service is not connected"))
         assertTrue(text.contains("\"readNodes\":false"))
         assertTrue(text.contains("\"tap\":\"point\""))
         assertTrue(text.contains("\"screenshot\":true"))
@@ -240,7 +240,7 @@ class ScreenToolsTest {
         assertEquals("start", virtualFailureJsonCategory(VIRTUAL_FAILURE_START))
         assertTrue(virtualFailureHint(VIRTUAL_FAILURE_TRANSPORT).contains("virtual_screen(action=start)"))
         assertTrue(virtualFailureHint(VIRTUAL_FAILURE_BACKEND).contains("Root"))
-        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_START).contains("启动失败"))
+        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_START).contains("failed to start"))
     }
 
     @Test
@@ -303,7 +303,7 @@ class ScreenToolsTest {
         assertTrue(text.contains("\"count\":3"))
         assertTrue(text.contains("\"scanned\":3"))
         assertTrue(text.contains("\"truncated\":true"))
-        assertTrue(text.contains("扫描未穷尽"))
+        assertTrue(text.contains("not exhaustive"))
     }
 
     @Test
@@ -459,7 +459,7 @@ class ScreenToolsTest {
     fun keyToolRejectsUnknownKey() = runTest {
         val result = run("screen_key", buildJsonObject { put("key", "power") })
         assertTrue(result.isError == true)
-        assertTrue(result.text().contains("不支持的 key"))
+        assertTrue(result.text().contains("Unsupported key"))
     }
 
     @Test
@@ -546,7 +546,7 @@ class ScreenToolsTest {
         val text = result.text()
         assertTrue(text.contains("任务落屏异常"))
         assertTrue(text.contains("\"ok\":false"))
-        assertTrue(text.contains("请检查 screen_status"))
+        assertTrue(text.contains("Check screen_status"))
     }
 
     @Test
@@ -566,7 +566,7 @@ class ScreenToolsTest {
             },
         )
         assertTrue(result.isError == true)
-        assertTrue(result.text().contains("请检查 screen_status"))
+        assertTrue(result.text().contains("Check screen_status"))
     }
 
     @Test
@@ -578,7 +578,7 @@ class ScreenToolsTest {
             },
         )
         assertTrue(result.isError == true)
-        assertTrue(result.text().contains("合法的 Android 包名"))
+        assertTrue(result.text().contains("valid Android package name"))
     }
 
     @Test
@@ -689,7 +689,7 @@ class ScreenToolsTest {
             for (target in listOf("auto", "unknown")) {
                 val result = tool.execute("legacy", buildJsonObject { put("target", target) }, null, null)
                 assertEquals(tool.name, true, result.isError)
-                assertTrue(result.text().contains("target 只支持"))
+                assertTrue(result.text().contains("target must be virtual or main"))
             }
             assertTrue(tool.parameters.toString().contains("\"target\""))
         }

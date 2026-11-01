@@ -47,8 +47,8 @@ internal fun GuiBounds.centerWithin(display: GuiBounds): Pair<Int, Int> =
 
 internal fun invalidTapCoordinate(x: Int, y: Int, display: GuiBounds): String? {
     if (x < display.left || x >= display.right || y < display.top || y >= display.bottom) {
-        return "点击坐标超出屏幕范围：屏幕 ${display.width}×${display.height}，收到 ($x, $y)；" +
-            "请重新 screen_observe 后按节点坐标或 ref 点击"
+        return "Tap coordinate is outside the screen: screen ${display.width}x${display.height}, got ($x, $y); " +
+            "call screen_observe again and tap a node coordinate or ref"
     }
     return null
 }
@@ -57,10 +57,10 @@ internal fun invalidSwipeCoordinates(x1: Int, y1: Int, x2: Int, y2: Int, display
     val outsideX = listOf(x1, x2).any { x -> x < display.left || x >= display.right }
     val outsideY = listOf(y1, y2).any { y -> y < display.top || y >= display.bottom }
     if (outsideX || outsideY) {
-        return "滑动坐标超出屏幕范围：屏幕 ${display.width}×${display.height}，收到 ($x1, $y1) → ($x2, $y2)"
+        return "Swipe coordinates are outside the screen: screen ${display.width}x${display.height}, got ($x1, $y1) -> ($x2, $y2)"
     }
     if (x1 == x2 && y1 == y2) {
-        return "滑动起点与终点相同：请提供不同的起点和终点坐标"
+        return "Swipe start and end are the same: provide different start and end coordinates"
     }
     return null
 }

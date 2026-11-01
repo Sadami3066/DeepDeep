@@ -71,6 +71,30 @@ class FloatingFeedReducerTest {
     }
 
     @Test
+    fun foregroundCompletionKeepsPanelEntryWithoutCard() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null, whileForeground = true),
+            1_000L,
+        )
+        assertEquals(1, state.completed.size)
+        assertNull(floatingEventCard(state))
+        assertEquals(1, floatingPendingCount(state))
+        assertTrue(state.completed.single().key in state.dismissedCardKeys)
+    }
+
+    @Test
+    fun backgroundCompletionQueuesCard() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.Completed("session-a", "会话", RunStatus.DONE, "好了", null),
+            1_000L,
+        )
+        assertTrue(floatingEventCard(state) is FloatingEventCard.Completed)
+        assertTrue(state.dismissedCardKeys.isEmpty())
+    }
+
+    @Test
     fun eventQueuePutsQuestionsBeforeCompletedInPendingOrder() {
         val state = baseState().copy(
             questions = listOf(pending("req-1"), pending("req-2", sessionId = "session-b")),
