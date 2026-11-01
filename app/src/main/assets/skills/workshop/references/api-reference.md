@@ -95,7 +95,7 @@ const caps = await app.agent.capabilities();
 // }
 ```
 
-返回当前页面 Agent 可请求的完整工具/技能目录（含默认编码工具、App 工具和已启用全局 skills）。`tools`/`skills` 参数只能使用这里的名称。
+返回当前页面 Agent 可请求的完整工具/技能目录（含编码工具、当前配置的命令/插件/MCP，以及可用 skills）。`tools`/`skills` 参数只能使用这里的名称。
 
 ### app.agent.run(options)
 
@@ -177,7 +177,7 @@ const text = await app.agent.run({
 - 并行：`Promise.all([...])`；串行：`await` 每一步。
 - 页面关闭/返回/WebView 销毁会取消正在运行的所有 Agent；没有后台队列。
 - 每次运行超时 180 秒；超时前会收到 `run_error`（`code=timeout`），随后 Promise reject。
-- 页面 Agent 当前不启用 MCP。
+- 页面 Agent 按当前配置启用 MCP；capabilities() 列出可选工具。
 - 页面 Agent 可以使用你显式请求的工具/技能；是否请求 App 工具、联网工具由页面作者决定。不要把不必要的用户隐私放进 prompt。
 
 ### 模型选择示例
@@ -228,9 +228,9 @@ try {
 
 ## 页面与 App 的边界
 
-- 页面不能调用 App 其他内部函数、不能读写其他创意或 App 数据、不能执行 shell。
+- 页面 bridge 不提供任意内部函数、直接文件访问或直接 shell 调用；app.agent.run 复用当前配置的文件、命令、插件和 MCP，不按目录隔离。
 - 页面 Agent 是任务型运行：没有聊天会话、不写入聊天记录、不后台续跑。
-- 页面 Agent 的工具/技能由页面代码显式指定；App 只校验名称、参数和限制。
+- 页面可主动指定较少的工具/技能；省略时使用全部可用能力，一次性运行不提供目标、提醒或聊天交付卡。
 - 用户关闭页面会取消运行；页面需要在离开前完成或保存结果。
 - 不要自动在页面加载时启动 Agent；由用户按钮触发，避免无感消耗 tokens。
 
@@ -238,4 +238,4 @@ try {
 
 - 页面代码：`files/workshop/apps/<id>/`
 - 页面数据：`files/workshop/userdata/<id>.db`（SQLite KV，页面与数据工具共享）
-- 页面 Agent 临时运行目录由 App 管理，结束后清理；不要依赖它保存数据。
+- 页面 Agent 的临时会话状态由 App 管理并在结束后清理；默认工作区中的产物保留。并行命令仅本次运行有效，结束或取消时终止并等待收尾。

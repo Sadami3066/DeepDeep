@@ -18,14 +18,14 @@ description: 在 DeepDeep「创意工坊」里创建或修改 HTML/CSS/JS 轻量
 - 用户想要一个手机上的互动小页面、小应用或小工具：待办、课程表、日程、纪念日、抽签、小游戏、动画、计算器、记账、习惯打卡、工具页等。
 - 用户想要一个多步骤工作台：表单输入 → 选模型 → Agent 调查/写作/处理 → 页面展示结果 → 再处理。
 - 用户要修改、迭代已有创意。
-- 普通报告、幻灯片、文档、图片不要用创意工坊，用 `present`。
+- 普通报告、幻灯片、文档、图片不需要创意工坊；主对话可用 `present`，页面 Agent 返回绝对路径与最终文本。
 
 ## 快速开始
 
 1. 理解需求；不确定的交互先一句话问清。
 2. 调 `workshop_create`：`name`（1–40 字）、可选 `description`、可选 `icon`（emoji）。返回草稿绝对路径 `<draft>`。
-3. 用 `read`/`write`/`edit` 的绝对路径在 `<draft>` 下写 `index.html`（入口）及 CSS/JS/资源。工坊 Agent 只能读写本次运行目录里的文件，不能执行命令。
-4. 调 `workshop_load`（`path=<draft>`）。按报错修到成功；成功后聊天出现入口卡片。
+3. 用 `read`/`write`/`edit` 的绝对路径在 `<draft>` 下写 `index.html`（入口）及 CSS/JS/资源。页面 Agent 使用当前配置的文件、命令、插件与 MCP；所有文件工具参数必须为绝对路径，默认工作区仅作位置提醒。
+4. 调 `workshop_load`（`path=<draft>`）。按报错修到成功；主对话中再用 `present` 交付入口；页面 Agent 返回应用 id、绝对路径与最终文本，不调用聊天交付工具。
 5. 打开检查布局与交互，再告诉用户去「创意工坊」使用。
 
 修改已有创意：`workshop_list` 找到 id 和路径；改界面/交互就编辑 `apps/<id>/` 文件；只改内容/数据用 `workshop_edit`。
@@ -109,8 +109,8 @@ const text = await app.agent.run({
 - `systemPrompt` 是本次任务约束；`maxTurns` 默认 16，范围 1–64，超限会中止并让 `run_end.truncated=true`。
 - 生命周期绑定页面：页面关闭/返回会取消正在运行的 Agent；没有后台运行。需要结果就在页面里 await 完。
 - 进度交给 `onEvent`（文本增量、工具调用）；其他界面状态由页面自己维护。
-- 页面 Agent 当前不启用 MCP。
-- `read`/`write`/`edit` 等文件工具只能读写本次运行目录，不能执行命令；联网查询用 `web_search`/`web_fetch`。
+- 页面 Agent 按当前配置启用 MCP；capabilities() 列出可选工具。
+- 文件、命令、插件和 MCP 不按运行目录隔离；tools/skills 可主动缩减。默认工作区文件在结束后保留，临时会话状态会清理；本次 job_start 的任务在完成或取消时会终止并等待收尾。一次性运行不提供 get_goal/create_goal/update_goal、定时提醒或 present 聊天交付卡。
 - 失败会 reject，并在 reject 前收到 `run_error`；用 `try/catch` 展示错误，不要吞掉。
 
 完整 API、限制与错误码：`references/api-reference.md`。

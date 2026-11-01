@@ -34,12 +34,14 @@
 ## 动手
 
 - Alpine/proot 里的 `bash`：无 root 用户空间，**不是安全沙箱**
-- 权限分三档（设置 → 权限）：普通档只有 `bash`；无线调试（ADB）/Root 档按实际可用后端注册工具——ADB 守护可用时 `adb_shell`（App 内嵌守护，uid 2000），Root 可用时 `root_shell`；只注册 effective 的一个 shell 工具，某后端不可用时自动回落另一端。两个 shell 工具默认 15s、上限 120s，与 `bash` 共用输出格式（截断提示 + 退出码）；不限制前台与轮次来源，后台、定时、目标续跑与工坊 Agent 都能用。
+- 权限分三档（设置 → 权限）：普通档只有 `bash`；无线调试（ADB）/Root 档按实际可用后端注册工具——ADB 守护可用时 `adb_shell`（App 内嵌守护，uid 2000），Root 可用时 `root_shell`；按当前配置与实际可用后端注册。两个 shell 工具默认 15s、上限 120s，与 `bash` 共用输出格式（截断提示 + 退出码）；不限制前台与轮次来源，后台、定时、目标续跑与工坊 Agent 都能用。
 - 无线调试首次设置（无需安装其他 App）：开发者选项打开「无线调试」→ 权限页点「配对无线调试」→ 在系统「使用配对码配对设备」页面看到 6 位码 → 下拉通知并展开（部分系统需长按）输入配对码；配对成功后自动点火守护进程。重启后无线调试会关闭，重新打开后在权限页点「连接并启动守护进程」即可，无需重新配对。
-- 后台任务：`job(action=start|output|list|kill)`；`output` 返回增量与状态行；运行中数量显示在聊天顶栏右侧（与上下文占用、定时任务、更多并列）
-- 定时任务：`schedule(action=create|list|update|delete)`；五段 cron（英文名、`*`/`/`/`,`/`-`、范围含 1827 天），绑定会话，到点投递回原对话；错过时下次打开补投一次；Service 被杀后不保证投递
-- 目标（goal）：`goal(action=get|create|edit|pause|resume|complete|blocked)`；自动续跑，轮数上限来自设置或显式参数；**只在进程内有效**，重启清空
-- 交付：`present` 文件/图片/HTML/创意
+- 后台任务：`job_start`、`job_output`、`job_list`、`job_kill`；`output` 返回增量与状态行；运行中数量显示在聊天顶栏右侧（与上下文占用、定时任务、更多并列）
+- 定时任务：`schedule_create`、`schedule_list`、`schedule_update`、`schedule_delete`；五段 cron（英文名、`*`/`/`/`,`/`-`、范围含 1827 天），绑定会话，到点投递回原对话；错过时下次打开补投一次；Service 被杀后不保证投递
+- 目标（goal）：`get_goal`、`create_goal`、`update_goal(action=edit|pause|resume|complete|blocked)`；自动续跑，轮数上限来自设置或显式参数；**只在进程内有效**，重启清空
+- 交付：`present` 文件/图片/HTML/创意；文件必须存在、可读且是普通文件，普通文本回复无需交付卡
+- 文件工具必须显式传绝对路径，工作区只提醒默认位置；不接受相对路径、`~` 或省略路径。截图、下载、工坊与日志返回一个可在文件工具、Linux 和交付间直接复用的绝对路径；正文、HTML 引用、glob 和任意命令不改写。
+- 普通 Linux 命令显示尾部最多 2000 行/50 KiB，超出后返回流式保存的完整日志路径；ADB/Root 上游截断时明确标为不完整。超时保留已产生输出，取消向上传播，不自动重跑。
 
 ## 悬浮窗
 
@@ -52,9 +54,9 @@
 ## 虚拟屏幕
 
 - 需要选中无线调试（ADB）或 Root 档，且对应后端实际可用（ADB 守护运行或 Root 已授权）；插件 → 虚拟屏幕 → 启动，浮窗面板出现实时缩略图，点开看全屏画面；虚拟屏始终竖屏，分辨率取手机真实屏幕的短边×长边（测试机 1220×2712），与手机当前方向无关
-- Agent 用统一的 `screen_*` 工具并指定 `target=virtual` 观察/点击/滑动/输入/截图/启动 App；`virtual_screen(action=start|stop|status)` 管生命周期，不占用主屏
-- 虚拟屏节点读取、ref 点击、中文输入、等待需要无障碍；无障碍关闭时仍可用坐标点击/滑动/按键/ASCII 输入/截图。主屏节点读取优先无障碍，缺失时退 uiautomator XML；虚拟屏在线时 uiautomator 可能读到副屏，因此主屏节点读取只走无障碍，关闭时会明确报错；主屏滑动、部分按键与 ASCII 输入需要无线调试
-- 虚拟屏还没画出新内容时截图会回退到最近一帧；无无障碍时 `screen_type` 只支持 ASCII；被系统挪到虚拟屏属于系统行为，`screen_app action=launch` 会返回 `onExpectedScreen` 与可执行提示
+- Agent 用 `screen_*` 工具观察、点击、滑动、输入、截图和启动应用，仅操作后台虚拟屏，不接受 `target` 参数；`virtual_screen(action=start|stop|status)` 管生命周期，不占用主屏
+- 虚拟屏节点读取、ref 点击、中文输入、等待需要无障碍；无障碍关闭时仍可用坐标点击/滑动/按键/ASCII 输入/截图。应用列表无需先启动虚拟屏；启动应用与交互需要在线，不回落到主屏，也不移动主屏正在使用的应用。ref 在新观察或屏幕重建后失效；观察过滤按 AND 组合，未完成扫描时零命中不代表目标不存在。
+- 虚拟屏还没画出新内容时截图会回退到最近一帧；无无障碍时 `screen_type` 只支持 ASCII；被系统挪到虚拟屏属于系统行为，`screen_launch` 会返回 `onExpectedScreen` 与可执行提示
 - 停止用插件页「停止虚拟屏幕」；App 进程结束后 helper 自动退出并释放虚拟屏
 
 ## 接入
@@ -63,8 +65,8 @@
 - **插件**：
   - 外部（按需下载/安装/更新/卸载）：飞书、企业微信、小米云服务
   - 内部（内置，可单独启停）：目标、后台任务、定时任务、创意工坊、网络搜索、屏幕、安排
-- **屏幕**：一套 `screen_*` 工具（target=main/virtual）通过无障碍 + 无线调试 + 虚拟屏 helper 查看并操作主屏与虚拟屏
-- **虚拟屏幕**：特权 helper 建后台虚拟屏，Agent 用 `screen_*` 的 target=virtual 启动并操作 App；`virtual_screen(action=start|stop|status)` 管生命周期（需无线调试或 Root 后端可用）
+- **屏幕**：原子 `screen_*` 工具通过无障碍和虚拟屏 helper 观察、操作后台虚拟屏，不支持主屏。
+- **虚拟屏幕**：特权 helper 建后台虚拟屏，Agent 用 `screen_launch` 启动应用，再用 `screen_*` 操作；`virtual_screen(action=start|stop|status)` 管生命周期（需无线调试或 Root 后端可用）
 - **安排**：读写系统日历事件与提醒（需日历权限）
 - **小米云服务**：WebView 登录 i.mi.com，按开关读写账号、笔记、待办、短信与通话、联系人、相册、录音
 - **企业微信**：安装官方 `wecom-cli` 后扫码授权，操作消息/文档/日程/待办；**飞书**：安装 CLI 后走 device-flow 授权
@@ -79,12 +81,12 @@
 |---|---|
 | pi 原生 | `read` `write` `edit` `ls` `grep` `find` `bash` |
 | App 核心 | `ask_user_question` `plugin_setup` `present` |
-| 目标 | `goal` |
-| 后台任务 | `job` |
-| 定时任务 | `schedule` |
+| 目标 | `get_goal` `create_goal` `update_goal` |
+| 后台任务 | `job_start` `job_output` `job_list` `job_kill` |
+| 定时任务 | `schedule_create` `schedule_list` `schedule_update` `schedule_delete` |
 | 创意工坊 | `workshop_create` `workshop_load` `workshop_list` `workshop_edit` `workshop_delete` |
 | 网络搜索 | `web_search` `web_fetch` |
-| 屏幕操作 | `screen_status` `screen_observe` `screen_screenshot` `screen_app` `screen_tap` `screen_swipe` `screen_scroll` `screen_type` `screen_key` `screen_wait` |
+| 屏幕操作 | `screen_status` `screen_observe` `screen_screenshot` `screen_list_apps` `screen_launch` `screen_tap` `screen_swipe` `screen_scroll` `screen_type` `screen_key` `screen_wait` |
 | 虚拟屏生命周期 | `virtual_screen` |
 | 无线调试（ADB，可选） | `adb_shell` |
 | Root（可选） | `root_shell` |
@@ -95,7 +97,7 @@
 - 每个创意是 Agent 按需求写的 HTML/CSS/JS 文件夹，WebView 渲染成可交互轻应用；没有分类/模板
 - 内置 workshop 技能可用 `/skill:workshop` 强制加载；建好后 `workshop_load` 装载、`present` 交付；`workshop_delete` 删除创意，连同页面数据一起清空
 - 页面经 bridge 读写自己的数据（SQLite，按创意隔离）；`workshop_edit` 可只改数据不重写页面；页面 JS 可用 `app.agent.*` 编排一次性 Agent
-- 边界：页面不能调用 App 内部函数、不能执行 shell、读不到 App 其他数据
+- 页面 bridge 只开放明确 API，页面数据按创意隔离；app.agent.run 是一次性 Agent，按当前配置开放文件、命令、插件和 MCP，工具和技能可主动缩减。工作文件放在默认工作区并保留；页面关闭会取消运行，结束前终止并等待本次并行命令收尾。一次性运行不提供目标续跑、提醒或聊天交付卡。
 
 ## 界面
 
