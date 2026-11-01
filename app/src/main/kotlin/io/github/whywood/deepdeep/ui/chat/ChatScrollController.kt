@@ -28,12 +28,6 @@ internal class ChatScrollController(private val listState: LazyListState) {
     val showJumpToBottom: Boolean
         get() = !following && !atBottom
 
-    suspend fun followContent() {
-        if (!following) return
-        awaitSettled()
-        settleByOverflow()
-    }
-
     suspend fun anchorToBottom() {
         if (!following) return
         withFrameNanos { }
@@ -96,25 +90,6 @@ internal class ChatScrollController(private val listState: LazyListState) {
         if (last.index != info.totalItemsCount - 1) return 0f
         val viewportBottom = info.viewportEndOffset - info.afterContentPadding
         return (last.offset + last.size - viewportBottom).toFloat().coerceAtLeast(0f)
-    }
-
-    private suspend fun settleByOverflow() {
-        repeat(2) {
-            if (!following) return
-            val info = listState.layoutInfo
-            val lastIndex = info.totalItemsCount - 1
-            if (lastIndex < 0) return
-            val last = info.visibleItemsInfo.lastOrNull()
-            if (last == null || last.index != lastIndex) {
-                listState.scrollToItem(lastIndex)
-                withFrameNanos { }
-                return@repeat
-            }
-            val overflow = overflowToBottom()
-            if (overflow <= 0f) return
-            listState.scrollBy(overflow)
-            withFrameNanos { }
-        }
     }
 }
 
