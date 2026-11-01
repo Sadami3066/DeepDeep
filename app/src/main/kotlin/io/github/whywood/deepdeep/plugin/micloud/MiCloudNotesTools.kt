@@ -11,8 +11,7 @@ import kotlinx.serialization.json.putJsonObject
 
 private const val MAX_SNIPPET_CHARS = 200
 
-private const val TOOL_NOTE_WRITE_OFF =
-    "笔记写入未开启，请先在插件详情打开写开关 / Notes writing is off, enable the write switch in the plugin settings"
+private const val TOOL_NOTE_WRITE_OFF = "笔记写入未开启，请先在插件详情打开写开关"
 
 internal fun notesTool(
     client: MiCloudReadApi,
@@ -23,14 +22,6 @@ internal fun notesTool(
     description = "List, read, create, update or delete notes in Xiaomi Cloud. Reads and writes the user's own notes; writes are only allowed when the notes write switch is on.",
     parameters = notesParameters,
     label = "mi_cloud_notes",
-    promptSnippet = "List, read or edit Xiaomi Cloud notes",
-    promptGuidelines = listOf(
-        "Use mi_cloud_notes for Xiaomi Cloud notes: list and read are read-only, create/update/delete change the account.",
-        "List or read before updating or deleting so you have the note id and tag.",
-        "Confirm with the user before creating, updating or deleting a note.",
-        "If a write is refused because the write switch is off, ask the user to enable notes writing in the Xiaomi Cloud plugin settings.",
-        "Note text is private data: only quote what the user asked for.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {
@@ -76,7 +67,7 @@ internal fun notesTool(
                     val content = args.argString("content")
                     if (subject == null && content == null) {
                         throw IllegalArgumentException(
-                            "update 需要 subject 或 content / update needs subject or content",
+                            "update 需要 subject 或 content",
                         )
                     }
                     val existing = noteDetail(client, id)
@@ -89,12 +80,12 @@ internal fun notesTool(
                     val id = args.requiredArgString("id")
                     val entry = noteDetail(client, id)
                     val tag = entry.stringOrNull("tag")
-                        ?: throw IllegalArgumentException("笔记缺少 tag，无法删除 / Note has no tag, cannot delete")
+                        ?: throw IllegalArgumentException("笔记缺少 tag，无法删除")
                     val purge = args.argBool("purge") ?: true
                     writeResult(writer.post(noteDeletePath(id), noteDeleteForm(tag, purge)))
                 }
 
-                else -> throw IllegalArgumentException("action 无效 / Invalid action: $action")
+                else -> throw IllegalArgumentException("action 无效：$action")
             }
         }
     },
@@ -102,7 +93,7 @@ internal fun notesTool(
 
 private suspend fun noteDetail(client: MiCloudReadApi, id: String): JsonObject {
     val payload = client.getJson(noteDetailPath(id, now())).payloadObject()
-    return payload.objectOrNull("entry") ?: payload ?: throw IOException("unexpected note response")
+    return payload.objectOrNull("entry") ?: payload ?: throw IOException("笔记数据格式异常")
 }
 
 private fun noteEntry(item: JsonObject): JsonObject = buildJsonObject {

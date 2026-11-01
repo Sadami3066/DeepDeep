@@ -11,12 +11,6 @@ internal fun smsTool(client: MiCloudReadApi): CodingTool = CodingTool(
     description = "List recent SMS threads (optionally with call records) from Xiaomi Cloud. Read-only.",
     parameters = smsParameters,
     label = "mi_cloud_sms",
-    promptSnippet = "List Xiaomi Cloud SMS threads",
-    promptGuidelines = listOf(
-        "Use mi_cloud_sms only when the user asks about their text messages or call records.",
-        "This tool is read-only: it never sends, deletes or modifies messages.",
-        "Message content is private data: only quote what the user asked for.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {

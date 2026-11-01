@@ -88,11 +88,7 @@ class ArrangePlugin(
         const val PERMISSION_POLL_MS = 500L
         const val PERMISSION_TIMEOUT_MS = 2L * 60L * 1_000L
 
-        val PROMPT_BODY = """
-            安排插件已可用：
-            - `arrange_calendar`：直接读写系统日历。`calendars` 列可写日历；`list` 按范围查询；`get` 读取；`create`/`update`/`delete` 创建、修改、删除事件与提醒。
-            日历读写需要 READ_CALENDAR 与 WRITE_CALENDAR；未授权时先让用户在插件页授权。修改/删除前先用 `list`/`get` 取 id，结果以工具返回 JSON 为准。
-        """.trimIndent()
+        val PROMPT_BODY = "安排插件已可用。日历写入会直接改动用户日程，创建、修改、删除前先与用户确认。"
 
         val SKILL_MARKDOWN = """
             ---
@@ -112,7 +108,7 @@ class ArrangePlugin(
             - `action=delete`：`id` 必填。
             - `start`/`end` 支持 `yyyy-MM-dd HH:mm`、`yyyy-MM-dd`、ISO 8601 或毫秒时间戳；非全天只给 start 时默认 1 小时。
 
-            日历读写需要 READ_CALENDAR 与 WRITE_CALENDAR；未授权时工具会返回错误，提示用户在「安排」插件中授权。日历写入会通过系统账户同步；最终以系统日历显示为准。
+            日历读写需要日历权限；未授权时工具会返回错误，提示用户在「安排」插件中授权。日历写入会通过系统账户同步；最终以系统日历显示为准。
         """.trimIndent()
     }
 }

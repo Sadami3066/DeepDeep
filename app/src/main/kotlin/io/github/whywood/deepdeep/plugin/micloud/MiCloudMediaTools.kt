@@ -13,13 +13,6 @@ internal fun galleryTool(client: MiCloudReadApi): CodingTool = CodingTool(
     description = "List Xiaomi Cloud gallery photos/videos or albums. Read-only.",
     parameters = galleryParameters,
     label = "mi_cloud_gallery",
-    promptSnippet = "List Xiaomi Cloud gallery items or albums",
-    promptGuidelines = listOf(
-        "Use mi_cloud_gallery when the user asks about their Xiaomi Cloud photos, videos or albums.",
-        "action=list returns media items, action=albums returns albums.",
-        "This tool is read-only: it never uploads, edits or deletes media.",
-        "Items may be truncated; ask for a smaller limit if you need a specific page.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {
@@ -34,7 +27,6 @@ internal fun galleryTool(client: MiCloudReadApi): CodingTool = CodingTool(
                         .take(limit)
                     val extra = buildJsonObject {
                         payload.boolOrNull("isLastPage")?.let { put("isLastPage", it) }
-                        payload.stringOrNull("indexHash")?.let { put("nextIndexHash", it) }
                     }
                     itemsResult(items, extra)
                 }
@@ -49,7 +41,7 @@ internal fun galleryTool(client: MiCloudReadApi): CodingTool = CodingTool(
                     itemsResult(albums)
                 }
 
-                else -> throw IllegalArgumentException("action 无效 / Invalid action: $action")
+                else -> throw IllegalArgumentException("action 无效：$action")
             }
         }
     },
@@ -64,13 +56,6 @@ internal fun recordingsTool(
     description = "List or download call recordings stored in Xiaomi Cloud. Downloads are saved into the workspace so the user can open them.",
     parameters = recordingsParameters,
     label = "mi_cloud_recordings",
-    promptSnippet = "List or download Xiaomi Cloud call recordings",
-    promptGuidelines = listOf(
-        "Use mi_cloud_recordings when the user asks about their Xiaomi Cloud call recordings.",
-        "Use action=list to browse, action=download with fileId to save one recording into the workspace.",
-        "This tool is read-only for the cloud account; downloading never deletes or modifies the cloud file.",
-        "Report the returned workspace path so the user can find the downloaded file.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {
@@ -80,7 +65,7 @@ internal fun recordingsTool(
                     val limit = limitArg(args)
                     val offset = args.argInt("offset") ?: 0
                     if (offset < 0) {
-                        throw IllegalArgumentException("offset 不能为负 / offset must not be negative")
+                        throw IllegalArgumentException("offset 不能为负")
                     }
                     val response = client.getJson(recordingsPath(userId, now(), offset, limit))
                     val items = response.payloadArray("list")
@@ -110,7 +95,7 @@ internal fun recordingsTool(
                     textResult(result.toString())
                 }
 
-                else -> throw IllegalArgumentException("action 无效 / Invalid action: $action")
+                else -> throw IllegalArgumentException("action 无效：$action")
             }
         }
     },

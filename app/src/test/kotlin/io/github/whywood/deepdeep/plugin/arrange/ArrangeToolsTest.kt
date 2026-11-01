@@ -11,11 +11,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,6 +30,29 @@ class ArrangeToolsTest {
     @Test
     fun exposesOnlyCalendarTool() {
         assertEquals(listOf("arrange_calendar"), tools.map { it.name })
+    }
+
+    @Test
+    fun toolTextFollowsTaskLanguage() {
+        val tool = tools.single()
+        assertNull(tool.promptSnippet)
+        assertNull(tool.promptGuidelines)
+        val texts = buildList {
+            add(tool.description)
+            val properties = tool.parameters["properties"] as JsonObject
+            properties.values.forEach { property ->
+                val description = ((property as? JsonObject)?.get("description") as? JsonPrimitive)?.contentOrNull
+                description?.let(::add)
+            }
+        }
+        texts.forEach { text ->
+            bannedWords.forEach { word ->
+                assertFalse("$word in $text", text.contains(word, ignoreCase = true))
+            }
+        }
+        assertFalse(tool.description.contains("CalendarContract"))
+        assertFalse(tool.description.contains("provider"))
+        assertTrue(tool.description.contains("calendar"))
     }
 
     @Test
@@ -215,6 +240,20 @@ class ArrangeToolsTest {
         }
         return tools.single().execute("test-call", args, null, null)
     }
+
+    private val bannedWords = listOf(
+        "helper",
+        "daemon",
+        "uid",
+        "uiautomator",
+        "displayId",
+        "taskDisplayId",
+        "nodeBackend",
+        "inputBackend",
+        "CalendarContract",
+        "backend",
+        "engine",
+    )
 
     private fun AgentToolResult.text(): String = (content.single() as TextContent).text
 

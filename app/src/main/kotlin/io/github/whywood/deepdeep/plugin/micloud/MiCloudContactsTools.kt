@@ -12,12 +12,6 @@ internal fun contactsTool(client: MiCloudReadApi): CodingTool = CodingTool(
     description = "List or search contacts in Xiaomi Cloud. Read-only.",
     parameters = contactsParameters,
     label = "mi_cloud_contacts",
-    promptSnippet = "List or search Xiaomi Cloud contacts",
-    promptGuidelines = listOf(
-        "Use mi_cloud_contacts when the user asks about their contacts.",
-        "Use action=list to browse, action=search with query to filter by name, phone or email.",
-        "This tool is read-only: it never adds, edits or deletes contacts.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {

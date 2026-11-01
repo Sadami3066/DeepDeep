@@ -55,11 +55,6 @@ private fun accountTool(client: MiCloudReadApi): CodingTool = CodingTool(
     description = "Read the signed-in Xiaomi Cloud account profile or storage quota. Read-only.",
     parameters = accountParameters,
     label = "mi_cloud_account",
-    promptSnippet = "Read Xiaomi Cloud profile or storage quota",
-    promptGuidelines = listOf(
-        "Use mi_cloud_account only when the user asks about their Xiaomi account or cloud storage.",
-        "This tool is read-only: it never changes the account or files.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {
@@ -67,7 +62,7 @@ private fun accountTool(client: MiCloudReadApi): CodingTool = CodingTool(
             val target = when (action) {
                 "profile" -> "/status/lite/profile?ts=${now()}"
                 "quota" -> "/status/vip/quota/summary?ts=${now()}"
-                else -> throw IllegalArgumentException("action 无效 / Invalid action: $action")
+                else -> throw IllegalArgumentException("action 无效：$action")
             }
             textResult(compactPayload(client.getJson(target)))
         }

@@ -62,13 +62,14 @@ class ArrangePluginTest {
     }
 
     @Test
-    fun promptBodyMentionsCalendarCrudAndPermission() {
+    fun promptBodyIsShortStatusAndSafetyNote() {
         val body = plugin().promptBody(PluginStatus.Ready("x")).orEmpty()
 
-        assertTrue(body.contains("arrange_calendar"))
-        assertTrue(body.contains("READ_CALENDAR"))
-        assertTrue(body.contains("create"))
-        assertFalse(body.contains("arrange_alarm"))
+        assertTrue(body.contains("可用"))
+        assertTrue(body.contains("确认"))
+        assertFalse(body.contains("arrange_calendar"))
+        assertFalse(body.contains("READ_CALENDAR"))
+        assertTrue(body.length <= 120)
     }
 
     @Test
@@ -82,10 +83,13 @@ class ArrangePluginTest {
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
         assertTrue(frontmatter.contains("name: deepdeep-arrange"))
         assertTrue(frontmatter.contains("description: "))
-        listOf("arrange_calendar", "list", "update", "delete", "reminders", "READ_CALENDAR")
+        listOf("arrange_calendar", "list", "update", "delete", "reminders", "日历权限")
             .forEach { expected -> assertTrue(expected, skill.markdown.contains(expected)) }
         assertFalse(skill.markdown.contains("arrange_alarm"))
         assertFalse(skill.markdown.contains("todo"))
+        listOf("READ_CALENDAR", "WRITE_CALENDAR").forEach { word ->
+            assertFalse(word, skill.markdown.contains(word))
+        }
     }
 
     private fun plugin(): ArrangePlugin = ArrangePlugin(context, calendar)

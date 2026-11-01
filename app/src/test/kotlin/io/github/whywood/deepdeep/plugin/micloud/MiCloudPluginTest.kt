@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,8 +60,38 @@ class MiCloudPluginTest {
             "mi_cloud_recordings",
             "重新登录",
             "确认",
-            "serviceToken",
+            "登录凭据",
         ).forEach { expected -> assertTrue(expected, skill.markdown.contains(expected)) }
+        listOf("serviceToken", "Cookie", "非公开接口", "字段可能变化").forEach { word ->
+            assertFalse(word, skill.markdown.contains(word))
+        }
+    }
+
+    @Test
+    fun promptBodyReportsLoginStateEnabledFeaturesAndSafety() {
+        val body = miCloudPromptBody(
+            PluginStatus.Ready("已登录", "小明"),
+            MiCloudCapabilities(notesRead = true, notesWrite = true, smsRead = true),
+        )
+        assertTrue(body.contains("已登录"))
+        assertTrue(body.contains("小明"))
+        assertTrue(body.contains("已开启"))
+        assertTrue(body.contains("笔记读取"))
+        assertTrue(body.contains("笔记写入"))
+        assertTrue(body.contains("确认"))
+        assertTrue(body.contains("401"))
+        listOf("serviceToken", "Cookie", "backend", "engine", "uid", "i.mi.com").forEach { word ->
+            assertFalse(word, body.contains(word, ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun promptBodyExplainsSignInWhenNotLoggedIn() {
+        val body = miCloudPromptBody(PluginStatus.NotReady("未登录"), MiCloudCapabilities())
+        assertTrue(body.contains("不可用"))
+        assertTrue(body.contains("plugin_setup"))
+        assertTrue(body.contains("登录"))
+        assertFalse(body.contains("serviceToken", ignoreCase = true))
     }
 
     @Test

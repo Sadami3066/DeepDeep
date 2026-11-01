@@ -9,7 +9,7 @@
     <string name="virtual_screen_failed_reconnect_retrying">自动重连失败（%1$s），正在重试…</string>
     <string name="virtual_screen_failed_reconnect_gave_up">虚拟屏连接已断开（%1$s），自动重连失败；旧屏上的应用已丢失，请重新启动虚拟屏</string>
     <string name="virtual_screen_failed_reconnect_backend">虚拟屏连接已断开，且当前没有可用的无线调试（ADB）或 Root 权限；请检查权限后重新启动虚拟屏</string>
-    <string name="virtual_screen_rebuilt_notice">虚拟屏已重建，旧屏上的应用已丢失，需要重新 screen_launch + screen_observe</string>
+    <string name="virtual_screen_rebuilt_notice">虚拟屏已重建，旧屏上的应用已丢失，需要重新在虚拟屏上启动应用并重新观察界面</string>
 
     <string name="virtual_screen_reason_eof">连接被对端关闭</string>
     <string name="virtual_screen_reason_heartbeat">心跳超时</string>

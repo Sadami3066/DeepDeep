@@ -10,6 +10,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -21,6 +23,7 @@ import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -301,7 +304,7 @@ class MiCloudToolsTest {
     }
 
     @Test
-    fun galleryListTrimsToLimitAndReturnsCursor() = runTest {
+    fun galleryListTrimsToLimitAndReportsLastPage() = runTest {
         readApi.respond(
             "/gallery/user/galleries",
             """{"data":{"galleries":[{"id":1,"fileName":"a.jpg"},{"id":2,"fileName":"b.jpg"},{"id":3,"fileName":"c.jpg"}],"isLastPage":false,"indexHash":"h1"}}""",
@@ -314,7 +317,7 @@ class MiCloudToolsTest {
         assertFalse(result.isError == true)
         val payload = result.json()
         assertEquals(2, payload["count"]!!.jsonPrimitive.int)
-        assertEquals("h1", payload["nextIndexHash"]!!.jsonPrimitive.content)
+        assertFalse(payload.containsKey("nextIndexHash"))
         assertFalse(payload["isLastPage"]!!.jsonPrimitive.boolean)
     }
 
@@ -381,6 +384,58 @@ class MiCloudToolsTest {
         assertEquals(true, zero.isError)
         assertEquals(true, tooBig.isError)
         assertTrue(readApi.requestedPaths.isEmpty())
+    }
+
+    @Test
+    fun toolTextFollowsTaskLanguage() {
+        settings.update(
+            MiCloudCapabilities(
+                notesRead = true,
+                todosRead = true,
+                smsRead = true,
+                contactsRead = true,
+                galleryRead = true,
+                recordingsRead = true,
+                accountRead = true,
+            ),
+        )
+        val all = tools()
+        assertEquals(7, all.size)
+        all.forEach { tool ->
+            assertNull(tool.promptSnippet)
+            assertNull(tool.promptGuidelines)
+            val texts = buildList {
+                add(tool.description)
+                val properties = tool.parameters["properties"] as JsonObject
+                properties.values.forEach { property ->
+                    val description = ((property as? JsonObject)?.get("description") as? JsonPrimitive)?.contentOrNull
+                    description?.let(::add)
+                }
+            }
+            texts.forEach { text ->
+                bannedWords.forEach { word ->
+                    assertFalse("$word in ${tool.name}: $text", text.contains(word, ignoreCase = true))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun toolErrorsAreChineseOnly() = runTest {
+        assertEquals("小米云登录已失效，请重新登录", TOOL_AUTH_ERROR)
+        assertEquals("请求小米云失败：", TOOL_REQUEST_FAILED)
+        settings.update(MiCloudCapabilities(notesRead = true, accountRead = true))
+        val invalidAction = run(tool("mi_cloud_account"), buildJsonObject { put("action", "other") })
+        assertEquals(true, invalidAction.isError)
+        assertTrue(invalidAction.text().contains("action 无效"))
+        assertFalse(invalidAction.text().contains(" / "))
+        val invalidLimit = run(tool("mi_cloud_notes"), buildJsonObject {
+            put("action", "list")
+            put("limit", 0)
+        })
+        assertEquals(true, invalidLimit.isError)
+        assertTrue(invalidLimit.text().contains("limit 必须在"))
+        assertFalse(invalidLimit.text().contains(" / "))
     }
 
     @Test
@@ -470,6 +525,20 @@ class MiCloudToolsTest {
         assertEquals("call_01.amr", safeFileName("call 01.amr"))
         assertEquals("recording", safeFileName("   "))
     }
+
+    private val bannedWords = listOf(
+        "helper",
+        "daemon",
+        "uid",
+        "uiautomator",
+        "displayId",
+        "taskDisplayId",
+        "nodeBackend",
+        "inputBackend",
+        "CalendarContract",
+        "backend",
+        "engine",
+    )
 
     private class FakeSettings(initial: MiCloudCapabilities) : MiCloudSettings {
         private val mutable = MutableStateFlow(initial)

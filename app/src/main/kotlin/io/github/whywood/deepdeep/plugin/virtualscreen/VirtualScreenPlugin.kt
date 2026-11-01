@@ -21,13 +21,26 @@ import io.github.whywood.deepdeep.plugin.PluginUi
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.vscreen.PrivilegedLauncher
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureCategory
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureInfo
+import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+
+internal const val VIRTUAL_SCREEN_TOOL = "virtual_screen"
+
+internal const val VIRTUAL_SCREEN_DESCRIPTION =
+    "Manage a virtual screen that runs apps in the background without taking over the visible phone screen: start, stop or check it. Returns the screen state, its size, a rebuild notice or failure details."
 
 class VirtualScreenPlugin(
     private val context: Context,
@@ -118,11 +131,7 @@ class VirtualScreenPlugin(
         )
     }
 
-    override fun tools(): List<CodingTool> = listOf(
-        startTool(engine),
-        stopTool(engine),
-        statusTool(engine),
-    )
+    override fun tools(): List<CodingTool> = virtualScreenTools(EngineScreen(engine))
 
     private fun string(id: Int): String = context.resources.getString(id)
 
@@ -141,84 +150,121 @@ internal fun virtualScreenAvailability(
     PluginAvailability.Unavailable(unavailableReason)
 }
 
-private val noParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {}
+internal interface VirtualScreenAccess {
+    val state: StateFlow<VirtualScreenState>
+    val lastFailure: VirtualScreenFailureInfo?
+    val lastTransportNotice: String?
+
+    suspend fun start(): VirtualScreenResult
+
+    suspend fun stop()
 }
 
-private fun startTool(engine: VirtualScreenEngine): CodingTool = CodingTool(
-    name = "virtual_screen_start",
-    description = "Start the privileged virtual screen at the real phone screen size in portrait. Requires ADB (wireless debugging) or Root privilege to be selected and available.",
-    parameters = noParameters,
-    label = "virtual_screen_start",
-    promptSnippet = "Start the background virtual screen",
-    promptGuidelines = listOf(
-        "Call virtual_screen_start before any screen_* tool with target=virtual; it fails with a readable message when no privilege backend is available.",
-        "After starting, open apps on it with screen_launch target=virtual and operate it with screen_* tools.",
-    ),
-    execute = { _, _, signal, _ ->
+private class EngineScreen(private val engine: VirtualScreenEngine) : VirtualScreenAccess {
+    override val state: StateFlow<VirtualScreenState>
+        get() = engine.state
+
+    override val lastFailure: VirtualScreenFailureInfo?
+        get() = engine.lastFailure
+
+    override val lastTransportNotice: String?
+        get() = engine.lastTransportNotice
+
+    override suspend fun start(): VirtualScreenResult = engine.start()
+
+    override suspend fun stop() = engine.stop()
+}
+
+private val virtualScreenParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("action") {
+            put("type", "string")
+            put(
+                "description",
+                "start opens the background screen, stop closes it and its apps, status reports whether it is running.",
+            )
+            putJsonArray("enum") {
+                add(JsonPrimitive("start"))
+                add(JsonPrimitive("stop"))
+                add(JsonPrimitive("status"))
+            }
+        }
+    }
+    put("required", buildJsonArray { add(JsonPrimitive("action")) })
+}
+
+internal fun virtualScreenTools(screen: VirtualScreenAccess): List<CodingTool> =
+    listOf(virtualScreenTool(screen))
+
+internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = CodingTool(
+    name = VIRTUAL_SCREEN_TOOL,
+    description = VIRTUAL_SCREEN_DESCRIPTION,
+    parameters = virtualScreenParameters,
+    label = VIRTUAL_SCREEN_TOOL,
+    execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
-        virtualScreenTool {
-            val result = engine.start()
-            if (!result.ok) throw IllegalStateException(result.message)
-            stateJson(engine).toString()
+        virtualScreenResult {
+            when (val action = args.requiredString("action").lowercase()) {
+                "start" -> {
+                    screen.start()
+                    textResult(
+                        stateJson(screen).toString(),
+                        isError = screen.state.value is VirtualScreenState.Failed,
+                    )
+                }
+
+                "stop" -> {
+                    screen.stop()
+                    textResult(stateJson(screen).toString())
+                }
+
+                "status" -> textResult(stateJson(screen).toString())
+
+                else -> throw IllegalArgumentException("action 只支持 start、stop、status")
+            }
         }
     },
 )
 
-private fun stopTool(engine: VirtualScreenEngine): CodingTool = CodingTool(
-    name = "virtual_screen_stop",
-    description = "Stop the virtual screen and release its display and the helper process.",
-    parameters = noParameters,
-    label = "virtual_screen_stop",
-    promptSnippet = "Stop the background virtual screen",
-    promptGuidelines = listOf("Call virtual_screen_stop when the tasks on the virtual screen are finished; the display and the helper process are released."),
-    execute = { _, _, signal, _ ->
-        signal?.throwIfAborted()
-        virtualScreenTool {
-            engine.stop()
-            buildJsonObject {
-                put("ok", true)
-                put("state", "offline")
-            }.toString()
-        }
-    },
-)
-
-private fun statusTool(engine: VirtualScreenEngine): CodingTool = CodingTool(
-    name = "virtual_screen_status",
-    description = "Report the virtual screen state: online or offline, display id, resolution, privilege backend and helper uid. Operation tools live under screen_* with target=virtual.",
-    parameters = noParameters,
-    label = "virtual_screen_status",
-    promptSnippet = "Check the virtual screen status",
-    promptGuidelines = listOf("Call virtual_screen_status when unsure whether the virtual screen is running or how it is running."),
-    execute = { _, _, signal, _ ->
-        signal?.throwIfAborted()
-        virtualScreenTool { stateJson(engine).toString() }
-    },
-)
-
-private fun stateJson(engine: VirtualScreenEngine): JsonObject = buildJsonObject {
-    when (val state = engine.state.value) {
+private fun stateJson(screen: VirtualScreenAccess): JsonObject = buildJsonObject {
+    screen.lastTransportNotice?.let { put("notice", it) }
+    when (val state = screen.state.value) {
         VirtualScreenState.Offline -> put("state", "offline")
         VirtualScreenState.Starting -> put("state", "starting")
         is VirtualScreenState.Failed -> {
             put("state", "failed")
-            put("error", state.message)
+            val failure = screen.lastFailure
+            val category = failureCategory(failure?.category)
+            putJsonObject("failure") {
+                put("category", category)
+                put("message", failure?.message ?: state.message)
+                put("hint", failureHint(category))
+            }
         }
+
         is VirtualScreenState.Online -> {
             put("state", "online")
-            put("displayId", state.displayId)
             put("width", state.width)
             put("height", state.height)
-            put("backend", state.backend)
-            put("uid", engine.helperUid ?: -1)
         }
     }
 }
 
-private suspend fun virtualScreenTool(block: suspend () -> String): AgentToolResult = try {
-    textResult(block())
+private fun failureCategory(category: VirtualScreenFailureCategory?): String = when (category) {
+    VirtualScreenFailureCategory.BACKEND -> "privilege"
+    VirtualScreenFailureCategory.START -> "start"
+    else -> "connection"
+}
+
+private fun failureHint(category: String): String = when (category) {
+    "privilege" -> "请用户在权限设置里开启无线调试（ADB）或 Root 后再试。"
+    "start" -> "可以直接重试启动。"
+    else -> "正在自动重连；若仍未恢复，可以重新启动虚拟屏。"
+}
+
+private suspend fun virtualScreenResult(block: suspend () -> AgentToolResult): AgentToolResult = try {
+    block()
 } catch (error: RequestAbortedException) {
     throw error
 } catch (error: CancellationException) {
@@ -226,3 +272,7 @@ private suspend fun virtualScreenTool(block: suspend () -> String): AgentToolRes
 } catch (error: Exception) {
     textResult(error.message ?: "虚拟屏操作失败", isError = true)
 }
+
+private fun JsonObject.requiredString(name: String): String =
+    (this[name] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+        ?: throw IllegalArgumentException("缺少参数 $name")

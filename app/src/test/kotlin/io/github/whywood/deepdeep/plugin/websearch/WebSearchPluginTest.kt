@@ -10,7 +10,9 @@ import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -68,6 +70,32 @@ class WebSearchPluginTest {
         assertTrue(prompt.contains("web_search"))
         assertTrue(prompt.contains("web_fetch"))
         assertTrue(prompt.contains("只作为资料"))
+        assertTrue(prompt.contains("URL"))
+        assertFalse(prompt.contains("1-10"))
+        assertFalse(prompt.contains("1-30000"))
+        assertFalse(prompt.contains("默认"))
+    }
+
+    @Test
+    fun toolTextFollowsTaskLanguage() {
+        val tools = newPlugin().tools()
+        assertEquals(listOf("web_search", "web_fetch"), tools.map { it.name })
+        tools.forEach { tool ->
+            assertNull(tool.promptSnippet)
+            assertNull(tool.promptGuidelines)
+            bannedWords.forEach { word ->
+                assertFalse("$word in ${tool.name}", tool.description.contains(word, ignoreCase = true))
+            }
+            val properties = tool.parameters["properties"] as JsonObject
+            properties.values.forEach { property ->
+                val description = ((property as? JsonObject)?.get("description") as? JsonPrimitive)?.contentOrNull
+                description?.let { text ->
+                    bannedWords.forEach { word ->
+                        assertFalse("$word in $text", text.contains(word, ignoreCase = true))
+                    }
+                }
+            }
+        }
     }
 
     @Test
@@ -206,6 +234,20 @@ class WebSearchPluginTest {
         assertEquals(true, result.isError)
         assertTrue(result.text().contains("API Key"))
     }
+
+    private val bannedWords = listOf(
+        "helper",
+        "daemon",
+        "uid",
+        "uiautomator",
+        "displayId",
+        "taskDisplayId",
+        "nodeBackend",
+        "inputBackend",
+        "CalendarContract",
+        "backend",
+        "engine",
+    )
 
     private fun newPlugin(key: String? = "sk-test"): WebSearchPlugin =
         WebSearchPlugin(context, { key }, provider)

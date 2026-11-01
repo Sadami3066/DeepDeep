@@ -44,7 +44,7 @@ private val calendarParameters: JsonObject = buildJsonObject {
             put("type", "string")
             put(
                 "description",
-                "calendars lists writable calendars; list queries events in a time range; get reads one event; create, update and delete change the provider.",
+                "calendars lists writable calendars; list queries events in a time range; get reads one event; create, update and delete change calendar events.",
             )
             putJsonArray("enum") {
                 add(JsonPrimitive(CALENDAR_CALENDARS))
@@ -119,14 +119,6 @@ private val calendarParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("action")) })
 }
 
-private val calendarGuidelines = listOf(
-    "Use arrange_calendar for appointments and events in the system calendar.",
-    "Call calendars first when the user has several calendars or when no calendarId is known.",
-    "Call list or get before update or delete so the id is current.",
-    "Resolve relative dates into yyyy-MM-dd HH:mm local time using the current date.",
-    "Calendar events are written directly to the system provider and sync through the account; report the returned event id and time.",
-)
-
 fun arrangeTools(
     calendar: ArrangeCalendarGateway,
     zone: ZoneId = ZoneId.systemDefault(),
@@ -137,11 +129,9 @@ private fun arrangeCalendarTool(
     zone: ZoneId,
 ): CodingTool = CodingTool(
     name = "arrange_calendar",
-    description = "Read, create, update and delete calendar events through the system CalendarContract provider.",
+    description = "Read, create, update or delete calendar events in the phone calendar.",
     parameters = calendarParameters,
     label = "arrange_calendar",
-    promptSnippet = "Manage system calendar events",
-    promptGuidelines = calendarGuidelines,
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         arrangeToolResult {

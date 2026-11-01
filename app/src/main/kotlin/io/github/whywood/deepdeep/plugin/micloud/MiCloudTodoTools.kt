@@ -11,8 +11,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-private const val TOOL_TODO_WRITE_OFF =
-    "待办写入未开启，请先在插件详情打开写开关 / To-do writing is off, enable the write switch in the plugin settings"
+private const val TOOL_TODO_WRITE_OFF = "待办写入未开启，请先在插件详情打开写开关"
 
 internal fun todoTool(
     client: MiCloudReadApi,
@@ -23,13 +22,6 @@ internal fun todoTool(
     description = "List, create, update or delete to-do items in Xiaomi Cloud. Reads and writes the user's own to-do list; writes are only allowed when the to-do write switch is on.",
     parameters = todoParameters,
     label = "mi_cloud_todo",
-    promptSnippet = "List or edit Xiaomi Cloud to-do items",
-    promptGuidelines = listOf(
-        "Use mi_cloud_todo for Xiaomi Cloud to-do items: list is read-only, create/update/delete change the account.",
-        "List before updating or deleting so you have the item id.",
-        "Confirm with the user before creating, updating or deleting a to-do item.",
-        "If a write is refused because the write switch is off, ask the user to enable to-do writing in the Xiaomi Cloud plugin settings.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         miCloudToolResult {
@@ -70,12 +62,12 @@ internal fun todoTool(
                     val remindAt = args.argLong("remindAt")
                     if (content == null && done == null && remindAt == null) {
                         throw IllegalArgumentException(
-                            "update 需要 content、done 或 remindAt / update needs content, done or remindAt",
+                            "update 需要 content、done 或 remindAt",
                         )
                     }
                     val existing = todoRecord(client, id)
                     val eTag = etagOf(existing)
-                        ?: throw IllegalArgumentException("待办缺少 eTag，无法更新 / To-do has no eTag, cannot update")
+                        ?: throw IllegalArgumentException("待办缺少 eTag，无法更新")
                     val updated = updatedTodoRecord(existing, content, done, remindAt, now())
                     writeResult(writer.post(todoUpdatePath(id), todoUpdateForm(eTag, updated)))
                 }
@@ -85,11 +77,11 @@ internal fun todoTool(
                     val id = args.requiredArgString("id")
                     val existing = todoRecord(client, id)
                     val eTag = etagOf(existing)
-                        ?: throw IllegalArgumentException("待办缺少 eTag，无法删除 / To-do has no eTag, cannot delete")
+                        ?: throw IllegalArgumentException("待办缺少 eTag，无法删除")
                     writeResult(writer.post(todoDeletePath(id), todoDeleteForm(eTag)))
                 }
 
-                else -> throw IllegalArgumentException("action 无效 / Invalid action: $action")
+                else -> throw IllegalArgumentException("action 无效：$action")
             }
         }
     },
@@ -97,7 +89,7 @@ internal fun todoTool(
 
 private suspend fun todoRecord(client: MiCloudReadApi, id: String): JsonObject {
     val payload = client.getJson(todoRecordPath(id)).payloadObject()
-    return payload.objectOrNull("record") ?: payload ?: throw IOException("unexpected to-do response")
+    return payload.objectOrNull("record") ?: payload ?: throw IOException("待办数据格式异常")
 }
 
 private fun todoEntry(item: JsonObject): JsonObject {
