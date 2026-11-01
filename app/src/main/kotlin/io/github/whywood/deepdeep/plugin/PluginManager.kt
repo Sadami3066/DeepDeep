@@ -31,6 +31,11 @@ class PluginManager(
     private val _state = MutableStateFlow(PluginsUiState())
     val state: StateFlow<PluginsUiState> = _state.asStateFlow()
 
+    override val setupPluginIds: List<String> = plugins
+        .filter { it.kind == PluginKind.EXTERNAL }
+        .map { it.id }
+        .sorted()
+
     private val busy = AtomicBoolean(false)
     @Volatile private var contributionsPending = false
 

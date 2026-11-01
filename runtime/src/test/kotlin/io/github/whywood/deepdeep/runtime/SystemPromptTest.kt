@@ -1,9 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.tools.CodingTool
 import java.io.File
 import java.nio.file.Files
-import kotlinx.serialization.json.buildJsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,6 +31,7 @@ class SystemPromptTest {
         assertEquals(DEEP_DEEP_SYSTEM_PROMPT, file.readText().trimEnd())
         assertTrue(file.readText().contains("DeepDeep"))
         assertFalse(file.readText().contains("expert coding assistant"))
+        assertFalse(file.readText().contains("proot"))
     }
 
     @Test
@@ -46,40 +45,43 @@ class SystemPromptTest {
     }
 
     @Test
-    fun ruleSectionCarriesGuidelinesAndWrapping() {
-        val tools = listOf(
-            tool("read", "Read file contents", listOf("Use read to examine files instead of cat or sed.")),
-            tool("bash", "Execute bash commands", null),
-        )
+    fun migratesLegacyDefaultSystemPrompt() {
+        val file = File(directory, SYSTEM_PROMPT_FILE)
+        file.writeText(LEGACY_SYSTEM_PROMPTS.single() + "\n")
 
-        val sections = buildToolRuleSection(tools)
+        ensureSystemPromptFile(directory)
 
-        assertFalse(sections.containsKey("tools"))
-        assertTrue(sections.getValue("rules").startsWith("<rules>"))
-        assertTrue(sections.getValue("rules").contains("- Use read to examine files instead of cat or sed."))
-        assertTrue(sections.getValue("rules").contains("- Be concise in your responses"))
-        assertTrue(sections.getValue("rules").contains("- Show file paths clearly when working with files"))
+        assertEquals(DEEP_DEEP_SYSTEM_PROMPT, file.readText().trimEnd())
     }
 
     @Test
-    fun ruleSectionDeduplicatesGuidelines() {
-        val tools = listOf(
-            tool("a", "Tool A", listOf("Same rule.")),
-            tool("b", "Tool B", listOf("Same rule.", "Other rule.")),
-        )
+    fun keepsUserEditThatResemblesLegacyPrompt() {
+        val file = File(directory, SYSTEM_PROMPT_FILE)
+        file.writeText(LEGACY_SYSTEM_PROMPTS.single() + "\nMy extra rule.\n")
 
-        val rules = buildToolRuleSection(tools).getValue("rules")
-        assertEquals(1, Regex("- Same rule\\.").findAll(rules).count())
-        assertTrue(rules.contains("- Other rule."))
+        ensureSystemPromptFile(directory)
+
+        assertTrue(file.readText().contains("My extra rule."))
     }
 
-    private fun tool(name: String, snippet: String, guidelines: List<String>?): CodingTool = CodingTool(
-        name = name,
-        description = name,
-        parameters = buildJsonObject { },
-        label = name,
-        promptSnippet = snippet,
-        promptGuidelines = guidelines,
-        execute = { _, _, _, _ -> dev.pi.coding.tools.textResult("ok") },
-    )
+    @Test
+    fun ruleSectionCarriesGlobalRules() {
+        val rules = buildToolRuleSection().getValue("rules")
+
+        assertTrue(rules.startsWith("<rules>"))
+        assertTrue(rules.endsWith("</rules>"))
+        assertTrue(rules.contains("- Never type, read, copy or repeat passwords"))
+        assertTrue(rules.contains("- Ask the user to confirm before destructive or irreversible actions"))
+        assertTrue(rules.contains("- Deliver finished work with present"))
+        assertFalse(rules.contains("promptGuidelines"))
+    }
+
+    @Test
+    fun ruleSectionStaysSmall() {
+        val rules = buildToolRuleSection().getValue("rules")
+        val bullets = rules.lines().count { it.startsWith("- ") }
+
+        assertTrue("rules should stay curated, got $bullets bullets", bullets <= 20)
+        assertTrue("rules should stay small, got ${rules.length} chars", rules.length <= 2500)
+    }
 }

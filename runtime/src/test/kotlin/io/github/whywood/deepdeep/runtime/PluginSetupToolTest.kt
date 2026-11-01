@@ -21,12 +21,15 @@ class PluginSetupToolTest {
     private fun args(plugin: String): JsonObject = buildJsonObject { put("plugin", plugin) }
 
     @Test
-    fun toolExposesPluginIdEnum() {
+    fun toolExposesEverySetupPluginId() {
         val tool = pluginSetupTool(controller())
         assertEquals("plugin_setup", tool?.name)
         val properties = tool?.parameters?.getValue("properties")?.jsonObject
         val plugin = properties?.getValue("plugin")?.jsonObject
-        assertTrue(plugin.toString().contains("feishu"))
+        val enum = plugin?.getValue("enum").toString()
+        assertTrue(enum.contains("feishu"))
+        assertTrue(enum.contains("wecom"))
+        assertTrue(enum.contains("micloud"))
     }
 
     @Test
@@ -37,13 +40,32 @@ class PluginSetupToolTest {
     @Test
     fun setupSuccessReturnsJson() = runTest {
         val tool = pluginSetupTool(controller())
-        val result = tool!!.execute("call-1", args("feishu"), null, null)
+        val result = tool!!.execute("call-1", args("wecom"), null, null)
         assertFalse(result.isError == true)
         val json = Json.parseToJsonElement(resultText(result)).jsonObject
         assertEquals("true", json.getValue("ok").toString())
-        assertEquals("feishu", json.getValue("plugin").toString().trim('"'))
+        assertEquals("wecom", json.getValue("plugin").toString().trim('"'))
         assertEquals("true", json.getValue("ready").toString())
         assertEquals("张三", json.getValue("account").toString().trim('"'))
+    }
+
+    @Test
+    fun unknownPluginIsRejectedBeforeCallingController() = runTest {
+        var calls = 0
+        val controller = object : PluginController {
+            override val setupPluginIds: List<String> = listOf("feishu", "wecom", "micloud")
+
+            override suspend fun setup(pluginId: String): PluginSetupResult {
+                calls++
+                return PluginSetupResult(true, pluginId, true, true)
+            }
+        }
+        val tool = pluginSetupTool(controller)
+        val result = tool!!.execute("call", args("other"), null, null)
+        assertTrue(result.isError == true)
+        assertTrue(resultText(result).contains("feishu"))
+        assertTrue(resultText(result).contains("micloud"))
+        assertEquals(0, calls)
     }
 
     @Test
@@ -61,6 +83,8 @@ class PluginSetupToolTest {
     }
 
     private fun controller(): PluginController = object : PluginController {
+        override val setupPluginIds: List<String> = listOf("feishu", "wecom", "micloud")
+
         override suspend fun setup(pluginId: String): PluginSetupResult = PluginSetupResult(
             ok = true,
             pluginId = pluginId,

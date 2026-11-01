@@ -30,7 +30,7 @@ class RootShellToolTest {
 
     private fun args(command: String? = null, timeoutMillis: Long? = null): JsonObject = buildJsonObject {
         if (command != null) put("command", command)
-        if (timeoutMillis != null) put("timeout_ms", timeoutMillis)
+        if (timeoutMillis != null) put("timeoutMs", timeoutMillis)
     }
 
     private fun adapter(executor: RootCommandExecutor): RootShellAdapter = RootShellAdapter(executor)
@@ -39,7 +39,7 @@ class RootShellToolTest {
     fun toolExposesRootShellSchema() {
         val properties = tool().parameters.getValue("properties").jsonObject
         assertTrue(properties.containsKey("command"))
-        assertTrue(properties.containsKey("timeout_ms"))
+        assertTrue(properties.containsKey("timeoutMs"))
         assertEquals("root_shell", tool().name)
     }
 
@@ -57,7 +57,7 @@ class RootShellToolTest {
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("root_disabled", resultText(result))
+        assertEquals("root_shell is unavailable: select the Root tier and grant root access first.", resultText(result))
         assertFalse(called)
     }
 
@@ -66,7 +66,7 @@ class RootShellToolTest {
         val result = tool(status = { RootToolStatus.Unsupported }).execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("root_unavailable", resultText(result))
+        assertEquals("root_shell is unavailable: this device does not provide root access.", resultText(result))
     }
 
     @Test
@@ -203,14 +203,14 @@ class RootShellToolTest {
             "call-1",
             buildJsonObject {
                 put("command", "id")
-                put("timeout_ms", "soon")
+                put("timeoutMs", "soon")
             },
             null,
             null,
         )
 
         assertEquals(true, result.isError)
-        assertEquals("timeout_ms 必须是整数", resultText(result))
+        assertEquals("timeoutMs 必须是整数", resultText(result))
     }
 
     @Test

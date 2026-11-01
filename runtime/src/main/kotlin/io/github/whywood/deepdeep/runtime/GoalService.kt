@@ -257,7 +257,7 @@ class GoalService : GoalController, GoalDriver {
             appendLine("<goal_round>")
             appendLine("Objective: $objective")
             appendLine(if (maxRounds > 0) "Round: $round/$maxRounds" else "Round: $round")
-            append("Continue working toward the objective. Call update_goal with action complete when it is achieved, or blocked with a concrete reason when the same blocker persisted for at least 3 rounds.")
+            append("Continue working toward the objective. Call goal with action=complete when it is achieved, or action=blocked with a concrete reason when the same blocker persisted for at least 3 rounds.")
             appendLine()
             append("</goal_round>")
         }

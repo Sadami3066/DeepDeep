@@ -13,15 +13,22 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-private const val FEISHU_PLUGIN_ID = "feishu"
-
-private val pluginSetupParameters: JsonObject = buildJsonObject {
+private fun pluginSetupParameters(ids: List<String>): JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("plugin") {
             put("type", "string")
-            putJsonArray("enum") { add(JsonPrimitive(FEISHU_PLUGIN_ID)) }
-            put("description", "Official plugin id")
+            if (ids.isNotEmpty()) {
+                putJsonArray("enum") { ids.forEach { add(JsonPrimitive(it)) } }
+            }
+            put(
+                "description",
+                if (ids.isEmpty()) {
+                    "Official plugin id"
+                } else {
+                    "Official plugin id: ${ids.joinToString(", ")}"
+                },
+            )
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("plugin")) })
@@ -29,24 +36,22 @@ private val pluginSetupParameters: JsonObject = buildJsonObject {
 
 fun pluginSetupTool(controller: PluginController?): CodingTool? {
     if (controller == null) return null
+    val ids = controller.setupPluginIds
     return CodingTool(
         name = "plugin_setup",
-        description = "Install and run the setup flow of an official DeepDeep plugin, for example connecting Feishu. Opens an in-app sheet and waits until the user finishes. Only works while DeepDeep is in the foreground.",
-        parameters = pluginSetupParameters,
+        description = "Install and run the setup flow of an official DeepDeep plugin such as Feishu, WeCom or Xiaomi Cloud. Opens an in-app sheet and waits for the user; only works while DeepDeep is in the foreground.",
+        parameters = pluginSetupParameters(ids),
         label = "plugin_setup",
-        promptSnippet = "Set up an official plugin with the user",
-        promptGuidelines = listOf(
-            "Use plugin_setup when the user asks to connect, enable, or sign in to an official plugin.",
-            "Do not run a plugin's interactive setup commands yourself; the plugin sheet is the only way to show the user an authorization link.",
-            "When plugin_setup reports that the user cancelled, ask what went wrong instead of retrying in a loop.",
-        ),
         execute = { _, args, signal, _ ->
             signal?.throwIfAborted()
             val pluginId = (args["plugin"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty()
-            if (pluginId.isEmpty()) {
-                textResult("plugin must not be empty", isError = true)
-            } else {
-                try {
+            when {
+                pluginId.isEmpty() -> textResult("plugin must not be empty", isError = true)
+                ids.isNotEmpty() && pluginId !in ids -> textResult(
+                    "unknown plugin: $pluginId. Valid ids: ${ids.joinToString(", ")}",
+                    isError = true,
+                )
+                else -> try {
                     textResult(setupResultJson(controller.setup(pluginId)).toString())
                 } catch (error: RequestAbortedException) {
                     throw error

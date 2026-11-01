@@ -12,165 +12,119 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-private val jobStartParameters: JsonObject = buildJsonObject {
+
+private val JOB_ACTION_VALUES = buildJsonArray {
+    add(JsonPrimitive("start"))
+    add(JsonPrimitive("output"))
+    add(JsonPrimitive("list"))
+    add(JsonPrimitive("kill"))
+}
+
+private val jobParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
+        putJsonObject("action") {
+            put("type", "string")
+            put("enum", JOB_ACTION_VALUES)
+            put("description", "start, output, list or kill")
+        }
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run in the background")
+            put("description", "Shell command to run in the background, required for start")
         }
         putJsonObject("label") {
             put("type", "string")
             put("description", "Short label shown in the jobs list (defaults to the command)")
         }
-    }
-    put("required", buildJsonArray { add(JsonPrimitive("command")) })
-}
-
-private val jobOutputParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {
-        putJsonObject("job_id") {
+        putJsonObject("jobId") {
             put("type", "string")
-            put("description", "Background job id (from job_start or a job reported by job_list)")
+            put("description", "Background job id from start or list; required for output and kill")
         }
         putJsonObject("wait") {
             put("type", "boolean")
-            put("description", "Wait for new output or job completion instead of returning immediately")
+            put("description", "For output: wait for new output or job completion instead of returning immediately")
         }
-        putJsonObject("timeout_ms") {
+        putJsonObject("timeoutMs") {
             put("type", "number")
-            put("description", "Maximum wait in milliseconds (default 30000, clamped to 1..600000)")
-        }
-    }
-    put("required", buildJsonArray { add(JsonPrimitive("job_id")) })
-}
-
-private val jobListParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {}
-}
-
-private val jobKillParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {
-        putJsonObject("job_id") {
-            put("type", "string")
-            put("description", "Background job id (from job_start or a job reported by job_list)")
+            put("description", "For output with wait: maximum wait in milliseconds (default 30000, clamped to 1..600000)")
         }
         putJsonObject("reason") {
             put("type", "string")
-            put("description", "Optional reason recorded on the job")
+            put("description", "Optional reason recorded on the job for kill")
         }
     }
-    put("required", buildJsonArray { add(JsonPrimitive("job_id")) })
+    put("required", buildJsonArray { add(JsonPrimitive("action")) })
 }
 
-fun jobTools(binding: SessionBinding, registry: JobRegistry): List<CodingTool> = listOf(
-    jobStartTool(binding, registry),
-    jobOutputTool(binding, registry),
-    jobListTool(binding, registry),
-    jobKillTool(binding, registry),
-)
+fun jobTools(binding: SessionBinding, registry: JobRegistry): List<CodingTool> =
+    listOf(jobTool(binding, registry))
 
-private fun jobStartTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
-    name = "job_start",
-    description = "Start a shell command as a background job and return its id immediately. Use job_output to read its output and job_kill to stop it.",
-    parameters = jobStartParameters,
-    label = "job_start",
-    promptSnippet = "Start a background job",
-    promptGuidelines = listOf(
-        "Use job_start for commands that run for a long time; read their output with job_output and stop them with job_kill.",
-        "Use the foreground bash tool for commands that finish quickly.",
-    ),
+private fun jobTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
+    name = "job",
+    description = "Start, read, list or cancel background shell jobs in the current conversation. start returns a job id; output returns output since the previous read plus a status line; list shows this conversation's jobs; kill requests cancellation.",
+    parameters = jobParameters,
+    label = "job",
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         jobToolResult {
-            val session = activeJobSession(binding)
-            val command = args.requiredJobString("command")
-            val label = args.jobStringOrNull("label").orEmpty()
-            val start = registry.start(session.sessionId, command, label, session.cwd)
-            val jobId = start.id
-            if (jobId == null) {
-                textResult(start.error ?: "failed to start job", isError = true)
-            } else {
-                textResult(
-                    "Started background job $jobId.\n\n" +
-                        "Use job_output with job id $jobId to read output, or job_kill to stop it.",
-                )
+            when (val action = args.requiredJobString("action").lowercase()) {
+                "start" -> jobStart(binding, registry, args)
+                "output" -> jobOutput(binding, registry, args)
+                "list" -> jobList(binding, registry)
+                "kill" -> jobKill(binding, registry, args)
+                else -> textResult("action must be start, output, list or kill.", isError = true)
             }
         }
     },
 )
 
-private fun jobOutputTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
-    name = "job_output",
-    description = "Read output produced by a background job since the previous job_output call. Always ends with a status line. Set wait=true to suspend until new output arrives or the job finishes.",
-    parameters = jobOutputParameters,
-    label = "job_output",
-    promptSnippet = "Read background job output",
-    promptGuidelines = listOf(
-        "Call job_output after starting a job with job_start; each call returns only output written since the previous read.",
-        "Use wait=true when the job is still running and you want to block until there is progress or the job settles.",
-        "A status line of running means the job is still active; done, failed and killed are terminal.",
-    ),
-    execute = { _, args, signal, _ ->
-        signal?.throwIfAborted()
-        jobToolResult {
-            activeJobSession(binding)
-            val jobId = args.requiredJobString("job_id")
-            val wait = args.jobBoolOrNull("wait") ?: false
-            val timeout = args.jobLongOrNull("timeout_ms")
-            val read = when {
-                !wait -> registry.readIncremental(jobId)
-                timeout == null -> registry.awaitRead(jobId, true)
-                else -> registry.awaitRead(jobId, true, timeout)
-            }
-            val status = "[status: ${jobStatusText(read.status, read.exitCode)}]"
-            val prefix = if (read.dropped) "[older output was dropped from the in-memory buffer]\n" else ""
-            val text = prefix + if (read.output.isEmpty()) status else read.output.trimEnd('\n') + "\n" + status
-            textResult(text, isError = read.status == JobStatus.FAILED)
-        }
-    },
-)
+private suspend fun jobStart(binding: SessionBinding, registry: JobRegistry, args: JsonObject): AgentToolResult {
+    val session = activeJobSession(binding)
+    val command = args.requiredJobString("command")
+    val label = args.jobStringOrNull("label").orEmpty()
+    val start = registry.start(session.sessionId, command, label, session.cwd)
+    val jobId = start.id
+    return if (jobId == null) {
+        textResult(start.error ?: "failed to start job", isError = true)
+    } else {
+        textResult(
+            "Started background job $jobId.\n\n" +
+                "Use action=output with jobId=$jobId to read output, or action=kill to stop it.",
+        )
+    }
+}
 
-private fun jobListTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
-    name = "job_list",
-    description = "List background jobs started in the current conversation with their status and label.",
-    parameters = jobListParameters,
-    label = "job_list",
-    promptSnippet = "List background jobs",
-    promptGuidelines = listOf("Use job_list to find a job id before calling job_output or job_kill."),
-    execute = { _, _, signal, _ ->
-        signal?.throwIfAborted()
-        jobToolResult {
-            val session = activeJobSession(binding)
-            val lines = registry.jobs.value
-                .filter { it.sessionId == session.sessionId }
-                .map { "${it.id} [bash] ${it.status.name.lowercase()} — ${it.label}" }
-            textResult(if (lines.isEmpty()) "no background jobs" else lines.joinToString("\n"))
-        }
-    },
-)
+private suspend fun jobOutput(binding: SessionBinding, registry: JobRegistry, args: JsonObject): AgentToolResult {
+    activeJobSession(binding)
+    val jobId = args.requiredJobString("jobId", "job_id")
+    val wait = args.jobBoolOrNull("wait") ?: false
+    val timeout = args.jobLongOrNull("timeoutMs", "timeout_ms")
+    val read = when {
+        !wait -> registry.readIncremental(jobId)
+        timeout == null -> registry.awaitRead(jobId, true)
+        else -> registry.awaitRead(jobId, true, timeout)
+    }
+    val status = "[status: ${jobStatusText(read.status, read.exitCode)}]"
+    val prefix = if (read.dropped) "[older output was dropped from the in-memory buffer]\n" else ""
+    val text = prefix + if (read.output.isEmpty()) status else read.output.trimEnd('\n') + "\n" + status
+    return textResult(text, isError = read.status == JobStatus.FAILED)
+}
 
-private fun jobKillTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
-    name = "job_kill",
-    description = "Request cancellation of a running background job. The job settles as killed once its process tree is stopped.",
-    parameters = jobKillParameters,
-    label = "job_kill",
-    promptSnippet = "Cancel a background job",
-    promptGuidelines = listOf("Use job_kill only when the running work is no longer needed."),
-    execute = { _, args, signal, _ ->
-        signal?.throwIfAborted()
-        jobToolResult {
-            activeJobSession(binding)
-            val jobId = args.requiredJobString("job_id")
-            val reason = args.jobStringOrNull("reason")
-            val requested = registry.kill(jobId, reason)
-            textResult(if (requested) "cancellation-requested" else "already-finished")
-        }
-    },
-)
+private fun jobList(binding: SessionBinding, registry: JobRegistry): AgentToolResult {
+    val session = activeJobSession(binding)
+    val lines = registry.jobs.value
+        .filter { it.sessionId == session.sessionId }
+        .map { "${it.id} ${it.status.name.lowercase()} — ${it.label}" }
+    return textResult(if (lines.isEmpty()) "no background jobs" else lines.joinToString("\n"))
+}
+
+private suspend fun jobKill(binding: SessionBinding, registry: JobRegistry, args: JsonObject): AgentToolResult {
+    activeJobSession(binding)
+    val jobId = args.requiredJobString("jobId", "job_id")
+    val reason = args.jobStringOrNull("reason")
+    val requested = registry.kill(jobId, reason)
+    return textResult(if (requested) "Cancellation requested." else "The job has already finished.")
+}
 
 private fun activeJobSession(binding: SessionBinding): BoundSession =
     binding.current() ?: throw IllegalStateException("No session is bound")
@@ -189,11 +143,17 @@ private suspend fun jobToolResult(block: suspend () -> AgentToolResult): AgentTo
 private fun JsonObject.jobStringOrNull(name: String): String? =
     (this[name] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
-private fun JsonObject.requiredJobString(name: String): String =
-    jobStringOrNull(name) ?: throw IllegalArgumentException("Missing required argument: $name")
+private fun JsonObject.requiredJobString(vararg names: String): String =
+    names.firstNotNullOfOrNull { name -> jobStringOrNull(name) }
+        ?: throw IllegalArgumentException("Missing required argument: ${names.first()}")
 
 private fun JsonObject.jobBoolOrNull(name: String): Boolean? =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
 
-private fun JsonObject.jobLongOrNull(name: String): Long? =
-    (this[name] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toLong()
+private fun JsonObject.jobLongOrNull(vararg names: String): Long? {
+    names.forEach { name ->
+        val raw = (this[name] as? JsonPrimitive)?.contentOrNull ?: return@forEach
+        return raw.toDoubleOrNull()?.toLong()
+    }
+    return null
+}

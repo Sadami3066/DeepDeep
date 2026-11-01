@@ -102,7 +102,7 @@ class PiSessionEngine(
                 shellExecutor = activeShell,
                 hooks = CodingHooks(extraSystemPromptSections = { currentSections() }),
                 credentials = credentials,
-                extraSystemPromptSections = buildToolRuleSection(tools),
+                extraSystemPromptSections = buildToolRuleSection(),
                 initialSystemPromptSections = currentSections(),
                 projectTrusted = true,
                 mcp = McpOptions(

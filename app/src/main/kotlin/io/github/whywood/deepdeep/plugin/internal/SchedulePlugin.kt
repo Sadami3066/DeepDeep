@@ -5,7 +5,6 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginStrings
-import okio.Path.Companion.toPath
 import io.github.whywood.deepdeep.runtime.ScheduleService
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.scheduleTools
@@ -21,5 +20,5 @@ class SchedulePlugin(
     override val version: String = "1.0"
 
     override fun tools(binding: SessionBinding): List<CodingTool> =
-        scheduleTools(".".toPath(), scheduleService, binding)
+        scheduleTools(scheduleService, binding)
 }

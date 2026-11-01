@@ -52,7 +52,7 @@ class GoalToolsTest {
     private lateinit var root: File
     private lateinit var session: AgentSession
     private lateinit var service: GoalService
-    private lateinit var tools: Map<String, CodingTool>
+    private lateinit var tool: CodingTool
 
     @Before
     fun setUp() = runBlocking {
@@ -71,7 +71,7 @@ class GoalToolsTest {
         session = engine.createSession(file = null, config = null, shellEnabled = false, mcpEnabled = false)
         service = GoalService()
         service.noteTurn(session.sessionId, TurnSource.USER)
-        tools = goalTools(SessionBinding().apply { attach(session) }, service) { 10 }.associateBy { it.name }
+        tool = goalTools(SessionBinding().apply { attach(session) }, service) { 10 }.single()
     }
 
     @After
@@ -81,9 +81,23 @@ class GoalToolsTest {
     }
 
     @Test
+    fun toolIsSingleGoalEntry() {
+        assertEquals("goal", tool.name)
+        val actions = tool.parameters.getValue("properties").jsonObject
+            .getValue("action").jsonObject.getValue("enum").toString()
+        listOf("get", "create", "edit", "pause", "resume", "complete", "blocked").forEach {
+            assertTrue(it, actions.contains(it))
+        }
+    }
+
+    @Test
     fun createGoalUsesDefaultMaxRounds() = runTest {
-        val goal = executeOk("create_goal", buildJsonObject { put("objective", "发布新版本") })
-            .getValue("goal").jsonObject
+        val goal = executeOk(
+            buildJsonObject {
+                put("action", "create")
+                put("objective", "发布新版本")
+            },
+        ).getValue("goal").jsonObject
 
         assertEquals(10, goal.getValue("maxRounds").jsonPrimitive.int)
     }
@@ -91,10 +105,10 @@ class GoalToolsTest {
     @Test
     fun explicitCreateRoundsWinOverDefault() = runTest {
         val goal = executeOk(
-            "create_goal",
             buildJsonObject {
+                put("action", "create")
                 put("objective", "发布新版本")
-                put("max_goal_rounds", 2)
+                put("maxRounds", 2)
             },
         ).getValue("goal").jsonObject
 
@@ -102,15 +116,29 @@ class GoalToolsTest {
     }
 
     @Test
-    fun updateGoalEditKeepsExistingRoundsWhenNotPassed() = runTest {
+    fun getReturnsCreatedGoal() = runTest {
+        val created = executeOk(
+            buildJsonObject {
+                put("action", "create")
+                put("objective", "整理会议记录")
+            },
+        ).getValue("goal").jsonObject
+
+        val read = executeOk(buildJsonObject { put("action", "get") }).getValue("goal").jsonObject
+
+        assertEquals(created.getValue("id").jsonPrimitive.content, read.getValue("id").jsonPrimitive.content)
+        assertEquals(created.getValue("revision").jsonPrimitive.int, read.getValue("revision").jsonPrimitive.int)
+    }
+
+    @Test
+    fun editKeepsExistingRoundsWhenNotPassed() = runTest {
         val created = service.create(session.sessionId, "旧目标", 5)!!.goal
 
         val goal = executeOk(
-            "update_goal",
             buildJsonObject {
-                put("goal_id", created.id)
-                put("revision", created.revision)
                 put("action", "edit")
+                put("goalId", created.id)
+                put("revision", created.revision)
                 put("objective", "新目标")
             },
         ).getValue("goal").jsonObject
@@ -121,19 +149,18 @@ class GoalToolsTest {
     }
 
     @Test
-    fun updateGoalEditWithoutChangesIsStillRejected() = runTest {
+    fun editWithoutChangesIsRejected() = runTest {
         val created = service.create(session.sessionId, "旧目标", 5)!!.goal
 
         val error = executeError(
-            "update_goal",
             buildJsonObject {
-                put("goal_id", created.id)
-                put("revision", created.revision)
                 put("action", "edit")
+                put("goalId", created.id)
+                put("revision", created.revision)
             },
         )
 
-        assertTrue(error.contains("requires objective or max_goal_rounds"))
+        assertTrue(error.contains("requires objective or maxRounds"))
         assertEquals(5, service.goals.value.getValue(session.sessionId).goal.maxRounds)
         assertEquals("旧目标", service.goals.value.getValue(session.sessionId).goal.objective)
     }
@@ -143,27 +170,39 @@ class GoalToolsTest {
         val created = service.create(session.sessionId, "旧目标", 5)!!.goal
 
         val goal = executeOk(
-            "update_goal",
             buildJsonObject {
-                put("goal_id", created.id)
-                put("revision", created.revision)
                 put("action", "edit")
-                put("max_goal_rounds", 4)
+                put("goalId", created.id)
+                put("revision", created.revision)
+                put("maxRounds", 4)
             },
         ).getValue("goal").jsonObject
 
         assertEquals(4, goal.getValue("maxRounds").jsonPrimitive.int)
     }
 
-    private suspend fun executeOk(name: String, args: JsonObject): JsonObject {
-        val result = tools.getValue(name).execute("call-1", args, null, null)
+    @Test
+    fun legacyParameterNamesAreAccepted() = runTest {
+        val goal = executeOk(
+            buildJsonObject {
+                put("action", "create")
+                put("objective", "发布新版本")
+                put("max_goal_rounds", 3)
+            },
+        ).getValue("goal").jsonObject
+
+        assertEquals(3, goal.getValue("maxRounds").jsonPrimitive.int)
+    }
+
+    private suspend fun executeOk(args: JsonObject): JsonObject {
+        val result = tool.execute("call-1", args, null, null)
         val text = result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
         assertNull("unexpected tool error: $text", result.isError)
         return Json.parseToJsonElement(text).jsonObject
     }
 
-    private suspend fun executeError(name: String, args: JsonObject): String {
-        val result = tools.getValue(name).execute("call-1", args, null, null)
+    private suspend fun executeError(args: JsonObject): String {
+        val result = tool.execute("call-1", args, null, null)
         val text = result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
         assertEquals("expected tool error: $text", true, result.isError)
         return text

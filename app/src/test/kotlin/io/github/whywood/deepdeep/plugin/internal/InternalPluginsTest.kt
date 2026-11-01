@@ -25,7 +25,7 @@ class InternalPluginsTest {
         assertEquals(PluginKind.INTERNAL, plugin.kind)
         assertEquals("goal", plugin.id)
         val names = plugin.tools(SessionBinding()).map { it.name }
-        assertTrue(names.containsAll(listOf("get_goal", "create_goal", "update_goal")))
+        assertEquals(listOf("goal"), names)
         val setting = plugin.settings().single() as PluginSettingSpec.Number
         assertEquals("max_rounds", setting.key)
         assertEquals(0, setting.min)
@@ -44,7 +44,7 @@ class InternalPluginsTest {
 
         assertEquals(PluginKind.INTERNAL, plugin.kind)
         val names = plugin.tools(SessionBinding()).map { it.name }
-        assertEquals(listOf("job_start", "job_output", "job_list", "job_kill"), names)
+        assertEquals(listOf("job"), names)
         val setting = plugin.settings().single() as PluginSettingSpec.Number
         assertEquals("max_running", setting.key)
         assertEquals(1, setting.min)

@@ -62,15 +62,6 @@ private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
     description = "Create a Workshop mini app draft: a self-contained HTML/CSS/JS folder the user can open on the phone. Returns the draft folder where you write the app files; call workshop_load afterwards to install it.",
     parameters = workshopCreateParameters,
     label = "workshop_create",
-    promptSnippet = "Create a Workshop mini app draft folder",
-    promptGuidelines = listOf(
-        "Use the workshop tools when the user wants an interactive mini app (创意) in DeepDeep, not a static report or document.",
-        "The workshop skill in the current context defines the folder format; read it before writing any app file.",
-        "Write app files with absolute paths under the returned draft folder using read/write/edit; the workshop folder is outside the bash workspace, so never use bash for it.",
-        "Call workshop_load with the draft path when the app is ready, then fix every error it reports.",
-        "After workshop_load succeeds, deliver the app with present using type=creative and the returned app id.",
-        "Use workshop_list to locate an existing app when the user wants changes, then edit that app path in place; no reload or register step is needed.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         workshopToolResult {
@@ -96,15 +87,9 @@ private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
 
 private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
     name = "workshop_load",
-    description = "Load a Workshop draft folder from the build folder as a mini app so the user can open it. Call it with the draft path returned by workshop_create after writing all app files.",
+    description = "Install a Workshop draft folder at the given path as a mini app so the user can open it. Call it with the draft path returned by workshop_create after writing all app files.",
     parameters = workshopLoadParameters,
     label = "workshop_load",
-    promptSnippet = "Load a Workshop draft as a mini app",
-    promptGuidelines = listOf(
-        "Call workshop_load with the exact absolute draft path returned by workshop_create.",
-        "Fix the reported error and retry until loading succeeds; the app is not visible to the user before that.",
-        "After workshop_load succeeds, deliver the app with present using type=creative and the app id in the response.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         workshopToolResult {
@@ -131,14 +116,9 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
 
 private fun workshopListTool(store: WorkshopStore): CodingTool = CodingTool(
     name = "workshop_list",
-    description = "List loaded Workshop mini apps and the current drafts with their absolute folder paths.",
+    description = "List installed Workshop mini apps and the current drafts with their absolute folder paths.",
     parameters = workshopListParameters,
     label = "workshop_list",
-    promptSnippet = "List Workshop mini apps and drafts",
-    promptGuidelines = listOf(
-        "Use workshop_list to find an existing app when the user asks to change one, then edit that app folder in place with absolute paths.",
-        "Drafts are unfinished apps in the build folder; loaded apps are under the apps folder.",
-    ),
     execute = { _, _, signal, _ ->
         signal?.throwIfAborted()
         workshopToolResult {
@@ -213,26 +193,14 @@ private val workshopEditParameters: JsonObject = buildJsonObject {
     })
 }
 
-private val workshopEditGuidelines = listOf(
-    "Use workshop_edit to read or update the JSON data persisted for a Workshop app; this is the app's data layer, not its code.",
-    "The app page reads the same data through window.app.data (get/set/remove/keys); changing data does not require rewriting page files.",
-    "Keep app code stable and update data when the user wants new daily content, form entries or other content.",
-    "Prefer one JSON document per feature, for example one key holding a todo list.",
-    "Use workshop_list to find the app id before calling workshop_edit, and pass key for get, set and delete.",
-    "Use lowercase keys: 1-64 letters, digits, '-' or '_', starting with a letter or digit; one value may be at most 256KB.",
-    "Never edit the SQLite database file directly.",
-)
-
 fun workshopEditTool(store: WorkshopStore): CodingTool =
     workshopEditTool(store) { file -> SqliteWorkshopData(file) }
 
 internal fun workshopEditTool(store: WorkshopStore, dataFactory: (File) -> WorkshopData): CodingTool = CodingTool(
     name = "workshop_edit",
-    description = "Read or edit one JSON value in a Workshop app's persisted data layer (not its code): action get reads a key, set writes or overwrites it, delete removes it, keys lists all keys. The app page reads the same data through window.app.data.",
+    description = "Read or edit one JSON value in a Workshop app's persisted data layer (not its code): action get reads a key, set writes or overwrites it, delete removes it, keys lists all keys.",
     parameters = workshopEditParameters,
     label = "workshop_edit",
-    promptSnippet = "Read or edit Workshop app data",
-    promptGuidelines = workshopEditGuidelines,
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         workshopToolResult {

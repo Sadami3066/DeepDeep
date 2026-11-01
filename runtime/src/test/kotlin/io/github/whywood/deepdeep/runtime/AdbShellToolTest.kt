@@ -26,31 +26,32 @@ class AdbShellToolTest {
 
     private fun args(command: String? = null, timeoutMillis: Long? = null): JsonObject = buildJsonObject {
         if (command != null) put("command", command)
-        if (timeoutMillis != null) put("timeout_ms", timeoutMillis)
+        if (timeoutMillis != null) put("timeoutMs", timeoutMillis)
     }
 
     @Test
     fun toolExposesAdbShellSchema() {
         val properties = tool().parameters.getValue("properties").jsonObject
         assertTrue(properties.containsKey("command"))
-        assertTrue(properties.containsKey("timeout_ms"))
+        assertTrue(properties.containsKey("timeoutMs"))
         assertEquals("adb_shell", tool().name)
     }
 
     @Test
-    fun toolDescribesEmbeddedDaemonAndFixedShellUid() {
+    fun toolDescriptionIsTaskOriented() {
         val tool = tool()
 
-        assertTrue(tool.description.contains("embedded wireless-debugging daemon"))
-        assertTrue(tool.description.contains("uid 2000"))
-        assertTrue(tool.description.contains("any turn"))
-        assertTrue(tool.description.contains("stderr is merged into stdout"))
+        assertTrue(tool.description.contains("Android shell"))
+        assertTrue(tool.description.contains("combined output"))
+        assertFalse(tool.description.contains("daemon"))
+        assertFalse(tool.description.contains("uid 2000"))
         assertFalse(tool.description.contains("Shizuku"))
-        assertTrue(tool.promptGuidelines.orEmpty().any { it.contains("uid 2000") })
+        assertNull(tool.promptSnippet)
+        assertNull(tool.promptGuidelines)
     }
 
     @Test
-    fun disabledToolReturnsAdbDisabled() = runBlocking {
+    fun disabledToolReturnsAdbUnavailable() = runBlocking {
         var called = false
         val tool = tool(
             executor = RootCommandExecutor { _, _ ->
@@ -63,7 +64,7 @@ class AdbShellToolTest {
         val result = tool.execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("adb_disabled", resultText(result))
+        assertEquals("ADB shell is unavailable: wireless debugging is not connected.", resultText(result))
         assertFalse(called)
     }
 
@@ -72,7 +73,7 @@ class AdbShellToolTest {
         val result = tool(status = { RootToolStatus.Unsupported }).execute("call-1", args("id"), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("adb_unavailable", resultText(result))
+        assertEquals("ADB shell is unavailable on this device.", resultText(result))
     }
 
     @Test
@@ -146,14 +147,14 @@ class AdbShellToolTest {
             "call-1",
             buildJsonObject {
                 put("command", "id")
-                put("timeout_ms", "soon")
+                put("timeoutMs", "soon")
             },
             null,
             null,
         )
 
         assertEquals(true, result.isError)
-        assertEquals("timeout_ms 必须是整数", resultText(result))
+        assertEquals("timeoutMs 必须是整数", resultText(result))
     }
 
     @Test

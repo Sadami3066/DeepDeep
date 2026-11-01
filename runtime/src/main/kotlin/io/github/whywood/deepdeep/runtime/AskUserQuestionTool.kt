@@ -40,7 +40,7 @@ private val askUserQuestionParameters: JsonObject = buildJsonObject {
                         put("type", "string")
                         put("description", "The question text")
                     }
-                    putJsonObject("multi_select") {
+                    putJsonObject("multiSelect") {
                         put("type", "boolean")
                         put("description", "Whether the user may pick more than one option (default false)")
                     }
@@ -76,15 +76,9 @@ private val askUserQuestionParameters: JsonObject = buildJsonObject {
 
 fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding): CodingTool = CodingTool(
     name = "ask_user_question",
-    description = "Ask the user one to five structured questions and wait for the answer. Use options for choices and omit options for free-form input. Mark a recommended option by appending (Recommended) to its label.",
+    description = "Ask the user one to five structured questions and wait for answers. Use options for choices; omit options for free-form input. Append (Recommended) to a recommended label. Ask only when a real choice or missing fact blocks progress.",
     parameters = askUserQuestionParameters,
     label = "ask_user_question",
-    promptSnippet = "Ask the user a structured question",
-    promptGuidelines = listOf(
-        "Use ask_user_question when you truly need the user to choose between approaches or provide missing information.",
-        "Ask at most five questions per call and keep each question short.",
-        "To recommend an option, append (Recommended) to its label; do not change the labels the user selected.",
-    ),
     execute = { toolCallId, args, signal, _ ->
         signal?.throwIfAborted()
         val sessionId = binding.current()?.sessionId
@@ -150,7 +144,7 @@ private fun parseQuestions(args: JsonObject): List<UserQuestion> {
             header = item.stringOrNull("header")?.trim()?.takeIf { it.isNotEmpty() },
             question = question,
             options = options,
-            multiSelect = item.boolOrNull("multi_select") ?: item.boolOrNull("multiSelect") ?: false,
+            multiSelect = item.boolOrNull("multiSelect") ?: item.boolOrNull("multi_select") ?: false,
         )
     }
 }

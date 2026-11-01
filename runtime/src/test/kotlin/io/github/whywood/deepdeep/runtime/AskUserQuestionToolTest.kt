@@ -56,8 +56,8 @@ class AskUserQuestionToolTest {
         assertEquals("array", (questions["type"] as JsonPrimitive).content)
         assertEquals("5", (questions["maxItems"] as JsonPrimitive).content)
         val questionProperties = questions.getValue("items").jsonObject.getValue("properties").jsonObject
-        assertTrue(questionProperties.containsKey("multi_select"))
-        assertFalse(questionProperties.containsKey("multiSelect"))
+        assertTrue(questionProperties.containsKey("multiSelect"))
+        assertFalse(questionProperties.containsKey("multi_select"))
     }
 
     @Test

@@ -36,9 +36,9 @@ private val rootShellParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run as root on the Android device")
+            put("description", "Shell command to run with root privileges")
         }
-        putJsonObject("timeout_ms") {
+        putJsonObject("timeoutMs") {
             put("type", "number")
             put("description", "Maximum run time in milliseconds (default 15000, clamped to 1..120000)")
         }
@@ -66,18 +66,12 @@ fun rootShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "root_shell",
-    description = "Run a shell command as root (su) on the Android device and return its exit code, stdout and stderr. Works in any turn while the user has granted root access.",
-    promptSnippet = "Run a command as root",
-    promptGuidelines = listOf(
-        "Use root_shell only when the user explicitly asks for a system-level operation that requires root; prefer the regular bash tool for all other commands.",
-        "root_shell works in foreground, background, scheduled and goal-continued runs alike; it never persists authorization.",
-        "Do not run destructive root commands unless the user explicitly asked for that exact command.",
-    ),
+    description = "Run a shell command with root privileges and return its exit code, stdout and stderr. Use only when the user explicitly asks for a system-level operation that needs root; prefer the regular bash tool otherwise.",
     parameters = rootShellParameters,
     executor = executor,
     enabled = enabled,
-    disabledMessage = "root_disabled",
+    disabledMessage = "root_shell is unavailable: select the Root tier and grant root access first.",
     status = status,
-    unavailableMessage = "root_unavailable",
-    failureMessage = "root_shell 执行失败",
+    unavailableMessage = "root_shell is unavailable: this device does not provide root access.",
+    failureMessage = "root_shell execution failed",
 )

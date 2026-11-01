@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
 interface PluginController {
+    val setupPluginIds: List<String> get() = emptyList()
+
     suspend fun setup(pluginId: String): PluginSetupResult
 }
 

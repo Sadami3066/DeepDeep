@@ -99,14 +99,6 @@ fun presentTool(
     description = "Deliver one to four finished works to the user: files, images, web pages, or installed Workshop mini apps. Chat shows a delivery card for every item; images and web pages render inline.",
     parameters = presentParameters,
     label = "present",
-    promptSnippet = "Deliver finished files, images, web pages or mini apps to the user",
-    promptGuidelines = listOf(
-        "Call present when a task produced works the user should see: reports, slides, videos and other files (type=file), images (type=image), self-contained web pages (type=html), or an installed Workshop mini app (type=creative with its id).",
-        "Deliver one to four items; paths may be absolute or relative to the current working directory, and title names a work.",
-        "Image and html items must point to an existing file with the matching extension; keep web page assets in the same folder as the page.",
-        "After workshop_load succeeds, deliver the app with present type=creative and the returned app id instead of describing it.",
-        "Do not repeat the delivered content in your reply; the cards already show it, so add no more than a short sentence of context.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         val bound = session()

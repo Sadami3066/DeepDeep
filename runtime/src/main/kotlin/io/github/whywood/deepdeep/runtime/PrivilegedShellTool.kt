@@ -20,9 +20,9 @@ private val adbShellParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run through the app's embedded wireless-debugging daemon on the Android device, with ADB shell privileges (uid 2000)")
+            put("description", "Shell command to run with Android shell (not root) privileges")
         }
-        putJsonObject("timeout_ms") {
+        putJsonObject("timeoutMs") {
             put("type", "number")
             put("description", "Maximum run time in milliseconds (default 15000, clamped to 1..120000)")
         }
@@ -33,8 +33,6 @@ private val adbShellParameters: JsonObject = buildJsonObject {
 internal fun privilegedShellTool(
     name: String,
     description: String,
-    promptSnippet: String,
-    promptGuidelines: List<String>,
     parameters: JsonObject,
     executor: RootCommandExecutor,
     enabled: () -> Boolean,
@@ -49,8 +47,6 @@ internal fun privilegedShellTool(
         description = description,
         parameters = parameters,
         label = name,
-        promptSnippet = promptSnippet,
-        promptGuidelines = promptGuidelines,
         execute = { toolCallId, args, signal, onUpdate ->
             signal?.throwIfAborted()
             when {
@@ -76,21 +72,14 @@ fun adbShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "adb_shell",
-    description = "Run a shell command through the app's embedded wireless-debugging daemon on the Android device and return its exit code and combined output (stderr is merged into stdout). The daemon runs as the ADB shell (uid 2000); it works in any turn while the ADB tier is connected, with no external app or persistent authorization.",
-    promptSnippet = "Run a command through the embedded ADB shell",
-    promptGuidelines = listOf(
-        "Use adb_shell only when the user explicitly asks for a system-level operation that needs ADB shell privileges; prefer the regular bash tool for all other commands.",
-        "adb_shell works in foreground, background, scheduled and goal-continued runs alike; it never persists an authorization.",
-        "Commands run as the ADB shell (uid 2000), never as root; use root_shell for root-only operations when root is available.",
-        "Do not run destructive commands unless the user explicitly asked for that exact command.",
-    ),
+    description = "Run a shell command with Android shell (not root) privileges and return its exit code and combined output. Use only when the user explicitly asks for a system-level operation that the normal bash tool cannot do.",
     parameters = adbShellParameters,
     executor = executor,
     enabled = enabled,
-    disabledMessage = "adb_disabled",
+    disabledMessage = "ADB shell is unavailable: wireless debugging is not connected.",
     status = status,
-    unavailableMessage = "adb_unavailable",
-    failureMessage = "adb_shell 执行失败",
+    unavailableMessage = "ADB shell is unavailable on this device.",
+    failureMessage = "adb_shell execution failed",
 )
 
 internal fun JsonObject.shellArguments(): JsonObject {
@@ -104,9 +93,9 @@ internal fun JsonObject.shellArguments(): JsonObject {
 }
 
 private fun JsonObject.shellTimeoutMillis(): Long {
-    val primitive = this["timeout_ms"] as? JsonPrimitive ?: return DEFAULT_SHELL_TIMEOUT_MILLIS
+    val primitive = this["timeoutMs"] as? JsonPrimitive ?: this["timeout_ms"] as? JsonPrimitive ?: return DEFAULT_SHELL_TIMEOUT_MILLIS
     val raw = primitive.contentOrNull ?: return DEFAULT_SHELL_TIMEOUT_MILLIS
-    return raw.toLongOrNull() ?: throw IllegalArgumentException("timeout_ms 必须是整数")
+    return raw.toLongOrNull() ?: throw IllegalArgumentException("timeoutMs 必须是整数")
 }
 
 internal const val DEFAULT_SHELL_TIMEOUT_MILLIS = 15_000L

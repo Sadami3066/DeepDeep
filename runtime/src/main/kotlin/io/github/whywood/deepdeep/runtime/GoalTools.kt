@@ -15,6 +15,8 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 private val GOAL_ACTION_VALUES = buildJsonArray {
+    add(JsonPrimitive("get"))
+    add(JsonPrimitive("create"))
     add(JsonPrimitive("edit"))
     add(JsonPrimitive("pause"))
     add(JsonPrimitive("resume"))
@@ -22,258 +24,206 @@ private val GOAL_ACTION_VALUES = buildJsonArray {
     add(JsonPrimitive("blocked"))
 }
 
-private val getGoalParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {}
-}
-
-private val createGoalParameters: JsonObject = buildJsonObject {
+private val goalParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
-        putJsonObject("objective") {
-            put("type", "string")
-            put("description", "Concrete objective to keep working toward across turns")
-        }
-        putJsonObject("max_goal_rounds") {
-            put("type", "number")
-            put("description", "Optional maximum number of goal rounds before the goal is blocked, between 1 and 50. Omit for unlimited rounds")
-        }
-    }
-    put("required", buildJsonArray { add(JsonPrimitive("objective")) })
-}
-
-private val updateGoalParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {
-        putJsonObject("goal_id") {
-            put("type", "string")
-            put("description", "Id of the current goal from get_goal")
-        }
-        putJsonObject("revision") {
-            put("type", "number")
-            put("description", "Current goal revision from get_goal; a stale revision is rejected")
-        }
         putJsonObject("action") {
             put("type", "string")
             put("enum", GOAL_ACTION_VALUES)
-            put("description", "edit, pause, resume, complete or blocked")
+            put("description", "get, create, edit, pause, resume, complete or blocked")
+        }
+        putJsonObject("goalId") {
+            put("type", "string")
+            put("description", "Id of the current goal from action=get; required for change actions")
+        }
+        putJsonObject("revision") {
+            put("type", "number")
+            put("description", "Current goal revision from action=get; required for change actions")
         }
         putJsonObject("objective") {
             put("type", "string")
-            put("description", "New objective text for action edit")
+            put("description", "Concrete objective, required for create and optional for edit")
         }
-        putJsonObject("max_goal_rounds") {
+        putJsonObject("maxRounds") {
             put("type", "number")
-            put("description", "New maximum round count for action edit, between 1 and 50. Omit for unlimited")
+            put("description", "Optional maximum goal rounds, 1-50; omit for unlimited")
         }
-        putJsonObject("blocked_reason") {
+        putJsonObject("blockedReason") {
             put("type", "string")
-            put("description", "Concrete blocker description, required for action blocked")
+            put("description", "Concrete blocker description, required for action=blocked")
         }
     }
-    put("required", buildJsonArray {
-        add(JsonPrimitive("goal_id"))
-        add(JsonPrimitive("revision"))
-        add(JsonPrimitive("action"))
-    })
+    put("required", buildJsonArray { add(JsonPrimitive("action")) })
 }
 
 fun goalTools(
     binding: SessionBinding,
     service: GoalService,
     defaultMaxRounds: () -> Int = { 0 },
-): List<CodingTool> = listOf(
-    getGoalTool(binding, service),
-    createGoalTool(binding, service, defaultMaxRounds),
-    updateGoalTool(binding, service),
-)
+): List<CodingTool> = listOf(goalTool(binding, service, defaultMaxRounds))
 
-private fun getGoalTool(binding: SessionBinding, service: GoalService): CodingTool = CodingTool(
-    name = "get_goal",
-    description = "Read the goal for the current conversation, including its objective, revision, phase, round progress and whether it is armed for the next turn.",
-    parameters = getGoalParameters,
-    label = "get_goal",
-    promptSnippet = "Read the current goal",
-    promptGuidelines = listOf(
-        "Call get_goal before update_goal so the goal id and revision are current.",
-        "Do not infer goal state; read it with get_goal.",
-    ),
-    execute = { _, _, signal, _ ->
-        signal?.throwIfAborted()
-        goalToolResult {
-            val session = binding.current()
-                ?: return@goalToolResult textResult("No session is bound. Goal tools require an active session.", isError = true)
-            textResult(goalViewJson(service.goals.value[session.sessionId]).toString())
-        }
-    },
-)
-
-private fun createGoalTool(
+private fun goalTool(
     binding: SessionBinding,
     service: GoalService,
     defaultMaxRounds: () -> Int,
 ): CodingTool = CodingTool(
-    name = "create_goal",
-    description = "Create a goal for the current conversation. The goal is armed immediately, so subsequent turns keep working toward the objective until it is completed, blocked or paused.",
-    parameters = createGoalParameters,
-    label = "create_goal",
-    promptSnippet = "Create a goal for this conversation",
-    promptGuidelines = listOf(
-        "Use create_goal only when the user directly asks to start a goal.",
-        "Never create a goal on your own initiative.",
-        "Keep the objective concrete and verifiable.",
-    ),
+    name = "goal",
+    description = "Read or change this conversation's goal. get reads it; create arms a new goal; edit, pause, resume, complete and blocked change it. Changes need the current revision; create, edit, pause and resume need a direct user request.",
+    parameters = goalParameters,
+    label = "goal",
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         goalToolResult {
             val session = binding.current()
                 ?: return@goalToolResult textResult("No session is bound. Goal tools require an active session.", isError = true)
-            val source = service.currentTurnSource(session.sessionId)
-            if (!source.isUserInitiated()) {
-                return@goalToolResult textResult(
-                    "create_goal is only allowed when the user directly asks for a goal. Do not create goals on your own.",
+            when (val action = args.requiredString("action").lowercase()) {
+                "get" -> textResult(goalViewJson(service.goals.value[session.sessionId]).toString())
+                "create" -> createGoal(service, session.sessionId, args, defaultMaxRounds)
+                "edit", "pause", "resume", "complete", "blocked" ->
+                    changeGoal(service, session.sessionId, args, action)
+                else -> textResult(
+                    "action must be get, create, edit, pause, resume, complete or blocked.",
                     isError = true,
                 )
             }
-            val objective = args.requiredString("objective")
-            val maxRounds = args.intOrNull("max_goal_rounds") ?: defaultMaxRounds().takeIf { it > 0 }
-            val created = service.create(session.sessionId, objective, maxRounds)
-                ?: return@goalToolResult textResult("The objective must not be blank.", isError = true)
-            textResult(goalViewJson(created).toString())
         }
     },
 )
 
-private fun updateGoalTool(
-    binding: SessionBinding,
+private suspend fun createGoal(
     service: GoalService,
-): CodingTool = CodingTool(
-    name = "update_goal",
-    description = "Update the goal for the current conversation. The revision must match the current goal. Actions edit, pause and resume require a direct user request; complete is allowed after the objective is achieved; blocked is only allowed during a goal round after the same blocker persisted for at least 3 rounds.",
-    parameters = updateGoalParameters,
-    label = "update_goal",
-    promptSnippet = "Update the current goal",
-    promptGuidelines = listOf(
-        "Call get_goal before update_goal so the goal id and revision are current.",
-        "Use action complete only after the objective is achieved.",
-        "Use action blocked only during a goal round after the same blocker persisted for at least 3 rounds.",
-        "Use action edit, pause or resume only when the user directly asks.",
-        "Do not stop working toward an active goal without completing or blocking it.",
-    ),
-    execute = { _, args, signal, _ ->
-        signal?.throwIfAborted()
-        goalToolResult {
-            val session = binding.current()
-                ?: return@goalToolResult textResult("No session is bound. Goal tools require an active session.", isError = true)
-            val goalId = args.requiredString("goal_id")
-            val revision = args.requiredInt("revision")
-            val action = args.requiredString("action").lowercase()
-            val current = service.goals.value[session.sessionId]
-                ?: return@goalToolResult textResult("No goal exists for this session. Use create_goal first.", isError = true)
-            if (current.goal.id != goalId) {
-                return@goalToolResult textResult(
-                    "goal_id does not match the current goal (${current.goal.id}).",
+    sessionId: String,
+    args: JsonObject,
+    defaultMaxRounds: () -> Int,
+): AgentToolResult {
+    val source = service.currentTurnSource(sessionId)
+    if (!source.isUserInitiated()) {
+        return textResult(
+            "create is only allowed when the user directly asks for a goal. Do not create goals on your own.",
+            isError = true,
+        )
+    }
+    val objective = args.requiredString("objective")
+    val maxRounds = args.intOrNull("maxRounds", "max_goal_rounds") ?: defaultMaxRounds().takeIf { it > 0 }
+    val created = service.create(sessionId, objective, maxRounds)
+        ?: return textResult("The objective must not be blank.", isError = true)
+    return textResult(goalViewJson(created).toString())
+}
+
+private suspend fun changeGoal(
+    service: GoalService,
+    sessionId: String,
+    args: JsonObject,
+    action: String,
+): AgentToolResult {
+    val goalId = args.requiredString("goalId", "goal_id")
+    val revision = args.requiredInt("revision")
+    val current = service.goals.value[sessionId]
+        ?: return textResult("No goal exists for this session. Use action=create first.", isError = true)
+    if (current.goal.id != goalId) {
+        return textResult(
+            "goalId does not match the current goal (${current.goal.id}).",
+            isError = true,
+        )
+    }
+    if (current.goal.revision != revision) {
+        return textResult(
+            "revision does not match the current goal revision (${current.goal.revision}). Call action=get again.",
+            isError = true,
+        )
+    }
+    val source = service.currentTurnSource(sessionId)
+    return when (action) {
+        "edit" -> {
+            if (!source.isUserInitiated()) {
+                return textResult(
+                    "edit is only allowed when the user directly asks. Continue the current turn.",
                     isError = true,
                 )
             }
-            if (current.goal.revision != revision) {
-                return@goalToolResult textResult(
-                    "revision does not match the current goal revision (${current.goal.revision}). Call get_goal again.",
+            val objective = args.stringOrNull("objective")?.trim()?.takeIf { it.isNotEmpty() }
+            val maxRounds = args.intOrNull("maxRounds", "max_goal_rounds")
+            if (objective == null && maxRounds == null) {
+                return textResult("edit requires objective or maxRounds.", isError = true)
+            }
+            val updated = service.edit(sessionId, objective, maxRounds)
+                ?: return textResult(
+                    "The goal could not be edited. The objective must not be blank.",
                     isError = true,
                 )
-            }
-            val source = service.currentTurnSource(session.sessionId)
-            when (action) {
-                "edit" -> {
-                    if (!source.isUserInitiated()) {
-                        return@goalToolResult textResult(
-                            "update_goal edit is only allowed when the user directly asks. Continue the current turn.",
-                            isError = true,
-                        )
-                    }
-                    val objective = args.stringOrNull("objective")?.trim()?.takeIf { it.isNotEmpty() }
-                    val maxRounds = args.intOrNull("max_goal_rounds")
-                    if (objective == null && maxRounds == null) {
-                        return@goalToolResult textResult(
-                            "update_goal edit requires objective or max_goal_rounds.",
-                            isError = true,
-                        )
-                    }
-                    val updated = service.edit(session.sessionId, objective, maxRounds)
-                        ?: return@goalToolResult textResult(
-                            "The goal could not be edited. The objective must not be blank.",
-                            isError = true,
-                        )
-                    textResult(goalViewJson(updated).toString())
-                }
-                "pause" -> {
-                    if (!source.isUserInitiated()) {
-                        return@goalToolResult textResult(
-                            "update_goal pause is only allowed when the user directly asks. Continue the current turn.",
-                            isError = true,
-                        )
-                    }
-                    val updated = service.pause(session.sessionId)
-                        ?: return@goalToolResult textResult("No goal exists for this session.", isError = true)
-                    textResult(goalViewJson(updated).toString())
-                }
-                "resume" -> {
-                    if (!source.isUserInitiated()) {
-                        return@goalToolResult textResult(
-                            "update_goal resume is only allowed when the user directly asks. Continue the current turn.",
-                            isError = true,
-                        )
-                    }
-                    val updated = service.resume(session.sessionId)
-                        ?: return@goalToolResult textResult(
-                            "The goal cannot be resumed: it is complete, already active or its round limit was reached.",
-                            isError = true,
-                        )
-                    textResult(goalViewJson(updated).toString())
-                }
-                "complete" -> {
-                    if (source != TurnSource.USER && source != TurnSource.RETRY && source != TurnSource.GOAL) {
-                        return@goalToolResult textResult(
-                            "update_goal complete is only allowed during a user turn or a goal round.",
-                            isError = true,
-                        )
-                    }
-                    if (current.goal.phase == GoalPhase.COMPLETE) {
-                        return@goalToolResult textResult("The goal is already complete.", isError = true)
-                    }
-                    val updated = service.complete(session.sessionId)
-                        ?: return@goalToolResult textResult("The goal could not be completed.", isError = true)
-                    textResult(goalViewJson(updated).toString())
-                }
-                "blocked" -> {
-                    if (source != TurnSource.GOAL) {
-                        return@goalToolResult textResult(
-                            "update_goal blocked is only allowed during a goal round. Continue working toward the objective.",
-                            isError = true,
-                        )
-                    }
-                    if (current.goal.roundsStarted < GoalService.MIN_BLOCKED_ROUNDS) {
-                        return@goalToolResult textResult(
-                            "The same blocker has not persisted for at least 3 rounds. Continue working toward the objective.",
-                            isError = true,
-                        )
-                    }
-                    val reason = args.requiredString("blocked_reason")
-                    val updated = service.block(session.sessionId, reason)
-                        ?: return@goalToolResult textResult(
-                            "The goal could not be blocked. Continue working toward the objective.",
-                            isError = true,
-                        )
-                    textResult(goalViewJson(updated).toString())
-                }
-                else -> textResult(
-                    "action must be edit, pause, resume, complete or blocked.",
-                    isError = true,
-                )
-            }
+            textResult(goalViewJson(updated).toString())
         }
-    },
-)
+
+        "pause" -> {
+            if (!source.isUserInitiated()) {
+                return textResult(
+                    "pause is only allowed when the user directly asks. Continue the current turn.",
+                    isError = true,
+                )
+            }
+            val updated = service.pause(sessionId)
+                ?: return textResult("No goal exists for this session.", isError = true)
+            textResult(goalViewJson(updated).toString())
+        }
+
+        "resume" -> {
+            if (!source.isUserInitiated()) {
+                return textResult(
+                    "resume is only allowed when the user directly asks. Continue the current turn.",
+                    isError = true,
+                )
+            }
+            val updated = service.resume(sessionId)
+                ?: return textResult(
+                    "The goal cannot be resumed: it is complete, already active or its round limit was reached.",
+                    isError = true,
+                )
+            textResult(goalViewJson(updated).toString())
+        }
+
+        "complete" -> {
+            if (source != TurnSource.USER && source != TurnSource.RETRY && source != TurnSource.GOAL) {
+                return textResult(
+                    "complete is only allowed during a user turn or a goal round.",
+                    isError = true,
+                )
+            }
+            if (current.goal.phase == GoalPhase.COMPLETE) {
+                return textResult("The goal is already complete.", isError = true)
+            }
+            val updated = service.complete(sessionId)
+                ?: return textResult("The goal could not be completed.", isError = true)
+            textResult(goalViewJson(updated).toString())
+        }
+
+        "blocked" -> {
+            if (source != TurnSource.GOAL) {
+                return textResult(
+                    "blocked is only allowed during a goal round. Continue working toward the objective.",
+                    isError = true,
+                )
+            }
+            if (current.goal.roundsStarted < GoalService.MIN_BLOCKED_ROUNDS) {
+                return textResult(
+                    "The same blocker has not persisted for at least 3 rounds. Continue working toward the objective.",
+                    isError = true,
+                )
+            }
+            val reason = args.requiredString("blockedReason", "blocked_reason")
+            val updated = service.block(sessionId, reason)
+                ?: return textResult(
+                    "The goal could not be blocked. Continue working toward the objective.",
+                    isError = true,
+                )
+            textResult(goalViewJson(updated).toString())
+        }
+
+        else -> textResult(
+            "action must be get, create, edit, pause, resume, complete or blocked.",
+            isError = true,
+        )
+    }
+}
 
 private fun goalViewJson(view: GoalView?): JsonObject = buildJsonObject {
     if (view == null) {
@@ -315,12 +265,17 @@ private fun TurnSource?.isUserInitiated(): Boolean =
 private fun JsonObject.stringOrNull(name: String): String? =
     (this[name] as? JsonPrimitive)?.contentOrNull
 
-private fun JsonObject.intOrNull(name: String): Int? =
-    stringOrNull(name)?.let { it.toIntOrNull() ?: it.toDoubleOrNull()?.toInt() }
+private fun JsonObject.intOrNull(vararg names: String): Int? {
+    names.forEach { name ->
+        val value = stringOrNull(name) ?: return@forEach
+        return value.toIntOrNull() ?: value.toDoubleOrNull()?.toInt()
+    }
+    return null
+}
 
-private fun JsonObject.requiredString(name: String): String =
-    stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw IllegalArgumentException("Missing required parameter: $name")
+private fun JsonObject.requiredString(vararg names: String): String =
+    names.firstNotNullOfOrNull { name -> stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() } }
+        ?: throw IllegalArgumentException("Missing required parameter: ${names.first()}")
 
-private fun JsonObject.requiredInt(name: String): Int =
-    intOrNull(name) ?: throw IllegalArgumentException("Missing or invalid required parameter: $name")
+private fun JsonObject.requiredInt(vararg names: String): Int =
+    intOrNull(*names) ?: throw IllegalArgumentException("Missing or invalid required parameter: ${names.first()}")
