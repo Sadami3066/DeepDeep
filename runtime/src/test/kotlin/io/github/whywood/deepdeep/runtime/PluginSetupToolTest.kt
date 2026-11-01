@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentToolResult
 import dev.pi.ai.TextContent
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -47,6 +48,20 @@ class PluginSetupToolTest {
         assertEquals("wecom", json.getValue("plugin").toString().trim('"'))
         assertEquals("true", json.getValue("ready").toString())
         assertEquals("张三", json.getValue("account").toString().trim('"'))
+    }
+
+    @Test
+    fun setupTimesOutWhileWaitingForTheUser() = runTest {
+        val tool = pluginSetupTool(
+            object : PluginController {
+                override suspend fun setup(pluginId: String): PluginSetupResult {
+                    awaitCancellation()
+                }
+            },
+        )
+        val result = tool!!.execute("call-timeout", args("wecom"), null, null)
+        assertNull(result.isError)
+        assertEquals("Timed out waiting for the user to complete setup.", resultText(result))
     }
 
     @Test

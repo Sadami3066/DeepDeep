@@ -4,6 +4,7 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -12,6 +13,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+
+private const val SETUP_WAIT_TIMEOUT_MS = 15 * 60_000L
 
 private fun pluginSetupParameters(ids: List<String>): JsonObject = buildJsonObject {
     put("type", "object")
@@ -52,7 +55,12 @@ fun pluginSetupTool(controller: PluginController?): CodingTool? {
                     isError = true,
                 )
                 else -> try {
-                    textResult(setupResultJson(controller.setup(pluginId)).toString())
+                    val result = withTimeoutOrNull(SETUP_WAIT_TIMEOUT_MS) { controller.setup(pluginId) }
+                    if (result == null) {
+                        textResult("Timed out waiting for the user to complete setup.")
+                    } else {
+                        textResult(setupResultJson(result).toString())
+                    }
                 } catch (error: RequestAbortedException) {
                     throw error
                 } catch (error: CancellationException) {

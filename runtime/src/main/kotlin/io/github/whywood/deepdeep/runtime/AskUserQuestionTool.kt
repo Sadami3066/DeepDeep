@@ -4,6 +4,7 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -16,6 +17,7 @@ import kotlinx.serialization.json.putJsonObject
 
 private const val MAX_QUESTIONS = 5
 private const val MAX_OPTIONS = 8
+private const val ANSWER_WAIT_TIMEOUT_MS = 10 * 60_000L
 
 private val askUserQuestionParameters: JsonObject = buildJsonObject {
     put("type", "object")
@@ -87,7 +89,11 @@ fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding)
         } else {
             try {
                 val questions = parseQuestions(args)
-                when (val outcome = questionCenter.ask(sessionId, toolCallId, questions, signal)) {
+                val outcome = withTimeoutOrNull(ANSWER_WAIT_TIMEOUT_MS) {
+                    questionCenter.ask(sessionId, toolCallId, questions, signal)
+                }
+                when (outcome) {
+                    null -> textResult("Timed out waiting for the user's answer.")
                     is QuestionOutcome.Answered -> textResult(answersJson(questions, outcome.answers).toString())
                     QuestionOutcome.Cancelled -> textResult("The user cancelled the question", isError = true)
                 }
