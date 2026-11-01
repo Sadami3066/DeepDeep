@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.files
+package io.github.whywood.deepdeep.data
 
 import java.io.File
 import org.junit.Assert.assertEquals

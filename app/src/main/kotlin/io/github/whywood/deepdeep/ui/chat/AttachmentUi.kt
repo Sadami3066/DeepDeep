@@ -48,7 +48,6 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.files.FileViewerDialog
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers

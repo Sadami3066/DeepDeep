@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.FilePreviewKind
+import io.github.whywood.deepdeep.data.filePreviewKind
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.data.guessMime
 import io.github.whywood.deepdeep.design.DdHairline
