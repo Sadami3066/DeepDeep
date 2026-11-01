@@ -22,8 +22,7 @@ import kotlinx.serialization.json.putJsonObject
 
 private const val BASH_MAX_LINES = 2000
 private const val BASH_MAX_BYTES = 51200
-private const val MAX_TIMEOUT_MS = 2147483647L
-private const val MAX_TIMEOUT_SECONDS_TEXT = "2147483.647"
+private const val BASH_MAX_TIMEOUT_SECONDS = 600
 
 private val bashParameters: JsonObject = buildJsonObject {
     put("type", "object")
@@ -34,7 +33,9 @@ private val bashParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("timeout") {
             put("type", "number")
-            put("description", "Timeout in seconds (optional, default 60)")
+            put("minimum", 1)
+            put("maximum", BASH_MAX_TIMEOUT_SECONDS)
+            put("description", "Timeout in seconds (1-$BASH_MAX_TIMEOUT_SECONDS, optional, default 60)")
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("command")) })
@@ -122,9 +123,8 @@ private fun JsonObject.timeoutSeconds(): Long? {
     if (seconds.isNaN() || seconds.isInfinite() || seconds <= 0.0) {
         throw IllegalArgumentException("Invalid timeout: must be a finite number of seconds")
     }
-    val timeoutMs = seconds * 1000.0
-    if (timeoutMs > MAX_TIMEOUT_MS) {
-        throw IllegalArgumentException("Invalid timeout: maximum is $MAX_TIMEOUT_SECONDS_TEXT seconds")
+    if (seconds > BASH_MAX_TIMEOUT_SECONDS) {
+        throw IllegalArgumentException("Invalid timeout: maximum is $BASH_MAX_TIMEOUT_SECONDS seconds")
     }
     return kotlin.math.ceil(seconds).toLong()
 }

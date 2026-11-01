@@ -61,4 +61,14 @@ class VirtualScreenHelperPolicyTest {
         assertEquals("已在虚拟屏启动 com.android.settings", message)
         assertEquals(false, message.contains("10"))
     }
+
+    @Test
+    fun offScreenLaunchMessageHidesInternalDisplayIds() {
+        val expected = "已启动 com.android.settings，但任务没有落在虚拟屏，请重新 screen_observe 确认真实页面"
+        assertEquals(expected, virtualLaunchMessage("com.android.settings", 10, 0))
+        assertEquals(expected, virtualLaunchMessage("com.android.settings", 10, -1))
+        assertEquals(false, expected.contains("10"))
+        assertEquals(false, expected.contains("0"))
+        assertEquals(false, expected.contains("display"))
+    }
 }

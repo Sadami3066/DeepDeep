@@ -10,7 +10,7 @@ DeepDeep：Android 个人 agent App（Kotlin + Compose）。模块：`:app`（UI
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 1635（app 1145 / runtime 443 / shell 47）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 1639（app 1147 / runtime 445 / shell 47）、0 失败 0 skip、lint 0 error。
 
 ## 规则
 

@@ -744,12 +744,12 @@ private fun appTool(controller: ScreenController): CodingTool = CodingTool(
                             put("message", report.message)
                             put("onExpectedScreen", onExpectedScreen)
                             when {
-                                !report.ok -> put(
+                                !report.ok && report.message.isBlank() -> put(
                                     "hint",
                                     "启动失败：请确认应用已安装且目标屏幕可用；需要时重新 screen_observe 查看当前页面",
                                 )
 
-                                !onExpectedScreen -> put(
+                                report.ok && !onExpectedScreen -> put(
                                     "hint",
                                     "应用已启动，但可能没有显示在目标屏幕：请重新 screen_observe 确认真实页面后再操作",
                                 )

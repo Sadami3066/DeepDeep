@@ -510,7 +510,29 @@ class ScreenToolsTest {
         val text = result.text()
         assertTrue(text.contains("任务落屏异常"))
         assertTrue(text.contains("\"ok\":false"))
-        assertTrue(text.contains("\"hint\""))
+        assertTrue(!text.contains("启动失败：请确认应用已安装"))
+    }
+
+    @Test
+    fun appToolReportsGenericHintOnlyWithoutFailureMessage() = runTest {
+        controller.launchReport = ScreenLaunchReport(
+            ok = false,
+            message = "",
+            target = ScreenTarget.VIRTUAL,
+            packageName = "com.example",
+            displayId = 9,
+            taskDisplayId = -1,
+        )
+        val result = run(
+            "screen_app",
+            buildJsonObject {
+                put("target", "virtual")
+                put("action", "launch")
+                put("packageName", "com.example")
+            },
+        )
+        assertTrue(result.isError == true)
+        assertTrue(result.text().contains("启动失败：请确认应用已安装"))
     }
 
     @Test

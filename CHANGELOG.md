@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- fix: 收口失败提示、虚拟屏文案与 bash 超时 [工具]
 - feat: 工坊删除与工具文案修复 [插件]
 - feat: 文件工具支持 /workspace 路径与 bash 退出码 [工具]
 - fix: 修复主屏窗口选择、ADB 快照与等待信息 [屏幕]

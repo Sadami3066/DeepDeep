@@ -20,7 +20,7 @@ private val adbShellParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("command") {
             put("type", "string")
-            put("description", "Shell command to run with Android shell (not root) privileges")
+            put("description", "Shell command to run with Android shell privileges")
         }
         putJsonObject("timeoutMs") {
             put("type", "number")
@@ -72,7 +72,7 @@ fun adbShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "adb_shell",
-    description = "Run a shell command with Android shell (not root) privileges and return its exit code and combined output. Use only when the user explicitly asks for a system-level operation that the normal bash tool cannot do.",
+    description = "Run a shell command with Android shell privileges and return its exit code and combined output. On rooted devices the command can elevate with su.",
     parameters = adbShellParameters,
     executor = executor,
     enabled = enabled,

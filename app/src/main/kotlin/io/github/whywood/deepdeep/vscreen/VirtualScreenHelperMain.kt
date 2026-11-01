@@ -237,6 +237,9 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         launchOnDisplay(packageName, display.displayId)
         val taskDisplayId = taskDisplayOf(packageName)
         val landedOnMain = taskDisplayId == Display.DEFAULT_DISPLAY
+        if (taskDisplayId != display.displayId) {
+            Log.w(TAG, "$packageName 未落在虚拟屏：taskDisplayId=$taskDisplayId，displayId=${display.displayId}")
+        }
         respond(id) {
             put("packageName", packageName)
             put("displayId", display.displayId)
@@ -968,7 +971,7 @@ internal fun virtualLaunchMessage(packageName: String, displayId: Int, taskDispl
     if (taskDisplayId == displayId) {
         "已在虚拟屏启动 $packageName"
     } else {
-        "已启动 $packageName，但任务落屏是 ${if (taskDisplayId < 0) "未知" else taskDisplayId.toString()}，不是虚拟屏 $displayId"
+        "已启动 $packageName，但任务没有落在虚拟屏，请重新 screen_observe 确认真实页面"
     }
 
 internal fun outOfBoundsReason(label: String, x: Int, y: Int, width: Int, height: Int): String? =

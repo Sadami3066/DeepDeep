@@ -12,6 +12,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -49,6 +50,10 @@ class DeepDeepBashToolTest {
             schema.parameters.getValue("required").jsonArray.map { it.jsonPrimitive.content },
         )
         assertTrue(schema.parameters.getValue("properties").jsonObject.containsKey("timeout"))
+        val timeout = schema.parameters.getValue("properties").jsonObject.getValue("timeout").jsonObject
+        assertEquals(1, timeout.getValue("minimum").jsonPrimitive.int)
+        assertEquals(600, timeout.getValue("maximum").jsonPrimitive.int)
+        assertTrue(timeout.getValue("description").jsonPrimitive.content.contains("1-600"))
         assertTrue(schema.description.contains("[exit: N]"))
     }
 
@@ -128,12 +133,36 @@ class DeepDeepBashToolTest {
     }
 
     @Test
-    fun rejectsInvalidTimeout() {
-        assertThrows(IllegalArgumentException::class.java) {
-            runBlocking {
-                tool(executor { _, _, _ -> ShellResult("", 0) }).execute("call", args(timeout = 0.0), null, null)
+    fun rejectsNonPositiveTimeout() {
+        listOf(0.0, -3.0).forEach { timeout ->
+            assertThrows(IllegalArgumentException::class.java) {
+                runBlocking {
+                    tool(executor { _, _, _ -> ShellResult("", 0) }).execute("call", args(timeout = timeout), null, null)
+                }
             }
         }
+    }
+
+    @Test
+    fun rejectsTimeoutAboveMaximum() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                tool(executor { _, _, _ -> ShellResult("", 0) }).execute("call", args(timeout = 600.5), null, null)
+            }
+        }
+        assertEquals("Invalid timeout: maximum is 600 seconds", error.message)
+    }
+
+    @Test
+    fun acceptsMaximumTimeout() = runBlocking {
+        var seenTimeout: Long? = null
+        val result = tool(executor { _, timeout, _ ->
+            seenTimeout = timeout
+            ShellResult("ok", 0)
+        }).execute("call", args(timeout = 600.0), null, null)
+
+        assertEquals(600L, seenTimeout)
+        assertTrue(resultText(result).contains("[exit: 0]"))
     }
 
     @Test
