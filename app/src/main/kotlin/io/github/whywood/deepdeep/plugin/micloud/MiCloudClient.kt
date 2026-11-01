@@ -37,7 +37,7 @@ class MiCloudClient(
             if (connection.url.host != baseHost()) authExpired()
             val body = connection.inputStream.use { it.readBytes().decodeToString() }
             val json = runCatching { Json.parseToJsonElement(body) }.getOrNull()
-                ?: throw IOException("小米云返回了非 JSON 内容")
+                ?: throw IOException("Mi Cloud returned non-JSON content")
             if (isMiCloudAuthFailure(json)) authExpired()
             json
         } finally {
@@ -75,11 +75,11 @@ class MiCloudClient(
 
     suspend fun profile(): MiCloudProfile {
         val json = getJson("/status/lite/profile?ts=${System.currentTimeMillis()}")
-        return parseProfile(json) ?: throw IOException("小米云账号信息响应格式异常")
+        return parseProfile(json) ?: throw IOException("Mi Cloud account response format is invalid")
     }
 
     private suspend fun requireCookie(): String = cookieProvider()?.takeIf { it.isNotBlank() }
-        ?: throw MiCloudAuthException("小米云未登录")
+        ?: throw MiCloudAuthException("Not signed in to Mi Cloud")
 
     private fun authExpired(): Nothing {
         onAuthExpired()
@@ -106,7 +106,7 @@ class MiCloudClient(
     private companion object {
         const val DEFAULT_BASE_URL = "https://i.mi.com"
         const val USER_ID = "userId"
-        const val AUTH_EXPIRED = "小米云登录已失效，请重新登录"
+        const val AUTH_EXPIRED = "Mi Cloud login expired; sign in again"
         const val CONNECT_TIMEOUT_MS = 15_000
         const val READ_TIMEOUT_MS = 30_000
         const val USER_AGENT =

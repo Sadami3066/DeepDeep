@@ -42,7 +42,7 @@ class GuiDisplayActionsTest {
             runBlocking { actions.observe(9, GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
         }
 
-        assertTrue(error.message.orEmpty().contains("无障碍服务未连接"))
+        assertTrue(error.message.orEmpty().contains("Accessibility service is not connected"))
     }
 
     @Test
@@ -53,13 +53,13 @@ class GuiDisplayActionsTest {
             runBlocking { actions.observe(-1, GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
         }
 
-        assertTrue(error.message.orEmpty().contains("负数"))
+        assertTrue(error.message.orEmpty().contains("must not be negative"))
     }
 
     @Test
     fun missingSnapshotMessageNamesTheDisplay() {
-        assertTrue(missingSnapshotMessage(7).contains("快照已失效"))
-        assertTrue(missingSnapshotMessage(7).contains("屏幕 7"))
+        assertTrue(missingSnapshotMessage(7).contains("is stale"))
+        assertTrue(missingSnapshotMessage(7).contains("display 7"))
     }
 
     @Test

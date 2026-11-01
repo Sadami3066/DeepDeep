@@ -47,5 +47,5 @@ class VirtualEngineBackend(
     override fun lastTransportNotice(): String? = runCatching { requireEngine().lastTransportNotice }.getOrNull()
 
     private fun requireEngine(): VirtualScreenEngine = engineProvider()
-        ?: throw IllegalStateException("虚拟屏引擎未就绪：请到插件页打开「虚拟屏幕」后再重试")
+        ?: throw IllegalStateException("Virtual screen engine is not ready; open the virtual screen plugin page and retry")
 }

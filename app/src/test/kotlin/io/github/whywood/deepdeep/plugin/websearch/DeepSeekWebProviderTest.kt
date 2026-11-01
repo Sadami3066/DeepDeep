@@ -154,7 +154,7 @@ class DeepSeekWebProviderTest {
 
         val error = assertFails { provider().fetch("https://example.com/blocked", 100) }
 
-        assertTrue(error.message!!.startsWith("抓取失败（HTTP 404）"))
+        assertTrue(error.message!!.startsWith("Fetch failed (HTTP 404)"))
         assertTrue(error.message!!.contains("URL blocked by site policy"))
         assertFalse(error.message!!.contains("DeepSeek"))
     }
@@ -169,7 +169,7 @@ class DeepSeekWebProviderTest {
 
         val error = assertFails { failing.fetch("https://example.com", 100) }
 
-        assertTrue(error.message!!.startsWith("抓取失败："))
+        assertTrue(error.message!!.startsWith("Fetch failed: "))
         assertFalse(error.message!!.contains("DeepSeek"))
     }
 
@@ -186,7 +186,7 @@ class DeepSeekWebProviderTest {
     fun missingKeyFailsWithoutSendingRequest() = runTest {
         val error = assertFails { provider(null).search("q", 5) }
 
-        assertTrue(error.message!!.contains("API Key"))
+        assertTrue(error.message!!.contains("API key"))
         assertTrue(requests.isEmpty())
     }
 

@@ -6,8 +6,8 @@ import android.app.ActivityOptions
 
 class AndroidScreenAppCatalog(private val context: Context) : ScreenAppCatalog {
     override fun app(packageName: String): ScreenApp {
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: error("找不到可启动的应用：$packageName")
-        val component = checkNotNull(intent.component) { "无法解析应用入口" }
+        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: error("No launchable app found: $packageName")
+        val component = checkNotNull(intent.component) { "Cannot resolve the app entry point" }
         return ScreenApp(packageName, packageName, component.className)
     }
 

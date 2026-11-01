@@ -19,15 +19,15 @@ class PrivilegedMainScreenShell(
         get() = privilege.state.value.let { it.selected != PrivilegeLevel.NORMAL && it.effective in it.availableBackends }
 
     override suspend fun execute(command: String, timeoutMs: Long): String {
-        check(available) { "主屏系统输入需要已授权且可用的 ADB 或 Root" }
+        check(available) { "Main screen system input needs authorized and available ADB or Root" }
         val state = privilege.state.value
         val (exitCode, output, truncated, timedOut) = when (state.effective) {
             PrivilegeLevel.ROOT -> root.execute(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
             PrivilegeLevel.ADB -> adb.exec(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
-            else -> error("主屏系统输入未启用")
+            else -> error("Main screen system input is not enabled")
         }
         check(!timedOut && exitCode == 0 && !truncated) {
-            "主屏命令未确认成功（exit=$exitCode, timeout=$timedOut, truncated=$truncated）；请重新观察当前屏幕，不要自动重跑。${output.takeLast(500)}"
+            "Main screen command did not confirm success (exit=$exitCode, timeout=$timedOut, truncated=$truncated); observe the current screen again and do not rerun automatically. ${output.takeLast(500)}"
         }
         return output
     }
@@ -36,16 +36,16 @@ class PrivilegedMainScreenShell(
 }
 
 internal fun mainTaskDisplays(output: String, packageName: String): Set<Int> {
-    check(output.contains("ACTIVITY MANAGER ACTIVITIES")) { "无法确认应用所在屏幕，未启动应用" }
+    check(output.contains("ACTIVITY MANAGER ACTIVITIES")) { "Cannot confirm the screen the app is on; the app was not launched" }
     var display: Int? = null
     val result = mutableSetOf<Int>()
     val displayHeader = Regex("^Display #(\\d+)\\b")
     val record = Regex("ActivityRecord\\{[^}]*\\s${Regex.escape(packageName)}/")
     output.lineSequence().forEach { line ->
         displayHeader.find(line.trim())?.let { display = it.groupValues[1].toInt() }
-        if (record.containsMatchIn(line)) result += checkNotNull(display) { "应用任务缺少屏幕信息，未启动应用" }
+        if (record.containsMatchIn(line)) result += checkNotNull(display) { "App task has no display information; the app was not launched" }
     }
-    check(result.isNotEmpty() || !output.contains("$packageName/")) { "无法解析应用所在屏幕，未启动应用" }
+    check(result.isNotEmpty() || !output.contains("$packageName/")) { "Cannot parse the screen the app is on; the app was not launched" }
     return result
 }
 

@@ -32,9 +32,9 @@ internal const val COMPACT_MAX_DEPTH = 3
 
 internal const val COMPACT_MAX_ARRAY = 12
 
-internal const val TOOL_AUTH_ERROR = "小米云登录已失效：请打开 DeepDeep → 插件 → 小米云 → 重新登录"
+internal const val TOOL_AUTH_ERROR = "Mi Cloud login expired; open DeepDeep > Plugins > Mi Cloud and sign in again"
 
-internal const val TOOL_REQUEST_FAILED = "请求小米云失败："
+internal const val TOOL_REQUEST_FAILED = "Mi Cloud request failed: "
 
 internal interface MiCloudReadApi {
     suspend fun userId(): String?
@@ -64,7 +64,7 @@ internal suspend fun miCloudToolResult(block: suspend () -> AgentToolResult): Ag
 } catch (error: MiCloudAuthException) {
     textResult(TOOL_AUTH_ERROR, isError = true)
 } catch (error: IllegalArgumentException) {
-    textResult(error.message ?: "参数无效", isError = true)
+    textResult(error.message ?: "Invalid argument", isError = true)
 } catch (error: IOException) {
     textResult(TOOL_REQUEST_FAILED + error.message.orEmpty(), isError = true)
 } catch (error: Exception) {
@@ -112,7 +112,7 @@ internal fun JsonObject.argString(name: String): String? =
     stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }
 
 internal fun JsonObject.requiredArgString(name: String): String =
-    argString(name) ?: throw IllegalArgumentException("缺少参数 $name")
+    argString(name) ?: throw IllegalArgumentException("Missing required argument: $name")
 
 internal fun JsonObject.argInt(name: String): Int? =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toInt()
@@ -126,9 +126,9 @@ internal fun JsonObject.argBool(name: String): Boolean? =
 internal fun limitArg(args: JsonObject): Int {
     if (!args.containsKey("limit")) return DEFAULT_LIST_LIMIT
     val limit = args.argInt("limit")
-        ?: throw IllegalArgumentException("limit 必须是整数")
+        ?: throw IllegalArgumentException("limit must be an integer")
     if (limit !in 1..MAX_LIST_LIMIT) {
-        throw IllegalArgumentException("limit 必须在 1-$MAX_LIST_LIMIT 之间")
+        throw IllegalArgumentException("limit must be between 1 and $MAX_LIST_LIMIT")
     }
     return limit
 }

@@ -29,7 +29,7 @@ class DeepSeekWebProvider(
             put("count", count)
             put("need_content", false)
         }
-        val response = post("$baseUrl/search", body.toString(), "搜索")
+        val response = post("$baseUrl/search", body.toString(), "Search")
         val results = response["results"] as? JsonArray ?: return WebSearchResult(emptyList())
         return WebSearchResult(
             items = results.mapNotNull { element ->
@@ -50,7 +50,7 @@ class DeepSeekWebProvider(
 
     override suspend fun fetch(url: String, maxChars: Int): String {
         val body = buildJsonObject { put("url", url) }
-        val response = post("$baseUrl/fetch", body.toString(), "抓取")
+        val response = post("$baseUrl/fetch", body.toString(), "Fetch")
         return response.string("content").orEmpty().take(maxChars.coerceIn(1, WEB_FETCH_MAX_CHARS))
     }
 
@@ -80,7 +80,7 @@ class DeepSeekWebProvider(
             }
             parseResponse(label, payload)
         } catch (error: IOException) {
-            throw IllegalStateException("${label}失败：${error.message ?: "网络不可用"}")
+            throw IllegalStateException("${label} failed: ${error.message ?: "network unavailable"}")
         } finally {
             connection?.disconnect()
         }
@@ -90,9 +90,9 @@ class DeepSeekWebProvider(
         val json = try {
             Json.parseToJsonElement(payload)
         } catch (error: SerializationException) {
-            throw IllegalStateException("${label}结果格式错误")
+            throw IllegalStateException("${label} returned an invalid response")
         }
-        return json as? JsonObject ?: throw IllegalStateException("${label}结果格式错误")
+        return json as? JsonObject ?: throw IllegalStateException("${label} returned an invalid response")
     }
 
     private fun errorMessage(label: String, status: Int, payload: String): String {
@@ -101,9 +101,9 @@ class DeepSeekWebProvider(
             (json["error"] as? JsonObject)?.string("message")
         }.getOrNull()?.takeIf { it.isNotBlank() }
         return if (detail == null) {
-            "${label}失败（HTTP $status）"
+            "${label} failed (HTTP $status)"
         } else {
-            "${label}失败（HTTP $status）：$detail"
+            "${label} failed (HTTP $status): $detail"
         }
     }
 
@@ -112,6 +112,6 @@ class DeepSeekWebProvider(
     private companion object {
         const val DEFAULT_BASE_URL = "https://api.deepseek.com/v1/tools"
         const val DEFAULT_TIMEOUT_MS = 30_000
-        const val MISSING_KEY_MESSAGE = "未配置 DeepSeek API Key，请先在设置中为 DeepSeek 提供商配置 API Key。"
+        const val MISSING_KEY_MESSAGE = "DeepSeek API key is not configured; set one for the DeepSeek provider in Settings"
     }
 }

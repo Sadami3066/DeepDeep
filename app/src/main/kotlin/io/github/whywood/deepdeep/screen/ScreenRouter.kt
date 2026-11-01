@@ -49,13 +49,13 @@ class ScreenRouter(
         val snapshot = accessibility.observe(online.displayId, maxDepth, maxNodes)
         val pruned = snapshot.usableOn(online.bounds())
         if (expectedPackage != null && pruned.packageName != expectedPackage) {
-            throw IllegalStateException("当前窗口属于 ${pruned.packageName ?: "未知应用"}，不是 $expectedPackage；请先 screen_launch 启动目标应用")
+            throw IllegalStateException("Current window belongs to ${pruned.packageName ?: "an unknown app"}, not $expectedPackage; call screen_launch to start the target app")
         }
         return ScreenObserveResult(BACKEND_ACCESSIBILITY, pruned, snapshot.nodes.size - pruned.nodes.size)
     }
 
     override suspend fun find(selectors: List<GuiSelector>, limit: Int): ScreenFindResult {
-        require(selectors.isNotEmpty()) { "需要提供至少一个查找条件" }
+        require(selectors.isNotEmpty()) { "Provide at least one filter" }
         val observed = observe(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         return ScreenFindResult(observed.backend, observed.snapshot, GuiNodeTree.findAll(observed.snapshot, selectors, limit))
     }
@@ -69,14 +69,14 @@ class ScreenRouter(
             requireAccessibility()
             accessibility.tap(online.displayId, selector, durationMs)
         }
-        return "已点击虚拟屏 ${selector.describeSelector()}"
+        return "Tapped virtual screen ${selector.describeSelector()}"
     }
 
     override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): String {
         val online = requireVirtualOnline()
         invalidSwipeCoordinates(x1, y1, x2, y2, online.bounds())?.let { throw IllegalArgumentException(it) }
         virtual.swipe(x1, y1, x2, y2, durationMs).requireOk()
-        return "已在虚拟屏滑动 ($x1, $y1) → ($x2, $y2)"
+        return "Swiped on virtual screen ($x1, $y1) -> ($x2, $y2)"
     }
 
     override suspend fun scroll(direction: GuiScrollDirection, amount: Int, selector: GuiSelector?): String {
@@ -86,33 +86,33 @@ class ScreenRouter(
             accessibility.bounds(online.displayId, selector)
         }
         val path = clampedSwipePath(direction, bounds, online.bounds())
-            ?: throw IllegalArgumentException("滚动目标不可见或可滑区域太小，请重新 screen_observe")
+            ?: throw IllegalArgumentException("Scroll target is not visible or too small to scroll; call screen_observe again")
         val steps = amount.coerceIn(1, 10)
         repeat(steps) {
             requireVirtualOnline()
             virtual.swipe(path[0], path[1], path[2], path[3], 300).requireOk()
         }
-        return "已在虚拟屏向 ${direction.name.lowercase()} 滚动 $steps 次"
+        return "Scrolled virtual screen ${direction.name.lowercase()} $steps times"
     }
 
     override suspend fun typeText(selector: GuiSelector?, text: String): ScreenTextResult {
         val online = requireVirtualOnline()
-        require(text.isNotEmpty()) { "text 不能为空" }
+        require(text.isNotEmpty()) { "text must not be empty" }
         if (selector != null) {
             requireAccessibility()
             val result = accessibility.setText(online.displayId, selector, text)
             return ScreenTextResult(BACKEND_ACCESSIBILITY, result.text, result.verified)
         }
-        require(isAsciiText(text)) { "非 ASCII 文本需要无障碍服务与输入框 ref 或 fieldText，请先 screen_observe" }
+        require(isAsciiText(text)) { "Non-ASCII text needs accessibility plus a field ref or fieldText; call screen_observe first" }
         virtual.text(text).requireOk()
         return ScreenTextResult(BACKEND_HELPER, text, false)
     }
 
     override suspend fun key(name: String): String {
         requireVirtualOnline()
-        require(name in SCREEN_KEYS) { "不支持的虚拟屏按键：$name" }
+        require(name in SCREEN_KEYS) { "Unsupported virtual screen key: $name" }
         virtual.key(name).requireOk()
-        return "已向虚拟屏发送按键 $name"
+        return "Sent virtual screen key $name"
     }
 
     override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): ScreenWaitOutcome {
@@ -123,13 +123,13 @@ class ScreenRouter(
 
     override suspend fun screenshot(): ScreenCapture {
         val online = requireVirtualOnline()
-        val png = virtual.screenshot() ?: throw IllegalStateException("虚拟屏暂无可用画面：请先 screen_launch 并等待首帧")
+        val png = virtual.screenshot() ?: throw IllegalStateException("Virtual screen has no frame yet: call screen_launch and wait for the first frame")
         return ScreenCapture(png, online.width, online.height, BACKEND_HELPER)
     }
 
     override suspend fun launch(packageName: String): ScreenLaunchReport {
         val online = requireVirtualOnline()
-        require(packageName.isNotBlank()) { "缺少包名 packageName" }
+        require(packageName.isNotBlank()) { "Missing required parameter: packageName" }
         val report = virtual.launch(packageName)
         return ScreenLaunchReport(
             ok = report.ok && report.taskDisplayId == online.displayId,
@@ -150,13 +150,13 @@ class ScreenRouter(
             accessibility.invalidateSnapshots()
             screenInstance = null
             throw IllegalStateException(when {
-                virtual.reconnecting() -> "虚拟屏正在重新连接，请稍后用 screen_status 检查"
-                state is VirtualScreenState.Starting -> "虚拟屏正在启动，请稍后重试"
-                state is VirtualScreenState.Failed -> "虚拟屏连接或启动失败：${state.message}；请检查权限后调用 virtual_screen(action=start)"
-                else -> "虚拟屏未启动：请先调用 virtual_screen(action=start)"
+                virtual.reconnecting() -> "Virtual screen is reconnecting; check screen_status shortly"
+                state is VirtualScreenState.Starting -> "Virtual screen is starting; retry shortly"
+                state is VirtualScreenState.Failed -> "Virtual screen connection or start failed: ${state.message}; check privileges and call virtual_screen(action=start)"
+                else -> "Virtual screen is not started: call virtual_screen(action=start) first"
             })
         }
-        check(state.displayId > 0) { "虚拟屏显示编号无效，拒绝操作主屏" }
+        check(state.displayId > 0) { "Invalid virtual screen display id; refusing to operate the main screen" }
         if (screenInstance != state.instanceId) {
             accessibility.invalidateSnapshots()
             screenInstance = state.instanceId
@@ -166,8 +166,8 @@ class ScreenRouter(
 
     private fun requireAccessibility() {
         check(accessibility.connected) {
-            if (accessibilityEnabled()) "无障碍开关已开启但服务未连接，请稍等后重试；仍未连接时到系统设置关闭再开启 DeepDeep 无障碍"
-            else "虚拟屏节点读取与中文输入需要无障碍服务，请到系统设置开启 DeepDeep 无障碍；当前仍可坐标点击、滑动、按键与截图"
+            if (accessibilityEnabled()) "Accessibility is enabled but the service is not connected; wait briefly and retry, or toggle DeepDeep accessibility off and on in system settings if it stays disconnected"
+            else "Virtual screen node reading and Unicode input need accessibility; enable DeepDeep accessibility in system settings. Coordinate taps, swipes, keys and screenshots still work"
         }
     }
 
@@ -228,5 +228,5 @@ private fun GuiWaitOutcome.toScreenWaitOutcome(): ScreenWaitOutcome =
     ScreenWaitOutcome(matched = matched, packageName = packageName, windowTitle = windowTitle)
 
 private fun VirtualScreenResult.requireOk() {
-    if (!ok) throw IllegalStateException(message.ifBlank { "虚拟屏操作失败" })
+    if (!ok) throw IllegalStateException(message.ifBlank { "Virtual screen operation failed" })
 }

@@ -7,45 +7,45 @@ import org.junit.Test
 class VirtualScreenHelperPolicyTest {
     @Test
     fun acceptsCoordinatesInsideDisplay() {
-        assertNull(outOfBoundsReason("点击", 0, 0, 1080, 2400))
-        assertNull(outOfBoundsReason("点击", 1079, 2399, 1080, 2400))
+        assertNull(outOfBoundsReason("tap", 0, 0, 1080, 2400))
+        assertNull(outOfBoundsReason("tap", 1079, 2399, 1080, 2400))
     }
 
     @Test
     fun rejectsCoordinatesOutsideDisplay() {
         assertEquals(
-            "点击坐标超出虚拟屏范围：(1080, 1200)，虚拟屏 1080×2400",
-            outOfBoundsReason("点击", 1080, 1200, 1080, 2400),
+            "tap coordinates out of virtual screen bounds: (1080, 1200), virtual screen 1080x2400",
+            outOfBoundsReason("tap", 1080, 1200, 1080, 2400),
         )
         assertEquals(
-            "点击坐标超出虚拟屏范围：(540, 2400)，虚拟屏 1080×2400",
-            outOfBoundsReason("点击", 540, 2400, 1080, 2400),
+            "tap coordinates out of virtual screen bounds: (540, 2400), virtual screen 1080x2400",
+            outOfBoundsReason("tap", 540, 2400, 1080, 2400),
         )
     }
 
     @Test
     fun rejectsNegativeCoordinates() {
         assertEquals(
-            "点击坐标超出虚拟屏范围：(-1, 100)，虚拟屏 1080×2400",
-            outOfBoundsReason("点击", -1, 100, 1080, 2400),
+            "tap coordinates out of virtual screen bounds: (-1, 100), virtual screen 1080x2400",
+            outOfBoundsReason("tap", -1, 100, 1080, 2400),
         )
         assertEquals(
-            "点击坐标超出虚拟屏范围：(100, -1)，虚拟屏 1080×2400",
-            outOfBoundsReason("点击", 100, -1, 1080, 2400),
+            "tap coordinates out of virtual screen bounds: (100, -1), virtual screen 1080x2400",
+            outOfBoundsReason("tap", 100, -1, 1080, 2400),
         )
     }
 
     @Test
     fun labelsSwipeEndpoints() {
         assertEquals(
-            "滑动起点坐标超出虚拟屏范围：(-5, 10)，虚拟屏 720×1280",
-            outOfBoundsReason("滑动起点", -5, 10, 720, 1280),
+            "swipe start coordinates out of virtual screen bounds: (-5, 10), virtual screen 720x1280",
+            outOfBoundsReason("swipe start", -5, 10, 720, 1280),
         )
         assertEquals(
-            "滑动终点坐标超出虚拟屏范围：(720, 10)，虚拟屏 720×1280",
-            outOfBoundsReason("滑动终点", 720, 10, 720, 1280),
+            "swipe end coordinates out of virtual screen bounds: (720, 10), virtual screen 720x1280",
+            outOfBoundsReason("swipe end", 720, 10, 720, 1280),
         )
-        assertNull(outOfBoundsReason("滑动终点", 719, 1279, 720, 1280))
+        assertNull(outOfBoundsReason("swipe end", 719, 1279, 720, 1280))
     }
     @Test
     fun screenshotFrameLimitMatchesProtocolHeader() {
@@ -58,13 +58,13 @@ class VirtualScreenHelperPolicyTest {
     @Test
     fun launchMessageHidesInternalDisplayIds() {
         val message = virtualLaunchMessage("com.android.settings", 10, 10)
-        assertEquals("已在虚拟屏启动 com.android.settings", message)
+        assertEquals("Launched com.android.settings on the virtual screen", message)
         assertEquals(false, message.contains("10"))
     }
 
     @Test
     fun offScreenLaunchMessageHidesInternalDisplayIds() {
-        val expected = "已启动 com.android.settings，但任务没有落在虚拟屏，请重新 screen_observe 确认真实页面"
+        val expected = "Launched com.android.settings but the task did not land on the virtual screen; run screen_observe again to confirm the actual page"
         assertEquals(expected, virtualLaunchMessage("com.android.settings", 10, 0))
         assertEquals(expected, virtualLaunchMessage("com.android.settings", 10, -1))
         assertEquals(false, expected.contains("10"))

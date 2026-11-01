@@ -59,7 +59,7 @@ private fun accountTool(client: MiCloudReadApi): CodingTool = CodingTool(
             val target = when (action) {
                 "profile" -> "/status/lite/profile?ts=${now()}"
                 "quota" -> "/status/vip/quota/summary?ts=${now()}"
-                else -> throw IllegalArgumentException("action 无效：$action")
+                else -> throw IllegalArgumentException("action must be profile or quota")
             }
             textResult(compactPayload(client.getJson(target)))
         }

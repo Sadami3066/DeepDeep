@@ -52,14 +52,14 @@ class ScreenRouterTest {
     @Test
     fun observeWithoutAccessibilityDoesNotFallBack() = runBlocking {
         accessibility.connected = false
-        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("无障碍"))
+        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("accessibility"))
         assertEquals(0, accessibility.observeCalls)
     }
 
     @Test
     fun startingObserveReportsStarting() = runBlocking {
         virtual.stateValue = VirtualScreenState.Starting
-        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("正在启动"))
+        assertTrue(expectFailure { router().observe(8, 120, null) }.message.orEmpty().contains("starting"))
     }
 
     @Test
@@ -75,7 +75,7 @@ class ScreenRouterTest {
         val message = router().tap(GuiSelector.Point(10, 20), 60)
         assertEquals(10 to 20, virtual.tapped)
         assertNull(accessibility.lastTapSelector)
-        assertTrue(message.contains("虚拟屏"))
+        assertTrue(message.contains("virtual screen"))
     }
 
     @Test
@@ -91,21 +91,21 @@ class ScreenRouterTest {
     fun virtualNodeTapWithoutAccessibilityFailsReadable() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().tap(GuiSelector.Text("OK"), 60) }
-        assertTrue(error.message.orEmpty().contains("无障碍"))
+        assertTrue(error.message.orEmpty().contains("accessibility"))
     }
 
     @Test
     fun virtualObserveRequiresAccessibility() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().observe(8, 120, null) }
-        assertTrue(error.message.orEmpty().contains("无障碍"))
+        assertTrue(error.message.orEmpty().contains("accessibility"))
     }
 
     @Test
     fun offlineVirtualScreenFailsReadable() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
         val error = expectFailure { router().observe(8, 120, null) }
-        assertTrue(error.message.orEmpty().contains("虚拟屏未启动"))
+        assertTrue(error.message.orEmpty().contains("is not started"))
     }
 
     @Test
@@ -146,7 +146,7 @@ class ScreenRouterTest {
     fun scrollOnVirtualScreenSwipesHelper() = runBlocking {
         val message = router().scroll(GuiScrollDirection.DOWN, 2, null)
         assertEquals(2, virtual.swipeCount)
-        assertEquals("已在虚拟屏向 down 滚动 2 次", message)
+        assertEquals("Scrolled virtual screen down 2 times", message)
     }
 
     @Test
@@ -167,7 +167,7 @@ class ScreenRouterTest {
     @Test
     fun offlineScreenshotFails() = runBlocking {
         virtual.stateValue = VirtualScreenState.Offline
-        assertTrue(expectFailure { router().screenshot() }.message.orEmpty().contains("未启动"))
+        assertTrue(expectFailure { router().screenshot() }.message.orEmpty().contains("is not started"))
     }
 
     @Test
@@ -212,7 +212,7 @@ class ScreenRouterTest {
     fun typeUnicodeOnVirtualScreenWithoutAccessibilityFails() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().typeText(null, "你好") }
-        assertTrue(error.message.orEmpty().contains("非 ASCII"))
+        assertTrue(error.message.orEmpty().contains("Non-ASCII"))
     }
 
     @Test
@@ -235,7 +235,7 @@ class ScreenRouterTest {
     fun unicodeEntryWithoutFieldFails() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().typeText(null, "你好") }
-        assertTrue(error.message.orEmpty().contains("非 ASCII"))
+        assertTrue(error.message.orEmpty().contains("Non-ASCII"))
     }
 
     @Test
@@ -244,8 +244,8 @@ class ScreenRouterTest {
             accessibility.connected = connected
             assertEquals(BACKEND_HELPER, router().typeText(null, "hello").backend)
             if (connected) assertEquals(BACKEND_ACCESSIBILITY, router().typeText(GuiSelector.Ref("1"), "你好").backend)
-            else assertTrue(expectFailure { router().typeText(GuiSelector.Ref("1"), "你好") }.message.orEmpty().contains("无障碍"))
-            assertTrue(expectFailure { router().typeText(null, "你好") }.message.orEmpty().contains("非 ASCII"))
+            else assertTrue(expectFailure { router().typeText(GuiSelector.Ref("1"), "你好") }.message.orEmpty().contains("accessibility"))
+            assertTrue(expectFailure { router().typeText(null, "你好") }.message.orEmpty().contains("Non-ASCII"))
         }
     }
 
@@ -296,7 +296,7 @@ class ScreenRouterTest {
     fun waitOnVirtualScreenRequiresAccessibility() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().waitFor(null, "OK", null, 100) }
-        assertTrue(error.message.orEmpty().contains("无障碍"))
+        assertTrue(error.message.orEmpty().contains("accessibility"))
     }
 
     @Test
@@ -417,7 +417,7 @@ class ScreenRouterTest {
         val error = expectFailure {
             router().scroll(GuiScrollDirection.DOWN, 1, GuiSelector.Ref("1"))
         }
-        assertTrue(error.message.orEmpty().contains("不可见"))
+        assertTrue(error.message.orEmpty().contains("not visible"))
     }
 
     @Test
@@ -433,16 +433,16 @@ class ScreenRouterTest {
         val virtualError = expectFailure {
             router().swipe(0, 0, 700, 1200, 300)
         }
-        assertTrue(virtualError.message.orEmpty().contains("滑动坐标超出屏幕范围"))
-        assertTrue(virtualError.message.orEmpty().contains("700×1200"))
+        assertTrue(virtualError.message.orEmpty().contains("Swipe coordinates are outside the screen"))
+        assertTrue(virtualError.message.orEmpty().contains("700x1200"))
         val mainError = expectFailure {
             router().swipe(0, 0, 1080, 10, 300)
         }
-        assertTrue(mainError.message.orEmpty().contains("700×1200"))
+        assertTrue(mainError.message.orEmpty().contains("700x1200"))
         val samePoint = expectFailure {
             router().swipe(10, 10, 10, 10, 300)
         }
-        assertTrue(samePoint.message.orEmpty().contains("起点与终点相同"))
+        assertTrue(samePoint.message.orEmpty().contains("start and end are the same"))
     }
 
     @Test
@@ -450,11 +450,11 @@ class ScreenRouterTest {
         val mainError = expectFailure {
             router().tap(GuiSelector.Point(1080, 10), 60)
         }
-        assertTrue(mainError.message.orEmpty().contains("点击坐标超出屏幕范围"))
+        assertTrue(mainError.message.orEmpty().contains("Tap coordinate is outside the screen"))
         val virtualError = expectFailure {
             router().tap(GuiSelector.Point(10, 1200), 60)
         }
-        assertTrue(virtualError.message.orEmpty().contains("700×1200"))
+        assertTrue(virtualError.message.orEmpty().contains("700x1200"))
     }
 
     @Test
@@ -513,8 +513,8 @@ class ScreenRouterTest {
         val error = expectFailure {
             router(accessibilityEnabled = { true }).tap(GuiSelector.Text("OK"), 60)
         }
-        assertTrue(error.message.orEmpty().contains("服务未连接"))
-        assertTrue(error.message.orEmpty().contains("稍等"))
+        assertTrue(error.message.orEmpty().contains("service is not connected"))
+        assertTrue(error.message.orEmpty().contains("wait briefly"))
     }
 
     @Test
@@ -523,7 +523,7 @@ class ScreenRouterTest {
         val error = expectFailure {
             router(accessibilityEnabled = { false }).tap(GuiSelector.Text("OK"), 60)
         }
-        assertTrue(error.message.orEmpty().contains("请到系统设置开启"))
+        assertTrue(error.message.orEmpty().contains("in system settings"))
     }
 
     @Test
@@ -532,7 +532,7 @@ class ScreenRouterTest {
         val error = expectFailure {
             router(accessibilityEnabled = { true }).observe(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         }
-        assertTrue(error.message.orEmpty().contains("服务未连接"))
+        assertTrue(error.message.orEmpty().contains("service is not connected"))
     }
 
     @Test
@@ -567,9 +567,9 @@ class ScreenRouterTest {
         }
         val message = error.message.orEmpty()
         assertTrue(message.contains("virtual_screen(action=start)"))
-        assertTrue(message.contains("权限"))
+        assertTrue(message.contains("privileges"))
         assertTrue(message.contains("连接被对端关闭"))
-        assertFalse(message.contains("主屏"))
+        assertFalse(message.contains("main screen"))
         assertFalse(message.contains("transport"))
     }
 
@@ -584,8 +584,8 @@ class ScreenRouterTest {
         val error = expectFailure {
             router().scroll(GuiScrollDirection.DOWN, 1, null)
         }
-        assertTrue(error.message.orEmpty().contains("权限"))
-        assertTrue(error.message.orEmpty().contains("权限"))
+        assertTrue(error.message.orEmpty().contains("privileges"))
+        assertTrue(error.message.orEmpty().contains("privileges"))
     }
 
     private suspend fun expectFailure(block: suspend () -> Unit): Throwable {

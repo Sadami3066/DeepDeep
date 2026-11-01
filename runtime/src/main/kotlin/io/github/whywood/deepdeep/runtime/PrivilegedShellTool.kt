@@ -84,7 +84,7 @@ fun adbShellTool(
 
 internal fun JsonObject.shellArguments(): JsonObject {
     val command = (this["command"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty()
-    if (command.isEmpty()) throw IllegalArgumentException("command 不能为空")
+    if (command.isEmpty()) throw IllegalArgumentException("command must not be empty")
     val timeoutMillis = shellTimeoutMillis().coerceIn(1, MAX_SHELL_TIMEOUT_MILLIS)
     return buildJsonObject {
         put("command", command)
@@ -95,7 +95,7 @@ internal fun JsonObject.shellArguments(): JsonObject {
 private fun JsonObject.shellTimeoutMillis(): Long {
     val primitive = this["timeoutMs"] as? JsonPrimitive ?: this["timeout_ms"] as? JsonPrimitive ?: return DEFAULT_SHELL_TIMEOUT_MILLIS
     val raw = primitive.contentOrNull ?: return DEFAULT_SHELL_TIMEOUT_MILLIS
-    return raw.toLongOrNull() ?: throw IllegalArgumentException("timeoutMs 必须是整数")
+    return raw.toLongOrNull() ?: throw IllegalArgumentException("timeoutMs must be an integer")
 }
 
 internal const val DEFAULT_SHELL_TIMEOUT_MILLIS = 15_000L

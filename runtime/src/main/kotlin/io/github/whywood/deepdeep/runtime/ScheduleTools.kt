@@ -115,7 +115,7 @@ private suspend fun createSchedule(
 ): AgentToolResult {
     val session = requireSession(binding)
     val sessionFile = session.sessionFile
-        ?: throw IllegalArgumentException("当前会话尚未保存，无法创建定时提醒")
+        ?: throw IllegalArgumentException("Current conversation is not saved yet; cannot create a reminder")
     val prompt = args.requiredString("prompt")
     val frequency = args.requiredString("frequency")
     val name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() } ?: promptPreview(prompt)
@@ -156,7 +156,7 @@ private suspend fun updateSchedule(
     val id = args.requiredString("id")
     val existing = service.list()
         .firstOrNull { it.id == id && it.sessionId == session.sessionId }
-        ?: throw IllegalArgumentException("未找到定时任务：$id")
+        ?: throw IllegalArgumentException("Schedule not found: $id")
     val hasTriggerArgs = listOf("frequency", "date", "time", "cron").any { args.containsKey(it) }
     val trigger = if (hasTriggerArgs) {
         parseTrigger(args, base = existing.trigger, requestedFrequency = args.stringOrNull("frequency"))
@@ -171,7 +171,7 @@ private suspend fun updateSchedule(
         enabled = args.boolOrNull("enabled"),
     )
     val updated = service.update(id, patch)
-        ?: throw IllegalArgumentException("未找到定时任务：$id")
+        ?: throw IllegalArgumentException("Schedule not found: $id")
     return textResult(scheduleJson(updated).toString())
 }
 
@@ -184,9 +184,9 @@ private suspend fun deleteSchedule(
     val id = args.requiredString("id")
     val existing = service.list()
         .firstOrNull { it.id == id && it.sessionId == session.sessionId }
-        ?: throw IllegalArgumentException("未找到定时任务：$id")
+        ?: throw IllegalArgumentException("Schedule not found: $id")
     if (!service.delete(existing.id)) {
-        throw IllegalArgumentException("未找到定时任务：$id")
+        throw IllegalArgumentException("Schedule not found: $id")
     }
     val result = buildJsonObject {
         put("deleted", true)
@@ -196,7 +196,7 @@ private suspend fun deleteSchedule(
 }
 
 private fun requireSession(binding: SessionBinding): BoundSession =
-    binding.current() ?: throw IllegalArgumentException("当前会话未绑定")
+    binding.current() ?: throw IllegalArgumentException("Current conversation is not bound")
 
 private suspend fun scheduleToolResult(block: suspend () -> AgentToolResult): AgentToolResult =
     try {
@@ -206,7 +206,7 @@ private suspend fun scheduleToolResult(block: suspend () -> AgentToolResult): Ag
     } catch (error: CancellationException) {
         throw error
     } catch (error: Exception) {
-        textResult(error.message ?: "定时任务操作失败", isError = true)
+        textResult(error.message ?: "Schedule operation failed", isError = true)
     }
 
 private fun scheduleJson(schedule: Schedule): JsonObject = buildJsonObject {
@@ -239,7 +239,7 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
             is ScheduleTrigger.Once -> "once"
             else -> null
         }
-        ?: throw IllegalArgumentException("缺少 frequency（once/cron）")
+        ?: throw IllegalArgumentException("Missing frequency (once or cron)")
     if (frequency == "once" && args.containsKey("cron")) throw IllegalArgumentException("once does not accept cron")
     if (frequency == "cron" && (args.containsKey("date") || args.containsKey("time"))) throw IllegalArgumentException("cron does not accept date/time")
     return when (frequency) {
@@ -248,19 +248,19 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
             val date = args.stringOrNull("date")?.trim()?.takeIf { it.isNotEmpty() }
                 ?.let(::parseDate)
                 ?: baseOnce?.date
-                ?: throw IllegalArgumentException("once 需要 date（YYYY-MM-DD）")
+                ?: throw IllegalArgumentException("once requires date (YYYY-MM-DD)")
             val time = parseTimeArg(args, baseOnce?.time)
-                ?: throw IllegalArgumentException("once 需要 time（HH:mm）")
+                ?: throw IllegalArgumentException("once requires time (HH:mm)")
             ScheduleTrigger.Once(date, time)
         }
         "cron" -> {
             val baseCron = base as? ScheduleTrigger.Cron
             val expression = args.stringOrNull("cron")?.trim()?.takeIf { it.isNotEmpty() }
                 ?: baseCron?.expression
-                ?: throw IllegalArgumentException("cron 需要 cron（5 段表达式）")
+                ?: throw IllegalArgumentException("cron requires a five-field cron expression")
             ScheduleTrigger.Cron(expression)
         }
-        else -> throw IllegalArgumentException("frequency 只能是 once/cron")
+        else -> throw IllegalArgumentException("frequency must be once or cron")
     }
 }
 
@@ -275,14 +275,14 @@ private fun parseTime(raw: String): LocalTime {
     return try {
         LocalTime.parse(raw, TOOL_TIME_FORMAT)
     } catch (error: DateTimeParseException) {
-        throw IllegalArgumentException("时间格式无效：$raw（使用 HH:mm）")
+        throw IllegalArgumentException("Invalid time: $raw (use HH:mm)")
     }
 }
 
 private fun parseDate(raw: String): LocalDate = try {
     LocalDate.parse(raw)
 } catch (error: DateTimeParseException) {
-    throw IllegalArgumentException("日期格式无效：$raw（使用 YYYY-MM-DD）")
+    throw IllegalArgumentException("Invalid date: $raw (use YYYY-MM-DD)")
 }
 
 private fun promptPreview(prompt: String): String {
@@ -298,4 +298,4 @@ private fun JsonObject.boolOrNull(name: String): Boolean? =
 
 private fun JsonObject.requiredString(name: String): String =
     stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw IllegalArgumentException("缺少参数 $name")
+        ?: throw IllegalArgumentException("Missing required parameter: $name")

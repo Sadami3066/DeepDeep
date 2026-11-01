@@ -95,7 +95,7 @@ class GuiPluginTest {
         val tool = plugin().tools().first { it.name == "screen_screenshot" }
         val result = tool.execute("legacy", buildJsonObject { put("target", "main") }, null, null)
         assertEquals(true, result.isError)
-        assertTrue((result.content.single() as TextContent).text.contains("无障碍"))
+        assertTrue((result.content.single() as TextContent).text.contains("accessibility"))
         assertTrue(!screenshotDir.exists())
     }
 
@@ -111,7 +111,7 @@ class GuiPluginTest {
             null,
         )
         assertEquals(true, result.isError)
-        assertTrue((result.content.single() as TextContent).text.contains("虚拟屏"))
+        assertTrue((result.content.single() as TextContent).text.contains("Virtual screen engine is not ready"))
     }
 
     @Test

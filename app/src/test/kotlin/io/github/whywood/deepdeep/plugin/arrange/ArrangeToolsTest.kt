@@ -228,7 +228,7 @@ class ArrangeToolsTest {
         calendar.readAllowed = false
         val result = run("calendars")
         assertEquals(true, result.isError)
-        assertTrue(result.text().contains("日历"))
+        assertTrue(result.text().contains("READ_CALENDAR"))
     }
 
     @Test
@@ -277,11 +277,11 @@ class ArrangeToolsTest {
         private val calendars = listOf(ArrangeCalendarInfo(1, "小米日历", "account", "com.xiaomi", true, true))
 
         private fun checkRead() {
-            if (!readAllowed) throw ArrangeCalendarPermissionException("缺少日历读取权限")
+            if (!readAllowed) throw ArrangeCalendarPermissionException("Missing READ_CALENDAR permission")
         }
 
         private fun checkWrite() {
-            if (!writeAllowed) throw ArrangeCalendarPermissionException("缺少日历写入权限")
+            if (!writeAllowed) throw ArrangeCalendarPermissionException("Missing WRITE_CALENDAR permission")
         }
 
         override fun hasReadPermission(): Boolean = readAllowed

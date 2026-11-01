@@ -165,10 +165,10 @@ class VirtualScreenEngine(
     suspend fun launchWithReport(packageName: String): VirtualScreenLaunchReport {
         val name = packageName.trim()
         if (name.isEmpty()) {
-            return VirtualScreenLaunchReport(false, "缺少包名", taskDisplayId = INVALID_TASK_DISPLAY)
+            return VirtualScreenLaunchReport(false, "Missing packageName", taskDisplayId = INVALID_TASK_DISPLAY)
         }
         if (!isOnline()) {
-            return VirtualScreenLaunchReport(false, "虚拟屏未启动", taskDisplayId = INVALID_TASK_DISPLAY)
+            return VirtualScreenLaunchReport(false, "Virtual screen is not running", taskDisplayId = INVALID_TASK_DISPLAY)
         }
         return withContext(Dispatchers.IO) {
             try {
@@ -196,7 +196,7 @@ class VirtualScreenEngine(
     override suspend fun tap(x: Int, y: Int): VirtualScreenResult = tap(x, y, 60)
 
     suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult {
-        if (x < 0 || y < 0) return VirtualScreenResult(false, "坐标不能为负数")
+        if (x < 0 || y < 0) return VirtualScreenResult(false, "Coordinates must not be negative")
         return executeCommand(
             VirtualScreenCommands.TAP,
             buildJsonObject {
@@ -226,7 +226,7 @@ class VirtualScreenEngine(
 
     override suspend fun key(name: String): VirtualScreenResult {
         val keyName = name.trim()
-        if (keyName.isEmpty()) return VirtualScreenResult(false, "缺少按键名")
+        if (keyName.isEmpty()) return VirtualScreenResult(false, "Missing key name")
         return executeCommand(
             VirtualScreenCommands.KEY,
             buildJsonObject { put("key", keyName) },
@@ -234,7 +234,7 @@ class VirtualScreenEngine(
     }
 
     override suspend fun text(value: String): VirtualScreenResult {
-        if (value.isEmpty()) return VirtualScreenResult(false, "文本不能为空")
+        if (value.isEmpty()) return VirtualScreenResult(false, "Text must not be empty")
         return executeCommand(
             VirtualScreenCommands.TEXT,
             buildJsonObject { put("text", value) },
@@ -321,19 +321,19 @@ class VirtualScreenEngine(
         val server = ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))
         try {
             helper = launcher.start(backend, server.localPort, nonce)
-            val client = accept(server) ?: throw IOException("等待 helper 连接超时")
+            val client = accept(server) ?: throw IOException("Timed out waiting for the helper to connect")
             runCatching { server.close() }
             socket = client
             input = BufferedInputStream(client.getInputStream())
             output = BufferedOutputStream(client.getOutputStream())
             client.soTimeout = HANDSHAKE_TIMEOUT_MS
-            val hello = readFrameJson() ?: throw IOException("helper 未发送握手信息")
+            val hello = readFrameJson() ?: throw IOException("The helper did not send a handshake")
             val uid = hello.intField("uid") ?: -1
             if (uid != VirtualScreenCommands.SHELL_UID) {
-                throw IOException("helper 身份为 uid=$uid，需要 shell(2000)")
+                throw IOException("Helper uid=$uid; shell uid 2000 is required")
             }
             if (hello.stringField("nonce") != nonce) {
-                throw IOException("helper 握手 nonce 不匹配")
+                throw IOException("Helper handshake nonce mismatch")
             }
             connectedUid = uid
             connectedBackend = backend
@@ -343,11 +343,11 @@ class VirtualScreenEngine(
                 VirtualScreenCommands.START,
                 buildJsonObject { put("id", id) },
             )
-            val response = readResponse(id) ?: throw IOException("helper 未返回启动结果")
+            val response = readResponse(id) ?: throw IOException("The helper did not return a start result")
             if (response.booleanField("ok") != true) {
-                throw IOException(response.stringField("error") ?: "启动虚拟屏失败")
+                throw IOException(response.stringField("error") ?: "Failed to start the virtual screen")
             }
-            val displayId = response.intField("displayId") ?: throw IOException("helper 未返回 displayId")
+            val displayId = response.intField("displayId") ?: throw IOException("The helper did not return a displayId")
             val width = response.intField("width") ?: VirtualScreenCommands.DEFAULT_WIDTH
             val height = response.intField("height") ?: VirtualScreenCommands.DEFAULT_HEIGHT
             correlator.reset()
@@ -693,7 +693,7 @@ class VirtualScreenEngine(
 
     private suspend fun executeCommand(command: String, params: JsonObject): VirtualScreenResult =
         withContext(Dispatchers.IO) {
-            if (!isOnline()) return@withContext VirtualScreenResult(false, "虚拟屏未启动")
+            if (!isOnline()) return@withContext VirtualScreenResult(false, "Virtual screen is not running")
             try {
                 val response = request(command, params)
                 VirtualScreenResult(true, response.stringField("message").orEmpty())
@@ -725,9 +725,9 @@ class VirtualScreenEngine(
                 Log.w(TAG, VirtualScreenTransportLog.event("command_abandoned", "id" to id, "command" to command))
             }
         }
-        if (response == null) throw IOException("命令超时：$command")
+        if (response == null) throw IOException("Command timed out: $command")
         if (response.booleanField("ok") != true) {
-            throw IllegalStateException(response.stringField("error") ?: "命令失败：$command")
+            throw IllegalStateException(response.stringField("error") ?: "Command failed: $command")
         }
         return response
     }
@@ -748,7 +748,7 @@ class VirtualScreenEngine(
 
     private fun sendFrame(frame: VirtualScreenFrame) {
         synchronized(writeLock) {
-            val stream = output ?: throw IOException("虚拟屏未连接")
+            val stream = output ?: throw IOException("Virtual screen is not connected")
             VirtualScreenProtocol.write(stream, frame)
         }
     }
@@ -759,7 +759,7 @@ class VirtualScreenEngine(
             readerJob = null
             heartbeatJob?.cancel()
             heartbeatJob = null
-            pendingResponse?.completeExceptionally(IOException("虚拟屏连接已关闭"))
+            pendingResponse?.completeExceptionally(IOException("Virtual screen connection closed"))
             pendingResponse = null
             pendingScreenshotEpoch = 0L
             correlator.reset()

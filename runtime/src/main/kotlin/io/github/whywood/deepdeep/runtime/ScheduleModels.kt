@@ -81,16 +81,16 @@ fun ScheduleTrigger.nextRun(now: ZonedDateTime): ZonedDateTime? = when (this) {
 }
 
 fun ScheduleTrigger.validationError(now: ZonedDateTime): String? = when (this) {
-    is ScheduleTrigger.Once -> if (nextRun(now) == null) "once 的时间必须在未来" else null
+    is ScheduleTrigger.Once -> if (nextRun(now) == null) "once time must be in the future" else null
     is ScheduleTrigger.Daily -> null
-    is ScheduleTrigger.Weekly -> if (days.isEmpty()) "weekly 至少需要一个星期" else null
+    is ScheduleTrigger.Weekly -> if (days.isEmpty()) "weekly needs at least one weekday" else null
     is ScheduleTrigger.Cron -> {
         val parsed = try {
             CronExpression.parse(expression)
         } catch (error: InvalidCronExpressionException) {
-            return "cron 表达式无效：${error.message}"
+            return "Invalid cron expression: ${error.message}"
         }
-        if (parsed.nextRun(now) == null) "cron 在未来 5 年内没有匹配时间" else null
+        if (parsed.nextRun(now) == null) "cron has no matching time within the next 5 years" else null
     }
 }
 
@@ -173,7 +173,7 @@ fun scheduleTriggerFromJsonObject(json: JsonObject): ScheduleTrigger {
             try {
                 CronExpression.parse(expression)
             } catch (error: InvalidCronExpressionException) {
-                throw CorruptScheduleDataException("cron 表达式无效：${error.message}", error)
+                throw CorruptScheduleDataException("Invalid cron expression: ${error.message}", error)
             }
             ScheduleTrigger.Cron(expression)
         }

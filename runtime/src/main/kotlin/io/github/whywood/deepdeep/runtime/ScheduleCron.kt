@@ -66,13 +66,13 @@ internal class CronExpression private constructor(
         fun parse(expression: String): CronExpression {
             val fields = expression.trim().split(Regex("\\s+"))
             if (fields.size != 5) {
-                throw InvalidCronExpressionException("cron 需要 5 段：分钟 小时 日 月 星期")
+                throw InvalidCronExpressionException("cron needs 5 fields: minute hour day-of-month month weekday")
             }
-            val minutes = parseField(fields[0], 0, 59, null, "分钟")
-            val hours = parseField(fields[1], 0, 23, null, "小时")
-            val dom = parseField(fields[2], 1, 31, null, "日")
-            val months = parseField(fields[3], 1, 12, MONTH_NAMES, "月")
-            val rawWeekdays = parseField(fields[4], 0, 7, WEEKDAY_NAMES, "星期")
+            val minutes = parseField(fields[0], 0, 59, null, "minute")
+            val hours = parseField(fields[1], 0, 23, null, "hour")
+            val dom = parseField(fields[2], 1, 31, null, "day-of-month")
+            val months = parseField(fields[3], 1, 12, MONTH_NAMES, "month")
+            val rawWeekdays = parseField(fields[4], 0, 7, WEEKDAY_NAMES, "weekday")
             val weekdays = BooleanArray(7) { index ->
                 rawWeekdays[index] || (index == 0 && rawWeekdays[7])
             }
@@ -94,17 +94,17 @@ internal class CronExpression private constructor(
             names: List<String>?,
             label: String,
         ): BooleanArray {
-            if (text.isBlank()) throw InvalidCronExpressionException("$label 段为空")
+            if (text.isBlank()) throw InvalidCronExpressionException("$label field is empty")
             val selected = BooleanArray(max + 1)
             for (rawPart in text.split(',')) {
                 val part = rawPart.trim()
-                if (part.isEmpty()) throw InvalidCronExpressionException("$label 段包含空项")
+                if (part.isEmpty()) throw InvalidCronExpressionException("$label field contains an empty item")
                 val slash = part.indexOf('/')
                 val base = if (slash >= 0) part.substring(0, slash) else part
                 val step = if (slash >= 0) {
                     part.substring(slash + 1).toIntOrNull()
                         ?.takeIf { it >= 1 }
-                        ?: throw InvalidCronExpressionException("$label 段的步长无效：$part")
+                        ?: throw InvalidCronExpressionException("Invalid step in $label field: $part")
                 } else {
                     1
                 }
@@ -114,7 +114,7 @@ internal class CronExpression private constructor(
                         val start = parseValue(base.substringBefore('-'), min, max, names, label)
                         val end = parseValue(base.substringAfter('-'), min, max, names, label)
                         if (start > end) {
-                            throw InvalidCronExpressionException("$label 段的范围无效：$part")
+                            throw InvalidCronExpressionException("Invalid range in $label field: $part")
                         }
                         start..end
                     }
@@ -131,7 +131,7 @@ internal class CronExpression private constructor(
                     value += step
                 }
             }
-            if (!selected.any { it }) throw InvalidCronExpressionException("$label 段没有有效取值")
+            if (!selected.any { it }) throw InvalidCronExpressionException("$label field has no selected values")
             return selected
         }
 
@@ -146,13 +146,13 @@ internal class CronExpression private constructor(
             val numeric = token.toIntOrNull()
             if (numeric != null) {
                 if (numeric !in min..max) {
-                    throw InvalidCronExpressionException("$label 段超出范围：$token（$min..$max）")
+                    throw InvalidCronExpressionException("$label field out of range: $token ($min..$max)")
                 }
                 return numeric
             }
             val named = names?.indexOfFirst { it.equals(token, ignoreCase = true) } ?: -1
             if (named >= 0) return named + if (names === MONTH_NAMES) 1 else 0
-            throw InvalidCronExpressionException("$label 段取值无效：$token")
+            throw InvalidCronExpressionException("Invalid value in $label field: $token")
         }
     }
 }

@@ -18,13 +18,13 @@ private val DATE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern
 internal fun boundedOptionalText(raw: String?, maxLength: Int, field: String): String? {
     val text = raw?.trim().orEmpty()
     if (text.isEmpty()) return null
-    if (text.length > maxLength) throw IllegalArgumentException("$field 不能超过 $maxLength 个字符")
+    if (text.length > maxLength) throw IllegalArgumentException("$field must be at most $maxLength characters")
     return text
 }
 
 internal fun parseCalendarMillis(raw: String, zone: ZoneId = ZoneId.systemDefault()): Long {
     val text = raw.trim()
-    if (text.isEmpty()) throw IllegalArgumentException("时间不能为空")
+    if (text.isEmpty()) throw IllegalArgumentException("Time must not be empty")
     text.toLongOrNull()?.let { return it }
     runCatching { OffsetDateTime.parse(text) }.getOrNull()?.let { return it.toInstant().toEpochMilli() }
     val normalized = text.replace(' ', 'T')
@@ -34,7 +34,7 @@ internal fun parseCalendarMillis(raw: String, zone: ZoneId = ZoneId.systemDefaul
     runCatching { LocalDate.parse(normalized) }.getOrNull()?.let {
         return it.atStartOfDay(zone).toInstant().toEpochMilli()
     }
-    throw IllegalArgumentException("无法解析时间「$raw」：支持 yyyy-MM-dd HH:mm、yyyy-MM-dd、ISO 8601 或毫秒时间戳")
+    throw IllegalArgumentException("Cannot parse time \"$raw\"; expected yyyy-MM-dd HH:mm, yyyy-MM-dd, ISO 8601 or epoch milliseconds")
 }
 
 internal fun formatCalendarTime(millis: Long, allDay: Boolean, zone: ZoneId = ZoneId.systemDefault()): String {

@@ -41,7 +41,7 @@ internal fun galleryTool(client: MiCloudReadApi): CodingTool = CodingTool(
                     itemsResult(albums)
                 }
 
-                else -> throw IllegalArgumentException("action 无效：$action")
+                else -> throw IllegalArgumentException("action must be list or albums")
             }
         }
     },
@@ -64,7 +64,7 @@ internal fun recordingsTool(
                     val limit = limitArg(args)
                     val offset = args.argInt("offset") ?: 0
                     if (offset < 0) {
-                        throw IllegalArgumentException("offset 不能为负")
+                        throw IllegalArgumentException("offset must not be negative")
                     }
                     val response = client.getJson(recordingsPath(userId, now(), offset, limit))
                     val items = response.payloadArray("list")
@@ -92,7 +92,7 @@ internal fun recordingsTool(
                     textResult(result.toString())
                 }
 
-                else -> throw IllegalArgumentException("action 无效：$action")
+                else -> throw IllegalArgumentException("action must be list or download")
             }
         }
     },

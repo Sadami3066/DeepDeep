@@ -167,12 +167,12 @@ private fun arrangeCalendarTool(
                         val end = args.stringOrNull("end")?.takeIf { it.isNotBlank() }
                             ?.let { parseCalendarMillis(it, zone) }
                             ?: (start + DEFAULT_LIST_DAYS * 24L * 60L * 60L * 1_000L)
-                        if (start >= end) throw IllegalArgumentException("end 必须晚于 start")
+                        if (start >= end) throw IllegalArgumentException("end must be after start")
                         val maxSpan = MAX_LIST_DAYS * 24L * 60L * 60L * 1_000L
-                        if (end - start > maxSpan) throw IllegalArgumentException("list 范围不能超过 $MAX_LIST_DAYS 天")
+                        if (end - start > maxSpan) throw IllegalArgumentException("list range must not exceed $MAX_LIST_DAYS days")
                         val limit = args.intOrNull("limit") ?: DEFAULT_CALENDAR_LIMIT
                         if (limit !in 1..MAX_CALENDAR_LIMIT) {
-                            throw IllegalArgumentException("limit 需要在 1..$MAX_CALENDAR_LIMIT 之间")
+                            throw IllegalArgumentException("limit must be between 1 and $MAX_CALENDAR_LIMIT")
                         }
                         val query = args.stringOrNull("query")?.trim()?.takeIf { it.isNotEmpty() }
                         val events = calendar.list(start, end, query, limit)
@@ -191,17 +191,17 @@ private fun arrangeCalendarTool(
                     CALENDAR_GET -> {
                         val id = args.requiredLong("id")
                         val event = calendar.get(id)
-                            ?: throw IllegalArgumentException("没有找到日程 $id")
+                            ?: throw IllegalArgumentException("Event $id not found")
                         textResult(buildJsonObject { put("event", eventJson(event, zone)) }.toString())
                     }
 
                     CALENDAR_CREATE -> {
                         val title = args.optionalText("title", MAX_LABEL_LENGTH)
-                            ?: throw IllegalArgumentException("action=create 需要提供 title")
+                            ?: throw IllegalArgumentException("action=create requires title")
                         val start = parseCalendarMillis(args.requiredString("start"), zone)
                         val end = args.optionalText("end", MAX_TEXT_LENGTH)
                             ?.let { parseCalendarMillis(it, zone) }
-                        if (end != null && end <= start) throw IllegalArgumentException("end 必须晚于 start")
+                        if (end != null && end <= start) throw IllegalArgumentException("end must be after start")
                         val allDay = args.booleanOrNull("allDay") ?: false
                         val draft = ArrangeEventDraft(
                             title = title,
@@ -237,7 +237,7 @@ private fun arrangeCalendarTool(
                             reminderMinutes = if (args.containsKey("reminders")) args.reminderMinutes() else null,
                         )
                         val updated = calendar.update(id, patch)
-                            ?: throw IllegalArgumentException("没有找到日程 $id")
+                            ?: throw IllegalArgumentException("Event $id not found")
                         textResult(
                             buildJsonObject {
                                 put("updated", true)
@@ -249,11 +249,11 @@ private fun arrangeCalendarTool(
                     CALENDAR_DELETE -> {
                         val id = args.requiredLong("id")
                         val removed = calendar.delete(id)
-                        if (!removed) throw IllegalArgumentException("没有找到日程 $id")
+                        if (!removed) throw IllegalArgumentException("Event $id not found")
                         textResult(buildJsonObject { put("deleted", id) }.toString())
                     }
 
-                    else -> throw IllegalArgumentException("action 只支持 calendars、list、get、create、update、delete")
+                    else -> throw IllegalArgumentException("action must be calendars, list, get, create, update or delete")
                 }
             }
         }
@@ -283,30 +283,30 @@ private suspend fun arrangeToolResult(block: suspend () -> AgentToolResult): Age
 } catch (error: CancellationException) {
     throw error
 } catch (error: ArrangeCalendarPermissionException) {
-    textResult(error.message ?: "日历权限未授予", isError = true)
+    textResult(error.message ?: "Calendar permission not granted", isError = true)
 } catch (error: Exception) {
-    textResult(error.message ?: "安排操作失败", isError = true)
+    textResult(error.message ?: "Arrange action failed", isError = true)
 }
 
 private fun JsonObject.reminderMinutes(): List<Int>? {
     val array = this["reminders"] as? JsonArray ?: return null
     return array.map { element ->
         val raw = (element as? JsonPrimitive)?.contentOrNull
-            ?: throw IllegalArgumentException("reminders 需要使用分钟整数")
-        val value = raw.toIntOrNull() ?: throw IllegalArgumentException("reminders 需要使用分钟整数")
+            ?: throw IllegalArgumentException("reminders must be integer minutes")
+        val value = raw.toIntOrNull() ?: throw IllegalArgumentException("reminders must be integer minutes")
         if (value !in 0..MAX_REMINDER_MINUTES) {
-            throw IllegalArgumentException("reminders 需要在 0..$MAX_REMINDER_MINUTES 分钟之间")
+            throw IllegalArgumentException("reminders must be between 0 and $MAX_REMINDER_MINUTES minutes")
         }
         value
     }.distinct().sorted()
 }
 
 private fun JsonObject.requiredLong(name: String): Long =
-    longOrNull(name) ?: throw IllegalArgumentException("缺少参数 $name")
+    longOrNull(name) ?: throw IllegalArgumentException("Missing required argument: $name")
 
 private fun JsonObject.requiredString(name: String): String =
     stringOrNull(name)?.trim()?.takeIf { it.isNotEmpty() }
-        ?: throw IllegalArgumentException("缺少参数 $name")
+        ?: throw IllegalArgumentException("Missing required argument: $name")
 
 private fun JsonObject.optionalText(name: String, maxLength: Int): String? =
     boundedOptionalText(stringOrNull(name), maxLength, name)

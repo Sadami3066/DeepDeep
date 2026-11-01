@@ -47,7 +47,7 @@ internal class ArrangeCalendarWriter(
             throw error
         }
         return store.loadEvent(eventId)
-            ?: throw IllegalStateException("事件已写入但无法读取，请稍后重试")
+            ?: throw IllegalStateException("Event was written but could not be read back; try again later")
     }
 
     fun update(id: Long, change: ArrangeEventUpdate): ArrangeCalendarEvent? {

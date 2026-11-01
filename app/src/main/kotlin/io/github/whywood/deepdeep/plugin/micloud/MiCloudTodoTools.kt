@@ -11,7 +11,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-private const val TOOL_TODO_WRITE_OFF = "待办写入未开启，请先在插件详情打开写开关"
+private const val TOOL_TODO_WRITE_OFF = "To-do writing is off; enable the write switch in plugin details"
 
 internal fun todoTool(
     client: MiCloudReadApi,
@@ -62,12 +62,12 @@ internal fun todoTool(
                     val remindAt = args.argLong("remindAt")
                     if (content == null && done == null && remindAt == null) {
                         throw IllegalArgumentException(
-                            "update 需要 content、done 或 remindAt",
+                            "update requires content, done or remindAt",
                         )
                     }
                     val existing = todoRecord(client, id)
                     val eTag = etagOf(existing)
-                        ?: throw IllegalArgumentException("待办缺少 eTag，无法更新")
+                        ?: throw IllegalArgumentException("To-do has no eTag; cannot update")
                     val updated = updatedTodoRecord(existing, content, done, remindAt, now())
                     writeResult(writer.post(todoUpdatePath(id), todoUpdateForm(eTag, updated)))
                 }
@@ -77,11 +77,11 @@ internal fun todoTool(
                     val id = args.requiredArgString("id")
                     val existing = todoRecord(client, id)
                     val eTag = etagOf(existing)
-                        ?: throw IllegalArgumentException("待办缺少 eTag，无法删除")
+                        ?: throw IllegalArgumentException("To-do has no eTag; cannot delete")
                     writeResult(writer.post(todoDeletePath(id), todoDeleteForm(eTag)))
                 }
 
-                else -> throw IllegalArgumentException("action 无效：$action")
+                else -> throw IllegalArgumentException("action must be list, create, update or delete")
             }
         }
     },
@@ -89,7 +89,7 @@ internal fun todoTool(
 
 private suspend fun todoRecord(client: MiCloudReadApi, id: String): JsonObject {
     val payload = client.getJson(todoRecordPath(id)).payloadObject()
-    return payload.objectOrNull("record") ?: payload ?: throw IOException("待办数据格式异常")
+    return payload.objectOrNull("record") ?: payload ?: throw IOException("To-do data format is invalid")
 }
 
 private fun todoEntry(item: JsonObject): JsonObject {

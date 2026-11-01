@@ -99,7 +99,7 @@ class MiCloudToolsTest {
             put("subject", "标题")
         })
         assertEquals(true, denied.isError)
-        assertTrue(denied.text().contains("笔记写入未开启"))
+        assertTrue(denied.text().contains("Note writing is off"))
         assertTrue(writeApi.calls.isEmpty())
 
         settings.update(MiCloudCapabilities(notesRead = true, notesWrite = true))
@@ -123,7 +123,7 @@ class MiCloudToolsTest {
             put("content", "买牛奶")
         })
         assertEquals(true, denied.isError)
-        assertTrue(denied.text().contains("待办写入未开启"))
+        assertTrue(denied.text().contains("To-do writing is off"))
         assertTrue(writeApi.calls.isEmpty())
 
         settings.update(MiCloudCapabilities(todosRead = true, todosWrite = true))
@@ -273,7 +273,7 @@ class MiCloudToolsTest {
         settings.update(MiCloudCapabilities(smsRead = true))
         val result = run(tool("mi_cloud_sms"))
         assertEquals(true, result.isError)
-        assertTrue(result.text().contains("登录已失效"))
+        assertTrue(result.text().contains("login expired"))
     }
 
     @Test
@@ -282,7 +282,7 @@ class MiCloudToolsTest {
         settings.update(MiCloudCapabilities(notesRead = true))
         val result = run(tool("mi_cloud_notes"), buildJsonObject { put("action", "list") })
         assertEquals(true, result.isError)
-        assertTrue(result.text().contains("登录已失效"))
+        assertTrue(result.text().contains("login expired"))
     }
 
     @Test
@@ -419,20 +419,20 @@ class MiCloudToolsTest {
     }
 
     @Test
-    fun toolErrorsAreChineseOnly() = runTest {
-        assertEquals("小米云登录已失效：请打开 DeepDeep → 插件 → 小米云 → 重新登录", TOOL_AUTH_ERROR)
-        assertEquals("请求小米云失败：", TOOL_REQUEST_FAILED)
+    fun toolErrorsAreEnglishOnly() = runTest {
+        assertEquals("Mi Cloud login expired; open DeepDeep > Plugins > Mi Cloud and sign in again", TOOL_AUTH_ERROR)
+        assertEquals("Mi Cloud request failed: ", TOOL_REQUEST_FAILED)
         settings.update(MiCloudCapabilities(notesRead = true, accountRead = true))
         val invalidAction = run(tool("mi_cloud_account"), buildJsonObject { put("action", "other") })
         assertEquals(true, invalidAction.isError)
-        assertTrue(invalidAction.text().contains("action 无效"))
+        assertEquals("action must be profile or quota", invalidAction.text())
         assertFalse(invalidAction.text().contains(" / "))
         val invalidLimit = run(tool("mi_cloud_notes"), buildJsonObject {
             put("action", "list")
             put("limit", 0)
         })
         assertEquals(true, invalidLimit.isError)
-        assertTrue(invalidLimit.text().contains("limit 必须在"))
+        assertEquals("limit must be between 1 and $MAX_LIST_LIMIT", invalidLimit.text())
         assertFalse(invalidLimit.text().contains(" / "))
     }
 

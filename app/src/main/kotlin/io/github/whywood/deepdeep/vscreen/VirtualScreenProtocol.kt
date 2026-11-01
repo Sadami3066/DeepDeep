@@ -66,7 +66,7 @@ object VirtualScreenProtocol {
             val count = input.read(header, filled, HEADER_BYTES - filled)
             if (count < 0) {
                 if (filled == 0) return null
-                throw IOException("连接在帧头中间结束")
+                throw IOException("Connection ended in the middle of a frame header")
             }
             filled += count
         }
@@ -75,15 +75,15 @@ object VirtualScreenProtocol {
             ((header[2].toInt() and 0xFF) shl 8) or
             (header[3].toInt() and 0xFF)
         if (length <= 0 || length > MAX_FRAME_BYTES) {
-            throw IOException("帧长度非法：$length")
+            throw IOException("Invalid frame length: $length")
         }
         val kind = VirtualScreenFrameKind.fromCode(header[4])
-            ?: throw IOException("未知帧类型：${header[4]}")
+            ?: throw IOException("Unknown frame type: ${header[4]}")
         val payload = ByteArray(length)
         var payloadFilled = 0
         while (payloadFilled < length) {
             val count = input.read(payload, payloadFilled, length - payloadFilled)
-            if (count < 0) throw IOException("连接在帧内容中间结束")
+            if (count < 0) throw IOException("Connection ended in the middle of frame content")
             payloadFilled += count
         }
         return VirtualScreenFrame(kind, payload)

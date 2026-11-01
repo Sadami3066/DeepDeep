@@ -84,7 +84,7 @@ class AskUserQuestionToolTest {
         job.join()
         val toolResult = requireNotNull(result)
         assertEquals(true, toolResult.isError)
-        assertEquals("用户取消了提问", resultText(toolResult))
+        assertEquals("The user cancelled the question", resultText(toolResult))
         assertTrue(center.pending.value.isEmpty())
     }
 

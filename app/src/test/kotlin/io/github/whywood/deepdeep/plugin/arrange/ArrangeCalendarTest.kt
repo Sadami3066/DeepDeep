@@ -100,7 +100,7 @@ class ArrangeCalendarTest {
 
     @Test
     fun knownResourceKeyBecomesReadableCalendarName() {
-        assertEquals("小米日历", calendarDisplayName("calendar_displayname_xiaomi"))
+        assertEquals("Xiaomi Calendar", calendarDisplayName("calendar_displayname_xiaomi"))
         assertEquals("我的日历", calendarDisplayName(" 我的日历 "))
         assertEquals("calendar_displayname_other", calendarDisplayName("calendar_displayname_other"))
         assertEquals("", calendarDisplayName(""))

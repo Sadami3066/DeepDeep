@@ -217,7 +217,7 @@ class RootShellToolTest {
         )
 
         assertEquals(true, result.isError)
-        assertEquals("timeoutMs 必须是整数", resultText(result))
+        assertEquals("timeoutMs must be an integer", resultText(result))
     }
 
     @Test
@@ -225,7 +225,7 @@ class RootShellToolTest {
         val result = tool().execute("call-1", args("   "), null, null)
 
         assertEquals(true, result.isError)
-        assertEquals("command 不能为空", resultText(result))
+        assertEquals("command must not be empty", resultText(result))
     }
 
     @Test

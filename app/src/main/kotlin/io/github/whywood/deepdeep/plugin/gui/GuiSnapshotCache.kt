@@ -11,7 +11,7 @@ internal class GuiSnapshotCache {
     fun remove(displayId: Int) { snapshots.remove(displayId) }
 
     fun store(displayId: Int, snapshot: GuiSnapshot): GuiSnapshot {
-        require(displayId >= 0) { "屏幕编号不能为负数" }
+        require(displayId >= 0) { "Display id must not be negative" }
         val generation = UUID.randomUUID().toString()
         val stamped = snapshot.copy(nodes = snapshot.nodes.mapIndexed { index, node ->
             node.copy(ref = "$displayId:$generation:$index")
@@ -21,9 +21,9 @@ internal class GuiSnapshotCache {
     }
 
     fun find(displayId: Int, selector: GuiSelector): GuiSnapshotNode {
-        require(displayId >= 0) { "屏幕编号不能为负数" }
+        require(displayId >= 0) { "Display id must not be negative" }
         val current = snapshots[displayId] ?: throw IllegalStateException(missingSnapshotMessage(displayId))
         return GuiNodeTree.find(current, selector)
-            ?: throw IllegalArgumentException("节点 ref 已失效或未匹配，请重新 screen_observe")
+            ?: throw IllegalArgumentException("Node ref is stale or did not match; call screen_observe again")
     }
 }
