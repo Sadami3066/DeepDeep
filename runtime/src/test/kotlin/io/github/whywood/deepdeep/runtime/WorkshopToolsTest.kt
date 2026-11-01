@@ -70,6 +70,20 @@ class WorkshopToolsTest {
     }
 
     @Test
+    fun oneShotLoadReturnsArtifactWithoutChatDeliveryInstructions() = runTest {
+        val path = createDraft("Page Artifact")
+        File(path, "index.html").writeText("<html><body>neutral</body></html>")
+        val tool = workshopTools(store, supportsChatDelivery = false).first { it.name == "workshop_load" }
+        val result = tool.execute("page", buildJsonObject { put("path", path) }, null, null)
+        assertNull(resultText(result), result.isError)
+        val json = resultJson(result)
+        assertTrue(!json.containsKey("delivery"))
+        assertTrue(!resultText(result).contains("present"))
+        assertTrue(File(json.getValue("path").jsonPrimitive.content, "index.html").isFile)
+        assertTrue(json.getValue("next").jsonPrimitive.content.contains("calling page"))
+    }
+
+    @Test
     fun createReturnsDraftJson() = runTest {
         val result = execute(
             "workshop_create",

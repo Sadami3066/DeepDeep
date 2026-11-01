@@ -43,6 +43,7 @@ class PiSessionEngine(
     private val toolContext: AppToolContext? = null,
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
+    private val supportsChatDelivery: Boolean = true,
 ) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -72,7 +73,7 @@ class PiSessionEngine(
         val providerId = if (restoredModel) restoredProviderId!! else fallback.providerId
         val modelId = if (restoredModel) restoredModelId!! else fallback.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
-        val binding = SessionBinding()
+        val binding = SessionBinding(supportsChatDelivery)
         val allTools = buildTools(activeShell, binding)
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         var created: AgentSession? = null
@@ -122,7 +123,7 @@ class PiSessionEngine(
     override suspend fun create(file: String?, config: ModelConfig): SessionHandle =
         PiSessionHandle(this, createSession(file?.toPath(), config))
 
-    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding())
+    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding(supportsChatDelivery))
 
     private fun buildTools(activeShell: ShellExecutor?, binding: SessionBinding): List<CodingTool> = buildList {
         val defaults = defaultCodingTools(

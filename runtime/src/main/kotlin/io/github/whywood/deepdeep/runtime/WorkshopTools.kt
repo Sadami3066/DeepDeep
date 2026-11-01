@@ -62,9 +62,9 @@ private val workshopDeleteParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("app")) })
 }
 
-fun workshopTools(store: WorkshopStore): List<CodingTool> = listOf(
+fun workshopTools(store: WorkshopStore, supportsChatDelivery: Boolean = true): List<CodingTool> = listOf(
     workshopCreateTool(store),
-    workshopLoadTool(store),
+    workshopLoadTool(store, supportsChatDelivery),
     workshopListTool(store),
     workshopDeleteTool(store),
 )
@@ -97,7 +97,7 @@ private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
     },
 )
 
-private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
+private fun workshopLoadTool(store: WorkshopStore, supportsChatDelivery: Boolean): CodingTool = CodingTool(
     name = "workshop_load",
     description = "Install a Workshop draft as a mini app so the user can open it. Call it with the absolute draft path returned by workshop_create after writing all app files; relative paths are rejected.",
     parameters = workshopLoadParameters,
@@ -108,7 +108,7 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
             val creation = store.loadDraft(args.requiredWorkshopString("path"))
             val result = buildJsonObject {
                 put("ok", true)
-                put("delivery", "present")
+                if (supportsChatDelivery) put("delivery", "present")
                 putJsonObject("app") {
                     put("id", creation.manifest.id)
                     put("name", creation.manifest.name)
@@ -118,7 +118,8 @@ private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
                 put("path", creation.directory.absolutePath)
                 put(
                     "next",
-                    "Deliver this app with present: {items:[{type:creative, id:${creation.manifest.id}}]}. Do not restate the app details in your reply.",
+                    if (supportsChatDelivery) "Deliver this app with present: {items:[{type:creative, id:${creation.manifest.id}}]}. Do not restate the app details in your reply."
+                    else "Return the installed app id, absolute path and final text to the calling page.",
                 )
             }
             textResult(result.toString())

@@ -41,7 +41,7 @@ class WorkshopPlugin(
     )
 
     override fun tools(binding: SessionBinding): List<CodingTool> =
-        workshopTools(store) + workshopEditTool(store)
+        workshopTools(store, binding.supportsChatDelivery) + workshopEditTool(store)
 
     override fun skills(): List<PluginSkill> {
         if (!settingBool(SKILL_ENABLED_KEY, true)) return emptyList()

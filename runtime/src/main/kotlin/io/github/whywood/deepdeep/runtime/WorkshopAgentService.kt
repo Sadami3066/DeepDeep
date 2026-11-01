@@ -270,6 +270,7 @@ class WorkshopAgentService(
             override fun listOrNull(dir: Path): List<Path>? = if (dir == projectSkills) emptyList() else super.listOrNull(dir)
         },
         toolFs = FileSystem.SYSTEM,
+        supportsChatDelivery = false,
     )
 
     private suspend fun discoverSkills(cwd: File): List<Skill> = runCatching {
