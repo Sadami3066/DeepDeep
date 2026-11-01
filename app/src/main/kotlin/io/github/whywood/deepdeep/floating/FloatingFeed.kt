@@ -20,6 +20,7 @@ class FloatingFeed(
     private val activeRuns: StateFlow<Map<String, ActiveRunView>>,
     private val pendingQuestions: StateFlow<List<PendingQuestion>>,
     private val scope: CoroutineScope,
+    private val isForeground: () -> Boolean = { false },
 ) {
     private val mutableState = MutableStateFlow(
         FloatingFeedState(lastEventAt = System.currentTimeMillis()),
@@ -74,6 +75,7 @@ class FloatingFeed(
                     status = runtimeEvent.status,
                     text = runtimeEvent.text,
                     error = null,
+                    whileForeground = isForeground(),
                 ),
             )
 
@@ -84,6 +86,7 @@ class FloatingFeed(
                     status = RunStatus.FAILED,
                     text = "",
                     error = runtimeEvent.message,
+                    whileForeground = isForeground(),
                 ),
             )
 

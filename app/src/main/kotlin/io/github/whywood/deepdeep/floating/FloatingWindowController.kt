@@ -66,7 +66,7 @@ class FloatingWindowController(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val feedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope)
+    private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope) { AppVisibility.foreground }
     private val windowContext = LanguagePreferences.wrap(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
