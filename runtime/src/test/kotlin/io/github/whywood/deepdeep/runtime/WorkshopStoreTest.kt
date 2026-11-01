@@ -155,6 +155,27 @@ class WorkshopStoreTest {
     }
 
     @Test
+    fun loadDraftReportsCallerPathForMissingEntry() = runTest {
+        val realRoot = File(root, "real").apply { mkdirs() }
+        val linkRoot = File(root, "link")
+        Files.createSymbolicLink(linkRoot.toPath(), realRoot.toPath())
+        val linkedStore = WorkshopStore(File(linkRoot, "workshop"))
+        val draft = linkedStore.createDraft("Linked Path")
+        val draftPath = draft.directory.absolutePath
+
+        val message = try {
+            linkedStore.loadDraft(draftPath)
+            fail("expected WorkshopLoadException")
+            ""
+        } catch (error: WorkshopLoadException) {
+            error.message.orEmpty()
+        }
+
+        assertTrue(message.contains(draftPath))
+        assertFalse(message.contains(realRoot.absolutePath))
+    }
+
+    @Test
     fun loadDraftRejectsInvalidManifest() = runTest {
         val draft = store.createDraft("Broken")
         File(draft.directory, "manifest.json").writeText("{\"id\":")

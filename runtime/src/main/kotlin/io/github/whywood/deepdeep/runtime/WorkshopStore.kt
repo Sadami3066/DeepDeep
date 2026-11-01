@@ -132,7 +132,7 @@ class WorkshopStore(
                 ?.joinToString(", ") { file -> file.name }
                 .orEmpty()
             throw WorkshopLoadException(
-                "draft entry is missing: ${manifest.entry} in ${draft.absolutePath}; " +
+                "draft entry is missing: ${manifest.entry} in $raw; " +
                     "existing files: [${files.ifEmpty { "none" }}]. " +
                     "Write ${manifest.entry} into that folder with an absolute path, then call workshop_load with the same draft path.",
             )
