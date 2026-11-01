@@ -108,7 +108,7 @@ internal class AutoRetryController(
         begin(sessionId)
     }
 
-    fun finishRunError(sessionId: String, message: String, strings: ChatUiStrings) {
+    fun finishRunError(sessionId: String, message: String?, strings: ChatUiStrings) {
         val reduced = writeTarget.read(sessionId).finishWithError("", message, strings)
         if (!writeTarget.isActive(sessionId)) {
             writeTarget.updateIfPresent(sessionId) { reduced }

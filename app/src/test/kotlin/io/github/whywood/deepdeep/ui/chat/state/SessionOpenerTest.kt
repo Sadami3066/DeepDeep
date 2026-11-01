@@ -4,10 +4,12 @@ import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
@@ -41,6 +43,7 @@ class SessionOpenerTest {
         scope: CoroutineScope,
         dispatcher: CoroutineDispatcher,
         runtime: AgentRuntime = FakeAgentRuntime(),
+        localizeError: (String?) -> String = { it ?: "" },
     ): SessionOpener = SessionOpener(
         runtime = runtime,
         ioDispatcher = dispatcher,
@@ -56,7 +59,7 @@ class SessionOpenerTest {
         takeCached = { stored.remove(it) },
         applySessionModel = {},
         titleFrom = { messages -> messages.firstOrNull()?.text ?: "new" },
-        localizeError = { it ?: "" },
+        localizeError = localizeError,
         localizeTitle = { it },
         decorateNotices = { conversation, id ->
             decorated += id
@@ -158,6 +161,38 @@ class SessionOpenerTest {
         advanceUntilIdle()
 
         assertEquals(1, runtime.openCalls.size)
+    }
+
+    @Test
+    fun failedHistoryLocalizesSummaryAndKeepsProviderDetails() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val strings = ChatUiStrings.fallback()
+        val raw = "413 Request Entity Too Large"
+        val runtime = FakeAgentRuntime().apply {
+            histories = mapOf(
+                "session-1" to listOf(
+                    AssistantMessage(0, AssistantRole.USER, "看图"),
+                    AssistantMessage(
+                        id = 1,
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        status = MessageStatus.FAILED,
+                        rawError = raw,
+                        startedAt = 2L,
+                        finishedAt = 3L,
+                    ),
+                ),
+            )
+        }
+        val opener = opener(this, dispatcher, runtime, localizeError = strings::runError)
+
+        opener.switchToSummary(summary("session-1"))
+        advanceUntilIdle()
+
+        val failed = state.messages.last()
+        assertEquals(MessageStatus.FAILED, failed.status)
+        assertEquals(strings.requestTooLarge, failed.error)
+        assertEquals(raw, failed.rawError)
     }
 
     @Test

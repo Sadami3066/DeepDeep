@@ -9,6 +9,7 @@ enum class RunErrorKind {
     TIMEOUT,
     NETWORK,
     MODEL_UNAVAILABLE,
+    REQUEST_TOO_LARGE,
     TOOL_ARGS,
     SERVER,
     UNKNOWN,
@@ -43,6 +44,7 @@ data class ChatUiStrings(
     val serviceUnavailable: String,
     val insufficientBalance: String,
     val modelUnavailable: String,
+    val requestTooLarge: String,
     val retry: String,
     val withCode: (String, String) -> String,
     val nothingToCompact: String,
@@ -69,6 +71,7 @@ data class ChatUiStrings(
 
             text.contains("Network", ignoreCase = true) -> RunErrorKind.NETWORK
             text.contains("404") || text.contains("model not found", ignoreCase = true) -> RunErrorKind.MODEL_UNAVAILABLE
+            REQUEST_TOO_LARGE.containsMatchIn(text) -> RunErrorKind.REQUEST_TOO_LARGE
             text.contains("tool input", ignoreCase = true) ||
                 text.contains("invalid JSON", ignoreCase = true) -> RunErrorKind.TOOL_ARGS
 
@@ -82,6 +85,7 @@ data class ChatUiStrings(
         RunErrorKind.INVALID_API_KEY,
         RunErrorKind.INSUFFICIENT_BALANCE,
         RunErrorKind.MODEL_UNAVAILABLE,
+        RunErrorKind.REQUEST_TOO_LARGE,
         -> false
 
         else -> true
@@ -97,19 +101,25 @@ data class ChatUiStrings(
             RunErrorKind.TIMEOUT -> timeout
             RunErrorKind.NETWORK -> networkError
             RunErrorKind.MODEL_UNAVAILABLE -> modelUnavailable
+            RunErrorKind.REQUEST_TOO_LARGE -> requestTooLarge
             RunErrorKind.TOOL_ARGS -> invalidToolArgs
             RunErrorKind.SERVER -> serviceUnavailable
             RunErrorKind.UNKNOWN -> requestFailed
         }
         val kind = runErrorKind(text)
         val showCode = code != null && kind != RunErrorKind.TIMEOUT &&
-            kind != RunErrorKind.NETWORK && kind != RunErrorKind.TOOL_ARGS
+            kind != RunErrorKind.NETWORK && kind != RunErrorKind.TOOL_ARGS &&
+            kind != RunErrorKind.REQUEST_TOO_LARGE
         return if (showCode) withCode(base, code!!) else base
     }
 
     companion object {
         private val SERVER_ERROR = Regex("\\b5\\d{2}\\b")
         private val ERROR_CODE = Regex("\\b([1-5]\\d{2})\\b")
+        private val REQUEST_TOO_LARGE = Regex(
+            "fail to allocate|request entity too large|payload too large|request too large|\\btoo large\\b|\\b413\\b",
+            RegexOption.IGNORE_CASE,
+        )
 
         fun fallback(): ChatUiStrings = ChatUiStrings(
             thinking = "Thinking",
@@ -140,6 +150,7 @@ data class ChatUiStrings(
             serviceUnavailable = "Model service temporarily unavailable",
             insufficientBalance = "Insufficient balance. Top up and try again.",
             modelUnavailable = "Model unavailable. Switch models.",
+            requestTooLarge = "Request too large. Compress images or start a new chat.",
             retry = "Retry",
             withCode = { base, code -> "$base ($code)" },
             nothingToCompact = "No compactable history",

@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -512,6 +513,8 @@ private fun AssistantTurn(
 @Composable
 private fun FailedMark(message: AssistantMessage, retryAttempt: Int?, onRetry: (Long) -> Unit) {
     val colors = deepDeepColors()
+    val rawDetails = rawErrorDetails(message.rawError)
+    var detailsExpanded by rememberSaveable(message.id, message.rawError) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         if (message.retrying) {
             Row(
@@ -538,18 +541,47 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?, onRetry: (
                 text = message.error ?: stringResource(R.string.assistant_failed),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 color = colors.inkSecondary,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            Box(
+            if (rawDetails != null && detailsExpanded) {
+                Text(
+                    text = rawDetails,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(colors.codeBackground)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .testTag("assistant_error_details"),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
+                    color = colors.inkSecondary,
+                )
+            }
+            Row(
                 modifier = Modifier.fillMaxWidth().height(44.dp),
-                contentAlignment = Alignment.CenterStart,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 DdTextAction(
                     text = stringResource(R.string.assistant_retry),
                     onClick = { onRetry(message.id) },
                     modifier = Modifier.testTag("assistant_retry"),
                 )
+                if (rawDetails != null) {
+                    Spacer(Modifier.width(16.dp))
+                    DdTextAction(
+                        text = stringResource(
+                            if (detailsExpanded) {
+                                R.string.assistant_error_details_hide
+                            } else {
+                                R.string.assistant_error_details_show
+                            },
+                        ),
+                        onClick = { detailsExpanded = !detailsExpanded },
+                        color = colors.inkTertiary,
+                        modifier = Modifier.testTag("assistant_error_details_toggle"),
+                    )
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.SessionSearchHit
 import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
+import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -88,9 +89,7 @@ internal class SessionListController(
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
         val sessionModel = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
         val settled = history
-            .map { message ->
-                message.error?.let { raw -> message.copy(error = localizeError(raw)) } ?: message
-            }
+            .map { message -> message.localizedRunError(localizeError) }
             .map { message ->
                 if (!message.streaming && !message.retrying) {
                     message
