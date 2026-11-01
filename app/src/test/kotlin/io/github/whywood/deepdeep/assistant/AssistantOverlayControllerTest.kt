@@ -905,6 +905,29 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
+    fun stopDuringQueuedImagePreparationPreventsLateSteer() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime().apply {
+            activeRuns.value = mapOf("session-1" to ActiveRunSnapshot("run-live", 1L))
+        }
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        controller.stop()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertTrue(runtime.steered.isEmpty())
+        assertTrue(runtime.followUps.isEmpty())
+        assertEquals(listOf("session-1"), runtime.stopped)
+        controller.reset()
+    }
+
+    @Test
     fun switchingSessionClearsAttachments() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val controller = controller(runtime, "session-1", this)

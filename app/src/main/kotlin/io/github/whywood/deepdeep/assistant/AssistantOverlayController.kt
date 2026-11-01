@@ -29,6 +29,7 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,6 +88,7 @@ class AssistantOverlayController(
         ImageNormalizer.normalize(file, mime)
     },
 ) {
+    private val queuedPreparations = mutableMapOf<String, MutableSet<Job>>()
     private val mutableState = MutableStateFlow(AssistantOverlayState())
     val state: StateFlow<AssistantOverlayState> = mutableState.asStateFlow()
     private val projection = SessionProjection(runtime, scope, ioDispatcher, strings)
@@ -210,6 +212,9 @@ class AssistantOverlayController(
     }
 
     fun stop() {
+        mutableState.value.sessionId?.let { sessionId ->
+            queuedPreparations.remove(sessionId)?.forEach { it.cancel() }
+        }
         projection.stop()
     }
 
@@ -448,9 +453,11 @@ class AssistantOverlayController(
         imageRefs: List<AttachmentRef>,
         root: File,
     ) {
-        scope.launch {
+        lateinit var job: Job
+        job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 val images = normalizeImages(imageRefs, root)
+                queuedPreparations[sessionId]?.remove(job)
                 if (followUp) {
                     runtime.followUp(sessionId, prompt, images)
                 } else {
@@ -460,8 +467,15 @@ class AssistantOverlayController(
                 throw cancelled
             } catch (error: Exception) {
                 if (mutableState.value.sessionId == sessionId) setError(AssistantOverlayError.SendFailed)
+            } finally {
+                queuedPreparations[sessionId]?.let { jobs ->
+                    jobs.remove(job)
+                    if (jobs.isEmpty()) queuedPreparations.remove(sessionId)
+                }
             }
         }
+        queuedPreparations.getOrPut(sessionId) { mutableSetOf() }.add(job)
+        job.start()
     }
 
     private fun isBusy(sessionId: String, current: AssistantOverlayState): Boolean =
