@@ -3,12 +3,17 @@ package io.github.whywood.deepdeep.screen
 import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
+import io.github.whywood.deepdeep.plugin.gui.GuiNode
 import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
 import java.io.File
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -26,16 +31,33 @@ class ScreenToolsTest {
     private val screenshotDir: File get() = File(temporaryFolder.root, "gui/screenshots")
 
     @Test
-    fun exposesUnifiedScreenToolsWithoutLegacyAliases() {
+    fun exposesTenScreenToolsWithoutLegacyAliases() {
         val names = screenTools(controller, screenshotDir).map { it.name }
         assertEquals(screenToolNames(), names)
-        assertEquals(12, names.size)
+        assertEquals(
+            listOf(
+                "screen_status",
+                "screen_observe",
+                "screen_screenshot",
+                "screen_tap",
+                "screen_swipe",
+                "screen_scroll",
+                "screen_type",
+                "screen_key",
+                "screen_wait",
+                "screen_app",
+            ),
+            names,
+        )
         names.forEach { name ->
             assertTrue(name, name.startsWith("screen_"))
             assertTrue(name, !name.startsWith("gui_"))
             assertTrue(name, !name.startsWith("virtual_screen_"))
         }
         val legacy = setOf(
+            "screen_find",
+            "screen_launch",
+            "screen_list_apps",
             "gui_observe",
             "gui_find",
             "gui_tap",
@@ -55,24 +77,166 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun statusToolReportsBackends() = runTest {
-        val result = run("screen_status", buildJsonObject { })
-        assertNull(result.isError)
-        val text = result.text()
-        assertTrue(text.contains("\"accessibility\""))
-        assertTrue(text.contains("\"adb\""))
-        assertTrue(text.contains("\"main\""))
-        assertTrue(text.contains("\"virtual\""))
-        assertTrue(text.contains("\"state\":\"online\""))
+    fun toolTextFollowsTaskLanguagePolicy() {
+        val tools = screenTools(controller, screenshotDir)
+        assertEquals(10, tools.size)
+        tools.forEach { tool ->
+            assertNull("${tool.name} 不应再带 promptSnippet", tool.promptSnippet)
+            assertNull("${tool.name} 不应再带 promptGuidelines", tool.promptGuidelines)
+            assertTaskText("${tool.name} description", tool.description)
+            val parameterDescriptions = mutableListOf<String>()
+            collectDescriptions(tool.parameters, parameterDescriptions)
+            parameterDescriptions.forEachIndexed { index, text ->
+                assertTaskText("${tool.name} 参数 $index", text)
+            }
+        }
     }
 
     @Test
-    fun observeToolIncludesBackendAndNodes() = runTest {
+    fun statusToolReportsCapabilities() = runTest {
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"accessibility\":\"connected\""))
+        assertTrue(text.contains("\"main\""))
+        assertTrue(text.contains("\"virtual\""))
+        assertTrue(text.contains("\"state\":\"online\""))
+        assertTrue(text.contains("\"readNodes\":true"))
+        assertTrue(text.contains("\"tap\":\"node\""))
+        assertTrue(text.contains("\"swipe\":false"))
+        assertTrue(text.contains("\"typeText\":\"unicode-with-field\""))
+        assertTrue(text.contains("\"key\":\"system\""))
+        assertTrue(text.contains("\"screenshot\":true"))
+        assertTrue(text.contains("\"width\":1080"))
+        assertTrue(text.contains("\"height\":2400"))
+        assertTrue(!text.contains("\"adb\""))
+        assertTrue(!text.contains("\"displayId\""))
+        assertTrue(!text.contains("\"nodeBackend\""))
+        assertTrue(!text.contains("\"inputBackend\""))
+        assertTrue(!text.contains("\"uid\""))
+        assertTrue(!text.contains("\"backend\""))
+    }
+
+    @Test
+    fun statusToolReportsAdbCapabilitiesWithoutAccessibility() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            accessibilityConnected = false,
+            accessibilityEnabled = false,
+            adbAvailable = true,
+            virtualState = "offline",
+            virtual = null,
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"accessibility\":\"disabled\""))
+        assertTrue(text.contains("无障碍服务未开启"))
+        assertTrue(text.contains("\"readNodes\":true"))
+        assertTrue(text.contains("\"tap\":\"node\""))
+        assertTrue(text.contains("\"scroll\":true"))
+        assertTrue(text.contains("\"swipe\":true"))
+        assertTrue(text.contains("\"typeText\":\"ascii\""))
+        assertTrue(text.contains("\"key\":\"all\""))
+        assertTrue(text.contains("\"screenshot\":false"))
+        assertTrue(text.contains("\"state\":\"offline\""))
+        assertTrue(!text.contains("\"failure\""))
+    }
+
+    @Test
+    fun statusToolMarksMainNodesUnavailableWhileVirtualScreenIsOnline() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            accessibilityConnected = false,
+            accessibilityEnabled = false,
+            adbAvailable = true,
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"accessibility\":\"disabled\""))
+        assertTrue(text.contains("\"readNodes\":false"))
+        assertTrue(text.contains("\"tap\":\"point\""))
+        assertTrue(text.contains("\"virtual\""))
+        assertTrue(text.contains("\"state\":\"online\""))
+        assertTrue(text.contains("\"readNodes\":false"))
+        assertTrue(text.contains("\"typeText\":\"ascii\""))
+    }
+
+    @Test
+    fun statusToolReportsRebindingAccessibility() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            accessibilityConnected = false,
+            accessibilityEnabled = true,
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"accessibility\":\"rebinding\""))
+        assertTrue(text.contains("无障碍服务正在重新绑定"))
+        assertTrue(text.contains("\"readNodes\":false"))
+        assertTrue(text.contains("\"tap\":\"none\""))
+        assertTrue(text.contains("\"screenshot\":false"))
+    }
+
+    @Test
+    fun statusToolReportsVirtualFailureAsTaskCategories() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            virtualState = "failed",
+            virtual = null,
+            virtualFailure = ScreenVirtualFailure(
+                category = VIRTUAL_FAILURE_TRANSPORT,
+                message = "虚拟屏连接已断开（连接被对端关闭），自动重连失败",
+                recoverable = true,
+                reason = "eof",
+            ),
+            virtualTransportNotice = "虚拟屏已重建，旧屏上的应用已丢失",
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"category\":\"connection\""))
+        assertTrue(text.contains("\"message\""))
+        assertTrue(text.contains("screen_app"))
+        assertTrue(text.contains("\"notice\""))
+        assertTrue(!text.contains("\"recoverable\""))
+        assertTrue(!text.contains("\"reason\""))
+        assertTrue(!text.contains("transport"))
+    }
+
+    @Test
+    fun statusToolOmitsVirtualFailureUnlessFailed() = runTest {
+        controller.statusSnapshot = controller.statusSnapshot.copy(
+            virtualState = "online",
+            virtualFailure = ScreenVirtualFailure(
+                category = VIRTUAL_FAILURE_TRANSPORT,
+                message = "旧错误",
+                recoverable = true,
+            ),
+        )
+        val result = run("screen_status", buildJsonObject { })
+        assertNull(result.isError)
+        assertTrue(!result.text().contains("\"failure\""))
+    }
+
+    @Test
+    fun virtualFailureCategoriesMapToTaskLanguage() {
+        assertEquals("connection", virtualFailureJsonCategory(VIRTUAL_FAILURE_TRANSPORT))
+        assertEquals("privilege", virtualFailureJsonCategory(VIRTUAL_FAILURE_BACKEND))
+        assertEquals("start", virtualFailureJsonCategory(VIRTUAL_FAILURE_START))
+        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_TRANSPORT).contains("screen_app"))
+        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_BACKEND).contains("Root"))
+        assertTrue(virtualFailureHint(VIRTUAL_FAILURE_START).contains("启动失败"))
+    }
+
+    @Test
+    fun observeToolReturnsWholeTreeWithoutFilters() = runTest {
         val result = run("screen_observe", buildJsonObject { put("target", "virtual") })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"backend\":\"accessibility\""))
-        assertTrue(text.contains("\"count\":2"))
+        assertTrue(text.contains("\"count\":3"))
+        assertTrue(text.contains("\"total\":3"))
+        assertTrue(text.contains("\"scanned\":3"))
+        assertTrue(text.contains("\"truncated\":false"))
+        assertTrue(text.contains("\"filtered\":0"))
         assertTrue(text.contains("\"ref\":\"0\""))
         assertEquals(ScreenTarget.VIRTUAL, controller.lastObserveTarget)
     }
@@ -85,6 +249,13 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun observeToolKeepsExplicitDepth() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("maxDepth", 6) })
+        assertNull(result.isError)
+        assertEquals(6, controller.lastObserveMaxDepth)
+    }
+
+    @Test
     fun observeToolReportsFilteredNodes() = runTest {
         controller.filteredNodes = 3
         val result = run("screen_observe", buildJsonObject { })
@@ -93,71 +264,49 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun observeToolKeepsExplicitDepth() = runTest {
-        val result = run("screen_observe", buildJsonObject { put("maxDepth", 6) })
-        assertNull(result.isError)
-        assertEquals(6, controller.lastObserveMaxDepth)
-    }
-
-    @Test
-    fun statusToolReportsReconnectingAccessibility() = runTest {
-        controller.statusSnapshot = controller.statusSnapshot.copy(
-            accessibilityConnected = false,
-            accessibilityEnabled = true,
-        )
-        val result = run("screen_status", buildJsonObject { })
+    fun observeToolFiltersByText() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("text", "OK") })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"state\":\"reconnecting\""))
-        assertTrue(text.contains("无障碍服务正在重新绑定"))
-        assertTrue(text.contains("\"nodeBackend\""))
-        assertTrue(text.contains("\"inputBackend\""))
+        assertTrue(text.contains("\"count\":2"))
+        assertTrue(text.contains("\"total\":2"))
+        assertTrue(text.contains("\"scanned\":3"))
+        assertTrue(text.contains("\"ref\":\"1\""))
+        assertTrue(text.contains("\"ref\":\"2\""))
+        assertTrue(!text.contains("\"ref\":\"0\""))
     }
 
     @Test
-    fun statusToolReportsDisabledAccessibility() = runTest {
-        controller.statusSnapshot = controller.statusSnapshot.copy(
-            accessibilityConnected = false,
-            accessibilityEnabled = false,
-        )
-        val result = run("screen_status", buildJsonObject { })
+    fun observeToolAppliesFilterLimit() = runTest {
+        val result = run("screen_observe", buildJsonObject {
+            put("text", "OK")
+            put("limit", 1)
+        })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"state\":\"disabled\""))
-        assertTrue(text.contains("无障碍服务未开启"))
+        assertTrue(text.contains("\"count\":1"))
+        assertTrue(text.contains("\"total\":2"))
     }
 
     @Test
-    fun statusToolReportsConnectedAccessibility() = runTest {
-        val result = run("screen_status", buildJsonObject { })
-        assertNull(result.isError)
-        assertTrue(result.text().contains("\"state\":\"connected\""))
-    }
-
-    @Test
-    fun findToolRejectsMissingSelectors() = runTest {
-        val result = run("screen_find", buildJsonObject { put("target", "main") })
-        assertTrue(result.isError == true)
-        assertTrue(result.text().contains("至少一个条件"))
-    }
-
-    @Test
-    fun findToolReturnsMatches() = runTest {
-        val result = run("screen_find", buildJsonObject { put("text", "OK") })
-        assertNull(result.isError)
-        assertTrue(result.text().contains("\"count\":1"))
-        assertTrue(result.text().contains("\"total\":1"))
-        assertTrue(result.text().contains("\"scanned\":2"))
-    }
-
-    @Test
-    fun findToolHintsWhenNothingMatches() = runTest {
-        val result = run("screen_find", buildJsonObject { put("text", "不存在的文字") })
+    fun observeToolHintsWhenFilterMatchesNothing() = runTest {
+        val result = run("screen_observe", buildJsonObject { put("text", "不存在的文字") })
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"count\":0"))
-        assertTrue(text.contains("\"scanned\":2"))
+        assertTrue(text.contains("\"total\":0"))
+        assertTrue(text.contains("\"scanned\":3"))
         assertTrue(text.contains("\"hint\""))
+    }
+
+    @Test
+    fun observeToolRejectsMultipleFilters() = runTest {
+        val result = run("screen_observe", buildJsonObject {
+            put("text", "OK")
+            put("desc", "按钮")
+        })
+        assertTrue(result.isError == true)
+        assertTrue(result.text().contains("只能提供一种"))
     }
 
     @Test
@@ -205,53 +354,6 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun statusToolReportsVirtualFailureAndNotice() = runTest {
-        controller.statusSnapshot = controller.statusSnapshot.copy(
-            virtualState = "failed",
-            virtualFailure = ScreenVirtualFailure(
-                category = VIRTUAL_FAILURE_TRANSPORT,
-                message = "虚拟屏连接已断开（连接被对端关闭），自动重连失败",
-                recoverable = true,
-                reason = "eof",
-            ),
-            virtualTransportNotice = "虚拟屏已重建，旧屏上的应用已丢失",
-        )
-        val result = run("screen_status", buildJsonObject { })
-        assertNull(result.isError)
-        val text = result.text()
-        assertTrue(text.contains("\"category\":\"transport\""))
-        assertTrue(text.contains("\"recoverable\":true"))
-        assertTrue(text.contains("\"reason\":\"eof\""))
-        assertTrue(text.contains("自动重连已尝试"))
-        assertTrue(text.contains("\"notice\""))
-    }
-
-    @Test
-    fun statusToolOmitsVirtualFailureUnlessFailed() = runTest {
-        controller.statusSnapshot = controller.statusSnapshot.copy(
-            virtualState = "online",
-            virtualFailure = ScreenVirtualFailure(
-                category = VIRTUAL_FAILURE_TRANSPORT,
-                message = "旧错误",
-                recoverable = true,
-            ),
-        )
-        val result = run("screen_status", buildJsonObject { })
-        assertNull(result.isError)
-        assertTrue(!result.text().contains("\"failure\""))
-    }
-
-    @Test
-    fun virtualFailureHintsFollowCategory() {
-        val transport = ScreenVirtualFailure(VIRTUAL_FAILURE_TRANSPORT, "m", true, "eof").hint()
-        assertTrue(transport.contains("screen_launch"))
-        val backend = ScreenVirtualFailure(VIRTUAL_FAILURE_BACKEND, "m", false).hint()
-        assertTrue(backend.contains("无线调试/Root 不可用"))
-        val start = ScreenVirtualFailure(VIRTUAL_FAILURE_START, "m", true).hint()
-        assertTrue(start.contains("启动失败"))
-    }
-
-    @Test
     fun typeToolParsesTextAndFieldText() = runTest {
         val result = run(
             "screen_type",
@@ -263,7 +365,9 @@ class ScreenToolsTest {
         assertNull(result.isError)
         assertEquals("你好", controller.lastTypedText)
         assertEquals(GuiSelector.Text("搜索"), controller.lastTextSelector)
-        assertTrue(result.text().contains("\"verified\":true"))
+        val text = result.text()
+        assertTrue(text.contains("\"verified\":true"))
+        assertTrue(!text.contains("\"backend\""))
     }
 
     @Test
@@ -281,26 +385,67 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun launchVirtualReturnsTaskDisplayDiagnostics() = runTest {
+    fun appToolListsLaunchableApps() = runTest {
+        val result = run("screen_app", buildJsonObject { put("action", "list") })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"target\":\"main\""))
+        assertTrue(text.contains("\"count\":1"))
+        assertTrue(text.contains("\"package\":\"com.example\""))
+        assertTrue(text.contains("\"label\":\"Example\""))
+        assertTrue(text.contains("\"component\":\"com.example/.Main\""))
+    }
+
+    @Test
+    fun appToolLaunchesOnVirtualScreen() = runTest {
         val result = run(
-            "screen_launch",
+            "screen_app",
             buildJsonObject {
                 put("target", "virtual")
+                put("action", "launch")
                 put("packageName", "com.android.settings")
             },
         )
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"target\":\"virtual\""))
-        assertTrue(text.contains("\"displayId\":9"))
-        assertTrue(text.contains("\"taskDisplayId\":0"))
-        assertTrue(text.contains("\"landedOnMain\":true"))
-        assertTrue(text.contains("\"landedOnExpectedDisplay\":false"))
+        assertTrue(text.contains("\"ok\":true"))
+        assertTrue(text.contains("\"package\":\"com.android.settings\""))
+        assertTrue(text.contains("\"message\""))
+        assertTrue(text.contains("\"onExpectedScreen\":true"))
+        assertEquals(ScreenTarget.VIRTUAL, controller.lastLaunchTarget)
+        assertTrue(!text.contains("\"displayId\""))
+        assertTrue(!text.contains("\"taskDisplayId\""))
+        assertTrue(!text.contains("\"landedOnMain\""))
+        assertTrue(!text.contains("\"backend\""))
+    }
+
+    @Test
+    fun appToolReportsOffScreenLaunchAsHint() = runTest {
+        controller.launchReport = ScreenLaunchReport(
+            ok = true,
+            message = "已在虚拟屏启动",
+            target = ScreenTarget.VIRTUAL,
+            packageName = "com.example",
+            displayId = 9,
+            taskDisplayId = 0,
+            landedOnMain = true,
+        )
+        val result = run(
+            "screen_app",
+            buildJsonObject {
+                put("target", "virtual")
+                put("action", "launch")
+                put("packageName", "com.example")
+            },
+        )
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"onExpectedScreen\":false"))
         assertTrue(text.contains("\"hint\""))
     }
 
     @Test
-    fun launchVirtualFailureIsErrorButKeepsDiagnostics() = runTest {
+    fun appToolReportsLaunchFailureAsError() = runTest {
         controller.launchReport = ScreenLaunchReport(
             ok = false,
             message = "任务落屏异常",
@@ -310,40 +455,55 @@ class ScreenToolsTest {
             taskDisplayId = -1,
         )
         val result = run(
-            "screen_launch",
+            "screen_app",
             buildJsonObject {
                 put("target", "virtual")
+                put("action", "launch")
                 put("packageName", "com.example")
             },
         )
         assertTrue(result.isError == true)
-        assertTrue(result.text().contains("任务落屏异常"))
-    }
-
-    @Test
-    fun launchRequiresValidPackageName() = runTest {
-        val result = run("screen_launch", buildJsonObject { put("packageName", "settings") })
-        assertTrue(result.isError == true)
-    }
-
-    @Test
-    fun listAppsReturnsCatalog() = runTest {
-        val result = run("screen_list_apps", buildJsonObject { })
-        assertNull(result.isError)
         val text = result.text()
-        assertTrue(text.contains("\"package\":\"com.example\""))
-        assertTrue(text.contains("\"label\":\"Example\""))
+        assertTrue(text.contains("任务落屏异常"))
+        assertTrue(text.contains("\"ok\":false"))
+        assertTrue(text.contains("\"hint\""))
     }
 
     @Test
-    fun screenshotToolWritesPngWithTargetAndBackend() = runTest {
+    fun appToolRequiresValidPackageName() = runTest {
+        val result = run(
+            "screen_app",
+            buildJsonObject {
+                put("action", "launch")
+                put("packageName", "settings")
+            },
+        )
+        assertTrue(result.isError == true)
+        assertTrue(result.text().contains("合法的 Android 包名"))
+    }
+
+    @Test
+    fun appToolRequiresKnownAction() = runTest {
+        val missing = run("screen_app", buildJsonObject { })
+        assertTrue(missing.isError == true)
+        assertTrue(missing.text().contains("action"))
+        val unknown = run("screen_app", buildJsonObject { put("action", "open") })
+        assertTrue(unknown.isError == true)
+        assertTrue(unknown.text().contains("list 或 launch"))
+    }
+
+    @Test
+    fun screenshotToolWritesPngWithTaskFields() = runTest {
         controller.capture = ScreenCapture(byteArrayOf(1, 2, 3), 1080, 2400, BACKEND_ACCESSIBILITY)
         val result = run("screen_screenshot", buildJsonObject { })
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"target\":\"main\""))
-        assertTrue(text.contains("\"backend\":\"accessibility\""))
         assertTrue(text.contains("\"path\":\"/gui/screenshots/screen-"))
+        assertTrue(text.contains("\"hostPath\""))
+        assertTrue(text.contains("\"width\":1080"))
+        assertTrue(text.contains("\"height\":2400"))
+        assertTrue(!text.contains("\"backend\""))
         val file = screenshotDir.listFiles()!!.single()
         assertTrue(file.name.startsWith("screen-"))
         assertEquals(byteArrayOf(1, 2, 3).toList(), file.readBytes().toList())
@@ -358,13 +518,37 @@ class ScreenToolsTest {
         assertTrue(result.text().contains("\"reason\":\"timeout\""))
     }
 
-    private suspend fun run(name: String, args: kotlinx.serialization.json.JsonObject): dev.pi.agent.AgentToolResult {
+    private suspend fun run(name: String, args: JsonObject): dev.pi.agent.AgentToolResult {
         val tool = screenTools(controller, screenshotDir).first { it.name == name }
         return tool.execute("call", args, null, null)
     }
 
     private fun dev.pi.agent.AgentToolResult.text(): String =
         (content.single() as TextContent).text
+
+    private fun assertTaskText(label: String, text: String) {
+        assertTrue("$label 不能为空", text.isNotBlank())
+        assertTrue("$label 超过 240 字符: ${text.length}", text.length <= 240)
+        assertTrue("$label 需要英文: $text", text.all { it.code < 128 })
+        BANNED_WORDS.forEach { word ->
+            assertTrue("$label 含禁用词 $word: $text", !text.lowercase().contains(word))
+        }
+    }
+
+    private fun collectDescriptions(element: JsonElement, out: MutableList<String>) {
+        when (element) {
+            is JsonObject -> element.forEach { (key, value) ->
+                if (key == "description" && value is JsonPrimitive) {
+                    out += value.content
+                } else {
+                    collectDescriptions(value, out)
+                }
+            }
+
+            is JsonArray -> element.forEach { collectDescriptions(it, out) }
+            else -> Unit
+        }
+    }
 
     private class FakeController : ScreenController {
         var lastObserveTarget: ScreenTarget? = null
@@ -386,7 +570,7 @@ class ScreenToolsTest {
             adbAvailable = false,
             main = ScreenDisplayInfo(ScreenTarget.MAIN, MAIN_DISPLAY_ID, 1080, 2400, BACKEND_ACCESSIBILITY),
             virtualState = "online",
-            virtual = ScreenDisplayInfo(ScreenTarget.VIRTUAL, 9, 1080, 2400, BACKEND_HELPER),
+            virtual = ScreenDisplayInfo(ScreenTarget.VIRTUAL, 9, 700, 1200, BACKEND_HELPER),
             virtualBackend = "adb",
             virtualUid = 2000,
         )
@@ -396,9 +580,7 @@ class ScreenToolsTest {
             target = ScreenTarget.VIRTUAL,
             packageName = "com.android.settings",
             displayId = 9,
-            taskDisplayId = 0,
-            landedOnMain = true,
-            backend = BACKEND_HELPER,
+            taskDisplayId = 9,
         )
 
         override suspend fun status(): ScreenStatusSnapshot = statusSnapshot
@@ -482,18 +664,39 @@ class ScreenToolsTest {
         )
 
         private fun snapshot(): GuiSnapshot = GuiNodeTree.buildSnapshot(
-            root = io.github.whywood.deepdeep.plugin.gui.GuiNode(
+            root = GuiNode(
                 className = "android.widget.FrameLayout",
                 bounds = GuiBounds(0, 0, 1080, 2400),
                 children = listOf(
-                    io.github.whywood.deepdeep.plugin.gui.GuiNode(
+                    GuiNode(
                         className = "android.widget.Button",
                         bounds = GuiBounds(100, 50, 300, 150),
                         text = "OK",
                     ),
+                    GuiNode(
+                        className = "android.widget.Button",
+                        bounds = GuiBounds(100, 200, 300, 300),
+                        text = "OK again",
+                    ),
                 ),
             ),
             packageName = "com.example",
+        )
+    }
+
+    private companion object {
+        val BANNED_WORDS = listOf(
+            "helper",
+            "daemon",
+            "uid",
+            "uiautomator",
+            "displayid",
+            "taskdisplayid",
+            "nodebackend",
+            "inputbackend",
+            "flag_secure",
+            "engine",
+            "backend",
         )
     }
 }

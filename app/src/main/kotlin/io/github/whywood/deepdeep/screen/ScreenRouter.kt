@@ -28,7 +28,7 @@ class ScreenRouter(
         val size = mainDisplaySize()
         val mainNodeBackend = when {
             accessibilityConnected -> BACKEND_ACCESSIBILITY
-            adbAvailable -> BACKEND_ADB
+            adbAvailable && online == null -> BACKEND_ADB
             else -> BACKEND_NONE
         }
         val mainInputBackend = when {
@@ -343,9 +343,19 @@ class ScreenRouter(
             return ScreenTextResult(BACKEND_ACCESSIBILITY, outcome.text, outcome.verified)
         }
         if (!isAsciiText(text)) {
-            throw IllegalStateException("主屏输入非 ASCII 文本需要无障碍服务与输入框 ref：请开启无障碍后重试")
+            throw IllegalStateException(
+                "主屏输入非 ASCII 文本需要输入框 ref 或 fieldText（经无障碍输入）：请先 screen_observe 获取输入框 ref 后重试",
+            )
         }
-        if (!adb.available()) throw mainAccessError()
+        if (!adb.available()) {
+            throw IllegalStateException(
+                if (accessibility.connected) {
+                    "直接注入文本需要无线调试（ADB）；请提供输入框 ref 或 fieldText 以通过无障碍输入"
+                } else {
+                    "直接注入文本需要无线调试（ADB）；请到权限设置完成配对，或提供输入框 ref 或 fieldText 并使用无障碍输入"
+                },
+            )
+        }
         adb.typeText(text)
         return ScreenTextResult(BACKEND_ADB, text, false)
     }
@@ -455,14 +465,13 @@ class ScreenRouter(
             is VirtualScreenState.Online -> state
             VirtualScreenState.Starting -> throw IllegalStateException("虚拟屏正在启动，请稍后重试")
             is VirtualScreenState.Failed -> throw IllegalStateException(virtualFailureMessage(state))
-            VirtualScreenState.Offline -> throw IllegalStateException("虚拟屏未启动：请先调用 virtual_screen_start")
+            VirtualScreenState.Offline -> throw IllegalStateException("虚拟屏未启动：请先调用 virtual_screen(action=start)")
         }
 
     private fun virtualFailureMessage(state: VirtualScreenState.Failed): String {
         val failure = runCatching { virtual.lastFailure() }.getOrNull()
             ?: return "虚拟屏启动失败：${state.message}"
-        val reason = failure.reason?.takeIf { it.isNotBlank() }?.let { "${failure.category}/$it" } ?: failure.category
-        return "${failure.hint()}（$reason）：${failure.message}"
+        return "${virtualFailureHint(failure.category)}：${failure.message}"
     }
 
     private fun accessibilityRebinding(): Boolean = runCatching { accessibilityEnabled() }.getOrDefault(false)
@@ -495,7 +504,7 @@ class ScreenRouter(
                 if (accessibilityRebinding()) {
                     "主屏节点读取需要无障碍：无障碍服务正在重新绑定，请等待几秒后重试"
                 } else {
-                    "主屏节点读取需要无障碍：虚拟屏在线时 ADB uiautomator 可能读到虚拟屏；请开启无障碍后重试"
+                    "主屏节点读取需要无障碍：虚拟屏在线时无法通过无线调试（ADB）读取主屏节点；请开启无障碍后重试"
                 },
             )
         }

@@ -35,7 +35,6 @@ private const val MIN_WAIT_MILLIS = 100
 private const val MAX_WAIT_MILLIS = 60000
 private const val DEFAULT_FIND_LIMIT = 20
 private const val MAX_FIND_LIMIT = 50
-private const val MAX_SCROLL_STEPS = 10
 
 private val SCREEN_KEYS = setOf(
     "back",
@@ -60,7 +59,6 @@ private val PACKAGE_NAME = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+")
 internal fun screenToolNames(): List<String> = listOf(
     "screen_status",
     "screen_observe",
-    "screen_find",
     "screen_screenshot",
     "screen_tap",
     "screen_swipe",
@@ -68,8 +66,7 @@ internal fun screenToolNames(): List<String> = listOf(
     "screen_type",
     "screen_key",
     "screen_wait",
-    "screen_launch",
-    "screen_list_apps",
+    "screen_app",
 )
 
 fun screenTools(
@@ -79,7 +76,6 @@ fun screenTools(
 ): List<CodingTool> = listOf(
     statusTool(controller),
     observeTool(controller),
-    findTool(controller),
     screenshotTool(controller, screenshotDir, linuxScreenshotDir),
     tapTool(controller),
     swipeTool(controller),
@@ -87,8 +83,7 @@ fun screenTools(
     typeTool(controller),
     keyTool(controller),
     waitTool(controller),
-    launchTool(controller),
-    listAppsTool(controller),
+    appTool(controller),
 )
 
 internal fun targetOf(args: JsonObject): ScreenTarget = ScreenTarget.parseOrNull(args.stringOrNull("target"))
@@ -124,17 +119,15 @@ internal fun parseScreenTapSelector(args: JsonObject): GuiSelector {
     }
 }
 
-internal fun parseScreenFindSelectors(args: JsonObject): List<GuiSelector> {
-    val selectors = buildList {
+internal fun parseObserveFilters(args: JsonObject): List<GuiSelector> {
+    val filters = buildList {
         args.stringOrNull("text")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.Text(it)) }
         args.stringOrNull("desc")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.Desc(it)) }
         args.stringOrNull("resourceId")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.ResourceId(it)) }
         args.stringOrNull("class")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(GuiSelector.ClassName(it)) }
     }
-    if (selectors.isEmpty()) {
-        throw IllegalArgumentException("需要提供 text、desc、resourceId、class 至少一个条件")
-    }
-    return selectors
+    if (filters.size > 1) throw IllegalArgumentException("text、desc、resourceId、class 只能提供一种")
+    return filters
 }
 
 internal fun parseScreenTextSelector(args: JsonObject): GuiSelector? {
@@ -216,7 +209,7 @@ internal fun waitTimeoutOf(args: JsonObject): Long {
     return timeout.toLong()
 }
 
-internal fun findLimitOf(args: JsonObject): Int {
+internal fun filterLimitOf(args: JsonObject): Int {
     val limit = args.intOrNull("limit") ?: DEFAULT_FIND_LIMIT
     if (limit !in 1..MAX_FIND_LIMIT) {
         throw IllegalArgumentException("limit 需要在 1..$MAX_FIND_LIMIT 之间")
@@ -236,7 +229,15 @@ internal fun observeLimitsOf(args: JsonObject): Pair<Int, Int> {
     return maxDepth to maxNodes
 }
 
-internal fun sweepDistance(amount: Int): Int = amount.coerceIn(1, MAX_SCROLL_STEPS)
+internal enum class ScreenAppAction { LIST, LAUNCH }
+
+internal fun parseScreenAppAction(args: JsonObject): ScreenAppAction =
+    when (val action = args.stringOrNull("action")?.trim()?.lowercase()) {
+        null, "" -> throw IllegalArgumentException("缺少参数 action：list 或 launch")
+        "list" -> ScreenAppAction.LIST
+        "launch" -> ScreenAppAction.LAUNCH
+        else -> throw IllegalArgumentException("action 只支持 list 或 launch，收到：$action")
+    }
 
 private val statusParameters: JsonObject = buildJsonObject {
     put("type", "object")
@@ -263,28 +264,21 @@ private val observeParameters: JsonObject = buildJsonObject {
             put("type", "string")
             put("description", "Optional expected package of the current window; the call fails when another app is in front.")
         }
-    }
-}
-
-private val findParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {
-        putTargetProperty()
         putJsonObject("text") {
             put("type", "string")
-            put("description", "Visible text to match case-insensitively as a substring.")
+            put("description", "Keep only nodes whose visible text contains this value, ignoring case.")
         }
         putJsonObject("desc") {
             put("type", "string")
-            put("description", "Content description to match case-insensitively as a substring.")
+            put("description", "Keep only nodes whose content description contains this value, ignoring case.")
         }
         putJsonObject("resourceId") {
             put("type", "string")
-            put("description", "View resource id, either full form (com.app:id/ok) or short form (ok).")
+            put("description", "Keep only nodes with this view id, either full form (com.app:id/ok) or short form (ok).")
         }
         putJsonObject("class") {
             put("type", "string")
-            put("description", "View class name, either full form (android.widget.Button) or simple form (Button).")
+            put("description", "Keep only nodes with this view class, either full form (android.widget.Button) or simple form (Button).")
         }
         putJsonObject("limit") {
             put("type", "integer")
@@ -306,7 +300,7 @@ private val tapParameters: JsonObject = buildJsonObject {
         putTargetProperty()
         putJsonObject("ref") {
             put("type", "string")
-            put("description", "Node ref from the latest screen_observe or screen_find on the same target screen.")
+            put("description", "Node ref from the latest screen_observe on the same target screen.")
         }
         putJsonObject("text") {
             put("type", "string")
@@ -326,11 +320,11 @@ private val tapParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("x") {
             put("type", "integer")
-            put("description", "Screen x coordinate in pixels; requires y and must lie inside the current display.")
+            put("description", "Screen x coordinate in pixels; requires y and must lie inside the current screen.")
         }
         putJsonObject("y") {
             put("type", "integer")
-            put("description", "Screen y coordinate in pixels; requires x and must lie inside the current display.")
+            put("description", "Screen y coordinate in pixels; requires x and must lie inside the current screen.")
         }
         putJsonObject("durationMs") {
             put("type", "integer")
@@ -394,8 +388,8 @@ private val scrollParameters: JsonObject = buildJsonObject {
             put("type", "string")
             put(
                 "description",
-                "Optional ref of a scrollable node from the latest observe on the same screen; " +
-                    "defaults to the whole screen. Off-screen, reversed or zero-area targets are rejected.",
+                "Optional ref of a scrollable node from the latest screen_observe on the same screen; " +
+                    "defaults to the whole screen.",
             )
         }
         putJsonObject("amount") {
@@ -412,7 +406,7 @@ private val typeParameters: JsonObject = buildJsonObject {
         putTargetProperty()
         putJsonObject("text") {
             put("type", "string")
-            put("description", "Text to type. Without ref/fieldText only ASCII is supported on the virtual screen and on the main screen without accessibility.")
+            put("description", "Text to type. Text with non-ASCII characters needs accessibility plus a ref or fieldText.")
         }
         putJsonObject("ref") {
             put("type", "string")
@@ -465,23 +459,31 @@ private val waitParameters: JsonObject = buildJsonObject {
     }
 }
 
-private val launchParameters: JsonObject = buildJsonObject {
+private val appParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putTargetProperty()
+        putJsonObject("action") {
+            put("type", "string")
+            put(
+                "description",
+                "list returns installed apps that can be opened; launch opens packageName on the target screen.",
+            )
+            putJsonArray("enum") {
+                add(JsonPrimitive("list"))
+                add(JsonPrimitive("launch"))
+            }
+        }
         putJsonObject("packageName") {
             put("type", "string")
-            put("description", "Android package name of the app to open, for example com.android.settings. Use screen_list_apps to find packages.")
+            put(
+                "description",
+                "Android package name of the app to open, for example com.android.settings. " +
+                    "Required for launch; use action=list to find packages.",
+            )
         }
     }
-    put("required", buildJsonArray { add(JsonPrimitive("packageName")) })
-}
-
-private val listAppsParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    putJsonObject("properties") {
-        putTargetProperty()
-    }
+    put("required", buildJsonArray { add(JsonPrimitive("action")) })
 }
 
 private fun JsonObjectBuilder.putTargetProperty() {
@@ -489,8 +491,8 @@ private fun JsonObjectBuilder.putTargetProperty() {
         put("type", "string")
         put(
             "description",
-            "Which screen to operate: main is the phone screen, virtual is the background virtual screen " +
-                "started by virtual_screen_start. Defaults to main.",
+            "Which screen to operate: main is the phone screen; virtual is the background virtual screen " +
+                "started with virtual_screen(action=start). Defaults to main.",
         )
         putJsonArray("enum") {
             add(JsonPrimitive(ScreenTarget.MAIN.id))
@@ -501,15 +503,9 @@ private fun JsonObjectBuilder.putTargetProperty() {
 
 private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_status",
-    description = "Report screen backends and state: accessibility connected/enabled state, ADB availability, main display size with its node and input backends, and the virtual screen display id, resolution, privilege backend, helper uid, node/input backends, failure category and recovery notice.",
+    description = "Check what works on the main and virtual screen right now: reading nodes, tapping, scrolling, swiping, typing, keys and screenshots. Use it when unsure which action is currently possible.",
     parameters = statusParameters,
     label = "screen_status",
-    promptSnippet = "Check screen backends and the virtual screen state",
-    promptGuidelines = listOf(
-        "Call screen_status when unsure which backends are available before using screen_* tools.",
-        "target=main works with accessibility only; without it main observation and coordinate input fall back to ADB wireless debugging.",
-        "When accessibility.enabled is true but accessibility.connected is false, the service is rebinding: wait a few seconds and retry instead of asking the user to enable it again.",
-    ),
     execute = { _, _, signal, _ ->
         signal?.throwIfAborted()
         screenTool { textResult(statusJson(controller.status()).toString()) }
@@ -518,65 +514,19 @@ private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_observe",
-    description = "Read a snapshot of a screen: package, window title and a node list with refs, text, bounds and flags. Off-screen, reversed and zero-area nodes are dropped. target=main uses accessibility, falling back to uiautomator XML over ADB.",
+    description = "Read a screen snapshot with refs, class, text, desc, bounds and flags. Use it to inspect the current screen or find a node by one of text, desc, resourceId or class; the result reports count, total, scanned and truncated.",
     parameters = observeParameters,
     label = "screen_observe",
-    promptSnippet = "Observe a screen as a node snapshot",
-    promptGuidelines = listOf(
-        "Call screen_observe before acting and again after every action that changes the screen; refs from an older observe are invalid.",
-        "On the virtual screen, node reading requires the accessibility service; screenshot/tap-by-coordinate still work without it.",
-        "maxDepth defaults to the full tree; nodes filtered out as off-screen or unlaid-out are reported in the filtered field.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
             val target = targetOf(args)
             val (maxDepth, maxNodes) = observeLimitsOf(args)
             val expectedPackage = args.stringOrNull("packageName")?.trim()?.takeIf { it.isNotEmpty() }
+            val filters = parseObserveFilters(args)
+            val limit = if (filters.isEmpty()) DEFAULT_FIND_LIMIT else filterLimitOf(args)
             val observed = controller.observe(target, maxDepth, maxNodes, expectedPackage)
-            textResult(observeJson(observed).toString())
-        }
-    },
-)
-
-private fun findTool(controller: ScreenController): CodingTool = CodingTool(
-    name = "screen_find",
-    description = "Find nodes on a screen by text, desc, resourceId and/or class, and return their refs for later actions. The whole visible hierarchy is searched.",
-    parameters = findParameters,
-    label = "screen_find",
-    promptSnippet = "Find screen nodes by text, desc, resourceId or class",
-    promptGuidelines = listOf(
-        "Use screen_find when the target text, desc, resourceId or class is known; the returned refs stay valid until the next observe on that screen.",
-        "text matches visible text and desc matches content description: retry with the other field when count is 0, and use total/scanned to see how much was searched.",
-    ),
-    execute = { _, args, signal, _ ->
-        signal?.throwIfAborted()
-        screenTool {
-            val target = targetOf(args)
-            val selectors = parseScreenFindSelectors(args)
-            val limit = findLimitOf(args)
-            val found = controller.find(target, selectors, limit)
-            val total = found.snapshot.nodes.count { node ->
-                selectors.all { selector -> GuiNodeTree.matches(node, selector) }
-            }
-            textResult(
-                buildJsonObject {
-                    put("backend", found.backend)
-                    put("count", found.matches.size)
-                    put("total", total)
-                    put("scanned", found.snapshot.nodes.size)
-                    put("hasMore", found.snapshot.truncated || found.matches.size >= limit)
-                    put("truncated", found.snapshot.truncated)
-                    put("nodes", buildJsonArray { found.matches.forEach { add(GuiNodeTree.nodeJson(it)) } })
-                    if (found.matches.isEmpty()) {
-                        put(
-                            "hint",
-                            "未命中：已按默认最大深度 $SCREEN_DEFAULT_MAX_DEPTH 检索 ${found.snapshot.nodes.size} 个节点；" +
-                                "text 只匹配可见文本、desc 只匹配内容描述，可分别尝试或改用 resourceId/class 后重试",
-                        )
-                    }
-                }.toString(),
-            )
+            textResult(observeJson(observed, filters, limit).toString())
         }
     },
 )
@@ -587,14 +537,9 @@ private fun screenshotTool(
     linuxScreenshotDir: String,
 ): CodingTool = CodingTool(
     name = "screen_screenshot",
-    description = "Capture a screen as a PNG file and return its host path, /gui path, width, height, target and backend. target=main needs accessibility; target=virtual uses the virtual screen helper.",
+    description = "Save a screen as a PNG and report its /gui path, host path, width and height. Use it when visual layout matters and the node tree cannot answer the question.",
     parameters = screenshotParameters,
     label = "screen_screenshot",
-    promptSnippet = "Capture a screen as a PNG",
-    promptGuidelines = listOf(
-        "Use screen_screenshot only when visual layout matters; screenshots can contain sensitive data, so never share them or read secrets from them.",
-        "target=main is not captured on Android 10, while locked, or when an app sets FLAG_SECURE; ask the user instead of retrying in a loop.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -611,7 +556,6 @@ private fun screenshotTool(
             textResult(
                 buildJsonObject {
                     put("target", target.id)
-                    put("backend", capture.backend)
                     put("path", "$base/$fileName")
                     put("hostPath", file.absolutePath)
                     put("width", capture.width)
@@ -625,14 +569,9 @@ private fun screenshotTool(
 
 private fun tapTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_tap",
-    description = "Tap or long-press a node or coordinate on a screen by ref, text, desc, resourceId, class or x/y.",
+    description = "Tap or long-press a node or a point on a screen. Use it to activate, open or long-press a visible control; provide exactly one of ref, text, desc, resourceId, class, or both x and y.",
     parameters = tapParameters,
     label = "screen_tap",
-    promptSnippet = "Tap or long-press a screen node",
-    promptGuidelines = listOf(
-        "Ask the user for confirmation before tapping anything destructive such as delete, send, pay or authorize.",
-        "Use ref from the latest screen_observe on the same target screen; without accessibility only x/y coordinates work on the virtual screen.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -646,14 +585,9 @@ private fun tapTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_swipe",
-    description = "Swipe between two coordinates on a screen. Coordinates must lie inside the current display; out-of-range coordinates are rejected with the display size in the error. target=main needs ADB wireless debugging; target=virtual uses the virtual screen helper.",
+    description = "Swipe between two points on a screen. Use it for gestures such as dismissing a card; coordinates are screen pixels and both points must lie inside the current screen.",
     parameters = swipeParameters,
     label = "screen_swipe",
-    promptSnippet = "Swipe on a screen",
-    promptGuidelines = listOf(
-        "Prefer screen_scroll for scrolling content; use screen_swipe for gestures such as dismissing cards.",
-        "Coordinates are display pixels: check screen_status for the main display size and observe bounds before using them.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -671,14 +605,9 @@ private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun scrollTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_scroll",
-    description = "Scroll a screen or a scrollable node in the given direction. Works on the main screen with ADB or accessibility, and on the virtual screen through the helper. Swipe coordinates are clamped into the current display; a target whose bounds are off-screen, reversed or too small fails with a readable error instead of injecting an invalid gesture.",
+    description = "Scroll a screen or a scrollable node in one direction. Use it to reveal content outside the current view; down or up reveals later or earlier content, right or left reveals horizontal content, with an optional number of steps.",
     parameters = scrollParameters,
     label = "screen_scroll",
-    promptSnippet = "Scroll a screen in a direction",
-    promptGuidelines = listOf(
-        "Call screen_observe again after scrolling to confirm the new screen content.",
-        "When scrolling a ref fails with an out-of-screen or too-small target error, re-observe and use a visible scrollable node, or scroll the whole screen without ref.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -693,14 +622,9 @@ private fun scrollTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_type",
-    description = "Type text into the focused field or an editable node. Any Unicode text needs accessibility and a ref; without them only ASCII can be injected through ADB or the virtual screen helper.",
+    description = "Type text into the focused field or a named editable field. Use it when a text field needs input; non-ASCII text needs accessibility plus a ref or fieldText, while ASCII-only text can go directly through wireless debugging (ADB).",
     parameters = typeParameters,
     label = "screen_type",
-    promptSnippet = "Type text into a screen field",
-    promptGuidelines = listOf(
-        "Never type passwords or verification codes; ask the user to enter sensitive input themselves.",
-        "Check verified in the result; when it is false, re-observe the field or ask the user instead of retrying blindly.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -711,7 +635,6 @@ private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
             textResult(
                 buildJsonObject {
                     put("ok", true)
-                    put("backend", outcome.backend)
                     put("verified", outcome.verified)
                     put("text", outcome.text)
                     if (!outcome.verified) {
@@ -725,13 +648,9 @@ private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_key",
-    description = "Press a key on a screen: ${SCREEN_KEYS.joinToString(", ")}. target=main uses accessibility for system keys when available, otherwise ADB key events; target=virtual uses the helper.",
+    description = "Press a key on a screen: back, home, recents, notifications, enter, delete, tab, escape, space, arrow keys or volume keys. Use it for navigation and dismissal when tapping a node is not reliable.",
     parameters = keyParameters,
     label = "screen_key",
-    promptSnippet = "Press a key on a screen",
-    promptGuidelines = listOf(
-        "Avoid back or home when it would abandon unsaved user input without confirmation.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -744,14 +663,9 @@ private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_wait",
-    description = "Wait until a screen shows a package or text, or until a text disappears. Conditions combine.",
+    description = "Wait until a package or text appears on a screen, or until a text disappears, and report whether it happened before the timeout. Use it when waiting for a screen transition or a loading state to finish.",
     parameters = waitParameters,
     label = "screen_wait",
-    promptSnippet = "Wait for a screen, text to appear or text to disappear",
-    promptGuidelines = listOf(
-        "Combine forPackage, forText and forTextGone to confirm screen transitions.",
-        "A screen_wait result with ok:false is not an error; re-observe the screen instead of retrying the same action blindly.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
@@ -781,145 +695,191 @@ private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
     },
 )
 
-private fun launchTool(controller: ScreenController): CodingTool = CodingTool(
-    name = "screen_launch",
-    description = "Open an installed app on the main or virtual screen by package name. For target=virtual the response includes displayId, taskDisplayId and landedOnMain diagnostics.",
-    parameters = launchParameters,
-    label = "screen_launch",
-    promptSnippet = "Open an app on the main or virtual screen",
-    promptGuidelines = listOf(
-        "Use screen_list_apps to find package names.",
-        "When target=virtual and landedOnMain is true, the task did not land on the virtual display; check the diagnostics instead of repeating blindly.",
-    ),
+private fun appTool(controller: ScreenController): CodingTool = CodingTool(
+    name = "screen_app",
+    description = "List installed apps that can be opened, or open one on the main or virtual screen by package name. Use it when the package name is unknown or an app should be opened; a launch reports whether the app reached the expected screen.",
+    parameters = appParameters,
+    label = "screen_app",
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         screenTool {
             val target = targetOf(args)
-            val packageName = parseScreenLaunchPackage(args)
-            val report = controller.launch(target, packageName)
-            textResult(
-                buildJsonObject {
-                    put("ok", report.ok)
-                    put("target", report.target.id)
-                    put("package", report.packageName)
-                    put("backend", report.backend)
-                    if (report.displayId >= 0) put("displayId", report.displayId)
-                    if (report.taskDisplayId >= 0) put("taskDisplayId", report.taskDisplayId)
-                    put("landedOnMain", report.landedOnMain)
-                    put("landedOnExpectedDisplay", report.landedOnExpectedDisplay)
-                    put("message", report.message)
-                    if (report.ok && !report.landedOnExpectedDisplay) {
-                        put("hint", "任务落屏与预期不一致：请结合 taskDisplayId 检查虚拟屏显示、IME 与首帧")
-                    }
-                }.toString(),
-                isError = !report.ok,
-            )
-        }
-    },
-)
+            when (parseScreenAppAction(args)) {
+                ScreenAppAction.LIST -> {
+                    val installed = controller.listApps()
+                    textResult(
+                        buildJsonObject {
+                            put("target", target.id)
+                            put("count", installed.size)
+                            put(
+                                "apps",
+                                buildJsonArray {
+                                    installed.forEach { app ->
+                                        add(
+                                            buildJsonObject {
+                                                put("package", app.packageName)
+                                                put("label", app.label)
+                                                if (app.component.isNotEmpty()) put("component", app.component)
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        }.toString(),
+                    )
+                }
 
-private fun listAppsTool(controller: ScreenController): CodingTool = CodingTool(
-    name = "screen_list_apps",
-    description = "List installed apps that can be launched, with package name, label and launcher component.",
-    parameters = listAppsParameters,
-    label = "screen_list_apps",
-    promptSnippet = "List launchable installed apps",
-    promptGuidelines = listOf("Call screen_list_apps before screen_launch when the package name is unknown."),
-    execute = { _, args, signal, _ ->
-        signal?.throwIfAborted()
-        screenTool {
-            val target = targetOf(args)
-            val apps = controller.listApps()
-            textResult(
-                buildJsonObject {
-                    put("target", target.id)
-                    put("count", apps.size)
-                    put(
-                        "apps",
-                        buildJsonArray {
-                            apps.forEach { app ->
-                                add(
-                                    buildJsonObject {
-                                        put("package", app.packageName)
-                                        put("label", app.label)
-                                        if (app.component.isNotEmpty()) put("component", app.component)
-                                    },
+                ScreenAppAction.LAUNCH -> {
+                    val packageName = parseScreenLaunchPackage(args)
+                    val report = controller.launch(target, packageName)
+                    val onExpectedScreen = report.landedOnExpectedDisplay
+                    textResult(
+                        buildJsonObject {
+                            put("ok", report.ok)
+                            put("package", report.packageName)
+                            put("message", report.message)
+                            put("onExpectedScreen", onExpectedScreen)
+                            when {
+                                !report.ok -> put(
+                                    "hint",
+                                    "启动失败：请确认应用已安装且目标屏幕可用；需要时重新 screen_observe 查看当前页面",
+                                )
+
+                                !onExpectedScreen -> put(
+                                    "hint",
+                                    "应用已启动，但可能没有显示在目标屏幕：请重新 screen_observe 确认真实页面后再操作",
                                 )
                             }
-                        },
+                        }.toString(),
+                        isError = !report.ok,
                     )
-                }.toString(),
-            )
+                }
+            }
         }
     },
 )
 
 internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObject {
-    putJsonObject("accessibility") {
-        put("connected", status.accessibilityConnected)
-        put("enabled", status.accessibilityEnabled)
-        when {
-            status.accessibilityConnected -> put("state", "connected")
-            status.accessibilityEnabled -> {
-                put("state", "reconnecting")
-                put(
-                    "hint",
-                    "无障碍服务正在重新绑定（设置里已开启）：请等待几秒后重试；" +
-                        "期间无法读取节点树与按 ref 操作，坐标点击、滑动和截图仍可用",
-                )
-            }
-            else -> {
-                put("state", "disabled")
-                put("hint", "无障碍服务未开启：请到系统设置开启 DeepDeep 无障碍；开启后虚拟屏节点操作才可用")
-            }
-        }
+    val connected = status.accessibilityConnected
+    val enabled = status.accessibilityEnabled
+    val accessibilityState = when {
+        connected -> "connected"
+        enabled -> "rebinding"
+        else -> "disabled"
     }
-    putJsonObject("adb") {
-        put("available", status.adbAvailable)
+    put("accessibility", accessibilityState)
+    when (accessibilityState) {
+        "rebinding" -> put(
+            "hint",
+            "无障碍服务正在重新绑定：请等待几秒后重试；期间坐标点击、滑动与截图仍可用",
+        )
+
+        "disabled" -> put(
+            "hint",
+            "无障碍服务未开启：请到权限设置开启 DeepDeep 无障碍；开启后可读取节点、按节点操作与截图",
+        )
     }
+    val virtualInfo = status.virtual
+    val virtualOnline = status.virtualState == "online" && virtualInfo != null
+    val adb = status.adbAvailable
+    val readNodes = connected || (adb && !virtualOnline)
     putJsonObject("main") {
-        put("displayId", status.main.displayId)
         put("width", status.main.width)
         put("height", status.main.height)
-        put("backend", status.main.backend)
-        put("nodeBackend", status.main.nodeBackend)
-        put("inputBackend", status.main.inputBackend)
+        put("readNodes", readNodes)
+        put("tap", when {
+            readNodes -> "node"
+            adb || connected -> "point"
+            else -> "none"
+        })
+        put("scroll", adb || connected)
+        put("swipe", adb)
+        put("typeText", when {
+            connected -> "unicode-with-field"
+            adb -> "ascii"
+            else -> "none"
+        })
+        put("key", when {
+            adb -> "all"
+            connected -> "system"
+            else -> "none"
+        })
+        put("screenshot", connected)
     }
     putJsonObject("virtual") {
         put("state", status.virtualState)
-        status.virtual?.let { info ->
-            put("displayId", info.displayId)
+        if (virtualOnline) {
+            val info = virtualInfo!!
             put("width", info.width)
             put("height", info.height)
-            put("backend", info.backend)
-            put("nodeBackend", info.nodeBackend)
-            put("inputBackend", info.inputBackend)
+            put("readNodes", connected)
+            put("tap", if (connected) "node" else "point")
+            put("scroll", true)
+            put("swipe", true)
+            put("typeText", if (connected) "unicode-with-field" else "ascii")
+            put("key", "all")
+            put("screenshot", true)
+        } else {
+            put("readNodes", false)
+            put("tap", "none")
+            put("scroll", false)
+            put("swipe", false)
+            put("typeText", "none")
+            put("key", "none")
+            put("screenshot", false)
         }
-        status.virtualBackend?.let { put("privilegeBackend", it) }
-        status.virtualUid?.let { put("uid", it) }
         status.virtualTransportNotice?.takeIf { it.isNotBlank() }?.let { put("notice", it) }
         if (status.virtualState == "failed") {
             status.virtualFailure?.let { failure ->
                 putJsonObject("failure") {
-                    put("category", failure.category)
-                    put("recoverable", failure.recoverable)
-                    failure.reason?.takeIf { it.isNotBlank() }?.let { put("reason", it) }
+                    put("category", virtualFailureJsonCategory(failure.category))
                     put("message", failure.message)
-                    put("hint", failure.hint())
+                    put("hint", virtualFailureHint(failure.category))
                 }
             }
         }
     }
 }
 
-internal fun observeJson(observed: ScreenObserveResult): JsonObject = buildJsonObject {
-    put("backend", observed.backend)
+internal fun observeJson(
+    observed: ScreenObserveResult,
+    filters: List<GuiSelector> = emptyList(),
+    limit: Int = DEFAULT_FIND_LIMIT,
+): JsonObject = buildJsonObject {
     observed.snapshot.packageName?.let { put("package", it) }
     observed.snapshot.windowTitle?.let { put("title", it) }
-    put("count", observed.snapshot.nodes.size)
+    val scanned = observed.snapshot.nodes
+    val total = if (filters.isEmpty()) {
+        scanned
+    } else {
+        scanned.filter { node -> GuiNodeTree.matchesAll(node, filters) }
+    }
+    val shown = if (filters.isEmpty()) total else total.take(limit)
+    put("count", shown.size)
+    put("total", total.size)
+    put("scanned", scanned.size)
     put("truncated", observed.snapshot.truncated)
-    if (observed.filteredNodes > 0) put("filtered", observed.filteredNodes)
-    put("nodes", buildJsonArray { observed.snapshot.nodes.forEach { add(GuiNodeTree.nodeJson(it)) } })
+    put("filtered", observed.filteredNodes)
+    put("nodes", buildJsonArray { shown.forEach { node -> add(GuiNodeTree.nodeJson(node)) } })
+    if (filters.isNotEmpty() && total.isEmpty()) {
+        put(
+            "hint",
+            "未命中：已检索 ${scanned.size} 个节点；text 只匹配可见文本、desc 只匹配内容描述，" +
+                "可分别尝试或改用 resourceId/class 后重试",
+        )
+    }
+}
+
+internal fun virtualFailureJsonCategory(category: String): String = when (category) {
+    VIRTUAL_FAILURE_TRANSPORT -> "connection"
+    VIRTUAL_FAILURE_BACKEND -> "privilege"
+    else -> "start"
+}
+
+internal fun virtualFailureHint(category: String): String = when (category) {
+    VIRTUAL_FAILURE_TRANSPORT -> "连接中断后未能自动恢复：请重新 screen_app action=launch 启动应用，再 screen_observe 确认当前页面"
+    VIRTUAL_FAILURE_BACKEND -> "无线调试（ADB）或 Root 当前不可用：请在权限设置里检查后重试"
+    else -> "虚拟屏启动失败：请稍后重试"
 }
 
 private suspend fun screenTool(block: suspend () -> AgentToolResult): AgentToolResult = try {

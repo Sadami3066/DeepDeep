@@ -38,6 +38,7 @@ class GuiPluginTest {
         assertEquals(R.string.plugin_screen_summary, plugin.summaryRes)
         assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)
         assertEquals(screenToolNames(), plugin.tools().map { it.name })
+        assertEquals(10, plugin.tools().size)
     }
 
     @Test
@@ -101,7 +102,10 @@ class GuiPluginTest {
         val text = (result.content.single() as TextContent).text
         assertTrue(text.contains("\"path\":\"/workspace/shots/screen-"))
         assertTrue(text.contains("\"target\":\"main\""))
-        assertTrue(text.contains("\"backend\":\"accessibility\""))
+        assertTrue(text.contains("\"hostPath\""))
+        assertTrue(text.contains("\"width\":720"))
+        assertTrue(text.contains("\"height\":1600"))
+        assertTrue(!text.contains("\"backend\""))
         val file = screenshotDir.listFiles()!!.single()
         assertTrue(file.name.startsWith("screen-"))
         assertArrayEquals(png, file.readBytes())
@@ -132,33 +136,47 @@ class GuiPluginTest {
         assertTrue(skill.markdown.startsWith("---\n"))
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
         assertTrue(frontmatter.contains("name: deepdeep-gui"))
-        assertTrue(frontmatter.contains("description: 统一操作手机主屏与后台虚拟屏"))
+        assertTrue(frontmatter.contains("description: 操作手机主屏与后台虚拟屏"))
+        screenToolNames().forEach { toolName -> assertTrue(toolName, skill.markdown.contains(toolName)) }
         listOf(
-            "screen_status",
-            "screen_observe",
-            "screen_find",
-            "screen_screenshot",
-            "screen_tap",
-            "screen_swipe",
-            "screen_scroll",
-            "screen_type",
-            "screen_key",
-            "screen_wait",
-            "screen_launch",
-            "screen_list_apps",
             "target=main",
             "target=virtual",
+            "virtual_screen(action=start)",
+            "action=list",
+            "action=launch",
+            "onExpectedScreen",
             "forTextGone",
             "verified",
-            "FLAG_SECURE",
             "ref",
+            "readNodes",
             "密码",
             "验证码",
             "权限弹窗",
             "设备管理员",
             "锁屏",
-            "taskDisplayId",
         ).forEach { expected -> assertTrue(expected, skill.markdown.contains(expected)) }
+    }
+
+    @Test
+    fun skillDropsLegacyToolsAndInternalTerms() {
+        val markdown = plugin().skills().single().markdown.lowercase()
+        listOf(
+            "screen_find",
+            "screen_launch",
+            "screen_list_apps",
+            "virtual_screen_start",
+            "helper",
+            "daemon",
+            "uid",
+            "uiautomator",
+            "displayid",
+            "taskdisplayid",
+            "nodebackend",
+            "inputbackend",
+            "flag_secure",
+            "engine",
+            "backend",
+        ).forEach { forbidden -> assertTrue(forbidden, !markdown.contains(forbidden)) }
     }
 
     private fun plugin(

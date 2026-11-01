@@ -268,6 +268,55 @@ class ScreenRouterTest {
     }
 
     @Test
+    fun mainTextEntryMatrixFollowsAvailableChannels() = runBlocking {
+        data class Case(
+            val accessibilityOn: Boolean,
+            val adbOn: Boolean,
+            val ref: String?,
+            val text: String,
+            val expectedBackend: String?,
+            val expectedError: String?,
+        )
+
+        val cases = listOf(
+            Case(true, true, null, "hello", BACKEND_ADB, null),
+            Case(true, true, "1", "你好", BACKEND_ACCESSIBILITY, null),
+            Case(true, false, "1", "你好", BACKEND_ACCESSIBILITY, null),
+            Case(true, false, null, "hello", null, "无线调试（ADB）"),
+            Case(true, false, null, "你好", null, "非 ASCII"),
+            Case(false, true, null, "hello", BACKEND_ADB, null),
+            Case(false, true, "1", "你好", null, "无障碍"),
+            Case(false, false, null, "hello", null, "无线调试（ADB）"),
+            Case(false, false, "1", "你好", null, "无障碍"),
+        )
+
+        cases.forEach { case ->
+            accessibility.connected = case.accessibilityOn
+            adb.availableState = case.adbOn
+            val selector = case.ref?.let { GuiSelector.Ref(it) }
+            if (case.expectedBackend != null) {
+                val result = router().typeText(ScreenTarget.MAIN, selector, case.text)
+                assertEquals(case.toString(), case.expectedBackend, result.backend)
+            } else {
+                val error = expectFailure { router().typeText(ScreenTarget.MAIN, selector, case.text) }
+                assertTrue(case.toString(), error.message.orEmpty().contains(case.expectedError!!))
+            }
+        }
+    }
+
+    @Test
+    fun mainAsciiEntryWithoutAdbPointsToRefOrWirelessDebugging() = runBlocking {
+        accessibility.connected = true
+        adb.availableState = false
+        val error = expectFailure { router().typeText(ScreenTarget.MAIN, null, "hello") }
+        assertEquals(
+            "直接注入文本需要无线调试（ADB）；请提供输入框 ref 或 fieldText 以通过无障碍输入",
+            error.message,
+        )
+        assertFalse(error.message.orEmpty().contains("请开启无障碍"))
+    }
+
+    @Test
     fun backKeyUsesAccessibilityGlobalWhenConnected() = runBlocking {
         accessibility.connected = true
         router().key(ScreenTarget.MAIN, "back")
@@ -448,11 +497,38 @@ class ScreenRouterTest {
         val status = router(accessibilityEnabled = { true }).status()
         assertEquals(false, status.accessibilityConnected)
         assertEquals(true, status.accessibilityEnabled)
-        assertEquals(BACKEND_ADB, status.main.backend)
-        assertEquals(BACKEND_ADB, status.main.nodeBackend)
+        assertEquals(BACKEND_NONE, status.main.backend)
+        assertEquals(BACKEND_NONE, status.main.nodeBackend)
         assertEquals(BACKEND_ADB, status.main.inputBackend)
         assertEquals(BACKEND_NONE, status.virtual?.nodeBackend)
         assertEquals(BACKEND_HELPER, status.virtual?.inputBackend)
+    }
+
+    @Test
+    fun statusReportsMainNodeChannelNoneWhileVirtualScreenIsOnline() = runBlocking {
+        accessibility.connected = false
+        adb.availableState = true
+        virtual.stateValue = VirtualScreenState.Online(
+            displayId = VIRTUAL_DISPLAY_ID,
+            width = 700,
+            height = 1200,
+            backend = "adb",
+        )
+        val status = router(accessibilityEnabled = { false }).status()
+        assertEquals("online", status.virtualState)
+        assertEquals(BACKEND_NONE, status.main.nodeBackend)
+        assertEquals(BACKEND_ADB, status.main.inputBackend)
+    }
+
+    @Test
+    fun statusReportsMainNodeChannelAdbWhenVirtualScreenIsOffline() = runBlocking {
+        accessibility.connected = false
+        adb.availableState = true
+        virtual.stateValue = VirtualScreenState.Offline
+        val status = router(accessibilityEnabled = { false }).status()
+        assertEquals("offline", status.virtualState)
+        assertEquals(BACKEND_ADB, status.main.nodeBackend)
+        assertNull(status.virtual)
     }
 
     @Test
@@ -525,10 +601,11 @@ class ScreenRouterTest {
             router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
         }
         val message = error.message.orEmpty()
-        assertTrue(message.contains("自动重连已尝试"))
-        assertTrue(message.contains("screen_launch"))
-        assertTrue(message.contains("eof"))
+        assertTrue(message.contains("screen_app"))
+        assertTrue(message.contains("screen_observe"))
+        assertTrue(message.contains("连接被对端关闭"))
         assertFalse(message.contains("启动失败"))
+        assertFalse(message.contains("transport"))
     }
 
     @Test
@@ -542,7 +619,8 @@ class ScreenRouterTest {
         val error = expectFailure {
             router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 1, null)
         }
-        assertTrue(error.message.orEmpty().contains("无线调试/Root 不可用"))
+        assertTrue(error.message.orEmpty().contains("Root"))
+        assertTrue(error.message.orEmpty().contains("权限设置"))
     }
 
     private suspend fun expectFailure(block: suspend () -> Unit): Throwable {
