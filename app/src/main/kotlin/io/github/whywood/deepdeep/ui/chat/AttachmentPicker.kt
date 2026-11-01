@@ -31,6 +31,8 @@ import java.util.UUID
 
 internal enum class AttachmentSource { IMAGE, FILE, CAMERA }
 
+private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
+
 @Composable
 internal fun AttachmentSourceSheet(
     onDismiss: () -> Unit,
@@ -107,7 +109,8 @@ internal fun rememberAttachmentPickers(onPicked: (Uri) -> Unit): AttachmentPicke
         val directory = File(context.cacheDir, "camera")
         val file = File(directory, "${UUID.randomUUID()}.jpg")
         runCatching {
-            directory.listFiles()?.forEach { stale -> stale.delete() }
+            val staleBefore = System.currentTimeMillis() - CAMERA_CACHE_TTL_MS
+            directory.listFiles()?.filter { it.lastModified() < staleBefore }?.forEach { stale -> stale.delete() }
             directory.mkdirs()
             file.createNewFile()
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
