@@ -174,10 +174,7 @@ private suspend fun changeGoal(
                 )
             }
             val updated = service.resume(sessionId)
-                ?: return textResult(
-                    "The goal cannot be resumed: it is complete, already active or its round limit was reached.",
-                    isError = true,
-                )
+                ?: return textResult(resumeFailureMessage(current.goal), isError = true)
             textResult(goalViewJson(updated).toString())
         }
 
@@ -223,6 +220,13 @@ private suspend fun changeGoal(
             isError = true,
         )
     }
+}
+
+private fun resumeFailureMessage(goal: Goal): String = when {
+    goal.phase == GoalPhase.COMPLETE -> "The goal is already complete."
+    goal.maxRounds > 0 && goal.roundsStarted >= goal.maxRounds ->
+        "The goal has no rounds left (${goal.roundsStarted} of ${goal.maxRounds} used). Raise maxRounds with action=edit before resuming."
+    else -> "The goal is already active. Use action=get to read its state."
 }
 
 private fun goalViewJson(view: GoalView?): JsonObject = buildJsonObject {

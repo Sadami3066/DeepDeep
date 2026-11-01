@@ -194,6 +194,54 @@ class GoalToolsTest {
         assertEquals(3, goal.getValue("maxRounds").jsonPrimitive.int)
     }
 
+    @Test
+    fun resumeActiveGoalReportsAlreadyActive() = runTest {
+        val created = executeOk(
+            buildJsonObject {
+                put("action", "create")
+                put("objective", "整理会议记录")
+            },
+        ).getValue("goal").jsonObject
+
+        val error = executeError(
+            buildJsonObject {
+                put("action", "resume")
+                put("goalId", created.getValue("id").jsonPrimitive.content)
+                put("revision", created.getValue("revision").jsonPrimitive.int)
+            },
+        )
+
+        assertTrue(error, error.contains("already active"))
+        assertTrue(error, error.contains("action=get"))
+    }
+
+    @Test
+    fun resumeCompleteGoalReportsAlreadyComplete() = runTest {
+        val created = executeOk(
+            buildJsonObject {
+                put("action", "create")
+                put("objective", "整理会议记录")
+            },
+        ).getValue("goal").jsonObject
+        val completed = executeOk(
+            buildJsonObject {
+                put("action", "complete")
+                put("goalId", created.getValue("id").jsonPrimitive.content)
+                put("revision", created.getValue("revision").jsonPrimitive.int)
+            },
+        ).getValue("goal").jsonObject
+
+        val error = executeError(
+            buildJsonObject {
+                put("action", "resume")
+                put("goalId", completed.getValue("id").jsonPrimitive.content)
+                put("revision", completed.getValue("revision").jsonPrimitive.int)
+            },
+        )
+
+        assertTrue(error, error.contains("already complete"))
+    }
+
     private suspend fun executeOk(args: JsonObject): JsonObject {
         val result = tool.execute("call-1", args, null, null)
         val text = result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
