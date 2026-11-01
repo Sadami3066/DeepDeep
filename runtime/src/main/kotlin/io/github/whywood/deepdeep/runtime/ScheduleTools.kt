@@ -79,7 +79,15 @@ private val scheduleParameters: JsonObject = buildJsonObject {
 }
 
 fun scheduleTools(service: ScheduleService, binding: SessionBinding): List<CodingTool> =
-    listOf(scheduleTool(service, binding))
+    scheduleTool(service, binding).let { delegate ->
+        val editable = setOf("prompt", "name", "frequency", "date", "time", "cron", "enabled")
+        listOf(
+            toolVariant(delegate, "schedule_create", "Create a reminder in this conversation. once needs date/time, cron needs a five-field expression. enabled defaults to true; false creates a disabled reminder.", editable, setOf("prompt", "frequency"), "create"),
+            toolVariant(delegate, "schedule_list", "List reminders in this conversation with their ids, schedules, enabled state and delivery results.", emptySet(), fixedAction = "list"),
+            toolVariant(delegate, "schedule_update", "Update only supplied reminder fields using an id from schedule_list. The conversation cannot change.", editable + "id", setOf("id"), "update"),
+            toolVariant(delegate, "schedule_delete", "Delete a reminder by its id from schedule_list.", setOf("id"), setOf("id"), "delete"),
+        )
+    }
 
 private fun scheduleTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
     name = "schedule",
@@ -117,7 +125,7 @@ private suspend fun createSchedule(
             name = name,
             prompt = prompt,
             trigger = trigger,
-            enabled = true,
+            enabled = args.boolOrNull("enabled") ?: true,
             sessionId = session.sessionId,
             sessionFile = sessionFile,
             cwd = session.cwd,
@@ -155,6 +163,7 @@ private suspend fun updateSchedule(
     } else {
         null
     }
+    require(args.keys.any { it !in setOf("id", "action") }) { "schedule_update requires at least one changed field" }
     val patch = SchedulePatch(
         name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() },
         prompt = args.stringOrNull("prompt")?.takeIf { it.isNotBlank() },
@@ -231,6 +240,8 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
             else -> null
         }
         ?: throw IllegalArgumentException("缺少 frequency（once/cron）")
+    if (frequency == "once" && args.containsKey("cron")) throw IllegalArgumentException("once does not accept cron")
+    if (frequency == "cron" && (args.containsKey("date") || args.containsKey("time"))) throw IllegalArgumentException("cron does not accept date/time")
     return when (frequency) {
         "once" -> {
             val baseOnce = base as? ScheduleTrigger.Once

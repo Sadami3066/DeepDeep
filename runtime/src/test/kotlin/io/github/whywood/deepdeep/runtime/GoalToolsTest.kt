@@ -52,7 +52,7 @@ class GoalToolsTest {
     private lateinit var root: File
     private lateinit var session: AgentSession
     private lateinit var service: GoalService
-    private lateinit var tool: CodingTool
+    private lateinit var tools: List<CodingTool>
 
     @Before
     fun setUp() = runBlocking {
@@ -71,7 +71,7 @@ class GoalToolsTest {
         session = engine.createSession(file = null, config = null, shellEnabled = false, mcpEnabled = false)
         service = GoalService()
         service.noteTurn(session.sessionId, TurnSource.USER)
-        tool = goalTools(SessionBinding().apply { attach(session) }, service) { 10 }.single()
+        tools = goalTools(SessionBinding().apply { attach(session) }, service) { 10 }
     }
 
     @After
@@ -81,13 +81,12 @@ class GoalToolsTest {
     }
 
     @Test
-    fun toolIsSingleGoalEntry() {
-        assertEquals("goal", tool.name)
-        val actions = tool.parameters.getValue("properties").jsonObject
+    fun toolsSeparateReadingCreationAndUpdates() {
+        assertEquals(listOf("get_goal", "create_goal", "update_goal"), tools.map { it.name })
+        val actions = tools.last().parameters.getValue("properties").jsonObject
             .getValue("action").jsonObject.getValue("enum").toString()
-        listOf("get", "create", "edit", "pause", "resume", "complete", "blocked").forEach {
-            assertTrue(it, actions.contains(it))
-        }
+        listOf("edit", "pause", "resume", "complete", "blocked").forEach { assertTrue(actions.contains(it)) }
+        assertTrue(!actions.contains("create"))
     }
 
     @Test
@@ -182,16 +181,14 @@ class GoalToolsTest {
     }
 
     @Test
-    fun legacyParameterNamesAreAccepted() = runTest {
-        val goal = executeOk(
-            buildJsonObject {
-                put("action", "create")
-                put("objective", "发布新版本")
-                put("max_goal_rounds", 3)
-            },
-        ).getValue("goal").jsonObject
-
-        assertEquals(3, goal.getValue("maxRounds").jsonPrimitive.int)
+    fun legacyParameterNamesAreRejected() = runTest {
+        val error = executeError(buildJsonObject {
+            put("action", "create")
+            put("objective", "发布新版本")
+            put("max_goal_rounds", 3)
+        })
+        assertTrue(error.contains("max_goal_rounds"))
+        assertTrue(service.goals.value.isEmpty())
     }
 
     @Test
@@ -212,7 +209,7 @@ class GoalToolsTest {
         )
 
         assertTrue(error, error.contains("already active"))
-        assertTrue(error, error.contains("action=get"))
+        assertTrue(error, error.contains("get_goal"))
     }
 
     @Test
@@ -242,15 +239,61 @@ class GoalToolsTest {
         assertTrue(error, error.contains("already complete"))
     }
 
+    @Test
+    fun eachManagementEntryRejectsMissingAndUnrelatedArguments() = runTest {
+        val binding = SessionBinding().apply { attach(session) }
+        val schedules = ScheduleService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), ScheduleStore(File(root, "schedules")), backgroundScope)
+        val jobs = JobRegistry(backgroundScope, notifier = { _, _, _ -> })
+        val entries = tools + jobTools(binding, jobs) + scheduleTools(schedules, binding)
+        assertEquals(11, entries.size)
+        for (entry in entries) {
+            val wrong = entry.execute("bad", buildJsonObject { put("unrelated", true) }, null, null)
+            assertEquals(entry.name, true, wrong.isError)
+            val required = entry.parameters["required"].toString()
+            if (required != "[]") assertEquals(entry.name, true, entry.execute("missing", buildJsonObject {}, null, null).isError)
+        }
+        assertEquals(true, entries.first { it.name == "job_list" }.execute("old", buildJsonObject { put("action", "list") }, null, null).isError)
+    }
+
+    @Test
+    fun scheduleCreateHonorsDisabledAndRejectsConflictingTriggers() = runTest {
+        val file = session.sessionFile
+        assertTrue(file != null)
+        val store = ScheduleStore(File(root, "schedules"))
+        val service = ScheduleService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), store, backgroundScope)
+        val entries = scheduleTools(service, SessionBinding().apply { attach(session) })
+        val create = entries.first { it.name == "schedule_create" }
+        val args = buildJsonObject {
+            put("prompt", "检查输出")
+            put("frequency", "cron")
+            put("cron", "0 9 * * *")
+            put("enabled", false)
+        }
+        val result = create.execute("create", args, null, null)
+        assertNull(result.content.toString(), result.isError)
+        assertEquals(false, store.list().single().enabled)
+        val conflicting = JsonObject(args + ("date" to kotlinx.serialization.json.JsonPrimitive("2028-01-01")))
+        assertEquals(true, create.execute("conflict", conflicting, null, null).isError)
+        assertEquals(1, store.list().size)
+        val invalidType = JsonObject(args + ("enabled" to kotlinx.serialization.json.JsonPrimitive("false")))
+        assertEquals(true, create.execute("type", invalidType, null, null).isError)
+    }
+
+    private suspend fun execute(args: JsonObject): dev.pi.agent.AgentToolResult {
+        val action = args.getValue("action").jsonPrimitive.content
+        val name = when (action) { "get" -> "get_goal"; "create" -> "create_goal"; else -> "update_goal" }
+        return tools.first { it.name == name }.execute("call", if (name == "update_goal") args else JsonObject(args - "action"), null, null)
+    }
+
     private suspend fun executeOk(args: JsonObject): JsonObject {
-        val result = tool.execute("call-1", args, null, null)
+        val result = execute(args)
         val text = result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
         assertNull("unexpected tool error: $text", result.isError)
         return Json.parseToJsonElement(text).jsonObject
     }
 
     private suspend fun executeError(args: JsonObject): String {
-        val result = tool.execute("call-1", args, null, null)
+        val result = execute(args)
         val text = result.content.filterIsInstance<TextContent>().joinToString("") { it.text }
         assertEquals("expected tool error: $text", true, result.isError)
         return text

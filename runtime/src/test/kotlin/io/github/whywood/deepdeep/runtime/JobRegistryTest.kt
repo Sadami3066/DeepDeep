@@ -154,7 +154,7 @@ class JobRegistryTest {
         val prompt = prompts.single()
         assertEquals(TurnNotice.JobFinished("build", false), notices.single())
         assertEquals(
-            "background job $id (build) finished [status: done exit=0]; read its output with job action=output.",
+            "background job $id (build) finished [status: done exit=0]; read its output with job_output.",
             prompt,
         )
     }

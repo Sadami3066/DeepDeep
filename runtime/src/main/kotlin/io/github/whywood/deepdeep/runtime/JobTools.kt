@@ -57,7 +57,14 @@ private val jobParameters: JsonObject = buildJsonObject {
 }
 
 fun jobTools(binding: SessionBinding, registry: JobRegistry): List<CodingTool> =
-    listOf(jobTool(binding, registry))
+    jobTool(binding, registry).let { delegate ->
+        listOf(
+            toolVariant(delegate, "job_start", "Start a long-running shell command in this conversation and return its job id immediately.", setOf("command", "label"), setOf("command"), "start"),
+            toolVariant(delegate, "job_output", "Read output since the previous read and the current status. wait=true waits for new output or completion; timeout leaves the job running.", setOf("jobId", "wait", "timeoutMs"), setOf("jobId"), "output"),
+            toolVariant(delegate, "job_list", "List this conversation's running and finished background jobs.", emptySet(), fixedAction = "list"),
+            toolVariant(delegate, "job_kill", "Request cancellation of a background job. Read job_output to confirm its final status.", setOf("jobId", "reason"), setOf("jobId"), "kill"),
+        )
+    }
 
 private fun jobTool(binding: SessionBinding, registry: JobRegistry): CodingTool = CodingTool(
     name = "job",
@@ -89,7 +96,7 @@ private suspend fun jobStart(binding: SessionBinding, registry: JobRegistry, arg
     } else {
         textResult(
             "Started background job $jobId.\n\n" +
-                "Use action=output with jobId=$jobId to read output, or action=kill to stop it.",
+                "Use job_output with jobId=$jobId to read output, or job_kill to stop it.",
         )
     }
 }

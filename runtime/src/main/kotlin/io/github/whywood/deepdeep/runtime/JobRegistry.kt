@@ -446,7 +446,7 @@ internal fun jobStatusText(status: JobStatus, exitCode: Int?): String = when (st
 private fun finishPrompt(snapshot: JobSnapshot): String =
     "background job ${snapshot.id} (${snapshot.label}) finished " +
         "[status: ${jobStatusText(snapshot.status, snapshot.exitCode)}]; " +
-        "read its output with job action=output."
+        "read its output with job_output."
 
 private fun commandPreview(command: String): String {
     val line = command.lineSequence().firstOrNull().orEmpty().trim()

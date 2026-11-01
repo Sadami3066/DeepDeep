@@ -60,7 +60,14 @@ fun goalTools(
     binding: SessionBinding,
     service: GoalService,
     defaultMaxRounds: () -> Int = { 0 },
-): List<CodingTool> = listOf(goalTool(binding, service, defaultMaxRounds))
+): List<CodingTool> {
+    val delegate = goalTool(binding, service, defaultMaxRounds)
+    return listOf(
+        toolVariant(delegate, "get_goal", "Read this conversation's goal, its id, revision, state and round progress.", emptySet(), fixedAction = "get"),
+        toolVariant(delegate, "create_goal", "Create and arm a concrete goal when the user requests it. Omit maxRounds for the configured default.", setOf("objective", "maxRounds"), setOf("objective"), "create"),
+        toolVariant(delegate, "update_goal", "Update the current goal using its exact id and revision from get_goal. edit/pause/resume require a user request; complete requires achieved work; blocked requires the same blocker across three goal rounds.", setOf("goalId", "revision", "action", "objective", "maxRounds", "blockedReason"), setOf("goalId", "revision", "action"), actions = listOf("edit", "pause", "resume", "complete", "blocked")),
+    )
+}
 
 private fun goalTool(
     binding: SessionBinding,
@@ -116,10 +123,17 @@ private suspend fun changeGoal(
     args: JsonObject,
     action: String,
 ): AgentToolResult {
+    val changeFields = when (action) {
+        "edit" -> setOf("objective", "maxRounds")
+        "blocked" -> setOf("blockedReason")
+        else -> emptySet()
+    }
+    val unexpected = args.keys - (setOf("goalId", "revision", "action") + changeFields)
+    if (unexpected.isNotEmpty()) return textResult("action=$action does not accept: ${unexpected.joinToString()}", isError = true)
     val goalId = args.requiredString("goalId", "goal_id")
     val revision = args.requiredInt("revision")
     val current = service.goals.value[sessionId]
-        ?: return textResult("No goal exists for this session. Use action=create first.", isError = true)
+        ?: return textResult("No goal exists for this session. Use create_goal first.", isError = true)
     if (current.goal.id != goalId) {
         return textResult(
             "goalId does not match the current goal (${current.goal.id}).",
@@ -128,7 +142,7 @@ private suspend fun changeGoal(
     }
     if (current.goal.revision != revision) {
         return textResult(
-            "revision does not match the current goal revision (${current.goal.revision}). Call action=get again.",
+            "revision does not match the current goal revision (${current.goal.revision}). Call get_goal again.",
             isError = true,
         )
     }
@@ -225,8 +239,8 @@ private suspend fun changeGoal(
 private fun resumeFailureMessage(goal: Goal): String = when {
     goal.phase == GoalPhase.COMPLETE -> "The goal is already complete."
     goal.maxRounds > 0 && goal.roundsStarted >= goal.maxRounds ->
-        "The goal has no rounds left (${goal.roundsStarted} of ${goal.maxRounds} used). Raise maxRounds with action=edit before resuming."
-    else -> "The goal is already active. Use action=get to read its state."
+        "The goal has no rounds left (${goal.roundsStarted} of ${goal.maxRounds} used). Raise maxRounds with update_goal action=edit before resuming."
+    else -> "The goal is already active. Use get_goal to read its state."
 }
 
 private fun goalViewJson(view: GoalView?): JsonObject = buildJsonObject {
