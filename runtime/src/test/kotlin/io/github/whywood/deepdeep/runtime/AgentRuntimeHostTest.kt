@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentEvent
+import dev.pi.agent.AgentToolResult
 import dev.pi.agent.asAgentMessage
 import dev.pi.ai.AssistantMessage
 import dev.pi.ai.Model
@@ -26,6 +27,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -202,6 +204,84 @@ class AgentRuntimeHostTest {
         }
     }
 
+
+    @Test
+    fun activityFollowsRetryLifecycleAndResetsOnRecovery() = runTest {
+        val fixture = Fixture(backgroundScope)
+        val received = mutableListOf<SessionRuntimeEvent>()
+        val subscription = backgroundScope.launch {
+            fixture.host.events.collect { received += it }
+        }
+        try {
+            runCurrent()
+            val handle = fixture.open("session-1")
+            handle.suspendPrompt = true
+            backgroundScope.launch { fixture.host.send("session-1", "retry me") }
+            settle()
+            assertEquals(1, handle.prompts.size)
+
+            received.clear()
+            handle.emit(SessionEvent.RetryScheduled(1, 100, "network"))
+            settle()
+            assertEquals(listOf<RuntimeActivity?>(RuntimeActivity.Retrying(1)), activityChanges(received))
+
+            handle.emit(messageStart())
+            settle()
+            assertEquals(RuntimeActivity.Thinking, activityChanges(received).last())
+
+            handle.emit(textDelta("a"))
+            handle.emit(textDelta("b"))
+            settle()
+            assertEquals(1, activityChanges(received).count { it == RuntimeActivity.Thinking })
+
+            handle.emit(SessionEvent.RetryScheduled(2, 100, "network"))
+            handle.emit(SessionEvent.RetrySucceeded(2))
+            settle()
+            assertEquals(RuntimeActivity.Thinking, activityChanges(received).last())
+
+            handle.emit(toolStart("bash"))
+            settle()
+            assertEquals(RuntimeActivity.RunningTool("bash"), activityChanges(received).last())
+
+            handle.emit(toolEnd("bash"))
+            settle()
+            assertEquals(RuntimeActivity.Thinking, activityChanges(received).last())
+
+            handle.promptGate.complete(Unit)
+            settle()
+
+            assertEquals(
+                listOf<RuntimeActivity?>(
+                    RuntimeActivity.Retrying(1),
+                    RuntimeActivity.Thinking,
+                    RuntimeActivity.Retrying(2),
+                    RuntimeActivity.Thinking,
+                    RuntimeActivity.RunningTool("bash"),
+                    RuntimeActivity.Thinking,
+                    null,
+                ),
+                activityChanges(received),
+            )
+        } finally {
+            subscription.cancel()
+            fixture.close()
+        }
+    }
+
+    private fun activityChanges(events: List<SessionRuntimeEvent>): List<RuntimeActivity?> =
+        events.map { it.event }.filterIsInstance<RuntimeEvent.ActivityChanged>().map { it.activity }
+
+    private fun messageStart(): SessionEvent = SessionEvent.AgentEventReceived(
+        AgentEvent.MessageStart(assistantMessage.asAgentMessage()),
+    )
+
+    private fun toolStart(name: String): SessionEvent = SessionEvent.AgentEventReceived(
+        AgentEvent.ToolExecutionStart("call-$name", name, JsonObject(emptyMap())),
+    )
+
+    private fun toolEnd(name: String): SessionEvent = SessionEvent.AgentEventReceived(
+        AgentEvent.ToolExecutionEnd("call-$name", name, AgentToolResult(), false),
+    )
 
     private fun kotlinx.coroutines.test.TestScope.settle() {
         repeat(32) {
