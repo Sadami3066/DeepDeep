@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.floating
 
 import android.content.ComponentCallbacks
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.graphics.Rect
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
+import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
@@ -37,6 +39,7 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.service.ActiveRunView
 import io.github.whywood.deepdeep.service.AppVisibility
+import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.vscreen.VirtualScreenController
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlin.math.hypot
@@ -409,11 +412,11 @@ class FloatingWindowController(
                         now = value.now,
                         maxHeight = with(density) { value.maxHeightPx.toDp() },
                         nearEdge = value.arrowSide,
-                        onOpenRun = { run -> openSession(run.sessionId) },
+                        onOpenRun = { run -> openSessionInApp(run.sessionId) },
                         onOpenQuestion = { pending -> openSession(pending.sessionId) },
                         onOpenCompleted = { completion ->
                             feed.removeCompleted(completion.key)
-                            openSession(completion.sessionId)
+                            openSessionInApp(completion.sessionId)
                         },
                         onCollapse = { panelOpen.value = false },
                     )
@@ -714,6 +717,14 @@ class FloatingWindowController(
     private fun openSession(sessionId: String) {
         panelOpen.value = false
         if (!AssistantEntry.openOverlay(context, sessionId)) onOpenApp()
+    }
+
+    private fun openSessionInApp(sessionId: String) {
+        panelOpen.value = false
+        val intent = Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .putExtra(NotificationCenter.EXTRA_SESSION_ID, sessionId)
+        if (runCatching { context.startActivity(intent) }.isFailure) onOpenApp()
     }
 
     private fun cardTitle(card: FloatingEventCard): String = when (card) {
