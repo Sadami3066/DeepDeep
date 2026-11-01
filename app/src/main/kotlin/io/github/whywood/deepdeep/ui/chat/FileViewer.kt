@@ -187,6 +187,10 @@ internal fun FileViewerDialog(
                         saveSheet = false
                         saveMediaToDownloads(context, file, mime)
                     },
+                    onShare = {
+                        saveSheet = false
+                        if (onShare != null) onShare() else shareMediaFile(context, file, mime)
+                    },
                 )
             }
         }

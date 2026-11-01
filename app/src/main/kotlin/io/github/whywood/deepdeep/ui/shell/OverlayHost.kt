@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui.shell
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.animateFloat
@@ -36,7 +35,6 @@ import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
-import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.UsageSheet
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
@@ -230,14 +228,6 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
     }
     }
 }
-
-internal fun shareChooser(context: Context, intent: Intent, title: String): Intent =
-    Intent.createChooser(intent, title).apply {
-        putExtra(
-            Intent.EXTRA_EXCLUDE_COMPONENTS,
-            arrayOf(ComponentName(context.packageName, MainActivity::class.java.name)),
-        )
-    }
 
 @Composable
 internal fun rememberFrozenChatState(live: ChatUiState, frozen: Boolean): ChatUiState {

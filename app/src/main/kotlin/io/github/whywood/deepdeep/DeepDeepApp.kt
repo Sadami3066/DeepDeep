@@ -67,7 +67,7 @@ import io.github.whywood.deepdeep.ui.shell.ShellOverlay
 import io.github.whywood.deepdeep.ui.shell.ShellOverlayActions
 import io.github.whywood.deepdeep.ui.shell.ShellOverlayState
 import io.github.whywood.deepdeep.ui.shell.rememberFrozenChatState
-import io.github.whywood.deepdeep.ui.shell.shareChooser
+import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus

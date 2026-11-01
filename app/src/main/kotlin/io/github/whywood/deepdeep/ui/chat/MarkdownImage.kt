@@ -214,6 +214,12 @@ private fun LoadedImage(
             else -> File(source).takeIf { it.isFile }
         }
     }
+    val share: (() -> Unit)? = when {
+        saveFile != null -> ({ shareMediaFile(context, saveFile, guessMime(saveFile.name)) })
+        source.startsWith("http://", ignoreCase = true) ||
+            source.startsWith("https://", ignoreCase = true) -> ({ shareMediaUrl(context, source) })
+        else -> null
+    }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Image(
             bitmap = imageBitmap,
@@ -240,6 +246,7 @@ private fun LoadedImage(
             onSave = saveFile?.let { file ->
                 { saveMediaToDownloads(context, file, guessMime(file.name)) }
             },
+            onShare = share,
             saveName = saveFile?.name ?: label,
         )
     }
@@ -252,6 +259,7 @@ private fun MarkdownImagePreview(
     colors: DeepDeepColors,
     onDismiss: () -> Unit,
     onSave: (() -> Unit)?,
+    onShare: (() -> Unit)?,
     saveName: String,
 ) {
     Dialog(
@@ -294,6 +302,7 @@ private fun MarkdownImagePreview(
                     saveSheet = false
                     onSave()
                 },
+                onShare = onShare,
             )
         }
     }

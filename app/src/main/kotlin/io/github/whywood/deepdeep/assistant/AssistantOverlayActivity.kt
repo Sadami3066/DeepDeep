@@ -31,7 +31,7 @@ import io.github.whywood.deepdeep.ui.chat.AttachmentSource
 import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
-import io.github.whywood.deepdeep.ui.shell.shareChooser
+import io.github.whywood.deepdeep.ui.common.shareChooser
 
 class AssistantOverlayActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
