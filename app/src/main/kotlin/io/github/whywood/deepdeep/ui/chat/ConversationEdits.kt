@@ -102,7 +102,14 @@ internal fun ConversationState.cancelRetry(now: Long): ConversationState {
     val updated = if (index < 0) {
         messages
     } else {
-        messages.toMutableList().also { list -> list[index] = list[index].copy(retrying = false) }
+        messages.toMutableList().also { list ->
+            list[index] = list[index].copy(
+                retrying = false,
+                streaming = false,
+                status = MessageStatus.FAILED,
+                finishedAt = now,
+            )
+        }
     }
     return copy(
         messages = updated,

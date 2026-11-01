@@ -51,13 +51,14 @@ class AutoRetryControllerTest {
         enabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
         writeTarget: ConversationWriteTarget = target(),
         runtime: FakeAgentRuntime = FakeAgentRuntime(),
+        awaitSession: suspend (String) -> Unit = {},
     ): AutoRetryController = AutoRetryController(
         scope = scope,
         writeTarget = writeTarget,
         runtime = runtime,
         enabledFlow = enabled,
         canRetry = { message -> strings.canAutoRetry(strings.runErrorKind(message)) },
-        awaitSession = {},
+        awaitSession = awaitSession,
         onBegin = { begins += it },
         onActiveError = { state, error -> activeErrors += state to error },
         onFailure = { sessionId, message -> failures += sessionId to message },
@@ -148,6 +149,23 @@ class AutoRetryControllerTest {
         assertEquals(MessageStatus.FAILED, tail.status)
         assertEquals(listOf("session-1"), failures.map { it.first })
         assertNull(failures.single().second)
+    }
+
+    @Test
+    fun failedRetryStartupRestoresRetryableFailedMessage() = runTest {
+        val controller = controller(backgroundScope, awaitSession = { error("session unavailable") })
+        runCurrent()
+        assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
+        advanceTimeBy(2_001L)
+        runCurrent()
+
+        val tail = activeState.messages.single()
+        assertEquals(MessageStatus.FAILED, tail.status)
+        assertFalse(tail.streaming)
+        assertFalse(tail.retrying)
+        assertFalse(activeState.sending)
+        assertNull(activeState.activity)
+        assertEquals(listOf("session-1" to "session unavailable"), failures)
     }
 
     @Test
