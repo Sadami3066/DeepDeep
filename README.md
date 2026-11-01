@@ -22,7 +22,7 @@ Android 上的个人 agent：pi2kotlin 运行时 + proot Linux + 插件 + 创意
 ./scripts/check.sh --device   # 再加覆盖安装到手机并启动
 ```
 
-`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.2.4` Release 下载并校验 sha256，不依赖本机 `~/.m2`。无线调试客户端依赖 `com.github.MuntashirAkon:libadb-android:3.1.1`（JitPack），首次构建需能访问 JitPack/Maven Central。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。
+`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.4.0` Release 下载并校验 sha256，不依赖本机 `~/.m2`。无线调试客户端依赖 `com.github.MuntashirAkon:libadb-android:3.1.1`（JitPack），首次构建需能访问 JitPack/Maven Central。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。
 
 ## 边界
 

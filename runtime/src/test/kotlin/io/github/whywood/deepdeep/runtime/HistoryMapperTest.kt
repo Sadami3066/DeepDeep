@@ -48,7 +48,8 @@ class HistoryMapperTest {
         val answer = messages[1]
         assertEquals(AssistantRole.ASSISTANT, answer.role)
         assertEquals(MessageStatus.FAILED, answer.status)
-        assertEquals("quota exceeded", answer.error)
+        assertNull(answer.error)
+        assertEquals("quota exceeded", answer.rawError)
         assertEquals("partial answer", answer.text)
     }
 
@@ -63,8 +64,24 @@ class HistoryMapperTest {
 
         assertEquals(2, messages.size)
         assertEquals(MessageStatus.FAILED, messages[1].status)
-        assertEquals("boom", messages[1].error)
+        assertNull(messages[1].error)
+        assertEquals("boom", messages[1].rawError)
         assertEquals("", messages[1].text)
+    }
+
+    @Test
+    fun errorAssistantWithoutErrorMessageMarksTurnFailedWithoutRawError() {
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                user("hi", 1L),
+                assistant(stopReason = StopReason.Error, timestamp = 2L),
+            ),
+        )
+
+        assertEquals(2, messages.size)
+        assertEquals(MessageStatus.FAILED, messages[1].status)
+        assertNull(messages[1].error)
+        assertNull(messages[1].rawError)
     }
 
     @Test
@@ -79,6 +96,7 @@ class HistoryMapperTest {
         assertEquals(2, messages.size)
         assertEquals(MessageStatus.STOPPED, messages[1].status)
         assertNull(messages[1].error)
+        assertNull(messages[1].rawError)
     }
 
     @Test

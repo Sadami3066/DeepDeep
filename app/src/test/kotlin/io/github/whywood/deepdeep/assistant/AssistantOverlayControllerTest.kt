@@ -445,7 +445,7 @@ class AssistantOverlayControllerTest {
                         role = AssistantRole.ASSISTANT,
                         text = "partial",
                         status = MessageStatus.FAILED,
-                        error = "failed",
+                        rawError = "failed",
                         startedAt = 1L,
                         finishedAt = 2L,
                     ),

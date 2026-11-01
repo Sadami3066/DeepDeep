@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ConversationState
 import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
+import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -161,9 +162,7 @@ internal class SessionOpener(
             }
         }
         if (epoch != latestEpoch) return
-        val localized = history.map { message ->
-            message.error?.let { raw -> message.copy(error = localizeError(raw)) } ?: message
-        }
+        val localized = history.map { message -> message.localizedRunError(localizeError) }
         val title = summary.title.ifBlank { titleFrom(localized) }
         var snapshot = ConversationState(
             messages = localized,

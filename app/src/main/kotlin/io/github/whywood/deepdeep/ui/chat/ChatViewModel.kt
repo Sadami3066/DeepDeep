@@ -104,7 +104,7 @@ class ChatViewModel(
         awaitSession = { sessionId -> sessionOpener.awaitOpening(sessionId) },
         onBegin = ::retryStarted,
         onActiveError = ::applyRunError,
-        onFailure = { sessionId, message -> finishRunError(sessionId, message ?: uiStrings.requestFailed) },
+        onFailure = { sessionId, message -> finishRunError(sessionId, message) },
     )
     private val sessionList: SessionListController = SessionListController(
         runtime = runtime, admin = runtime, ioDispatcher = ioDispatcher,
@@ -413,7 +413,7 @@ class ChatViewModel(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                finishRunError(sessionId, error.message ?: uiStrings.requestFailed)
+                finishRunError(sessionId, error.message)
             }
         }
     }
@@ -720,7 +720,7 @@ class ChatViewModel(
         retryController.onRetryEvent(scoped.sessionId, event)
     }
 
-    private fun finishRunError(sessionId: String, message: String) {
+    private fun finishRunError(sessionId: String, message: String?) {
         retryController.finishRunError(sessionId, message, uiStrings)
     }
 

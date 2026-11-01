@@ -110,7 +110,7 @@ object HistoryMapper {
                             startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
                             finishedAt = message.timestamp,
                             status = turnStatus(base.status, message.stopReason),
-                            error = message.errorMessage?.takeIf { it.isNotBlank() } ?: base.error,
+                            rawError = message.errorMessage?.takeIf { it.isNotBlank() } ?: base.rawError,
                         )
                     }
 

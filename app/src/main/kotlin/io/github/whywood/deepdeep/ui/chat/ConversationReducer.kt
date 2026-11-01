@@ -205,6 +205,7 @@ internal fun ConversationState.finishWithStatus(
         text = finalText,
         streaming = false,
         error = if (status == RunStatus.FAILED) message.error else null,
+        rawError = if (status == RunStatus.FAILED) message.rawError else null,
         status = when (status) {
             RunStatus.DONE -> MessageStatus.DONE
             RunStatus.STOPPED -> MessageStatus.STOPPED
@@ -231,13 +232,15 @@ internal fun ConversationState.finishWithError(
     val index = finishTargetIndex(runId)
     if (index == -1) return copy(sending = false, activity = null, activityStartedAt = null)
     val current = messages[index]
+    val providerError = rawError?.trim()?.takeIf { it.isNotEmpty() }
     val failed = current.copy(
         text = current.text,
         streaming = false,
         retrying = false,
         status = MessageStatus.FAILED,
         finishedAt = now,
-        error = strings.runError(rawError),
+        error = strings.runError(providerError),
+        rawError = providerError,
         steps = failRunningTools(current.steps),
     )
     return copy(
@@ -361,6 +364,7 @@ private fun AssistantMessage.clearFailureOnProgress(): AssistantMessage = if (re
 } else {
     copy(
         error = null,
+        rawError = null,
         status = if (status == MessageStatus.FAILED) MessageStatus.RUNNING else status,
     )
 }

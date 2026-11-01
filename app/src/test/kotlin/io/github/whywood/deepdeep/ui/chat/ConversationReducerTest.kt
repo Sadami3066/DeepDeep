@@ -75,9 +75,99 @@ class ConversationReducerTest {
         assertEquals(MessageStatus.FAILED, message.status)
         assertEquals("partial", message.text)
         assertEquals(strings.withCode(strings.insufficientBalance, "402"), message.error)
+        assertEquals("402 Insufficient Balance", message.rawError)
         assertEquals(4000L, message.finishedAt)
         assertEquals(ToolActivityStatus.FAILED, (message.steps.single() as AssistantStep.Tool).trace.status)
         assertFalse(reduced.sending)
+    }
+
+    @Test
+    fun runFailedWithOversizedRequestShowsActionableSummary() {
+        val raw = "fail to allocate at 62110616"
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFailed("run-1", raw), strings, now = 4000L)
+        val message = reduced.messages.single()
+        assertEquals(MessageStatus.FAILED, message.status)
+        assertEquals(strings.requestTooLarge, message.error)
+        assertEquals(raw, message.rawError)
+    }
+
+    @Test
+    fun runFailedWithoutProviderMessageKeepsNoDetails() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFailed("run-1", "  "), strings)
+        val message = reduced.messages.single()
+        assertEquals(strings.requestFailed, message.error)
+        assertNull(message.rawError)
+    }
+
+    @Test
+    fun progressAfterFailureClearsSummaryAndDetails() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    status = MessageStatus.FAILED,
+                    runId = "run-1",
+                    error = strings.requestFailed,
+                    rawError = "boom",
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.TextDelta("run-1", "again"), strings)
+        val message = reduced.messages.single()
+        assertEquals(MessageStatus.RUNNING, message.status)
+        assertNull(message.error)
+        assertNull(message.rawError)
+    }
+
+    @Test
+    fun sameRunFailedFinishKeepsSummaryAndDetails() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        state = reduce(state, RuntimeEvent.RunFailed("run-1", "fail to allocate at 62110616"), strings, now = 3000L)
+
+        val finished = reduce(state, RuntimeEvent.RunFinished("run-1", "", RunStatus.FAILED, 4000L), strings)
+
+        val message = finished.messages.single()
+        assertEquals(MessageStatus.FAILED, message.status)
+        assertEquals(strings.requestTooLarge, message.error)
+        assertEquals("fail to allocate at 62110616", message.rawError)
+    }
+
+    @Test
+    fun successfulFinishAfterFailureDropsSummaryAndDetails() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-1",
+                    error = strings.requestFailed,
+                    rawError = "boom",
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-1", "done", RunStatus.DONE, 1000L), strings)
+        val message = reduced.messages.single()
+        assertEquals(MessageStatus.DONE, message.status)
+        assertNull(message.error)
+        assertNull(message.rawError)
     }
 
     @Test

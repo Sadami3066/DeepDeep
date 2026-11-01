@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
 import io.github.whywood.deepdeep.ui.chat.beginTurn
 import io.github.whywood.deepdeep.ui.chat.finishWithError
 import io.github.whywood.deepdeep.ui.chat.finishWithStatus
+import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import io.github.whywood.deepdeep.ui.chat.markRetryingTail
 import io.github.whywood.deepdeep.ui.chat.reduce
 import io.github.whywood.deepdeep.ui.chat.toggleStep
@@ -44,9 +45,7 @@ internal class SessionProjection(
         close()
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
         val usage = withContext(ioDispatcher) { runtime.usage(sessionId) }
-        val localized = history.map { message ->
-            message.error?.let { raw -> message.copy(error = strings().runError(raw)) } ?: message
-        }
+        val localized = history.map { message -> message.localizedRunError { raw -> strings().runError(raw) } }
         var seeded = ConversationState(
             messages = localized,
             loaded = true,
@@ -140,6 +139,6 @@ internal class SessionProjection(
     }
 
     private fun fail(rawError: String?) {
-        mutableState.value = mutableState.value.finishWithError("", rawError ?: strings().requestFailed, strings())
+        mutableState.value = mutableState.value.finishWithError("", rawError, strings())
     }
 }

@@ -23,7 +23,7 @@ data class NormalizedImage(
 
 @SuppressLint("ExifInterface")
 object ImageNormalizer {
-    const val MAX_EDGE = 2048
+    const val MAX_EDGE = ImageScaling.MAX_EDGE
     const val MAX_BASE64_LENGTH = 1_500_000
     private const val MAX_PIXELS = 64L * 1024L * 1024L
     private val JPEG_QUALITIES = intArrayOf(85, 75, 65, 55, 45)
@@ -48,18 +48,20 @@ object ImageNormalizer {
         if (sourceWidth <= 0 || sourceHeight <= 0) return null
         if (sourceWidth.toLong() * sourceHeight.toLong() > MAX_PIXELS) return null
         options.inJustDecodeBounds = false
-        options.inSampleSize = sampleSize(maxOf(sourceWidth, sourceHeight))
+        options.inSampleSize = ImageScaling.sampleSizeFor(sourceWidth, sourceHeight)
         options.inPreferredConfig = Bitmap.Config.ARGB_8888
         val decoded = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
         val oriented = applyOrientation(decoded, readOrientation(file))
         if (oriented !== decoded) decoded.recycle()
-        return encode(oriented).also { oriented.recycle() }
-    }
-
-    private fun sampleSize(longEdge: Int): Int {
-        var sample = 1
-        while (longEdge / sample > MAX_EDGE) sample *= 2
-        return sample
+        val target = ImageScaling.scaledSizeFor(oriented.width, oriented.height)
+        val output = if (target.width == oriented.width && target.height == oriented.height) {
+            oriented
+        } else {
+            val scaled = Bitmap.createScaledBitmap(oriented, target.width, target.height, true)
+            if (scaled !== oriented) oriented.recycle()
+            scaled
+        }
+        return encode(output).also { output.recycle() }
     }
 
     private fun readOrientation(file: File): Int = runCatching {

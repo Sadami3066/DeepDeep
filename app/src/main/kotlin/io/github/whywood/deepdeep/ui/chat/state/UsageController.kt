@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.chat.state
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -27,9 +28,7 @@ internal class UsageController(
         val current = state()
         if (current.sending) return
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
-        val localized = history.map { message ->
-            message.error?.let { raw -> message.copy(error = localizeError(raw)) } ?: message
-        }
+        val localized = history.map { message -> message.localizedRunError(localizeError) }
         var nextId = (localized.maxOfOrNull { it.id } ?: -1L) + 1
         val notices = current.messages.takeLastWhile { it.notice != null }.map { it.copy(id = nextId++) }
         val next = localized + notices

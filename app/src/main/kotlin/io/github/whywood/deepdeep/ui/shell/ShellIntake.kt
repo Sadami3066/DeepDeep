@@ -204,6 +204,7 @@ internal fun rememberShellChatUiStrings(): ChatUiStrings {
         serviceUnavailable = stringResource(R.string.chat_error_service_unavailable),
         insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
         modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
+        requestTooLarge = stringResource(R.string.chat_error_request_too_large),
         retry = stringResource(R.string.assistant_retry),
         withCode = { base, code ->
             errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)

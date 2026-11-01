@@ -176,6 +176,7 @@ data class AssistantMessage(
     val finishedAt: Long? = null,
     val runId: String = "",
     val error: String? = null,
+    val rawError: String? = null,
     val reminder: String? = null,
     val retrying: Boolean = false,
     val notice: TurnNotice? = null,
