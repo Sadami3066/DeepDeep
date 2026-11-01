@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.formatAttachmentSize
+import io.github.whywood.deepdeep.data.guessMime
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -247,7 +248,7 @@ private fun FileRow(entry: FileBrowserEntry, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
-                icon = if (entry.directory) DdIcons.Folder else DdIcons.File,
+                icon = if (entry.directory) DdIcons.Folder else fileEntryIcon(entry.name),
                 tint = if (entry.directory) colors.inkSecondary else colors.inkTertiary,
                 size = 16.dp,
             )
@@ -274,6 +275,14 @@ private fun FileRow(entry: FileBrowserEntry, onClick: () -> Unit) {
             }
         }
     }
+}
+
+private fun fileEntryIcon(name: String): DdIcon = when (filePreviewKind(name, guessMime(name))) {
+    FilePreviewKind.IMAGE -> DdIcons.Image
+    FilePreviewKind.VIDEO -> DdIcons.Play
+    FilePreviewKind.HTML -> DdIcons.Globe
+    FilePreviewKind.CODE -> DdIcons.Terminal
+    FilePreviewKind.MARKDOWN, FilePreviewKind.UNSUPPORTED -> DdIcons.File
 }
 
 @Composable
