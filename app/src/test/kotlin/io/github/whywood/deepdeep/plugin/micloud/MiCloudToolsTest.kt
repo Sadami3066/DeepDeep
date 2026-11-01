@@ -422,7 +422,7 @@ class MiCloudToolsTest {
 
     @Test
     fun toolErrorsAreChineseOnly() = runTest {
-        assertEquals("小米云登录已失效，请重新登录", TOOL_AUTH_ERROR)
+        assertEquals("小米云登录已失效：请打开 DeepDeep → 插件 → 小米云 → 重新登录", TOOL_AUTH_ERROR)
         assertEquals("请求小米云失败：", TOOL_REQUEST_FAILED)
         settings.update(MiCloudCapabilities(notesRead = true, accountRead = true))
         val invalidAction = run(tool("mi_cloud_account"), buildJsonObject { put("action", "other") })

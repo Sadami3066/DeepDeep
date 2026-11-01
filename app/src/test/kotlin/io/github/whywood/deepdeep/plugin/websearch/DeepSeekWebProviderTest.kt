@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.plugin.websearch
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -12,6 +13,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -152,8 +154,23 @@ class DeepSeekWebProviderTest {
 
         val error = assertFails { provider().fetch("https://example.com/blocked", 100) }
 
-        assertTrue(error.message!!.contains("HTTP 404"))
+        assertTrue(error.message!!.startsWith("抓取失败（HTTP 404）"))
         assertTrue(error.message!!.contains("URL blocked by site policy"))
+        assertFalse(error.message!!.contains("DeepSeek"))
+    }
+
+    @Test
+    fun networkFailureDoesNotMentionProviderName() = runTest {
+        val closedPort = ServerSocket(0).use { it.localPort }
+        val failing = DeepSeekWebProvider(
+            apiKeyProvider = { "sk-test" },
+            baseUrl = "http://127.0.0.1:$closedPort/v1/tools",
+        )
+
+        val error = assertFails { failing.fetch("https://example.com", 100) }
+
+        assertTrue(error.message!!.startsWith("抓取失败："))
+        assertFalse(error.message!!.contains("DeepSeek"))
     }
 
     @Test

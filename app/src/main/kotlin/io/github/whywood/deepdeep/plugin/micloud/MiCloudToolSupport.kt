@@ -32,7 +32,7 @@ internal const val COMPACT_MAX_DEPTH = 3
 
 internal const val COMPACT_MAX_ARRAY = 12
 
-internal const val TOOL_AUTH_ERROR = "小米云登录已失效，请重新登录"
+internal const val TOOL_AUTH_ERROR = "小米云登录已失效：请打开 DeepDeep → 插件 → 小米云 → 重新登录"
 
 internal const val TOOL_REQUEST_FAILED = "请求小米云失败："
 

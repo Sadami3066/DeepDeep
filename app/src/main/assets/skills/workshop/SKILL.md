@@ -137,6 +137,7 @@ const text = await app.agent.run({
 - `workshop_list` 找 id/path。
 - 改界面/交互/逻辑：编辑 `apps/<id>/` 文件，不需要重新 `workshop_load`。
 - 改内容/数据：用 `workshop_edit`，不改页面。
+- 删除创意：`workshop_delete`（`app=<id>`），会连同页面数据一起删除，无法恢复。
 - 重写页面不丢数据；不要直接改 `userdata` 下的数据库文件。
 
 ## 页面要求

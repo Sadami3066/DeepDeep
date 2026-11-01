@@ -80,7 +80,7 @@ class DeepSeekWebProvider(
             }
             parseResponse(label, payload)
         } catch (error: IOException) {
-            throw IllegalStateException("DeepSeek $label 请求失败：${error.message ?: "网络不可用"}")
+            throw IllegalStateException("${label}失败：${error.message ?: "网络不可用"}")
         } finally {
             connection?.disconnect()
         }
@@ -90,9 +90,9 @@ class DeepSeekWebProvider(
         val json = try {
             Json.parseToJsonElement(payload)
         } catch (error: SerializationException) {
-            throw IllegalStateException("DeepSeek $label 响应格式错误")
+            throw IllegalStateException("${label}结果格式错误")
         }
-        return json as? JsonObject ?: throw IllegalStateException("DeepSeek $label 响应格式错误")
+        return json as? JsonObject ?: throw IllegalStateException("${label}结果格式错误")
     }
 
     private fun errorMessage(label: String, status: Int, payload: String): String {
@@ -101,9 +101,9 @@ class DeepSeekWebProvider(
             (json["error"] as? JsonObject)?.string("message")
         }.getOrNull()?.takeIf { it.isNotBlank() }
         return if (detail == null) {
-            "DeepSeek $label 请求失败（HTTP $status）"
+            "${label}失败（HTTP $status）"
         } else {
-            "DeepSeek $label 请求失败（HTTP $status）：$detail"
+            "${label}失败（HTTP $status）：$detail"
         }
     }
 

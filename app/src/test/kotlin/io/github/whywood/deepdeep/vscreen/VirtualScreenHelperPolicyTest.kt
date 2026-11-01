@@ -54,4 +54,11 @@ class VirtualScreenHelperPolicyTest {
         assertEquals(true, screenshotFrameExceedsLimit(limit - 4))
         assertEquals(true, screenshotFrameExceedsLimit(limit))
     }
+
+    @Test
+    fun launchMessageHidesInternalDisplayIds() {
+        val message = virtualLaunchMessage("com.android.settings", 10, 10)
+        assertEquals("已在虚拟屏启动 com.android.settings", message)
+        assertEquals(false, message.contains("10"))
+    }
 }

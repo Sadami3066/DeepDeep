@@ -242,14 +242,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             put("displayId", display.displayId)
             put("taskDisplayId", taskDisplayId)
             put("landedOnMain", landedOnMain)
-            put(
-                "message",
-                if (taskDisplayId == display.displayId) {
-                    "已在虚拟屏启动 $packageName（task display ${display.displayId}）"
-                } else {
-                    "已启动 $packageName，但任务落屏是 ${if (taskDisplayId < 0) "未知" else taskDisplayId.toString()}，不是虚拟屏 ${display.displayId}"
-                },
-            )
+            put("message", virtualLaunchMessage(packageName, display.displayId, taskDisplayId))
         }
     }
 
@@ -970,6 +963,13 @@ private const val SCREENSHOT_FRAME_HEADER_BYTES = 5
 
 internal fun portraitScreenSize(width: Int, height: Int): PortraitScreenSize =
     if (width <= height) PortraitScreenSize(width, height) else PortraitScreenSize(height, width)
+
+internal fun virtualLaunchMessage(packageName: String, displayId: Int, taskDisplayId: Int): String =
+    if (taskDisplayId == displayId) {
+        "已在虚拟屏启动 $packageName"
+    } else {
+        "已启动 $packageName，但任务落屏是 ${if (taskDisplayId < 0) "未知" else taskDisplayId.toString()}，不是虚拟屏 $displayId"
+    }
 
 internal fun outOfBoundsReason(label: String, x: Int, y: Int, width: Int, height: Int): String? =
     if (x >= 0 && y >= 0 && x < width && y < height) {

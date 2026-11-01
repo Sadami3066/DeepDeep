@@ -99,6 +99,14 @@ class ArrangeCalendarTest {
     }
 
     @Test
+    fun knownResourceKeyBecomesReadableCalendarName() {
+        assertEquals("小米日历", calendarDisplayName("calendar_displayname_xiaomi"))
+        assertEquals("我的日历", calendarDisplayName(" 我的日历 "))
+        assertEquals("calendar_displayname_other", calendarDisplayName("calendar_displayname_other"))
+        assertEquals("", calendarDisplayName(""))
+    }
+
+    @Test
     fun limitedSortOrderAppendsValidatedLimit() {
         assertEquals("BEGIN ASC LIMIT 5", limitedSortOrder("BEGIN ASC", 5))
         assertEquals("BEGIN ASC LIMIT 1", limitedSortOrder("BEGIN ASC", 1))

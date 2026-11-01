@@ -53,14 +53,20 @@ class WorkshopToolsTest {
     }
 
     @Test
-    fun catalogContainsTheThreeTools() {
-        assertEquals(setOf("workshop_create", "workshop_load", "workshop_list"), tools.keys)
+    fun catalogContainsTheFourTools() {
+        assertEquals(
+            setOf("workshop_create", "workshop_load", "workshop_list", "workshop_delete"),
+            tools.keys,
+        )
         val create = tools.getValue("workshop_create").parameters
         assertEquals(listOf("name"), create.getValue("required").jsonArray.map { it.jsonPrimitive.content })
         assertEquals(setOf("name", "description", "icon"), create.getValue("properties").jsonObject.keys)
         val load = tools.getValue("workshop_load").parameters
         assertEquals(listOf("path"), load.getValue("required").jsonArray.map { it.jsonPrimitive.content })
         assertTrue(tools.getValue("workshop_list").parameters.getValue("properties").jsonObject.isEmpty())
+        val delete = tools.getValue("workshop_delete").parameters
+        assertEquals(listOf("app"), delete.getValue("required").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(setOf("app"), delete.getValue("properties").jsonObject.keys)
     }
 
     @Test
@@ -161,6 +167,66 @@ class WorkshopToolsTest {
         val noEntry = execute("workshop_load", buildJsonObject { put("path", path) })
         assertEquals(true, noEntry.isError)
         assertTrue(resultText(noEntry).contains("entry"))
+    }
+
+    @Test
+    fun loadRejectsRelativePathWithAbsolutePathHint() = runTest {
+        val result = execute(
+            "workshop_load",
+            buildJsonObject { put("path", "workshop/build/my-app-abcde") },
+        )
+        assertEquals(true, result.isError)
+        val text = resultText(result)
+        assertTrue(text.contains("must be absolute"))
+        assertTrue(text.contains(store.buildDir.absolutePath))
+        assertTrue(text.contains("my-app-abcde"))
+    }
+
+    @Test
+    fun loadMissingEntryReportsDraftFolderAndFiles() = runTest {
+        val path = createDraft("No Entry")
+        File(path, "notes.txt").writeText("draft notes")
+        val result = execute("workshop_load", buildJsonObject { put("path", path) })
+        assertEquals(true, result.isError)
+        val text = resultText(result)
+        assertTrue(text.contains("draft entry is missing: index.html"))
+        assertTrue(text.contains(File(path).canonicalPath))
+        assertTrue(text.contains("manifest.json"))
+        assertTrue(text.contains("notes.txt"))
+    }
+
+    @Test
+    fun deleteRemovesAppDirectoryAndData() = runTest {
+        val path = createDraft("Delete Me")
+        File(path, "index.html").writeText("<html></html>")
+        val loaded = resultJson(execute("workshop_load", buildJsonObject { put("path", path) }))
+        val appId = loaded.getValue("app").jsonObject.getValue("id").jsonPrimitive.content
+        val dataFile = store.dataFile(appId)
+        dataFile.writeText("{}")
+        File(dataFile.path + "-wal").writeText("{}")
+
+        val result = execute("workshop_delete", buildJsonObject { put("app", appId) })
+
+        assertNull(result.isError)
+        assertEquals("{\"ok\":true,\"deleted\":true,\"app\":\"delete-me\"}", resultText(result))
+        assertTrue(!File(store.appsDir, appId).exists())
+        assertTrue(!dataFile.exists())
+        assertTrue(!File(dataFile.path + "-wal").exists())
+        assertTrue(store.load(appId) is WorkshopEntry.Missing)
+    }
+
+    @Test
+    fun deleteRejectsMissingApp() = runTest {
+        val missingArgument = execute("workshop_delete", buildJsonObject {})
+        assertEquals(true, missingArgument.isError)
+        assertTrue(resultText(missingArgument).contains("app"))
+
+        val missing = execute("workshop_delete", buildJsonObject { put("app", "no-such-app") })
+        assertEquals(true, missing.isError)
+        assertEquals(
+            "workshop app not found: no-such-app (use workshop_list to see installed apps)",
+            resultText(missing),
+        )
     }
 
     @Test

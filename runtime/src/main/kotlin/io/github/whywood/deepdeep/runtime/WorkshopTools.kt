@@ -40,7 +40,7 @@ private val workshopLoadParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("path") {
             put("type", "string")
-            put("description", "Absolute path of the draft folder returned by workshop_create")
+            put("description", "Absolute path of the draft folder returned by workshop_create; relative paths are rejected")
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("path")) })
@@ -51,10 +51,22 @@ private val workshopListParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {}
 }
 
+private val workshopDeleteParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("app") {
+            put("type", "string")
+            put("description", "Workshop app id, from workshop_list")
+        }
+    }
+    put("required", buildJsonArray { add(JsonPrimitive("app")) })
+}
+
 fun workshopTools(store: WorkshopStore): List<CodingTool> = listOf(
     workshopCreateTool(store),
     workshopLoadTool(store),
     workshopListTool(store),
+    workshopDeleteTool(store),
 )
 
 private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
@@ -87,7 +99,7 @@ private fun workshopCreateTool(store: WorkshopStore): CodingTool = CodingTool(
 
 private fun workshopLoadTool(store: WorkshopStore): CodingTool = CodingTool(
     name = "workshop_load",
-    description = "Install a Workshop draft folder at the given path as a mini app so the user can open it. Call it with the draft path returned by workshop_create after writing all app files.",
+    description = "Install a Workshop draft as a mini app so the user can open it. Call it with the absolute draft path returned by workshop_create after writing all app files; relative paths are rejected.",
     parameters = workshopLoadParameters,
     label = "workshop_load",
     execute = { _, args, signal, _ ->
@@ -152,6 +164,28 @@ private fun workshopListTool(store: WorkshopStore): CodingTool = CodingTool(
                         )
                     }
                 }
+            }
+            textResult(result.toString())
+        }
+    },
+)
+
+private fun workshopDeleteTool(store: WorkshopStore): CodingTool = CodingTool(
+    name = "workshop_delete",
+    description = "Delete an installed Workshop mini app together with all of its saved data. Use it when the user asks to remove a mini app; this cannot be undone.",
+    parameters = workshopDeleteParameters,
+    label = "workshop_delete",
+    execute = { _, args, signal, _ ->
+        signal?.throwIfAborted()
+        workshopToolResult {
+            val app = args.requiredWorkshopString("app")
+            if (!store.delete(app)) {
+                throw IllegalArgumentException("workshop app not found: $app (use workshop_list to see installed apps)")
+            }
+            val result = buildJsonObject {
+                put("ok", true)
+                put("deleted", true)
+                put("app", app)
             }
             textResult(result.toString())
         }

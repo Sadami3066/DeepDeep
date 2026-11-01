@@ -95,6 +95,11 @@ interface ArrangeCalendarGateway {
 
 internal fun accessLevelIsWritable(accessLevel: Int): Boolean = accessLevel >= ARRANGE_WRITABLE_ACCESS_LEVEL
 
+internal fun calendarDisplayName(raw: String): String = when (raw.trim()) {
+    "calendar_displayname_xiaomi" -> "小米日历"
+    else -> raw.trim()
+}
+
 internal fun limitedSortOrder(sortOrder: String, limit: Int): String {
     require(limit in 1..ARRANGE_EVENT_LIMIT_MAX) { "limit 需要在 1..$ARRANGE_EVENT_LIMIT_MAX 之间" }
     return "$sortOrder LIMIT $limit"
@@ -229,7 +234,9 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
             while (cursor.moveToNext()) {
                 calendars += ArrangeCalendarInfo(
                     id = cursor.long(CalendarContract.Calendars._ID),
-                    name = cursor.text(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME).orEmpty(),
+                    name = calendarDisplayName(
+                        cursor.text(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME).orEmpty(),
+                    ),
                     accountName = cursor.text(CalendarContract.Calendars.ACCOUNT_NAME).orEmpty(),
                     accountType = cursor.text(CalendarContract.Calendars.ACCOUNT_TYPE).orEmpty(),
                     writable = accessLevelIsWritable(

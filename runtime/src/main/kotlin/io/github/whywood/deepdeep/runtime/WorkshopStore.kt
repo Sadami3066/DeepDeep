@@ -90,9 +90,19 @@ class WorkshopStore(
 
     suspend fun loadDraft(draftPath: String): WorkshopCreation = withContext(Dispatchers.IO) {
         ensureRoot()
-        val draft = File(draftPath).canonicalFile
+        val raw = draftPath.trim()
+        if (!File(raw).isAbsolute) {
+            throw WorkshopLoadException(
+                "draft path must be absolute, such as ${File(buildDir, "my-app-abcde").absolutePath}; " +
+                    "workshop_create returns the exact draft path to use. Got relative path: $raw",
+            )
+        }
+        val draft = File(raw).canonicalFile
         if (!draft.toPath().startsWith(buildDir.canonicalFile.toPath()) || draft == buildDir.canonicalFile) {
-            throw WorkshopLoadException("draft path is not inside the workshop build folder: $draftPath")
+            throw WorkshopLoadException(
+                "draft path is not inside the workshop build folder: $draftPath; " +
+                    "use the absolute draft path returned by workshop_create, such as ${File(buildDir, "my-app-abcde").absolutePath}",
+            )
         }
         if (!draft.isDirectory) {
             throw WorkshopLoadException("draft folder does not exist: $draftPath")
@@ -117,7 +127,15 @@ class WorkshopStore(
         val entry = File(draft, manifest.entry)
         val entryCanonical = entry.canonicalFile
         if (!entryCanonical.toPath().startsWith(draft.toPath()) || !entryCanonical.isFile) {
-            throw WorkshopLoadException("draft entry is missing: ${manifest.entry}")
+            val files = draft.listFiles()
+                ?.sortedBy { file -> file.name }
+                ?.joinToString(", ") { file -> file.name }
+                .orEmpty()
+            throw WorkshopLoadException(
+                "draft entry is missing: ${manifest.entry} in ${draft.absolutePath}; " +
+                    "existing files: [${files.ifEmpty { "none" }}]. " +
+                    "Write ${manifest.entry} into that folder with an absolute path, then call workshop_load with the same draft path.",
+            )
         }
         validateDraftContents(draft)
         if (!appsDir.exists() && !appsDir.mkdirs()) {

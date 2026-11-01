@@ -100,7 +100,7 @@ class WorkshopEditToolTest {
         )
         assertTrue(properties.getValue("value").jsonObject["type"] == null)
         assertEquals(
-            setOf("workshop_create", "workshop_load", "workshop_list"),
+            setOf("workshop_create", "workshop_load", "workshop_list", "workshop_delete"),
             workshopTools(store).map { it.name }.toSet(),
         )
     }
