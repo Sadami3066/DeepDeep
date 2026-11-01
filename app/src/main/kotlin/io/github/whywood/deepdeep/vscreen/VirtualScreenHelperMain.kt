@@ -414,17 +414,17 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         }
         val taskClass = Class.forName("android.app.TaskInfo")
         val displayField = taskClass.getField("displayId")
-        val visibleField = runCatching { taskClass.getField("isVisible") }.getOrNull()
-        val baseField = runCatching { taskClass.getField("baseActivity") }.getOrNull()
-        val topField = runCatching { taskClass.getField("topActivity") }.getOrNull()
+        val visibleField = taskClass.getField("isVisible")
+        val baseField = taskClass.getField("baseActivity")
+        val topField = taskClass.getField("topActivity")
         return tasks.filterNotNull().mapNotNull { task ->
-            val packages = listOfNotNull(baseField?.get(task), topField?.get(task))
+            val packages = listOfNotNull(baseField.get(task), topField.get(task))
                 .filterIsInstance<ComponentName>()
                 .map { it.packageName }
             if (packageName !in packages) return@mapNotNull null
             TaskEntry(
                 displayId = displayField.getInt(task),
-                visible = visibleField?.getBoolean(task) ?: false,
+                visible = visibleField.getBoolean(task),
             )
         }
     }
