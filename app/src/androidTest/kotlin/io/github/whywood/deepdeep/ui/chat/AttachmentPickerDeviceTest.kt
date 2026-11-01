@@ -1,9 +1,11 @@
 package io.github.whywood.deepdeep.ui.chat
 
 import android.app.Activity
+import android.app.UiAutomation
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
+import android.os.ParcelFileDescriptor
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContract
@@ -18,9 +20,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
 
 class AttachmentPickerDeviceTest {
-    @get:Rule
+    @get:Rule(order = 0)
+    val foregroundHost = object : ExternalResource() {
+        override fun before() {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val automation = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+            val output = automation.executeShellCommand(
+                "am start -W -n ${instrumentation.targetContext.packageName}/androidx.activity.ComponentActivity",
+            )
+            ParcelFileDescriptor.AutoCloseInputStream(output).use { input ->
+                check(!input.readBytes().decodeToString().contains("Error"))
+            }
+        }
+    }
+
+    @get:Rule(order = 1)
     val compose = createComposeRule()
 
     @Test
