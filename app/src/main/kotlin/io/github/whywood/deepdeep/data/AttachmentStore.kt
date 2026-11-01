@@ -64,13 +64,13 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
                 name = name,
                 mime = meta.mime,
                 size = target.length(),
-                path = relativePath,
+                path = target.absolutePath,
                 kind = attachmentKind(meta.mime, name),
             ),
         )
     }
 
-    override fun file(ref: AttachmentRef, root: File): File = File(root, ref.path)
+    override fun file(ref: AttachmentRef, root: File): File = attachmentFile(ref, root)
 
     override fun resolve(raw: String, root: File): AttachmentRef? {
         val trimmed = raw.trim().trim('<', '>', '"', '\'')
@@ -111,7 +111,7 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
                 name = canonical.name,
                 mime = mime,
                 size = canonical.length(),
-                path = relative,
+                path = canonical.absolutePath,
                 kind = attachmentKind(mime, canonical.name),
             )
         }

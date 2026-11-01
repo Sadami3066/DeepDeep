@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui.chat
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.attachmentFile
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
@@ -83,9 +82,8 @@ private fun ImageAttachmentCard(
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
-    val context = LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
-        val file = attachmentFile(context, attachment, root)
+        val file = attachmentFile(attachment, root)
         value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
     }
     DdPressable(
@@ -205,7 +203,6 @@ private fun AttachmentPreviewCard(
     onOpen: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val context = LocalContext.current
     val cardWidth = 150.dp
     Box(
         modifier = Modifier
@@ -219,7 +216,7 @@ private fun AttachmentPreviewCard(
         when (attachment.kind) {
             AttachmentKind.IMAGE -> {
                 val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
-                    val file = attachmentFile(context, attachment, root)
+                    val file = attachmentFile(attachment, root)
                     value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
                 }
                 val image = bitmap
@@ -239,7 +236,7 @@ private fun AttachmentPreviewCard(
 
             AttachmentKind.TEXT -> {
                 val snippet by produceState(initialValue = "", attachment.id) {
-                    val file = attachmentFile(context, attachment, root)
+                    val file = attachmentFile(attachment, root)
                     value = withContext(Dispatchers.IO) {
                         runCatching {
                             file.bufferedReader().use { reader ->
@@ -317,9 +314,6 @@ internal fun AttachmentPreviewDialog(
         onShare = onShare,
     )
 }
-
-private fun attachmentFile(context: Context, attachment: AttachmentRef, root: File): File =
-    File(root, attachment.path)
 
 private fun decodeThumbnailBitmap(file: File): Bitmap? {
     AttachmentThumbnails.get(file)?.let { return it }

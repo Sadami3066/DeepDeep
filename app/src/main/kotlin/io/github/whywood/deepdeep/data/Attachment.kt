@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.data
 
 import java.util.Locale
+import java.io.File
 
 enum class AttachmentKind {
     IMAGE,
@@ -80,13 +81,17 @@ fun formatAttachmentSize(bytes: Long): String = when {
     else -> "$bytes B"
 }
 
-fun encodeAttachmentBlock(attachments: List<AttachmentRef>): String {
+internal fun attachmentFile(ref: AttachmentRef, root: File): File =
+    if (File(ref.path).isAbsolute) File(ref.path) else File(root, ref.path)
+
+fun encodeAttachmentBlock(attachments: List<AttachmentRef>, root: File): String {
     if (attachments.isEmpty()) return ""
+    require(root.isAbsolute)
     return buildString {
         appendLine(ATTACHMENTS_OPEN)
         attachments.forEach { attachment ->
             append("- ")
-            append(attachment.path)
+            append(attachmentFile(attachment, root).absolutePath)
             append(" | ")
             append(attachment.name.replace('|', '-'))
             append(" | ")
@@ -95,7 +100,7 @@ fun encodeAttachmentBlock(attachments: List<AttachmentRef>): String {
             append(attachment.size)
             appendLine()
         }
-        appendLine("files are in the workspace; use the read tool to inspect them")
+        appendLine("use these absolute paths with file tools to inspect the attachments")
         append(ATTACHMENTS_CLOSE)
     }.trimEnd()
 }

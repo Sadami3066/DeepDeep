@@ -82,6 +82,7 @@ class SessionDraftStoreTest {
         )
 
         assertTrue(prompt.contains("> quoted"))
+        assertTrue(prompt.contains("- /home/attachments/a1 |"))
         assertTrue(prompt.contains("body"))
         assertTrue(prompt.endsWith("body"))
     }

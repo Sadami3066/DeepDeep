@@ -822,7 +822,7 @@ class AssistantOverlayControllerTest {
 
         val prompt = runtime.sent.single()
         assertTrue(prompt.startsWith("<attachments>"))
-        assertTrue(prompt.contains("attachments/a1"))
+        assertTrue(prompt.contains("- $HOME_CWD/attachments/a1 |"))
         assertTrue(prompt.endsWith("hello"))
         assertEquals(listOf(ImagePart("BASE64", "image/jpeg")), runtime.sentImages.single())
         assertTrue(controller.state.value.attachments.isEmpty())

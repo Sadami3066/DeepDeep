@@ -124,9 +124,9 @@ class AssistantOverlayController(
         val sessionId = current.sessionId ?: return false
         if (!current.conversation.loaded) return false
         val attachments = current.attachments
-        val prompt = buildPrompt(attachments, text.trim())
-        if (prompt.isEmpty()) return false
         val root = resolveAttachmentRoot(current.conversationCwd, homeDir)
+        val prompt = buildPrompt(attachments, text.trim(), root)
+        if (prompt.isEmpty()) return false
         val imageRefs = attachments.filter { it.kind == AttachmentKind.IMAGE }
         mutableState.update { it.copy(attachments = emptyList(), error = null) }
         if (isBusy(sessionId, current)) {
@@ -206,9 +206,9 @@ class AssistantOverlayController(
             }
         }
 
-    private fun buildPrompt(attachments: List<AttachmentRef>, body: String): String {
+    private fun buildPrompt(attachments: List<AttachmentRef>, body: String, root: File): String {
         if (attachments.isEmpty()) return body
-        return (encodeAttachmentBlock(attachments) + "\n\n" + body).trim()
+        return (encodeAttachmentBlock(attachments, root) + "\n\n" + body).trim()
     }
 
     fun stop() {

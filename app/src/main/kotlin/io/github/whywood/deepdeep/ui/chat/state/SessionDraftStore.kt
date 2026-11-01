@@ -129,7 +129,7 @@ internal class SessionDraftStore(
             append("\n\n")
         }
         if (attachments.isNotEmpty()) {
-            append(encodeAttachmentBlock(attachments))
+            append(encodeAttachmentBlock(attachments, checkNotNull(attachmentRoot(state()))))
             append("\n\n")
         }
         append(body)
