@@ -47,6 +47,10 @@ data class ScreenStatusSnapshot(
     val virtualFailure: ScreenVirtualFailure? = null,
     val virtualTransportNotice: String? = null,
     val reconnecting: Boolean = false,
+    val main: ScreenDisplayInfo? = null,
+    val mainInputAvailable: Boolean = false,
+    val mainScreenshotAvailable: Boolean = false,
+    val mainKeys: List<String> = emptyList(),
 )
 
 data class ScreenObserveResult(
@@ -145,6 +149,11 @@ interface ScreenVirtualBackend {
 
 interface ScreenAppCatalog {
     fun launchableApps(): List<ScreenApp>
+
+    fun app(packageName: String): ScreenApp = launchableApps().firstOrNull { it.packageName == packageName }
+        ?: error("找不到应用：$packageName")
+
+    fun launchOnMain(packageName: String): ScreenApp = error("主屏应用启动不可用")
 
 }
 

@@ -58,8 +58,8 @@ class AdbUiAutomatorParserTest {
     }
 
     @Test
-    fun snapshotRejectsMainDisplay() {
-        assertThrows(IllegalArgumentException::class.java) { GuiSnapshotCache().store(0, snapshot()) }
+    fun snapshotRejectsNegativeDisplay() {
+        assertThrows(IllegalArgumentException::class.java) { GuiSnapshotCache().store(-1, snapshot()) }
     }
 
     @Test
@@ -68,7 +68,7 @@ class AdbUiAutomatorParserTest {
         assertEquals(60, tapDurationOf(buildJsonObject {}))
         assertEquals(300L, swipeDurationOf(buildJsonObject {}))
         for (name in listOf("home", "recents", "notifications", "volume_up", "volume_down")) {
-            assertThrows(IllegalArgumentException::class.java) { parseScreenKey(buildJsonObject { put("key", name) }) }
+            assertEquals(name, parseScreenKey(buildJsonObject { put("key", name) }))
         }
     }
 }

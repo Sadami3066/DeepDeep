@@ -164,7 +164,69 @@ class ToolContractDeviceTest {
     }
 
     @Test
-    fun virtualScreenHandlesNeutralChineseFormAndRejectsOldCalls() = runBlocking {
+    fun mainScreenWorksAndRefsCannotCrossDisplays() = runBlocking {
+        graph.privilege.refresh()
+        ensureAccessibilityConnected()
+        val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.privilege))
+        val virtual = ScreenRouter(AccessibilityScreenBackend(GuiAccessibilityActions()), VirtualEngineBackend { engine }, AndroidScreenAppCatalog(context))
+        val main = io.github.whywood.deepdeep.screen.MainScreenController(
+            GuiAccessibilityActions(), AndroidScreenAppCatalog(context),
+            {
+                val metrics = android.util.DisplayMetrics()
+                (context.getSystemService(android.content.Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager)
+                    .getDisplay(0).getRealMetrics(metrics)
+                metrics.widthPixels to metrics.heightPixels
+            }, { virtual.status() },
+            io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(graph.privilege, io.github.whywood.deepdeep.shell.RootShell(), graph.adbBridge),
+        )
+        val fixture = InstrumentationRegistry.getInstrumentation().context.packageName
+        val tools = screenTools(virtual, File(context.filesDir, "gui/screenshots"), main).associateBy { it.name }
+        fun mainArgs(block: kotlinx.serialization.json.JsonObjectBuilder.() -> Unit = {}) = buildJsonObject { put("target", "main"); block() }
+        var capture: File? = null
+        try {
+            val launched = run(tools.getValue("screen_launch"), mainArgs { put("packageName", fixture) })
+            assertNull(launched.text(), launched.isError)
+            val ready = run(tools.getValue("screen_wait"), mainArgs { put("forPackage", fixture); put("forText", "Initial neutral"); put("timeoutMs", 10000) })
+            assertTrue(ready.text(), ready.text().contains("\"ok\":true"))
+            val observed = run(tools.getValue("screen_observe"), mainArgs { put("class", "EditText"); put("desc", "Contract input") })
+            val ref = Json.parseToJsonElement(observed.text()).jsonObject.getValue("nodes").jsonArray.single().jsonObject.getValue("ref").jsonPrimitive.content
+            assertTrue(ref.startsWith("0:"))
+            assertTrue(observed.text().contains("\"target\":\"main\""))
+            val typed = run(tools.getValue("screen_type"), mainArgs { put("ref", ref); put("text", "主屏中性中文") })
+            assertNull(typed.text(), typed.isError)
+            assertTrue(typed.text().contains("\"verified\":true"))
+            assertNull(run(tools.getValue("screen_tap"), mainArgs { put("text", "确认测试") }).isError)
+            val confirmed = run(tools.getValue("screen_wait"), mainArgs { put("forText", "已确认：主屏中性中文") })
+            assertTrue(confirmed.text(), confirmed.text().contains("\"ok\":true"))
+            val shot = run(tools.getValue("screen_screenshot"), mainArgs())
+            assertNull(shot.text(), shot.isError)
+            capture = File(Json.parseToJsonElement(shot.text()).jsonObject.getValue("path").jsonPrimitive.content)
+            assertTrue(capture.length() > 100)
+            File(context.cacheDir, "dual-screen-main-proof.png").writeBytes(capture.readBytes())
+            assertEquals(0, linux().execute("test -s '${capture.absolutePath}'").exitCode)
+            assertNull(run(tools.getValue("screen_tap"), mainArgs { put("x", 10); put("y", 10) }).isError)
+            assertNull(run(tools.getValue("screen_swipe"), mainArgs { put("x1", 500); put("y1", 1700); put("x2", 500); put("y2", 1400) }).isError)
+            assertNull(run(tools.getValue("screen_scroll"), mainArgs { put("direction", "up") }).isError)
+            assertNull(run(tools.getValue("screen_key"), mainArgs { put("key", "home") }).isError)
+            assertTrue(engine.start().ok)
+            val opened = run(tools.getValue("screen_launch"), buildJsonObject { put("packageName", fixture) })
+            assertNull(opened.text(), opened.isError)
+            val virtualReady = run(tools.getValue("screen_wait"), buildJsonObject { put("forPackage", fixture); put("timeoutMs", 10000) })
+            assertTrue(virtualReady.text(), virtualReady.text().contains("\"ok\":true"))
+            val virtualSnapshot = run(tools.getValue("screen_observe"))
+            val virtualRef = Json.parseToJsonElement(virtualSnapshot.text()).jsonObject.getValue("nodes").jsonArray.first().jsonObject.getValue("ref").jsonPrimitive.content
+            assertEquals(true, run(tools.getValue("screen_tap"), mainArgs { put("ref", virtualRef) }).isError)
+            assertEquals(true, run(tools.getValue("screen_tap"), buildJsonObject { put("ref", ref) }).isError)
+            assertEquals(true, run(tools.getValue("screen_tap"), mainArgs { put("ref", ref) }).isError)
+            val noMove = run(tools.getValue("screen_launch"), mainArgs { put("packageName", fixture) })
+            assertEquals(noMove.text(), true, noMove.isError)
+            val stillVirtual = run(tools.getValue("screen_observe"), buildJsonObject { put("packageName", fixture) })
+            assertNull(stillVirtual.text(), stillVirtual.isError)
+        } finally { engine.stop(); capture?.delete() }
+    }
+
+    @Test
+    fun virtualScreenHandlesNeutralChineseFormWithoutMainFallback() = runBlocking {
         graph.privilege.refresh()
         val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.privilege))
         val controller = ScreenRouter(AccessibilityScreenBackend(GuiAccessibilityActions()), VirtualEngineBackend { engine }, AndroidScreenAppCatalog(context), { GuiAccessibilityState.isEnabled(context) })
@@ -179,23 +241,7 @@ class ToolContractDeviceTest {
             val started = engine.start()
             assertTrue(started.message, started.ok)
             assertNull(run(tools.getValue("screen_launch"), buildJsonObject { put("packageName", fixturePackage) }).isError)
-            if (!GuiAccessibilityState.connected.value) {
-                val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-                val withoutOwn = enabled.split(':').filterNot { it.startsWith(context.packageName + "/") }.joinToString(":")
-                val automation = InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
-                fun shell(command: String) {
-                    val descriptor = automation.executeShellCommand(command)
-                    val output = ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes().toString(Charsets.UTF_8) }
-                    assertFalse(output, output.contains("Error") || output.contains("Exception"))
-                }
-                assertTrue("Accessibility must already be authorized", enabled.contains(context.packageName))
-                if (withoutOwn.isEmpty()) shell("settings delete secure enabled_accessibility_services")
-                else shell("settings put secure enabled_accessibility_services $withoutOwn")
-                delay(1000)
-                shell("settings put secure enabled_accessibility_services $enabled")
-                shell("settings put secure accessibility_enabled 1")
-            }
-            withTimeout(10000) { while (!GuiAccessibilityState.connected.value) delay(100) }
+            ensureAccessibilityConnected()
             val wait = run(tools.getValue("screen_wait"), buildJsonObject { put("forPackage", fixturePackage); put("forText", "Initial neutral"); put("timeoutMs", 10000) })
             assertTrue(wait.text(), Json.parseToJsonElement(wait.text()).jsonObject.getValue("ok").jsonPrimitive.content == "true")
             val observed = run(tools.getValue("screen_observe"), buildJsonObject { put("class", "EditText"); put("desc", "Contract input") })
@@ -224,5 +270,25 @@ class ToolContractDeviceTest {
             assertTrue(engine.start().ok)
             assertEquals(true, run(tools.getValue("screen_tap"), buildJsonObject { put("ref", ref) }).isError)
         } finally { engine.stop(); screenshot?.delete() }
+    }
+
+    private suspend fun ensureAccessibilityConnected() {
+        val automation = InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+        if (!GuiAccessibilityState.connected.value) {
+            val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+            assertTrue("Accessibility must already be authorized", enabled.contains(context.packageName))
+            val withoutOwn = enabled.split(':').filterNot { it.startsWith(context.packageName + "/") }.joinToString(":")
+            fun shell(command: String) {
+                val descriptor = automation.executeShellCommand(command)
+                val output = ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes().decodeToString() }
+                assertFalse(output, output.contains("Error") || output.contains("Exception"))
+            }
+            if (withoutOwn.isEmpty()) shell("settings delete secure enabled_accessibility_services")
+            else shell("settings put secure enabled_accessibility_services $withoutOwn")
+            delay(3000)
+            shell("settings put secure enabled_accessibility_services $enabled")
+            shell("settings put secure accessibility_enabled 1")
+        }
+        withTimeout(10000) { while (!GuiAccessibilityState.connected.value) delay(100) }
     }
 }

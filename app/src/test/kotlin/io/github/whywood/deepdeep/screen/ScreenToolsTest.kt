@@ -1,6 +1,12 @@
 package io.github.whywood.deepdeep.screen
 
 import dev.pi.ai.TextContent
+import dev.pi.ai.RunSignal
+import dev.pi.ai.RequestAbortedException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.runCurrent
 import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
 import io.github.whywood.deepdeep.plugin.gui.GuiBounds
 import io.github.whywood.deepdeep.plugin.gui.GuiNode
@@ -436,7 +442,7 @@ class ScreenToolsTest {
         val result = run("screen_list_apps", buildJsonObject {})
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(!text.contains("\"target\""))
+        assertTrue(text.contains("\"target\":\"virtual\""))
         assertTrue(text.contains("\"count\":1"))
         assertTrue(text.contains("\"package\":\"com.example\""))
         assertTrue(text.contains("\"label\":\"Example\""))
@@ -566,7 +572,7 @@ class ScreenToolsTest {
         val result = run("screen_screenshot", buildJsonObject { })
         assertNull(result.isError)
         val text = result.text()
-        assertTrue(!text.contains("\"target\""))
+        assertTrue(text.contains("\"target\":\"virtual\""))
         assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
         assertTrue(!text.contains("\"bashPath\""))
         assertTrue(!text.contains("\"hostPath\""))
@@ -602,14 +608,65 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun everyScreenToolRejectsLegacyTargetBeforeOperation() = runTest {
+    fun defaultVirtualAndExplicitMainRouteIndependently() = runTest {
+        val main = FakeController()
+        val tools = screenTools(controller, screenshotDir, main).associateBy { it.name }
+        tools.getValue("screen_tap").execute("virtual", buildJsonObject { put("x", 10); put("y", 20) }, null, null)
+        assertEquals(GuiSelector.Point(10, 20), controller.lastTapSelector)
+        assertNull(main.lastTapSelector)
+        tools.getValue("screen_tap").execute("main", buildJsonObject { put("target", "main"); put("x", 30); put("y", 40) }, null, null)
+        assertEquals(GuiSelector.Point(30, 40), main.lastTapSelector)
+        assertEquals(GuiSelector.Point(10, 20), controller.lastTapSelector)
+        val observed = tools.getValue("screen_observe").execute("main", buildJsonObject { put("target", "main") }, null, null)
+        assertTrue(observed.text().contains("\"target\":\"main\""))
+    }
+
+    @Test
+    fun virtualFailureNeverFallsBackToMain() = runTest {
+        val virtual = object : ScreenController by controller {
+            override suspend fun tap(selector: GuiSelector, durationMs: Int): String = error("virtual offline")
+        }
+        val main = FakeController()
+        val tool = screenTools(virtual, screenshotDir, main).first { it.name == "screen_tap" }
+        val result = tool.execute("virtual", buildJsonObject { put("x", 1); put("y", 2) }, null, null)
+        assertEquals(true, result.isError)
+        assertTrue(result.text().contains("virtual offline"))
+        assertNull(main.lastTapSelector)
+    }
+
+    @Test
+    fun midOperationAbortCancelsSelectedScreenWithoutRetry() = runTest {
+        val started = CompletableDeferred<Unit>()
+        var calls = 0
+        var cleaned = false
+        val main = object : ScreenController by controller {
+            override suspend fun screenshot(): ScreenCapture {
+                calls++
+                started.complete(Unit)
+                try { awaitCancellation() } finally { cleaned = true }
+            }
+        }
+        val tool = screenTools(controller, screenshotDir, main).first { it.name == "screen_screenshot" }
+        val signal = RunSignal()
+        val result = async { runCatching { tool.execute("main", buildJsonObject { put("target", "main") }, signal, null) } }
+        runCurrent()
+        started.await()
+        signal.abort("stop")
+        assertTrue(result.await().exceptionOrNull() is RequestAbortedException)
+        assertTrue(cleaned)
+        assertEquals(1, calls)
+        assertTrue(!screenshotDir.exists())
+    }
+
+    @Test
+    fun everyScreenToolDeclaresTargetsAndRejectsUnknownScreenBeforeOperation() = runTest {
         for (tool in screenTools(controller, screenshotDir)) {
-            for (target in listOf("main", "virtual")) {
+            for (target in listOf("auto", "unknown")) {
                 val result = tool.execute("legacy", buildJsonObject { put("target", target) }, null, null)
                 assertEquals(tool.name, true, result.isError)
-                assertTrue(result.text().contains("target 已移除"))
+                assertTrue(result.text().contains("target 只支持"))
             }
-            assertTrue(!tool.parameters.toString().contains("\"target\""))
+            assertTrue(tool.parameters.toString().contains("\"target\""))
         }
     }
 

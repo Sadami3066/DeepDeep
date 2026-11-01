@@ -46,20 +46,20 @@ class GuiDisplayActionsTest {
     }
 
     @Test
-    fun mainScreenObserveIsRejected() {
+    fun negativeScreenObserveIsRejected() {
         val actions = GuiAccessibilityActions { null }
 
         val error = assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { actions.observe(0, GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
+            runBlocking { actions.observe(-1, GUI_DEFAULT_MAX_DEPTH, GUI_DEFAULT_MAX_NODES) }
         }
 
-        assertTrue(error.message.orEmpty().contains("虚拟屏"))
+        assertTrue(error.message.orEmpty().contains("负数"))
     }
 
     @Test
     fun missingSnapshotMessageNamesTheDisplay() {
         assertTrue(missingSnapshotMessage(7).contains("快照已失效"))
-        assertTrue(missingSnapshotMessage(7).contains("虚拟屏"))
+        assertTrue(missingSnapshotMessage(7).contains("屏幕 7"))
     }
 
     @Test

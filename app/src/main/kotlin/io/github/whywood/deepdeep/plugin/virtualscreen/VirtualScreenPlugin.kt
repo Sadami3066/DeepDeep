@@ -207,7 +207,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         virtualScreenResult {
-            require(args.keys.all { it == "action" }) { "virtual_screen only accepts action; target 已移除" }
+            require(args.keys.all { it == "action" }) { "virtual_screen only accepts action；请在 screen_* 工具中选择 target" }
             when (val action = args.requiredString("action").lowercase()) {
                 "start" -> {
                     screen.start()

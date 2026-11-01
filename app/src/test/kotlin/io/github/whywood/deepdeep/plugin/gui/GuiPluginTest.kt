@@ -31,7 +31,7 @@ class GuiPluginTest {
     fun identityMatchesPluginContract() {
         val plugin = plugin()
         assertEquals("gui", plugin.id)
-        assertEquals("3.0.0", plugin.version)
+        assertEquals("3.1.0", plugin.version)
         assertEquals(DdIcons.HandClick, plugin.icon)
         assertEquals(R.string.plugin_screen_name, plugin.nameRes)
         assertEquals(R.string.plugin_screen_summary, plugin.summaryRes)
@@ -91,16 +91,16 @@ class GuiPluginTest {
     }
 
     @Test
-    fun legacyMainScreenshotNeverCaptures() = runTest {
+    fun mainScreenshotWithoutAccessibilityFailsBeforeWriting() = runTest {
         val tool = plugin().tools().first { it.name == "screen_screenshot" }
         val result = tool.execute("legacy", buildJsonObject { put("target", "main") }, null, null)
         assertEquals(true, result.isError)
-        assertTrue((result.content.single() as TextContent).text.contains("target 已移除"))
+        assertTrue((result.content.single() as TextContent).text.contains("无障碍"))
         assertTrue(!screenshotDir.exists())
     }
 
     @Test
-    fun screenshotToolWritesVirtualCapture() = runTest {
+    fun virtualScreenshotDoesNotFallBackToMain() = runTest {
         val actions = FakeActions()
         val plugin = plugin(actions = actions)
         val tool = plugin.tools().first { it.name == "screen_screenshot" }
@@ -123,7 +123,7 @@ class GuiPluginTest {
         assertTrue(skill.markdown.startsWith("---\n"))
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
         assertTrue(frontmatter.contains("name: deepdeep-gui"))
-        assertTrue(frontmatter.contains("description: 操作后台虚拟屏"))
+        assertTrue(frontmatter.contains("description: 优先操作后台虚拟屏"))
         screenToolNames().forEach { toolName -> assertTrue(toolName, skill.markdown.contains(toolName)) }
         listOf(
             "virtual_screen(action=start)",

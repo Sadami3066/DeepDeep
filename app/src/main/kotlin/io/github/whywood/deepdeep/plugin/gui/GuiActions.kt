@@ -9,6 +9,8 @@ data class GuiTextResult(
     val verified: Boolean,
 )
 
+data class GuiScreenshot(val png: ByteArray, val width: Int, val height: Int)
+
 data class GuiWaitOutcome(
     val matched: Boolean,
     val packageName: String? = null,
@@ -29,6 +31,18 @@ interface GuiActions {
     suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult
 
     suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome
+
+    suspend fun swipeMain(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long) {
+        throw GuiUnavailableException("主屏手势不可用")
+    }
+
+    suspend fun keyMain(name: String) {
+        throw GuiUnavailableException("主屏按键不可用")
+    }
+
+    suspend fun screenshotMain(): GuiScreenshot {
+        throw GuiUnavailableException("主屏截图不可用")
+    }
 }
 
 enum class GuiScrollDirection {

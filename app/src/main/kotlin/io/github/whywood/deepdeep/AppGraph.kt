@@ -236,6 +236,7 @@ class AppGraph(context: Context) : AppDependencies {
                 GuiPlugin(
                     context = appContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
+                    mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
                 ),
                 VirtualScreenPlugin(
                     context = appContext,
