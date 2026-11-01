@@ -859,6 +859,52 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
+    fun switchingSessionDuringImagePreparationKeepsOriginalRecipient() = runTest(dispatcher) {
+        val recipients = mutableListOf<String>()
+        val runtime = FakeAgentRuntime().apply { onSend = { sessionId, _ -> recipients += sessionId } }
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        assertTrue(controller.state.value.conversation.sending)
+        controller.openSession("session-2")
+        runCurrent()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertEquals(listOf("session-1"), recipients)
+        assertEquals("session-2", controller.state.value.sessionId)
+        assertTrue(controller.state.value.conversation.messages.isEmpty())
+        controller.reset()
+    }
+
+    @Test
+    fun stopDuringImagePreparationPreventsLateSend() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val image = CompletableDeferred<NormalizedImage?>()
+        val controller = controller(runtime, "session-1", this, normalizeImage = { _, _ -> image.await() })
+        controller.start()
+        runCurrent()
+        controller.importAttachment("session-1", File(HOME_CWD)) { AttachmentImport.Imported(ref()) }
+        runCurrent()
+        assertTrue(controller.send("photo"))
+        runCurrent()
+        controller.stop()
+        image.complete(NormalizedImage("BASE64", "image/jpeg", 1, 1))
+        runCurrent()
+
+        assertTrue(runtime.sent.isEmpty())
+        assertFalse(controller.state.value.conversation.sending)
+        assertEquals(MessageStatus.STOPPED, controller.state.value.conversation.messages.last().status)
+        assertEquals(listOf("session-1"), runtime.stopped)
+        controller.reset()
+    }
+
+    @Test
     fun switchingSessionClearsAttachments() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val controller = controller(runtime, "session-1", this)

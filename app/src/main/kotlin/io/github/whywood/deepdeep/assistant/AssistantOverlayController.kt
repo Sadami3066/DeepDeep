@@ -127,13 +127,10 @@ class AssistantOverlayController(
         val root = resolveAttachmentRoot(current.conversationCwd, homeDir)
         val imageRefs = attachments.filter { it.kind == AttachmentKind.IMAGE }
         mutableState.update { it.copy(attachments = emptyList(), error = null) }
-        if (imageRefs.isEmpty()) {
-            dispatch(sessionId, prompt, emptyList(), followUp)
+        if (isBusy(sessionId, current)) {
+            enqueue(sessionId, prompt, followUp, imageRefs, root)
         } else {
-            scope.launch {
-                val images = normalizeImages(imageRefs, root)
-                dispatch(sessionId, prompt, images, followUp)
-            }
+            projection.sendPreparedTurn(prompt) { normalizeImages(imageRefs, root) }
         }
         return true
     }
@@ -193,15 +190,6 @@ class AssistantOverlayController(
         }
     }
 
-    private fun dispatch(sessionId: String, prompt: String, images: List<ImagePart>, followUp: Boolean) {
-        if (mutableState.value.sessionId != sessionId) return
-        if (isBusy(sessionId, mutableState.value)) {
-            enqueue(sessionId, prompt, followUp, images)
-        } else {
-            projection.sendTurn(prompt, images)
-        }
-    }
-
     private suspend fun normalizeImages(refs: List<AttachmentRef>, root: File): List<ImagePart> =
         withContext(ioDispatcher) {
             refs.mapNotNull { ref ->
@@ -222,8 +210,7 @@ class AssistantOverlayController(
     }
 
     fun stop() {
-        val sessionId = mutableState.value.sessionId ?: return
-        runtime.stop(sessionId)
+        projection.stop()
     }
 
     fun retry(messageId: Long) {
@@ -454,9 +441,16 @@ class AssistantOverlayController(
         }
     }
 
-    private fun enqueue(sessionId: String, prompt: String, followUp: Boolean, images: List<ImagePart>) {
+    private fun enqueue(
+        sessionId: String,
+        prompt: String,
+        followUp: Boolean,
+        imageRefs: List<AttachmentRef>,
+        root: File,
+    ) {
         scope.launch {
             try {
+                val images = normalizeImages(imageRefs, root)
                 if (followUp) {
                     runtime.followUp(sessionId, prompt, images)
                 } else {
@@ -465,13 +459,13 @@ class AssistantOverlayController(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                setError(AssistantOverlayError.SendFailed)
+                if (mutableState.value.sessionId == sessionId) setError(AssistantOverlayError.SendFailed)
             }
         }
     }
 
     private fun isBusy(sessionId: String, current: AssistantOverlayState): Boolean =
-        current.conversation.sending || runtime.activeRuns.value.containsKey(sessionId)
+        current.conversation.sending || projection.state.value.sending || runtime.activeRuns.value.containsKey(sessionId)
 
     private fun setError(error: AssistantOverlayError) {
         mutableState.update { it.copy(error = error) }

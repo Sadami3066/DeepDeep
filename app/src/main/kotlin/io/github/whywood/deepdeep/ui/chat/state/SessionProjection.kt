@@ -3,17 +3,20 @@ package io.github.whywood.deepdeep.ui.chat.state
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
+import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
 import io.github.whywood.deepdeep.ui.chat.ConversationState
 import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
 import io.github.whywood.deepdeep.ui.chat.beginTurn
 import io.github.whywood.deepdeep.ui.chat.finishWithError
+import io.github.whywood.deepdeep.ui.chat.finishWithStatus
 import io.github.whywood.deepdeep.ui.chat.markRetryingTail
 import io.github.whywood.deepdeep.ui.chat.reduce
 import io.github.whywood.deepdeep.ui.chat.toggleStep
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +38,7 @@ internal class SessionProjection(
 
     private var eventJob: Job? = null
     private var currentSessionId: String? = null
+    private val preparations = mutableMapOf<String, Job>()
 
     suspend fun open(sessionId: String) {
         close()
@@ -61,20 +65,29 @@ internal class SessionProjection(
         }
     }
 
-    fun sendTurn(prompt: String, images: List<ImagePart> = emptyList()) {
+    fun sendTurn(prompt: String, images: List<ImagePart> = emptyList()) = sendPreparedTurn(prompt) { images }
+
+    fun sendPreparedTurn(prompt: String, prepareImages: suspend () -> List<ImagePart>) {
         val sessionId = currentSessionId ?: return
         val text = prompt.trim()
         if (text.isEmpty()) return
         mutableState.update { it.beginTurn(text, System.currentTimeMillis()) }
-        scope.launch {
+        lateinit var job: Job
+        job = scope.launch(start = CoroutineStart.LAZY) {
             try {
+                val images = prepareImages()
+                preparations.remove(sessionId, job)
                 runtime.send(sessionId, text, images)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                fail(error.message)
+                if (currentSessionId == sessionId) fail(error.message)
+            } finally {
+                preparations.remove(sessionId, job)
             }
         }
+        preparations[sessionId] = job
+        job.start()
     }
 
     fun enqueue(prompt: String, followUp: Boolean) {
@@ -94,6 +107,10 @@ internal class SessionProjection(
 
     fun stop() {
         val sessionId = currentSessionId ?: return
+        preparations.remove(sessionId)?.let { job ->
+            job.cancel()
+            mutableState.update { it.finishWithStatus("", "", RunStatus.STOPPED, System.currentTimeMillis()) }
+        }
         runtime.stop(sessionId)
     }
 
