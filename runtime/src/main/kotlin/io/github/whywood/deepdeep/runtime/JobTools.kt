@@ -45,7 +45,7 @@ private val jobParameters: JsonObject = buildJsonObject {
             put("description", "For output: wait for new output or job completion instead of returning immediately")
         }
         putJsonObject("timeoutMs") {
-            put("type", "number")
+            put("type", "integer")
             put("description", "For output with wait: maximum wait in milliseconds (default 30000, clamped to 1..600000)")
         }
         putJsonObject("reason") {
@@ -102,9 +102,11 @@ private suspend fun jobStart(binding: SessionBinding, registry: JobRegistry, arg
 }
 
 private suspend fun jobOutput(binding: SessionBinding, registry: JobRegistry, args: JsonObject): AgentToolResult {
-    activeJobSession(binding)
+    val session = activeJobSession(binding)
     val jobId = args.requiredJobString("jobId", "job_id")
+    requireJobOwner(registry, session.sessionId, jobId)
     val wait = args.jobBoolOrNull("wait") ?: false
+    require(wait || !args.containsKey("timeoutMs")) { "timeoutMs requires wait=true" }
     val timeout = args.jobLongOrNull("timeoutMs", "timeout_ms")
     val read = when {
         !wait -> registry.readIncremental(jobId)
@@ -126,11 +128,16 @@ private fun jobList(binding: SessionBinding, registry: JobRegistry): AgentToolRe
 }
 
 private suspend fun jobKill(binding: SessionBinding, registry: JobRegistry, args: JsonObject): AgentToolResult {
-    activeJobSession(binding)
+    val session = activeJobSession(binding)
     val jobId = args.requiredJobString("jobId", "job_id")
+    requireJobOwner(registry, session.sessionId, jobId)
     val reason = args.jobStringOrNull("reason")
     val requested = registry.kill(jobId, reason)
     return textResult(if (requested) "Cancellation requested." else "The job has already finished.")
+}
+
+private fun requireJobOwner(registry: JobRegistry, sessionId: String, jobId: String) {
+    require(registry.jobs.value.any { it.id == jobId && it.sessionId == sessionId }) { "Job not found in this conversation: $jobId" }
 }
 
 private fun activeJobSession(binding: SessionBinding): BoundSession =

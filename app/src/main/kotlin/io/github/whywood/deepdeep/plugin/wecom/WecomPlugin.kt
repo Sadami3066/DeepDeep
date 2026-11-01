@@ -193,7 +193,7 @@ class WecomPlugin internal constructor(
         lastBotId?.let { add(PluginDetailRow(R.string.plugin_wecom_detail_bot_id, it)) }
     }
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN.replace("<download-directory>", File(workspaceDir, "tmp").absolutePath)))
 
     override fun promptBody(status: PluginStatus): String = when (status) {
         is PluginStatus.Ready -> buildString {
@@ -224,7 +224,7 @@ class WecomPlugin internal constructor(
             val result = coroutineScope {
                 val poller = launch { publishQrCode(ui, qrFile, pageUrl) }
                 try {
-                    runtime.executeStreaming(WecomCli.authInitCommand(), INIT_TIMEOUT_MS) { line ->
+                    runtime.executeStreaming(WecomCli.authInitCommand(qrFile), INIT_TIMEOUT_MS) { line ->
                         val url = WecomCli.parseQrPageUrl(line)
                         if (url != null && pageUrl.compareAndSet(null, url)) {
                             ui.stage(
@@ -319,7 +319,7 @@ class WecomPlugin internal constructor(
             - 请求体可用命名参数、`--json '<JSON>'` 或 `--set path=value` 组合给出。
             - 发消息前先 `wecom-cli message aibot sessions list`，用本次返回的 `chat_id`；给授权人发消息可用 `wecom-cli identity whoami` 的 ID 作为 chat_id。
             - 发送图片、文件、语音或视频前，先经 `wecom-cli media` 上传拿到 `media_id`。
-            - 拉取多页数据用 `--page-count <n>`；下载文件用 `--output-dir /workspace/tmp` 落到工作区，再用 present 交付给用户。
+            - 拉取多页数据用 `--page-count <n>`；下载文件用 `--output-dir <download-directory>` 落到工作区，再用 present 交付给用户。
             - 不要自行创建定时任务或总结流程，除非用户明确要求。
         """.trimIndent()
     }

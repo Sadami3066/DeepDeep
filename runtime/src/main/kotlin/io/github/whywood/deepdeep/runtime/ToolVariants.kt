@@ -45,7 +45,8 @@ internal fun toolVariant(
                 when (type) {
                     "string" -> value == null || !value.isString
                     "boolean" -> value == null || value.isString || value.booleanOrNull == null
-                    "number", "integer" -> value == null || value.isString || value.doubleOrNull?.isFinite() != true
+                    "number", "integer" -> value == null || value.isString || value.doubleOrNull?.isFinite() != true ||
+                        (type == "integer" && value.doubleOrNull!! % 1.0 != 0.0)
                     else -> false
                 }
             }

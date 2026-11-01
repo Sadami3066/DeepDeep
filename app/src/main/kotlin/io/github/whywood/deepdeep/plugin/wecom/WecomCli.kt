@@ -12,7 +12,6 @@ object WecomCli {
     const val CONFIG_DIR = "/root/.config/wecom"
     const val CREDENTIALS_PATH = "$CONFIG_DIR/credentials.enc"
     const val QR_HOST_FILE = ".wecom-qr.png"
-    const val QR_GUEST_PATH = "/workspace/$QR_HOST_FILE"
     const val PACKAGE_BINARY = "package/bin/wecom-cli"
 
     const val VERSION = "1.3.4"
@@ -34,8 +33,11 @@ object WecomCli {
 
     fun authShowCommand(): String = command("auth show")
 
-    fun authInitCommand(): String =
-        command("auth init --noninteractive --no-browser --output-qrcode $QR_GUEST_PATH")
+    fun authInitCommand(qrFile: File): String {
+        require(qrFile.isAbsolute) { "QR output path must be absolute" }
+        val path = "'" + qrFile.absolutePath.replace("'", "'\\''") + "'"
+        return command("auth init --noninteractive --no-browser --output-qrcode $path")
+    }
 
     fun logoutCommand(): String = "rm -f $CREDENTIALS_PATH; true"
 

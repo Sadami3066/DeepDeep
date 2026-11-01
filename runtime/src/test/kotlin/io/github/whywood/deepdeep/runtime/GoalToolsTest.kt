@@ -279,6 +279,31 @@ class GoalToolsTest {
         assertEquals(true, create.execute("type", invalidType, null, null).isError)
     }
 
+    @Test
+    fun updatesRejectFractionalRevisionsAndIrrelevantActionFields() = runTest {
+        val created = service.create(session.sessionId, "目标", 5)!!.goal
+        val update = tools.first { it.name == "update_goal" }
+        val fractional = buildJsonObject { put("goalId", created.id); put("revision", 1.5); put("action", "complete") }
+        assertEquals(true, update.execute("fractional", fractional, null, null).isError)
+        val irrelevant = buildJsonObject { put("goalId", created.id); put("revision", created.revision); put("action", "pause"); put("objective", "不应改写") }
+        assertEquals(true, update.execute("irrelevant", irrelevant, null, null).isError)
+        assertEquals(created, service.goals.value.getValue(session.sessionId).goal)
+    }
+
+    @Test
+    fun backgroundJobReadAndKillRequireOwningConversation() = runTest {
+        val registry = JobRegistry(backgroundScope, BackgroundCommandRunner { _, _ -> kotlinx.coroutines.awaitCancellation() }, notifier = { _, _, _ -> })
+        val other = registry.start("other-session", "sleep", "other").id!!
+        val entries = jobTools(SessionBinding().apply { attach(session) }, registry)
+        for (name in listOf("job_output", "job_kill")) {
+            assertEquals(true, entries.first { it.name == name }.execute("other", buildJsonObject { put("jobId", other) }, null, null).isError)
+        }
+        val own = registry.start(session.sessionId, "sleep", "own").id!!
+        assertEquals(true, entries.first { it.name == "job_output" }.execute("wait", buildJsonObject { put("jobId", own); put("timeoutMs", 50) }, null, null).isError)
+        registry.finishSession(session.sessionId)
+        registry.finishSession("other-session")
+    }
+
     private suspend fun execute(args: JsonObject): dev.pi.agent.AgentToolResult {
         val action = args.getValue("action").jsonPrimitive.content
         val name = when (action) { "get" -> "get_goal"; "create" -> "create_goal"; else -> "update_goal" }

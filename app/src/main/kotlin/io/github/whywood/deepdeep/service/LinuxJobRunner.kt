@@ -12,6 +12,8 @@ class LinuxJobRunner(private val environment: LinuxEnvironment) : BackgroundComm
         val result = environment.executeStreaming(command, TIMEOUT_MILLIS) { line ->
             onOutput(line + "\n")
         }
+        result.fullOutputPath?.let { onOutput("\n[Full output: $it]\n") }
+        if (result.timedOut) onOutput("\n[Command timed out and was terminated]\n")
         return result.exitCode
     }
 

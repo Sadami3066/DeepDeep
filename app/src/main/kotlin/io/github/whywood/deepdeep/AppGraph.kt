@@ -146,12 +146,9 @@ class AppGraph(context: Context) : AppDependencies {
         File(appContext.filesDir, "skills").let { it to it.absolutePath },
     )
 
-    fun linuxBinds(): List<Pair<File, String>> = skillBinds() + listOf(
-        File(appContext.filesDir, "gui").let { it to it.absolutePath },
-        File(appContext.filesDir, "micloud").let { it to it.absolutePath },
-        File(appContext.filesDir, "workshop").let { it to it.absolutePath },
-        File(appContext.filesDir, "agent-runs").let { it to it.absolutePath },
-        File(appContext.cacheDir, "tool-output").let { it to it.absolutePath },
+    fun linuxBinds(): List<Pair<File, String>> = listOf(
+        appContext.filesDir.let { it to it.absolutePath },
+        appContext.cacheDir.let { it to it.absolutePath },
     )
 
     init {

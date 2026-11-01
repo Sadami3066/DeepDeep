@@ -387,7 +387,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun occupancyConflict(packageName: String, displayId: Int): String? {
         val tasks = runCatching { tasksOf(packageName) }.getOrElse {
             Log.w(TAG, "读取任务列表失败", it)
-            return null
+            throw IllegalStateException("无法确认应用当前所在屏幕，拒绝启动以避免移动主屏应用", it)
         }
         for (task in tasks) {
             if (task.displayId == displayId) continue
@@ -410,7 +410,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 .invoke(service, MAX_TASKS, false, false, Display.INVALID_DISPLAY) as List<*>
             methods.any { it.parameterTypes.size == 3 } -> methods.first { it.parameterTypes.size == 3 }
                 .invoke(service, MAX_TASKS, false, false) as List<*>
-            else -> return emptyList()
+            else -> throw IllegalStateException("系统未提供可用的任务查询接口")
         }
         val taskClass = Class.forName("android.app.TaskInfo")
         val displayField = taskClass.getField("displayId")

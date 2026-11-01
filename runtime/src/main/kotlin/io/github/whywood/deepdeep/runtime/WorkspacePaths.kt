@@ -8,7 +8,6 @@ import java.io.File
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
@@ -59,7 +58,7 @@ internal fun CodingTool.withAbsolutePaths(): CodingTool {
                         val split = block.text.indexOf("\n\n[")
                         val body = if (split < 0) block.text else block.text.substring(0, split)
                         val notice = if (split < 0) "" else block.text.substring(split)
-                        val absolute = body.lineSequence().joinToString("\n") { line -> "$base/$line" }
+                        val absolute = body.lineSequence().joinToString("\n") { line -> "${base.trimEnd('/')}/$line" }
                         val bounded = truncateHead(absolute + notice, maxLines = Int.MAX_VALUE)
                         block.copy(text = bounded.text + if (bounded.truncated) "\n\n[Absolute-path output truncated; narrow the query.]" else "")
                     }

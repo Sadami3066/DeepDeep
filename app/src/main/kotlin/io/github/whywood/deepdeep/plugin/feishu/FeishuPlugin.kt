@@ -289,7 +289,7 @@ class FeishuPlugin(
         }
     }
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN.replace("<download-directory>", File(linux.workspaceDir, "tmp").absolutePath)))
 
     override fun promptBody(status: PluginStatus): String = when (status) {
         is PluginStatus.Ready -> buildString {
@@ -301,8 +301,8 @@ class FeishuPlugin(
                 appendLine("当前授权缺少 ${lastMissingScopes.size} 项权限：${lastMissingScopes.joinToString(" ")}。")
             }
             appendLine(
-                "电子表格/多维表格没有直读权限时不要反复重新授权：先用 `mkdir -p /workspace/tmp && lark-cli drive +export " +
-                    "--url <链接> --file-extension xlsx --output-dir /workspace/tmp`（电子表格）或 " +
+                "电子表格/多维表格没有直读权限时不要反复重新授权：先用 `mkdir -p ${File(linux.workspaceDir, "tmp").absolutePath} && lark-cli drive +export " +
+                    "--url <链接> --file-extension xlsx --output-dir ${File(linux.workspaceDir, "tmp").absolutePath}`（电子表格）或 " +
                     "`--file-extension base`（多维表格）导出到本地再解析。" +
                     "需要直读时请用户在插件详情页点「应用权限」，到飞书开放平台为应用开通对应权限。",
             )
@@ -420,7 +420,7 @@ class FeishuPlugin(
             - 调用前先看用法：`lark-cli <domain> --help`。
             - 不熟悉的业务域先读指南：`lark-cli skills list`、`lark-cli skills read lark-im`。
             - 命令返回 `missing_scopes` 或登录时提示缺少权限，说明飞书应用本身未开通该权限；不要反复重新授权。
-            - 电子表格/多维表格没有直读权限时，改用导出兜底：`mkdir -p /workspace/tmp && lark-cli drive +export --url <链接> --file-extension xlsx --output-dir /workspace/tmp`（电子表格），多维表格把 `xlsx` 换成 `base`，导出到 `/workspace/tmp` 后再解析文件。
+            - 电子表格/多维表格没有直读权限时，改用导出兜底：`mkdir -p <download-directory> && lark-cli drive +export --url <链接> --file-extension xlsx --output-dir <download-directory>`（电子表格），多维表格把 `xlsx` 换成 `base`，导出到 `<download-directory>` 后再解析文件。
             - 需要直读时，请用户在插件详情页点「应用权限」，到飞书开放平台为应用开通对应权限，再重新授权。
             - 只读优先：发送、修改、删除、授权等写操作必须先向用户确认；支持 `--dry-run` 的命令先预览。
             - 高风险写入会要求确认参数或返回退出码 10，先向用户说明再继续。

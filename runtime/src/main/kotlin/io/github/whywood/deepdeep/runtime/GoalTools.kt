@@ -34,18 +34,18 @@ private val goalParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("goalId") {
             put("type", "string")
-            put("description", "Id of the current goal from action=get; required for change actions")
+            put("description", "Id of the current goal from get_goal; required for change actions")
         }
         putJsonObject("revision") {
-            put("type", "number")
-            put("description", "Current goal revision from action=get; required for change actions")
+            put("type", "integer")
+            put("description", "Current goal revision from get_goal; required for change actions")
         }
         putJsonObject("objective") {
             put("type", "string")
             put("description", "Concrete objective, required for create and optional for edit")
         }
         putJsonObject("maxRounds") {
-            put("type", "number")
+            put("type", "integer")
             put("description", "Optional maximum goal rounds, 1-50; omit for unlimited")
         }
         putJsonObject("blockedReason") {
