@@ -207,7 +207,7 @@ class GuiPluginTest {
         override suspend fun global(action: GuiGlobalAction) =
             throw UnsupportedOperationException()
 
-        override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean =
+        override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome =
             throw UnsupportedOperationException()
 
         override suspend fun screenshot(): GuiScreenshot = screenshotResult

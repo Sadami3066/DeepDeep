@@ -131,8 +131,8 @@ class ScreenToolsTest {
         val text = result.text()
         assertTrue(text.contains("\"accessibility\":\"disabled\""))
         assertTrue(text.contains("无障碍服务未开启"))
-        assertTrue(text.contains("\"readNodes\":true"))
-        assertTrue(text.contains("\"tap\":\"node\""))
+        assertTrue(text.contains("\"readNodes\":false"))
+        assertTrue(text.contains("\"tap\":\"point\""))
         assertTrue(text.contains("\"scroll\":true"))
         assertTrue(text.contains("\"swipe\":true"))
         assertTrue(text.contains("\"typeText\":\"ascii\""))
@@ -261,6 +261,34 @@ class ScreenToolsTest {
         val result = run("screen_observe", buildJsonObject { })
         assertNull(result.isError)
         assertTrue(result.text().contains("\"filtered\":3"))
+        assertTrue(result.text().contains("\"scanned\":3"))
+    }
+
+    @Test
+    fun observeToolReportsTraversalCountAndTruncationHint() = runTest {
+        controller.observeSnapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(
+                className = "root",
+                bounds = GuiBounds(0, 0, 1080, 2400),
+                children = listOf(
+                    GuiNode(
+                        className = "a",
+                        bounds = GuiBounds(0, 0, 100, 100),
+                        children = listOf(GuiNode(className = "a1", bounds = GuiBounds(0, 0, 50, 50))),
+                    ),
+                    GuiNode(className = "b", bounds = GuiBounds(0, 100, 100, 200)),
+                ),
+            ),
+            maxDepth = 1,
+            maxNodes = 10,
+        )
+        val result = run("screen_observe", buildJsonObject { })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"count\":3"))
+        assertTrue(text.contains("\"scanned\":4"))
+        assertTrue(text.contains("\"truncated\":true"))
+        assertTrue(text.contains("结果已截断"))
     }
 
     @Test
@@ -394,6 +422,22 @@ class ScreenToolsTest {
         assertTrue(text.contains("\"package\":\"com.example\""))
         assertTrue(text.contains("\"label\":\"Example\""))
         assertTrue(text.contains("\"component\":\"com.example/.Main\""))
+        assertEquals(ScreenTarget.MAIN, controller.lastListAppsTarget)
+    }
+
+    @Test
+    fun appToolListReportsVirtualScreenUnavailable() = runTest {
+        controller.listAppsFailure = IllegalStateException("虚拟屏未启动：请先调用 virtual_screen(action=start)")
+        val result = run(
+            "screen_app",
+            buildJsonObject {
+                put("target", "virtual")
+                put("action", "list")
+            },
+        )
+        assertTrue(result.isError == true)
+        assertTrue(result.text().contains("虚拟屏未启动"))
+        assertEquals(ScreenTarget.VIRTUAL, controller.lastListAppsTarget)
     }
 
     @Test
@@ -510,12 +554,26 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun waitToolReportsTimeoutWithoutError() = runTest {
-        controller.waitResult = false
+    fun waitToolReportsTimeoutWithCurrentWindow() = runTest {
+        controller.waitOutcome = ScreenWaitOutcome(matched = false, packageName = "com.example", windowTitle = "设置")
         val result = run("screen_wait", buildJsonObject { put("forText", "OK") })
         assertNull(result.isError)
-        assertTrue(result.text().contains("\"ok\":false"))
-        assertTrue(result.text().contains("\"reason\":\"timeout\""))
+        val text = result.text()
+        assertTrue(text.contains("\"ok\":false"))
+        assertTrue(text.contains("\"reason\":\"timeout\""))
+        assertTrue(text.contains("\"timeoutMs\":5000"))
+        assertTrue(text.contains("\"current\":{\"package\":\"com.example\",\"title\":\"设置\"}"))
+    }
+
+    @Test
+    fun waitToolReportsMatchedWindow() = runTest {
+        controller.waitOutcome = ScreenWaitOutcome(matched = true, packageName = "com.android.settings", windowTitle = "设置")
+        val result = run("screen_wait", buildJsonObject { put("forPackage", "com.android.settings") })
+        assertNull(result.isError)
+        val text = result.text()
+        assertTrue(text.contains("\"ok\":true"))
+        assertTrue(text.contains("\"current\":{\"package\":\"com.android.settings\",\"title\":\"设置\"}"))
+        assertTrue(!text.contains("\"reason\""))
     }
 
     private suspend fun run(name: String, args: JsonObject): dev.pi.agent.AgentToolResult {
@@ -563,7 +621,10 @@ class ScreenToolsTest {
         var lastTextSelector: GuiSelector? = null
         var lastLaunchTarget: ScreenTarget? = null
         var capture = ScreenCapture(byteArrayOf(9), 1, 1, BACKEND_ACCESSIBILITY)
-        var waitResult = true
+        var waitOutcome = ScreenWaitOutcome(matched = true)
+        var observeSnapshot: GuiSnapshot? = null
+        var lastListAppsTarget: ScreenTarget? = null
+        var listAppsFailure: Throwable? = null
         var statusSnapshot = ScreenStatusSnapshot(
             accessibilityConnected = true,
             accessibilityEnabled = true,
@@ -593,7 +654,7 @@ class ScreenToolsTest {
         ): ScreenObserveResult {
             lastObserveTarget = target
             lastObserveMaxDepth = maxDepth
-            return ScreenObserveResult(BACKEND_ACCESSIBILITY, snapshot(), filteredNodes)
+            return ScreenObserveResult(BACKEND_ACCESSIBILITY, observeSnapshot ?: snapshot(), filteredNodes)
         }
 
         override suspend fun find(
@@ -650,7 +711,7 @@ class ScreenToolsTest {
             text: String?,
             textGone: String?,
             timeoutMs: Long,
-        ): Boolean = waitResult
+        ): ScreenWaitOutcome = waitOutcome
 
         override suspend fun screenshot(target: ScreenTarget): ScreenCapture = capture
 
@@ -659,9 +720,11 @@ class ScreenToolsTest {
             return launchReport
         }
 
-        override fun listApps(): List<ScreenApp> = listOf(
-            ScreenApp("com.example", "Example", "com.example/.Main"),
-        )
+        override suspend fun listApps(target: ScreenTarget): List<ScreenApp> {
+            lastListAppsTarget = target
+            listAppsFailure?.let { throw it }
+            return listOf(ScreenApp("com.example", "Example", "com.example/.Main"))
+        }
 
         private fun snapshot(): GuiSnapshot = GuiNodeTree.buildSnapshot(
             root = GuiNode(

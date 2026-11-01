@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
 import io.github.whywood.deepdeep.plugin.gui.GuiTextResult
+import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
@@ -150,7 +151,8 @@ class ScreenRouterTest {
     @Test
     fun mainSwipeUsesAdbAndFailsWithoutIt() = runBlocking {
         adb.availableState = true
-        router().swipe(ScreenTarget.MAIN, 1, 2, 3, 4, 300)
+        val message = router().swipe(ScreenTarget.MAIN, 1, 2, 3, 4, 300)
+        assertEquals("已通过 ADB 在主屏滑动 (1, 2) → (3, 4)", message)
         assertEquals(listOf(1, 2, 3, 4, 300), adb.swiped)
         adb.availableState = false
         expectFailure { router().swipe(ScreenTarget.MAIN, 1, 2, 3, 4, 300) }
@@ -165,8 +167,9 @@ class ScreenRouterTest {
 
     @Test
     fun scrollOnVirtualScreenSwipesHelper() = runBlocking {
-        router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 2, null)
+        val message = router().scroll(ScreenTarget.VIRTUAL, GuiScrollDirection.DOWN, 2, null)
         assertEquals(2, virtual.swipeCount)
+        assertEquals("已在虚拟屏向 down 滚动 2 次", message)
     }
 
     @Test
@@ -370,8 +373,47 @@ class ScreenRouterTest {
         accessibility.connected = false
         virtual.stateValue = VirtualScreenState.Offline
         adb.availableState = true
-        val matched = router().waitFor(ScreenTarget.MAIN, null, "OK", null, 1_000)
-        assertTrue(matched)
+        val outcome = router().waitFor(ScreenTarget.MAIN, null, "OK", null, 1_000)
+        assertTrue(outcome.matched)
+        assertEquals("com.example", outcome.packageName)
+    }
+
+    @Test
+    fun waitOnMainScreenReportsCurrentWindowFromAccessibility() = runBlocking {
+        accessibility.connected = true
+        accessibility.waitOutcome = GuiWaitOutcome(matched = false, packageName = "com.example", windowTitle = "设置")
+        val outcome = router().waitFor(ScreenTarget.MAIN, "com.example", "文件管理", null, 10)
+        assertEquals(false, outcome.matched)
+        assertEquals("com.example", outcome.packageName)
+        assertEquals("设置", outcome.windowTitle)
+    }
+
+    @Test
+    fun virtualWaitUsesAccessibilityOutcome() = runBlocking {
+        accessibility.connected = true
+        accessibility.waitOutcome = GuiWaitOutcome(matched = true, packageName = "com.android.documentsui", windowTitle = "文件管理")
+        val outcome = router().waitFor(ScreenTarget.VIRTUAL, null, "文件管理", null, 10)
+        assertTrue(outcome.matched)
+        assertEquals("文件管理", outcome.windowTitle)
+    }
+
+    @Test
+    fun listsLaunchableAppsOnMainScreen() = runBlocking {
+        assertEquals(listOf("com.example"), router().listApps(ScreenTarget.MAIN).map { it.packageName })
+    }
+
+    @Test
+    fun virtualAppListRequiresOnlineVirtualScreen() = runBlocking {
+        virtual.stateValue = VirtualScreenState.Offline
+        val error = expectFailure { router().listApps(ScreenTarget.VIRTUAL) }
+        assertTrue(error.message.orEmpty().contains("虚拟屏未启动"))
+        virtual.stateValue = VirtualScreenState.Online(
+            displayId = VIRTUAL_DISPLAY_ID,
+            width = 700,
+            height = 1200,
+            backend = "adb",
+        )
+        assertEquals(1, router().listApps(ScreenTarget.VIRTUAL).size)
     }
 
     @Test
@@ -405,12 +447,25 @@ class ScreenRouterTest {
     }
 
     @Test
+    fun snapshotMatchesWindowTitle() {
+        val snapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(className = "android.widget.FrameLayout", bounds = GuiBounds(0, 0, 100, 100)),
+            packageName = "com.android.documentsui",
+            windowTitle = "文件管理",
+        )
+        assertTrue(snapshotMatches(snapshot, null, "文件管理", null))
+        assertTrue(!snapshotMatches(snapshot, null, null, "文件管理"))
+        assertTrue(snapshotMatches(snapshot, null, null, "设置"))
+    }
+
+    @Test
     fun observeDropsUnusableBoundsAndReportsFilteredCount() = runBlocking {
         accessibility.connected = true
         accessibility.snapshot = viewPagerSnapshot()
         val observed = router().observe(ScreenTarget.MAIN, SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
         assertEquals(listOf("0", "2"), observed.snapshot.nodes.map { it.ref })
         assertEquals(1, observed.filteredNodes)
+        assertEquals(3, observed.snapshot.scanned)
     }
 
     @Test
@@ -645,7 +700,7 @@ class ScreenRouterTest {
         var lastSetTextValue = ""
         var lastScrollDirection: GuiScrollDirection? = null
         var lastGlobal: GuiGlobalAction? = null
-        var waitResult = true
+        var waitOutcome = GuiWaitOutcome(matched = true)
 
         override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
             observeCalls++
@@ -675,7 +730,7 @@ class ScreenRouterTest {
             text: String?,
             textGone: String?,
             timeoutMs: Long,
-        ): Boolean = waitResult
+        ): GuiWaitOutcome = waitOutcome
 
         override suspend fun screenshotMain(): GuiScreenshot =
             GuiScreenshot(byteArrayOf(9, 9), 1080, 2400)

@@ -13,7 +13,17 @@ class GuiDisplayActionsTest {
         kind: GuiWindowKind,
         layer: Int = 0,
         readable: Boolean = true,
-    ): GuiWindowCandidate = GuiWindowCandidate(kind = kind, layer = layer, readable = readable)
+        active: Boolean = false,
+        focused: Boolean = false,
+        area: Int = FULL_AREA,
+    ): GuiWindowCandidate = GuiWindowCandidate(
+        kind = kind,
+        layer = layer,
+        readable = readable,
+        active = active,
+        focused = focused,
+        area = area,
+    )
 
     @Test
     fun accessibilityActionsImplementLegacyAndDisplayContracts() {
@@ -48,8 +58,8 @@ class GuiDisplayActionsTest {
 
     @Test
     fun missingSnapshotMessageNamesTheDisplay() {
-        assertEquals("请先调用 gui_observe 读取当前界面", missingSnapshotMessage(GUI_MAIN_DISPLAY))
-        assertTrue(missingSnapshotMessage(7).contains("屏幕 7"))
+        assertEquals("请先调用 screen_observe 读取主屏界面", missingSnapshotMessage(GUI_MAIN_DISPLAY))
+        assertTrue(missingSnapshotMessage(7).contains("虚拟屏"))
     }
 
     @Test
@@ -116,6 +126,69 @@ class GuiDisplayActionsTest {
     }
 
     @Test
+    fun prefersActiveForegroundWindowOverHigherLayerBottomStrip() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.APPLICATION, layer = 12, area = 1080 * 68),
+                candidate(GuiWindowKind.APPLICATION, layer = 3, area = FULL_AREA, active = true, focused = true),
+            ),
+        )
+        assertEquals(1, index)
+    }
+
+    @Test
+    fun prefersFocusedDialogOverLargerBackgroundWindow() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.APPLICATION, layer = 2, area = FULL_AREA),
+                candidate(GuiWindowKind.APPLICATION, layer = 6, area = 900 * 600, active = true, focused = true),
+            ),
+        )
+        assertEquals(1, index)
+    }
+
+    @Test
+    fun prefersActiveWindowOverFocusedWindow() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.SYSTEM, layer = 4, area = FULL_AREA, focused = true),
+                candidate(GuiWindowKind.APPLICATION, layer = 9, area = 1000 * 1000, active = true),
+            ),
+        )
+        assertEquals(1, index)
+    }
+
+    @Test
+    fun ignoresTinyWindowWhenLargerReadableWindowExists() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.SYSTEM, layer = 15, area = 1080 * 68),
+                candidate(GuiWindowKind.APPLICATION, layer = 1, area = FULL_AREA),
+            ),
+        )
+        assertEquals(1, index)
+    }
+
+    @Test
+    fun keepsTinyWindowWhenItIsTheOnlyReadableWindow() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(candidate(GuiWindowKind.APPLICATION, area = 1080 * 68)),
+        )
+        assertEquals(0, index)
+    }
+
+    @Test
+    fun selectsSingleReadableWindowOnVirtualDisplay() {
+        val index = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.INPUT_METHOD, layer = 9, area = FULL_AREA),
+                candidate(GuiWindowKind.APPLICATION, layer = 1, area = 700 * 1200),
+            ),
+        )
+        assertEquals(1, index)
+    }
+
+    @Test
     fun returnsNullWhenNoApplicationOrSystemWindowIsReadable() {
         assertNull(GuiWindowSelection.topmostReadable(emptyList()))
         assertNull(
@@ -136,5 +209,9 @@ class GuiDisplayActionsTest {
                 ),
             ),
         )
+    }
+
+    private companion object {
+        const val FULL_AREA = 1080 * 2400
     }
 }

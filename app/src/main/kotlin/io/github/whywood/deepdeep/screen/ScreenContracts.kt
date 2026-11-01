@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshotNode
 import io.github.whywood.deepdeep.plugin.gui.GuiTextResult
+import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
@@ -89,6 +90,12 @@ data class ScreenTextResult(
     val verified: Boolean,
 )
 
+data class ScreenWaitOutcome(
+    val matched: Boolean,
+    val packageName: String? = null,
+    val windowTitle: String? = null,
+)
+
 data class ScreenLaunchReport(
     val ok: Boolean,
     val message: String,
@@ -130,7 +137,7 @@ interface ScreenAccessibilityBackend {
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean
+    ): GuiWaitOutcome
 
     suspend fun screenshotMain(): GuiScreenshot
 
@@ -214,13 +221,13 @@ interface ScreenController {
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean
+    ): ScreenWaitOutcome
 
     suspend fun screenshot(target: ScreenTarget): ScreenCapture
 
     suspend fun launch(target: ScreenTarget, packageName: String): ScreenLaunchReport
 
-    fun listApps(): List<ScreenApp>
+    suspend fun listApps(target: ScreenTarget): List<ScreenApp>
 }
 
 internal const val BACKEND_ACCESSIBILITY = "accessibility"

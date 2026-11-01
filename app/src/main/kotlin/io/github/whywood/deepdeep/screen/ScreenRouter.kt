@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
+import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlinx.coroutines.delay
@@ -150,7 +151,7 @@ class ScreenRouter(
                     throw IllegalStateException("主屏滑动需要无线调试（ADB）连接：请到权限设置完成配对；滚动请改用 screen_scroll")
                 }
                 adb.swipe(x1, y1, x2, y2, durationMs)
-                "已通过 ADB 在 $(target.id) 屏幕滑动 ($x1, $y1) → ($x2, $y2)"
+                "已通过 ADB 在主屏滑动 ($x1, $y1) → ($x2, $y2)"
             }
             ScreenTarget.VIRTUAL -> {
                 requireVirtualOnline()
@@ -225,12 +226,12 @@ class ScreenRouter(
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean = when (target) {
+    ): ScreenWaitOutcome = when (target) {
         ScreenTarget.MAIN -> waitMain(packageName, text, textGone, timeoutMs)
         ScreenTarget.VIRTUAL -> {
             val online = requireVirtualOnline()
             if (!accessibility.connected) throw virtualAccessibilityError()
-            accessibility.waitFor(online.displayId, packageName, text, textGone, timeoutMs)
+            accessibility.waitFor(online.displayId, packageName, text, textGone, timeoutMs).toScreenWaitOutcome()
         }
     }
 
@@ -290,7 +291,13 @@ class ScreenRouter(
         }
     }
 
-    override fun listApps(): List<ScreenApp> = apps.launchableApps()
+    override suspend fun listApps(target: ScreenTarget): List<ScreenApp> = when (target) {
+        ScreenTarget.MAIN -> apps.launchableApps()
+        ScreenTarget.VIRTUAL -> {
+            requireVirtualOnline()
+            apps.launchableApps()
+        }
+    }
 
     private suspend fun tapMain(selector: GuiSelector, durationMs: Int): String {
         if (selector is GuiSelector.Point) {
@@ -403,16 +410,20 @@ class ScreenRouter(
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean {
+    ): ScreenWaitOutcome {
         if (accessibility.connected) {
-            return accessibility.waitFor(MAIN_DISPLAY_ID, packageName, text, textGone, timeoutMs)
+            return accessibility.waitFor(MAIN_DISPLAY_ID, packageName, text, textGone, timeoutMs).toScreenWaitOutcome()
         }
         val deadline = System.currentTimeMillis() + timeoutMs
         ensureAdbMainObservationAllowed()
+        var current = ScreenWaitOutcome(matched = false)
         while (true) {
             val snapshot = runCatching { adb.observeMain(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES) }.getOrNull()
-            if (snapshot != null && snapshotMatches(snapshot, packageName, text, textGone)) return true
-            if (System.currentTimeMillis() >= deadline) return false
+            if (snapshot != null) {
+                current = ScreenWaitOutcome(false, snapshot.packageName, snapshot.windowTitle)
+                if (snapshotMatches(snapshot, packageName, text, textGone)) return current.copy(matched = true)
+            }
+            if (System.currentTimeMillis() >= deadline) return current
             delay(WAIT_POLL_MS)
         }
     }
@@ -452,7 +463,12 @@ class ScreenRouter(
                     .requireOk()
             }
         }
-        return "已在 ${target.id} 屏幕向 ${direction.name.lowercase()} 滚动 $steps 次"
+        return "已在${screenLabel(target)}向 ${direction.name.lowercase()} 滚动 $steps 次"
+    }
+
+    private fun screenLabel(target: ScreenTarget): String = when (target) {
+        ScreenTarget.MAIN -> "主屏"
+        ScreenTarget.VIRTUAL -> "虚拟屏"
     }
 
     private fun mainBounds(): GuiBounds {
@@ -588,15 +604,19 @@ internal fun snapshotMatches(
 ): Boolean {
     val packageMatches = packageName == null || snapshot.packageName == packageName
     val contains = { value: String ->
-        snapshot.nodes.any { node ->
-            node.text?.contains(value, ignoreCase = true) == true ||
-                node.desc?.contains(value, ignoreCase = true) == true
-        }
+        snapshot.windowTitle?.contains(value, ignoreCase = true) == true ||
+            snapshot.nodes.any { node ->
+                node.text?.contains(value, ignoreCase = true) == true ||
+                    node.desc?.contains(value, ignoreCase = true) == true
+            }
     }
     val textMatches = text == null || contains(text)
     val textGoneMatches = textGone == null || !contains(textGone)
     return packageMatches && textMatches && textGoneMatches
 }
+
+private fun GuiWaitOutcome.toScreenWaitOutcome(): ScreenWaitOutcome =
+    ScreenWaitOutcome(matched = matched, packageName = packageName, windowTitle = windowTitle)
 
 private fun VirtualScreenResult.requireOk() {
     if (!ok) throw IllegalStateException(message.ifBlank { "虚拟屏操作失败" })

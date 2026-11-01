@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,6 +74,15 @@ class AdbUiAutomatorParserTest {
     fun invalidXmlReturnsNull() {
         assertNull(AdbUiAutomatorParser.parse(""))
         assertNull(AdbUiAutomatorParser.parse("not xml at all"))
+    }
+
+    @Test
+    fun uiDumpCommandDropsStaleSnapshotBeforeDumping() {
+        val command = adbUiDumpCommand()
+        assertTrue(command.startsWith("rm -f $ADB_UI_DUMP_PATH; "))
+        assertTrue(command.contains("uiautomator dump $ADB_UI_DUMP_PATH"))
+        assertTrue(command.contains("&& cat $ADB_UI_DUMP_PATH"))
+        assertFalse(command.contains("; cat"))
     }
 
     @Test

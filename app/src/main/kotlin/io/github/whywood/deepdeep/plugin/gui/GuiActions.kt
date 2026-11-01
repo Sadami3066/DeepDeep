@@ -15,6 +15,12 @@ data class GuiTextResult(
     val verified: Boolean,
 )
 
+data class GuiWaitOutcome(
+    val matched: Boolean,
+    val packageName: String? = null,
+    val windowTitle: String? = null,
+)
+
 interface GuiActions {
     val connected: Boolean
 
@@ -28,7 +34,7 @@ interface GuiActions {
 
     suspend fun global(action: GuiGlobalAction)
 
-    suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean
+    suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome
 
     suspend fun screenshot(): GuiScreenshot
 }
@@ -42,7 +48,7 @@ interface GuiDisplayActions {
 
     suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult
 
-    suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean
+    suspend fun waitFor(displayId: Int, packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome
 }
 
 enum class GuiScrollDirection {

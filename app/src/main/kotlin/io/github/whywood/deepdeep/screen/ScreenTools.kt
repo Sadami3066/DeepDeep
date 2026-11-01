@@ -443,11 +443,11 @@ private val waitParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("forText") {
             put("type", "string")
-            put("description", "Wait until this text or content description appears on screen.")
+            put("description", "Wait until this text appears in a node, a content description or the window title.")
         }
         putJsonObject("forTextGone") {
             put("type", "string")
-            put("description", "Wait until this text or content description disappears from the screen.")
+            put("description", "Wait until this text is gone from nodes, content descriptions and the window title.")
         }
         putJsonObject("timeoutMs") {
             put("type", "integer")
@@ -503,7 +503,7 @@ private fun JsonObjectBuilder.putTargetProperty() {
 
 private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_status",
-    description = "Check what works on the main and virtual screen right now: reading nodes, tapping, scrolling, swiping, typing, keys and screenshots. Use it when unsure which action is currently possible.",
+    description = "Check what works on the main and virtual screen right now: reading nodes, tapping, scrolling, swiping, typing, keys and screenshots. Node reading and screenshots need accessibility; use it when unsure which action is possible.",
     parameters = statusParameters,
     label = "screen_status",
     execute = { _, _, signal, _ ->
@@ -514,7 +514,7 @@ private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_observe",
-    description = "Read a screen snapshot with refs, class, text, desc, bounds and flags. Use it to inspect the current screen or find a node by one of text, desc, resourceId or class; the result reports count, total, scanned and truncated.",
+    description = "Read a screen as nodes with refs, text, desc, bounds and flags; filter by text, desc, resourceId or class. count is returned nodes, total matches, scanned traversed, filtered off-screen, truncated means maxDepth or maxNodes left nodes out.",
     parameters = observeParameters,
     label = "screen_observe",
     execute = { _, args, signal, _ ->
@@ -663,7 +663,7 @@ private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_wait",
-    description = "Wait until a package or text appears on a screen, or until a text disappears, and report whether it happened before the timeout. Use it when waiting for a screen transition or a loading state to finish.",
+    description = "Wait until a package or text appears on a screen, or a text disappears, and report whether it happened before the timeout with the current window. Use it when waiting for a screen transition or loading state to finish.",
     parameters = waitParameters,
     label = "screen_wait",
     execute = { _, args, signal, _ ->
@@ -678,16 +678,20 @@ private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
             }
             val timeoutMs = waitTimeoutOf(args)
             val startedAt = System.currentTimeMillis()
-            val matched = controller.waitFor(target, packageName, text, textGone, timeoutMs)
+            val outcome = controller.waitFor(target, packageName, text, textGone, timeoutMs)
             val elapsedMs = (System.currentTimeMillis() - startedAt).toInt()
             textResult(
                 buildJsonObject {
-                    put("ok", matched)
+                    put("ok", outcome.matched)
                     put("elapsedMs", elapsedMs)
-                    if (!matched) {
+                    put("timeoutMs", timeoutMs)
+                    putJsonObject("current") {
+                        outcome.packageName?.let { put("package", it) }
+                        outcome.windowTitle?.let { put("title", it) }
+                    }
+                    if (!outcome.matched) {
                         put("reason", "timeout")
-                        put("timeoutMs", timeoutMs)
-                        put("hint", "等待超时：界面没有出现预期变化，请重新 screen_observe 判断当前状态")
+                        put("hint", "等待超时：界面没有出现预期变化，请用 screen_observe 判断当前状态后再决定下一步")
                     }
                 }.toString(),
             )
@@ -697,7 +701,7 @@ private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun appTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_app",
-    description = "List installed apps that can be opened, or open one on the main or virtual screen by package name. Use it when the package name is unknown or an app should be opened; a launch reports whether the app reached the expected screen.",
+    description = "List installed apps that can be opened, or open one on the main or virtual screen by package name. A virtual-screen list needs a running virtual screen; a launch reports whether the app reached the expected screen.",
     parameters = appParameters,
     label = "screen_app",
     execute = { _, args, signal, _ ->
@@ -706,7 +710,7 @@ private fun appTool(controller: ScreenController): CodingTool = CodingTool(
             val target = targetOf(args)
             when (parseScreenAppAction(args)) {
                 ScreenAppAction.LIST -> {
-                    val installed = controller.listApps()
+                    val installed = controller.listApps(target)
                     textResult(
                         buildJsonObject {
                             put("target", target.id)
@@ -782,14 +786,14 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
     val virtualInfo = status.virtual
     val virtualOnline = status.virtualState == "online" && virtualInfo != null
     val adb = status.adbAvailable
-    val readNodes = connected || (adb && !virtualOnline)
+    val readNodes = connected
     putJsonObject("main") {
         put("width", status.main.width)
         put("height", status.main.height)
         put("readNodes", readNodes)
         put("tap", when {
             readNodes -> "node"
-            adb || connected -> "point"
+            adb -> "point"
             else -> "none"
         })
         put("scroll", adb || connected)
@@ -848,26 +852,31 @@ internal fun observeJson(
 ): JsonObject = buildJsonObject {
     observed.snapshot.packageName?.let { put("package", it) }
     observed.snapshot.windowTitle?.let { put("title", it) }
-    val scanned = observed.snapshot.nodes
+    val observedNodes = observed.snapshot.nodes
     val total = if (filters.isEmpty()) {
-        scanned
+        observedNodes
     } else {
-        scanned.filter { node -> GuiNodeTree.matchesAll(node, filters) }
+        observedNodes.filter { node -> GuiNodeTree.matchesAll(node, filters) }
     }
     val shown = if (filters.isEmpty()) total else total.take(limit)
     put("count", shown.size)
     put("total", total.size)
-    put("scanned", scanned.size)
+    put("scanned", observed.snapshot.scanned)
     put("truncated", observed.snapshot.truncated)
     put("filtered", observed.filteredNodes)
     put("nodes", buildJsonArray { shown.forEach { node -> add(GuiNodeTree.nodeJson(node)) } })
-    if (filters.isNotEmpty() && total.isEmpty()) {
-        put(
-            "hint",
-            "未命中：已检索 ${scanned.size} 个节点；text 只匹配可见文本、desc 只匹配内容描述，" +
-                "可分别尝试或改用 resourceId/class 后重试",
-        )
+    val hints = buildList {
+        if (observed.snapshot.truncated) {
+            add("结果已截断：还有节点未返回，可提高 maxDepth 或 maxNodes，或先用过滤条件缩小范围")
+        }
+        if (filters.isNotEmpty() && total.isEmpty()) {
+            add(
+                "未命中：已检索 ${observed.snapshot.scanned} 个节点；text 只匹配可见文本、desc 只匹配内容描述，" +
+                    "可分别尝试或改用 resourceId/class 后重试",
+            )
+        }
     }
+    if (hints.isNotEmpty()) put("hint", hints.joinToString("；"))
 }
 
 internal fun virtualFailureJsonCategory(category: String): String = when (category) {

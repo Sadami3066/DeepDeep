@@ -27,9 +27,8 @@ class AdbScreenBackend(
     }
 
     override suspend fun observeMain(maxDepth: Int, maxNodes: Int): GuiSnapshot {
-        val xml = exec(UI_DUMP_COMMAND, UI_DUMP_TIMEOUT_MS)
-        val parsed = AdbUiAutomatorParser.parse(xml)
-            ?: throw IllegalStateException("无法解析 uiautomator 界面快照，请确认屏幕已解锁并停留在目标界面")
+        val parsed = AdbUiAutomatorParser.parse(dumpUiHierarchy())
+            ?: throw IllegalStateException("无法读取主屏界面结构：快照内容无法解析，请确认屏幕已解锁并停留在目标界面后重试")
         return GuiNodeTree.buildSnapshot(
             root = parsed.root,
             packageName = parsed.packageName,
@@ -57,6 +56,17 @@ class AdbScreenBackend(
 
     override suspend fun shell(command: String): String = exec(command, SHELL_TIMEOUT_MS)
 
+    private suspend fun dumpUiHierarchy(): String {
+        val result = requireAdb().exec(adbUiDumpCommand(), UI_DUMP_TIMEOUT_MS)
+        if (result.exitCode != 0 || result.stdout.isBlank()) {
+            throw IllegalStateException("无法读取主屏界面结构：请确认屏幕已解锁并停留在目标界面后重试")
+        }
+        if (result.truncated) {
+            throw IllegalStateException("主屏界面结构过大，无法完整读取：请开启无障碍服务后重试")
+        }
+        return result.stdout
+    }
+
     private suspend fun exec(command: String, timeoutMs: Long): String {
         val result = requireAdb().exec(command, timeoutMs)
         if (result.exitCode != 0) {
@@ -81,10 +91,13 @@ class AdbScreenBackend(
         const val INPUT_TIMEOUT_MS = 10_000L
         const val SHELL_TIMEOUT_MS = 10_000L
         const val MAX_OUTPUT_CHARS = 400
-        const val UI_DUMP_COMMAND =
-            "uiautomator dump /data/local/tmp/deepdeep-ui.xml >/dev/null 2>&1; cat /data/local/tmp/deepdeep-ui.xml"
     }
 }
+
+internal const val ADB_UI_DUMP_PATH = "/data/local/tmp/deepdeep-ui.xml"
+
+internal fun adbUiDumpCommand(): String =
+    "rm -f $ADB_UI_DUMP_PATH; uiautomator dump $ADB_UI_DUMP_PATH >/dev/null 2>&1 && cat $ADB_UI_DUMP_PATH"
 
 internal fun adbInputTextCommand(text: String): String = "input text " + shellQuote(text.replace(" ", "%s"))
 

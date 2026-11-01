@@ -60,6 +60,7 @@ data class GuiSnapshot(
     val windowTitle: String?,
     val nodes: List<GuiSnapshotNode>,
     val truncated: Boolean,
+    val scanned: Int = nodes.size,
 )
 
 sealed interface GuiSelector {
@@ -117,8 +118,11 @@ object GuiNodeTree {
             windowTitle = windowTitle,
             nodes = nodes,
             truncated = truncated,
+            scanned = countNodes(root),
         )
     }
+
+    fun countNodes(node: GuiNode): Int = 1 + node.children.sumOf { child -> countNodes(child) }
 
     fun render(snapshot: GuiSnapshot): String = buildJsonObject {
         snapshot.packageName?.let { put("package", it) }

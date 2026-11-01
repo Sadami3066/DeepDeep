@@ -71,9 +71,9 @@ class GuiAccessibilityActions(
         maxNodes: Int,
     ): GuiSnapshot {
         val window = selectDisplayWindow(service, displayId)
-            ?: throw IllegalStateException("无法读取屏幕 $displayId：请确认该屏幕上已有可见界面")
+            ?: throw IllegalStateException("无法读取虚拟屏界面：请先在虚拟屏启动一个应用后重试")
         val root = window.root
-            ?: throw IllegalStateException("无法读取屏幕 $displayId 的界面内容：请确认无障碍服务可以读取该窗口")
+            ?: throw IllegalStateException("无法读取虚拟屏界面内容：请确认无障碍服务可以读取该窗口")
         return GuiNodeTree.buildSnapshot(
             root = convert(root),
             packageName = root.packageName?.toString()?.takeIf { it.isNotBlank() },
@@ -95,7 +95,7 @@ class GuiAccessibilityActions(
         }
         val node = requireNode(displayId, selector)
         if (node.bounds.width <= 0 || node.bounds.height <= 0) {
-            throw IllegalStateException("目标节点当前不可见，请重新 gui_observe")
+            throw IllegalStateException("目标节点当前不可见，请重新 screen_observe")
         }
         val info = node.token as? AccessibilityNodeInfo
         if (durationMs >= LONG_PRESS_MILLIS) {
@@ -118,8 +118,8 @@ class GuiAccessibilityActions(
             throw IllegalArgumentException("输入文本需要 ref 或 text 选择器，不能使用坐标")
         }
         val info = requireNode(displayId, selector).token as? AccessibilityNodeInfo
-            ?: throw IllegalStateException("无法编辑该节点，请重新 gui_observe")
-        if (!info.refresh()) throw IllegalArgumentException("输入框已失效，请重新 gui_observe")
+            ?: throw IllegalStateException("无法编辑该节点，请重新 screen_observe")
+        if (!info.refresh()) throw IllegalArgumentException("输入框已失效，请重新 screen_observe")
         if (!info.isEditable) throw IllegalArgumentException("目标节点不是输入框，请选择可编辑的节点")
         info.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
         val arguments = Bundle().apply {
@@ -128,7 +128,7 @@ class GuiAccessibilityActions(
         if (!info.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)) {
             throw IllegalStateException("写入文本失败：输入框可能不接受程序输入")
         }
-        if (!info.refresh()) throw IllegalStateException("写入后无法回读输入框，请重新 gui_observe 确认")
+        if (!info.refresh()) throw IllegalStateException("写入后无法回读输入框，请重新 screen_observe 确认")
         val actual = info.text?.toString().orEmpty()
         return GuiTextResult(actual, actual == text)
     }
@@ -167,7 +167,7 @@ class GuiAccessibilityActions(
         }
     }
 
-    override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): Boolean =
+    override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): GuiWaitOutcome =
         waitFor(GUI_MAIN_DISPLAY, packageName, text, textGone, timeoutMs)
 
     override suspend fun waitFor(
@@ -176,7 +176,7 @@ class GuiAccessibilityActions(
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean {
+    ): GuiWaitOutcome {
         val service = requireService()
         val deadline = System.currentTimeMillis() + timeoutMs
         while (true) {
@@ -185,20 +185,24 @@ class GuiAccessibilityActions(
             } else {
                 selectDisplayWindow(service, displayId)
             }
-            val root = if (window != null) {
-                window.root
-            } else if (displayId == GUI_MAIN_DISPLAY) {
-                service.rootInActiveWindow
-            } else {
-                null
+            val root = when {
+                window != null -> window.root
+                displayId == GUI_MAIN_DISPLAY -> service.rootInActiveWindow
+                else -> null
             }
             val currentPackage = root?.packageName?.toString()?.takeIf { it.isNotBlank() }
                 ?: if (displayId == GUI_MAIN_DISPLAY) service.currentPackageName else null
+            val windowTitle = window?.title?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: if (displayId == GUI_MAIN_DISPLAY) service.currentWindowTitle else null
+            val current = GuiWaitOutcome(matched = false, packageName = currentPackage, windowTitle = windowTitle)
+            fun contains(value: String): Boolean =
+                windowTitle?.contains(value, ignoreCase = true) == true ||
+                    (root != null && containsText(root, value, 0))
             val packageMatches = packageName == null || currentPackage == packageName
-            val textMatches = text == null || (root != null && containsText(root, text, 0))
-            val textGoneMatches = textGone == null || root == null || !containsText(root, textGone, 0)
-            if (packageMatches && textMatches && textGoneMatches) return true
-            if (System.currentTimeMillis() >= deadline) return false
+            val textMatches = text == null || contains(text)
+            val textGoneMatches = textGone == null || !contains(textGone)
+            if (packageMatches && textMatches && textGoneMatches) return current.copy(matched = true)
+            if (System.currentTimeMillis() >= deadline) return current
             delay(WAIT_POLL_MILLIS)
         }
     }
@@ -267,7 +271,7 @@ class GuiAccessibilityActions(
         AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY ->
             "无法识别当前屏幕，请稍后重试"
         AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_WINDOW ->
-            "当前窗口无法截图，请重新 gui_observe 后重试"
+            "当前窗口无法截图，请重新 screen_observe 后重试"
         AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERNAL_ERROR ->
             "系统截图失败，请稍后重试"
         else -> "截图失败（系统错误码 $errorCode）"
@@ -281,7 +285,7 @@ class GuiAccessibilityActions(
     private fun requireNode(displayId: Int, selector: GuiSelector): GuiSnapshotNode {
         val current = snapshots[displayId] ?: throw IllegalStateException(missingSnapshotMessage(displayId))
         return GuiNodeTree.find(current, selector)
-            ?: throw IllegalArgumentException("界面上找不到匹配的节点，请重新 gui_observe")
+            ?: throw IllegalArgumentException("界面上找不到匹配的节点，请重新 screen_observe")
     }
 
     private fun clickNode(node: AccessibilityNodeInfo): Boolean {
@@ -320,10 +324,15 @@ class GuiAccessibilityActions(
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
         val windows = service.windowsOnAllDisplays[displayId] ?: return null
         val candidates = windows.map { window ->
+            val bounds = Rect()
+            window.getBoundsInScreen(bounds)
             GuiWindowCandidate(
                 kind = windowKindOf(window),
                 layer = window.layer,
                 readable = window.root != null,
+                active = window.isActive,
+                focused = window.isFocused,
+                area = bounds.width() * bounds.height(),
             )
         }
         val index = GuiWindowSelection.topmostReadable(candidates) ?: return null
@@ -460,23 +469,41 @@ internal data class GuiWindowCandidate(
     val kind: GuiWindowKind,
     val layer: Int,
     val readable: Boolean,
+    val active: Boolean = false,
+    val focused: Boolean = false,
+    val area: Int = 0,
 )
 
 internal object GuiWindowSelection {
-    fun topmostReadable(candidates: List<GuiWindowCandidate>): Int? =
-        candidates.indices
-            .sortedByDescending { index -> candidates[index].layer }
-            .firstOrNull { index ->
+    private const val MIN_AREA_RATIO = 0.1f
+
+    fun topmostReadable(candidates: List<GuiWindowCandidate>): Int? {
+        val readable = candidates.indices.filter { index ->
+            val candidate = candidates[index]
+            candidate.readable && candidate.kind in PREFERRED_KINDS && candidate.area > 0
+        }
+        if (readable.isEmpty()) return null
+        val largestArea = readable.maxOf { index -> candidates[index].area }
+        val minimumArea = (largestArea * MIN_AREA_RATIO).toInt()
+        return readable
+            .filter { index ->
                 val candidate = candidates[index]
-                candidate.readable && candidate.kind in PREFERRED_KINDS
+                candidate.active || candidate.focused || candidate.area >= minimumArea
             }
+            .maxWithOrNull(
+                compareBy<Int> { index -> candidates[index].active }
+                    .thenBy { index -> candidates[index].focused }
+                    .thenBy { index -> candidates[index].area }
+                    .thenBy { index -> candidates[index].layer },
+            )
+    }
 
     private val PREFERRED_KINDS = setOf(GuiWindowKind.APPLICATION, GuiWindowKind.SYSTEM)
 }
 
 internal fun missingSnapshotMessage(displayId: Int): String =
     if (displayId == GUI_MAIN_DISPLAY) {
-        "请先调用 gui_observe 读取当前界面"
+        "请先调用 screen_observe 读取主屏界面"
     } else {
-        "请先读取屏幕 $displayId 的界面后再使用 ref 或文本选择器"
+        "请先调用 screen_observe 读取虚拟屏界面后再使用 ref 或文本选择器"
     }

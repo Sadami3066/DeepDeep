@@ -69,6 +69,33 @@ class GuiNodeTreeTest {
     }
 
     @Test
+    fun scannedCountsNodesBeyondDepthBudget() {
+        val tree = node(
+            className = "root",
+            children = listOf(
+                node(
+                    className = "a",
+                    children = listOf(node(className = "a1", children = listOf(node(className = "a2")))),
+                ),
+                node(className = "b"),
+            ),
+        )
+        val snapshot = GuiNodeTree.buildSnapshot(root = tree, maxDepth = 1, maxNodes = 10)
+        assertEquals(3, snapshot.nodes.size)
+        assertEquals(5, snapshot.scanned)
+        assertTrue(snapshot.truncated)
+    }
+
+    @Test
+    fun scannedMatchesNodeCountWhenNothingIsCut() {
+        val tree = node(className = "root", children = listOf(node(className = "a")))
+        val snapshot = GuiNodeTree.buildSnapshot(root = tree, maxDepth = 5, maxNodes = 10)
+        assertEquals(2, snapshot.nodes.size)
+        assertEquals(2, snapshot.scanned)
+        assertFalse(snapshot.truncated)
+    }
+
+    @Test
     fun parseAndResolveRef() {
         val snapshot = snapshotOf(node(className = "root", children = listOf(node(className = "a"))))
         assertEquals(1, GuiNodeTree.parseRef("1"))

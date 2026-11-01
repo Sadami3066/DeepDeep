@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
 import io.github.whywood.deepdeep.plugin.gui.GuiTextResult
+import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 
 class AccessibilityScreenBackend(
     private val mainActions: GuiActions,
@@ -48,7 +49,7 @@ class AccessibilityScreenBackend(
         text: String?,
         textGone: String?,
         timeoutMs: Long,
-    ): Boolean = if (displayId == MAIN_DISPLAY_ID) {
+    ): GuiWaitOutcome = if (displayId == MAIN_DISPLAY_ID) {
         mainActions.waitFor(packageName, text, textGone, timeoutMs)
     } else {
         requireDisplayActions().waitFor(displayId, packageName, text, textGone, timeoutMs)

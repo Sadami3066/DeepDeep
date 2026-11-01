@@ -211,7 +211,7 @@ class GuiPlugin(
             - ref 只对同一 target 屏幕的最近一次 `screen_observe` 有效；换屏幕或重新 observe 后旧 ref 失效。
             - `screen_tap` 的目标只能给一种：ref、text、desc、resourceId、class 或 x、y 坐标；节点选择器与坐标不能同时提供。`screen_scroll` 的 ref 只用于指定可滚动节点。
             - text 与 desc 是忽略大小写的包含匹配；resourceId 可写全名（`com.app:id/ok`）或短名（`ok`）；class 可写全名或简名（`Button`）。
-            - `screen_observe` 默认读取全树深度，`truncated=true` 表示还有未返回的节点。过滤时 `count` 是返回数、`total` 是命中总数、`scanned` 是检索节点数；`count=0` 时看 `hint`，text 与 desc 是两个字段，可分别尝试。
+            - `screen_observe` 默认读取全树深度；`count` 是返回数、`total` 是命中总数、`scanned` 是遍历到的节点数、`filtered` 是被屏外或零面积规则丢弃的节点数；`truncated=true` 表示 maxDepth/maxNodes 还有节点未返回。`count=0` 时看 `hint`，text 与 desc 是两个字段，可分别尝试。
             - 坐标只在节点树没有可用信息时使用，先 observe 确认 bounds；坐标超出当前屏幕会直接报错并带上屏幕宽高。
 
             ## 输入
@@ -222,9 +222,9 @@ class GuiPlugin(
 
             ## 等待
 
-            - 界面切换、加载和动画不会立刻稳定：用 `screen_wait` 等包名或文字出现，`forTextGone` 等加载提示消失。
+            - 界面切换、加载和动画不会立刻稳定：用 `screen_wait` 等包名或文字出现，`forTextGone` 等加载提示消失；`forText` 也会匹配窗口标题。
             - 多个条件可组合，全部满足才返回 `ok:true`。
-            - 等待超时返回 `ok:false`，不是错误；重新 observe 判断当前状态后再决定下一步。
+            - 结果里的 `current` 给出当前窗口的 package 与 title，成功和超时都有；超时返回 `ok:false`，不是错误，按 `current` 判断当前状态后再决定下一步，不要盲目重复等待。
             - 不要用连续点击或长串坐标滑动猜界面状态。
 
             ## 截图
@@ -236,7 +236,7 @@ class GuiPlugin(
 
             ## 启动应用
 
-            - `screen_app action=list` 查包名，`screen_app action=launch` 启动；启动前确认目标屏幕可用（虚拟屏需在线）。
+            - `screen_app action=list` 查包名，`screen_app action=launch` 启动；`target=virtual` 的 list 与 launch 都要求虚拟屏在线，虚拟屏未启动时会直接报错。
             - 启动结果里 `onExpectedScreen=false` 表示应用可能没有出现在目标屏幕：先向用户说明，不要反复重试。
 
             ## 安全红线
