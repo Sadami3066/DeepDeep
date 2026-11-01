@@ -161,8 +161,30 @@ class ArrangeToolsTest {
         )
 
         assertNull(result.isError)
-        assertEquals(1, (result.json()["events"] as JsonArray).size)
+        val json = result.json()
+        assertEquals(1, (json["events"] as JsonArray).size)
+        assertEquals(1, json["count"]!!.jsonPrimitive.int)
+        assertEquals("2026-10-26 00:00", json["rangeStartText"]!!.jsonPrimitive.content)
+        assertEquals("2026-10-27 00:00", json["rangeEndText"]!!.jsonPrimitive.content)
         assertEquals(10, calendar.lastLimit)
+    }
+
+    @Test
+    fun emptyRangeReportsCountAndReadableBounds() = runTest {
+        val result = run(
+            "list",
+            buildJsonObject {
+                put("start", "2026-11-01 00:00")
+                put("end", "2026-11-02 00:00")
+            },
+        )
+
+        assertNull(result.isError)
+        val json = result.json()
+        assertEquals(0, (json["events"] as JsonArray).size)
+        assertEquals(0, json["count"]!!.jsonPrimitive.int)
+        assertEquals("2026-11-01 00:00", json["rangeStartText"]!!.jsonPrimitive.content)
+        assertEquals("2026-11-02 00:00", json["rangeEndText"]!!.jsonPrimitive.content)
     }
 
     @Test

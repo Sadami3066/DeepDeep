@@ -179,7 +179,10 @@ private fun arrangeCalendarTool(
                         textResult(
                             buildJsonObject {
                                 put("rangeStart", start)
+                                put("rangeStartText", formatCalendarTime(start, allDay = false, zone = zone))
                                 put("rangeEnd", end)
+                                put("rangeEndText", formatCalendarTime(end, allDay = false, zone = zone))
+                                put("count", events.size)
                                 putJsonArray("events") { events.forEach { add(eventJson(it, zone)) } }
                             }.toString(),
                         )
