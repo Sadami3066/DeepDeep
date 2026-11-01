@@ -295,7 +295,7 @@ class FeishuPlugin(
         is PluginStatus.Ready -> buildString {
             appendLine("飞书插件已安装并已连接为 ${status.account ?: "当前账号"}。")
             appendLine("在 bash 中通过 `lark-cli` 访问飞书；个人数据必须加 `--as user`。")
-            appendLine("发送、修改、删除等写操作前必须先向用户确认，支持时先用 `--dry-run` 预览。")
+            appendLine("已授权范围内直接执行；超出授权的发送、修改、删除等操作先询问，支持时可用 `--dry-run` 预览。")
             appendLine("不熟悉命令时先运行 `lark-cli skills list` 或 `lark-cli skills read <domain>` 查看用法。")
             if (lastMissingScopes.isNotEmpty()) {
                 appendLine("当前授权缺少 ${lastMissingScopes.size} 项权限：${lastMissingScopes.joinToString(" ")}。")
@@ -422,7 +422,7 @@ class FeishuPlugin(
             - 命令返回 `missing_scopes` 或登录时提示缺少权限，说明飞书应用本身未开通该权限；不要反复重新授权。
             - 电子表格/多维表格没有直读权限时，改用导出兜底：`mkdir -p <download-directory> && lark-cli drive +export --url <链接> --file-extension xlsx --output-dir <download-directory>`（电子表格），多维表格把 `xlsx` 换成 `base`，导出到 `<download-directory>` 后再解析文件。
             - 需要直读时，请用户在插件详情页点「应用权限」，到飞书开放平台为应用开通对应权限，再重新授权。
-            - 只读优先：发送、修改、删除、授权等写操作必须先向用户确认；支持 `--dry-run` 的命令先预览。
+            - 已授权范围内直接执行；超出授权的发送、修改、删除、授权等操作先询问；支持时可用 `--dry-run` 预览。
             - 高风险写入会要求确认参数或返回退出码 10，先向用户说明再继续。
 
             常用入口：

@@ -201,7 +201,7 @@ class WecomPlugin internal constructor(
                 "企业微信插件已安装并已连接" +
                     (status.account?.let { "（Bot ID：$it）" } ?: "") + "。",
             )
-            appendLine("在 bash 中通过 `wecom-cli` 访问企业微信；只读优先，发送消息、写文档、创建或修改日程/待办等写操作前必须先向用户确认，支持时先用 `--dry-run` 预览。")
+            appendLine("在 bash 中通过 `wecom-cli` 访问企业微信；已授权范围内直接执行；超出授权的发送、修改、删除等操作先询问，支持时可用 `--dry-run` 预览。")
             appendLine("发消息前先运行 `wecom-cli message aibot sessions list`，使用本次返回的 `chat_id`；给授权人发消息可用 `wecom-cli identity whoami` 的 ID 作为 chat_id。")
             appendLine("不熟悉命令时先看 `wecom-cli --help`，或对应服务的 `--help`、`--doc`、`--schema`。")
             append("不要自行运行 `auth init`，也不要读取或输出凭据文件；授权由用户在插件页完成。")
@@ -315,11 +315,11 @@ class WecomPlugin internal constructor(
 
             - 先确认命令与参数：`wecom-cli --help`、`wecom-cli <service> --help`；需要文档或 schema 时加 `--doc` / `--schema`。
             - 服务目录在线获取，需要已授权与网络；鉴权失败时提示用户在插件页重新授权，不要自行运行 `auth init`。
-            - 只读优先：发送消息、写文档、创建或修改日程/待办、上传下载等写操作前必须先向用户确认；支持 `--dry-run` 的命令先预览。
+            - 已授权范围内直接执行；超出授权的发送、修改、删除等操作先询问；支持时可用 `--dry-run` 预览。
             - 请求体可用命名参数、`--json '<JSON>'` 或 `--set path=value` 组合给出。
             - 发消息前先 `wecom-cli message aibot sessions list`，用本次返回的 `chat_id`；给授权人发消息可用 `wecom-cli identity whoami` 的 ID 作为 chat_id。
             - 发送图片、文件、语音或视频前，先经 `wecom-cli media` 上传拿到 `media_id`。
-            - 拉取多页数据用 `--page-count <n>`；下载文件用 `--output-dir <download-directory>` 落到工作区，再用 present 交付给用户。
+            - 拉取多页数据用 `--page-count <n>`；下载文件用 `--output-dir <download-directory>` 落到工作区，再按当前运行支持的交付方式返回文件绝对路径。
             - 不要自行创建定时任务或总结流程，除非用户明确要求。
         """.trimIndent()
     }
