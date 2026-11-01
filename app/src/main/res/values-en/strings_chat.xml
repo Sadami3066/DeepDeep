@@ -8,6 +8,10 @@
     <string name="assistant_attach_open">View attachment</string>
     <string name="assistant_attach_share">Share file</string>
     <string name="assistant_attach_unpreviewable">Cannot preview this file</string>
+    <string name="attach_pick_image">Choose from library</string>
+    <string name="attach_pick_file">Choose a file</string>
+    <string name="attach_take_photo">Take a photo</string>
+    <string name="attach_camera_unavailable">No camera app available</string>
     <string name="assistant_close">Close</string>
     <string name="assistant_configure_hint">No model configured</string>
     <string name="assistant_configure_input">Configure a model in settings first</string>
