@@ -58,6 +58,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.service.AppVisibility
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -105,12 +106,14 @@ class MiCloudLoginActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        AppVisibility.activityStarted()
         startWatching()
     }
 
     override fun onStop() {
         watchJob?.cancel()
         watchJob = null
+        AppVisibility.activityStopped()
         super.onStop()
     }
 

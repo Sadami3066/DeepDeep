@@ -31,6 +31,13 @@ data class PluginInteraction(
     val progress: Int? = null,
     val confirmInstall: Boolean = false,
     val cancellable: Boolean = true,
+    val customContent: PluginSetupContent? = null,
+)
+
+data class PluginSetupNotice(
+    val pluginId: String,
+    val pluginName: String,
+    val stage: String,
 )
 
 data class PluginsUiState(

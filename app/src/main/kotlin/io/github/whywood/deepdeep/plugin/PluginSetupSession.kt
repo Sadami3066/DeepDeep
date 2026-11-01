@@ -295,6 +295,29 @@ internal class PluginSetupSession(
                         imagePath = imagePath,
                         progress = progress,
                         confirmInstall = false,
+                        customContent = null,
+                    ),
+                )
+            }
+        }
+
+        override fun custom(content: PluginSetupContent) {
+            if (cancelRequested) return
+            state.update { current ->
+                val base = current.interaction?.takeIf { it.pluginId == plugin.id }
+                    ?: PluginInteraction(
+                        pluginId = plugin.id,
+                        title = strings.format(R.string.plugins_setup_title, strings.get(plugin.nameRes)),
+                        stageTitle = strings.get(plugin.nameRes),
+                    )
+                current.copy(
+                    interaction = base.copy(
+                        customContent = content,
+                        stageMessage = null,
+                        url = null,
+                        imagePath = null,
+                        progress = null,
+                        confirmInstall = false,
                     ),
                 )
             }

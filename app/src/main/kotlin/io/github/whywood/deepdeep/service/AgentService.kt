@@ -10,12 +10,16 @@ import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.floating.FloatingWindowController
+import io.github.whywood.deepdeep.plugin.PluginSetupNotice
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AgentService : Service() {
@@ -87,6 +91,20 @@ class AgentService : Service() {
     }
 
     private fun startFloatingWindow() {
+        val pluginSetup = graph.pluginManager.state
+            .map { state ->
+                state.interaction?.let { interaction ->
+                    PluginSetupNotice(
+                        pluginId = interaction.pluginId,
+                        pluginName = state.plugins
+                            .firstOrNull { it.plugin.id == interaction.pluginId }
+                            ?.plugin?.let { getString(it.nameRes) }
+                            ?: interaction.pluginId,
+                        stage = interaction.stageTitle,
+                    )
+                }
+            }
+            .stateIn(scope, SharingStarted.Eagerly, null)
         val controller = FloatingWindowController(
             context = this,
             runtime = graph.host,
@@ -96,6 +114,7 @@ class AgentService : Service() {
             theme = graph.themePreferences.theme,
             fontStyle = graph.fontPreferences.read(),
             virtualScreenProvider = { VirtualScreenRuntime.engine() },
+            pluginSetup = pluginSetup,
             onOpenApp = { AppVisibility.bringToFront(this) },
         )
         floatingWindow = controller

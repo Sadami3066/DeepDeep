@@ -93,6 +93,8 @@ interface PluginUi {
         imagePath: String? = null,
     )
 
+    fun custom(content: PluginSetupContent)
+
     fun progress(percent: Int?, @StringRes labelRes: Int)
 
     fun cancelled(): Boolean

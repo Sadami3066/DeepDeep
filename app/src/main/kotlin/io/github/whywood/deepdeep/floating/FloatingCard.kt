@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -60,6 +61,7 @@ internal fun FloatingEventCard(
     onAnswerQuestion: (PendingQuestion, QuestionOption) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
+    onOpenSetup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -70,6 +72,7 @@ internal fun FloatingEventCard(
     val bottomPadding = if (arrowSide == FloatingArrowSide.BOTTOM) near else far
     val onClick = when (card) {
         is FloatingEventCard.Question -> null
+        is FloatingEventCard.PluginSetup -> onOpenSetup
         is FloatingEventCard.Completed -> ({ onOpenCompleted(card.completion) })
     }
     Box(
@@ -111,6 +114,12 @@ internal fun FloatingEventCard(
                             queueSize = queueSize,
                             onAnswer = onAnswerQuestion,
                             onOpenOverlay = { onOpenQuestion(card.pending) },
+                        )
+
+                        is FloatingEventCard.PluginSetup -> SetupBody(
+                            notice = card.notice,
+                            queueSize = queueSize,
+                            onDismiss = onDismiss,
                         )
 
                         is FloatingEventCard.Completed -> CompletedBody(
@@ -228,6 +237,36 @@ private fun QuestionOptionRow(
             }
         }
     }
+}
+
+@Composable
+private fun SetupBody(
+    notice: PluginSetupNotice,
+    queueSize: Int,
+    onDismiss: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    CardHeader(
+        label = stringResource(R.string.floating_card_plugin_setup),
+        labelColor = colors.accent,
+        title = notice.pluginName,
+        queueSize = queueSize,
+        onClose = onDismiss,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = notice.stage,
+        style = DdType.body,
+        color = colors.ink,
+        maxLines = 3,
+        overflow = TextOverflow.Ellipsis,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.floating_card_plugin_setup_hint),
+        style = DdType.bodySmall,
+        color = colors.inkTertiary,
+    )
 }
 
 @Composable
@@ -407,5 +446,6 @@ private fun PresentedItemType.icon(): DdIcon = when (this) {
 
 internal fun FloatingEventCard.sessionId(): String = when (this) {
     is FloatingEventCard.Question -> pending.sessionId
+    is FloatingEventCard.PluginSetup -> ""
     is FloatingEventCard.Completed -> completion.sessionId
 }
