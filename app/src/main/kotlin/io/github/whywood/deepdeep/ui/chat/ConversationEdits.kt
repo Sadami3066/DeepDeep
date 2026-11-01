@@ -50,6 +50,23 @@ internal fun ConversationState.retryExternallyStartedRun(runId: String, startedA
     return retried.copy(messages = updated)
 }
 
+internal fun ConversationState.markRetryScheduled(attempt: Int, now: Long): ConversationState {
+    val index = messages.indexOfLast {
+        it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
+    }
+    val updated = if (index < 0) {
+        messages
+    } else {
+        messages.toMutableList().also { list -> list[index] = list[index].copy(retrying = true) }
+    }
+    return copy(
+        messages = updated,
+        sending = true,
+        activity = RuntimeActivity.Retrying(attempt),
+        activityStartedAt = now,
+    )
+}
+
 internal fun ConversationState.markRetryingTail(now: Long): ConversationState {
     val index = messages.indexOfLast {
         it.role == AssistantRole.ASSISTANT && it.status == MessageStatus.FAILED
@@ -66,6 +83,7 @@ internal fun ConversationState.markRetryingTail(now: Long): ConversationState {
     } else {
         messages.take(index) + messages[index].copy(
             streaming = true,
+            status = MessageStatus.RUNNING,
             retrying = true,
             runId = "",
             finishedAt = null,
@@ -76,5 +94,20 @@ internal fun ConversationState.markRetryingTail(now: Long): ConversationState {
         sending = true,
         activity = RuntimeActivity.Thinking,
         activityStartedAt = now,
+    )
+}
+
+internal fun ConversationState.cancelRetry(now: Long): ConversationState {
+    val index = messages.indexOfLast { it.retrying }
+    val updated = if (index < 0) {
+        messages
+    } else {
+        messages.toMutableList().also { list -> list[index] = list[index].copy(retrying = false) }
+    }
+    return copy(
+        messages = updated,
+        sending = false,
+        activity = null,
+        activityStartedAt = null,
     )
 }

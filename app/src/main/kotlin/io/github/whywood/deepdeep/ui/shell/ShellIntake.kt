@@ -172,14 +172,11 @@ internal fun ShellIntakeHost(
 
 @Composable
 internal fun rememberShellChatUiStrings(): ChatUiStrings {
-    val retryTemplate = stringResource(R.string.chat_status_retrying_format)
     val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
-    val autoRetryTemplate = stringResource(R.string.chat_status_auto_retry)
     val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
     val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
     return ChatUiStrings(
         thinking = stringResource(R.string.chat_status_thinking),
-        retrying = { attempt -> retryTemplate.replace("%1\$d", attempt.toString()) },
         compacting = stringResource(R.string.chat_status_compacting),
         compactionFailed = stringResource(R.string.chat_status_compaction_failed),
         runningTool = { name -> runningToolTemplate.replace("%1\$s", displayToolName(name)) },
@@ -208,9 +205,6 @@ internal fun rememberShellChatUiStrings(): ChatUiStrings {
         insufficientBalance = stringResource(R.string.chat_error_insufficient_balance),
         modelUnavailable = stringResource(R.string.chat_error_model_unavailable),
         retry = stringResource(R.string.assistant_retry),
-        autoRetrying = { attempt, max ->
-            autoRetryTemplate.replace("%1\$d", attempt.toString()).replace("%2\$d", max.toString())
-        },
         withCode = { base, code ->
             errorCodeTemplate.replace("%1\$s", base).replace("%2\$s", code)
         },

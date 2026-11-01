@@ -98,6 +98,7 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
@@ -233,6 +234,8 @@ fun ChatScreen(
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
+    val retryActivity = state.activity as? RuntimeActivity.Retrying
+    val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
     val stablePendingQuestions = remember(pendingQuestions) { pendingQuestions }
     val thinkingLevels = remember(state.models, state.modelId) {
         state.models.firstOrNull { it.id == state.modelId }?.thinkingLevels.orEmpty()
@@ -421,6 +424,11 @@ fun ChatScreen(
                                         onOpenPresentFile = onOpenPresentFile,
                                         onSharePresentFile = onSharePresentFile,
                                         onOpenWorkshop = onOpenWorkshop,
+                                        retryAttempt = if (message.id == retryTargetId) {
+                                            retryActivity?.attempt
+                                        } else {
+                                            null
+                                        },
                                     )
                                 }
                             }
