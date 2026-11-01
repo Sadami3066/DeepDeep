@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.PluginInteraction
 import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.plugin.PluginSetupContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -50,8 +52,8 @@ fun PluginSetupSheet(
     manager: PluginManager,
     interaction: PluginInteraction,
 ) {
-    val colors = deepDeepColors()
     val context = LocalContext.current
+    val onCancel = { manager.cancelInteraction() }
 
     fun openUrl(url: String) {
         runCatching {
@@ -59,100 +61,151 @@ fun PluginSetupSheet(
         }
     }
 
-    DdSheet(onDismiss = { manager.cancelInteraction() }) {
+    DdSheet(onDismiss = onCancel) {
         Column(Modifier.fillMaxWidth().testTag("plugin_setup_sheet")) {
             DdSheetHeader(
                 title = interaction.title,
-                onClose = { manager.cancelInteraction() },
+                onClose = onCancel,
             )
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 520.dp)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-            ) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = interaction.stageTitle,
-                    style = DdType.label,
-                    color = colors.ink,
+            val custom = interaction.customContent
+            if (custom != null) {
+                CustomSetupContent(
+                    content = custom,
+                    onCancel = onCancel,
                 )
-                interaction.stageMessage?.let { message ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = message,
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                    )
-                }
-                interaction.imagePath?.let { path ->
-                    Spacer(Modifier.height(14.dp))
-                    PluginQrCode(path = path, description = interaction.stageTitle)
-                }
-                if (interaction.confirmInstall) {
-                    Spacer(Modifier.height(20.dp))
-                    DdPrimaryButton(
-                        text = stringResource(R.string.plugins_confirm_install_continue),
-                        onClick = { manager.confirmInstall() },
-                        modifier = Modifier.fillMaxWidth().testTag("plugin_setup_confirm"),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    DdTextAction(
-                        text = stringResource(R.string.plugins_cancel),
-                        onClick = { manager.cancelInteraction() },
-                        modifier = Modifier.testTag("plugin_setup_cancel"),
-                        color = colors.inkSecondary,
-                    )
-                } else {
-                    interaction.url?.let { url ->
-                        Spacer(Modifier.height(12.dp))
-                        DdTextAction(
-                            text = stringResource(R.string.plugins_open_browser),
-                            onClick = { openUrl(url) },
-                            modifier = Modifier.testTag("plugin_setup_open_browser"),
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = url,
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    interaction.progress?.let { progress ->
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = stringResource(R.string.plugins_downloading_percent, progress),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    if (interaction.url != null || interaction.progress != null) {
-                        DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = if (interaction.url != null) {
-                                stringResource(R.string.plugins_waiting_browser)
-                            } else {
-                                interaction.stageTitle
-                            },
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    DdTextAction(
-                        text = stringResource(R.string.plugins_cancel),
-                        onClick = { manager.cancelInteraction() },
-                        modifier = Modifier.testTag("plugin_setup_cancel"),
-                        color = colors.inkSecondary,
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
+            } else {
+                StandardSetupContent(
+                    manager = manager,
+                    interaction = interaction,
+                    onOpenUrl = ::openUrl,
+                    onCancel = onCancel,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun CustomSetupContent(
+    content: PluginSetupContent,
+    onCancel: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(max = 520.dp)
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+        key(content.key) {
+            content.render()
+        }
+        Spacer(Modifier.height(12.dp))
+        DdTextAction(
+            text = stringResource(R.string.plugins_cancel),
+            onClick = onCancel,
+            modifier = Modifier.testTag("plugin_setup_cancel"),
+            color = colors.inkSecondary,
+        )
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun StandardSetupContent(
+    manager: PluginManager,
+    interaction: PluginInteraction,
+    onOpenUrl: (String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(max = 520.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = interaction.stageTitle,
+            style = DdType.label,
+            color = colors.ink,
+        )
+        interaction.stageMessage?.let { message ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = DdType.bodySmall,
+                color = colors.inkSecondary,
+            )
+        }
+        interaction.imagePath?.let { path ->
+            Spacer(Modifier.height(14.dp))
+            PluginQrCode(path = path, description = interaction.stageTitle)
+        }
+        if (interaction.confirmInstall) {
+            Spacer(Modifier.height(20.dp))
+            DdPrimaryButton(
+                text = stringResource(R.string.plugins_confirm_install_continue),
+                onClick = { manager.confirmInstall() },
+                modifier = Modifier.fillMaxWidth().testTag("plugin_setup_confirm"),
+            )
+            Spacer(Modifier.height(8.dp))
+            DdTextAction(
+                text = stringResource(R.string.plugins_cancel),
+                onClick = onCancel,
+                modifier = Modifier.testTag("plugin_setup_cancel"),
+                color = colors.inkSecondary,
+            )
+        } else {
+            interaction.url?.let { url ->
+                Spacer(Modifier.height(12.dp))
+                DdTextAction(
+                    text = stringResource(R.string.plugins_open_browser),
+                    onClick = { onOpenUrl(url) },
+                    modifier = Modifier.testTag("plugin_setup_open_browser"),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = url,
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            interaction.progress?.let { progress ->
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.plugins_downloading_percent, progress),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            if (interaction.url != null || interaction.progress != null) {
+                DdSpinner(size = 18.dp, strokeWidth = 2.dp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = if (interaction.url != null) {
+                        stringResource(R.string.plugins_waiting_browser)
+                    } else {
+                        interaction.stageTitle
+                    },
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+            DdTextAction(
+                text = stringResource(R.string.plugins_cancel),
+                onClick = onCancel,
+                modifier = Modifier.testTag("plugin_setup_cancel"),
+                color = colors.inkSecondary,
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 

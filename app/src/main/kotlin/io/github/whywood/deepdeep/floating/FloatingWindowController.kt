@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.plugin.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
@@ -62,11 +63,12 @@ class FloatingWindowController(
     private val theme: Flow<ThemeMode>,
     private val fontStyle: DdFontStyle,
     private val virtualScreenProvider: () -> VirtualScreenController?,
+    private val pluginSetup: StateFlow<PluginSetupNotice?> = MutableStateFlow(null),
     private val onOpenApp: () -> Unit,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val feedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope)
+    private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope, pluginSetup)
     private val windowContext = LanguagePreferences.wrap(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
@@ -396,6 +398,7 @@ class FloatingWindowController(
                             feed.removeCompleted(completion.key)
                             openSession(completion.sessionId)
                         },
+                        onOpenSetup = onOpenApp,
                         onDismiss = { feed.dismissCard(value.card.key) },
                     )
 
@@ -715,6 +718,7 @@ class FloatingWindowController(
 
     private fun cardTitle(card: FloatingEventCard): String = when (card) {
         is FloatingEventCard.Question -> sessionTitle(card.pending.sessionId)
+        is FloatingEventCard.PluginSetup -> card.notice.pluginName
         is FloatingEventCard.Completed -> card.completion.title.ifBlank {
             sessionTitle(card.completion.sessionId)
         }

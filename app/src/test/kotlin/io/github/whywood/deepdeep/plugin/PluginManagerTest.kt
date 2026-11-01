@@ -560,6 +560,106 @@ class PluginManagerTest {
         override suspend fun status(): PluginStatus = PluginStatus.Ready("ready")
     }
 
+    @Test
+    fun setupExposesPluginCustomContent() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val shown = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        plugin.setupHook = { ui ->
+            ui.custom(PluginSetupContent("login") { })
+            shown.complete(Unit)
+            finish.await()
+        }
+        val result = async { manager.setup(plugin.id) }
+        advanceUntilIdle()
+        shown.await()
+
+        val interaction = manager.state.value.interaction
+        assertNotNull(interaction)
+        assertEquals("login", interaction!!.customContent?.key)
+        assertTrue(manager.state.value.busy)
+
+        finish.complete(Unit)
+        advanceUntilIdle()
+        assertNull(manager.state.value.interaction)
+        assertTrue(result.await().ok)
+    }
+
+    @Test
+    fun stageReplacesCustomSetupContent() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val customShown = CompletableDeferred<Unit>()
+        val staged = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        plugin.setupHook = { ui ->
+            ui.custom(PluginSetupContent("form") { })
+            customShown.complete(Unit)
+            staged.await()
+            ui.stage(R.string.plugins_title)
+            finish.await()
+        }
+        val result = async { manager.setup(plugin.id) }
+        advanceUntilIdle()
+        customShown.await()
+        assertNotNull(manager.state.value.interaction?.customContent)
+
+        staged.complete(Unit)
+        advanceUntilIdle()
+        assertNull(manager.state.value.interaction?.customContent)
+
+        finish.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(result.await().ok)
+    }
+
+    @Test
+    fun cancelInteractionClearsCustomSetupContent() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val shown = CompletableDeferred<Unit>()
+        val blocked = CompletableDeferred<Unit>()
+        plugin.setupHook = { ui ->
+            ui.custom(PluginSetupContent("form") { })
+            shown.complete(Unit)
+            blocked.await()
+        }
+        val result = async { manager.setup(plugin.id) }
+        advanceUntilIdle()
+        shown.await()
+        assertNotNull(manager.state.value.interaction?.customContent)
+
+        manager.cancelInteraction()
+        advanceUntilIdle()
+
+        val setup = result.await()
+        assertFalse(setup.ok)
+        assertEquals("res:${R.string.plugins_setup_cancelled}", setup.error)
+        assertNull(manager.state.value.interaction)
+    }
+
     private class FakePlugin(
         var availability: PluginAvailability = PluginAvailability.Available,
     ) : OfficialPlugin {

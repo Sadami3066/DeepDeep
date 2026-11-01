@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.floating
 
+import io.github.whywood.deepdeep.plugin.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -418,6 +419,34 @@ class FloatingFeedReducerTest {
         val entry = completion("session-a", 1_000L, RunStatus.DONE).copy(items = listOf(untitled))
         assertEquals("report.md", entry.deliveryLabel)
         assertFalse(entry.key.isBlank())
+    }
+
+    @Test
+    fun pluginSetupCardAppearsAndClears() {
+        val notice = PluginSetupNotice("micloud", "小米云服务", "等待扫码")
+        val state = reduceFloatingFeed(baseState(), FloatingFeedEvent.SetupChanged(notice), 2_000L)
+        val card = floatingEventCard(state) as FloatingEventCard.PluginSetup
+        assertEquals("micloud", card.notice.pluginId)
+        assertEquals(FloatingWhaleMood.WAVE, floatingWhaleMood(state, 2_100L))
+
+        val dismissed = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard(card.key), 2_200L)
+        assertNull(floatingEventCard(dismissed))
+
+        val cleared = reduceFloatingFeed(dismissed, FloatingFeedEvent.SetupChanged(null), 2_300L)
+        assertNull(cleared.setup)
+        assertTrue(cleared.dismissedCardKeys.none { it.startsWith(PLUGIN_SETUP_CARD_PREFIX) })
+    }
+
+    @Test
+    fun pluginSetupCardRanksBelowQuestionAndAboveCompleted() {
+        val state = baseState().copy(
+            setup = PluginSetupNotice("micloud", "小米云服务", "等待扫码"),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+        )
+        assertEquals(FloatingEventCard.PluginSetup::class.java, floatingEventCard(state)?.javaClass)
+
+        val withQuestion = state.copy(questions = listOf(pending("req-1")))
+        assertEquals(FloatingEventCard.Question::class.java, floatingEventCard(withQuestion)?.javaClass)
     }
 
     private fun baseState(): FloatingFeedState = FloatingFeedState(lastEventAt = 1_000L)

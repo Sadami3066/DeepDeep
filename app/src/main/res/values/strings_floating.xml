@@ -21,6 +21,8 @@
     <string name="floating_card_failed">失败：%1$s</string>
     <string name="floating_card_dismiss">关闭通知</string>
     <string name="floating_card_queue"> · %1$d 条</string>
+    <string name="floating_card_plugin_setup">插件设置</string>
+    <string name="floating_card_plugin_setup_hint">点按继续</string>
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">收起面板</string>
