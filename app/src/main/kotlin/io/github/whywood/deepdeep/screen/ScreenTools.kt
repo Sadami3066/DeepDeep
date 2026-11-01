@@ -78,13 +78,13 @@ fun screenTools(
         CodingTool(
             name = virtualTool.name,
             label = virtualTool.label,
-            description = virtualTool.description + " Select target=virtual (default, preferred) or main explicitly. Never switches screens after a failure. After cancellation, observe the selected screen before retrying an action.",
+            description = virtualTool.description,
             parameters = JsonObject(virtualTool.parameters + ("properties" to JsonObject(properties + ("target" to buildJsonObject {
                 put("type", "string")
                 put("enum", buildJsonArray { add(JsonPrimitive("virtual")); add(JsonPrimitive("main")) })
                 put("default", "virtual")
-                put("description", "Screen to operate: virtual is preferred; main operates the phone display.")
             })))),
+            promptGuidelines = screenGuidelines(virtualTool.name),
             execute = { id, args, signal, update ->
                 signal?.throwIfAborted()
                 screenTool(JsonObject(emptyMap())) {
@@ -115,6 +115,22 @@ fun screenTools(
             },
         )
     }
+}
+
+internal const val SCREEN_TARGET_GUIDELINE =
+    "Screen tools default to the virtual screen; pass target=main explicitly for the phone display, and never switch screens after a failure."
+internal const val SCREEN_CANCEL_GUIDELINE =
+    "After a cancellation or timeout, observe the selected screen before retrying an action."
+internal const val SCREEN_OBSERVE_GUIDELINE =
+    "Observe the screen before node operations and verify the result afterward; refs expire on a new observation or a different screen instance."
+internal const val SCREEN_LAUNCH_GUIDELINE =
+    "After screen_launch, observe the target screen before interacting."
+
+private fun screenGuidelines(name: String): List<String> = buildList {
+    add(SCREEN_TARGET_GUIDELINE)
+    add(SCREEN_CANCEL_GUIDELINE)
+    if (name == "screen_observe") add(SCREEN_OBSERVE_GUIDELINE)
+    if (name == "screen_launch") add(SCREEN_LAUNCH_GUIDELINE)
 }
 
 private fun toolsForScreen(controller: ScreenController, screenshotDir: File): List<CodingTool> = listOf(

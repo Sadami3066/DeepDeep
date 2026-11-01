@@ -47,6 +47,7 @@ internal fun privilegedShellTool(
         description = description,
         parameters = parameters,
         label = name,
+        promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
         execute = { toolCallId, args, signal, onUpdate ->
             signal?.throwIfAborted()
             when {
@@ -103,3 +104,6 @@ internal const val MAX_SHELL_TIMEOUT_MILLIS = 120_000L
 internal const val DEFAULT_SHELL_TIMEOUT_SECONDS = 15L
 internal const val MIN_SHELL_TIMEOUT_SECONDS = 1L
 internal const val MAX_SHELL_TIMEOUT_SECONDS = 120L
+
+internal const val SYSTEM_SHELL_GUIDELINE =
+    "System shell output may already be truncated upstream; never claim a complete log when none is available."

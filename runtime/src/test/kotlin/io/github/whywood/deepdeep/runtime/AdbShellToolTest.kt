@@ -49,7 +49,7 @@ class AdbShellToolTest {
         val command = tool.parameters.getValue("properties").jsonObject.getValue("command").jsonObject
         assertFalse(command.getValue("description").toString().contains("not root"))
         assertNull(tool.promptSnippet)
-        assertNull(tool.promptGuidelines)
+        assertTrue(tool.promptGuidelines.orEmpty().contains(SYSTEM_SHELL_GUIDELINE))
     }
 
     @Test

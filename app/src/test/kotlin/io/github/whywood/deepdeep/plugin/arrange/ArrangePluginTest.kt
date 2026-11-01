@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.plugin.PluginStatus
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,14 +63,9 @@ class ArrangePluginTest {
     }
 
     @Test
-    fun promptBodyIsShortStatusAndSafetyNote() {
-        val body = plugin().promptBody(PluginStatus.Ready("x")).orEmpty()
-
-        assertTrue(body.contains("可用"))
-        assertTrue(body.contains("确认"))
-        assertFalse(body.contains("arrange_calendar"))
-        assertFalse(body.contains("READ_CALENDAR"))
-        assertTrue(body.length <= 120)
+    fun promptBodyStaysEmptyBecauseTheToolOwnsItsGuidance() = runTest {
+        assertNull(plugin().promptBody(PluginStatus.Ready("x")))
+        assertTrue(plugin().tools().single().promptGuidelines.orEmpty().contains(ARRANGE_CALENDAR_GUIDELINE))
     }
 
     @Test

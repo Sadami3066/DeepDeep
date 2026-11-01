@@ -201,7 +201,7 @@ class WecomPlugin internal constructor(
                 "企业微信插件已安装并已连接" +
                     (status.account?.let { "（Bot ID：$it）" } ?: "") + "。",
             )
-            appendLine("在 bash 中通过 `wecom-cli` 访问企业微信；已授权范围内直接执行；超出授权的发送、修改、删除等操作先询问，支持时可用 `--dry-run` 预览。")
+            appendLine("在 bash 中通过 `wecom-cli` 访问企业微信；发送、修改、删除等操作支持时先用 `--dry-run` 预览。")
             appendLine("发消息前先运行 `wecom-cli message aibot sessions list`，使用本次返回的 `chat_id`；给授权人发消息可用 `wecom-cli identity whoami` 的 ID 作为 chat_id。")
             appendLine("不熟悉命令时先看 `wecom-cli --help`，或对应服务的 `--help`、`--doc`、`--schema`。")
             append("不要自行运行 `auth init`，也不要读取或输出凭据文件；授权由用户在插件页完成。")

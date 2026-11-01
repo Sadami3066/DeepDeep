@@ -15,6 +15,9 @@ import okio.Path.Companion.toPath
 
 private val FILE_TOOL_NAMES = setOf("read", "write", "edit", "ls", "grep", "find")
 
+internal const val ABSOLUTE_PATH_GUIDELINE =
+    "File tool arguments need explicit absolute paths; the workspace is only a suggested location, not an access boundary."
+
 internal fun requireAbsolutePath(path: String): String {
     require(path.startsWith("/")) { "path must be an explicit absolute path: $path" }
     return path.toPath(normalize = true).toString()
@@ -26,7 +29,7 @@ internal fun CodingTool.withAbsolutePaths(): CodingTool {
     val properties = parameters.getValue("properties").jsonObject.toMutableMap()
     properties["path"] = buildJsonObject {
         put("type", "string")
-        put("description", "Required absolute path in the Android filesystem; no relative paths or ~ expansion.")
+        put("description", "Absolute path in the Android filesystem.")
     }
     val required = (parameters["required"] as? JsonArray).orEmpty().toMutableList()
     if (JsonPrimitive("path") !in required) required += JsonPrimitive("path")
@@ -39,10 +42,11 @@ internal fun CodingTool.withAbsolutePaths(): CodingTool {
     }
     return CodingTool(
         name = name,
-        description = description.replace("relative to the search directory", "as absolute paths") +
-            " An explicit absolute path is required; file locations in results are absolute.",
+        description = description.replace("relative to the search directory", "as absolute paths"),
         parameters = schema,
         label = label,
+        promptSnippet = original.promptSnippet,
+        promptGuidelines = original.promptGuidelines.orEmpty() + ABSOLUTE_PATH_GUIDELINE,
         prepareArguments = ::prepare,
         execute = { id, args, signal, update ->
             val prepared = prepare(args)

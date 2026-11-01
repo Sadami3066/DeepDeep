@@ -76,8 +76,6 @@ class ArrangePlugin(
 
     override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
 
-    override fun promptBody(status: PluginStatus): String = PROMPT_BODY
-
     private fun hasCalendarPermission(): Boolean = calendar.hasReadPermission() && calendar.hasWritePermission()
 
     private fun string(id: Int): String = context.resources.getString(id)
@@ -87,8 +85,6 @@ class ArrangePlugin(
         const val SKILL_ID = "deepdeep-arrange"
         const val PERMISSION_POLL_MS = 500L
         const val PERMISSION_TIMEOUT_MS = 2L * 60L * 1_000L
-
-        val PROMPT_BODY = "安排插件已可用。日历写入会直接改动用户日程，创建、修改、删除前先与用户确认。"
 
         val SKILL_MARKDOWN = """
             ---

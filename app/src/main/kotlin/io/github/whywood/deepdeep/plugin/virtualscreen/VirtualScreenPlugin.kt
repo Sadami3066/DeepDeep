@@ -42,6 +42,9 @@ internal const val VIRTUAL_SCREEN_TOOL = "virtual_screen"
 internal const val VIRTUAL_SCREEN_DESCRIPTION =
     "Manage a virtual screen that runs apps in the background without taking over the visible phone screen: start, stop or check it. Returns the screen state, its size, a rebuild notice or failure details."
 
+internal const val VIRTUAL_SCREEN_GUIDELINE =
+    "virtual_screen only manages the virtual screen lifecycle; use the screen_* tools to operate on it."
+
 class VirtualScreenPlugin(
     private val context: Context,
     private val privilege: PrivilegeController,
@@ -204,6 +207,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
     description = VIRTUAL_SCREEN_DESCRIPTION,
     parameters = virtualScreenParameters,
     label = VIRTUAL_SCREEN_TOOL,
+    promptGuidelines = listOf(VIRTUAL_SCREEN_GUIDELINE),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         virtualScreenResult {

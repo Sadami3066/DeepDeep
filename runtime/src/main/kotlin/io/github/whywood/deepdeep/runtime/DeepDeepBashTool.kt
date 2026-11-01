@@ -47,6 +47,10 @@ internal fun deepDeepBashTool(shellExecutor: ShellExecutor): CodingTool = Coding
     description = "Execute a command using the Linux /bin/sh shell in the current working directory. Returns merged stdout and stderr, ending with the exit code as [exit: N]. Output is truncated to the last $BASH_MAX_LINES lines or ${BASH_MAX_BYTES / 1024}KB (whichever is hit first). Oversized output is saved to a complete log when available. Cancellation stops execution and is not retried. Optionally provide a timeout in seconds.",
     parameters = bashParameters,
     label = "bash",
+    promptGuidelines = listOf(
+        "Check the [exit: N] marker on every bash result; investigate failures before moving on.",
+        "bash runs Linux /bin/sh; shared work files keep the same absolute paths as the file tools.",
+    ),
     execute = { _toolCallId, args, signal, _onUpdate ->
         val command = args.requiredString("command")
         val timeoutSeconds = args.timeoutSeconds()

@@ -21,8 +21,10 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -82,12 +84,35 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun screenToolSchemasStayCompactAndDeduplicated() {
+        val tools = screenTools(controller, screenshotDir)
+        val descriptions = tools.joinToString("\n") { it.description }
+
+        assertFalse(descriptions.contains("Select target=virtual"))
+        assertFalse(descriptions.contains("Never switches screens"))
+        tools.forEach { tool ->
+            val target = tool.parameters.getValue("properties").jsonObject.getValue("target").jsonObject
+            assertNull("${tool.name} 的 target 参数不应重复描述", target["description"])
+        }
+        val schemaChars = tools.sumOf { it.description.length + it.parameters.toString().length }
+        assertTrue("screen tool text too long: $schemaChars", schemaChars <= 9_300)
+    }
+
+    @Test
     fun toolTextFollowsTaskLanguagePolicy() {
         val tools = screenTools(controller, screenshotDir)
         assertEquals(11, tools.size)
         tools.forEach { tool ->
             assertNull("${tool.name} 不应再带 promptSnippet", tool.promptSnippet)
-            assertNull("${tool.name} 不应再带 promptGuidelines", tool.promptGuidelines)
+            assertTrue(
+                "${tool.name} 应带统一 target 规则",
+                tool.promptGuidelines.orEmpty().contains(SCREEN_TARGET_GUIDELINE),
+            )
+            assertTrue(
+                "${tool.name} 应带取消恢复规则",
+                tool.promptGuidelines.orEmpty().contains(SCREEN_CANCEL_GUIDELINE),
+            )
+            assertFalse("${tool.name} 的描述不应重复 target 规则", tool.description.contains("Select target=virtual"))
             assertTaskText("${tool.name} description", tool.description)
             val parameterDescriptions = mutableListOf<String>()
             collectDescriptions(tool.parameters, parameterDescriptions)

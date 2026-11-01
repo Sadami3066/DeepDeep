@@ -295,7 +295,7 @@ class FeishuPlugin(
         is PluginStatus.Ready -> buildString {
             appendLine("飞书插件已安装并已连接为 ${status.account ?: "当前账号"}。")
             appendLine("在 bash 中通过 `lark-cli` 访问飞书；个人数据必须加 `--as user`。")
-            appendLine("已授权范围内直接执行；超出授权的发送、修改、删除等操作先询问，支持时可用 `--dry-run` 预览。")
+            appendLine("发送、修改、删除等操作支持时先用 `--dry-run` 预览。")
             appendLine("不熟悉命令时先运行 `lark-cli skills list` 或 `lark-cli skills read <domain>` 查看用法。")
             if (lastMissingScopes.isNotEmpty()) {
                 appendLine("当前授权缺少 ${lastMissingScopes.size} 项权限：${lastMissingScopes.joinToString(" ")}。")

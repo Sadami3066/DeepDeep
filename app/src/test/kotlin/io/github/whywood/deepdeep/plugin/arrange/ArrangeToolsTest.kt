@@ -36,7 +36,7 @@ class ArrangeToolsTest {
     fun toolTextFollowsTaskLanguage() {
         val tool = tools.single()
         assertNull(tool.promptSnippet)
-        assertNull(tool.promptGuidelines)
+        assertEquals(listOf(ARRANGE_CALENDAR_GUIDELINE), tool.promptGuidelines)
         val texts = buildList {
             add(tool.description)
             val properties = tool.parameters["properties"] as JsonObject

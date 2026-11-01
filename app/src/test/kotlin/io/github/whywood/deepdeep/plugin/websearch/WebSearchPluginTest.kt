@@ -65,15 +65,8 @@ class WebSearchPluginTest {
     }
 
     @Test
-    fun promptBodyDescribesToolsWhenReady() {
-        val prompt = newPlugin().promptBody(PluginStatus.Ready("ready"))
-        assertTrue(prompt.contains("web_search"))
-        assertTrue(prompt.contains("web_fetch"))
-        assertTrue(prompt.contains("只作为资料"))
-        assertTrue(prompt.contains("URL"))
-        assertFalse(prompt.contains("1-10"))
-        assertFalse(prompt.contains("1-30000"))
-        assertFalse(prompt.contains("默认"))
+    fun promptBodyIsSilentWhenReady() {
+        assertNull(newPlugin().promptBody(PluginStatus.Ready("ready")))
     }
 
     @Test
@@ -82,7 +75,7 @@ class WebSearchPluginTest {
         assertEquals(listOf("web_search", "web_fetch"), tools.map { it.name })
         tools.forEach { tool ->
             assertNull(tool.promptSnippet)
-            assertNull(tool.promptGuidelines)
+            assertTrue(tool.promptGuidelines.orEmpty().isNotEmpty())
             assertTrue(tool.description.isNotBlank())
             val properties = tool.parameters["properties"] as JsonObject
             properties.values.forEach { property ->
@@ -96,7 +89,7 @@ class WebSearchPluginTest {
 
     @Test
     fun promptBodyExplainsMissingKey() {
-        val prompt = newPlugin(null).promptBody(PluginStatus.NotReady("missing"))
+        val prompt = newPlugin(null).promptBody(PluginStatus.NotReady("missing")).orEmpty()
         assertTrue(prompt.contains("API Key"))
         assertTrue(prompt.contains("web_search"))
         assertTrue(prompt.contains("web_fetch"))

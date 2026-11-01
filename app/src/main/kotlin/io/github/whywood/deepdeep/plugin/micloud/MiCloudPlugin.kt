@@ -266,10 +266,10 @@ internal fun miCloudPromptBody(status: PluginStatus, capabilities: MiCloudCapabi
             }
             appendLine("新建、修改或删除笔记与待办前必须先向用户确认，并说明会直接写入小米云账号。")
             appendLine("遇到 401 或登录失效时提示用户在插件详情页重新登录，不要反复重试请求。")
-            append("不要输出或记录登录凭据；短信、联系人、录音只按用户要求读取。")
+            append("短信、联系人、录音只按用户要求读取。")
         } else {
             appendLine("小米云插件当前不可用：${status.label}")
-            appendLine("需要登录或重新登录时调用 plugin_setup 工具（plugin=\"micloud\"），不要让用户导出登录凭据。")
+            appendLine("需要登录或重新登录时调用 plugin_setup 工具（plugin=\"micloud\"）。")
             append("未登录时不要声称能读取小米云数据。")
         }
     }

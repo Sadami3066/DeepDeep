@@ -5,6 +5,7 @@ import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.virtualscreen.VIRTUAL_SCREEN_DESCRIPTION
+import io.github.whywood.deepdeep.plugin.virtualscreen.VIRTUAL_SCREEN_GUIDELINE
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenAccess
 import io.github.whywood.deepdeep.plugin.virtualscreen.virtualScreenAvailability
 import io.github.whywood.deepdeep.plugin.virtualscreen.virtualScreenTools
@@ -44,7 +45,7 @@ class VirtualScreenPluginTest {
         assertEquals(listOf("virtual_screen"), tools.map { it.name })
         assertEquals("virtual_screen", tools.single().label)
         assertNull(tools.single().promptSnippet)
-        assertNull(tools.single().promptGuidelines)
+        assertEquals(listOf(VIRTUAL_SCREEN_GUIDELINE), tools.single().promptGuidelines)
     }
 
     @Test

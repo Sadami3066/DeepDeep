@@ -28,7 +28,7 @@ internal fun buildPersonalizationSections(
         buildString {
             appendLine("当前日期：${escapePromptXml(now.toLocalDate().toString())}（UTC${escapePromptXml(now.offset.id)}）。")
             appendLine("模型：${escapePromptXml(providerId)}/${escapePromptXml(modelId)}。")
-            appendLine("默认工作位置：${escapePromptXml(cwd)}。这只是提醒，不限制文件访问；文件工具仍须显式提供绝对路径。")
+            appendLine("默认工作位置：${escapePromptXml(cwd)}。这只是默认位置，不是访问边界。")
             if (nickname.isEmpty()) {
                 appendLine("直接称呼「你」，不要使用名字。")
             } else {
@@ -75,9 +75,8 @@ internal fun sharedStorageSection(): Map<String, String> = mapOf(
     "shared_storage" to wrapPromptSection(
         "shared_storage",
         listOf(
-            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place.",
-            "Download, Documents, Pictures, DCIM, Music and Movies under it are readable and writable.",
-            "Treat these as the user's real files: look before changing, and do not delete or overwrite anything unless the user asked for it.",
+            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place, with Download, Documents, Pictures, DCIM, Music and Movies writable.",
+            "Treat these as the user's real files: look before changing, and never delete or overwrite anything unless the user asked for it.",
         ).joinToString("\n") { "- $it" },
     ),
 )

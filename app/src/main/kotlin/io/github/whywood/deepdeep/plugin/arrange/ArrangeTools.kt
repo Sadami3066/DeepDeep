@@ -124,6 +124,9 @@ fun arrangeTools(
     zone: ZoneId = ZoneId.systemDefault(),
 ): List<CodingTool> = listOf(arrangeCalendarTool(calendar, zone))
 
+internal const val ARRANGE_CALENDAR_GUIDELINE =
+    "Calendar writes change the user's schedule; confirm with the user before creating, updating or deleting an event."
+
 private fun arrangeCalendarTool(
     calendar: ArrangeCalendarGateway,
     zone: ZoneId,
@@ -132,6 +135,7 @@ private fun arrangeCalendarTool(
     description = "Read, create, update or delete calendar events in the phone calendar.",
     parameters = calendarParameters,
     label = "arrange_calendar",
+    promptGuidelines = listOf(ARRANGE_CALENDAR_GUIDELINE),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         arrangeToolResult {

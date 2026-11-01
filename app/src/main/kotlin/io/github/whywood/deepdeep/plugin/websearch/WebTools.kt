@@ -62,11 +62,17 @@ private val fetchParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("url")) })
 }
 
+private const val WEB_CITE_GUIDELINE = "Cite the source URLs you used when answering with web results."
+
 private fun webSearchTool(provider: WebProvider): CodingTool = CodingTool(
     name = "web_search",
     description = "Search the web for current information and return ranked results with title, URL and snippet.",
     parameters = searchParameters,
     label = "web_search",
+    promptGuidelines = listOf(
+        WEB_CITE_GUIDELINE,
+        "Search before answering questions about current events or facts you do not know.",
+    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         webToolResult {
@@ -83,6 +89,7 @@ private fun webFetchTool(provider: WebProvider): CodingTool = CodingTool(
     description = "Fetch one web page and return its main content as Markdown.",
     parameters = fetchParameters,
     label = "web_fetch",
+    promptGuidelines = listOf(WEB_CITE_GUIDELINE),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         webToolResult {

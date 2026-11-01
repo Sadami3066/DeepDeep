@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -38,7 +39,10 @@ class ToolTextPolicyTest {
         tools().forEach { tool ->
             assertTrue("${tool.name} description is empty", tool.description.isNotBlank())
             assertNull("${tool.name} should not send promptSnippet", tool.promptSnippet)
-            assertNull("${tool.name} should not send promptGuidelines", tool.promptGuidelines)
+            tool.promptGuidelines.orEmpty().forEach { guideline ->
+                assertTrue("${tool.name} guideline is empty", guideline.isNotBlank())
+                assertFalse("${tool.name} guideline should stay one line", guideline.contains("\n"))
+            }
             scan(tool.name, tool.description)
             scan(tool.name, tool.parameters)
         }

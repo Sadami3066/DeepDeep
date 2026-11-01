@@ -1,7 +1,10 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.textResult
 import java.io.File
 import java.nio.file.Files
+import kotlinx.serialization.json.JsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -35,9 +38,13 @@ class SystemPromptTest {
     }
 
     @Test
-    fun defaultPromptExplainsWorkspacePathsAndExitCodes() {
-        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("绝对路径"))
-        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("[exit: N]"))
+    fun defaultPromptStaysIdentityOnly() {
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.length < 200)
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("DeepDeep"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("当前使用的语言"))
+        assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("绝对路径"))
+        assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("[exit: N]"))
+        assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("/workspace"))
     }
 
     @Test
@@ -75,35 +82,52 @@ class SystemPromptTest {
     }
 
     @Test
-    fun ruleSectionCarriesGlobalRules() {
-        val rules = buildToolRuleSection(setOf("screen_observe", "present", "bash", "create_goal", "schedule_create", "job_start")).getValue("rules")
+    fun ruleSectionCarriesGlobalRulesFirst() {
+        val rules = buildToolRuleSection(emptyList()).getValue("rules")
 
         assertTrue(rules.startsWith("<rules>"))
         assertTrue(rules.endsWith("</rules>"))
         assertTrue(rules.contains("- Never type, read, copy or repeat passwords"))
         assertTrue(rules.contains("outside that scope"))
-        assertTrue(rules.contains("Use present when delivering a file"))
-        assertFalse(rules.contains("promptGuidelines"))
-    }
-
-    @Test
-    fun rulesOnlyMentionAvailableCapabilities() {
-        val rules = buildToolRuleSection(setOf("read", "write", "bash", "job_start")).getValue("rules")
-        assertTrue(rules.contains("Linux /bin/sh"))
-        assertTrue(rules.contains("job_start"))
-        assertFalse(rules.contains("schedule_create"))
-        assertFalse(rules.contains("create_goal"))
         assertFalse(rules.contains("present"))
-        assertFalse(rules.contains("virtual_screen"))
-        assertFalse(rules.contains("fails twice"))
-    }
-    @Test
-    fun androidShellRulesRemainAvailableWithoutLinux() {
-        val rules = buildToolRuleSection(setOf("root_shell")).getValue("rules")
-        assertTrue(rules.contains("Android system shell"))
-        assertTrue(rules.contains("upstream output may already be incomplete"))
-        assertTrue(rules.contains("do not automatically retry"))
-        assertFalse(rules.contains("Linux /bin/sh"))
     }
 
+    @Test
+    fun ruleSectionAggregatesToolGuidelines() {
+        val rules = buildToolRuleSection(
+            listOf(
+                tool("bash", "Check the [exit: N] marker on every bash result."),
+                tool("read", "Use read to examine files instead of cat or sed."),
+            ),
+        ).getValue("rules")
+
+        assertTrue(rules.contains("- Check the [exit: N] marker on every bash result."))
+        assertTrue(rules.contains("- Use read to examine files instead of cat or sed."))
+    }
+
+    @Test
+    fun ruleSectionDeduplicatesSharedGuidelines() {
+        val shared = "File tool arguments need explicit absolute paths."
+        val rules = buildToolRuleSection(listOf(tool("read", shared), tool("write", shared))).getValue("rules")
+
+        assertEquals(1, rules.split(shared).size - 1)
+    }
+
+    @Test
+    fun ruleSectionLeavesOutGuidelinesOfAbsentTools() {
+        val rules = buildToolRuleSection(listOf(tool("job_start", "Use job_output to read new output."))).getValue("rules")
+
+        assertTrue(rules.contains("job_output"))
+        assertFalse(rules.contains("schedule_create"))
+        assertFalse(rules.contains("virtual_screen"))
+    }
+
+    private fun tool(name: String, vararg guidelines: String): CodingTool = CodingTool(
+        name = name,
+        description = "test tool",
+        parameters = JsonObject(emptyMap()),
+        label = name,
+        promptGuidelines = guidelines.toList(),
+        execute = { _, _, _, _ -> textResult("ok") },
+    )
 }

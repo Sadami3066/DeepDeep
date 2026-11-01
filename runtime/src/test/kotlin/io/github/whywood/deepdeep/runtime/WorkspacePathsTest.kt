@@ -17,6 +17,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
@@ -65,10 +66,10 @@ class WorkspacePathsTest {
             val wrapped = tool.withAbsolutePaths()
             assertEquals(tool.name, wrapped.name)
             assertEquals(tool.label, wrapped.label)
-            assertTrue(wrapped.parameters.toString().contains("absolute path"))
-            assertTrue(wrapped.description.contains("absolute path"))
-            assertNull(wrapped.promptSnippet)
-            assertNull(wrapped.promptGuidelines)
+            assertTrue(wrapped.parameters.toString().contains("Absolute path"))
+            assertFalse(wrapped.description.contains("An explicit absolute path"))
+            assertEquals(tool.promptSnippet, wrapped.promptSnippet)
+            assertTrue(wrapped.promptGuidelines.orEmpty().contains(ABSOLUTE_PATH_GUIDELINE))
         }
     }
 
