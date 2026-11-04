@@ -26,6 +26,15 @@ data class FloatingRun(
     val startedAt: Long,
 )
 
+data class FloatingSubscription(
+    val sessionId: String,
+    val title: String,
+    val startedAt: Long,
+    val activity: RuntimeActivity?,
+    val text: String,
+    val updatedAt: Long,
+)
+
 data class FloatingCompletion(
     val sessionId: String,
     val title: String,
@@ -50,6 +59,8 @@ data class FloatingFeedState(
     val stagedDeliveries: Map<String, List<PresentedItem>> = emptyMap(),
     val sessionTitles: Map<String, String> = emptyMap(),
     val setup: PluginSetupNotice? = null,
+    val subscription: FloatingSubscription? = null,
+    val manualSubscription: Boolean = false,
     val lastEventAt: Long = 0L,
     val dismissedCardKeys: Set<String> = emptySet(),
 )
@@ -67,6 +78,10 @@ sealed interface FloatingEventCard {
 
     data class Completed(val completion: FloatingCompletion) : FloatingEventCard {
         override val key: String = completion.key
+    }
+
+    data class Tracking(val subscription: FloatingSubscription) : FloatingEventCard {
+        override val key: String = "tracking:${subscription.sessionId}"
     }
 }
 
@@ -94,6 +109,20 @@ sealed interface FloatingFeedEvent {
     data class SetupChanged(val notice: PluginSetupNotice?) : FloatingFeedEvent
 
     data class RemoveCompleted(val key: String) : FloatingFeedEvent
+
+    data class Subscribe(val sessionId: String) : FloatingFeedEvent
+
+    data class TrackingActivity(
+        val sessionId: String,
+        val activity: RuntimeActivity?,
+    ) : FloatingFeedEvent
+
+    data class TrackingText(
+        val sessionId: String,
+        val text: String,
+    ) : FloatingFeedEvent
+
+    data class TrackingReset(val sessionId: String) : FloatingFeedEvent
 }
 
 fun reduceFloatingFeed(
@@ -106,7 +135,28 @@ fun reduceFloatingFeed(
         val titles = state.sessionTitles + runs
             .filter { it.title.isNotBlank() }
             .associate { it.sessionId to it.title }
-        val next = state.copy(runs = runs, sessionTitles = titles)
+        var subscription = state.subscription?.let { current ->
+            runs.firstOrNull { it.sessionId == current.sessionId }?.let { run ->
+                current.copy(
+                    title = run.title.ifBlank { current.title },
+                    startedAt = run.startedAt,
+                    activity = run.activity,
+                )
+            }
+        }
+        var manual = state.manualSubscription
+        if (subscription == null) {
+            manual = false
+            subscription = runs.lastOrNull()?.toSubscription(now)
+        } else if (!manual && runs.last().startedAt > subscription.startedAt) {
+            subscription = runs.last().toSubscription(now)
+        }
+        val next = state.copy(
+            runs = runs,
+            sessionTitles = titles,
+            subscription = subscription,
+            manualSubscription = manual,
+        )
         if (next.copy(lastEventAt = state.lastEventAt) == state) state else next.copy(lastEventAt = now)
     }
 
@@ -183,7 +233,73 @@ fun reduceFloatingFeed(
             dismissedCardKeys = liveDismissedKeys(state.dismissedCardKeys, completed),
         )
     }
+
+    is FloatingFeedEvent.Subscribe -> {
+        val current = state.subscription
+        if (current?.sessionId == event.sessionId) {
+            if (state.manualSubscription) state else state.copy(manualSubscription = true)
+        } else {
+            val run = state.runs.firstOrNull { it.sessionId == event.sessionId }
+            state.copy(
+                subscription = FloatingSubscription(
+                    sessionId = event.sessionId,
+                    title = run?.title ?: state.sessionTitles[event.sessionId].orEmpty(),
+                    startedAt = run?.startedAt ?: 0L,
+                    activity = run?.activity,
+                    text = "",
+                    updatedAt = now,
+                ),
+                manualSubscription = true,
+                lastEventAt = now,
+            )
+        }
+    }
+
+    is FloatingFeedEvent.TrackingActivity -> {
+        val current = state.subscription
+        if (current == null || current.sessionId != event.sessionId || current.activity == event.activity) {
+            state
+        } else {
+            state.copy(
+                subscription = current.copy(activity = event.activity, updatedAt = now),
+                lastEventAt = now,
+            )
+        }
+    }
+
+    is FloatingFeedEvent.TrackingText -> {
+        val current = state.subscription
+        if (current == null || current.sessionId != event.sessionId || current.text == event.text) {
+            state
+        } else {
+            state.copy(
+                subscription = current.copy(text = event.text, updatedAt = now),
+                lastEventAt = now,
+            )
+        }
+    }
+
+    is FloatingFeedEvent.TrackingReset -> {
+        val current = state.subscription
+        if (current == null || current.sessionId != event.sessionId || current.text.isEmpty()) {
+            state
+        } else {
+            state.copy(
+                subscription = current.copy(text = "", updatedAt = now),
+                lastEventAt = now,
+            )
+        }
+    }
 }
+
+private fun FloatingRun.toSubscription(now: Long): FloatingSubscription = FloatingSubscription(
+    sessionId = sessionId,
+    title = title,
+    startedAt = startedAt,
+    activity = activity,
+    text = "",
+    updatedAt = now,
+)
 
 private fun liveDismissedKeys(
     keys: Set<String>,
@@ -215,6 +331,7 @@ fun floatingEventQueue(state: FloatingFeedState): List<FloatingEventCard> {
         state.questions.forEach { add(FloatingEventCard.Question(it)) }
         state.setup?.let { add(FloatingEventCard.PluginSetup(it)) }
         floatingVisibleCompletions(state).forEach { add(FloatingEventCard.Completed(it)) }
+        state.subscription?.let { add(FloatingEventCard.Tracking(it)) }
     }
     return candidates.filterNot { it.key in state.dismissedCardKeys }
 }

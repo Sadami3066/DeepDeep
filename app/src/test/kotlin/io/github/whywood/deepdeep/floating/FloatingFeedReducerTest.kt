@@ -473,6 +473,214 @@ class FloatingFeedReducerTest {
         assertEquals(FloatingEventCard.Question::class.java, floatingEventCard(withQuestion)?.javaClass)
     }
 
+    @Test
+    fun runsChangedAutoSubscribesLatestRun() {
+        val state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(
+                listOf(
+                    run("session-a", "第一个", 1_000L),
+                    run("session-b", "第二个", 2_000L),
+                ),
+            ),
+            3_000L,
+        )
+        val subscription = state.subscription!!
+        assertEquals("session-b", subscription.sessionId)
+        assertEquals("第二个", subscription.title)
+        assertEquals(2_000L, subscription.startedAt)
+        assertEquals(3_000L, subscription.updatedAt)
+        assertEquals("", subscription.text)
+        assertFalse(state.manualSubscription)
+    }
+
+    @Test
+    fun autoSubscriptionSwitchesToNewerRun() {
+        var state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(listOf(run("session-a", "A", 1_000L))),
+            2_000L,
+        )
+        assertEquals("session-a", state.subscription?.sessionId)
+
+        state = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RunsChanged(
+                listOf(run("session-a", "A", 1_000L), run("session-b", "B", 2_000L)),
+            ),
+            3_000L,
+        )
+        assertEquals("session-b", state.subscription?.sessionId)
+        assertFalse(state.manualSubscription)
+    }
+
+    @Test
+    fun manualSubscriptionSurvivesNewerRun() {
+        var state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(
+                listOf(run("session-a", "A", 1_000L), run("session-b", "B", 2_000L)),
+            ),
+            3_000L,
+        )
+        state = reduceFloatingFeed(state, FloatingFeedEvent.Subscribe("session-a"), 4_000L)
+        assertTrue(state.manualSubscription)
+        assertEquals("session-a", state.subscription?.sessionId)
+
+        state = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RunsChanged(
+                listOf(
+                    run("session-a", "A", 1_000L),
+                    run("session-b", "B", 2_000L),
+                    run("session-c", "C", 3_000L),
+                ),
+            ),
+            5_000L,
+        )
+        assertEquals("session-a", state.subscription?.sessionId)
+        assertTrue(state.manualSubscription)
+    }
+
+    @Test
+    fun subscribingAlreadySubscribedSessionOnlyMarksManual() {
+        val auto = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(listOf(run("session-a", "A", 1_000L))),
+            2_000L,
+        )
+        val tracked = reduceFloatingFeed(
+            auto,
+            FloatingFeedEvent.TrackingText("session-a", "流式文本"),
+            2_100L,
+        )
+        val manual = reduceFloatingFeed(tracked, FloatingFeedEvent.Subscribe("session-a"), 2_200L)
+        assertTrue(manual.manualSubscription)
+        assertEquals("流式文本", manual.subscription?.text)
+    }
+
+    @Test
+    fun endedSubscriptionFallsBackToLatestRemainingRun() {
+        var state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(
+                listOf(run("session-a", "A", 1_000L), run("session-b", "B", 2_000L)),
+            ),
+            3_000L,
+        )
+        assertEquals("session-b", state.subscription?.sessionId)
+
+        state = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RunsChanged(listOf(run("session-a", "A", 1_000L))),
+            4_000L,
+        )
+        assertEquals("session-a", state.subscription?.sessionId)
+        assertFalse(state.manualSubscription)
+
+        state = reduceFloatingFeed(state, FloatingFeedEvent.RunsChanged(emptyList()), 5_000L)
+        assertNull(state.subscription)
+        assertFalse(state.manualSubscription)
+    }
+
+    @Test
+    fun manualSubscriptionEndedClearsAndFollowsLatestRun() {
+        var state = reduceFloatingFeed(
+            baseState(),
+            FloatingFeedEvent.RunsChanged(
+                listOf(run("session-a", "A", 1_000L), run("session-b", "B", 2_000L)),
+            ),
+            3_000L,
+        )
+        state = reduceFloatingFeed(state, FloatingFeedEvent.Subscribe("session-a"), 4_000L)
+        assertTrue(state.manualSubscription)
+
+        state = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.RunsChanged(listOf(run("session-b", "B", 2_000L))),
+            5_000L,
+        )
+        assertEquals("session-b", state.subscription?.sessionId)
+        assertFalse(state.manualSubscription)
+    }
+
+    @Test
+    fun trackingCardQueuesAfterAllOtherCards() {
+        val state = baseState().copy(
+            questions = listOf(pending("req-1")),
+            setup = PluginSetupNotice("micloud", "小米云服务", "等待扫码"),
+            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
+            subscription = subscription("session-z"),
+        )
+        val queue = floatingEventQueue(state)
+        assertEquals(4, queue.size)
+        assertTrue(queue[0] is FloatingEventCard.Question)
+        assertTrue(queue[1] is FloatingEventCard.PluginSetup)
+        assertTrue(queue[2] is FloatingEventCard.Completed)
+        val tracking = queue[3] as FloatingEventCard.Tracking
+        assertEquals("session-z", tracking.subscription.sessionId)
+        assertEquals("session-z", tracking.sessionId())
+        assertEquals(queue.first(), floatingEventCard(state))
+    }
+
+    @Test
+    fun trackingCardShowsWhenNothingElsePending() {
+        val state = baseState().copy(subscription = subscription("session-a"))
+        assertTrue(floatingEventCard(state) is FloatingEventCard.Tracking)
+        assertEquals(0, floatingPendingCount(state))
+    }
+
+    @Test
+    fun trackingEventsOnlyTouchSubscribedSession() {
+        val state = baseState().copy(subscription = subscription("session-a"))
+        val other = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.TrackingText("session-b", "别人的文本"),
+            2_000L,
+        )
+        assertEquals("", other.subscription?.text)
+
+        val tracked = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.TrackingText("session-a", "最新文本"),
+            2_100L,
+        )
+        assertEquals("最新文本", tracked.subscription?.text)
+        assertEquals(2_100L, tracked.subscription?.updatedAt)
+    }
+
+    @Test
+    fun trackingActivityUpdatesSubscribedSession() {
+        val state = baseState().copy(subscription = subscription("session-a"))
+        val tool = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.TrackingActivity("session-a", RuntimeActivity.RunningTool("bash")),
+            2_000L,
+        )
+        assertEquals(RuntimeActivity.RunningTool("bash"), tool.subscription?.activity)
+
+        val ignored = reduceFloatingFeed(
+            tool,
+            FloatingFeedEvent.TrackingActivity("session-b", RuntimeActivity.Compacting),
+            2_100L,
+        )
+        assertEquals(RuntimeActivity.RunningTool("bash"), ignored.subscription?.activity)
+    }
+
+    @Test
+    fun trackingResetClearsText() {
+        val tracked = baseState().copy(subscription = subscription("session-a", text = "进行中"))
+        val reset = reduceFloatingFeed(tracked, FloatingFeedEvent.TrackingReset("session-a"), 2_000L)
+        assertEquals("", reset.subscription?.text)
+
+        val ignored = reduceFloatingFeed(
+            tracked,
+            FloatingFeedEvent.TrackingReset("session-b"),
+            2_100L,
+        )
+        assertEquals("进行中", ignored.subscription?.text)
+    }
+
     private fun baseState(): FloatingFeedState = FloatingFeedState(lastEventAt = 1_000L)
 
     private fun run(sessionId: String, title: String, startedAt: Long): FloatingRun = FloatingRun(
@@ -480,6 +688,19 @@ class FloatingFeedReducerTest {
         title = title,
         activity = RuntimeActivity.Thinking,
         startedAt = startedAt,
+    )
+
+    private fun subscription(
+        sessionId: String,
+        text: String = "",
+        activity: RuntimeActivity? = RuntimeActivity.Thinking,
+    ): FloatingSubscription = FloatingSubscription(
+        sessionId = sessionId,
+        title = "会话",
+        startedAt = 1_000L,
+        activity = activity,
+        text = text,
+        updatedAt = 1_000L,
     )
 
     private fun pending(

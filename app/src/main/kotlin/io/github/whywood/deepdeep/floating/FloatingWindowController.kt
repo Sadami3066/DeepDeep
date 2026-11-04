@@ -255,6 +255,7 @@ class FloatingWindowController(
                     questions = feedState.questions,
                     completed = floatingVisibleCompletions(feedState),
                     now = now.value,
+                    subscribedSessionId = feedState.subscription?.sessionId,
                 ),
                 surfaceWidth = FloatingPanelWidth,
                 maxHeightRatio = FloatingPanelMaxHeightRatio,
@@ -401,6 +402,7 @@ class FloatingWindowController(
                             feed.removeCompleted(completion.key)
                             openSession(completion.sessionId)
                         },
+                        onOpenTracking = { subscription -> openSession(subscription.sessionId) },
                         onOpenSetup = onOpenApp,
                         onDismiss = { feed.dismissCard(value.card.key) },
                     )
@@ -412,12 +414,14 @@ class FloatingWindowController(
                         now = value.now,
                         maxHeight = with(density) { value.maxHeightPx.toDp() },
                         nearEdge = value.arrowSide,
+                        subscribedSessionId = value.subscribedSessionId,
                         onOpenRun = { run -> openSessionInApp(run.sessionId) },
                         onOpenQuestion = { pending -> openSession(pending.sessionId) },
                         onOpenCompleted = { completion ->
                             feed.removeCompleted(completion.key)
                             openSessionInApp(completion.sessionId)
                         },
+                        onSubscribe = { sessionId -> feed.subscribe(sessionId) },
                         onCollapse = { panelOpen.value = false },
                     )
 
@@ -733,6 +737,10 @@ class FloatingWindowController(
         is FloatingEventCard.Completed -> card.completion.title.ifBlank {
             sessionTitle(card.completion.sessionId)
         }
+
+        is FloatingEventCard.Tracking -> card.subscription.title.ifBlank {
+            sessionTitle(card.subscription.sessionId)
+        }
     }
 
     private fun sessionTitle(sessionId: String): String {
@@ -904,6 +912,7 @@ private sealed interface FloatingSurfaceUi {
         val questions: List<PendingQuestion>,
         val completed: List<FloatingCompletion>,
         val now: Long,
+        val subscribedSessionId: String? = null,
         val maxHeightPx: Int = 0,
         val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
     ) : FloatingSurfaceUi

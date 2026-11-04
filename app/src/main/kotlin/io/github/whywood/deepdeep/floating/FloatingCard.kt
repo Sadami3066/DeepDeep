@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
@@ -61,6 +62,7 @@ internal fun FloatingEventCard(
     onAnswerQuestion: (PendingQuestion, QuestionOption) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
+    onOpenTracking: (FloatingSubscription) -> Unit,
     onOpenSetup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -74,6 +76,7 @@ internal fun FloatingEventCard(
         is FloatingEventCard.Question -> null
         is FloatingEventCard.PluginSetup -> onOpenSetup
         is FloatingEventCard.Completed -> ({ onOpenCompleted(card.completion) })
+        is FloatingEventCard.Tracking -> ({ onOpenTracking(card.subscription) })
     }
     Box(
         Modifier
@@ -127,6 +130,12 @@ internal fun FloatingEventCard(
                             sessionTitle = sessionTitle,
                             queueSize = queueSize,
                             onDismiss = onDismiss,
+                        )
+
+                        is FloatingEventCard.Tracking -> TrackingBody(
+                            subscription = card.subscription,
+                            sessionTitle = sessionTitle,
+                            queueSize = queueSize,
                         )
                     }
                 }
@@ -354,6 +363,50 @@ private fun CompletedBody(
 }
 
 @Composable
+private fun TrackingBody(
+    subscription: FloatingSubscription,
+    sessionTitle: String,
+    queueSize: Int,
+) {
+    val colors = deepDeepColors()
+    CardHeader(
+        label = stringResource(R.string.floating_card_tracking),
+        labelColor = colors.accent,
+        title = sessionTitle,
+        queueSize = queueSize,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        DdSpinner(color = colors.accent, size = 12.dp, strokeWidth = 1.4.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = activityText(subscription.activity),
+            style = DdType.body,
+            color = colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    val preview = subscription.text.trim().takeLast(220)
+    if (preview.isNotEmpty()) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = preview,
+            style = DdType.bodySmall,
+            color = colors.inkSecondary,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.floating_card_open_in_overlay),
+        style = DdType.bodySmall,
+        color = colors.inkTertiary,
+    )
+}
+
+@Composable
 private fun CardHeader(
     label: String,
     labelColor: Color,
@@ -449,4 +502,5 @@ internal fun FloatingEventCard.sessionId(): String = when (this) {
     is FloatingEventCard.Question -> pending.sessionId
     is FloatingEventCard.PluginSetup -> ""
     is FloatingEventCard.Completed -> completion.sessionId
+    is FloatingEventCard.Tracking -> subscription.sessionId
 }

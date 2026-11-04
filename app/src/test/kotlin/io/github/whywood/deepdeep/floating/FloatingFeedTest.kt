@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.floating
 
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.service.ActiveRunView
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -9,6 +10,7 @@ import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -143,12 +145,209 @@ class FloatingFeedTest {
         feed.stop()
     }
 
+    @Test
+    fun autoSubscribesLatestRunningSession() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf(
+                "session-1" to ActiveRunView("session-1", "第一个", RuntimeActivity.Thinking, 100L),
+                "session-2" to ActiveRunView("session-2", "第二个", RuntimeActivity.Thinking, 200L),
+            ),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        val subscription = feed.state.value.subscription!!
+        assertEquals("session-2", subscription.sessionId)
+        assertEquals("第二个", subscription.title)
+        assertFalse(feed.state.value.manualSubscription)
+        feed.stop()
+    }
+
+    @Test
+    fun manualSubscriptionIsNotReplacedByNewerRun() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "第一个", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        feed.subscribe("session-1")
+        runCurrent()
+        assertTrue(feed.state.value.manualSubscription)
+
+        runs.value = mapOf(
+            "session-1" to ActiveRunView("session-1", "第一个", RuntimeActivity.Thinking, 100L),
+            "session-2" to ActiveRunView("session-2", "第二个", RuntimeActivity.Thinking, 200L),
+        )
+        runCurrent()
+
+        assertEquals("session-1", feed.state.value.subscription?.sessionId)
+        assertTrue(feed.state.value.manualSubscription)
+        feed.stop()
+    }
+
+    @Test
+    fun trackingTextFollowsSubscribedSession() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-2", RuntimeEvent.TextDelta("run-2", "别的会话"))
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "你好"))
+        runCurrent()
+        assertEquals("", feed.state.value.subscription?.text)
+
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("你好", feed.state.value.subscription?.text)
+        feed.stop()
+    }
+
+    @Test
+    fun trackingTextIsThrottledAndMerged() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "你"))
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "好"))
+        runCurrent()
+        assertEquals("", feed.state.value.subscription?.text)
+
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("你好", feed.state.value.subscription?.text)
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "！"))
+        runCurrent()
+        assertEquals("你好", feed.state.value.subscription?.text)
+
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("你好！", feed.state.value.subscription?.text)
+        feed.stop()
+    }
+
+    @Test
+    fun runStartedAndUserInputResetTrackedText() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "你好"))
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("你好", feed.state.value.subscription?.text)
+
+        runtime.emitFor("session-1", RuntimeEvent.RunStarted("run-2", 500L))
+        runCurrent()
+        assertEquals("", feed.state.value.subscription?.text)
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-2", "再来"))
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("再来", feed.state.value.subscription?.text)
+
+        runtime.emitFor("session-1", RuntimeEvent.UserInputAdmitted("run-2", "继续"))
+        runCurrent()
+        assertEquals("", feed.state.value.subscription?.text)
+        feed.stop()
+    }
+
+    @Test
+    fun trackingActivityFollowsSubscribedSession() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor(
+            "session-1",
+            RuntimeEvent.ToolStarted("run-1", "call-1", "bash", emptyMap(), 10L),
+        )
+        runCurrent()
+        assertEquals(RuntimeActivity.RunningTool("bash"), feed.state.value.subscription?.activity)
+
+        runtime.emitFor("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Compacting))
+        runCurrent()
+        assertEquals(RuntimeActivity.Compacting, feed.state.value.subscription?.activity)
+
+        runtime.emitFor("session-2", RuntimeEvent.ActivityChanged("run-2", RuntimeActivity.CompactionFailed))
+        runCurrent()
+        assertEquals(RuntimeActivity.Compacting, feed.state.value.subscription?.activity)
+        feed.stop()
+    }
+
+    @Test
+    fun resubscribingSessionDropsStaleTrackedText() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话一", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "旧"))
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("旧", feed.state.value.subscription?.text)
+
+        runs.value = mapOf(
+            "session-1" to ActiveRunView("session-1", "会话一", RuntimeActivity.Thinking, 100L),
+            "session-2" to ActiveRunView("session-2", "会话二", RuntimeActivity.Thinking, 200L),
+        )
+        runCurrent()
+        assertEquals("session-2", feed.state.value.subscription?.sessionId)
+
+        runs.value = mapOf(
+            "session-1" to ActiveRunView("session-1", "会话一", RuntimeActivity.Thinking, 100L),
+        )
+        runCurrent()
+        assertEquals("session-1", feed.state.value.subscription?.sessionId)
+
+        runtime.emitFor("session-1", RuntimeEvent.TextDelta("run-1", "新"))
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("新", feed.state.value.subscription?.text)
+        feed.stop()
+    }
+
     private fun feed(runtime: FakeAgentRuntime, isForeground: () -> Boolean = { false }): FloatingFeed = FloatingFeed(
         runtime = runtime,
         activeRuns = MutableStateFlow<Map<String, ActiveRunView>>(emptyMap()),
         pendingQuestions = MutableStateFlow(emptyList()),
         scope = kotlinx.coroutines.CoroutineScope(dispatcher),
         isForeground = isForeground,
+    )
+
+    private fun floatingFeed(
+        runtime: FakeAgentRuntime,
+        runs: MutableStateFlow<Map<String, ActiveRunView>>,
+    ): FloatingFeed = FloatingFeed(
+        runtime = runtime,
+        activeRuns = runs,
+        pendingQuestions = MutableStateFlow(emptyList()),
+        scope = kotlinx.coroutines.CoroutineScope(dispatcher),
     )
 
     private fun session(id: String, title: String): ConversationSummary = ConversationSummary(

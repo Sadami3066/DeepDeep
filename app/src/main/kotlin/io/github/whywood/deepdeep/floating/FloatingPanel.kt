@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -49,9 +51,11 @@ internal fun FloatingPanel(
     now: Long,
     maxHeight: Dp,
     nearEdge: FloatingArrowSide,
+    subscribedSessionId: String?,
     onOpenRun: (FloatingRun) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
+    onSubscribe: (String) -> Unit,
     onCollapse: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -98,7 +102,13 @@ internal fun FloatingPanel(
                 if (runs.isNotEmpty()) {
                     SectionLabel(stringResource(R.string.floating_panel_running))
                     runs.forEach { run ->
-                        RunRow(run = run, now = now, onClick = { onOpenRun(run) })
+                        RunRow(
+                            run = run,
+                            now = now,
+                            subscribed = run.sessionId == subscribedSessionId,
+                            onClick = { onOpenRun(run) },
+                            onSubscribe = { onSubscribe(run.sessionId) },
+                        )
                     }
                 }
                 if (questions.isNotEmpty()) {
@@ -161,7 +171,9 @@ private fun SectionLabel(text: String) {
 private fun RunRow(
     run: FloatingRun,
     now: Long,
+    subscribed: Boolean,
     onClick: () -> Unit,
+    onSubscribe: () -> Unit,
 ) {
     val colors = deepDeepColors()
     PanelRow(onClick = onClick, contentDescription = run.title) {
@@ -183,8 +195,45 @@ private fun RunRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
+        SubscribeControl(subscribed = subscribed, onClick = onSubscribe)
+        Spacer(Modifier.width(6.dp))
         DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+    }
+}
+
+@Composable
+private fun SubscribeControl(
+    subscribed: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.size(30.dp),
+        shape = CircleShape,
+        contentDescription = stringResource(
+            if (subscribed) R.string.floating_subscribed else R.string.floating_subscribe,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(if (subscribed) colors.accent else Color.Transparent)
+                .then(
+                    if (subscribed) {
+                        Modifier
+                    } else {
+                        Modifier.border(1.5.dp, colors.hairline, CircleShape)
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (subscribed) {
+                DdIcon(icon = DdIcons.Check, tint = colors.onAccent, size = 12.dp)
+            }
+        }
     }
 }
 
@@ -314,7 +363,7 @@ private fun PanelRow(
 }
 
 @Composable
-private fun activityText(activity: RuntimeActivity?): String = when (activity) {
+internal fun activityText(activity: RuntimeActivity?): String = when (activity) {
     null, is RuntimeActivity.Thinking -> stringResource(R.string.floating_activity_thinking)
     is RuntimeActivity.Retrying -> stringResource(R.string.floating_activity_retrying, activity.attempt)
     is RuntimeActivity.Compacting -> stringResource(R.string.floating_activity_compacting)

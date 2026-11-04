@@ -23,12 +23,15 @@
     <string name="floating_card_queue"> · %1$d 条</string>
     <string name="floating_card_plugin_setup">插件设置</string>
     <string name="floating_card_plugin_setup_hint">点按继续</string>
+    <string name="floating_card_tracking">跟踪中</string>
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">收起面板</string>
     <string name="floating_panel_running">正在运行</string>
     <string name="floating_panel_questions">待回答</string>
     <string name="floating_panel_completed">已完成</string>
+    <string name="floating_subscribe">订阅会话</string>
+    <string name="floating_subscribed">正在跟踪此会话</string>
     <string name="floating_preview_offline">虚拟屏未运行</string>
     <string name="floating_preview_starting">虚拟屏启动中…</string>
     <string name="floating_preview_failed">虚拟屏启动失败</string>
