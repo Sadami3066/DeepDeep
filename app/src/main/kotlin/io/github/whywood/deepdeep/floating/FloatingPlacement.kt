@@ -49,6 +49,7 @@ data class FloatingSurfaceAnchor(
     val y: Int,
     val anchorBottom: Boolean,
     val arrowSide: FloatingArrowSide,
+    val alignEnd: Boolean,
     val available: Int,
 )
 
@@ -62,11 +63,9 @@ fun floatingSurfaceAnchor(
     gap: Int,
 ): FloatingSurfaceAnchor {
     val rightX = screenWidth - windowWidth - edgeMargin
-    val clampedX = (if (bubble.x + bubbleSize / 2 < screenWidth / 2) {
-        edgeMargin
-    } else {
-        rightX
-    }).coerceIn(edgeMargin, rightX.coerceAtLeast(edgeMargin))
+    val alignEnd = bubble.x + bubbleSize / 2 >= screenWidth / 2
+    val clampedX = (if (alignEnd) rightX else edgeMargin)
+        .coerceIn(edgeMargin, rightX.coerceAtLeast(edgeMargin))
     val windowBottom = bubble.y - gap
     val belowTop = bubble.y + bubbleSize + gap
     val aboveSpace = windowBottom - edgeMargin
@@ -79,6 +78,7 @@ fun floatingSurfaceAnchor(
             y = screenHeight - windowBottom,
             anchorBottom = true,
             arrowSide = FloatingArrowSide.BOTTOM,
+            alignEnd = alignEnd,
             available = available,
         )
     } else {
@@ -87,6 +87,7 @@ fun floatingSurfaceAnchor(
             y = belowTop,
             anchorBottom = false,
             arrowSide = FloatingArrowSide.TOP,
+            alignEnd = alignEnd,
             available = available,
         )
     }
@@ -105,6 +106,7 @@ data class FloatingStackPlacement(
     val y: Int,
     val anchorBottom: Boolean,
     val arrowSide: FloatingArrowSide,
+    val alignEnd: Boolean,
     val maxContentHeight: Int,
     val preview: FloatingPreviewSize?,
 )
@@ -152,6 +154,7 @@ fun floatingPlaceSurfaceStack(
         y = anchor.y,
         anchorBottom = anchor.anchorBottom,
         arrowSide = anchor.arrowSide,
+        alignEnd = anchor.alignEnd,
         maxContentHeight = bodyMaxHeight,
         preview = previewSize,
     )

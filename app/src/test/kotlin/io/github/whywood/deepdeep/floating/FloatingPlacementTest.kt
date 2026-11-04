@@ -273,6 +273,42 @@ class FloatingPlacementTest {
     }
 
     @Test
+    fun surfaceAlignsToBubbleSide() {
+        val right = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 880, y = 1628),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = 0,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = 0,
+            preview = null,
+        )
+        assertTrue(right.alignEnd)
+        assertEquals(screenWidth - 800 - margin, right.x)
+        val left = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 0, y = 1628),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = 0,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = 0,
+            preview = null,
+        )
+        assertFalse(left.alignEnd)
+        assertEquals(margin, left.x)
+    }
+
+    @Test
     fun standalonePreviewUsesFullRatioCap() {
         assertEquals(
             FloatingPreviewSize(396, 792),

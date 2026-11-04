@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.floating
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -30,11 +31,13 @@ import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 internal fun FloatingVirtualPreview(
     state: VirtualScreenState?,
     frame: ImageBitmap?,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingVirtualPreviewCorner)
-    Box(modifier.testTag("floating_virtual_preview")) {
+    val click = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    Box(modifier.then(click).testTag("floating_virtual_preview")) {
         if (state is VirtualScreenState.Online && frame != null) {
             Box(
                 Modifier

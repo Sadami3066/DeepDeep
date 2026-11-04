@@ -84,6 +84,7 @@ class FloatingWindowController(
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
     private val previewOpen = MutableStateFlow(false)
+    private val previewExpanded = MutableStateFlow(false)
     private val appForeground = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(FloatingWindowSettings())
     private val themeMode = MutableStateFlow(ThemeMode.SYSTEM)
@@ -156,6 +157,7 @@ class FloatingWindowController(
         scope.launch { feed.state.collect { requestRender() } }
         scope.launch { panelOpen.collect { requestRender() } }
         scope.launch { previewOpen.collect { requestRender() } }
+        scope.launch { previewExpanded.collect { requestRender() } }
         scope.launch { theme.collect { mode -> themeMode.value = mode } }
         scope.launch { now.collect { requestRender() } }
         scope.launch { virtualScreenState.collect { requestRender() } }
@@ -230,6 +232,7 @@ class FloatingWindowController(
         ticker = null
         panelOpen.value = false
         previewOpen.value = false
+        previewExpanded.value = false
     }
 
     private fun updateWindows() {
@@ -297,20 +300,25 @@ class FloatingWindowController(
         val screenWidth = frame.width
         val screenHeight = frame.height
         val padding = px(FloatingSurfaceWindowPadding)
+        val surfaceWidthPx = (px(surfaceWidth) * FloatingSurfaceScale).roundToInt()
+        val previewWidthPx = (
+            px(FloatingVirtualPreviewWidth) *
+                if (previewExpanded.value) 1f else FloatingPreviewCollapsedRatio
+            ).roundToInt()
         val bubbleVisual = FloatingBubblePosition(
             x = bubbleWindowPosition.x + px(FloatingBubbleWindowPadding),
             y = bubbleWindowPosition.y + px(FloatingBubbleWindowPadding),
         )
         val state = virtualScreenState.value
         val previewSpec = FloatingPreviewSpec(
-            width = px(FloatingVirtualPreviewWidth),
+            width = previewWidthPx,
             aspectRatio = state?.let(::floatingPreviewRatio) ?: FLOATING_PREVIEW_DEFAULT_RATIO,
             maxHeightRatio = FloatingVirtualPreviewMaxHeightRatio,
             chipHeight = px(FloatingVirtualPreviewChipHeight),
             online = state is VirtualScreenState.Online,
         )
         if (body != null) {
-            val windowWidth = px(surfaceWidth) + padding * 2
+            val windowWidth = surfaceWidthPx + padding * 2
             val placement = floatingPlaceSurfaceStack(
                 bubble = bubbleVisual,
                 bubbleSize = px(FloatingBubbleSize),
@@ -322,7 +330,7 @@ class FloatingWindowController(
                 windowPadding = padding,
                 blockGap = px(FloatingSurfaceBlockGap),
                 maxHeightRatio = maxHeightRatio,
-                minBodyHeight = px(FloatingSurfaceMinBodyHeight),
+                minBodyHeight = px(FloatingSurfaceMinBodyHeight * FloatingSurfaceScale),
                 preview = previewSpec.takeIf { preview },
             )
             if (preview && placement.preview == null) {
@@ -341,9 +349,12 @@ class FloatingWindowController(
             params.y = placement.y
             runCatching { windowManager.updateViewLayout(view, params) }
             surfaceUi.value = FloatingSurfaceUi(
-                body = body.withMaxHeight(placement.maxContentHeight),
+                body = body.withMaxHeight(
+                    (placement.maxContentHeight / FloatingSurfaceScale).roundToInt(),
+                ),
                 preview = placement.preview?.let { FloatingSurfacePreview(it.width, it.height) },
                 anchoredBottom = placement.anchorBottom,
+                alignEnd = placement.alignEnd,
             )
         } else {
             val size = floatingStandalonePreviewSize(previewSpec, screenHeight, padding)
@@ -387,7 +398,7 @@ class FloatingWindowController(
                         Modifier
                             .fillMaxWidth()
                             .padding(FloatingSurfaceWindowPadding),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        horizontalAlignment = if (content.alignEnd) Alignment.End else Alignment.Start,
                     ) {
                         val body = content.body
                         val preview = content.preview
@@ -396,10 +407,10 @@ class FloatingWindowController(
                                 SurfacePreview(preview)
                                 if (body != null) Spacer(Modifier.height(FloatingSurfaceBlockGap))
                             }
-                            if (body != null) SurfaceBody(body)
+                            if (body != null) FloatingScaledSurface { SurfaceBody(body) }
                         } else {
                             if (body != null) {
-                                SurfaceBody(body)
+                                FloatingScaledSurface { SurfaceBody(body) }
                                 if (preview != null) Spacer(Modifier.height(FloatingSurfaceBlockGap))
                             }
                             if (preview != null) SurfacePreview(preview)
@@ -486,10 +497,15 @@ class FloatingWindowController(
         FloatingVirtualPreview(
             state = state,
             frame = frame,
+            onClick = ::togglePreview,
             modifier = Modifier
                 .width(with(density) { preview.widthPx.toDp() })
                 .height(with(density) { preview.heightPx.toDp() }),
         )
+    }
+
+    private fun togglePreview() {
+        previewExpanded.value = !previewExpanded.value
     }
 
     private fun removeSurfaceWindow() {
@@ -652,6 +668,7 @@ class FloatingWindowController(
         longPressFired = true
         fadeRing()
         previewOpen.value = !previewOpen.value
+        if (!previewOpen.value) previewExpanded.value = false
     }
 
     private fun fadeRing() {
@@ -930,6 +947,7 @@ private data class FloatingSurfaceUi(
     val body: FloatingSurfaceBody? = null,
     val preview: FloatingSurfacePreview? = null,
     val anchoredBottom: Boolean = false,
+    val alignEnd: Boolean = false,
 )
 
 private fun FloatingSurfaceBody.withMaxHeight(maxHeightPx: Int): FloatingSurfaceBody = when (this) {
