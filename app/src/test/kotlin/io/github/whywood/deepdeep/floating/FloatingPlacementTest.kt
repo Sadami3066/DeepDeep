@@ -12,7 +12,6 @@ class FloatingPlacementTest {
     private val margin = 24
     private val gap = 18
     private val padding = 48
-    private val arrowInset = 60
 
     @Test
     fun defaultBubbleSitsOnRightEdgeBelowUpperHalf() {
@@ -62,14 +61,12 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
-            arrowInset = arrowInset,
             maxHeightRatio = 0.45f,
         )
         assertTrue(placement.anchorBottom)
         assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
         assertEquals(screenHeight - (1628 - gap), placement.y)
         assertEquals(screenWidth - 800 - margin, placement.x)
-        assertEquals(880 + bubbleSize / 2 - (screenWidth - 800 - margin), placement.arrowOffset)
         assertEquals(1080, placement.maxContentHeight)
     }
 
@@ -84,7 +81,6 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
-            arrowInset = arrowInset,
             maxHeightRatio = 0.45f,
         )
         assertFalse(placement.anchorBottom)
@@ -104,7 +100,6 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
-            arrowInset = arrowInset,
             maxHeightRatio = 0.70f,
         )
         val available = 700 - gap - margin - padding * 2
@@ -112,22 +107,19 @@ class FloatingPlacementTest {
     }
 
     @Test
-    fun arrowStaysInsideSurfaceOnNarrowScreens() {
+    fun surfaceStaysInsideContentOnNarrowScreens() {
         val placement = floatingPlaceSurface(
             bubble = FloatingBubblePosition(x = 10, y = 1628),
             bubbleSize = bubbleSize,
-            windowWidth = 1100,
+            windowWidth = 1600,
             screenWidth = screenWidth,
             screenHeight = screenHeight,
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
-            arrowInset = arrowInset,
             maxHeightRatio = 0.45f,
         )
         assertEquals(margin, placement.x)
-        assertTrue(placement.arrowOffset >= arrowInset)
-        assertTrue(placement.arrowOffset <= 1100 - arrowInset)
     }
 
     @Test

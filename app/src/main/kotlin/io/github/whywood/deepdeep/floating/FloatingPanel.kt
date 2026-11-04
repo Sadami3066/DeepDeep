@@ -62,7 +62,6 @@ internal fun FloatingPanel(
     completed: List<FloatingCompletion>,
     now: Long,
     maxHeight: Dp,
-    nearEdge: FloatingArrowSide,
     subscribedSessionId: String?,
     onOpenRun: (FloatingRun) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
@@ -73,72 +72,58 @@ internal fun FloatingPanel(
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
-    val near = FloatingSurfaceNearPadding
-    val far = FloatingSurfaceWindowPadding * 2 - near
-    val topPadding = if (nearEdge == FloatingArrowSide.TOP) near else far
-    val bottomPadding = if (nearEdge == FloatingArrowSide.BOTTOM) near else far
-    Box(
+    Column(
         Modifier
-            .padding(
-                start = FloatingSurfaceWindowPadding,
-                end = FloatingSurfaceWindowPadding,
-                top = topPadding,
-                bottom = bottomPadding,
-            )
+            .width(FloatingPanelWidth)
+            .heightIn(max = maxHeight)
+            .floatingLift(shape, colors)
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, panelBorder(colors), shape)
             .testTag("floating_panel"),
     ) {
+        PanelHeader(onCollapse = onCollapse)
+        DdHairline()
         Column(
             Modifier
-                .width(FloatingPanelWidth)
-                .heightIn(max = maxHeight)
-                .floatingLift(shape, colors)
-                .clip(shape)
-                .background(colors.surface)
-                .border(1.dp, panelBorder(colors), shape),
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            PanelHeader(onCollapse = onCollapse)
-            DdHairline()
-            Column(
-                Modifier
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                val empty = runs.isEmpty() && questions.isEmpty() && completed.isEmpty()
-                if (empty) {
-                    DdEmptyState(
-                        text = stringResource(R.string.floating_panel_empty),
-                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 10.dp),
+            val empty = runs.isEmpty() && questions.isEmpty() && completed.isEmpty()
+            if (empty) {
+                DdEmptyState(
+                    text = stringResource(R.string.floating_panel_empty),
+                    modifier = Modifier.padding(horizontal = 2.dp, vertical = 10.dp),
+                )
+            }
+            if (runs.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.floating_panel_running))
+                runs.forEach { run ->
+                    RunRow(
+                        run = run,
+                        now = now,
+                        subscribed = run.sessionId == subscribedSessionId,
+                        onClick = { onOpenRun(run) },
+                        onSubscribe = { onSubscribe(run.sessionId) },
                     )
                 }
-                if (runs.isNotEmpty()) {
-                    SectionLabel(stringResource(R.string.floating_panel_running))
-                    runs.forEach { run ->
-                        RunRow(
-                            run = run,
-                            now = now,
-                            subscribed = run.sessionId == subscribedSessionId,
-                            onClick = { onOpenRun(run) },
-                            onSubscribe = { onSubscribe(run.sessionId) },
-                        )
-                    }
+            }
+            if (questions.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.floating_panel_questions))
+                questions.forEach { pending ->
+                    QuestionRow(pending = pending, onClick = { onOpenQuestion(pending) })
                 }
-                if (questions.isNotEmpty()) {
-                    SectionLabel(stringResource(R.string.floating_panel_questions))
-                    questions.forEach { pending ->
-                        QuestionRow(pending = pending, onClick = { onOpenQuestion(pending) })
-                    }
-                }
-                if (completed.isNotEmpty()) {
-                    SectionLabel(stringResource(R.string.floating_panel_completed))
-                    completed.forEach { completion ->
-                        CompletedRow(
-                            completion = completion,
-                            onClick = { onOpenCompleted(completion) },
-                            onRemoveCompleted = { onRemoveCompleted(completion) },
-                        )
-                    }
+            }
+            if (completed.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.floating_panel_completed))
+                completed.forEach { completion ->
+                    CompletedRow(
+                        completion = completion,
+                        onClick = { onOpenCompleted(completion) },
+                        onRemoveCompleted = { onRemoveCompleted(completion) },
+                    )
                 }
             }
         }

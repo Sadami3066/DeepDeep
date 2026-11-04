@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.floating
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,10 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -58,8 +53,6 @@ internal fun FloatingEventCard(
     sessionTitle: String,
     queueSize: Int,
     maxHeight: Dp,
-    arrowSide: FloatingArrowSide,
-    arrowOffset: Dp,
     onAnswerQuestion: (PendingQuestion, QuestionOption) -> Unit,
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
@@ -69,10 +62,6 @@ internal fun FloatingEventCard(
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
-    val near = FloatingSurfaceNearPadding
-    val far = FloatingSurfaceWindowPadding * 2 - near
-    val topPadding = if (arrowSide == FloatingArrowSide.TOP) near else far
-    val bottomPadding = if (arrowSide == FloatingArrowSide.BOTTOM) near else far
     val onClick = when (card) {
         is FloatingEventCard.Question -> null
         is FloatingEventCard.PluginSetup -> onOpenSetup
@@ -81,66 +70,48 @@ internal fun FloatingEventCard(
     }
     Box(
         Modifier
-            .padding(
-                start = FloatingSurfaceWindowPadding,
-                end = FloatingSurfaceWindowPadding,
-                top = topPadding,
-                bottom = bottomPadding,
+            .width(FloatingCardWidth)
+            .floatingLift(shape, colors)
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, cardBorder(colors), shape)
+            .then(
+                if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
             )
             .testTag("floating_card"),
     ) {
-        Column(Modifier.width(FloatingCardWidth)) {
-            if (arrowSide == FloatingArrowSide.TOP) {
-                FloatingArrow(side = FloatingArrowSide.TOP, offset = arrowOffset)
-            }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .floatingLift(shape, colors)
-                    .clip(shape)
-                    .background(colors.surface)
-                    .border(1.dp, cardBorder(colors), shape)
-                    .then(
-                        if (onClick == null) Modifier else Modifier.clickable(onClick = onClick),
-                    ),
-            ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = maxHeight)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 18.dp, vertical = 15.dp),
-                ) {
-                    when (card) {
-                        is FloatingEventCard.Question -> QuestionBody(
-                            pending = card.pending,
-                            sessionTitle = sessionTitle,
-                            queueSize = queueSize,
-                            onAnswer = onAnswerQuestion,
-                            onOpenOverlay = { onOpenQuestion(card.pending) },
-                        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = maxHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 15.dp),
+        ) {
+            when (card) {
+                is FloatingEventCard.Question -> QuestionBody(
+                    pending = card.pending,
+                    sessionTitle = sessionTitle,
+                    queueSize = queueSize,
+                    onAnswer = onAnswerQuestion,
+                    onOpenOverlay = { onOpenQuestion(card.pending) },
+                )
 
-                        is FloatingEventCard.PluginSetup -> SetupBody(
-                            notice = card.notice,
-                            queueSize = queueSize,
-                            onDismiss = onDismiss,
-                        )
+                is FloatingEventCard.PluginSetup -> SetupBody(
+                    notice = card.notice,
+                    queueSize = queueSize,
+                    onDismiss = onDismiss,
+                )
 
-                        is FloatingEventCard.Completed -> CompletedBody(
-                            completion = card.completion,
-                            sessionTitle = sessionTitle,
-                            queueSize = queueSize,
-                            onDismiss = onDismiss,
-                        )
+                is FloatingEventCard.Completed -> CompletedBody(
+                    completion = card.completion,
+                    sessionTitle = sessionTitle,
+                    queueSize = queueSize,
+                    onDismiss = onDismiss,
+                )
 
-                        is FloatingEventCard.Tracking -> TrackingBody(
-                            subscription = card.subscription,
-                        )
-                    }
-                }
-            }
-            if (arrowSide == FloatingArrowSide.BOTTOM) {
-                FloatingArrow(side = FloatingArrowSide.BOTTOM, offset = arrowOffset)
+                is FloatingEventCard.Tracking -> TrackingBody(
+                    subscription = card.subscription,
+                )
             }
         }
     }
@@ -451,44 +422,6 @@ private fun CardHeader(
                 iconSize = 16.dp,
                 tint = colors.inkTertiary,
             )
-        }
-    }
-}
-
-@Composable
-private fun FloatingArrow(
-    side: FloatingArrowSide,
-    offset: Dp,
-) {
-    val colors = deepDeepColors()
-    val borderColor = cardBorder(colors)
-    Box(Modifier.width(FloatingCardWidth).height(FloatingArrowHeight)) {
-        Canvas(
-            Modifier
-                .offset(x = offset.coerceIn(8.dp, FloatingCardWidth - FloatingArrowWidth - 8.dp))
-                .size(FloatingArrowWidth, FloatingArrowHeight),
-        ) {
-            val half = size.width / 2f
-            val path = Path()
-            if (side == FloatingArrowSide.BOTTOM) {
-                path.moveTo(0f, 0f)
-                path.lineTo(size.width, 0f)
-                path.lineTo(half, size.height)
-            } else {
-                path.moveTo(half, 0f)
-                path.lineTo(0f, size.height)
-                path.lineTo(size.width, size.height)
-            }
-            path.close()
-            drawPath(path = path, color = colors.surface)
-            val strokeWidth = Stroke(width = with(density) { 1.dp.toPx() }).width
-            if (side == FloatingArrowSide.BOTTOM) {
-                drawLine(borderColor, Offset(0f, 0f), Offset(half, size.height), strokeWidth)
-                drawLine(borderColor, Offset(half, size.height), Offset(size.width, 0f), strokeWidth)
-            } else {
-                drawLine(borderColor, Offset(half, 0f), Offset(0f, size.height), strokeWidth)
-                drawLine(borderColor, Offset(half, 0f), Offset(size.width, size.height), strokeWidth)
-            }
         }
     }
 }

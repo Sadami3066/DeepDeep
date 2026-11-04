@@ -61,7 +61,6 @@ class FloatingContentFrameTest {
             edgeMargin = 24,
             gap = 18,
             windowPadding = 48,
-            arrowInset = 60,
             maxHeightRatio = 0.70f,
         )
         assertTrue(placement.anchorBottom)
@@ -86,7 +85,6 @@ class FloatingContentFrameTest {
             edgeMargin = 24,
             gap = 18,
             windowPadding = 48,
-            arrowInset = 60,
             maxHeightRatio = 0.70f,
         )
         assertTrue(placement.anchorBottom)

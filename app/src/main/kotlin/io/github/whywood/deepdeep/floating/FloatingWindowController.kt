@@ -15,10 +15,15 @@ import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -294,7 +299,7 @@ class FloatingWindowController(
         val view = surfaceView ?: return
         val params = surfaceParams ?: return
         val state = virtualScreenState.value
-        val padding = px(FloatingVirtualPreviewPadding)
+        val padding = px(FloatingSurfaceWindowPadding)
         val size = if (state is VirtualScreenState.Online) {
             floatingPreviewSize(
                 width = px(FloatingVirtualPreviewWidth),
@@ -325,7 +330,7 @@ class FloatingWindowController(
         params.x = placement.x
         params.y = placement.y
         runCatching { windowManager.updateViewLayout(view, params) }
-        surfaceUi.value = FloatingSurfaceUi.Preview(arrowSide = placement.arrowSide)
+        surfaceUi.value = FloatingSurfaceUi.Preview
     }
 
     private fun showSurfaceWindow(
@@ -350,7 +355,6 @@ class FloatingWindowController(
             edgeMargin = px(FloatingEdgeMargin),
             gap = px(FloatingSurfaceGap),
             windowPadding = px(FloatingSurfaceWindowPadding),
-            arrowInset = px(FloatingArrowWidth) / 2 + px(8.dp),
             maxHeightRatio = maxHeightRatio,
         )
         params.width = windowWidth
@@ -362,19 +366,12 @@ class FloatingWindowController(
         surfaceUi.value = when (ui) {
             is FloatingSurfaceUi.Card -> ui.copy(
                 sessionTitle = sessionTitle,
-                maxHeightPx = (placement.maxContentHeight - px(FloatingArrowHeight)).coerceAtLeast(0),
-                arrowSide = placement.arrowSide,
-                arrowOffsetPx = placement.arrowOffset -
-                    px(FloatingSurfaceWindowPadding) -
-                    px(FloatingArrowWidth) / 2,
+                maxHeightPx = placement.maxContentHeight.coerceAtLeast(0),
             )
 
-            is FloatingSurfaceUi.Panel -> ui.copy(
-                maxHeightPx = placement.maxContentHeight,
-                arrowSide = placement.arrowSide,
-            )
+            is FloatingSurfaceUi.Panel -> ui.copy(maxHeightPx = placement.maxContentHeight)
 
-            is FloatingSurfaceUi.Preview -> ui
+            FloatingSurfaceUi.Preview -> ui
         }
     }
 
@@ -388,55 +385,58 @@ class FloatingWindowController(
             DeepDeepTheme(theme, fontStyle) {
                 val surface by surfaceUi.collectAsState()
                 val density = LocalDensity.current
-                when (val value = surface) {
-                    is FloatingSurfaceUi.Card -> FloatingEventCard(
-                        card = value.card,
-                        sessionTitle = value.sessionTitle,
-                        queueSize = value.queueSize,
-                        maxHeight = with(density) { value.maxHeightPx.toDp() },
-                        arrowSide = value.arrowSide,
-                        arrowOffset = with(density) { value.arrowOffsetPx.toDp() },
-                        onAnswerQuestion = ::answerQuestion,
-                        onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                        onOpenCompleted = { completion ->
-                            feed.removeCompleted(completion.key)
-                            openSession(completion.sessionId)
-                        },
-                        onOpenTracking = { subscription -> openSession(subscription.sessionId) },
-                        onOpenSetup = onOpenApp,
-                        onDismiss = { feed.dismissCard(value.card.key) },
-                    )
-
-                    is FloatingSurfaceUi.Panel -> FloatingPanel(
-                        runs = value.runs,
-                        questions = value.questions,
-                        completed = value.completed,
-                        now = value.now,
-                        maxHeight = with(density) { value.maxHeightPx.toDp() },
-                        nearEdge = value.arrowSide,
-                        subscribedSessionId = value.subscribedSessionId,
-                        onOpenRun = { run -> openSessionInApp(run.sessionId) },
-                        onOpenQuestion = { pending -> openSession(pending.sessionId) },
-                        onOpenCompleted = { completion ->
-                            feed.removeCompleted(completion.key)
-                            openSessionInApp(completion.sessionId)
-                        },
-                        onRemoveCompleted = { completion -> feed.removeCompleted(completion.key) },
-                        onSubscribe = { sessionId -> feed.subscribe(sessionId) },
-                        onCollapse = { panelOpen.value = false },
-                    )
-
-                    is FloatingSurfaceUi.Preview -> {
-                        val state by virtualScreenState.collectAsState()
-                        val preview by previewFrame.collectAsState()
-                        FloatingVirtualPreview(
-                            state = state,
-                            frame = preview,
-                            nearEdge = value.arrowSide,
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(FloatingSurfaceWindowPadding),
+                ) {
+                    when (val value = surface) {
+                        is FloatingSurfaceUi.Card -> FloatingEventCard(
+                            card = value.card,
+                            sessionTitle = value.sessionTitle,
+                            queueSize = value.queueSize,
+                            maxHeight = with(density) { value.maxHeightPx.toDp() },
+                            onAnswerQuestion = ::answerQuestion,
+                            onOpenQuestion = { pending -> openSession(pending.sessionId) },
+                            onOpenCompleted = { completion ->
+                                feed.removeCompleted(completion.key)
+                                openSession(completion.sessionId)
+                            },
+                            onOpenTracking = { subscription -> openSession(subscription.sessionId) },
+                            onOpenSetup = onOpenApp,
+                            onDismiss = { feed.dismissCard(value.card.key) },
                         )
-                    }
 
-                    null -> Unit
+                        is FloatingSurfaceUi.Panel -> FloatingPanel(
+                            runs = value.runs,
+                            questions = value.questions,
+                            completed = value.completed,
+                            now = value.now,
+                            maxHeight = with(density) { value.maxHeightPx.toDp() },
+                            subscribedSessionId = value.subscribedSessionId,
+                            onOpenRun = { run -> openSessionInApp(run.sessionId) },
+                            onOpenQuestion = { pending -> openSession(pending.sessionId) },
+                            onOpenCompleted = { completion ->
+                                feed.removeCompleted(completion.key)
+                                openSessionInApp(completion.sessionId)
+                            },
+                            onRemoveCompleted = { completion -> feed.removeCompleted(completion.key) },
+                            onSubscribe = { sessionId -> feed.subscribe(sessionId) },
+                            onCollapse = { panelOpen.value = false },
+                        )
+
+                        FloatingSurfaceUi.Preview -> {
+                            val state by virtualScreenState.collectAsState()
+                            val preview by previewFrame.collectAsState()
+                            FloatingVirtualPreview(
+                                state = state,
+                                frame = preview,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+
+                        null -> Unit
+                    }
                 }
             }
         }
@@ -893,8 +893,6 @@ private sealed interface FloatingSurfaceUi {
         val sessionTitle: String = "",
         val queueSize: Int = 1,
         val maxHeightPx: Int = 0,
-        val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
-        val arrowOffsetPx: Int = 0,
     ) : FloatingSurfaceUi
 
     data class Panel(
@@ -904,10 +902,7 @@ private sealed interface FloatingSurfaceUi {
         val now: Long,
         val subscribedSessionId: String? = null,
         val maxHeightPx: Int = 0,
-        val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
     ) : FloatingSurfaceUi
 
-    data class Preview(
-        val arrowSide: FloatingArrowSide = FloatingArrowSide.BOTTOM,
-    ) : FloatingSurfaceUi
+    data object Preview : FloatingSurfaceUi
 }

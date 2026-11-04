@@ -20,7 +20,6 @@ data class FloatingSurfacePlacement(
     val anchorBottom: Boolean,
     val maxContentHeight: Int,
     val arrowSide: FloatingArrowSide,
-    val arrowOffset: Int,
 )
 
 fun floatingDefaultBubblePosition(
@@ -62,7 +61,6 @@ fun floatingPlaceSurface(
     edgeMargin: Int,
     gap: Int,
     windowPadding: Int,
-    arrowInset: Int,
     maxHeightRatio: Float,
 ): FloatingSurfacePlacement {
     val rightX = screenWidth - windowWidth - edgeMargin
@@ -81,11 +79,6 @@ fun floatingPlaceSurface(
         (available - windowPadding * 2).coerceAtLeast(0),
         (screenHeight * maxHeightRatio).roundToInt(),
     )
-    val bubbleCenter = bubble.x + bubbleSize / 2
-    val arrowOffset = (bubbleCenter - clampedX).coerceIn(
-        arrowInset,
-        (windowWidth - arrowInset).coerceAtLeast(arrowInset),
-    )
     return if (useAbove) {
         FloatingSurfacePlacement(
             x = clampedX,
@@ -93,7 +86,6 @@ fun floatingPlaceSurface(
             anchorBottom = true,
             maxContentHeight = maxContentHeight,
             arrowSide = FloatingArrowSide.BOTTOM,
-            arrowOffset = arrowOffset,
         )
     } else {
         FloatingSurfacePlacement(
@@ -102,7 +94,6 @@ fun floatingPlaceSurface(
             anchorBottom = false,
             maxContentHeight = maxContentHeight,
             arrowSide = FloatingArrowSide.TOP,
-            arrowOffset = arrowOffset,
         )
     }
 }

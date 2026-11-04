@@ -30,25 +30,11 @@ import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 internal fun FloatingVirtualPreview(
     state: VirtualScreenState?,
     frame: ImageBitmap?,
-    nearEdge: FloatingArrowSide,
+    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingVirtualPreviewCorner)
-    val near = FloatingSurfaceNearPadding
-    val far = FloatingVirtualPreviewPadding * 2 - near
-    val topPadding = if (nearEdge == FloatingArrowSide.TOP) near else far
-    val bottomPadding = if (nearEdge == FloatingArrowSide.BOTTOM) near else far
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(
-                start = FloatingVirtualPreviewPadding,
-                end = FloatingVirtualPreviewPadding,
-                top = topPadding,
-                bottom = bottomPadding,
-            )
-            .testTag("floating_virtual_preview"),
-    ) {
+    Box(modifier.testTag("floating_virtual_preview")) {
         if (state is VirtualScreenState.Online && frame != null) {
             Box(
                 Modifier
