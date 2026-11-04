@@ -70,14 +70,14 @@ class FloatingContentFrameTest {
     }
 
     @Test
-    fun systemBarsCauseThePanelGapThatThisFrameFixes() {
+    fun bottomAnchoredSurfaceRestsGapAboveBubble() {
         val content = floatingContentFrame(
             displayWidth = 1220,
             displayHeight = 2712,
             insets = FloatingFrameInsets(left = 0, top = 138, right = 0, bottom = 52),
         )
         val bubble = FloatingBubblePosition(x = 940, y = 2140)
-        val withContent = floatingPlaceSurface(
+        val placement = floatingPlaceSurface(
             bubble = bubble,
             bubbleSize = 220,
             windowWidth = 1000,
@@ -89,18 +89,8 @@ class FloatingContentFrameTest {
             arrowInset = 60,
             maxHeightRatio = 0.70f,
         )
-        val withDisplay = floatingPlaceSurface(
-            bubble = bubble,
-            bubbleSize = 220,
-            windowWidth = 1000,
-            screenWidth = 1220,
-            screenHeight = 2712,
-            edgeMargin = 24,
-            gap = 18,
-            windowPadding = 48,
-            arrowInset = 60,
-            maxHeightRatio = 0.70f,
-        )
-        assertEquals(190, withDisplay.y - withContent.y)
+        assertTrue(placement.anchorBottom)
+        assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
+        assertEquals(bubble.y - 18, content.height - placement.y)
     }
 }

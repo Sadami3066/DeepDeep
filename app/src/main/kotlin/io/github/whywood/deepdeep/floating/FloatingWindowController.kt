@@ -805,8 +805,8 @@ class FloatingWindowController(
     private fun refreshContentFrame(ignoreViewFrame: Boolean = false) {
         if (!started) return
         val display = context.resources.displayMetrics
-        val frame = (if (ignoreViewFrame) null else viewContentFrame())
-            ?: metricsContentFrame()
+        val frame = metricsContentFrame()
+            ?: (if (ignoreViewFrame) null else viewContentFrame())
             ?: floatingFullContentFrame(display.widthPixels, display.heightPixels)
         if (frame == contentFrame.value) return
         contentFrame.value = frame
@@ -832,20 +832,9 @@ class FloatingWindowController(
     private fun metricsContentFrame(): FloatingContentFrame? {
         if (Build.VERSION.SDK_INT < 30) return null
         val metrics = runCatching { windowManager.currentWindowMetrics }.getOrNull() ?: return null
-        val display = context.resources.displayMetrics
-        val insets = metrics.windowInsets.floatingFrameInsets()
-        if (!insets.isEmpty) {
-            return floatingContentFrame(display.widthPixels, display.heightPixels, insets)
-        }
         val bounds = metrics.bounds
         if (bounds.width() <= 0 || bounds.height() <= 0) return null
-        if (bounds.width() >= display.widthPixels && bounds.height() >= display.heightPixels) return null
-        return FloatingContentFrame(
-            left = bounds.left,
-            top = bounds.top,
-            width = bounds.width(),
-            height = bounds.height(),
-        )
+        return floatingContentFrame(bounds.width(), bounds.height(), metrics.windowInsets.floatingFrameInsets())
     }
 
     private fun WindowInsets.floatingFrameInsets(): FloatingFrameInsets {
