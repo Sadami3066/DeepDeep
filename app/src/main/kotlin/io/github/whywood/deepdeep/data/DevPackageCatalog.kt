@@ -7,12 +7,12 @@ data class DevPackage(
     val id: String,
     val displayName: String,
     val sizeLabel: String,
+    @StringRes val descriptionRes: Int,
 )
 
 data class DevBundle(
     val id: String,
     @StringRes val titleRes: Int,
-    @StringRes val subtitleRes: Int,
     val packageIds: List<String>,
     val sizeLabel: String,
     val recommended: Boolean = false,
@@ -21,40 +21,39 @@ data class DevBundle(
 
 object DevPackageCatalog {
     val packages = listOf(
-        DevPackage("curl", "curl", "~1 MB"),
-        DevPackage("wget", "wget", "~1 MB"),
-        DevPackage("ca-certificates", "CA 证书", "<1 MB"),
-        DevPackage("jq", "jq", "<1 MB"),
-        DevPackage("python3", "Python 3", "~40 MB"),
-        DevPackage("py3-pip", "pip", "~10 MB"),
-        DevPackage("nodejs", "Node.js", "~55 MB"),
-        DevPackage("npm", "npm", "~15 MB"),
-        DevPackage("ripgrep", "ripgrep", "~3 MB"),
-        DevPackage("fd", "fd", "~2 MB"),
-        DevPackage("ffmpeg", "FFmpeg", "~100 MB"),
-        DevPackage("openssh-client", "OpenSSH", "~3 MB"),
-        DevPackage("unzip", "unzip", "<1 MB"),
-        DevPackage("zip", "zip", "<1 MB"),
-        DevPackage("tree", "tree", "<1 MB"),
-        DevPackage("poppler-utils", "PDF 工具", "~20 MB"),
-        DevPackage("qpdf", "qpdf", "~8 MB"),
-        DevPackage("py3-openpyxl", "Excel 读写", "~115 MB"),
-        DevPackage("py3-xlsxwriter", "Excel 生成", "~2 MB"),
-        DevPackage("py3-pillow", "图像处理", "~10 MB"),
-        DevPackage("tesseract-ocr", "OCR", "~35 MB"),
-        DevPackage("git", "Git", "~10 MB"),
-        DevPackage("github-cli", "GitHub CLI", "~45 MB"),
-        DevPackage("build-base", "GCC / make", "~235 MB"),
-        DevPackage("cmake", "CMake", "~20 MB"),
-        DevPackage("make", "make", "~2 MB"),
-        DevPackage("pkgconf", "pkgconf", "<1 MB"),
+        DevPackage("curl", "curl", "~1 MB", R.string.dev_package_curl),
+        DevPackage("wget", "wget", "~1 MB", R.string.dev_package_wget),
+        DevPackage("ca-certificates", "CA 证书", "<1 MB", R.string.dev_package_ca_certificates),
+        DevPackage("jq", "jq", "<1 MB", R.string.dev_package_jq),
+        DevPackage("python3", "Python 3", "~40 MB", R.string.dev_package_python3),
+        DevPackage("py3-pip", "pip", "~10 MB", R.string.dev_package_pip),
+        DevPackage("nodejs", "Node.js", "~55 MB", R.string.dev_package_nodejs),
+        DevPackage("npm", "npm", "~15 MB", R.string.dev_package_npm),
+        DevPackage("ripgrep", "ripgrep", "~3 MB", R.string.dev_package_ripgrep),
+        DevPackage("fd", "fd", "~2 MB", R.string.dev_package_fd),
+        DevPackage("ffmpeg", "FFmpeg", "~100 MB", R.string.dev_package_ffmpeg),
+        DevPackage("openssh-client", "OpenSSH", "~3 MB", R.string.dev_package_openssh),
+        DevPackage("unzip", "unzip", "<1 MB", R.string.dev_package_unzip),
+        DevPackage("zip", "zip", "<1 MB", R.string.dev_package_zip),
+        DevPackage("tree", "tree", "<1 MB", R.string.dev_package_tree),
+        DevPackage("poppler-utils", "PDF 工具", "~20 MB", R.string.dev_package_pdf),
+        DevPackage("qpdf", "qpdf", "~8 MB", R.string.dev_package_qpdf),
+        DevPackage("py3-openpyxl", "Excel 读写", "~115 MB", R.string.dev_package_excel),
+        DevPackage("py3-xlsxwriter", "Excel 生成", "~2 MB", R.string.dev_package_excel_writer),
+        DevPackage("py3-pillow", "图像处理", "~10 MB", R.string.dev_package_image),
+        DevPackage("tesseract-ocr", "OCR", "~35 MB", R.string.dev_package_ocr),
+        DevPackage("git", "Git", "~10 MB", R.string.dev_package_git),
+        DevPackage("github-cli", "GitHub CLI", "~45 MB", R.string.dev_package_github_cli),
+        DevPackage("build-base", "GCC / make", "~235 MB", R.string.dev_package_build_base),
+        DevPackage("cmake", "CMake", "~20 MB", R.string.dev_package_cmake),
+        DevPackage("make", "make", "~2 MB", R.string.dev_package_make),
+        DevPackage("pkgconf", "pkgconf", "<1 MB", R.string.dev_package_pkgconf),
     )
 
     val bundles = listOf(
         DevBundle(
             id = "base",
             titleRes = R.string.dev_bundle_base,
-            subtitleRes = R.string.dev_bundle_base_body,
             packageIds = listOf(
                 "curl", "wget", "ca-certificates", "jq",
                 "python3", "py3-pip",
@@ -68,7 +67,6 @@ object DevPackageCatalog {
         DevBundle(
             id = "office",
             titleRes = R.string.dev_bundle_office,
-            subtitleRes = R.string.dev_bundle_office_body,
             packageIds = listOf(
                 "poppler-utils", "qpdf",
                 "python3", "py3-pip",
@@ -80,7 +78,6 @@ object DevPackageCatalog {
         DevBundle(
             id = "dev",
             titleRes = R.string.dev_bundle_dev,
-            subtitleRes = R.string.dev_bundle_dev_body,
             packageIds = listOf(
                 "git", "github-cli", "build-base", "cmake", "make", "pkgconf", "openssh-client",
             ),

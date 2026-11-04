@@ -12,6 +12,13 @@ class DevPackageCatalogTest {
     }
 
     @Test
+    fun everyPackageExplainsItsPurpose() {
+        DevPackageCatalog.packages.forEach { packageInfo ->
+            assertTrue("package ${packageInfo.id} has no description", packageInfo.descriptionRes != 0)
+        }
+    }
+
+    @Test
     fun bundlesReferenceKnownPackages() {
         assertEquals(3, DevPackageCatalog.bundles.size)
         val known = DevPackageCatalog.packages.map { it.id }.toSet()
