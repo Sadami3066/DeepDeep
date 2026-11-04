@@ -5,18 +5,29 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
+import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.viewfinder.core.ImplementationMode
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,11 +76,14 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
+private const val SCAN_CARD_HIDE_MS = 1800L
 
 @Composable
 internal fun CameraCaptureSheet(
@@ -159,11 +174,39 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
     var capturing by remember { mutableStateOf(false) }
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     val active = remember { mutableStateOf(true) }
+    val scanDecision = remember { mutableStateOf<ScanDecision?>(null) }
+    val lastBarcodeAt = remember { mutableLongStateOf(0L) }
+    val installedPackages: (String) -> Boolean = remember {
+        { packageName ->
+            runCatching { context.packageManager.getApplicationInfo(packageName, 0) }.isSuccess
+        }
+    }
+    val analyzer = remember {
+        CameraBarcodeAnalyzer { raw ->
+            lastBarcodeAt.longValue = SystemClock.elapsedRealtime()
+            val decision = ScanRouting.resolve(raw, installedPackages)
+            if (scanDecision.value != decision) scanDecision.value = decision
+        }
+    }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(300)
+            val decision = scanDecision.value
+            if (decision != null &&
+                SystemClock.elapsedRealtime() - lastBarcodeAt.longValue > SCAN_CARD_HIDE_MS
+            ) {
+                scanDecision.value = null
+            }
+        }
+    }
     DisposableEffect(lifecycleOwner) {
         onDispose {
             active.value = false
             surfaceRequest = null
             provider?.unbindAll()
+            analysisExecutor.shutdown()
+            analyzer.close()
         }
     }
     LaunchedEffect(lifecycleOwner, lensFacing) {
@@ -188,12 +231,28 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
             val capture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .build()
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                CameraSelector.Builder().requireLensFacing(lensFacing).build(),
-                preview,
-                capture,
-            )
+            val analysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setResolutionSelector(
+                    ResolutionSelector.Builder()
+                        .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                        .setResolutionStrategy(
+                            ResolutionStrategy(
+                                Size(1280, 960),
+                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                            ),
+                        )
+                        .build(),
+                )
+                .build()
+                .apply { setAnalyzer(analysisExecutor, analyzer) }
+            val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+            try {
+                cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture, analysis)
+            } catch (_: IllegalArgumentException) {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+            }
             imageCapture = capture
             unavailable = false
         } catch (_: Exception) {
@@ -239,6 +298,12 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
             )
         }
     }
+    val scanCard = scanDecision.value
+    var lastCard by remember { mutableStateOf<ScanDecision?>(null) }
+    LaunchedEffect(scanCard) {
+        if (scanCard != null) lastCard = scanCard
+    }
+    val cardContent = scanCard ?: lastCard
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -314,6 +379,27 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
                 tint = Color.White,
                 enabled = !capturing,
             )
+        }
+        AnimatedVisibility(
+            visible = scanCard != null,
+            enter = fadeIn(tween(140)) + slideInVertically(tween(160)) { height -> height / 4 },
+            exit = fadeOut(tween(120)),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
+        ) {
+            cardContent?.let { decision ->
+                ScanResultCard(
+                    decision = decision,
+                    onActivate = {
+                        ScanLauncher.launch(context, decision)
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

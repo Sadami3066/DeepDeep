@@ -14,6 +14,12 @@
         </intent>
         <package android:name="com.miui.securitycenter" />
         <package android:name="com.miui.powerkeeper" />
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.eg.android.AlipayGphone" />
+        <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.sankuai.meituan" />
+        <package android:name="com.jingdong.app.mall" />
+        <package android:name="com.ss.android.ugc.aweme" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />

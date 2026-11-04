@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.compose)
+    implementation(libs.mlkit.barcode.scanning)
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.webkit)

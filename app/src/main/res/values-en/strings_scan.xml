@@ -1,0 +1,6 @@
+<resources>
+    <string name="scan_action_app">Scan with %1$s</string>
+    <string name="scan_action_browse">Open in browser</string>
+    <string name="scan_action_copy">Copy</string>
+    <string name="scan_copied">Copied</string>
+</resources>
