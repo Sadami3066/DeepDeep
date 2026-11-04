@@ -421,6 +421,7 @@ class FloatingWindowController(
                             feed.removeCompleted(completion.key)
                             openSessionInApp(completion.sessionId)
                         },
+                        onRemoveCompleted = { completion -> feed.removeCompleted(completion.key) },
                         onSubscribe = { sessionId -> feed.subscribe(sessionId) },
                         onCollapse = { panelOpen.value = false },
                     )
