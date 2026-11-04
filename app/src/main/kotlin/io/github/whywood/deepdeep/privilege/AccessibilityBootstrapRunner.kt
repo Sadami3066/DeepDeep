@@ -12,7 +12,6 @@ import kotlinx.coroutines.sync.Mutex
 internal class AccessibilityBootstrapRunner(
     private val component: String,
     private val exec: suspend (command: String, timeoutMillis: Long) -> RootCommandResult,
-    private val isDaemonAlive: suspend () -> Boolean,
     private val isEnabled: () -> Boolean,
     private val scope: CoroutineScope,
 ) {
@@ -21,7 +20,7 @@ internal class AccessibilityBootstrapRunner(
     private var retryAt = 0L
     private var failures = 0
 
-    fun onBridgeReady() {
+    fun onPrivilegeReady() {
         scope.launch { ensure(fresh = true) }
     }
 
@@ -31,7 +30,7 @@ internal class AccessibilityBootstrapRunner(
             if (fresh) retryAt = 0L
             val now = System.currentTimeMillis()
             if (now < retryAt || now - lastAttemptAt < MIN_ATTEMPT_INTERVAL_MS) return
-            if (!isEnabled() || !isDaemonAlive()) return
+            if (!isEnabled()) return
             lastAttemptAt = now
             val snapshot = readSettings() ?: run {
                 fail(READ_FAILED)

@@ -6,6 +6,7 @@ import android.provider.Settings
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
+import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.shell.RootShell
 import io.github.whywood.deepdeep.shell.RootStatus
 import kotlinx.coroutines.CoroutineScope
@@ -31,8 +32,20 @@ class PrivilegeControllerImpl(
 
     private val accessibilityBootstrap = AccessibilityBootstrapRunner(
         component = accessibilityServiceComponent(),
-        exec = { command, timeoutMillis -> adbBridge.exec(command, timeoutMillis) },
-        isDaemonAlive = { adbBridge.isDaemonAlive() },
+        exec = { command, timeoutMillis ->
+            if (stateFlow.value.effective == PrivilegeLevel.ROOT) {
+                val result = rootShell.execute(command, timeoutMillis)
+                RootCommandResult(
+                    exitCode = result.exitCode,
+                    stdout = result.stdout,
+                    stderr = result.stderr,
+                    truncated = result.truncated,
+                    timedOut = result.timedOut,
+                )
+            } else {
+                adbBridge.exec(command, timeoutMillis)
+            }
+        },
         isEnabled = { stateFlow.value.effective != PrivilegeLevel.NORMAL },
         scope = scope,
     )
@@ -43,13 +56,12 @@ class PrivilegeControllerImpl(
             val level = preferences.readLevel()
             publish { it.copy(selected = level) }
             refreshBackends(probeRoot = shouldProbeRootOnStartup(level))
-            if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
         }
         scope.launch {
             var daemonReady = false
             adbBridge.state.collect { bridge ->
                 publish { it.copy(adb = bridge) }
-                if (bridge.daemon && !daemonReady) accessibilityBootstrap.onBridgeReady()
+                if (bridge.daemon && !daemonReady) accessibilityBootstrap.onPrivilegeReady()
                 daemonReady = bridge.daemon
             }
         }
@@ -60,7 +72,6 @@ class PrivilegeControllerImpl(
         publish { it.copy(selected = level) }
         if (level != PrivilegeLevel.NORMAL) {
             refreshBackends(probeRoot = true)
-            if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
         }
     }
 
@@ -71,12 +82,13 @@ class PrivilegeControllerImpl(
     override suspend fun probeRoot(): RootStatus {
         val status = rootShell.probe()
         publish { it.copy(root = status) }
+        accessibilityBootstrap.onPrivilegeReady()
         return status
     }
 
     override suspend fun connect() {
         runCatching { adbBridge.connectAndStart() }
-        if (stateFlow.value.adb.daemon) accessibilityBootstrap.onBridgeReady()
+        refreshBackends(probeRoot = false)
     }
 
     override fun startPairing() {
@@ -92,6 +104,7 @@ class PrivilegeControllerImpl(
     private suspend fun refreshBackends(probeRoot: Boolean) {
         runCatching { adbBridge.refreshState() }
         if (probeRoot && shouldAutoProbeRoot(stateFlow.value.root)) probeRoot()
+        accessibilityBootstrap.onPrivilegeReady()
     }
 
     private fun publish(transform: (PrivilegeState) -> PrivilegeState) {
