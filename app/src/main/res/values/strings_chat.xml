@@ -8,8 +8,8 @@
     <string name="assistant_attach_open">查看附件</string>
     <string name="assistant_attach_share">分享文件</string>
     <string name="assistant_attach_unpreviewable">无法预览此文件</string>
-    <string name="attach_pick_image">从相册选择</string>
-    <string name="attach_pick_file">选择文件</string>
+    <string name="attach_pick_image">照片</string>
+    <string name="attach_pick_file">文件</string>
     <string name="attach_take_photo">拍照</string>
     <string name="camera_close">关闭</string>
     <string name="camera_shutter">拍照</string>

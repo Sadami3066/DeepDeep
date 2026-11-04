@@ -8,9 +8,9 @@
     <string name="assistant_attach_open">View attachment</string>
     <string name="assistant_attach_share">Share file</string>
     <string name="assistant_attach_unpreviewable">Cannot preview this file</string>
-    <string name="attach_pick_image">Choose from library</string>
-    <string name="attach_pick_file">Choose a file</string>
-    <string name="attach_take_photo">Take a photo</string>
+    <string name="attach_pick_image">Photo</string>
+    <string name="attach_pick_file">File</string>
+    <string name="attach_take_photo">Camera</string>
     <string name="camera_close">Close</string>
     <string name="camera_shutter">Take photo</string>
     <string name="camera_switch_lens">Switch camera</string>
