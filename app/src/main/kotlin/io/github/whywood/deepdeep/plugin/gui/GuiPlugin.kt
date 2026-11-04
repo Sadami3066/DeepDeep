@@ -196,7 +196,7 @@ class GuiPlugin(
 
             虚拟屏流程：在「屏幕操作」插件页手动启停虚拟屏，或让 agent 先 `virtual_screen(action=start)`，再 screen_launch。主屏流程：screen_status(target=main)，然后在每次观察和操作中都指定 target=main。观察后操作，操作后用 screen_wait 或 screen_observe 确认实际结果。
             需要视觉信息时截图，节点足以回答时直接读节点。
-            ref 绑定所选屏幕和最近一次快照；禁止跨 target 复用。重新 observe、窗口变化或屏幕重建后应重新获取 ref。
+            ref 绑定所选屏幕；普通操作、重新 observe 或窗口变化后仍会按节点身份重新定位，只有屏幕重建后需要重新获取。
             scanned 仅统计已扫描节点；complete=false 表示未穷尽，零命中不能证明目标不存在。过滤只筛选已扫描节点，可提高 maxDepth/maxNodes；limit 只限制返回数量。
             两块屏幕的节点读取和中文输入都需要无障碍。虚拟屏未连接无障碍时仍可坐标操作、按键和截图；主屏坐标、ASCII 与按键可使用已授权的 ADB/Root，主屏截图需要无障碍及 Android 11+。
             无障碍开关开启但未连接时先稍等，仍未连接请用户关闭再开启服务。
