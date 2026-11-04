@@ -10,6 +10,9 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.max
+import kotlin.math.sqrt
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.awaitClose
@@ -18,8 +21,12 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 
 internal const val VOICE_STOP_TIMEOUT_MS = 1200L
-internal const val VOICE_RESTART_DELAY_MS = 200L
+internal const val VOICE_RESTART_DELAY_MS = 120L
 internal const val MAX_VOICE_RETRIES = 2
+
+internal const val PCM_LEVEL_FLOOR_DB = -50.0
+internal const val PCM_LEVEL_CEILING_DB = -15.0
+private const val VOLUME_DECAY = 0.6f
 
 internal enum class VoiceErrorDisposition { RESTART, RETRY, FAIL }
 
@@ -40,6 +47,29 @@ internal fun voiceShouldRetry(error: SpeechError, attempt: Int): Boolean =
 
 internal fun speechErrorForCode(code: Int): SpeechError =
     (speechEventForError(code) as? SpeechEvent.Failed)?.error ?: SpeechError.SPEECH_TIMEOUT
+
+internal fun levelForDb(db: Double): Float =
+    ((db - PCM_LEVEL_FLOOR_DB) / (PCM_LEVEL_CEILING_DB - PCM_LEVEL_FLOOR_DB))
+        .coerceIn(0.0, 1.0)
+        .toFloat()
+
+internal fun pcmBufferLevel(buffer: ByteArray): Float {
+    if (buffer.size < 4) return 0f
+    var sum = 0.0
+    var count = 0
+    var index = 0
+    while (index + 1 < buffer.size) {
+        val sample = ((buffer[index].toInt() and 0xFF) or (buffer[index + 1].toInt() shl 8))
+            .toShort() / 32768.0
+        sum += sample * sample
+        count += 1
+        index += 2
+    }
+    if (count == 0) return 0f
+    val rms = sqrt(sum / count)
+    val db = 20 * log10(rms.coerceAtLeast(1e-7))
+    return levelForDb(db)
+}
 
 internal class ContinuousVoiceSession(context: Context) {
     private val appContext = context.applicationContext
@@ -103,6 +133,7 @@ internal class ContinuousVoiceSession(context: Context) {
         private var finished = false
         private var retries = 0
         private var lastVolume = -1f
+        private var bufferVolumes = false
 
         private val volumeStep = 0.04f
 
@@ -111,13 +142,6 @@ internal class ContinuousVoiceSession(context: Context) {
 
         fun begin() {
             if (finished) return
-            val speech = runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }.getOrNull()
-            if (speech == null) {
-                fail(SpeechError.UNAVAILABLE)
-                return
-            }
-            recognizer = speech
-            speech.setRecognitionListener(this)
             startSegment()
         }
 
@@ -147,13 +171,8 @@ internal class ContinuousVoiceSession(context: Context) {
             segmentOpen = false
             main.removeCallbacks(restart)
             main.removeCallbacks(stopTimeout)
-            val speech = recognizer
-            recognizer = null
+            releaseRecognizer()
             events.close()
-            if (speech != null) {
-                runCatching { speech.cancel() }
-                runCatching { speech.destroy() }
-            }
         }
 
         private fun fail(error: SpeechError) {
@@ -162,15 +181,35 @@ internal class ContinuousVoiceSession(context: Context) {
             finish()
         }
 
+        private fun createRecognizer(): SpeechRecognizer? {
+            val speech = runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }.getOrNull()
+            if (speech == null) {
+                fail(SpeechError.UNAVAILABLE)
+                return null
+            }
+            speech.setRecognitionListener(this)
+            recognizer = speech
+            return speech
+        }
+
+        private fun releaseRecognizer() {
+            val speech = recognizer ?: return
+            recognizer = null
+            runCatching { speech.cancel() }
+            runCatching { speech.destroy() }
+        }
+
         private fun startSegment() {
             if (finished || stopped) return
-            val speech = recognizer ?: return
+            val speech = createRecognizer() ?: return
             segmentOpen = true
+            lastVolume = -1f
             val started = runCatching {
                 speech.startListening(recognitionIntent(languageTag))
             }.isSuccess
             if (started) return
             segmentOpen = false
+            releaseRecognizer()
             fail(SpeechError.CLIENT)
         }
 
@@ -187,12 +226,20 @@ internal class ContinuousVoiceSession(context: Context) {
 
         override fun onReadyForSpeech(params: Bundle?) = Unit
         override fun onBeginningOfSpeech() = Unit
-        override fun onBufferReceived(buffer: ByteArray?) = Unit
         override fun onEndOfSpeech() = Unit
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
+        override fun onBufferReceived(buffer: ByteArray?) {
+            if (finished || buffer == null) return
+            bufferVolumes = true
+            val shaped = max(pcmBufferLevel(buffer), lastVolume * VOLUME_DECAY)
+            if (abs(shaped - lastVolume) < volumeStep) return
+            lastVolume = shaped
+            events.trySend(SpeechEvent.Volume(shaped))
+        }
+
         override fun onRmsChanged(rmsdB: Float) {
-            if (finished) return
+            if (finished || bufferVolumes) return
             val level = rmsLevel(rmsdB)
             if (abs(level - lastVolume) < volumeStep) return
             lastVolume = level
@@ -208,6 +255,7 @@ internal class ContinuousVoiceSession(context: Context) {
         override fun onResults(results: Bundle?) {
             if (finished) return
             segmentOpen = false
+            releaseRecognizer()
             val text = recognitionText(results)
             if (text.isNotEmpty()) deliverFinal(text)
             if (stopped) {
@@ -220,6 +268,7 @@ internal class ContinuousVoiceSession(context: Context) {
         override fun onError(error: Int) {
             if (finished) return
             segmentOpen = false
+            releaseRecognizer()
             if (stopped) {
                 finish()
                 return
