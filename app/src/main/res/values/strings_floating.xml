@@ -15,7 +15,6 @@
     <string name="floating_card_more_questions">共 %1$d 个问题，请在浮层回答</string>
     <string name="floating_card_delivery">交付</string>
     <string name="floating_card_delivery_count">%1$d 项交付</string>
-    <string name="floating_card_open_in_overlay">在浮层查看</string>
     <string name="floating_card_done">回答完成</string>
     <string name="floating_card_stopped">已停止</string>
     <string name="floating_card_failed">失败：%1$s</string>
@@ -23,7 +22,6 @@
     <string name="floating_card_queue"> · %1$d 条</string>
     <string name="floating_card_plugin_setup">插件设置</string>
     <string name="floating_card_plugin_setup_hint">点按继续</string>
-    <string name="floating_card_tracking">跟踪中</string>
     <string name="floating_tracking_tool">工具 · %1$s</string>
     <string name="floating_tracking_thinking">思考 · %1$s</string>
 

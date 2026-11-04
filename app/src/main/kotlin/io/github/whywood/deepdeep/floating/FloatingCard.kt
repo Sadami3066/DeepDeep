@@ -135,8 +135,6 @@ internal fun FloatingEventCard(
 
                         is FloatingEventCard.Tracking -> TrackingBody(
                             subscription = card.subscription,
-                            sessionTitle = sessionTitle,
-                            queueSize = queueSize,
                         )
                     }
                 }
@@ -355,41 +353,44 @@ private fun CompletedBody(
             )
         }
     }
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text = stringResource(R.string.floating_card_open_in_overlay),
-        style = DdType.bodySmall,
-        color = colors.inkTertiary,
-    )
 }
 
 @Composable
 private fun TrackingBody(
     subscription: FloatingSubscription,
-    sessionTitle: String,
-    queueSize: Int,
 ) {
     val colors = deepDeepColors()
-    CardHeader(
-        label = stringResource(R.string.floating_card_tracking),
-        labelColor = colors.accent,
-        title = sessionTitle,
-        queueSize = queueSize,
-    )
-    Spacer(Modifier.height(8.dp))
+    val activity = subscription.activity
+    val toolLine = subscription.tool?.let { stringResource(R.string.floating_tracking_tool, it) }
+    val thinkingLine = trackingThinking(subscription.reasoning)
+    val messageLine = floatingTrackedPreview(subscription.text).takeIf { it.isNotEmpty() }
+    val exceptional = activity is RuntimeActivity.Retrying ||
+        activity is RuntimeActivity.Compacting ||
+        activity is RuntimeActivity.CompactionFailed
+    val thinkingPrimary = !exceptional && toolLine == null && thinkingLine != null
+    val primary = when {
+        exceptional -> activityText(activity)
+        toolLine != null -> toolLine
+        thinkingLine != null -> thinkingLine
+        else -> activityText(activity)
+    }
+    val detail = when {
+        thinkingLine == null -> messageLine
+        thinkingPrimary -> messageLine
+        else -> thinkingLine
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         DdSpinner(color = colors.accent, size = 12.dp, strokeWidth = 1.4.dp)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = trackingPrimary(subscription),
+            text = primary,
             style = DdType.body,
             color = colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
-    val detail = trackingDetail(subscription)
-    if (detail.isNotEmpty()) {
+    if (detail != null) {
         Spacer(Modifier.height(4.dp))
         Text(
             text = detail,
@@ -399,37 +400,16 @@ private fun TrackingBody(
             overflow = TextOverflow.Ellipsis,
         )
     }
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text = stringResource(R.string.floating_card_open_in_overlay),
-        style = DdType.bodySmall,
-        color = colors.inkTertiary,
-    )
 }
 
 @Composable
-private fun trackingPrimary(subscription: FloatingSubscription): String {
-    val activity = subscription.activity
-    return when {
-        activity is RuntimeActivity.Retrying ||
-            activity is RuntimeActivity.Compacting ||
-            activity is RuntimeActivity.CompactionFailed -> activityText(activity)
-
-        subscription.tool != null -> stringResource(R.string.floating_tracking_tool, subscription.tool)
-
-        else -> activityText(activity)
+private fun trackingThinking(reasoning: String): String? {
+    val preview = floatingTrackedPreview(reasoning)
+    return if (preview.isEmpty()) {
+        null
+    } else {
+        stringResource(R.string.floating_tracking_thinking, preview)
     }
-}
-
-@Composable
-private fun trackingDetail(subscription: FloatingSubscription): String {
-    if (subscription.reasoning.isNotBlank()) {
-        val preview = floatingTrackedPreview(subscription.reasoning)
-        if (preview.isNotEmpty()) {
-            return stringResource(R.string.floating_tracking_thinking, preview)
-        }
-    }
-    return floatingTrackedPreview(subscription.text)
 }
 
 @Composable
