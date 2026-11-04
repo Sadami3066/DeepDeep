@@ -1,7 +1,4 @@
 <resources>
-    <string name="plugin_screen_name">屏幕</string>
-    <string name="plugin_screen_summary">查看并操作虚拟屏或主屏</string>
-
-    <string name="plugin_screen_detail_virtual">虚拟屏操作</string>
-    <string name="plugin_screen_detail_virtual_value">使用 screen_* 工具操作在线虚拟屏</string>
+    <string name="plugin_screen_name">屏幕操作</string>
+    <string name="plugin_screen_summary">在后台虚拟屏或主屏上操作应用</string>
 </resources>

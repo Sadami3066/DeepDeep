@@ -7,17 +7,11 @@ import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBootstrap
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
 import io.github.whywood.deepdeep.plugin.PluginAction
 import io.github.whywood.deepdeep.plugin.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginProgress
 import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.vscreen.PrivilegedLauncher
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
@@ -45,75 +39,38 @@ internal const val VIRTUAL_SCREEN_DESCRIPTION =
 internal const val VIRTUAL_SCREEN_GUIDELINE =
     "virtual_screen only manages the virtual screen lifecycle; use the screen_* tools to operate on it."
 
-class VirtualScreenPlugin(
+class VirtualScreenFeature internal constructor(
     private val context: Context,
-    private val privilege: PrivilegeController,
-    private val adb: AdbBootstrap,
-) : OfficialPlugin {
-    private val engine: VirtualScreenEngine = VirtualScreenRuntime.install(
-        VirtualScreenEngine(
-            context.applicationContext,
-            PrivilegedLauncher(context.applicationContext, adb, privilege),
-        ),
-    )
-
-    override val id: String = "virtual_screen"
-    override val kind: PluginKind = PluginKind.INTERNAL
-    override val icon: DdIcon = DdIcons.Monitor
-    override val nameRes: Int = R.string.plugin_virtual_screen_name
-    override val summaryRes: Int = R.string.plugin_virtual_screen_summary
-    override val version: String = "1.1.0"
-    override val sizeLabelRes: Int = R.string.plugin_virtual_screen_size
-
-    override suspend fun availability(): PluginAvailability = virtualScreenAvailability(
-        privilege.state.value.virtualScreenAvailable,
-        string(R.string.plugin_virtual_screen_privilege_required),
-    )
-
-    override suspend fun install(progress: PluginProgress) = Unit
-
-    override suspend fun uninstall() = Unit
-
-    override suspend fun status(): PluginStatus = when (val state = engine.state.value) {
+    private val screen: VirtualScreenAccess,
+) {
+    fun status(): PluginStatus = when (val state = screen.state.value) {
         VirtualScreenState.Offline -> PluginStatus.NotReady(string(R.string.plugin_virtual_screen_status_offline))
         VirtualScreenState.Starting -> PluginStatus.NotReady(string(R.string.plugin_virtual_screen_status_starting))
         is VirtualScreenState.Online -> PluginStatus.Ready(string(R.string.plugin_virtual_screen_status_online))
         is VirtualScreenState.Failed -> PluginStatus.Failed(state.message)
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = buildList {
-        if (engine.state.value is VirtualScreenState.Online) {
-            add(
-                PluginAction(
-                    ACTION_STOP,
-                    R.string.plugin_virtual_screen_action_stop,
-                    PluginActionStyle.DESTRUCTIVE,
-                ),
-            )
-        } else {
-            add(PluginAction(ACTION_START, R.string.plugin_virtual_screen_action_start))
-        }
+    fun actions(): List<PluginAction> = if (screen.state.value is VirtualScreenState.Online) {
+        listOf(
+            PluginAction(
+                ACTION_STOP,
+                R.string.plugin_virtual_screen_action_stop,
+                PluginActionStyle.DESTRUCTIVE,
+            ),
+        )
+    } else {
+        listOf(PluginAction(ACTION_START, R.string.plugin_virtual_screen_action_start))
     }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    suspend fun runAction(actionId: String) {
         when (actionId) {
-            ACTION_START -> engine.start()
-            ACTION_STOP -> engine.stop()
+            ACTION_START -> screen.start()
+            ACTION_STOP -> screen.stop()
         }
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> {
-        val state = engine.state.value
-        val online = state as? VirtualScreenState.Online
-        val backend = online?.backend?.let { backend ->
-            when (backend) {
-                PrivilegedLauncher.BACKEND_ROOT -> string(R.string.plugin_virtual_screen_backend_root)
-                PrivilegedLauncher.BACKEND_ADB -> string(R.string.plugin_virtual_screen_backend_adb)
-                else -> backend
-            }
-        } ?: string(R.string.plugin_virtual_screen_value_offline)
-        val uid = engine.helperUid?.let { "uid $it" }
-            ?: string(R.string.plugin_virtual_screen_value_offline)
+    fun detailRows(status: PluginStatus): List<PluginDetailRow> {
+        val online = screen.state.value as? VirtualScreenState.Online
         return listOf(
             PluginDetailRow(R.string.plugin_virtual_screen_detail_state, status.label),
             PluginDetailRow(
@@ -121,26 +78,31 @@ class VirtualScreenPlugin(
                 online?.let { "${it.width} × ${it.height}" }
                     ?: string(R.string.plugin_virtual_screen_value_offline),
             ),
-            PluginDetailRow(
-                R.string.plugin_virtual_screen_detail_display,
-                online?.displayId?.toString() ?: string(R.string.plugin_virtual_screen_value_offline),
-            ),
-            PluginDetailRow(R.string.plugin_virtual_screen_detail_backend, backend),
-            PluginDetailRow(R.string.plugin_virtual_screen_detail_uid, uid),
-            PluginDetailRow(
-                R.string.plugin_virtual_screen_detail_controls,
-                string(R.string.plugin_virtual_screen_detail_controls_value),
-            ),
         )
     }
 
-    override fun tools(): List<CodingTool> = virtualScreenTools(EngineScreen(engine))
+    fun tools(): List<CodingTool> = virtualScreenTools(screen)
 
     private fun string(id: Int): String = context.resources.getString(id)
 
-    private companion object {
-        const val ACTION_START = "start"
-        const val ACTION_STOP = "stop"
+    companion object {
+        const val ACTION_START = "virtual_start"
+        const val ACTION_STOP = "virtual_stop"
+
+        fun install(
+            context: Context,
+            privilege: PrivilegeController,
+            adb: AdbBootstrap,
+        ): VirtualScreenFeature {
+            val appContext = context.applicationContext
+            val engine = VirtualScreenRuntime.install(
+                VirtualScreenEngine(
+                    appContext,
+                    PrivilegedLauncher(appContext, adb, privilege),
+                ),
+            )
+            return VirtualScreenFeature(appContext, EngineScreen(engine))
+        }
     }
 }
 
@@ -164,7 +126,7 @@ internal interface VirtualScreenAccess {
     suspend fun stop()
 }
 
-private class EngineScreen(private val engine: VirtualScreenEngine) : VirtualScreenAccess {
+internal class EngineScreen(private val engine: VirtualScreenEngine) : VirtualScreenAccess {
     override val reconnecting: Boolean get() = engine.reconnecting
     override val state: StateFlow<VirtualScreenState>
         get() = engine.state

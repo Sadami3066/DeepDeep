@@ -2,17 +2,22 @@ package io.github.whywood.deepdeep.plugin.gui
 
 import android.content.ContextWrapper
 import android.content.res.Resources
+import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenAccess
+import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.screen.screenToolNames
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureInfo
+import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
+import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,23 +76,51 @@ class GuiPluginTest {
     }
 
     @Test
-    fun detailRowsReportServiceAndKeepAliveState() = runTest {
+    fun actionsIncludeVirtualScreenLifecycleWhenFeatureIsPresent() {
+        val actions = plugin(virtualScreen = feature()).actions(PluginStatus.NotReady("x"))
+        assertEquals(
+            listOf("virtual_start", "accessibility_settings", "battery_exemption"),
+            actions.map { it.id },
+        )
+        assertEquals(R.string.plugin_virtual_screen_action_start, actions.first().labelRes)
+    }
+
+    @Test
+    fun stoppedVirtualScreenOffersStopAction() {
+        val actions = plugin(virtualScreen = feature(FakeScreen(VirtualScreenState.Online(3, 1080, 1920, "adb"))))
+            .actions(PluginStatus.Ready("x"))
+        assertEquals("virtual_stop", actions.first().id)
+        assertEquals(R.string.plugin_virtual_screen_action_stop, actions.first().labelRes)
+    }
+
+    @Test
+    fun detailRowsReportAccessibilityAndVirtualScreenState() = runTest {
         val connected = plugin().detailRows(PluginStatus.Ready("x"))
-        assertEquals(6, connected.size)
+        assertEquals(1, connected.size)
         assertEquals(R.string.plugin_gui_detail_service, connected[0].labelRes)
         assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected[0].value)
-        assertEquals(R.string.plugin_screen_detail_virtual, connected[1].labelRes)
-        assertEquals("res:${R.string.plugin_screen_detail_virtual_value}", connected[1].value)
-        assertEquals(R.string.plugin_gui_detail_how, connected[2].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_how_value}", connected[2].value)
-        assertEquals(R.string.plugin_gui_detail_battery, connected[3].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_battery_optimized}", connected[3].value)
-        assertEquals(R.string.plugin_gui_detail_background, connected[4].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_background_unrestricted}", connected[4].value)
-        assertEquals(R.string.plugin_gui_detail_recent, connected[5].labelRes)
 
         val disabled = plugin(FakeActions(disconnected = true)).detailRows(PluginStatus.NotReady("x"))
         assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled[0].value)
+
+        val online = plugin(virtualScreen = feature(FakeScreen(VirtualScreenState.Online(3, 1080, 1920, "adb"))))
+            .detailRows(PluginStatus.Ready("x"))
+        assertEquals(3, online.size)
+        assertEquals(R.string.plugin_virtual_screen_detail_state, online[1].labelRes)
+        assertEquals("res:${R.string.plugin_virtual_screen_status_online}", online[1].value)
+        assertEquals(R.string.plugin_virtual_screen_detail_resolution, online[2].labelRes)
+        assertEquals("1080 × 1920", online[2].value)
+
+        val offline = plugin(virtualScreen = feature()).detailRows(PluginStatus.Ready("x"))
+        assertEquals("res:${R.string.plugin_virtual_screen_status_offline}", offline[1].value)
+        assertEquals("res:${R.string.plugin_virtual_screen_value_offline}", offline[2].value)
+    }
+
+    @Test
+    fun toolsIncludeVirtualScreenLifecycleWhenFeatureIsPresent() {
+        val tools = plugin(virtualScreen = feature()).tools()
+        assertEquals(screenToolNames() + "virtual_screen", tools.map { it.name })
+        assertEquals(12, tools.size)
     }
 
     @Test
@@ -127,6 +160,7 @@ class GuiPluginTest {
         screenToolNames().forEach { toolName -> assertTrue(toolName, skill.markdown.contains(toolName)) }
         listOf(
             "virtual_screen(action=start)",
+            "屏幕操作",
             "onExpectedScreen",
             "forTextGone",
             "verified",
@@ -151,7 +185,28 @@ class GuiPluginTest {
 
     private fun plugin(
         actions: GuiActions = FakeActions(),
-    ): GuiPlugin = GuiPlugin(context, actions, screenshotDir)
+        virtualScreen: VirtualScreenFeature? = null,
+    ): GuiPlugin = GuiPlugin(context, actions, screenshotDir, virtualScreen = virtualScreen)
+
+    private fun feature(screen: VirtualScreenAccess = FakeScreen()): VirtualScreenFeature =
+        VirtualScreenFeature(context, screen)
+
+    private class FakeScreen(
+        initial: VirtualScreenState = VirtualScreenState.Offline,
+    ) : VirtualScreenAccess {
+        override val state = MutableStateFlow(initial)
+        override var lastFailure: VirtualScreenFailureInfo? = null
+        override var lastTransportNotice: String? = null
+
+        override suspend fun start(): VirtualScreenResult {
+            state.value = VirtualScreenState.Online(3, 1080, 1920, "adb")
+            return VirtualScreenResult(true)
+        }
+
+        override suspend fun stop() {
+            state.value = VirtualScreenState.Offline
+        }
+    }
 
     private class FakeActions(
         var disconnected: Boolean = false,

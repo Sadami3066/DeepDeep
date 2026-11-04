@@ -4,26 +4,14 @@
 
     <string name="plugin_gui_status_connected">无障碍服务已连接</string>
     <string name="plugin_gui_status_disabled">无障碍服务未开启</string>
+    <string name="plugin_gui_status_disconnected">无障碍服务已断开，打开 App 并连上无线调试后会自动恢复</string>
 
     <string name="plugin_gui_action_settings">打开无障碍设置</string>
+    <string name="plugin_gui_action_battery">允许后台运行</string>
+    <string name="plugin_gui_action_autostart">自启动设置</string>
 
     <string name="plugin_gui_detail_service">无障碍服务</string>
     <string name="plugin_gui_detail_enabled">已开启</string>
     <string name="plugin_gui_detail_disabled">未开启</string>
-    <string name="plugin_gui_detail_how">开启方式</string>
-    <string name="plugin_gui_detail_how_value">守护进程就绪后会自动开启无障碍，被系统回收后也会自动恢复；也可在这里手动打开。开关是灰色时去应用信息允许受限设置</string>
-    <string name="plugin_gui_status_disconnected">无障碍服务已断开，打开 App 并连上无线调试后会自动恢复</string>
-    <string name="plugin_gui_action_battery">允许后台运行</string>
-    <string name="plugin_gui_action_autostart">自启动设置</string>
-    <string name="plugin_gui_action_power">省电策略</string>
-
     <string name="plugin_gui_detail_disconnected">已断开</string>
-    <string name="plugin_gui_detail_battery">电池优化</string>
-    <string name="plugin_gui_detail_battery_ignored">已豁免</string>
-    <string name="plugin_gui_detail_battery_optimized">未豁免</string>
-    <string name="plugin_gui_detail_background">后台限制</string>
-    <string name="plugin_gui_detail_background_unrestricted">无限制</string>
-    <string name="plugin_gui_detail_background_restricted">受限，请改为无限制</string>
-    <string name="plugin_gui_detail_recent">最近任务</string>
-    <string name="plugin_gui_detail_recent_value">多任务界面下拉卡片锁定</string>
 </resources>

@@ -4,26 +4,14 @@
 
     <string name="plugin_gui_status_connected">Accessibility service connected</string>
     <string name="plugin_gui_status_disabled">Accessibility service is off</string>
+    <string name="plugin_gui_status_disconnected">Accessibility service disconnected; it recovers automatically once the app opens with wireless debugging connected</string>
 
     <string name="plugin_gui_action_settings">Open accessibility settings</string>
+    <string name="plugin_gui_action_battery">Allow background running</string>
+    <string name="plugin_gui_action_autostart">Autostart settings</string>
 
     <string name="plugin_gui_detail_service">Accessibility service</string>
     <string name="plugin_gui_detail_enabled">On</string>
     <string name="plugin_gui_detail_disabled">Off</string>
-    <string name="plugin_gui_detail_how">How to enable</string>
-    <string name="plugin_gui_detail_how_value">Accessibility turns on automatically once the shell daemon is ready and recovers after the system drops it; you can also open it manually here. If the toggle is greyed out, allow restricted settings in App info</string>
-    <string name="plugin_gui_status_disconnected">Accessibility service disconnected; it recovers automatically once the app opens with wireless debugging connected</string>
-    <string name="plugin_gui_action_battery">Allow background running</string>
-    <string name="plugin_gui_action_autostart">Autostart settings</string>
-    <string name="plugin_gui_action_power">Battery saver policy</string>
-
     <string name="plugin_gui_detail_disconnected">Disconnected</string>
-    <string name="plugin_gui_detail_battery">Battery optimization</string>
-    <string name="plugin_gui_detail_battery_ignored">Exempt</string>
-    <string name="plugin_gui_detail_battery_optimized">Not exempt</string>
-    <string name="plugin_gui_detail_background">Background restriction</string>
-    <string name="plugin_gui_detail_background_unrestricted">Unrestricted</string>
-    <string name="plugin_gui_detail_background_restricted">Restricted — set to No restrictions</string>
-    <string name="plugin_gui_detail_recent">Recent tasks</string>
-    <string name="plugin_gui_detail_recent_value">Pull down the task card to lock it</string>
 </resources>

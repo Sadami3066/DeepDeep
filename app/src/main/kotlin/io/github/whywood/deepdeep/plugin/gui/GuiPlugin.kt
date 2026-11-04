@@ -16,6 +16,7 @@ import io.github.whywood.deepdeep.plugin.PluginProgress
 import io.github.whywood.deepdeep.plugin.PluginSkill
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
 import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
 import io.github.whywood.deepdeep.screen.ScreenController
@@ -38,6 +39,7 @@ class GuiPlugin(
     screenshotDir: File? = null,
     private val mainShell: MainScreenShell? = null,
     private val mainActions: GuiActions = GuiAccessibilityActions(),
+    private val virtualScreen: VirtualScreenFeature? = null,
 ) : OfficialPlugin {
     private val resolvedScreenshotDir: File by lazy {
         screenshotDir ?: File(File(context.filesDir, "gui"), "screenshots")
@@ -91,6 +93,7 @@ class GuiPlugin(
     }
 
     override fun actions(status: PluginStatus): List<PluginAction> = buildList {
+        virtualScreen?.let { addAll(it.actions()) }
         add(PluginAction(ACTION_ACCESSIBILITY_SETTINGS, R.string.plugin_gui_action_settings))
         if (!KeepAlive.isIgnoringBatteryOptimizations(context)) {
             add(PluginAction(ACTION_BATTERY_EXEMPTION, R.string.plugin_gui_action_battery))
@@ -98,13 +101,13 @@ class GuiPlugin(
         if (KeepAlive.supportsAutostartSettings(context)) {
             add(PluginAction(ACTION_AUTOSTART, R.string.plugin_gui_action_autostart))
         }
-        if (KeepAlive.isBackgroundRestricted(context) && KeepAlive.supportsPowerSettings(context)) {
-            add(PluginAction(ACTION_POWER, R.string.plugin_gui_action_power))
-        }
     }
 
     override suspend fun runAction(actionId: String, ui: PluginUi) {
         when (actionId) {
+            VirtualScreenFeature.ACTION_START, VirtualScreenFeature.ACTION_STOP ->
+                virtualScreen?.runAction(actionId)
+
             ACTION_ACCESSIBILITY_SETTINGS -> {
                 context.startActivity(
                     Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -114,54 +117,26 @@ class GuiPlugin(
 
             ACTION_BATTERY_EXEMPTION -> KeepAlive.requestIgnoreBatteryOptimizations(context)
             ACTION_AUTOSTART -> KeepAlive.openAutostartSettings(context)
-            ACTION_POWER -> KeepAlive.openPowerSettings(context)
         }
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = listOf(
-        PluginDetailRow(
-            R.string.plugin_gui_detail_service,
-            string(
-                when {
-                    status is PluginStatus.Ready -> R.string.plugin_gui_detail_enabled
-                    GuiAccessibilityState.isEnabled(context) -> R.string.plugin_gui_detail_disconnected
-                    else -> R.string.plugin_gui_detail_disabled
-                },
+    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = buildList {
+        add(
+            PluginDetailRow(
+                R.string.plugin_gui_detail_service,
+                string(
+                    when {
+                        status is PluginStatus.Ready -> R.string.plugin_gui_detail_enabled
+                        GuiAccessibilityState.isEnabled(context) -> R.string.plugin_gui_detail_disconnected
+                        else -> R.string.plugin_gui_detail_disabled
+                    },
+                ),
             ),
-        ),
-        PluginDetailRow(
-            R.string.plugin_screen_detail_virtual,
-            string(R.string.plugin_screen_detail_virtual_value),
-        ),
-        PluginDetailRow(
-            R.string.plugin_gui_detail_how,
-            string(R.string.plugin_gui_detail_how_value),
-        ),
-        PluginDetailRow(
-            R.string.plugin_gui_detail_battery,
-            string(
-                if (KeepAlive.isIgnoringBatteryOptimizations(context)) {
-                    R.string.plugin_gui_detail_battery_ignored
-                } else {
-                    R.string.plugin_gui_detail_battery_optimized
-                },
-            ),
-        ),
-        PluginDetailRow(
-            R.string.plugin_gui_detail_background,
-            string(
-                if (KeepAlive.isBackgroundRestricted(context)) {
-                    R.string.plugin_gui_detail_background_restricted
-                } else {
-                    R.string.plugin_gui_detail_background_unrestricted
-                },
-            ),
-        ),
-        PluginDetailRow(
-            R.string.plugin_gui_detail_recent,
-            string(R.string.plugin_gui_detail_recent_value),
-        ),
-    )
+        )
+        virtualScreen?.let { feature ->
+            addAll(feature.detailRows(feature.status()))
+        }
+    }
 
     override fun tools(): List<CodingTool> =
         screenTools(
@@ -169,7 +144,7 @@ class GuiPlugin(
             resolvedScreenshotDir,
             mainController,
             onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() },
-        )
+        ) + virtualScreen?.tools().orEmpty()
 
     override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
 
@@ -179,7 +154,6 @@ class GuiPlugin(
         const val ACTION_ACCESSIBILITY_SETTINGS = "accessibility_settings"
         const val ACTION_BATTERY_EXEMPTION = "battery_exemption"
         const val ACTION_AUTOSTART = "autostart"
-        const val ACTION_POWER = "power_settings"
         const val SKILL_ID = "deepdeep-gui"
 
         val SKILL_MARKDOWN = """
@@ -206,7 +180,7 @@ class GuiPlugin(
 
             ## 操作流程
 
-            虚拟屏流程：先 `virtual_screen(action=start)`，再 screen_launch。主屏流程：screen_status(target=main)，然后在每次观察和操作中都指定 target=main。观察后操作，操作后用 screen_wait 或 screen_observe 确认实际结果。
+            虚拟屏流程：在「屏幕操作」插件页手动启停虚拟屏，或让 agent 先 `virtual_screen(action=start)`，再 screen_launch。主屏流程：screen_status(target=main)，然后在每次观察和操作中都指定 target=main。观察后操作，操作后用 screen_wait 或 screen_observe 确认实际结果。
             需要视觉信息时截图，节点足以回答时直接读节点。
             ref 绑定所选屏幕和最近一次快照；禁止跨 target 复用。重新 observe、窗口变化或屏幕重建后应重新获取 ref。
             scanned 仅统计已扫描节点；complete=false 表示未穷尽，零命中不能证明目标不存在。过滤只筛选已扫描节点，可提高 maxDepth/maxNodes；limit 只限制返回数量。

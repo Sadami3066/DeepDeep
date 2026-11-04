@@ -1,27 +1,13 @@
 <resources>
-    <string name="plugin_virtual_screen_name">虚拟屏幕</string>
-    <string name="plugin_virtual_screen_summary">在后台虚拟屏上运行、查看并操作应用</string>
-    <string name="plugin_virtual_screen_size">内置</string>
-    <string name="plugin_virtual_screen_privilege_required">需要无线调试（ADB）或 Root 权限</string>
-
     <string name="plugin_virtual_screen_status_offline">未启动</string>
     <string name="plugin_virtual_screen_status_starting">正在启动</string>
     <string name="plugin_virtual_screen_status_online">运行中</string>
-    <string name="plugin_virtual_screen_status_failed">启动失败</string>
 
     <string name="plugin_virtual_screen_action_start">启动虚拟屏幕</string>
     <string name="plugin_virtual_screen_action_stop">停止虚拟屏幕</string>
 
     <string name="plugin_virtual_screen_detail_state">状态</string>
     <string name="plugin_virtual_screen_detail_resolution">分辨率</string>
-    <string name="plugin_virtual_screen_detail_display">屏幕 ID</string>
-    <string name="plugin_virtual_screen_detail_backend">特权后端</string>
-    <string name="plugin_virtual_screen_detail_uid">运行身份</string>
-    <string name="plugin_virtual_screen_detail_controls">屏幕操作</string>
-    <string name="plugin_virtual_screen_detail_controls_value">在「屏幕」插件里用 screen_* 工具并指定 target=virtual</string>
 
     <string name="plugin_virtual_screen_value_offline">—</string>
-    <string name="plugin_virtual_screen_backend_root">Root</string>
-    <string name="plugin_virtual_screen_backend_adb">ADB</string>
-
 </resources>
