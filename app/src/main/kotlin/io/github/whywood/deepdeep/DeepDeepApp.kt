@@ -35,6 +35,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
 import io.github.whywood.deepdeep.ui.chat.AttachmentSource
 import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
@@ -116,6 +117,7 @@ internal fun DeepDeepApp(
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
     var attachmentSheetOpen by remember { mutableStateOf(false) }
+    var cameraSheetOpen by remember { mutableStateOf(false) }
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
@@ -632,8 +634,17 @@ internal fun DeepDeepApp(
                     when (source) {
                         AttachmentSource.IMAGE -> attachmentPickers.pickImages()
                         AttachmentSource.FILE -> attachmentPickers.pickFiles()
-                        AttachmentSource.CAMERA -> attachmentPickers.takePhoto()
+                        AttachmentSource.CAMERA -> cameraSheetOpen = true
                     }
+                },
+            )
+        }
+        if (cameraSheetOpen) {
+            CameraCaptureSheet(
+                onDismiss = { cameraSheetOpen = false },
+                onCaptured = { uri ->
+                    cameraSheetOpen = false
+                    chatViewModel.attach(uri)
                 },
             )
         }

@@ -11,7 +11,13 @@
     <string name="attach_pick_image">从相册选择</string>
     <string name="attach_pick_file">选择文件</string>
     <string name="attach_take_photo">拍照</string>
-    <string name="attach_camera_unavailable">没有可用的相机应用</string>
+    <string name="camera_title">拍照</string>
+    <string name="camera_shutter">拍照</string>
+    <string name="camera_switch_lens">切换镜头</string>
+    <string name="camera_permission_hint">需要相机权限才能拍照</string>
+    <string name="camera_open_settings">去设置开启</string>
+    <string name="camera_failed">拍照失败</string>
+    <string name="camera_unavailable">无法打开相机</string>
     <string name="assistant_close">关闭</string>
     <string name="assistant_configure_hint">尚未配置模型</string>
     <string name="assistant_configure_input">先在设置中配置模型</string>

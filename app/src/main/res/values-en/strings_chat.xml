@@ -11,7 +11,13 @@
     <string name="attach_pick_image">Choose from library</string>
     <string name="attach_pick_file">Choose a file</string>
     <string name="attach_take_photo">Take a photo</string>
-    <string name="attach_camera_unavailable">No camera app available</string>
+    <string name="camera_title">Take a photo</string>
+    <string name="camera_shutter">Take photo</string>
+    <string name="camera_switch_lens">Switch camera</string>
+    <string name="camera_permission_hint">Camera permission is needed to take photos</string>
+    <string name="camera_open_settings">Open settings</string>
+    <string name="camera_failed">Couldn\'t take the photo</string>
+    <string name="camera_unavailable">Camera isn\'t available</string>
     <string name="assistant_close">Close</string>
     <string name="assistant_configure_hint">No model configured</string>
     <string name="assistant_configure_input">Configure a model in settings first</string>

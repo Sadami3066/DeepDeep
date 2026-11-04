@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.ui.chat.AttachmentSource
 import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
 import io.github.whywood.deepdeep.ui.common.shareChooser
@@ -97,6 +98,7 @@ class AssistantOverlayActivity : ComponentActivity() {
             val shareTitle = stringResource(R.string.assistant_attach_share)
             var preview by remember { mutableStateOf<AssistantOverlayPreview?>(null) }
             var attachSheetOpen by remember { mutableStateOf(false) }
+            var cameraSheetOpen by remember { mutableStateOf(false) }
             val attachmentPickers = rememberAttachmentPickers { uri -> controller.attach(uri) }
             val attachmentRoot = remember(state.conversationCwd) {
                 resolveAttachmentRoot(state.conversationCwd, graph.homeDir)
@@ -190,8 +192,17 @@ class AssistantOverlayActivity : ComponentActivity() {
                             when (source) {
                                 AttachmentSource.IMAGE -> attachmentPickers.pickImages()
                                 AttachmentSource.FILE -> attachmentPickers.pickFiles()
-                                AttachmentSource.CAMERA -> attachmentPickers.takePhoto()
+                                AttachmentSource.CAMERA -> cameraSheetOpen = true
                             }
+                        },
+                    )
+                }
+                if (cameraSheetOpen) {
+                    CameraCaptureSheet(
+                        onDismiss = { cameraSheetOpen = false },
+                        onCaptured = { uri ->
+                            cameraSheetOpen = false
+                            controller.attach(uri)
                         },
                     )
                 }
