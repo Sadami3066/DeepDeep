@@ -10,8 +10,10 @@ import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.agent.AgentToolResult
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.tools.FileMutationQueue
 import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.ShellResult
+import dev.pi.coding.tools.defaultCodingTools
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -76,7 +78,7 @@ class PiSessionEngineScopeTest {
             )
             try {
                 assertEquals(
-                    listOf("edit", "find", "grep", "ls", "read", "write"),
+                    listOf("edit", "read", "write"),
                     session.activeToolNames.sorted(),
                 )
                 val sessionFile = session.sessionFile
@@ -108,15 +110,16 @@ class PiSessionEngineScopeTest {
         )
         try {
             assertEquals(
-                listOf("edit", "find", "grep", "ls", "read", "write"),
+                listOf("edit", "read", "write"),
                 buildWorkshopAgentTools(engine.availableTools()).map { it.name },
             )
             File(workspace, "notes.txt").writeText("hello scope\n")
             File(workspace, "draft").mkdirs()
             File(workspace, "draft/page.html").writeText("<html></html>")
-            val tools = engine.availableTools()
-                .filter { tool -> workshopAgentToolVisible(tool.name) }
-                .associateBy { it.name }
+            val sourceFileTools = defaultCodingTools(engine.cwd, FileSystem.SYSTEM, FileMutationQueue())
+                .filter { tool -> tool.name in setOf("ls", "find", "grep") }
+                .map { tool -> tool.withAbsolutePaths() }
+            val tools = (engine.availableTools() + sourceFileTools).associateBy { it.name }
 
             assertTrue(runTool(tools.getValue("ls"), buildJsonObject { put("path", workspace.absolutePath) }).contains("notes.txt"))
             assertTrue(

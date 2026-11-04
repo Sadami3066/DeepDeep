@@ -140,6 +140,7 @@ class PiSessionEngine(
         defaults.forEach { tool ->
             when (tool.name) {
                 "bash" -> activeShell?.let { add(deepDeepBashTool(it)) }
+                "ls", "grep", "find" -> Unit
                 else -> add(tool.withAbsolutePaths())
             }
         }
