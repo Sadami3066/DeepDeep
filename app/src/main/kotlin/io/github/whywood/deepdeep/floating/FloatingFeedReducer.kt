@@ -33,6 +33,8 @@ data class FloatingSubscription(
     val activity: RuntimeActivity?,
     val text: String,
     val updatedAt: Long,
+    val tool: String? = null,
+    val reasoning: String = "",
 )
 
 data class FloatingCompletion(
@@ -120,6 +122,16 @@ sealed interface FloatingFeedEvent {
     data class TrackingText(
         val sessionId: String,
         val text: String,
+    ) : FloatingFeedEvent
+
+    data class TrackingReasoning(
+        val sessionId: String,
+        val text: String,
+    ) : FloatingFeedEvent
+
+    data class TrackingTool(
+        val sessionId: String,
+        val tool: String,
     ) : FloatingFeedEvent
 
     data class TrackingReset(val sessionId: String) : FloatingFeedEvent
@@ -294,13 +306,44 @@ fun reduceFloatingFeed(
         }
     }
 
-    is FloatingFeedEvent.TrackingReset -> {
+    is FloatingFeedEvent.TrackingReasoning -> {
         val current = state.subscription
-        if (current == null || current.sessionId != event.sessionId || current.text.isEmpty()) {
+        if (current == null || current.sessionId != event.sessionId || current.reasoning == event.text) {
             state
         } else {
             state.copy(
-                subscription = current.copy(text = "", updatedAt = now),
+                subscription = current.copy(reasoning = event.text, updatedAt = now),
+                lastEventAt = now,
+            )
+        }
+    }
+
+    is FloatingFeedEvent.TrackingTool -> {
+        val current = state.subscription
+        if (current == null || current.sessionId != event.sessionId || current.tool == event.tool) {
+            state
+        } else {
+            state.copy(
+                subscription = current.copy(tool = event.tool, updatedAt = now),
+                lastEventAt = now,
+            )
+        }
+    }
+
+    is FloatingFeedEvent.TrackingReset -> {
+        val current = state.subscription
+        if (current == null || current.sessionId != event.sessionId) {
+            state
+        } else if (current.text.isEmpty() && current.reasoning.isEmpty() && current.tool == null) {
+            state
+        } else {
+            state.copy(
+                subscription = current.copy(
+                    text = "",
+                    reasoning = "",
+                    tool = null,
+                    updatedAt = now,
+                ),
                 lastEventAt = now,
             )
         }
@@ -358,6 +401,17 @@ fun floatingInlineOptions(pending: PendingQuestion): List<QuestionOption>? {
     if (question.multiSelect || question.options.isEmpty()) return null
     return question.options
 }
+
+const val FLOATING_TRACKED_PREVIEW_LENGTH = 64
+
+fun floatingTrackedPreview(text: String): String = text
+    .lineSequence()
+    .map { it.trim() }
+    .filter { it.isNotEmpty() }
+    .lastOrNull()
+    .orEmpty()
+    .takeLast(FLOATING_TRACKED_PREVIEW_LENGTH)
+    .trim()
 
 data class FloatingElapsed(
     val hours: Long,

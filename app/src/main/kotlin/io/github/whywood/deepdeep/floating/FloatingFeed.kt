@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 internal const val FLOATING_TRACKING_TEXT_THROTTLE_MS = 200L
+internal const val FLOATING_TRACKED_TEXT_LIMIT = 4096
 
 class FloatingFeed(
     private val runtime: ConversationQueries,
@@ -34,10 +35,12 @@ class FloatingFeed(
     val state: StateFlow<FloatingFeedState> = mutableState.asStateFlow()
 
     private val jobs = mutableListOf<Job>()
-    private val textLock = Any()
-    private var lastText = ""
-    private var lastTextSessionId: String? = null
-    private var textJob: Job? = null
+    private val textStream = TrackedStream { sessionId, text ->
+        dispatch(FloatingFeedEvent.TrackingText(sessionId, text))
+    }
+    private val reasoningStream = TrackedStream { sessionId, text ->
+        dispatch(FloatingFeedEvent.TrackingReasoning(sessionId, text))
+    }
 
     fun start() {
         if (jobs.isNotEmpty()) return
@@ -64,8 +67,8 @@ class FloatingFeed(
     fun stop() {
         jobs.forEach { it.cancel() }
         jobs.clear()
-        textJob?.cancel()
-        textJob = null
+        textStream.stop()
+        reasoningStream.stop()
     }
 
     fun dismissCard(key: String) {
@@ -89,10 +92,12 @@ class FloatingFeed(
 
             is RuntimeEvent.ActivityChanged -> trackActivity(sessionId, runtimeEvent.activity)
 
-            is RuntimeEvent.ToolStarted -> trackActivity(
-                sessionId,
-                RuntimeActivity.RunningTool(runtimeEvent.name),
-            )
+            is RuntimeEvent.ToolStarted -> {
+                trackActivity(sessionId, RuntimeActivity.RunningTool(runtimeEvent.name))
+                trackTool(sessionId, runtimeEvent.name)
+            }
+
+            is RuntimeEvent.ReasoningDelta -> appendTrackedReasoning(sessionId, runtimeEvent.text)
 
             is RuntimeEvent.TextDelta -> appendTrackedText(sessionId, runtimeEvent.text)
 
@@ -139,33 +144,25 @@ class FloatingFeed(
         dispatch(FloatingFeedEvent.TrackingActivity(sessionId, activity))
     }
 
+    private fun trackTool(sessionId: String, tool: String) {
+        if (mutableState.value.subscription?.sessionId != sessionId) return
+        dispatch(FloatingFeedEvent.TrackingTool(sessionId, tool))
+    }
+
     private fun appendTrackedText(sessionId: String, delta: String) {
         if (mutableState.value.subscription?.sessionId != sessionId) return
-        synchronized(textLock) {
-            if (lastTextSessionId != sessionId) {
-                lastTextSessionId = sessionId
-                lastText = ""
-            }
-            lastText += delta
-        }
-        if (textJob?.isActive == true) return
-        textJob = scope.launch {
-            delay(FLOATING_TRACKING_TEXT_THROTTLE_MS)
-            val subscriptionId = mutableState.value.subscription?.sessionId ?: return@launch
-            val text = synchronized(textLock) {
-                lastText.takeIf { lastTextSessionId == subscriptionId }
-            }
-            if (!text.isNullOrEmpty()) {
-                dispatch(FloatingFeedEvent.TrackingText(subscriptionId, text))
-            }
-        }
+        textStream.append(sessionId, delta)
+    }
+
+    private fun appendTrackedReasoning(sessionId: String, delta: String) {
+        if (mutableState.value.subscription?.sessionId != sessionId) return
+        reasoningStream.append(sessionId, delta)
     }
 
     private fun resetTrackedText(sessionId: String) {
         if (mutableState.value.subscription?.sessionId != sessionId) return
-        synchronized(textLock) {
-            if (lastTextSessionId == sessionId) lastText = ""
-        }
+        textStream.reset(sessionId)
+        reasoningStream.reset(sessionId)
         dispatch(FloatingFeedEvent.TrackingReset(sessionId))
     }
 
@@ -174,11 +171,55 @@ class FloatingFeed(
             reduceFloatingFeed(current, event, System.currentTimeMillis())
         }
         val subscriptionId = next.subscription?.sessionId
-        synchronized(textLock) {
-            if (lastTextSessionId != subscriptionId) {
-                lastTextSessionId = subscriptionId
-                lastText = ""
+        textStream.select(subscriptionId)
+        reasoningStream.select(subscriptionId)
+    }
+
+    private inner class TrackedStream(
+        private val emit: (sessionId: String, text: String) -> Unit,
+    ) {
+        private val lock = Any()
+        private var sessionId: String? = null
+        private var buffer = ""
+        private var job: Job? = null
+
+        fun append(sessionId: String, delta: String) {
+            synchronized(lock) {
+                if (this.sessionId != sessionId) {
+                    this.sessionId = sessionId
+                    buffer = ""
+                }
+                buffer = (buffer + delta).takeLast(FLOATING_TRACKED_TEXT_LIMIT)
             }
+            if (job?.isActive == true) return
+            job = scope.launch {
+                delay(FLOATING_TRACKING_TEXT_THROTTLE_MS)
+                val active = mutableState.value.subscription?.sessionId ?: return@launch
+                val text = synchronized(lock) {
+                    if (this@TrackedStream.sessionId == active) buffer else null
+                }
+                if (!text.isNullOrEmpty()) emit(active, text)
+            }
+        }
+
+        fun reset(sessionId: String) {
+            synchronized(lock) {
+                if (this.sessionId == sessionId) buffer = ""
+            }
+        }
+
+        fun select(sessionId: String?) {
+            synchronized(lock) {
+                if (this.sessionId != sessionId) {
+                    this.sessionId = sessionId
+                    buffer = ""
+                }
+            }
+        }
+
+        fun stop() {
+            job?.cancel()
+            job = null
         }
     }
 }

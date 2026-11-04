@@ -49,6 +49,7 @@ import io.github.whywood.deepdeep.plugin.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.PresentedItemType
 
 @Composable
@@ -380,21 +381,21 @@ private fun TrackingBody(
         DdSpinner(color = colors.accent, size = 12.dp, strokeWidth = 1.4.dp)
         Spacer(Modifier.width(8.dp))
         Text(
-            text = activityText(subscription.activity),
+            text = trackingPrimary(subscription),
             style = DdType.body,
             color = colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
-    val preview = subscription.text.trim().takeLast(220)
-    if (preview.isNotEmpty()) {
-        Spacer(Modifier.height(6.dp))
+    val detail = trackingDetail(subscription)
+    if (detail.isNotEmpty()) {
+        Spacer(Modifier.height(4.dp))
         Text(
-            text = preview,
+            text = detail,
             style = DdType.bodySmall,
             color = colors.inkSecondary,
-            maxLines = 3,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
@@ -404,6 +405,31 @@ private fun TrackingBody(
         style = DdType.bodySmall,
         color = colors.inkTertiary,
     )
+}
+
+@Composable
+private fun trackingPrimary(subscription: FloatingSubscription): String {
+    val activity = subscription.activity
+    return when {
+        activity is RuntimeActivity.Retrying ||
+            activity is RuntimeActivity.Compacting ||
+            activity is RuntimeActivity.CompactionFailed -> activityText(activity)
+
+        subscription.tool != null -> stringResource(R.string.floating_tracking_tool, subscription.tool)
+
+        else -> activityText(activity)
+    }
+}
+
+@Composable
+private fun trackingDetail(subscription: FloatingSubscription): String {
+    if (subscription.reasoning.isNotBlank()) {
+        val preview = floatingTrackedPreview(subscription.reasoning)
+        if (preview.isNotEmpty()) {
+            return stringResource(R.string.floating_tracking_thinking, preview)
+        }
+    }
+    return floatingTrackedPreview(subscription.text)
 }
 
 @Composable

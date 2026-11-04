@@ -724,6 +724,69 @@ class FloatingFeedReducerTest {
         assertEquals("进行中", ignored.subscription?.text)
     }
 
+    @Test
+    fun trackingToolAndReasoningUpdateSubscribedSession() {
+        val state = baseState().copy(subscription = subscription("session-a"))
+        val tool = reduceFloatingFeed(
+            state,
+            FloatingFeedEvent.TrackingTool("session-a", "bash"),
+            2_000L,
+        )
+        assertEquals("bash", tool.subscription?.tool)
+
+        val ignoredTool = reduceFloatingFeed(
+            tool,
+            FloatingFeedEvent.TrackingTool("session-b", "read"),
+            2_100L,
+        )
+        assertEquals("bash", ignoredTool.subscription?.tool)
+
+        val reasoning = reduceFloatingFeed(
+            ignoredTool,
+            FloatingFeedEvent.TrackingReasoning("session-a", "先看看工作区"),
+            2_200L,
+        )
+        assertEquals("先看看工作区", reasoning.subscription?.reasoning)
+        assertEquals("bash", reasoning.subscription?.tool)
+
+        val ignoredReasoning = reduceFloatingFeed(
+            reasoning,
+            FloatingFeedEvent.TrackingReasoning("session-b", "别的会话"),
+            2_300L,
+        )
+        assertEquals("先看看工作区", ignoredReasoning.subscription?.reasoning)
+    }
+
+    @Test
+    fun trackingResetClearsTextToolAndReasoning() {
+        val tracked = baseState().copy(
+            subscription = subscription("session-a", text = "进行中").copy(
+                tool = "bash",
+                reasoning = "先看看工作区",
+            ),
+        )
+        val reset = reduceFloatingFeed(tracked, FloatingFeedEvent.TrackingReset("session-a"), 2_000L)
+        assertEquals("", reset.subscription?.text)
+        assertEquals("", reset.subscription?.reasoning)
+        assertNull(reset.subscription?.tool)
+
+        val ignored = reduceFloatingFeed(
+            tracked,
+            FloatingFeedEvent.TrackingReset("session-b"),
+            2_100L,
+        )
+        assertEquals("bash", ignored.subscription?.tool)
+        assertEquals("先看看工作区", ignored.subscription?.reasoning)
+    }
+
+    @Test
+    fun trackedPreviewKeepsLastNonBlankLineAndCapsLength() {
+        assertEquals("最后一行", floatingTrackedPreview("第一行\n\n  最后一行  "))
+        assertEquals("", floatingTrackedPreview("   \n\n"))
+        val long = "字".repeat(FLOATING_TRACKED_PREVIEW_LENGTH + 40)
+        assertEquals(FLOATING_TRACKED_PREVIEW_LENGTH, floatingTrackedPreview(long).length)
+    }
+
     private fun baseState(): FloatingFeedState = FloatingFeedState(lastEventAt = 1_000L)
 
     private fun run(sessionId: String, title: String, startedAt: Long): FloatingRun = FloatingRun(

@@ -329,6 +329,36 @@ class FloatingFeedTest {
     }
 
     @Test
+    fun trackingToolAndReasoningFollowSubscribedSession() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+
+        runtime.emitFor("session-1", RuntimeEvent.ToolStarted("run-1", "call-1", "bash", emptyMap(), 10L))
+        runCurrent()
+        assertEquals("bash", feed.state.value.subscription?.tool)
+
+        runtime.emitFor("session-1", RuntimeEvent.ReasoningDelta("run-1", "先看"))
+        runtime.emitFor("session-1", RuntimeEvent.ReasoningDelta("run-1", "目录"))
+        runCurrent()
+        assertEquals("", feed.state.value.subscription?.reasoning)
+
+        advanceTimeBy(FLOATING_TRACKING_TEXT_THROTTLE_MS + 1)
+        runCurrent()
+        assertEquals("先看目录", feed.state.value.subscription?.reasoning)
+
+        runtime.emitFor("session-1", RuntimeEvent.RunStarted("run-2", 600L))
+        runCurrent()
+        assertNull(feed.state.value.subscription?.tool)
+        assertEquals("", feed.state.value.subscription?.reasoning)
+        feed.stop()
+    }
+
+    @Test
     fun resubscribingSessionDropsStaleTrackedText() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val runs = MutableStateFlow(

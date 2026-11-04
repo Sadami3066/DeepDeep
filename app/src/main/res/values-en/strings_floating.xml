@@ -24,6 +24,8 @@
     <string name="floating_card_plugin_setup">Plugin setup</string>
     <string name="floating_card_plugin_setup_hint">Tap to continue</string>
     <string name="floating_card_tracking">Tracking</string>
+    <string name="floating_tracking_tool">Tool · %1$s</string>
+    <string name="floating_tracking_thinking">Thinking · %1$s</string>
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">Collapse panel</string>
