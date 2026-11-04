@@ -31,7 +31,7 @@
     <string name="floating_panel_questions">待回答</string>
     <string name="floating_panel_completed">已完成</string>
     <string name="floating_subscribe">订阅会话</string>
-    <string name="floating_subscribed">正在跟踪此会话</string>
+    <string name="floating_unsubscribe">取消订阅</string>
     <string name="floating_preview_offline">虚拟屏未运行</string>
     <string name="floating_preview_starting">虚拟屏启动中…</string>
     <string name="floating_preview_failed">虚拟屏启动失败</string>

@@ -230,7 +230,7 @@ private fun SubscribeControl(
         modifier = Modifier.size(30.dp),
         shape = CircleShape,
         contentDescription = stringResource(
-            if (subscribed) R.string.floating_subscribed else R.string.floating_subscribe,
+            if (subscribed) R.string.floating_unsubscribe else R.string.floating_subscribe,
         ),
     ) {
         Box(

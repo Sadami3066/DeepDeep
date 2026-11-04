@@ -177,6 +177,12 @@ class FloatingFeedTest {
 
         feed.subscribe("session-1")
         runCurrent()
+        assertNull(feed.state.value.subscription)
+        assertTrue(feed.state.value.manualSubscription)
+
+        feed.subscribe("session-1")
+        runCurrent()
+        assertEquals("session-1", feed.state.value.subscription?.sessionId)
         assertTrue(feed.state.value.manualSubscription)
 
         runs.value = mapOf(
@@ -187,6 +193,31 @@ class FloatingFeedTest {
 
         assertEquals("session-1", feed.state.value.subscription?.sessionId)
         assertTrue(feed.state.value.manualSubscription)
+        feed.stop()
+    }
+
+    @Test
+    fun clickingSubscribedSessionStopsTracking() = runTest(dispatcher) {
+        val runtime = FakeAgentRuntime()
+        val runs = MutableStateFlow(
+            mapOf("session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.Thinking, 100L)),
+        )
+        val feed = floatingFeed(runtime, runs)
+        feed.start()
+        runCurrent()
+        assertEquals("session-1", feed.state.value.subscription?.sessionId)
+
+        feed.subscribe("session-1")
+        runCurrent()
+        assertNull(feed.state.value.subscription)
+        assertTrue(feed.state.value.manualSubscription)
+        assertNull(floatingEventCard(feed.state.value))
+
+        runs.value = mapOf(
+            "session-1" to ActiveRunView("session-1", "会话", RuntimeActivity.RunningTool("bash"), 100L),
+        )
+        runCurrent()
+        assertNull(feed.state.value.subscription)
         feed.stop()
     }
 

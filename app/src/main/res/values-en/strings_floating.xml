@@ -31,7 +31,7 @@
     <string name="floating_panel_questions">Questions</string>
     <string name="floating_panel_completed">Completed</string>
     <string name="floating_subscribe">Subscribe to session</string>
-    <string name="floating_subscribed">Tracking this session</string>
+    <string name="floating_unsubscribe">Stop tracking</string>
     <string name="floating_preview_offline">Virtual screen is off</string>
     <string name="floating_preview_starting">Starting virtual screen…</string>
     <string name="floating_preview_failed">Virtual screen failed</string>

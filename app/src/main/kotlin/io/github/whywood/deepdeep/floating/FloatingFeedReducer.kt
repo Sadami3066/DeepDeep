@@ -135,6 +135,8 @@ fun reduceFloatingFeed(
         val titles = state.sessionTitles + runs
             .filter { it.title.isNotBlank() }
             .associate { it.sessionId to it.title }
+        val latest = runs.lastOrNull()
+        var manual = state.manualSubscription
         var subscription = state.subscription?.let { current ->
             runs.firstOrNull { it.sessionId == current.sessionId }?.let { run ->
                 current.copy(
@@ -144,12 +146,25 @@ fun reduceFloatingFeed(
                 )
             }
         }
-        var manual = state.manualSubscription
-        if (subscription == null) {
-            manual = false
-            subscription = runs.lastOrNull()?.toSubscription(now)
-        } else if (!manual && runs.last().startedAt > subscription.startedAt) {
-            subscription = runs.last().toSubscription(now)
+        val ended = state.subscription != null && subscription == null
+        when {
+            latest == null -> {
+                subscription = null
+                manual = false
+            }
+
+            ended -> {
+                manual = false
+                subscription = latest.toSubscription(now)
+            }
+
+            subscription == null -> {
+                if (!manual) subscription = latest.toSubscription(now)
+            }
+
+            !manual && latest.startedAt > subscription.startedAt -> {
+                subscription = latest.toSubscription(now)
+            }
         }
         val next = state.copy(
             runs = runs,
@@ -237,7 +252,7 @@ fun reduceFloatingFeed(
     is FloatingFeedEvent.Subscribe -> {
         val current = state.subscription
         if (current?.sessionId == event.sessionId) {
-            if (state.manualSubscription) state else state.copy(manualSubscription = true)
+            state.copy(subscription = null, manualSubscription = true)
         } else {
             val run = state.runs.firstOrNull { it.sessionId == event.sessionId }
             state.copy(

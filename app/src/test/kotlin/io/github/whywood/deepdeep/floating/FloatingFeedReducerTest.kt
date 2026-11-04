@@ -543,20 +543,63 @@ class FloatingFeedReducerTest {
     }
 
     @Test
-    fun subscribingAlreadySubscribedSessionOnlyMarksManual() {
+    fun clickingSubscribedSessionUnsubscribesAndStaysOff() {
+        val running = listOf(run("session-a", "A", 1_000L))
         val auto = reduceFloatingFeed(
             baseState(),
-            FloatingFeedEvent.RunsChanged(listOf(run("session-a", "A", 1_000L))),
+            FloatingFeedEvent.RunsChanged(running),
             2_000L,
         )
-        val tracked = reduceFloatingFeed(
-            auto,
-            FloatingFeedEvent.TrackingText("session-a", "流式文本"),
-            2_100L,
+        assertEquals("session-a", auto.subscription?.sessionId)
+        val off = reduceFloatingFeed(auto, FloatingFeedEvent.Subscribe("session-a"), 2_100L)
+        assertNull(off.subscription)
+        assertTrue(off.manualSubscription)
+
+        val repeated = reduceFloatingFeed(off, FloatingFeedEvent.RunsChanged(running), 2_200L)
+        assertNull(repeated.subscription)
+        assertTrue(repeated.manualSubscription)
+
+        val newer = reduceFloatingFeed(
+            repeated,
+            FloatingFeedEvent.RunsChanged(running + run("session-b", "B", 2_500L)),
+            2_600L,
         )
-        val manual = reduceFloatingFeed(tracked, FloatingFeedEvent.Subscribe("session-a"), 2_200L)
-        assertTrue(manual.manualSubscription)
-        assertEquals("流式文本", manual.subscription?.text)
+        assertNull(newer.subscription)
+        assertTrue(newer.manualSubscription)
+
+        val idle = reduceFloatingFeed(newer, FloatingFeedEvent.RunsChanged(emptyList()), 3_000L)
+        assertNull(idle.subscription)
+        assertFalse(idle.manualSubscription)
+
+        val next = reduceFloatingFeed(
+            idle,
+            FloatingFeedEvent.RunsChanged(listOf(run("session-c", "C", 3_500L))),
+            3_600L,
+        )
+        assertEquals("session-c", next.subscription?.sessionId)
+        assertFalse(next.manualSubscription)
+    }
+
+    @Test
+    fun unsubscribingWorksWithMultipleRunningSessions() {
+        val running = listOf(
+            run("session-a", "A", 1_000L),
+            run("session-b", "B", 2_000L),
+        )
+        val auto = reduceFloatingFeed(baseState(), FloatingFeedEvent.RunsChanged(running), 3_000L)
+        assertEquals("session-b", auto.subscription?.sessionId)
+
+        val off = reduceFloatingFeed(auto, FloatingFeedEvent.Subscribe("session-b"), 3_100L)
+        assertNull(off.subscription)
+        assertTrue(off.manualSubscription)
+        assertNull(floatingEventCard(off))
+
+        val resubscribed = reduceFloatingFeed(off, FloatingFeedEvent.Subscribe("session-a"), 3_200L)
+        assertEquals("session-a", resubscribed.subscription?.sessionId)
+        assertTrue(resubscribed.manualSubscription)
+
+        val switched = reduceFloatingFeed(resubscribed, FloatingFeedEvent.RunsChanged(running), 3_300L)
+        assertEquals("session-a", switched.subscription?.sessionId)
     }
 
     @Test
