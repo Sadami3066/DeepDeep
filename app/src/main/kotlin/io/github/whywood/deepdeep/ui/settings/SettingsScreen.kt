@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
@@ -79,6 +80,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onOpenChatSettings: () -> Unit,
+    overlayEntryMode: OverlayEntryMode = OverlayEntryMode.VOICE,
+    onOpenUsageHabits: () -> Unit = {},
     onOpenAssistant: () -> Unit = {},
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
@@ -252,6 +255,15 @@ fun SettingsScreen(
                     onClick = onOpenChatSettings,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_chat"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.HandClick,
+                    title = stringResource(R.string.settings_usage_habits),
+                    value = overlayEntryModeLabel(overlayEntryMode),
+                    onClick = onOpenUsageHabits,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_usage_habits"),
                 )
             }
 

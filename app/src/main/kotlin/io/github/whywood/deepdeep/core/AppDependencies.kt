@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
@@ -60,6 +61,8 @@ interface StorageDependencies {
     val appPreferences: AppPreferences
 
     val voicePreferences: VoicePreferences
+
+    val overlayEntryPreferences: OverlayEntryPreferences
 
     val linuxSettings: LinuxSettingsStore
 

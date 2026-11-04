@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
@@ -49,6 +50,9 @@ internal class FakeAppDependencies(
     override val appPreferences: AppPreferences get() = unavailable("appPreferences")
 
     override val voicePreferences: VoicePreferences get() = unavailable("voicePreferences")
+
+    override val overlayEntryPreferences: OverlayEntryPreferences
+        get() = unavailable("overlayEntryPreferences")
 
     override val linuxSettings: LinuxSettingsStore get() = unavailable("linuxSettings")
 

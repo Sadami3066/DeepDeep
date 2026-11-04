@@ -140,9 +140,6 @@ internal fun DeepDeepApp(
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
     val pluginsState by graph.pluginManager.state.collectAsStateWithLifecycle()
     val voiceAutoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(initialValue = false)
-    val voiceSendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
-        initialValue = false,
-    )
     val appLanguage = remember(context) { LanguagePreferences(context).read() }
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
@@ -504,7 +501,6 @@ internal fun DeepDeepApp(
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
                     chatFontScale = uiPreferences.chatFontScale,
-                    voiceSendAfterRecognition = voiceSendAfterRecognition,
                     voiceLanguage = appLanguage,
                 )
             },
@@ -515,7 +511,7 @@ internal fun DeepDeepApp(
                 onFontStyleChange, nickname, defaultProvider?.name, defaultModelLabel,
                 defaultModelConfig, configuredProviders, linuxState, linuxEnabled,
                 sharedStorageEnabled, devPackages, personalization, uiPreferences,
-                voiceAutoSpeak, voiceSendAfterRecognition, authKinds, credentialRevision,
+                voiceAutoSpeak, authKinds, credentialRevision,
                 onOpenFile = openWorkspaceFile,
                 onOpenAssistantSettings = { navigator.push(AppDestination.AssistantSettings) },
             )

@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
@@ -142,6 +143,7 @@ class AppGraph(context: Context) : AppDependencies {
     val themePreferences = ThemePreferences(appContext)
     override val appPreferences = AppPreferences(appContext)
     override val voicePreferences = VoicePreferences(appContext)
+    override val overlayEntryPreferences = OverlayEntryPreferences(appContext)
     override val shareStaging = ShareStaging(appContext)
 
     fun linuxBinds(): List<Pair<File, String>> = listOf(File("/data") to "/data")

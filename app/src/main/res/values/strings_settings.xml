@@ -1,5 +1,10 @@
 <resources>
     <string name="settings_chat">聊天设置</string>
+    <string name="settings_usage_habits">使用习惯</string>
+    <string name="usage_habits_entry_mode">进入浮层时的行为</string>
+    <string name="usage_habits_mode_voice">语音模式</string>
+    <string name="usage_habits_mode_camera">拍照模式</string>
+    <string name="usage_habits_mode_none">无</string>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
 

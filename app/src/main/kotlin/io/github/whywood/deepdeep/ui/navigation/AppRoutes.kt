@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.DevPackagesState
+import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
@@ -40,6 +41,7 @@ import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopViewerScreen
@@ -88,12 +90,15 @@ internal fun AppRouteContent(
     modelConfig: ModelConfig, configuredProviderIds: Set<String>,
     linuxState: LinuxInstallState, linuxEnabled: Boolean, sharedStorageEnabled: Boolean,
     devPackages: DevPackagesState, personalization: PersonalizationUi, uiPreferences: UiPreferences,
-    voiceAutoSpeak: Boolean, voiceSendAfterRecognition: Boolean,
+    voiceAutoSpeak: Boolean,
     authKinds: Map<String, ProviderAuthKind>, credentialRevision: Long,
     onOpenFile: (String) -> Unit = {},
     onOpenAssistantSettings: () -> Unit = {},
 ) {
     val privilegeState by dependencies.privilege.state.collectAsStateWithLifecycle()
+    val overlayEntryMode by dependencies.overlayEntryPreferences.mode.collectAsStateWithLifecycle(
+        initialValue = OverlayEntryMode.VOICE,
+    )
     when (destination) {
         AppDestination.Chat -> Box(Modifier.fillMaxSize())
 
@@ -117,6 +122,8 @@ internal fun AppRouteContent(
             onBack = onBack,
             onThemeModeChange = onThemeChange,
             onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
+            overlayEntryMode = overlayEntryMode,
+            onOpenUsageHabits = { navigator.push(AppDestination.UsageHabits) },
             onOpenAssistant = onOpenAssistantSettings,
             onOpenProviders = { navigator.push(AppDestination.Providers) },
             onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
@@ -214,12 +221,16 @@ internal fun AppRouteContent(
             onVoiceAutoSpeakChange = { enabled ->
                 scope.launch { dependencies.voicePreferences.setAutoSpeak(enabled) }
             },
-            voiceSendAfterRecognition = voiceSendAfterRecognition,
-            onVoiceSendAfterRecognitionChange = { enabled ->
-                scope.launch { dependencies.voicePreferences.setSendAfterRecognition(enabled) }
-            },
             onChatFontScaleChange = { value ->
                 scope.launch { dependencies.appPreferences.setChatFontScale(value) }
+            },
+        )
+
+        AppDestination.UsageHabits -> UsageHabitsScreen(
+            mode = overlayEntryMode,
+            onBack = onBack,
+            onModeChange = { mode ->
+                scope.launch { dependencies.overlayEntryPreferences.setMode(mode) }
             },
         )
 

@@ -51,8 +51,6 @@ fun ChatSettingsScreen(
     onToggle: (UiToggle, Boolean) -> Unit,
     voiceAutoSpeak: Boolean = false,
     onVoiceAutoSpeakChange: (Boolean) -> Unit = {},
-    voiceSendAfterRecognition: Boolean = false,
-    onVoiceSendAfterRecognitionChange: (Boolean) -> Unit = {},
     onChatFontScaleChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -113,13 +111,6 @@ fun ChatSettingsScreen(
                     title = R.string.settings_background_job_wake,
                     checked = preferences.backgroundJobWake,
                     onCheckedChange = { onToggle(UiToggle.BACKGROUND_JOB_WAKE, it) },
-                )
-                DdHairline()
-                SwitchRow(
-                    icon = DdIcons.Mic,
-                    title = R.string.voice_setting_send_after_recognition,
-                    checked = voiceSendAfterRecognition,
-                    onCheckedChange = onVoiceSendAfterRecognitionChange,
                 )
                 DdHairline()
                 SwitchRow(
