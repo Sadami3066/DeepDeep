@@ -1,16 +1,9 @@
 package io.github.whywood.deepdeep.assistant
 
-import android.Manifest
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -41,14 +34,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -61,11 +54,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -76,20 +68,16 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
+import io.github.whywood.deepdeep.ui.common.rememberComposerVoice
 import io.github.whywood.deepdeep.voice.SpeechError
-import io.github.whywood.deepdeep.voice.SpeechEvent
-import io.github.whywood.deepdeep.voice.SpeechRecognizerController
 import io.github.whywood.deepdeep.voice.TextSpeaker
-import io.github.whywood.deepdeep.voice.VoiceLanguage
 import java.io.File
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 internal data class AssistantOverlayConfig(
     val autoSpeak: Boolean = false,
-    val sendAfterRecognition: Boolean = false,
+    val entryMode: OverlayEntryMode = OverlayEntryMode.NONE,
     val autoCollapseProcess: Boolean = true,
     val chatFontScale: Float = 1f,
     val language: AppLanguage = AppLanguage.CHINESE,
@@ -106,6 +94,7 @@ internal data class AssistantOverlayActions(
     val onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
     val onOpenPreview: (AttachmentRef) -> Unit,
     val onPickAttachment: () -> Unit,
+    val onOpenCamera: () -> Unit,
     val onRemoveAttachment: (String) -> Unit,
     val onOpenFile: (String) -> Unit,
     val onShareFile: (String) -> Unit,
@@ -141,18 +130,9 @@ internal fun AssistantOverlayScreen(
     val density = LocalDensity.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
     val speaker = remember(context) { TextSpeaker(context) }
-    val recognizer = remember(context) { SpeechRecognizerController(context) }
-    val activity = remember(context) { context.findActivity() }
     val inputFocus = remember { FocusRequester() }
     var input by remember { mutableStateOf("") }
-    var transcript by remember { mutableStateOf("") }
-    var listening by remember { mutableStateOf(false) }
-    var voiceFailure by remember { mutableStateOf<SpeechError?>(null) }
-    var permissionPermanentlyDenied by remember { mutableStateOf(false) }
-    var listenJob by remember { mutableStateOf<Job?>(null) }
-    var micWasListening by remember { mutableStateOf(false) }
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
     var laidOut by remember { mutableStateOf(false) }
@@ -163,23 +143,23 @@ internal fun AssistantOverlayScreen(
     var composerHeightPx by remember { mutableIntStateOf(0) }
     var switcherOpen by remember { mutableStateOf(false) }
     var switcherLevel by remember { mutableStateOf<OverlaySwitcherLevel>(OverlaySwitcherLevel.Workspaces) }
+    var voiceSendRequested by remember { mutableStateOf(false) }
+    var focusRequest by remember { mutableStateOf(0) }
+    var entryTriggered by rememberSaveable { mutableStateOf(false) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     val messages = state.conversation.messages
     val glowSignal = remember(state, pendingQuestions) { overlayRunSignal(state, pendingQuestions) }
     val glow = rememberOverlayGlow(glowSignal, entryPlayed = false, entryStart = entered)
 
-    fun stopListening() {
-        listenJob?.cancel()
-        listenJob = null
-        listening = false
-    }
-
-    fun finishListening() {
-        if (listening) recognizer.stopListening()
-    }
+    val voice = rememberComposerVoice(
+        language = config.language,
+        onCommit = { text ->
+            input = if (input.isBlank()) text else input.trimEnd() + " " + text
+        },
+        onSendRequested = { voiceSendRequested = true },
+    )
 
     fun dismiss() {
-        stopListening()
         speaker.stop()
         actions.onDismiss()
     }
@@ -187,9 +167,8 @@ internal fun AssistantOverlayScreen(
     fun submit(raw: String, followUp: Boolean) {
         val text = raw.trim()
         if (text.isEmpty()) return
-        stopListening()
         speaker.stop()
-        voiceFailure = null
+        voice.clearFailure()
         keyboard?.hide()
         focusManager.clearFocus()
         if (actions.onSend(text, followUp)) {
@@ -197,94 +176,14 @@ internal fun AssistantOverlayScreen(
         }
     }
 
-    fun beginListening() {
-        stopListening()
-        speaker.stop()
-        transcript = ""
-        voiceFailure = null
-        listening = true
-        listenJob = scope.launch {
-            recognizer.listen(VoiceLanguage.recognitionTag(config.language)).collect { event ->
-                when (event) {
-                    is SpeechEvent.Partial -> transcript = event.text
-                    is SpeechEvent.Volume -> Unit
-                    is SpeechEvent.Final -> {
-                        listening = false
-                        listenJob = null
-                        transcript = ""
-                        val text = event.text.trim()
-                        if (text.isEmpty()) {
-                            voiceFailure = SpeechError.NO_MATCH
-                        } else if (config.sendAfterRecognition && input.isBlank()) {
-                            submit(text, followUp = false)
-                        } else {
-                            input = if (input.isBlank()) text else input.trimEnd() + " " + text
-                        }
-                    }
-
-                    is SpeechEvent.Failed -> {
-                        listening = false
-                        listenJob = null
-                        voiceFailure = event.error
-                    }
-
-                    SpeechEvent.Timeout -> {
-                        listening = false
-                        listenJob = null
-                        voiceFailure = SpeechError.SPEECH_TIMEOUT
-                    }
-                }
-            }
-            listening = false
-            listenJob = null
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            beginListening()
-        } else {
-            permissionPermanentlyDenied = activity != null &&
-                !ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity,
-                    Manifest.permission.RECORD_AUDIO,
-                )
-            voiceFailure = SpeechError.INSUFFICIENT_PERMISSIONS
-        }
-    }
-
-    val requestListening: () -> Unit = {
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            beginListening()
-        } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
-
-    val micPressStart: () -> Unit = {
-        micWasListening = listening
-        if (!listening) requestListening()
-    }
-
-    val micPressEnd: (Boolean) -> Unit = { heldLong ->
-        when {
-            heldLong -> finishListening()
-            micWasListening -> stopListening()
-        }
-    }
-
-    val micCancel: () -> Unit = {
-        stopListening()
+    LaunchedEffect(voiceSendRequested) {
+        if (!voiceSendRequested) return@LaunchedEffect
+        voiceSendRequested = false
+        submit(input, followUp = false)
     }
 
     DisposableEffect(speaker) {
         onDispose {
-            listenJob?.cancel()
-            listenJob = null
             speaker.stop()
             speaker.release()
         }
@@ -292,14 +191,6 @@ internal fun AssistantOverlayScreen(
 
     LaunchedEffect(state.sessionId) {
         input = ""
-    }
-
-    LaunchedEffect(state.conversation.loaded, state.sessionId, pendingQuestions.size) {
-        if (!state.conversation.loaded) return@LaunchedEffect
-        if (messages.isNotEmpty() || state.conversation.sending || pendingQuestions.isNotEmpty()) return@LaunchedEffect
-        delay(250)
-        inputFocus.requestFocus()
-        keyboard?.show()
     }
 
     LaunchedEffect(state.conversation.sending) {
@@ -319,6 +210,11 @@ internal fun AssistantOverlayScreen(
     val quote: (Long, String) -> Unit = { _, text ->
         val quoted = text.trim().lineSequence().joinToString("\n") { line -> "> $line" }
         input = if (input.isBlank()) "$quoted\n\n" else "$quoted\n\n$input"
+        focusRequest++
+    }
+
+    LaunchedEffect(focusRequest) {
+        if (focusRequest == 0) return@LaunchedEffect
         inputFocus.requestFocus()
         keyboard?.show()
     }
@@ -398,6 +294,15 @@ internal fun AssistantOverlayScreen(
             animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
             label = "overlay-composer",
         )
+        LaunchedEffect(entered, config.entryMode) {
+            if (!entered || entryTriggered) return@LaunchedEffect
+            entryTriggered = true
+            when (config.entryMode) {
+                OverlayEntryMode.VOICE -> voice.start()
+                OverlayEntryMode.CAMERA -> actions.onOpenCamera()
+                OverlayEntryMode.NONE -> Unit
+            }
+        }
         val panelProgress by animateFloatAsState(
             targetValue = if (slideStarted && panelMounted) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.95f, stiffness = 520f),
@@ -461,7 +366,8 @@ internal fun AssistantOverlayScreen(
                 )
             }
         }
-        if (entered) {
+        val entryPending = !entryTriggered && config.entryMode != OverlayEntryMode.NONE
+        if (entered && !entryPending) {
             Column(
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -473,14 +379,11 @@ internal fun AssistantOverlayScreen(
                     .padding(bottom = with(density) { (stableNavigationBottomPx + 8.dp.toPx()).toDp() })
                     .onSizeChanged { composerHeightPx = it.height },
             ) {
-                if (listening) {
-                    AssistantOverlayListening(transcript)
-                }
-                voiceFailure?.let { failure ->
+                voice.failure?.let { failure ->
                     OverlayVoiceFailure(
                         failure = failure,
-                        showSettings = needsPermissionSettings(failure, permissionPermanentlyDenied),
-                        onRetry = requestListening,
+                        showSettings = failure == SpeechError.INSUFFICIENT_PERMISSIONS,
+                        onRetry = voice.start,
                         onOpenSettings = openPermissionSettings,
                     )
                 }
@@ -492,17 +395,10 @@ internal fun AssistantOverlayScreen(
                     value = input,
                     onValueChange = { next ->
                         input = next
-                        if (next.isNotEmpty()) voiceFailure = null
+                        voice.clearFailure()
                     },
-                    listening = listening,
-                    onToggleMic = {
-                        if (listening) stopListening() else requestListening()
-                    },
-                    onMicPressStart = micPressStart,
-                    onMicPressEnd = micPressEnd,
-                    onMicCancel = micCancel,
+                    voice = voice,
                     onSubmit = { followUp -> submit(input, followUp) },
-                    config = config,
                     actions = actions,
                     glow = glow,
                     modifier = Modifier.fillMaxWidth(),
@@ -655,16 +551,4 @@ private fun voiceErrorMessage(error: SpeechError): String = when (error) {
     -> stringResource(R.string.voice_error_language)
 
     else -> stringResource(R.string.voice_error_generic)
-}
-
-private fun needsPermissionSettings(error: SpeechError, permanentlyDenied: Boolean): Boolean =
-    permanentlyDenied || error == SpeechError.INSUFFICIENT_PERMISSIONS
-
-private fun Context.findActivity(): Activity? {
-    var current: Context? = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }

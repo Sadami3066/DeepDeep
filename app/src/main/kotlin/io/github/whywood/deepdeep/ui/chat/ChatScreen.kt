@@ -169,7 +169,6 @@ fun ChatScreen(
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
     chatFontScale: Float = 1f,
-    voiceSendAfterRecognition: Boolean = false,
     voiceLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
     val (
@@ -573,7 +572,6 @@ fun ChatScreen(
                         onClearQueue = onClearQueue,
                         onModelsOpenChange = onModelsOpenChange,
                     ),
-                    voiceSendAfterRecognition = voiceSendAfterRecognition,
                     voiceLanguage = voiceLanguage,
                     modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
                 )

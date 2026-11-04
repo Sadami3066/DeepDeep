@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="assistant_overlay_title">Assistant</string>
-    <string name="assistant_overlay_listening">Listening…</string>
     <string name="assistant_overlay_input_hint">Ask me anything…</string>
     <string name="assistant_overlay_send">Send</string>
     <string name="assistant_overlay_stop">Stop</string>

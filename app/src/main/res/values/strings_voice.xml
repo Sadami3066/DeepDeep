@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="voice_open">语音输入</string>
-    <string name="voice_listening">正在聆听</string>
     <string name="voice_error_no_match">没有听清，请再说一次</string>
     <string name="voice_error_timeout">没有检测到语音</string>
     <string name="voice_error_permission">需要麦克风权限才能使用语音输入</string>
@@ -11,5 +10,7 @@
     <string name="voice_error_unavailable">此设备不支持语音识别</string>
     <string name="voice_error_generic">语音识别失败，请重试</string>
     <string name="voice_setting_auto_speak">自动朗读回答</string>
-    <string name="voice_setting_send_after_recognition">识别后直接发送</string>
+    <string name="voice_bar_cancel">取消语音输入</string>
+    <string name="voice_bar_stop">停止并填入</string>
+    <string name="voice_bar_send">停止并发送</string>
 </resources>

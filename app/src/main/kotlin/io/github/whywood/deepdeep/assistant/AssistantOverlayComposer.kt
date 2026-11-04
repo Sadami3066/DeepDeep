@@ -1,14 +1,19 @@
 package io.github.whywood.deepdeep.assistant
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,16 +30,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -51,15 +58,22 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.chat.ChatInputField
 import io.github.whywood.deepdeep.ui.chat.ComposerChip
+import io.github.whywood.deepdeep.ui.chat.ComposerMetrics
 import io.github.whywood.deepdeep.ui.chat.ModelPickerSheet
 import io.github.whywood.deepdeep.ui.chat.QueueStrip
 import io.github.whywood.deepdeep.ui.chat.state.mergeDroppedInputText
+import io.github.whywood.deepdeep.ui.common.ComposerVoice
+import io.github.whywood.deepdeep.ui.common.VoiceRecordingBar
+import io.github.whywood.deepdeep.ui.common.VoiceTranscriptPreview
+
+private enum class OverlayComposerSurface { Collapsed, Expanded, Recording }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -67,31 +81,53 @@ internal fun AssistantOverlayComposer(
     state: AssistantOverlayState,
     value: String,
     onValueChange: (String) -> Unit,
-    listening: Boolean,
-    onToggleMic: () -> Unit,
+    voice: ComposerVoice,
     onSubmit: (Boolean) -> Unit,
-    config: AssistantOverlayConfig,
     actions: AssistantOverlayActions,
     glow: OverlayGlow,
     modifier: Modifier = Modifier,
-    onMicPressStart: () -> Unit = {},
-    onMicPressEnd: (heldLong: Boolean) -> Unit = { _ -> },
-    onMicCancel: () -> Unit = {},
     focusRequester: FocusRequester? = null,
 ) {
     val colors = deepDeepColors()
+    val keyboard = LocalSoftwareKeyboardController.current
     val busy = state.conversation.sending
     val canSend = value.isNotBlank() && state.conversation.loaded
     var showModelSheet by remember { mutableStateOf(false) }
-    val modelLabel = state.modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
+    var focused by remember { mutableStateOf(false) }
+    var pendingExpand by remember { mutableStateOf(false) }
+    val recording = voice.listening || voice.stopping
+    val expanded = pendingExpand ||
+        focused ||
+        value.isNotBlank() ||
+        recording ||
+        state.attachments.isNotEmpty() ||
+        state.conversation.queuedInputs.isNotEmpty() ||
+        state.importingAttachment ||
+        busy ||
+        state.error != null
+    val surface = when {
+        recording -> OverlayComposerSurface.Recording
+        expanded -> OverlayComposerSurface.Expanded
+        else -> OverlayComposerSurface.Collapsed
+    }
     val micDescription = stringResource(R.string.assistant_overlay_mic)
     val attachDescription = stringResource(R.string.assistant_attach_add)
-    val pressStart by rememberUpdatedState(onMicPressStart)
-    val pressEnd by rememberUpdatedState(onMicPressEnd)
-    val pressCancel by rememberUpdatedState(onMicCancel)
     val sendDescription = stringResource(
         if (busy) R.string.assistant_send_steer else R.string.assistant_overlay_send,
     )
+    val collapsedInset =
+        ComposerMetrics.CollapsedHorizontalPadding - ComposerMetrics.ExpandedHorizontalPadding
+    val horizontalInset by animateDpAsState(
+        targetValue = if (surface == OverlayComposerSurface.Collapsed) collapsedInset else 0.dp,
+        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+        label = "overlay-composer-inset",
+    )
+
+    LaunchedEffect(pendingExpand) {
+        if (!pendingExpand) return@LaunchedEffect
+        focusRequester?.requestFocus()
+        keyboard?.show()
+    }
 
     Column(
         modifier
@@ -100,162 +136,101 @@ internal fun AssistantOverlayComposer(
             .padding(vertical = 4.dp),
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            OverlayComposerCard(
-                glow = glow,
-                modifier = Modifier
+            Column(
+                Modifier
                     .widthIn(max = 780.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(horizontal = horizontalInset.coerceAtLeast(0.dp)),
             ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
-                ) {
-                    Column {
-                        val queued = state.conversation.queuedInputs
-                        if (queued.isNotEmpty()) {
-                            QueueStrip(
-                                queuedInputs = queued,
-                                onClear = {
-                                    val dropped = actions.onClearQueue()
-                                    if (dropped.isNotEmpty()) {
-                                        onValueChange(mergeDroppedInputText(value, dropped))
-                                    }
-                                },
-                                modifier = Modifier.padding(bottom = 10.dp),
+                VoiceTranscriptPreview(
+                    buffer = voice.buffer,
+                    partial = voice.partial,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+                AnimatedContent(
+                    targetState = recording,
+                    modifier = Modifier.fillMaxWidth(),
+                    transitionSpec = {
+                        (fadeIn(tween(DdMotion.FAST)) togetherWith fadeOut(tween(DdMotion.FAST)))
+                            .using(
+                                SizeTransform(
+                                    clip = false,
+                                    sizeAnimationSpec = { _, _ ->
+                                        tween(DdMotion.BASE, easing = DdMotion.EaseOut)
+                                    },
+                                ),
                             )
+                    },
+                    label = "overlay-composer-surface",
+                ) { isRecording ->
+                if (isRecording) {
+                    VoiceRecordingBar(
+                        volume = voice.volume,
+                        stopping = voice.stopping,
+                        canSend = voice.buffer.isNotBlank() || value.isNotBlank(),
+                        onCancel = voice.cancel,
+                        onStop = voice.stop,
+                        onSend = voice.send,
+                    )
+                } else {
+                    OverlayComposerCard(
+                        glow = glow,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        AnimatedContent(
+                            targetState = expanded,
+                            transitionSpec = {
+                                (
+                                    fadeIn(tween(DdMotion.FAST)) togetherWith
+                                        fadeOut(tween(DdMotion.FAST))
+                                    ).using(
+                                    SizeTransform(
+                                        clip = false,
+                                        sizeAnimationSpec = { _, _ ->
+                                            tween(DdMotion.BASE, easing = DdMotion.EaseOut)
+                                        },
+                                    ),
+                                )
+                            },
+                            contentAlignment = Alignment.BottomCenter,
+                            label = "overlay-composer-content",
+                        ) { isExpanded ->
+                            if (isExpanded) {
+                                AssistantOverlayExpandedContent(
+                                    state = state,
+                                    value = value,
+                                    onValueChange = onValueChange,
+                                    busy = busy,
+                                    canSend = canSend,
+                                    micDescription = micDescription,
+                                    attachDescription = attachDescription,
+                                    sendDescription = sendDescription,
+                                    onMicClick = voice.start,
+                                    onSubmit = onSubmit,
+                                    actions = actions,
+                                    onFocusChanged = { isFocused ->
+                                        focused = isFocused
+                                        if (isFocused) pendingExpand = false
+                                    },
+                                    onOpenModels = { showModelSheet = true },
+                                    focusRequester = focusRequester,
+                                )
+                            } else {
+                                AssistantOverlayCollapsedBar(
+                                    state = state,
+                                    canSend = canSend,
+                                    micDescription = micDescription,
+                                    attachDescription = attachDescription,
+                                    sendDescription = sendDescription,
+                                    onMicClick = voice.start,
+                                    onSubmit = onSubmit,
+                                    actions = actions,
+                                    onExpand = { pendingExpand = true },
+                                )
+                            }
                         }
-                        if (state.attachments.isNotEmpty()) {
-                            AssistantOverlayAttachments(
-                                attachments = state.attachments,
-                                onOpen = actions.onOpenPreview,
-                                onRemove = actions.onRemoveAttachment,
-                                modifier = Modifier.padding(bottom = 10.dp),
-                            )
-                        }
-                        ChatInputField(
-                            value = value,
-                            onValueChange = onValueChange,
-                            placeholder = stringResource(R.string.assistant_overlay_input_hint),
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 6,
-                            focusRequester = focusRequester,
-                            testTag = "assistant_overlay_input",
-                        )
                     }
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (state.importingAttachment) {
-                        Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
-                            DdSpinner(size = 14.dp, color = colors.inkTertiary)
-                        }
-                    } else {
-                        DdIconButton(
-                            icon = DdIcons.Plus,
-                            onClick = actions.onPickAttachment,
-                            contentDescription = attachDescription,
-                            modifier = Modifier.testTag("assistant_overlay_attach"),
-                            size = 34.dp,
-                            iconSize = 17.dp,
-                            tint = colors.inkTertiary,
-                        )
-                    }
-                    ComposerChip(
-                        text = modelLabel,
-                        onClick = { showModelSheet = true },
-                        enabled = !busy,
-                        contentDescription = stringResource(R.string.assistant_model_sheet),
-                        testTag = "assistant_overlay_model_chip",
-                        maxWidth = 150.dp,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(if (listening) colors.accentSoft else colors.wash)
-                            .pointerInput(Unit) {
-                                awaitEachGesture {
-                                    awaitFirstDown(requireUnconsumed = false)
-                                    pressStart()
-                                    val early = withTimeoutOrNull(280) {
-                                        waitForUpOrCancellation() != null
-                                    }
-                                    when (early) {
-                                        null -> {
-                                            if (waitForUpOrCancellation() != null) {
-                                                pressEnd(true)
-                                            } else {
-                                                pressCancel()
-                                            }
-                                        }
-
-                                        true -> pressEnd(false)
-                                        false -> pressCancel()
-                                    }
-                                }
-                            }
-                            .semantics {
-                                contentDescription = micDescription
-                                role = Role.Button
-                                onClick {
-                                    onToggleMic()
-                                    true
-                                }
-                            }
-                            .testTag("assistant_overlay_mic"),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        DdIcon(
-                            icon = if (listening) DdIcons.AudioLines else DdIcons.Mic,
-                            tint = if (listening) colors.accent else colors.inkSecondary,
-                            size = 18.dp,
-                        )
-                    }
-                    if (busy) {
-                        Spacer(Modifier.width(6.dp))
-                        DdPressable(
-                            onClick = { actions.onStop() },
-                            modifier = Modifier.size(34.dp).testTag("assistant_overlay_stop"),
-                            shape = CircleShape,
-                            background = colors.wash,
-                            contentDescription = stringResource(R.string.assistant_overlay_stop),
-                        ) {
-                            Box(
-                                Modifier
-                                    .size(12.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(colors.danger),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(if (canSend) colors.accent else colors.wash)
-                            .combinedClickable(
-                                enabled = canSend,
-                                role = Role.Button,
-                                onClick = { onSubmit(false) },
-                                onLongClick = { if (busy) onSubmit(true) },
-                            )
-                            .semantics { contentDescription = sendDescription }
-                            .testTag("assistant_overlay_send"),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        DdIcon(
-                            icon = DdIcons.ArrowUp,
-                            tint = if (canSend) colors.onAccent else colors.inkTertiary,
-                            size = 18.dp,
-                        )
-                    }
                 }
             }
         }
@@ -286,6 +261,253 @@ internal fun AssistantOverlayComposer(
                 showModelSheet = false
                 state.sessionId?.let(actions.onOpenInApp)
             },
+        )
+    }
+}
+
+@Composable
+private fun AssistantOverlayExpandedContent(
+    state: AssistantOverlayState,
+    value: String,
+    onValueChange: (String) -> Unit,
+    busy: Boolean,
+    canSend: Boolean,
+    micDescription: String,
+    attachDescription: String,
+    sendDescription: String,
+    onMicClick: () -> Unit,
+    onSubmit: (Boolean) -> Unit,
+    actions: AssistantOverlayActions,
+    onFocusChanged: (Boolean) -> Unit,
+    onOpenModels: () -> Unit,
+    focusRequester: FocusRequester?,
+) {
+    val colors = deepDeepColors()
+    val modelLabel = state.modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
+    Column(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
+        ) {
+            Column {
+                val queued = state.conversation.queuedInputs
+                if (queued.isNotEmpty()) {
+                    QueueStrip(
+                        queuedInputs = queued,
+                        onClear = {
+                            val dropped = actions.onClearQueue()
+                            if (dropped.isNotEmpty()) {
+                                onValueChange(mergeDroppedInputText(value, dropped))
+                            }
+                        },
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+                if (state.attachments.isNotEmpty()) {
+                    AssistantOverlayAttachments(
+                        attachments = state.attachments,
+                        onOpen = actions.onOpenPreview,
+                        onRemove = actions.onRemoveAttachment,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+                ChatInputField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    placeholder = stringResource(R.string.assistant_overlay_input_hint),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { onFocusChanged(it.isFocused) },
+                    maxLines = 6,
+                    focusRequester = focusRequester,
+                    testTag = "assistant_overlay_input",
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (state.importingAttachment) {
+                Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+                    DdSpinner(size = 14.dp, color = colors.inkTertiary)
+                }
+            } else {
+                DdIconButton(
+                    icon = DdIcons.Plus,
+                    onClick = actions.onPickAttachment,
+                    contentDescription = attachDescription,
+                    modifier = Modifier.testTag("assistant_overlay_attach"),
+                    size = 34.dp,
+                    iconSize = 17.dp,
+                    tint = colors.inkTertiary,
+                )
+            }
+            ComposerChip(
+                text = modelLabel,
+                onClick = onOpenModels,
+                enabled = !busy,
+                contentDescription = stringResource(R.string.assistant_model_sheet),
+                testTag = "assistant_overlay_model_chip",
+                maxWidth = 150.dp,
+            )
+            Spacer(Modifier.weight(1f))
+            OverlayMicButton(
+                contentDescription = micDescription,
+                onClick = onMicClick,
+                modifier = Modifier.testTag("assistant_overlay_mic"),
+            )
+            if (busy) {
+                Spacer(Modifier.width(6.dp))
+                OverlayStopButton(onClick = actions.onStop)
+            }
+            Spacer(Modifier.width(6.dp))
+            OverlaySendButton(
+                canSend = canSend,
+                busy = busy,
+                contentDescription = sendDescription,
+                onSubmit = onSubmit,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AssistantOverlayCollapsedBar(
+    state: AssistantOverlayState,
+    canSend: Boolean,
+    micDescription: String,
+    attachDescription: String,
+    sendDescription: String,
+    onMicClick: () -> Unit,
+    onSubmit: (Boolean) -> Unit,
+    actions: AssistantOverlayActions,
+    onExpand: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(ComposerMetrics.CollapsedHeight)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onExpand,
+            )
+            .padding(start = 8.dp, end = 8.dp)
+            .testTag("assistant_overlay_collapsed"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (state.importingAttachment) {
+            Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+                DdSpinner(size = 14.dp, color = colors.inkTertiary)
+            }
+        } else {
+            DdIconButton(
+                icon = DdIcons.Plus,
+                onClick = actions.onPickAttachment,
+                contentDescription = attachDescription,
+                modifier = Modifier.testTag("assistant_overlay_attach"),
+                size = 34.dp,
+                iconSize = 17.dp,
+                tint = colors.inkTertiary,
+            )
+        }
+        Text(
+            text = stringResource(R.string.assistant_overlay_input_hint),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp)
+                .testTag("assistant_overlay_collapsed_hint"),
+            style = DdType.body,
+            color = colors.inkTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        OverlayMicButton(
+            contentDescription = micDescription,
+            onClick = onMicClick,
+            modifier = Modifier.testTag("assistant_overlay_mic"),
+        )
+        Spacer(Modifier.width(6.dp))
+        OverlaySendButton(
+            canSend = canSend,
+            busy = false,
+            contentDescription = sendDescription,
+            onSubmit = onSubmit,
+        )
+    }
+}
+
+@Composable
+private fun OverlayMicButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = modifier.size(ComposerMetrics.ActionButtonSize),
+        contentDescription = contentDescription,
+    ) {
+        DdIcon(
+            icon = DdIcons.Mic,
+            tint = colors.inkSecondary,
+            size = ComposerMetrics.ActionIconSize,
+        )
+    }
+}
+
+@Composable
+private fun OverlayStopButton(onClick: () -> Unit) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.size(34.dp).testTag("assistant_overlay_stop"),
+        shape = CircleShape,
+        background = colors.wash,
+        contentDescription = stringResource(R.string.assistant_overlay_stop),
+    ) {
+        Box(
+            Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(colors.danger),
+        )
+    }
+}
+
+@Composable
+private fun OverlaySendButton(
+    canSend: Boolean,
+    busy: Boolean,
+    contentDescription: String,
+    onSubmit: (Boolean) -> Unit,
+) {
+    val colors = deepDeepColors()
+    Box(
+        modifier = Modifier
+            .size(ComposerMetrics.ActionButtonSize)
+            .clip(CircleShape)
+            .background(if (canSend) colors.accent else colors.wash)
+            .combinedClickable(
+                enabled = canSend,
+                role = Role.Button,
+                onClick = { onSubmit(false) },
+                onLongClick = { if (busy) onSubmit(true) },
+            )
+            .semantics { this.contentDescription = contentDescription }
+            .testTag("assistant_overlay_send"),
+        contentAlignment = Alignment.Center,
+    ) {
+        DdIcon(
+            icon = DdIcons.ArrowUp,
+            tint = if (canSend) colors.onAccent else colors.inkTertiary,
+            size = ComposerMetrics.ActionIconSize,
         )
     }
 }

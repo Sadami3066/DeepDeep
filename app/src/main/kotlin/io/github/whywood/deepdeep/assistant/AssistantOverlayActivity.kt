@@ -20,6 +20,7 @@ import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
@@ -81,8 +82,8 @@ class AssistantOverlayActivity : ComponentActivity() {
             val autoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(
                 initialValue = false,
             )
-            val sendAfterRecognition by graph.voicePreferences.sendAfterRecognition.collectAsStateWithLifecycle(
-                initialValue = false,
+            val overlayEntryMode by graph.overlayEntryPreferences.mode.collectAsStateWithLifecycle(
+                initialValue = OverlayEntryMode.VOICE,
             )
             val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(
                 initialValue = UiPreferences(),
@@ -136,7 +137,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     preview = preview,
                     config = AssistantOverlayConfig(
                         autoSpeak = autoSpeak,
-                        sendAfterRecognition = sendAfterRecognition,
+                        entryMode = overlayEntryMode,
                         autoCollapseProcess = uiPreferences.autoCollapseProcess,
                         chatFontScale = uiPreferences.chatFontScale,
                         language = language,
@@ -159,6 +160,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                             )
                         },
                         onPickAttachment = { attachSheetOpen = true },
+                        onOpenCamera = { cameraSheetOpen = true },
                         onRemoveAttachment = controller::removeAttachment,
                         onOpenFile = openFile,
                         onShareFile = shareFile,

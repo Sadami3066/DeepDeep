@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -311,33 +310,5 @@ internal fun AssistantOverlayPanel(
                 )
             }
         }
-    }
-}
-
-@Composable
-internal fun AssistantOverlayListening(transcript: String) {
-    val colors = deepDeepColors()
-    val shape = RoundedCornerShape(18.dp)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
-            .shadow(10.dp, shape, clip = false, ambientColor = colors.ink, spotColor = colors.ink)
-            .clip(shape)
-            .background(colors.surface.copy(alpha = 0.96f))
-            .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
-            .padding(start = 14.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DdIcon(icon = DdIcons.AudioLines, tint = colors.accent, size = 16.dp)
-        Box(Modifier.size(width = 8.dp, height = 1.dp))
-        Text(
-            text = transcript.ifEmpty { stringResource(R.string.assistant_overlay_listening) },
-            modifier = Modifier.weight(1f),
-            style = DdType.bodySmall,
-            color = if (transcript.isEmpty()) colors.inkTertiary else colors.ink,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="assistant_overlay_title">助手</string>
-    <string name="assistant_overlay_listening">正在聆听…</string>
     <string name="assistant_overlay_input_hint">问我任何问题…</string>
     <string name="assistant_overlay_send">发送</string>
     <string name="assistant_overlay_stop">停止</string>
