@@ -222,6 +222,81 @@ class PluginManagerTest {
     }
 
     @Test
+    fun unavailablePluginHidesToolsAndPromptBody() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+        assertEquals(listOf("fake_tool"), manager.tools().map { it.name })
+        assertEquals("PROMPT:未连接", manager.promptBody())
+
+        plugin.availability = PluginAvailability.Unavailable("需要 Linux")
+        manager.refresh()
+        advanceUntilIdle()
+
+        assertTrue(manager.tools().isEmpty())
+        assertNull(manager.promptBody())
+    }
+
+    @Test
+    fun defaultDisabledInternalPluginStartsDisabledWithoutActiveSkill() = runTest {
+        val plugin = FakeInternalPlugin(defaultEnabledValue = false)
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+
+        val record = PluginRecordStore(recordsFile()).load().records.getValue(plugin.id)
+        assertFalse(record.enabled)
+        assertFalse(manager.state.value.snapshot(plugin.id)!!.enabled)
+        assertTrue(manager.tools().isEmpty())
+        assertFalse(File(temporaryFolder.root, "agent/skills/internal-skill").exists())
+    }
+
+    @Test
+    fun enablingUnavailablePluginDoesNotActivateSkills() = runTest {
+        val plugin = FakePlugin()
+        val manager = newManager(this, plugin)
+        manager.install(plugin.id)
+        advanceUntilIdle()
+        assertTrue(File(temporaryFolder.root, "agent/skills/fake-skill/SKILL.md").isFile)
+
+        manager.setEnabled(plugin.id, false)
+        advanceUntilIdle()
+        plugin.availability = PluginAvailability.Unavailable("需要 Linux")
+        manager.setEnabled(plugin.id, true)
+        advanceUntilIdle()
+
+        assertTrue(manager.state.value.snapshot(plugin.id)!!.enabled)
+        assertTrue(manager.tools().isEmpty())
+        assertFalse(File(temporaryFolder.root, "agent/skills/fake-skill").exists())
+    }
+
+    @Test
+    fun refreshAndSyncSkillsFollowsLiveAvailability() = runTest {
+        val plugin = FakePlugin()
+        plugin.installed = true
+        PluginRecordStore(recordsFile()).upsert(
+            PluginRecord(plugin.id, "2.0", 0L, listOf("fake-skill")),
+        )
+        val manager = newManager(this, plugin)
+        manager.start()
+        advanceUntilIdle()
+        assertTrue(File(temporaryFolder.root, "agent/skills/fake-skill/SKILL.md").isFile)
+
+        plugin.availability = PluginAvailability.Unavailable("需要 Linux")
+        manager.refreshAndSyncSkills()
+
+        assertFalse(
+            manager.state.value.snapshot(plugin.id)!!.availability is PluginAvailability.Available,
+        )
+        assertFalse(File(temporaryFolder.root, "agent/skills/fake-skill").exists())
+    }
+
+    @Test
     fun disabledPluginSkipsStatusAndRejectsOperations() = runTest {
         val plugin = FakePlugin()
         val manager = newManager(this, plugin)
@@ -527,7 +602,9 @@ class PluginManagerTest {
         assertEquals(1, plugin.statusCalls)
     }
 
-    private class FakeInternalPlugin : OfficialPlugin {
+    private class FakeInternalPlugin(
+        private val defaultEnabledValue: Boolean = true,
+    ) : OfficialPlugin {
         override val id: String = "fake-internal"
         override val kind: PluginKind = PluginKind.INTERNAL
         override val icon: DdIcon = DdIcons.Target
@@ -535,6 +612,8 @@ class PluginManagerTest {
         override val summaryRes: Int = R.string.plugins_title
         override val version: String = "1.0"
         override val sizeLabelRes: Int = R.string.plugins_title
+        override val defaultEnabled: Boolean
+            get() = defaultEnabledValue
 
         var applied: Map<String, String> = emptyMap()
 

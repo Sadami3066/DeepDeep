@@ -1,24 +1,32 @@
 package io.github.whywood.deepdeep.plugin.gui
 
+import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Resources
 import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.adb.AdbBridgeState
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenAccess
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
+import io.github.whywood.deepdeep.privilege.PrivilegeController
+import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.privilege.PrivilegeState
 import io.github.whywood.deepdeep.screen.screenToolNames
+import io.github.whywood.deepdeep.shell.RootStatus
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureInfo
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,11 +51,24 @@ class GuiPluginTest {
         assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)
         assertEquals(screenToolNames(), plugin.tools().map { it.name })
         assertEquals(11, plugin.tools().size)
+        assertTrue(plugin.requiresPrivilege)
+        assertFalse(plugin.defaultEnabled)
     }
 
     @Test
-    fun availabilityIsAlwaysAvailable() = runTest {
+    fun availabilityFollowsPrivilegeState() = runTest {
         assertEquals(PluginAvailability.Available, plugin().availability())
+
+        val privilege = FakePrivilege(available = false)
+        val unauthorized = plugin(privilege = privilege).availability()
+        assertTrue(unauthorized is PluginAvailability.Unavailable)
+        assertEquals(
+            "res:${R.string.plugin_screen_privilege_required}",
+            (unauthorized as PluginAvailability.Unavailable).reason,
+        )
+
+        privilege.setAvailable(true)
+        assertEquals(PluginAvailability.Available, plugin(privilege = privilege).availability())
     }
 
     @Test
@@ -91,6 +112,18 @@ class GuiPluginTest {
             .actions(PluginStatus.Ready("x"))
         assertEquals("virtual_stop", actions.first().id)
         assertEquals(R.string.plugin_virtual_screen_action_stop, actions.first().labelRes)
+    }
+
+    @Test
+    fun privilegeGatesVirtualScreenToolsAndActions() {
+        val privilege = FakePrivilege(available = false)
+        val plugin = plugin(privilege = privilege, virtualScreen = feature())
+        assertTrue(plugin.tools().isEmpty())
+        assertTrue(plugin.actions(PluginStatus.Ready("x")).none { it.id.startsWith("virtual_") })
+
+        privilege.setAvailable(true)
+        assertEquals(screenToolNames() + "virtual_screen", plugin.tools().map { it.name })
+        assertEquals("virtual_start", plugin.actions(PluginStatus.Ready("x")).first().id)
     }
 
     @Test
@@ -185,11 +218,39 @@ class GuiPluginTest {
 
     private fun plugin(
         actions: GuiActions = FakeActions(),
+        privilege: FakePrivilege? = null,
         virtualScreen: VirtualScreenFeature? = null,
-    ): GuiPlugin = GuiPlugin(context, actions, screenshotDir, virtualScreen = virtualScreen)
+    ): GuiPlugin = GuiPlugin(
+        context,
+        actions,
+        screenshotDir,
+        privilege = privilege,
+        virtualScreen = virtualScreen,
+    )
 
     private fun feature(screen: VirtualScreenAccess = FakeScreen()): VirtualScreenFeature =
         VirtualScreenFeature(context, screen)
+
+    private class FakePrivilege(available: Boolean) : PrivilegeController {
+        private val flow = MutableStateFlow(privilegeState(available))
+        override val state: StateFlow<PrivilegeState> get() = flow
+
+        fun setAvailable(available: Boolean) {
+            flow.value = privilegeState(available)
+        }
+
+        override suspend fun select(level: PrivilegeLevel) = Unit
+
+        override suspend fun refresh() = Unit
+
+        override suspend fun probeRoot(): RootStatus = RootStatus.NotRequested
+
+        override suspend fun connect() = Unit
+
+        override fun startPairing() = Unit
+
+        override fun openWirelessDebugging(context: Context) = Unit
+    }
 
     private class FakeScreen(
         initial: VirtualScreenState = VirtualScreenState.Offline,
@@ -244,4 +305,14 @@ class GuiPluginTest {
     private class FakeResources : Resources(null, null, null) {
         override fun getString(id: Int): String = "res:$id"
     }
+}
+
+private fun privilegeState(available: Boolean): PrivilegeState = if (available) {
+    PrivilegeState(
+        selected = PrivilegeLevel.ADB,
+        effective = PrivilegeLevel.ADB,
+        adb = AdbBridgeState(paired = true, daemon = true),
+    )
+} else {
+    PrivilegeState()
 }

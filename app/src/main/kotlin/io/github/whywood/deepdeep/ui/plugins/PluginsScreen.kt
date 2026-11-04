@@ -292,6 +292,12 @@ private fun PluginRow(
             ?: stringResource(R.string.plugins_stage_preparing)
     }
     val enabled = interactive && operation == null
+    val available = snapshot.availability is PluginAvailability.Available
+    val description = if (available) {
+        summary
+    } else {
+        (snapshot.availability as? PluginAvailability.Unavailable)?.reason ?: summary
+    }
     val brandIcon = VendorPluginIcons[plugin.id]
         ?.takeIf { plugin.kind == PluginKind.EXTERNAL }
     DdPressable(
@@ -338,7 +344,7 @@ private fun PluginRow(
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = stage ?: summary,
+                    text = stage ?: description,
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 2,
@@ -358,12 +364,13 @@ private fun PluginRow(
                         modifier = Modifier
                             .testTag("plugin_switch_${plugin.id}")
                             .semantics { contentDescription = name },
+                        activeColor = if (snapshot.enabled && !available) colors.warning else null,
                     )
                 } else if (plugin.kind != PluginKind.INTERNAL) {
                     DdTextAction(
                         text = stringResource(R.string.plugins_action_download),
                         onClick = onDownload,
-                        enabled = enabled && snapshot.availability is PluginAvailability.Available,
+                        enabled = enabled && available,
                         modifier = Modifier.testTag("plugin_download_${plugin.id}"),
                     )
                 }

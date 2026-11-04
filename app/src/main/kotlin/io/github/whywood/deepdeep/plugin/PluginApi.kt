@@ -15,6 +15,10 @@ interface OfficialPlugin {
 
     val kind: PluginKind get() = PluginKind.EXTERNAL
 
+    val requiresPrivilege: Boolean get() = false
+
+    val defaultEnabled: Boolean get() = true
+
     val icon: DdIcon
 
     val tintIcon: Boolean get() = true

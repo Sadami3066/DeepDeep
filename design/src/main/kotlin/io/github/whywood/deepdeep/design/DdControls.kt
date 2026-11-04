@@ -44,6 +44,7 @@ fun DdSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     stateDescription: String? = null,
+    activeColor: Color? = null,
 ) {
     val colors = deepDeepColors()
     val interaction = remember { MutableInteractionSource() }
@@ -60,7 +61,7 @@ fun DdSwitch(
     )
     val trackColor by animateColorAsState(
         targetValue = if (checked) {
-            colors.accent
+            activeColor ?: colors.accent
         } else {
             colors.ink.copy(alpha = if (colors.dark) 0.22f else 0.10f)
         },

@@ -133,7 +133,10 @@ class AppGraph(context: Context) : AppDependencies {
             rootShell = rootShell,
             adbBridge = adbBridge,
             scope = scope,
-        ) { host.reconfigure() }
+        ) {
+            pluginManager.refreshAndSyncSkills()
+            host.reconfigure()
+        }
     }
     override val privilege: PrivilegeController get() = privilegeImpl
     val themePreferences = ThemePreferences(appContext)
@@ -229,6 +232,7 @@ class AppGraph(context: Context) : AppDependencies {
                     context = appContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
                     mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
+                    privilege = privilege,
                     virtualScreen = VirtualScreenFeature.install(appContext, privilege, adbBridge),
                 ),
                 ArrangePlugin(context = appContext),

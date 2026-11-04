@@ -64,6 +64,7 @@ fun PluginDetailScreen(
     manager: PluginManager,
     pluginId: String,
     onBack: () -> Unit,
+    onOpenPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -110,6 +111,7 @@ fun PluginDetailScreen(
         deleteOpen = deleteOpen,
         onDeleteOpenChange = { deleteOpen = it },
         onBack = onBack,
+        onOpenPermission = onOpenPermission,
         onRefresh = { scope.launch { holder.refresh() } },
         onInstall = { scope.launch { holder.install(pluginId) } },
         onUpdate = { scope.launch { holder.update(pluginId) } },
@@ -131,6 +133,7 @@ private fun PluginDetailContent(
     deleteOpen: Boolean,
     onDeleteOpenChange: (Boolean) -> Unit,
     onBack: () -> Unit,
+    onOpenPermission: () -> Unit,
     onRefresh: () -> Unit,
     onInstall: () -> Unit,
     onUpdate: () -> Unit,
@@ -283,7 +286,7 @@ private fun PluginDetailContent(
             }
 
             val availability = snapshot.availability
-            if (!snapshot.installed && availability is PluginAvailability.Unavailable) {
+            if (availability is PluginAvailability.Unavailable) {
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = availability.reason,
@@ -291,6 +294,17 @@ private fun PluginDetailContent(
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
+                if (plugin.requiresPrivilege) {
+                    Spacer(Modifier.height(8.dp))
+                    SettingsGroup {
+                        DdListRow(
+                            title = stringResource(R.string.plugin_screen_open_permission),
+                            onClick = onOpenPermission,
+                            showChevron = true,
+                            modifier = Modifier.testTag("plugin_permission_guide"),
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(24.dp))

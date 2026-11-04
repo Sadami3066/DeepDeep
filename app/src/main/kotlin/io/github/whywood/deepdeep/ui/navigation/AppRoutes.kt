@@ -277,6 +277,7 @@ internal fun AppRouteContent(
             manager = dependencies.pluginManager,
             pluginId = destination.id,
             onBack = onBack,
+            onOpenPermission = { navigator.push(AppDestination.Permission) },
         )
 
         AppDestination.Archived -> ArchivedSessionsScreen(

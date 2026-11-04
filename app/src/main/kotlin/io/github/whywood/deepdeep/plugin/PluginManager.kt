@@ -97,7 +97,7 @@ class PluginManager(
                     version = plugin.version,
                     installedAt = System.currentTimeMillis(),
                     skillIds = skills.map { it.id },
-                    enabled = true,
+                    enabled = plugin.defaultEnabled,
                 )
                 runCatching { recordStore.upsert(record) }
                 records[plugin.id] = record
@@ -105,7 +105,14 @@ class PluginManager(
             statusCache.applySettings(plugin)
             val record = records[plugin.id] ?: return@forEach
             val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
-            runCatching { skillStore.sync(plugin.id, skills, record.skillIds, record.enabled) }
+            runCatching {
+                skillStore.sync(
+                    plugin.id,
+                    skills,
+                    record.skillIds,
+                    record.enabled && availabilityOf(plugin) is PluginAvailability.Available,
+                )
+            }
             val ids = skills.map { it.id }
             if (ids != record.skillIds) {
                 runCatching { recordStore.upsert(record.copy(skillIds = ids)) }
@@ -129,7 +136,9 @@ class PluginManager(
     }
 
     fun tools(binding: SessionBinding): List<CodingTool> = _state.value.plugins
-        .filter { it.installed && it.enabled }
+        .filter {
+            it.installed && it.enabled && it.availability is PluginAvailability.Available
+        }
         .flatMap { snapshot ->
             when (snapshot.plugin.kind) {
                 PluginKind.EXTERNAL -> snapshot.plugin.tools()
@@ -157,7 +166,11 @@ class PluginManager(
         scope.launch {
             runCatching {
                 recordStore.setEnabled(pluginId, enabled)
-                skillStore.setActive(pluginId, plugin.skills(), enabled)
+                skillStore.setActive(
+                    pluginId,
+                    plugin.skills(),
+                    enabled && availabilityOf(plugin) is PluginAvailability.Available,
+                )
                 refreshStatuses()
                 onContributionsChanged()
             }.onFailure { error ->
@@ -190,7 +203,14 @@ class PluginManager(
                 val record = recordStore.load().records[pluginId]
                 if (record != null) {
                     val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
-                    runCatching { skillStore.sync(pluginId, skills, record.skillIds, record.enabled) }
+                    runCatching {
+                        skillStore.sync(
+                            pluginId,
+                            skills,
+                            record.skillIds,
+                            record.enabled && availabilityOf(plugin) is PluginAvailability.Available,
+                        )
+                    }
                     val ids = skills.map { it.id }
                     if (ids != record.skillIds) recordStore.upsert(record.copy(skillIds = ids))
                 }
@@ -263,12 +283,31 @@ class PluginManager(
 
     fun promptBody(): String? {
         val bodies = _state.value.plugins
-            .filter { it.installed && it.enabled }
+            .filter {
+                it.installed && it.enabled && it.availability is PluginAvailability.Available
+            }
             .mapNotNull { snapshot ->
                 snapshot.status?.let { status -> snapshot.plugin.promptBody(status) }
             }
             .filter { it.isNotBlank() }
         return bodies.takeIf { it.isNotEmpty() }?.joinToString("\n\n")
+    }
+
+    suspend fun refreshAndSyncSkills() {
+        statusCache.refreshStatuses()
+        val records = recordStore.load().records
+        pluginsById.values.forEach { plugin ->
+            val record = records[plugin.id] ?: return@forEach
+            val skills = runCatching { plugin.skills() }.getOrDefault(emptyList())
+            runCatching {
+                skillStore.sync(
+                    plugin.id,
+                    skills,
+                    record.skillIds,
+                    record.enabled && availabilityOf(plugin) is PluginAvailability.Available,
+                )
+            }
+        }
     }
 
     private fun launchBusy(block: suspend () -> Unit) {
@@ -302,6 +341,11 @@ class PluginManager(
     private suspend fun refreshStatuses() {
         statusCache.refreshStatuses()
     }
+
+    private suspend fun availabilityOf(plugin: OfficialPlugin): PluginAvailability =
+        runCatching { plugin.availability() }.getOrElse { error ->
+            PluginAvailability.Unavailable(error.message ?: error.javaClass.simpleName)
+        }
 
     private fun errorMessage(error: Throwable): String =
         error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName

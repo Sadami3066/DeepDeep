@@ -17,6 +17,8 @@ import io.github.whywood.deepdeep.plugin.PluginSkill
 import io.github.whywood.deepdeep.plugin.PluginStatus
 import io.github.whywood.deepdeep.plugin.PluginUi
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
+import io.github.whywood.deepdeep.plugin.virtualscreen.virtualScreenAvailability
+import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
 import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
 import io.github.whywood.deepdeep.screen.ScreenController
@@ -39,6 +41,7 @@ class GuiPlugin(
     screenshotDir: File? = null,
     private val mainShell: MainScreenShell? = null,
     private val mainActions: GuiActions = GuiAccessibilityActions(),
+    private val privilege: PrivilegeController? = null,
     private val virtualScreen: VirtualScreenFeature? = null,
 ) : OfficialPlugin {
     private val resolvedScreenshotDir: File by lazy {
@@ -77,8 +80,13 @@ class GuiPlugin(
     override val summaryRes: Int = R.string.plugin_screen_summary
     override val version: String = "3.1.0"
     override val sizeLabelRes: Int = R.string.plugin_gui_size
+    override val requiresPrivilege: Boolean get() = true
+    override val defaultEnabled: Boolean get() = false
 
-    override suspend fun availability(): PluginAvailability = PluginAvailability.Available
+    override suspend fun availability(): PluginAvailability = virtualScreenAvailability(
+        virtualScreenAvailable,
+        string(R.string.plugin_screen_privilege_required),
+    )
 
     override suspend fun install(progress: PluginProgress) = Unit
 
@@ -93,7 +101,7 @@ class GuiPlugin(
     }
 
     override fun actions(status: PluginStatus): List<PluginAction> = buildList {
-        virtualScreen?.let { addAll(it.actions()) }
+        if (virtualScreenAvailable) virtualScreen?.let { addAll(it.actions()) }
         add(PluginAction(ACTION_ACCESSIBILITY_SETTINGS, R.string.plugin_gui_action_settings))
         if (!KeepAlive.isIgnoringBatteryOptimizations(context)) {
             add(PluginAction(ACTION_BATTERY_EXEMPTION, R.string.plugin_gui_action_battery))
@@ -138,15 +146,21 @@ class GuiPlugin(
         }
     }
 
-    override fun tools(): List<CodingTool> =
+    override fun tools(): List<CodingTool> = if (virtualScreenAvailable) {
         screenTools(
             screenController,
             resolvedScreenshotDir,
             mainController,
             onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() },
         ) + virtualScreen?.tools().orEmpty()
+    } else {
+        emptyList()
+    }
 
     override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+
+    private val virtualScreenAvailable: Boolean
+        get() = privilege?.state?.value?.virtualScreenAvailable ?: true
 
     private fun string(id: Int): String = context.resources.getString(id)
 
