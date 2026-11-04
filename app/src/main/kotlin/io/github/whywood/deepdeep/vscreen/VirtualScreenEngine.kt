@@ -22,8 +22,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -877,10 +880,17 @@ object VirtualScreenRuntime {
     @Volatile
     private var instance: VirtualScreenEngine? = null
 
+    private val mutableToolStarted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val toolStarted: SharedFlow<Unit> = mutableToolStarted.asSharedFlow()
+
     fun install(engine: VirtualScreenEngine): VirtualScreenEngine {
         instance = engine
         return engine
     }
 
     fun engine(): VirtualScreenEngine? = instance
+
+    fun notifyToolStarted() {
+        mutableToolStarted.tryEmit(Unit)
+    }
 }

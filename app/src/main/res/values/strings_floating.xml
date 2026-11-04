@@ -36,6 +36,7 @@
     <string name="floating_preview_starting">虚拟屏启动中…</string>
     <string name="floating_preview_failed">虚拟屏启动失败</string>
     <string name="floating_preview_waiting">等待画面…</string>
+    <string name="floating_preview_auto_hint">虚拟屏已启动，长按小鲸鱼可以查看或关闭预览</string>
     <string name="floating_panel_empty">小鲸鱼在打盹，暂时没有会话动态</string>
 
     <string name="floating_activity_thinking">正在思考…</string>

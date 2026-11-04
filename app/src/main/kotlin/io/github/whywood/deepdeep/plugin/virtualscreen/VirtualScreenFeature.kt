@@ -176,7 +176,7 @@ internal fun virtualScreenTool(screen: VirtualScreenAccess): CodingTool = Coding
             require(args.keys.all { it == "action" }) { "virtual_screen only accepts action; choose target with the screen_* tools" }
             when (val action = args.requiredString("action").lowercase()) {
                 "start" -> {
-                    screen.start()
+                    if (screen.start().ok) VirtualScreenRuntime.notifyToolStarted()
                     textResult(
                         stateJson(screen).toString(),
                         isError = screen.state.value is VirtualScreenState.Failed,

@@ -36,6 +36,7 @@
     <string name="floating_preview_starting">Starting virtual screen…</string>
     <string name="floating_preview_failed">Virtual screen failed</string>
     <string name="floating_preview_waiting">Waiting for frames…</string>
+    <string name="floating_preview_auto_hint">Virtual screen started. Long-press the whale to show or hide its preview</string>
     <string name="floating_panel_empty">The whale is dozing — no session activity</string>
 
     <string name="floating_activity_thinking">Thinking…</string>

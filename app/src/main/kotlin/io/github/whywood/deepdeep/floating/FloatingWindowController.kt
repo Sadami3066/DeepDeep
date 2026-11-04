@@ -15,6 +15,7 @@ import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.core.view.WindowInsetsCompat
 import io.github.whywood.deepdeep.MainActivity
+import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
@@ -49,6 +51,7 @@ import io.github.whywood.deepdeep.service.ActiveRunView
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.vscreen.VirtualScreenController
+import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -161,6 +164,7 @@ class FloatingWindowController(
         scope.launch { theme.collect { mode -> themeMode.value = mode } }
         scope.launch { now.collect { requestRender() } }
         scope.launch { virtualScreenState.collect { requestRender() } }
+        scope.launch { VirtualScreenRuntime.toolStarted.collect { onScreenToolStarted() } }
         scope.launch { renderTrigger.collect { render() } }
     }
 
@@ -506,6 +510,13 @@ class FloatingWindowController(
 
     private fun togglePreview() {
         previewExpanded.value = !previewExpanded.value
+    }
+
+    private fun onScreenToolStarted() {
+        if (!settingsState.value.enabled || !Settings.canDrawOverlays(context)) return
+        if (previewOpen.value) return
+        previewOpen.value = true
+        Toast.makeText(context, R.string.floating_preview_auto_hint, Toast.LENGTH_LONG).show()
     }
 
     private fun removeSurfaceWindow() {
