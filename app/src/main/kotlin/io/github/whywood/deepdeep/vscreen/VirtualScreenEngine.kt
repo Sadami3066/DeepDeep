@@ -257,11 +257,11 @@ class VirtualScreenEngine(
             val epoch = screenshotGate.open()
             try {
                 val response = requestLocked(VirtualScreenCommands.SCREENSHOT, JsonObject(emptyMap()), screenshotEpoch = epoch)
-                if (response.stringField("kind") != "screenshot") return@withLock null
+                check(response.stringField("kind") == "screenshot") {
+                    "The virtual screen did not return a screenshot frame; retry"
+                }
                 screenshotGate.await(epoch, SCREENSHOT_TIMEOUT_MS)
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                null
+                    ?: throw IllegalStateException("The virtual screen screenshot timed out; retry")
             } finally {
                 screenshotGate.close(epoch)
             }

@@ -234,6 +234,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         if (packageName.isEmpty()) throw IllegalArgumentException("Missing packageName")
         val conflict = occupancyConflict(packageName, display.displayId)
         if (conflict != null) throw IllegalStateException(conflict)
+        display.noteLaunch()
         launchOnDisplay(packageName, display.displayId)
         val taskDisplayId = taskDisplayOf(packageName)
         val landedOnMain = taskDisplayId == Display.DEFAULT_DISPLAY
@@ -273,6 +274,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             throw IllegalStateException("Failed to inject release event: ($x, $y) display=$displayId")
         }
         up.recycle()
+        display.noteInput()
         respond(id) { put("message", "Tapped ($x, $y)") }
     }
 
@@ -317,6 +319,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             throw IllegalStateException("Failed to inject release event: ($x2, $y2) display=$displayId")
         }
         up.recycle()
+        display.noteInput()
         respond(id) { put("message", "Swiped ($x1, $y1) -> ($x2, $y2)") }
     }
 
@@ -327,6 +330,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val keyCode = KEY_CODES[name]
             ?: throw IllegalArgumentException("Unsupported key: $name; available: ${KEY_CODES.keys.joinToString(", ")}")
         injectKey(displayId, keyCode)
+        session?.noteInput()
         respond(id) { put("message", "Sent key $name") }
     }
 
@@ -344,12 +348,13 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             injected++
         }
         if (injected == 0) throw IllegalStateException("Cannot type this text; only keyboard-mappable ASCII characters are supported")
+        session?.noteInput()
         respond(id) { put("message", "Typed ${injected / 2} characters") }
     }
 
     private fun handleScreenshot(id: Int) {
         val display = session ?: throw IllegalStateException("Virtual screen is not running")
-        val png = display.screenshotPng() ?: throw IllegalStateException("No frame available yet; try again later")
+        val png = display.screenshotPng()
         if (screenshotFrameExceedsLimit(png.size)) {
             throw IllegalStateException("Screenshot too large: ${png.size} bytes exceeds the frame limit of ${VirtualScreenProtocol.MAX_FRAME_BYTES}")
         }
@@ -689,6 +694,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val rowStride: Int,
         val pixelStride: Int,
         val pixels: ByteArray,
+        val transparentRatio: Float,
     )
 
     private class ShellContext(base: Context) : ContextWrapper(base) {
@@ -720,11 +726,21 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         private var display: VirtualDisplay? = null
         private var snapshot: FrameSnapshot? = null
         private var snapshotAtUptime = 0L
+        private var lastInputAtUptime = 0L
+        private var lastLaunchAtUptime = 0L
         private var frameBuffer: Bitmap? = null
         private var previewBuffer: Bitmap? = null
 
         val displayId: Int
             get() = display?.display?.displayId ?: -1
+
+        fun noteInput() {
+            lastInputAtUptime = SystemClock.uptimeMillis()
+        }
+
+        fun noteLaunch() {
+            lastLaunchAtUptime = SystemClock.uptimeMillis()
+        }
 
         fun start(): Int {
             val manager = DisplayManager::class.java
@@ -748,7 +764,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         fun streamJpeg(targetWidth: Int): ByteArray? {
             val image = tryAcquire() ?: return null
             return try {
-                cacheSnapshotIfDue(image)
+                cacheSnapshot(image)
                 encodeJpeg(image, targetWidth)
             } finally {
                 image.close()
@@ -783,54 +799,73 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             return out.toByteArray()
         }
 
-        fun screenshotPng(): ByteArray? {
-            val deadline = SystemClock.uptimeMillis() + SCREENSHOT_WAIT_MS
+        fun screenshotPng(): ByteArray {
+            val startedAt = SystemClock.uptimeMillis()
+            val initialRatio = synchronized(imageLock) { snapshot?.transparentRatio }
+            val wait = screenshotWait(
+                nowMs = startedAt,
+                lastInputAtMs = lastInputAtUptime,
+                lastLaunchAtMs = lastLaunchAtUptime,
+                latestTransparentRatio = initialRatio,
+            )
+            val deadline = startedAt + wait.timeoutMs
             while (true) {
-                val image = tryAcquire()
-                if (image != null) {
-                    return try {
-                        val bitmap = toBitmap(image)
-                        try {
-                            encodePng(bitmap)
-                        } finally {
-                            bitmap.recycle()
-                        }
-                    } finally {
-                        image.close()
-                    }
+                acquireLatestFrame()
+                val current = synchronized(imageLock) { snapshot }
+                val capturedAt = synchronized(imageLock) { snapshotAtUptime }
+                val satisfied = when (wait) {
+                    ScreenshotWait.NONE -> true
+                    ScreenshotWait.SETTLE -> capturedAt >= startedAt
+                    ScreenshotWait.CONTENT -> current != null && frameIsComplete(current.transparentRatio)
                 }
-                val cached = synchronized(imageLock) { snapshot }
-                if (cached != null) {
-                    val bitmap = bitmapFromSnapshot(cached)
-                    return try {
-                        encodePng(bitmap)
-                    } finally {
-                        bitmap.recycle()
-                    }
-                }
-                if (SystemClock.uptimeMillis() >= deadline) return null
-                Thread.sleep(50)
+                if (satisfied || SystemClock.uptimeMillis() >= deadline) break
+                Thread.sleep(SCREENSHOT_POLL_MS)
+            }
+            val frame = synchronized(imageLock) { snapshot } ?: throw IllegalStateException(missingFrameMessage())
+            if (frameIsBlank(frame.transparentRatio)) throw IllegalStateException(blankFrameMessage())
+            val bitmap = bitmapFromSnapshot(frame)
+            return try {
+                encodePng(bitmap)
+            } finally {
+                bitmap.recycle()
             }
         }
 
-        private fun cacheSnapshotIfDue(image: Image) {
-            val now = SystemClock.uptimeMillis()
-            if (now - snapshotAtUptime < SNAPSHOT_CACHE_INTERVAL_MS) return
+        private fun acquireLatestFrame(): FrameSnapshot? {
+            val image = tryAcquire() ?: return null
+            return try {
+                cacheSnapshot(image)
+            } finally {
+                image.close()
+            }
+        }
+
+        private fun cacheSnapshot(image: Image): FrameSnapshot {
             val plane = image.planes[0]
             val buffer = plane.buffer
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
             buffer.rewind()
-            synchronized(imageLock) {
-                snapshot = FrameSnapshot(
-                    width = image.width,
-                    height = image.height,
+            val now = SystemClock.uptimeMillis()
+            val frame = FrameSnapshot(
+                width = image.width,
+                height = image.height,
+                rowStride = plane.rowStride,
+                pixelStride = plane.pixelStride,
+                pixels = bytes,
+                transparentRatio = transparentPixelRatio(
+                    pixels = bytes,
                     rowStride = plane.rowStride,
                     pixelStride = plane.pixelStride,
-                    pixels = bytes,
-                )
+                    width = image.width,
+                    height = image.height,
+                ),
+            )
+            synchronized(imageLock) {
+                snapshot = frame
+                snapshotAtUptime = now
             }
-            snapshotAtUptime = now
+            return frame
         }
 
         private fun bitmapFromSnapshot(value: FrameSnapshot): Bitmap {
@@ -864,17 +899,6 @@ private class HelperServer(private val port: Int, private val nonce: String) {
             runCatching { reader.acquireLatestImage() }.getOrNull()
         }
 
-        private fun toBitmap(image: Image): Bitmap {
-            val plane = image.planes[0]
-            val paddedWidth = plane.rowStride / plane.pixelStride
-            val padded = Bitmap.createBitmap(paddedWidth, image.height, Bitmap.Config.ARGB_8888)
-            padded.copyPixelsFromBuffer(plane.buffer.rewind())
-            if (paddedWidth == image.width) return padded
-            val cropped = Bitmap.createBitmap(padded, 0, 0, image.width, image.height)
-            padded.recycle()
-            return cropped
-        }
-
         private fun displayFlags(): Int {
             var flags = FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or
                 FLAG_ROTATES_WITH_CONTENT or FLAG_DESTROY_CONTENT_ON_REMOVAL
@@ -897,8 +921,6 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         private companion object {
             const val DISPLAY_NAME = "deepdeep-vscreen"
             const val JPEG_QUALITY = 70
-            const val SCREENSHOT_WAIT_MS = 3000L
-            const val SNAPSHOT_CACHE_INTERVAL_MS = 1000L
             const val DISPLAY_IME_POLICY_LOCAL = 0
             const val FLAG_PUBLIC = 1 shl 0
             const val FLAG_OWN_CONTENT_ONLY = 1 shl 3
