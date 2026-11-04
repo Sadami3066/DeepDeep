@@ -1,10 +1,7 @@
 package io.github.whywood.deepdeep.floating
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,19 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -43,7 +34,6 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
@@ -52,8 +42,6 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 @Composable
 internal fun FloatingPanel(
@@ -68,6 +56,7 @@ internal fun FloatingPanel(
     onOpenCompleted: (FloatingCompletion) -> Unit,
     onRemoveCompleted: (FloatingCompletion) -> Unit,
     onSubscribe: (String) -> Unit,
+    onOpenApp: () -> Unit,
     onCollapse: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -82,7 +71,7 @@ internal fun FloatingPanel(
             .border(1.dp, panelBorder(colors), shape)
             .testTag("floating_panel"),
     ) {
-        PanelHeader(onCollapse = onCollapse)
+        PanelHeader(onOpenApp = onOpenApp, onCollapse = onCollapse)
         DdHairline()
         Column(
             Modifier
@@ -131,7 +120,7 @@ internal fun FloatingPanel(
 }
 
 @Composable
-private fun PanelHeader(onCollapse: () -> Unit) {
+private fun PanelHeader(onOpenApp: () -> Unit, onCollapse: () -> Unit) {
     val colors = deepDeepColors()
     Row(
         Modifier
@@ -145,6 +134,14 @@ private fun PanelHeader(onCollapse: () -> Unit) {
             style = DdType.label.copy(fontSize = 16.sp, lineHeight = 21.sp),
             color = colors.ink,
             maxLines = 1,
+        )
+        DdIconButton(
+            icon = DdIcons.External,
+            onClick = onOpenApp,
+            contentDescription = stringResource(R.string.floating_panel_open_app),
+            size = 34.dp,
+            iconSize = 16.dp,
+            tint = colors.inkTertiary,
         )
         DdIconButton(
             icon = DdIcons.Close,
@@ -279,10 +276,6 @@ private fun CompletedRow(
     onRemoveCompleted: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val removeThreshold = with(density) { FloatingCompletedRemoveThreshold.toPx() }
-    val offsetX = remember(completion.key) { Animatable(0f) }
     val title = completion.title.ifBlank { stringResource(R.string.app_name) }
     val detail = when {
         completion.status == RunStatus.FAILED -> stringResource(
@@ -304,60 +297,7 @@ private fun CompletedRow(
             .clip(RoundedCornerShape(12.dp))
             .testTag("floating_completed_${completion.key}"),
     ) {
-        Box(
-            Modifier
-                .matchParentSize()
-                .background(colors.danger.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            DdIcon(
-                icon = DdIcons.Trash,
-                tint = colors.danger,
-                modifier = Modifier.padding(start = 14.dp),
-                size = 15.dp,
-            )
-        }
-        PanelRow(
-            onClick = onClick,
-            contentDescription = title,
-            modifier = Modifier
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                .background(colors.surface)
-                .pointerInput(completion.key) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            scope.launch {
-                                offsetX.snapTo((offsetX.value + dragAmount).coerceAtLeast(0f))
-                            }
-                        },
-                        onDragEnd = {
-                            scope.launch {
-                                if (offsetX.value >= removeThreshold) {
-                                    offsetX.animateTo(
-                                        size.width.toFloat(),
-                                        tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-                                    )
-                                    onRemoveCompleted()
-                                } else {
-                                    offsetX.animateTo(
-                                        0f,
-                                        tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-                                    )
-                                }
-                            }
-                        },
-                        onDragCancel = {
-                            scope.launch {
-                                offsetX.animateTo(
-                                    0f,
-                                    tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-                                )
-                            }
-                        },
-                    )
-                },
-        ) {
+        PanelRow(onClick = onClick, contentDescription = title) {
             DdIcon(
                 icon = completion.icon(),
                 tint = completion.iconTint(colors),
@@ -380,7 +320,7 @@ private fun CompletedRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             if (completion.hasDelivery && completion.items.size > 1) {
                 Text(
                     text = stringResource(R.string.floating_card_delivery_count, completion.items.size),
@@ -388,8 +328,16 @@ private fun CompletedRow(
                     color = colors.inkTertiary,
                     maxLines = 1,
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
             }
+            DdIconButton(
+                icon = DdIcons.Trash,
+                onClick = onRemoveCompleted,
+                contentDescription = stringResource(R.string.floating_panel_remove_completed),
+                size = 28.dp,
+                iconSize = 15.dp,
+                tint = colors.inkTertiary,
+            )
             DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
         }
     }

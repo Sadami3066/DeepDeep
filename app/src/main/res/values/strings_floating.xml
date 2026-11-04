@@ -27,6 +27,8 @@
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">收起面板</string>
+    <string name="floating_panel_open_app">进入 DeepDeep</string>
+    <string name="floating_panel_remove_completed">移除这条已完成</string>
     <string name="floating_panel_running">正在运行</string>
     <string name="floating_panel_questions">待回答</string>
     <string name="floating_panel_completed">已完成</string>

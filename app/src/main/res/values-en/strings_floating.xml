@@ -27,6 +27,8 @@
 
     <string name="floating_panel_title">DeepDeep</string>
     <string name="floating_panel_close">Collapse panel</string>
+    <string name="floating_panel_open_app">Open DeepDeep</string>
+    <string name="floating_panel_remove_completed">Remove this finished item</string>
     <string name="floating_panel_running">Running</string>
     <string name="floating_panel_questions">Questions</string>
     <string name="floating_panel_completed">Completed</string>

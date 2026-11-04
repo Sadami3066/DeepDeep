@@ -25,7 +25,6 @@ internal val FloatingSurfaceMinBodyHeight = 120.dp
 internal val FloatingCardWidth = 280.dp
 internal val FloatingCardCorner = 20.dp
 internal val FloatingPanelWidth = 300.dp
-internal val FloatingCompletedRemoveThreshold = 88.dp
 internal val FloatingVirtualPreviewWidth = 132.dp
 internal val FloatingVirtualPreviewChipHeight = 46.dp
 internal val FloatingVirtualPreviewCorner = 14.dp
