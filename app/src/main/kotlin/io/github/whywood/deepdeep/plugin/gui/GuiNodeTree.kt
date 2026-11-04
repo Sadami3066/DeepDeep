@@ -163,8 +163,8 @@ object GuiNodeTree {
 
     fun matches(node: GuiSnapshotNode, selector: GuiSelector): Boolean = when (selector) {
         is GuiSelector.Ref -> selector.ref.trim().removePrefix("#") == node.ref
-        is GuiSelector.Text -> node.text?.contains(selector.text, ignoreCase = true) == true
-        is GuiSelector.Desc -> node.desc?.contains(selector.desc, ignoreCase = true) == true
+        is GuiSelector.Text -> matchesValue(node.text, selector.text) || matchesValue(node.desc, selector.text)
+        is GuiSelector.Desc -> matchesValue(node.desc, selector.desc)
         is GuiSelector.ResourceId -> matchesResourceId(node.resourceId, selector.id)
         is GuiSelector.ClassName -> matchesClassName(node.className, selector.name)
         is GuiSelector.Point -> node.bounds.contains(selector.x, selector.y)
@@ -176,6 +176,12 @@ object GuiNodeTree {
     fun findAll(snapshot: GuiSnapshot, selectors: List<GuiSelector>, limit: Int): List<GuiSnapshotNode> =
         snapshot.nodes.filter { node -> matchesAll(node, selectors) }.take(limit)
 
+    fun matchesValue(value: String?, query: String): Boolean {
+        val normalizedQuery = normalizedMatchText(query)
+        if (normalizedQuery.isEmpty()) return false
+        return normalizedMatchText(value).contains(normalizedQuery)
+    }
+
     private fun matchesResourceId(resourceId: String?, id: String): Boolean {
         if (resourceId.isNullOrEmpty() || id.isEmpty()) return false
         return resourceId == id || resourceId.endsWith("/$id") || resourceId.endsWith(":id/$id")
@@ -185,4 +191,16 @@ object GuiNodeTree {
         if (name.isEmpty()) return false
         return className == name || className.endsWith(".$name")
     }
+}
+
+private val MATCH_IGNORED_CHARACTERS = setOf(',', '，', '.', '．', '、', '_', '\'', '’', '‘', '·', '。')
+
+internal fun normalizedMatchText(value: String?): String {
+    if (value.isNullOrEmpty()) return ""
+    val builder = StringBuilder(value.length)
+    value.forEach { character ->
+        if (character.isWhitespace() || character == '\u00A0' || character in MATCH_IGNORED_CHARACTERS) return@forEach
+        builder.append(character.lowercaseChar())
+    }
+    return builder.toString()
 }

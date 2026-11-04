@@ -117,9 +117,42 @@ class GuiNodeTreeTest {
         )
         assertTrue(GuiNodeTree.matches(target, GuiSelector.Text("confirm")))
         assertTrue(GuiNodeTree.matches(target, GuiSelector.Text("m o")))
+        assertTrue(GuiNodeTree.matches(target, GuiSelector.Text("confi rmo")))
         assertFalse(GuiNodeTree.matches(target, GuiSelector.Text("cancel")))
         assertTrue(GuiNodeTree.matches(target, GuiSelector.Desc("button")))
         assertFalse(GuiNodeTree.matches(target, GuiSelector.Desc("cancel")))
+    }
+
+    @Test
+    fun textSelectorAlsoMatchesContentDescription() {
+        val target = snapshotNode(text = null, desc = "Submit Button")
+        assertTrue(GuiNodeTree.matches(target, GuiSelector.Text("submit")))
+        assertTrue(GuiNodeTree.matches(target, GuiSelector.Text("Submit Button")))
+        assertFalse(GuiNodeTree.matches(snapshotNode(text = "Submit", desc = null), GuiSelector.Text("cancel")))
+    }
+
+    @Test
+    fun textMatchingIgnoresSpacesAndSeparators() {
+        val formatted = snapshotNode(text = "9,801")
+        assertTrue(GuiNodeTree.matches(formatted, GuiSelector.Text("9801")))
+        assertTrue(GuiNodeTree.matches(formatted, GuiSelector.Text("9 801")))
+        assertTrue(GuiNodeTree.matches(formatted, GuiSelector.Text("9,801")))
+        val price = snapshotNode(text = "1 234.56 元")
+        assertTrue(GuiNodeTree.matches(price, GuiSelector.Text("1234.56")))
+        assertTrue(GuiNodeTree.matches(price, GuiSelector.Text("23456元")))
+        val desc = snapshotNode(desc = "1，234 次点击")
+        assertTrue(GuiNodeTree.matches(desc, GuiSelector.Text("1234次")))
+    }
+
+    @Test
+    fun separatorOnlyTextMatchesNothing() {
+        val target = snapshotNode(text = "9,801")
+        assertFalse(GuiNodeTree.matches(target, GuiSelector.Text(",")))
+        assertFalse(GuiNodeTree.matches(target, GuiSelector.Text(" ")))
+        assertFalse(GuiNodeTree.matches(target, GuiSelector.Desc("...")))
+        assertEquals("", normalizedMatchText(" , . 、 "))
+        assertEquals("9801", normalizedMatchText(" 9,801 "))
+        assertEquals("ab-c", normalizedMatchText("A B-C_"))
     }
 
     @Test

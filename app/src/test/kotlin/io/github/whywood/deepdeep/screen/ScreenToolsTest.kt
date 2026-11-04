@@ -389,6 +389,40 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun observeTextFilterMatchesDescriptionAndFormattedNumbers() = runTest {
+        controller.observeSnapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(
+                className = "android.widget.FrameLayout",
+                bounds = GuiBounds(0, 0, 1080, 2400),
+                children = listOf(
+                    GuiNode(
+                        className = "android.widget.TextView",
+                        bounds = GuiBounds(0, 0, 200, 50),
+                        text = "9,801",
+                    ),
+                    GuiNode(
+                        className = "android.widget.ImageButton",
+                        bounds = GuiBounds(0, 60, 200, 110),
+                        desc = "提交订单",
+                    ),
+                    GuiNode(
+                        className = "android.widget.TextView",
+                        bounds = GuiBounds(0, 120, 200, 170),
+                        text = "取消",
+                    ),
+                ),
+            ),
+            packageName = "com.example",
+        )
+        val byNumber = run("screen_observe", buildJsonObject { put("text", "9801") })
+        assertNull(byNumber.isError)
+        assertTrue(byNumber.text().contains("\"count\":1"))
+        val byDescription = run("screen_observe", buildJsonObject { put("text", "提交") })
+        assertNull(byDescription.isError)
+        assertTrue(byDescription.text().contains("\"count\":1"))
+    }
+
+    @Test
     fun tapToolRoutesTargetAndDuration() = runTest {
         val result = run(
             "screen_tap",

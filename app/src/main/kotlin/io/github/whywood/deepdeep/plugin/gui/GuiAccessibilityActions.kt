@@ -139,6 +139,10 @@ class GuiAccessibilityActions(
     ): GuiWaitOutcome {
         val service = requireService()
         val deadline = System.currentTimeMillis() + timeoutMs
+        val normalizedText = text?.let { normalizedMatchText(it) }
+        val normalizedTextGone = textGone?.let { normalizedMatchText(it) }
+        require(normalizedText == null || normalizedText.isNotEmpty()) { "forText has no searchable characters" }
+        require(normalizedTextGone == null || normalizedTextGone.isNotEmpty()) { "forTextGone has no searchable characters" }
         while (true) {
             require(displayId >= 0) { "Display id must not be negative" }
             val window = selectDisplayWindow(service, displayId)
@@ -146,12 +150,12 @@ class GuiAccessibilityActions(
             val currentPackage = root?.packageName?.toString()?.takeIf { it.isNotBlank() }
             val windowTitle = window?.title?.toString()?.trim()?.takeIf { it.isNotEmpty() }
             val current = GuiWaitOutcome(matched = false, packageName = currentPackage, windowTitle = windowTitle)
-            fun contains(value: String): Boolean =
-                windowTitle?.contains(value, ignoreCase = true) == true ||
-                    (root != null && containsText(root, value, 0))
+            fun contains(normalized: String): Boolean =
+                normalizedMatchText(windowTitle).contains(normalized) ||
+                    (root != null && containsText(root, normalized, 0))
             val packageMatches = packageName == null || currentPackage == packageName
-            val textMatches = text == null || contains(text)
-            val textGoneMatches = textGone == null || (root != null && !contains(textGone))
+            val textMatches = normalizedText == null || contains(normalizedText)
+            val textGoneMatches = normalizedTextGone == null || (root != null && !contains(normalizedTextGone))
             if (packageMatches && textMatches && textGoneMatches) return current.copy(matched = true)
             if (System.currentTimeMillis() >= deadline) return current
             delay(WAIT_POLL_MILLIS)
@@ -239,13 +243,13 @@ class GuiAccessibilityActions(
         else -> GuiWindowKind.OTHER
     }
 
-    private fun containsText(node: AccessibilityNodeInfo, text: String, depth: Int): Boolean {
+    private fun containsText(node: AccessibilityNodeInfo, normalizedQuery: String, depth: Int): Boolean {
         if (depth > MAX_WAIT_DEPTH) return false
-        if (node.text?.toString()?.contains(text, ignoreCase = true) == true) return true
-        if (node.contentDescription?.toString()?.contains(text, ignoreCase = true) == true) return true
+        if (normalizedMatchText(node.text?.toString()).contains(normalizedQuery)) return true
+        if (normalizedMatchText(node.contentDescription?.toString()).contains(normalizedQuery)) return true
         for (index in 0 until node.childCount) {
             val child = runCatching { node.getChild(index) }.getOrNull() ?: continue
-            if (containsText(child, text, depth + 1)) return true
+            if (containsText(child, normalizedQuery, depth + 1)) return true
         }
         return false
     }

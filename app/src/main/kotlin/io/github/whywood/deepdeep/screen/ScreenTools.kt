@@ -314,11 +314,11 @@ private val observeParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("text") {
             put("type", "string")
-            put("description", "Keep only nodes whose visible text contains this value, ignoring case.")
+            put("description", "Keep only nodes whose visible text or content description contains this value, ignoring case, spaces and separators.")
         }
         putJsonObject("desc") {
             put("type", "string")
-            put("description", "Keep only nodes whose content description contains this value, ignoring case.")
+            put("description", "Keep only nodes whose content description contains this value, ignoring case, spaces and separators.")
         }
         putJsonObject("resourceId") {
             put("type", "string")
@@ -350,11 +350,11 @@ private val tapParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("text") {
             put("type", "string")
-            put("description", "Visible text to match case-insensitively as a substring.")
+            put("description", "Visible text or content description to match case-insensitively as a substring, ignoring spaces and separators.")
         }
         putJsonObject("desc") {
             put("type", "string")
-            put("description", "Content description to match case-insensitively as a substring.")
+            put("description", "Content description to match case-insensitively as a substring, ignoring spaces and separators.")
         }
         putJsonObject("resourceId") {
             put("type", "string")
@@ -457,7 +457,7 @@ private val typeParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("fieldText") {
             put("type", "string")
-            put("description", "Visible text of the editable node when no ref is known; requires accessibility.")
+            put("description", "Visible text or content description of the editable node when no ref is known; requires accessibility.")
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("text")) })
@@ -840,8 +840,8 @@ internal fun observeJson(
         if (shown.size < total.size) add("Result count reached limit; raise or omit limit")
         if (filters.isNotEmpty() && total.isEmpty()) {
             add(
-                "No match: scanned ${observed.snapshot.scanned} nodes; text matches visible text only and desc matches " +
-                    "content descriptions only, so try them separately or use resourceId/class and retry",
+                "No match: scanned ${observed.snapshot.scanned} nodes; text matches visible text or content descriptions, " +
+                    "so try a shorter value or use resourceId/class, then retry",
             )
         }
     }
