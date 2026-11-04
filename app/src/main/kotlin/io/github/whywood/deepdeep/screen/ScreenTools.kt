@@ -124,7 +124,7 @@ internal const val SCREEN_TARGET_GUIDELINE =
 internal const val SCREEN_CANCEL_GUIDELINE =
     "After a cancellation or timeout, observe the selected screen before retrying an action."
 internal const val SCREEN_OBSERVE_GUIDELINE =
-    "Observe the screen before node operations and verify the result afterward; refs expire on a new observation or a different screen instance."
+    "Observe the screen before node operations and verify the result afterward; refs keep resolving by node identity across ordinary operations, and only a restarted screen invalidates them."
 internal const val SCREEN_LAUNCH_GUIDELINE =
     "After screen_launch, observe the target screen before interacting."
 
@@ -346,7 +346,7 @@ private val tapParameters: JsonObject = buildJsonObject {
     putJsonObject("properties") {
         putJsonObject("ref") {
             put("type", "string")
-            put("description", "Node ref from the latest screen_observe on the same target screen.")
+            put("description", "Node ref from screen_observe on the same target screen; it is re-resolved by node identity when the node moves.")
         }
         putJsonObject("text") {
             put("type", "string")
@@ -453,7 +453,7 @@ private val typeParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("ref") {
             put("type", "string")
-            put("description", "Ref of the editable node from the latest screen_observe on the same target screen; supports any Unicode text.")
+            put("description", "Ref of the editable node from screen_observe on the same target screen; supports any Unicode text.")
         }
         putJsonObject("fieldText") {
             put("type", "string")
@@ -524,7 +524,7 @@ private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_observe",
-    description = "Read the selected screen as nodes. Filters combine with AND. Refs belong to this screen instance and snapshot; observing again invalidates previous refs. scanned counts visited nodes; complete=false means unsearched nodes remain, even when there are no matches.",
+    description = "Read the selected screen as nodes. Filters combine with AND. Refs are re-resolved by node identity across ordinary operations; a restarted screen invalidates them. scanned counts visited nodes; complete=false means unsearched nodes remain, even when there are no matches.",
     parameters = observeParameters,
     label = "screen_observe",
     execute = { _, args, signal, _ ->

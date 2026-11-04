@@ -156,6 +156,80 @@ object GuiNodeTree {
         return snapshot.nodes.firstOrNull { it.ref == key }
     }
 
+    fun refIndex(ref: String): Int? {
+        val key = ref.trim().removePrefix("#")
+        val index = key.substringAfterLast(':').toIntOrNull() ?: key.toIntOrNull() ?: return null
+        return index.takeIf { it >= 0 }
+    }
+
+    fun counterpart(snapshot: GuiSnapshot, target: GuiSnapshotNode): GuiSnapshotNode? {
+        if (snapshot.nodes.isEmpty()) return null
+        val targetIndex = refIndex(target.ref)
+        var best: GuiSnapshotNode? = null
+        var bestScore = -1
+        var bestDistance = Int.MAX_VALUE
+        snapshot.nodes.forEach { node ->
+            val score = relocationScore(node, target, targetIndex) ?: return@forEach
+            val distance = boundsDistance(node.bounds, target.bounds)
+            if (score > bestScore || (score == bestScore && distance < bestDistance)) {
+                best = node
+                bestScore = score
+                bestDistance = distance
+            }
+        }
+        return best
+    }
+
+    private fun relocationScore(node: GuiSnapshotNode, target: GuiSnapshotNode, targetIndex: Int?): Int? {
+        val targetId = target.resourceId
+        if (targetId != null && node.resourceId != targetId) return null
+        val targetText = normalizedMatchText(target.text)
+        val targetDesc = normalizedMatchText(target.desc)
+        val nodeText = normalizedMatchText(node.text)
+        val nodeDesc = normalizedMatchText(node.desc)
+        if (targetText.isNotEmpty() && nodeText.isNotEmpty() && nodeText != targetText && nodeDesc != targetText) {
+            return null
+        }
+        if (targetDesc.isNotEmpty() && nodeDesc.isNotEmpty() && nodeDesc != targetDesc && nodeText != targetDesc) {
+            return null
+        }
+        val sameClass = target.className == node.className
+        val sameIndex = targetIndex != null && refIndex(node.ref) == targetIndex
+        val overlap = boundsOverlapRatio(target.bounds, node.bounds)
+        val identityMatched = (targetId != null && node.resourceId == targetId) ||
+            (targetText.isNotEmpty() && (nodeText == targetText || nodeDesc == targetText)) ||
+            (targetDesc.isNotEmpty() && (nodeDesc == targetDesc || nodeText == targetDesc))
+        val labeled = targetId != null || targetText.isNotEmpty() || targetDesc.isNotEmpty()
+        if (labeled) {
+            if (!identityMatched) return null
+        } else if (!sameClass || (!sameIndex && overlap < 0.5f)) {
+            return null
+        }
+        var score = 0
+        if (targetId != null && node.resourceId == targetId) score += 12
+        if (targetText.isNotEmpty() && (nodeText == targetText || nodeDesc == targetText)) score += 8
+        if (targetDesc.isNotEmpty() && (nodeDesc == targetDesc || nodeText == targetDesc)) score += 7
+        if (sameClass) score += 2
+        if (target.clickable == node.clickable) score += 1
+        if (target.editable == node.editable) score += 1
+        if (sameIndex) score += 2
+        if (overlap >= 0.5f) score += 3 else if (overlap > 0f) score += 1
+        return score
+    }
+
+    private fun boundsDistance(first: GuiBounds, second: GuiBounds): Int =
+        kotlin.math.abs(first.centerX - second.centerX) + kotlin.math.abs(first.centerY - second.centerY)
+
+    private fun boundsOverlapRatio(first: GuiBounds, second: GuiBounds): Float {
+        val width = minOf(first.right, second.right) - maxOf(first.left, second.left)
+        val height = minOf(first.bottom, second.bottom) - maxOf(first.top, second.top)
+        if (width <= 0 || height <= 0) return 0f
+        val intersection = width.toLong() * height
+        val smaller = minOf(first.width.toLong() * first.height, second.width.toLong() * second.height)
+        if (smaller <= 0) return 0f
+        return (intersection.toDouble() / smaller).toFloat()
+    }
+
     fun find(snapshot: GuiSnapshot, selector: GuiSelector): GuiSnapshotNode? = when (selector) {
         is GuiSelector.Ref -> findRef(snapshot, selector.ref)
         else -> snapshot.nodes.firstOrNull { node -> matches(node, selector) }

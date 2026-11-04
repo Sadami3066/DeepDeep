@@ -36,9 +36,9 @@ class GuiAccessibilityActions(
 
     override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
         require(displayId >= 0) { "Display id must not be negative" }
-        snapshots.remove(displayId)
-        val result = snapshotDisplayWindow(requireService(), displayId, maxDepth, maxNodes)
-        return snapshots.store(displayId, result)
+        val service = requireService()
+        val snapshot = snapshotDisplayWindow(service, displayId, maxDepth, maxNodes)
+        return snapshots.store(displayId, snapshot)
     }
 
     private fun snapshotDisplayWindow(
@@ -49,6 +49,15 @@ class GuiAccessibilityActions(
     ): GuiSnapshot {
         val window = selectDisplayWindow(service, displayId)
             ?: throw IllegalStateException("Cannot read the selected screen window; open the target app on that screen and retry")
+        return snapshotWindow(window, displayId, maxDepth, maxNodes)
+    }
+
+    private fun snapshotWindow(
+        window: AccessibilityWindowInfo,
+        displayId: Int,
+        maxDepth: Int,
+        maxNodes: Int,
+    ): GuiSnapshot {
         val root = window.root
             ?: throw IllegalStateException("Cannot read the selected screen content; check that accessibility can read that window")
         val generation = java.util.UUID.randomUUID().toString()
@@ -168,15 +177,65 @@ class GuiAccessibilityActions(
         )
 
     private fun requireNode(displayId: Int, selector: GuiSelector): GuiSnapshotNode {
-        val cached = snapshots.find(displayId, selector)
-        val node = cached.token as? AccessibilityNodeInfo ?: throw IllegalStateException("Node is stale; call screen_observe again")
-        if (!node.refresh() || selectDisplayWindow(requireService(), displayId)?.id != node.windowId) {
-            snapshots.remove(displayId)
-            throw IllegalStateException("The selected screen window changed; call screen_observe again")
-        }
+        val service = requireService()
+        val target = snapshots.findTarget(displayId, selector)
+        if (target != null) refreshedNode(service, displayId, target)?.let { return it }
+        val relocated = relocate(service, displayId, target, selector)
+            ?: throw IllegalStateException(staleNodeMessage(selector))
+        return refreshedNode(service, displayId, relocated)
+            ?: throw IllegalStateException(staleNodeMessage(selector))
+    }
+
+    private fun refreshedNode(
+        service: GuiAccessibilityService,
+        displayId: Int,
+        node: GuiSnapshotNode,
+    ): GuiSnapshotNode? {
+        val info = node.token as? AccessibilityNodeInfo ?: return null
+        if (!info.refresh()) return null
+        if (!info.isVisibleToUser) return null
+        if (displayWindows(service, displayId).none { window -> window.id == info.windowId }) return null
         val rect = Rect()
-        node.getBoundsInScreen(rect)
-        return cached.copy(bounds = GuiBounds(rect.left, rect.top, rect.right, rect.bottom))
+        info.getBoundsInScreen(rect)
+        return node.copy(bounds = GuiBounds(rect.left, rect.top, rect.right, rect.bottom))
+    }
+
+    private fun relocate(
+        service: GuiAccessibilityService,
+        displayId: Int,
+        target: GuiSnapshotNode?,
+        selector: GuiSelector,
+    ): GuiSnapshotNode? {
+        val window = windowOf(service, displayId, target) ?: selectDisplayWindow(service, displayId) ?: return null
+        val snapshot = snapshots.store(displayId, snapshotWindow(window, displayId, GUI_MAX_DEPTH, GUI_MAX_NODES))
+        return when {
+            target != null -> GuiNodeTree.counterpart(snapshot, target)
+            selector is GuiSelector.Ref -> null
+            else -> GuiNodeTree.find(snapshot, selector)
+        }
+    }
+
+    private fun windowOf(
+        service: GuiAccessibilityService,
+        displayId: Int,
+        target: GuiSnapshotNode?,
+    ): AccessibilityWindowInfo? {
+        val windowId = (target?.token as? AccessibilityNodeInfo)?.windowId ?: return null
+        return displayWindows(service, displayId).firstOrNull { window -> window.id == windowId }
+    }
+
+    private fun displayWindows(service: GuiAccessibilityService, displayId: Int): List<AccessibilityWindowInfo> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            service.windowsOnAllDisplays[displayId].orEmpty()
+        } else if (displayId == 0) {
+            service.windows.orEmpty()
+        } else {
+            emptyList()
+        }
+
+    private fun staleNodeMessage(selector: GuiSelector): String = when (selector) {
+        is GuiSelector.Ref -> "That ref is no longer on this screen; call screen_observe for a fresh ref"
+        else -> "No node matches that selector on this screen now; call screen_observe again"
     }
 
     private fun clickNode(node: AccessibilityNodeInfo): Boolean {
@@ -212,12 +271,8 @@ class GuiAccessibilityActions(
     }
 
     private fun selectDisplayWindow(service: GuiAccessibilityService, displayId: Int): AccessibilityWindowInfo? {
-        val windows = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            service.windowsOnAllDisplays[displayId] ?: return null
-        } else {
-            if (displayId != 0) return null
-            service.windows
-        }
+        val windows = displayWindows(service, displayId)
+        if (windows.isEmpty()) return null
         val candidates = windows.map { window ->
             val bounds = Rect()
             window.getBoundsInScreen(bounds)

@@ -110,6 +110,111 @@ class GuiNodeTreeTest {
     }
 
     @Test
+    fun refIndexParsesGenerationRefs() {
+        assertEquals(3, GuiNodeTree.refIndex("0:2f4d:3"))
+        assertEquals(3, GuiNodeTree.refIndex("#3"))
+        assertEquals(0, GuiNodeTree.refIndex("0"))
+        assertNull(GuiNodeTree.refIndex("abc"))
+        assertNull(GuiNodeTree.refIndex("-1"))
+    }
+
+    @Test
+    fun counterpartRelocatesByResourceIdAndDescription() {
+        val target = snapshotOf(
+            node(className = "android.widget.Button", text = "OK", resourceId = "com.example:id/ok", bounds = GuiBounds(0, 0, 100, 50)),
+        ).nodes.single()
+        val byId = snapshotOf(
+            node(
+                className = "android.view.View",
+                bounds = GuiBounds(0, 0, 100, 400),
+                children = listOf(
+                    node(className = "android.view.View", text = "Header", bounds = GuiBounds(0, 0, 100, 50)),
+                    node(
+                        className = "android.widget.Button",
+                        text = "OK",
+                        resourceId = "com.example:id/ok",
+                        bounds = GuiBounds(0, 300, 100, 350),
+                    ),
+                ),
+            ),
+        )
+        assertEquals("com.example:id/ok", GuiNodeTree.counterpart(byId, target)?.resourceId)
+
+        val described = snapshotOf(
+            node(className = "android.widget.ImageButton", desc = "提交订单", bounds = GuiBounds(0, 0, 100, 50)),
+        ).nodes.single()
+        val afterDescriptionChange = snapshotOf(
+            node(className = "android.widget.ImageButton", desc = "提交订单", bounds = GuiBounds(0, 500, 100, 550)),
+        )
+        assertEquals(500, GuiNodeTree.counterpart(afterDescriptionChange, described)?.bounds?.top)
+    }
+
+    @Test
+    fun counterpartPrefersClosestRepeatedLabel() {
+        val target = snapshotOf(
+            node(className = "android.widget.TextView", text = "详情", bounds = GuiBounds(0, 100, 100, 150)),
+        ).nodes.single()
+        val after = snapshotOf(
+            node(
+                className = "android.view.View",
+                bounds = GuiBounds(0, 0, 100, 1200),
+                children = listOf(
+                    node(className = "android.widget.TextView", text = "详情", bounds = GuiBounds(0, 1100, 100, 1150)),
+                    node(className = "android.widget.TextView", text = "详情", bounds = GuiBounds(0, 120, 100, 170)),
+                ),
+            ),
+        )
+        assertEquals(120, GuiNodeTree.counterpart(after, target)?.bounds?.top)
+    }
+
+    @Test
+    fun counterpartRelocatesUnlabeledNodeByClassAndBounds() {
+        val target = snapshotOf(
+            node(className = "android.widget.ImageView", bounds = GuiBounds(10, 10, 60, 60)),
+        ).nodes.single()
+        val overlapping = snapshotOf(
+            node(className = "android.widget.ImageView", bounds = GuiBounds(12, 14, 62, 64)),
+        )
+        assertEquals(overlapping.nodes[0], GuiNodeTree.counterpart(overlapping, target))
+        val noSameNode = snapshotOf(
+            node(
+                className = "android.view.View",
+                bounds = GuiBounds(0, 0, 100, 1200),
+                children = listOf(
+                    node(className = "android.widget.TextView", text = "详情", bounds = GuiBounds(0, 0, 100, 50)),
+                    node(className = "android.widget.ImageView", bounds = GuiBounds(500, 500, 550, 550)),
+                ),
+            ),
+        )
+        assertNull(GuiNodeTree.counterpart(noSameNode, target))
+    }
+
+    @Test
+    fun counterpartRejectsDifferentLabelsAndIds() {
+        val target = snapshotOf(
+            node(className = "android.widget.Button", text = "OK", bounds = GuiBounds(0, 0, 100, 50)),
+        ).nodes.single()
+        val otherLabel = snapshotOf(
+            node(className = "android.widget.Button", text = "Cancel", bounds = GuiBounds(0, 0, 100, 50)),
+        )
+        assertNull(GuiNodeTree.counterpart(otherLabel, target))
+
+        val identified = snapshotOf(
+            node(className = "android.widget.Button", resourceId = "com.example:id/ok", bounds = GuiBounds(0, 0, 100, 50)),
+        ).nodes.single()
+        val rebuiltId = snapshotOf(
+            node(className = "android.widget.Button", resourceId = "com.example:id/cancel", bounds = GuiBounds(0, 0, 100, 50)),
+        )
+        assertNull(GuiNodeTree.counterpart(rebuiltId, identified))
+    }
+
+    @Test
+    fun counterpartWithoutCandidatesReturnsNull() {
+        val target = snapshotOf(node(className = "root")).nodes.single()
+        assertNull(GuiNodeTree.counterpart(GuiSnapshot(null, null, emptyList(), false), target))
+    }
+
+    @Test
     fun matchesTextAndDescAsCaseInsensitiveSubstrings() {
         val target = snapshotNode(
             text = "Confirm Order",
