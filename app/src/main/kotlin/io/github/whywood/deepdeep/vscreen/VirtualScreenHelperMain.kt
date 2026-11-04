@@ -809,13 +809,14 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 latestTransparentRatio = initialRatio,
             )
             val deadline = startedAt + wait.timeoutMs
+            val neededAfter = if (wait == ScreenshotWait.SETTLE) lastInputAtUptime else startedAt
             while (true) {
                 acquireLatestFrame()
                 val current = synchronized(imageLock) { snapshot }
                 val capturedAt = synchronized(imageLock) { snapshotAtUptime }
                 val satisfied = when (wait) {
                     ScreenshotWait.NONE -> true
-                    ScreenshotWait.SETTLE -> capturedAt >= startedAt
+                    ScreenshotWait.SETTLE -> capturedAt >= neededAfter
                     ScreenshotWait.CONTENT -> current != null && frameIsComplete(current.transparentRatio)
                 }
                 if (satisfied || SystemClock.uptimeMillis() >= deadline) break
