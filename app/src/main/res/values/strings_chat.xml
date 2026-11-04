@@ -11,7 +11,7 @@
     <string name="attach_pick_image">从相册选择</string>
     <string name="attach_pick_file">选择文件</string>
     <string name="attach_take_photo">拍照</string>
-    <string name="camera_title">拍照</string>
+    <string name="camera_close">关闭</string>
     <string name="camera_shutter">拍照</string>
     <string name="camera_switch_lens">切换镜头</string>
     <string name="camera_permission_hint">需要相机权限才能拍照</string>

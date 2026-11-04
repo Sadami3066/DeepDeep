@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -329,6 +331,7 @@ fun DdPrimaryButton(
 @Composable
 fun DdSheet(
     onDismiss: () -> Unit,
+    fullBleed: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -336,23 +339,36 @@ fun DdSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
-        containerColor = colors.raised,
-        contentColor = colors.ink,
+        containerColor = if (fullBleed) Color.Black else colors.raised,
+        contentColor = if (fullBleed) Color.White else colors.ink,
         tonalElevation = 0.dp,
         scrimColor = colors.scrim,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = {
-            Box(
-                Modifier
-                    .padding(top = 10.dp, bottom = 8.dp)
-                    .size(width = 32.dp, height = 4.dp)
-                    .clip(CircleShape)
-                    .background(colors.hairline),
-            )
+        dragHandle = if (fullBleed) {
+            null
+        } else {
+            {
+                Box(
+                    Modifier
+                        .padding(top = 10.dp, bottom = 8.dp)
+                        .size(width = 32.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(colors.hairline),
+                )
+            }
+        },
+        contentWindowInsets = if (fullBleed) {
+            { WindowInsets(0, 0, 0, 0) }
+        } else {
+            { BottomSheetDefaults.windowInsets }
         },
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding(),
+            modifier = if (fullBleed) {
+                Modifier.fillMaxWidth()
+            } else {
+                Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
+            },
             content = content,
         )
     }

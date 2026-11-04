@@ -19,18 +19,19 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.viewfinder.core.ImplementationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,7 +59,6 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -69,6 +69,9 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
+private const val SHEET_HEIGHT_FRACTION = 0.92f
+
+private val ControlScrim = Color.Black.copy(alpha = 0.5f)
 
 @Composable
 internal fun CameraCaptureSheet(
@@ -88,23 +91,35 @@ internal fun CameraCaptureSheet(
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
-    DdSheet(onDismiss = onDismiss) {
-        DdSheetHeader(
-            title = stringResource(R.string.camera_title),
-            onClose = onDismiss,
-        )
-        if (granted) {
-            CameraBody(onCaptured = onCaptured)
-        } else {
-            CameraPermissionHint(
-                onOpenSettings = {
-                    settingsLauncher.launch(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", context.packageName, null),
-                        ),
-                    )
-                },
+    DdSheet(onDismiss = onDismiss, fullBleed = true) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(SHEET_HEIGHT_FRACTION)
+                .background(Color.Black),
+        ) {
+            if (granted) {
+                CameraBody(onCaptured = onCaptured)
+            } else {
+                CameraPermissionHint(
+                    onOpenSettings = {
+                        settingsLauncher.launch(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            ),
+                        )
+                    },
+                )
+            }
+            DdIconButton(
+                icon = DdIcons.Close,
+                onClick = onDismiss,
+                contentDescription = stringResource(R.string.camera_close),
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+                tint = Color.White,
+                background = ControlScrim,
+                iconSize = 20.dp,
             )
         }
     }
@@ -112,16 +127,15 @@ internal fun CameraCaptureSheet(
 
 @Composable
 private fun CameraPermissionHint(onOpenSettings: () -> Unit) {
-    val colors = deepDeepColors()
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 40.dp),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(28.dp))
         Text(
             text = stringResource(R.string.camera_permission_hint),
             style = DdType.body,
-            color = colors.inkSecondary,
+            color = Color.White.copy(alpha = 0.85f),
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(24.dp))
@@ -130,7 +144,6 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit) {
             onClick = onOpenSettings,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(28.dp))
     }
 }
 
@@ -226,80 +239,85 @@ private fun CameraBody(onCaptured: (Uri) -> Unit) {
             )
         }
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(3f / 4f)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color.Black),
-            contentAlignment = Alignment.Center,
-        ) {
-            val request = surfaceRequest
-            when {
-                unavailable -> Text(
-                    text = stringResource(R.string.camera_unavailable),
-                    style = DdType.body,
-                    color = Color.White.copy(alpha = 0.85f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
+    Box(Modifier.fillMaxSize()) {
+        val request = surfaceRequest
+        when {
+            unavailable -> Text(
+                text = stringResource(R.string.camera_unavailable),
+                modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+                style = DdType.body,
+                color = Color.White.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center,
+            )
 
-                request != null -> CameraXViewfinder(
-                    surfaceRequest = request,
-                    modifier = Modifier.fillMaxSize(),
-                    implementationMode = ImplementationMode.EMBEDDED,
-                    contentScale = ContentScale.Crop,
-                )
+            request != null -> CameraXViewfinder(
+                surfaceRequest = request,
+                modifier = Modifier.fillMaxSize(),
+                implementationMode = ImplementationMode.EMBEDDED,
+                contentScale = ContentScale.Crop,
+            )
 
-                else -> DdSpinner(color = Color.White)
-            }
-            if (!unavailable) {
-                Box(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(148.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
-                            ),
+            else -> DdSpinner(
+                modifier = Modifier.align(Alignment.Center),
+                color = Color.White,
+            )
+        }
+        if (!unavailable) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent),
                         ),
+                    ),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                        ),
+                    ),
+            )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.weight(1f))
+                ShutterButton(
+                    enabled = imageCapture != null && !capturing,
+                    capturing = capturing,
+                    contentDescription = stringResource(R.string.camera_shutter),
+                    onClick = takePhoto,
                 )
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Spacer(Modifier.weight(1f))
-                    ShutterButton(
-                        enabled = imageCapture != null && !capturing,
-                        capturing = capturing,
-                        contentDescription = stringResource(R.string.camera_shutter),
-                        onClick = takePhoto,
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    DdIconButton(
+                        icon = DdIcons.Refresh,
+                        onClick = {
+                            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                                CameraSelector.LENS_FACING_FRONT
+                            } else {
+                                CameraSelector.LENS_FACING_BACK
+                            }
+                        },
+                        contentDescription = stringResource(R.string.camera_switch_lens),
+                        tint = Color.White,
+                        background = ControlScrim,
+                        enabled = !capturing,
                     )
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                        DdIconButton(
-                            icon = DdIcons.Refresh,
-                            onClick = {
-                                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                    CameraSelector.LENS_FACING_FRONT
-                                } else {
-                                    CameraSelector.LENS_FACING_BACK
-                                }
-                            },
-                            contentDescription = stringResource(R.string.camera_switch_lens),
-                            tint = Color.White,
-                            background = Color.White.copy(alpha = 0.14f),
-                            enabled = !capturing,
-                        )
-                    }
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 

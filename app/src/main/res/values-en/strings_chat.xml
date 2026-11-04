@@ -11,7 +11,7 @@
     <string name="attach_pick_image">Choose from library</string>
     <string name="attach_pick_file">Choose a file</string>
     <string name="attach_take_photo">Take a photo</string>
-    <string name="camera_title">Take a photo</string>
+    <string name="camera_close">Close</string>
     <string name="camera_shutter">Take photo</string>
     <string name="camera_switch_lens">Switch camera</string>
     <string name="camera_permission_hint">Camera permission is needed to take photos</string>
