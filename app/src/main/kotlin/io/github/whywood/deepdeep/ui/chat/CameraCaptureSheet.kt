@@ -19,12 +19,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.viewfinder.core.ImplementationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +31,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -69,9 +68,6 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
-private const val SHEET_HEIGHT_FRACTION = 0.92f
-
-private val ControlScrim = Color.Black.copy(alpha = 0.5f)
 
 @Composable
 internal fun CameraCaptureSheet(
@@ -92,63 +88,59 @@ internal fun CameraCaptureSheet(
         }
     }
     DdSheet(onDismiss = onDismiss, fullBleed = true) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(SHEET_HEIGHT_FRACTION)
-                .background(Color.Black),
-        ) {
-            if (granted) {
-                CameraBody(onCaptured = onCaptured)
-            } else {
-                CameraPermissionHint(
-                    onOpenSettings = {
-                        settingsLauncher.launch(
-                            Intent(
-                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                Uri.fromParts("package", context.packageName, null),
-                            ),
-                        )
-                    },
-                )
-            }
-            DdIconButton(
-                icon = DdIcons.Close,
-                onClick = onDismiss,
-                contentDescription = stringResource(R.string.camera_close),
-                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                tint = Color.White,
-                background = ControlScrim,
-                iconSize = 20.dp,
+        if (granted) {
+            CameraBody(onCaptured = onCaptured, onDismiss = onDismiss)
+        } else {
+            CameraPermissionHint(
+                onOpenSettings = {
+                    settingsLauncher.launch(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null),
+                        ),
+                    )
+                },
+                onDismiss = onDismiss,
             )
         }
     }
 }
 
 @Composable
-private fun CameraPermissionHint(onOpenSettings: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 40.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = stringResource(R.string.camera_permission_hint),
-            style = DdType.body,
-            color = Color.White.copy(alpha = 0.85f),
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(24.dp))
-        DdPrimaryButton(
-            text = stringResource(R.string.camera_open_settings),
-            onClick = onOpenSettings,
-            modifier = Modifier.fillMaxWidth(),
+private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 32.dp, end = 32.dp, top = 56.dp, bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.camera_permission_hint),
+                style = DdType.body,
+                color = Color.White.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(20.dp))
+            DdPrimaryButton(
+                text = stringResource(R.string.camera_open_settings),
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        DdIconButton(
+            icon = DdIcons.Close,
+            onClick = onDismiss,
+            contentDescription = stringResource(R.string.camera_close),
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+            tint = Color.White,
+            iconSize = 20.dp,
         )
     }
 }
 
 @Composable
-private fun CameraBody(onCaptured: (Uri) -> Unit) {
+private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val captureFailed = stringResource(R.string.camera_failed)
@@ -239,84 +231,69 @@ private fun CameraBody(onCaptured: (Uri) -> Unit) {
             )
         }
     }
-    Box(Modifier.fillMaxSize()) {
-        val request = surfaceRequest
-        when {
-            unavailable -> Text(
-                text = stringResource(R.string.camera_unavailable),
-                modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
-                style = DdType.body,
-                color = Color.White.copy(alpha = 0.85f),
-                textAlign = TextAlign.Center,
-            )
-
-            request != null -> CameraXViewfinder(
-                surfaceRequest = request,
-                modifier = Modifier.fillMaxSize(),
-                implementationMode = ImplementationMode.EMBEDDED,
-                contentScale = ContentScale.Crop,
-            )
-
-            else -> DdSpinner(
-                modifier = Modifier.align(Alignment.Center),
-                color = Color.White,
-            )
-        }
-        if (!unavailable) {
-            Box(
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent),
-                        ),
-                    ),
-            )
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
-                        ),
-                    ),
-            )
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Spacer(Modifier.weight(1f))
-                ShutterButton(
-                    enabled = imageCapture != null && !capturing,
-                    capturing = capturing,
-                    contentDescription = stringResource(R.string.camera_shutter),
-                    onClick = takePhoto,
+    Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+        Box(
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp)
+                .fillMaxWidth()
+                .aspectRatio(4f / 3f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            val request = surfaceRequest
+            when {
+                unavailable -> Text(
+                    text = stringResource(R.string.camera_unavailable),
+                    style = DdType.body,
+                    color = Color.White.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp),
                 )
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    DdIconButton(
-                        icon = DdIcons.Refresh,
-                        onClick = {
-                            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                CameraSelector.LENS_FACING_FRONT
-                            } else {
-                                CameraSelector.LENS_FACING_BACK
-                            }
-                        },
-                        contentDescription = stringResource(R.string.camera_switch_lens),
-                        tint = Color.White,
-                        background = ControlScrim,
-                        enabled = !capturing,
-                    )
-                }
+
+                request != null -> CameraXViewfinder(
+                    surfaceRequest = request,
+                    modifier = Modifier.fillMaxSize(),
+                    implementationMode = ImplementationMode.EMBEDDED,
+                    contentScale = ContentScale.Crop,
+                )
+
+                else -> DdSpinner(color = Color.White)
             }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIconButton(
+                icon = DdIcons.Close,
+                onClick = onDismiss,
+                contentDescription = stringResource(R.string.camera_close),
+                tint = Color.White,
+            )
+            Spacer(Modifier.weight(1f))
+            ShutterButton(
+                enabled = imageCapture != null && !capturing,
+                capturing = capturing,
+                contentDescription = stringResource(R.string.camera_shutter),
+                onClick = takePhoto,
+            )
+            Spacer(Modifier.weight(1f))
+            DdIconButton(
+                icon = DdIcons.Refresh,
+                onClick = {
+                    lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
+                },
+                contentDescription = stringResource(R.string.camera_switch_lens),
+                tint = Color.White,
+                enabled = !capturing,
+            )
         }
     }
 }
@@ -331,14 +308,14 @@ private fun ShutterButton(
     val colors = deepDeepColors()
     DdPressable(
         onClick = onClick,
-        modifier = Modifier.size(76.dp).border(3.dp, Color.White, CircleShape),
+        modifier = Modifier.size(72.dp).border(3.dp, Color.White, CircleShape),
         shape = CircleShape,
         enabled = enabled,
         contentDescription = contentDescription,
     ) {
         Box(
             modifier = Modifier
-                .size(58.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(if (enabled || capturing) Color.White else Color.White.copy(alpha = 0.4f)),
             contentAlignment = Alignment.Center,
