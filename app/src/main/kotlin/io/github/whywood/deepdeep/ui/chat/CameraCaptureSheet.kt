@@ -19,6 +19,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.viewfinder.core.ImplementationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -108,11 +109,16 @@ internal fun CameraCaptureSheet(
 
 @Composable
 private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
-    Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(3f / 4f),
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 32.dp, end = 32.dp, top = 56.dp, bottom = 24.dp),
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -121,7 +127,7 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
                 color = Color.White.copy(alpha = 0.85f),
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             DdPrimaryButton(
                 text = stringResource(R.string.camera_open_settings),
                 onClick = onOpenSettings,
@@ -132,7 +138,9 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
             icon = DdIcons.Close,
             onClick = onDismiss,
             contentDescription = stringResource(R.string.camera_close),
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp),
             tint = Color.White,
             iconSize = 20.dp,
         )
@@ -231,40 +239,52 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
             )
         }
     }
-    Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(3f / 4f),
+    ) {
+        val request = surfaceRequest
+        when {
+            unavailable -> Text(
+                text = stringResource(R.string.camera_unavailable),
+                style = DdType.body,
+                color = Color.White.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp),
+            )
+
+            request != null -> CameraXViewfinder(
+                surfaceRequest = request,
+                modifier = Modifier.fillMaxSize(),
+                implementationMode = ImplementationMode.EMBEDDED,
+                contentScale = ContentScale.Crop,
+            )
+
+            else -> DdSpinner(
+                modifier = Modifier.align(Alignment.Center),
+                color = Color.White,
+            )
+        }
         Box(
             modifier = Modifier
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp)
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .aspectRatio(4f / 3f)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.Black),
-            contentAlignment = Alignment.Center,
-        ) {
-            val request = surfaceRequest
-            when {
-                unavailable -> Text(
-                    text = stringResource(R.string.camera_unavailable),
-                    style = DdType.body,
-                    color = Color.White.copy(alpha = 0.85f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
-
-                request != null -> CameraXViewfinder(
-                    surfaceRequest = request,
-                    modifier = Modifier.fillMaxSize(),
-                    implementationMode = ImplementationMode.EMBEDDED,
-                    contentScale = ContentScale.Crop,
-                )
-
-                else -> DdSpinner(color = Color.White)
-            }
-        }
+                .height(120.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                    ),
+                ),
+        )
         Row(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .navigationBarsPadding()
+                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
