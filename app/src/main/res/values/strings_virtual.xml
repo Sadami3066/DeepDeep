@@ -6,7 +6,7 @@
     <string name="plugin_virtual_screen_action_start">启动虚拟屏幕</string>
     <string name="plugin_virtual_screen_action_stop">停止虚拟屏幕</string>
 
-    <string name="plugin_virtual_screen_detail_state">状态</string>
+    <string name="plugin_virtual_screen_detail_state">虚拟屏</string>
     <string name="plugin_virtual_screen_detail_resolution">分辨率</string>
 
     <string name="plugin_virtual_screen_value_offline">—</string>
