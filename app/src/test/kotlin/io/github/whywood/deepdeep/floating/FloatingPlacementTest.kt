@@ -2,6 +2,8 @@ package io.github.whywood.deepdeep.floating
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -12,6 +14,15 @@ class FloatingPlacementTest {
     private val margin = 24
     private val gap = 18
     private val padding = 48
+    private val blockGap = 26
+    private val minBodyHeight = 312
+    private val preview = FloatingPreviewSpec(
+        width = 396,
+        aspectRatio = 0.5f,
+        maxHeightRatio = 0.45f,
+        chipHeight = 120,
+        online = true,
+    )
 
     @Test
     fun defaultBubbleSitsOnRightEdgeBelowUpperHalf() {
@@ -52,7 +63,7 @@ class FloatingPlacementTest {
 
     @Test
     fun surfaceSitsAboveBubbleWhenThereIsRoom() {
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = FloatingBubblePosition(x = 880, y = 1628),
             bubbleSize = bubbleSize,
             windowWidth = 800,
@@ -61,7 +72,10 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
+            blockGap = 0,
             maxHeightRatio = 0.45f,
+            minBodyHeight = 0,
+            preview = null,
         )
         assertTrue(placement.anchorBottom)
         assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
@@ -72,7 +86,7 @@ class FloatingPlacementTest {
 
     @Test
     fun surfaceDropsBelowBubbleWhenTopRoomIsMissing() {
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = FloatingBubblePosition(x = 880, y = 100),
             bubbleSize = bubbleSize,
             windowWidth = 800,
@@ -81,7 +95,10 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
+            blockGap = 0,
             maxHeightRatio = 0.45f,
+            minBodyHeight = 0,
+            preview = null,
         )
         assertFalse(placement.anchorBottom)
         assertEquals(FloatingArrowSide.TOP, placement.arrowSide)
@@ -91,7 +108,7 @@ class FloatingPlacementTest {
 
     @Test
     fun contentHeightNeverExceedsAvailableSpace() {
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = FloatingBubblePosition(x = 0, y = 700),
             bubbleSize = bubbleSize,
             windowWidth = 320,
@@ -100,7 +117,10 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
+            blockGap = 0,
             maxHeightRatio = 0.70f,
+            minBodyHeight = 0,
+            preview = null,
         )
         val available = 700 - gap - margin - padding * 2
         assertEquals(minOf(available, (900 * 0.70f).toInt()), placement.maxContentHeight)
@@ -108,7 +128,7 @@ class FloatingPlacementTest {
 
     @Test
     fun surfaceStaysInsideContentOnNarrowScreens() {
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = FloatingBubblePosition(x = 10, y = 1628),
             bubbleSize = bubbleSize,
             windowWidth = 1600,
@@ -117,9 +137,155 @@ class FloatingPlacementTest {
             edgeMargin = margin,
             gap = gap,
             windowPadding = padding,
+            blockGap = 0,
             maxHeightRatio = 0.45f,
+            minBodyHeight = 0,
+            preview = null,
         )
         assertEquals(margin, placement.x)
+    }
+
+    @Test
+    fun stackedPlacementKeepsPreviewAboveBubble() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 880, y = 1628),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview,
+        )
+        assertTrue(placement.anchorBottom)
+        assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
+        assertEquals(screenHeight - (1628 - gap), placement.y)
+        assertEquals(screenWidth - 800 - margin, placement.x)
+        assertEquals(FloatingPreviewSize(396, 792), placement.preview)
+        assertEquals(672, placement.maxContentHeight)
+    }
+
+    @Test
+    fun stackedPlacementDropsPreviewWhenBodyWouldGetTooShort() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 100, y = 500),
+            bubbleSize = bubbleSize,
+            windowWidth = 400,
+            screenWidth = 500,
+            screenHeight = 800,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview,
+        )
+        assertTrue(placement.anchorBottom)
+        assertNull(placement.preview)
+        assertEquals(360, placement.maxContentHeight)
+    }
+
+    @Test
+    fun stackedPreviewShrinksToRemainingSpace() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 880, y = 1176),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview,
+        )
+        assertEquals(FloatingPreviewSize(350, 700), placement.preview)
+        assertEquals(312, placement.maxContentHeight)
+    }
+
+    @Test
+    fun stackedPlacementDropsTooNarrowPreview() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 100, y = 700),
+            bubbleSize = bubbleSize,
+            windowWidth = 400,
+            screenWidth = 500,
+            screenHeight = 1000,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview,
+        )
+        assertNull(placement.preview)
+        assertEquals(450, placement.maxContentHeight)
+    }
+
+    @Test
+    fun stackedOfflinePreviewUsesChipHeight() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 880, y = 1628),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview.copy(online = false),
+        )
+        assertEquals(FloatingPreviewSize(396, 120), placement.preview)
+        assertEquals(1080, placement.maxContentHeight)
+    }
+
+    @Test
+    fun stackedPlacementDropsBelowBubbleOnUpperHalf() {
+        val placement = floatingPlaceSurfaceStack(
+            bubble = FloatingBubblePosition(x = 880, y = 100),
+            bubbleSize = bubbleSize,
+            windowWidth = 800,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            edgeMargin = margin,
+            gap = gap,
+            windowPadding = padding,
+            blockGap = blockGap,
+            maxHeightRatio = 0.45f,
+            minBodyHeight = minBodyHeight,
+            preview = preview,
+        )
+        assertFalse(placement.anchorBottom)
+        assertEquals(FloatingArrowSide.TOP, placement.arrowSide)
+        assertEquals(100 + bubbleSize + gap, placement.y)
+        assertNotNull(placement.preview)
+    }
+
+    @Test
+    fun standalonePreviewUsesFullRatioCap() {
+        assertEquals(
+            FloatingPreviewSize(396, 792),
+            floatingStandalonePreviewSize(preview, screenHeight = screenHeight, windowPadding = padding),
+        )
+        assertEquals(
+            FloatingPreviewSize(396, 120),
+            floatingStandalonePreviewSize(
+                preview.copy(online = false),
+                screenHeight = screenHeight,
+                windowPadding = padding,
+            ),
+        )
     }
 
     @Test

@@ -52,7 +52,7 @@ class FloatingContentFrameTest {
             insets = FloatingFrameInsets(left = 0, top = 138, right = 0, bottom = 52),
         )
         val bubble = FloatingBubblePosition(x = 940, y = 2140)
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = bubble,
             bubbleSize = 220,
             windowWidth = 1000,
@@ -61,7 +61,10 @@ class FloatingContentFrameTest {
             edgeMargin = 24,
             gap = 18,
             windowPadding = 48,
+            blockGap = 0,
             maxHeightRatio = 0.70f,
+            minBodyHeight = 0,
+            preview = null,
         )
         assertTrue(placement.anchorBottom)
         assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
@@ -76,7 +79,7 @@ class FloatingContentFrameTest {
             insets = FloatingFrameInsets(left = 0, top = 138, right = 0, bottom = 52),
         )
         val bubble = FloatingBubblePosition(x = 940, y = 2140)
-        val placement = floatingPlaceSurface(
+        val placement = floatingPlaceSurfaceStack(
             bubble = bubble,
             bubbleSize = 220,
             windowWidth = 1000,
@@ -85,7 +88,10 @@ class FloatingContentFrameTest {
             edgeMargin = 24,
             gap = 18,
             windowPadding = 48,
+            blockGap = 0,
             maxHeightRatio = 0.70f,
+            minBodyHeight = 0,
+            preview = null,
         )
         assertTrue(placement.anchorBottom)
         assertEquals(FloatingArrowSide.BOTTOM, placement.arrowSide)
