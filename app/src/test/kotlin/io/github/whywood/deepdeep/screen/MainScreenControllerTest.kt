@@ -189,7 +189,7 @@ class MainScreenControllerTest {
         var swiped: List<Int>? = null
         override fun invalidateSnapshots() = cache.clear()
         override fun bounds(displayId: Int, selector: GuiSelector) = cache.find(displayId, selector).bounds
-        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
+        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String?): GuiSnapshot {
             observed = displayId
             return cache.store(displayId, snapshot())
         }

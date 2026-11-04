@@ -103,7 +103,7 @@ data class ScreenApp(
 interface ScreenAccessibilityBackend {
     val connected: Boolean
 
-    suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot
+    suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String? = null): GuiSnapshot
 
     suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int)
 

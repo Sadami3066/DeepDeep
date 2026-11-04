@@ -276,7 +276,7 @@ class GuiPluginTest {
         override val connected: Boolean
             get() = !disconnected
 
-        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot =
+        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String?): GuiSnapshot =
             throw UnsupportedOperationException()
 
         override suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int) =

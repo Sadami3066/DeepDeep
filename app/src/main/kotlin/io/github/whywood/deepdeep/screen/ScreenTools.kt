@@ -10,6 +10,8 @@ import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
 import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
+import io.github.whywood.deepdeep.plugin.gui.GuiWindowInfo
+import io.github.whywood.deepdeep.plugin.gui.windowKindName
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -310,7 +312,7 @@ private val observeParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("packageName") {
             put("type", "string")
-            put("description", "Optional expected package of the current window; the call fails when another app is in front.")
+            put("description", "Optional package whose window to read; other windows on that screen are then ignored for node reads and an error lists the visible windows when it is absent.")
         }
         putJsonObject("text") {
             put("type", "string")
@@ -833,6 +835,10 @@ internal fun observeJson(
     put("truncated", observed.snapshot.truncated || shown.size < total.size)
     put("filtered", observed.filteredNodes)
     put("nodes", buildJsonArray { shown.forEach { node -> add(GuiNodeTree.nodeJson(node)) } })
+    val windows = observed.snapshot.windows
+    if (windows.size > 1) {
+        putJsonArray("windows") { windows.forEach { window -> add(windowJson(window)) } }
+    }
     val hints = buildList {
         if (observed.snapshot.truncated) {
             add("Scan was not exhaustive, so absence is not proof; raise maxDepth/maxNodes, and filters only apply to scanned nodes")
@@ -846,6 +852,16 @@ internal fun observeJson(
         }
     }
     if (hints.isNotEmpty()) put("hint", hints.joinToString("; "))
+}
+
+internal fun windowJson(window: GuiWindowInfo): JsonObject = buildJsonObject {
+    window.packageName?.let { put("package", it) }
+    window.title?.let { put("title", it) }
+    put("type", windowKindName(window.kind))
+    if (window.focused) put("focused", true)
+    if (window.active) put("active", true)
+    if (window.selected) put("selected", true)
+    if (window.bounds.width > 0 && window.bounds.height > 0) put("bounds", window.bounds.format())
 }
 
 internal fun virtualFailureJsonCategory(category: String): String = when (category) {

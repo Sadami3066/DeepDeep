@@ -70,6 +70,14 @@ class ScreenRouterTest {
     }
 
     @Test
+    fun observeForwardsExpectedPackageToWindowSelection() = runBlocking {
+        accessibility.connected = true
+        accessibility.snapshot = accessibility.snapshot.copy(packageName = "com.example")
+        router().observe(8, 120, "com.example")
+        assertEquals("com.example", accessibility.lastObserveExpectedPackage)
+    }
+
+    @Test
     fun virtualCoordinateTapUsesHelperEvenWithoutAccessibility() = runBlocking {
         accessibility.connected = false
         val message = router().tap(GuiSelector.Point(10, 20), 60)
@@ -607,6 +615,7 @@ class ScreenRouterTest {
         var observeCalls = 0
         var lastObserveDisplayId = -1
         var lastObserveMaxDepth = -1
+        var lastObserveExpectedPackage: String? = null
         var snapshot: GuiSnapshot = testSnapshot()
         var snapshotForDepth: ((Int, Int) -> GuiSnapshot)? = null
         var lastTapDisplayId = -1
@@ -615,10 +624,11 @@ class ScreenRouterTest {
         var lastSetTextValue = ""
         var waitOutcome = GuiWaitOutcome(matched = true)
 
-        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
+        override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String?): GuiSnapshot {
             observeCalls++
             lastObserveDisplayId = displayId
             lastObserveMaxDepth = maxDepth
+            lastObserveExpectedPackage = expectedPackage
             return snapshotForDepth?.invoke(maxDepth, maxNodes) ?: snapshot
         }
 

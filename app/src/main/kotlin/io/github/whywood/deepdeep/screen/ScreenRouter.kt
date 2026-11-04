@@ -46,7 +46,7 @@ class ScreenRouter(
     override suspend fun observe(maxDepth: Int, maxNodes: Int, expectedPackage: String?): ScreenObserveResult {
         val online = requireVirtualOnline()
         requireAccessibility()
-        val snapshot = accessibility.observe(online.displayId, maxDepth, maxNodes)
+        val snapshot = accessibility.observe(online.displayId, maxDepth, maxNodes, expectedPackage)
         val pruned = snapshot.usableOn(online.bounds())
         if (expectedPackage != null && pruned.packageName != expectedPackage) {
             throw IllegalStateException("Current window belongs to ${pruned.packageName ?: "an unknown app"}, not $expectedPackage; call screen_launch to start the target app")

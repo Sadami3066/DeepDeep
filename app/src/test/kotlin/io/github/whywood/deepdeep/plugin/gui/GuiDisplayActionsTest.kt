@@ -16,6 +16,8 @@ class GuiDisplayActionsTest {
         active: Boolean = false,
         focused: Boolean = false,
         area: Int = FULL_AREA,
+        packageName: String? = "com.example",
+        title: String? = null,
     ): GuiWindowCandidate = GuiWindowCandidate(
         kind = kind,
         layer = layer,
@@ -23,6 +25,8 @@ class GuiDisplayActionsTest {
         active = active,
         focused = focused,
         area = area,
+        packageName = packageName,
+        title = title,
     )
 
     @Test
@@ -63,17 +67,17 @@ class GuiDisplayActionsTest {
     }
 
     @Test
-    fun selectsReadableApplicationOrSystemWindowWithHighestLayer() {
+    fun selectsReadableApplicationWindowOverSystemWindow() {
         val single = GuiWindowSelection.topmostReadable(listOf(candidate(GuiWindowKind.APPLICATION, layer = 1)))
         assertEquals(0, single)
 
         val systemAboveApp = GuiWindowSelection.topmostReadable(
             listOf(
                 candidate(GuiWindowKind.APPLICATION, layer = 1),
-                candidate(GuiWindowKind.SYSTEM, layer = 5),
+                candidate(GuiWindowKind.SYSTEM, layer = 5, focused = true),
             ),
         )
-        assertEquals(1, systemAboveApp)
+        assertEquals(0, systemAboveApp)
 
         val unreadableOnTop = GuiWindowSelection.topmostReadable(
             listOf(
@@ -93,22 +97,78 @@ class GuiDisplayActionsTest {
     }
 
     @Test
-    fun layerOrderWinsOverWindowListOrder() {
+    fun prefersApplicationWindowOverGuideBubbleOrSystemPopup() {
+        val bubbleAboveApp = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.APPLICATION, layer = 1, area = FULL_AREA),
+                candidate(GuiWindowKind.SYSTEM, layer = 20, area = 320 * 200, focused = true),
+            ),
+        )
+        assertEquals(0, bubbleAboveApp)
+
+        val systemDialogAboveApp = GuiWindowSelection.topmostReadable(
+            listOf(
+                candidate(GuiWindowKind.APPLICATION, layer = 1, area = FULL_AREA),
+                candidate(GuiWindowKind.SYSTEM, layer = 20, area = 900 * 600, focused = true),
+            ),
+        )
+        assertEquals(0, systemDialogAboveApp)
+    }
+
+    @Test
+    fun layerOrderBreaksTiesWithinTheSameWindowKind() {
         val appAboveSystem = GuiWindowSelection.topmostReadable(
             listOf(
                 candidate(GuiWindowKind.APPLICATION, layer = 7),
-                candidate(GuiWindowKind.SYSTEM, layer = 3),
+                candidate(GuiWindowKind.APPLICATION, layer = 3),
             ),
         )
         assertEquals(0, appAboveSystem)
 
         val systemAboveApp = GuiWindowSelection.topmostReadable(
             listOf(
-                candidate(GuiWindowKind.APPLICATION, layer = 3),
+                candidate(GuiWindowKind.SYSTEM, layer = 3),
                 candidate(GuiWindowKind.SYSTEM, layer = 7),
             ),
         )
         assertEquals(1, systemAboveApp)
+    }
+
+    @Test
+    fun packageFilterSelectsOnlyThatPackagesWindow() {
+        val candidates = listOf(
+            candidate(GuiWindowKind.APPLICATION, area = FULL_AREA, packageName = "com.example"),
+            candidate(GuiWindowKind.APPLICATION, area = 900 * 600, focused = true, packageName = "com.other"),
+        )
+        assertEquals(1, GuiWindowSelection.select(candidates, expectedPackage = "com.other"))
+        assertEquals(0, GuiWindowSelection.select(candidates, expectedPackage = "com.example"))
+        assertNull(GuiWindowSelection.select(candidates, expectedPackage = "com.missing"))
+    }
+
+    @Test
+    fun packageFilterCanSelectSystemDialogOfThatPackage() {
+        val candidates = listOf(
+            candidate(GuiWindowKind.APPLICATION, area = FULL_AREA),
+            candidate(
+                GuiWindowKind.SYSTEM,
+                area = 900 * 600,
+                focused = true,
+                packageName = "com.android.permissioncontroller",
+            ),
+        )
+        assertEquals(
+            1,
+            GuiWindowSelection.select(candidates, expectedPackage = "com.android.permissioncontroller"),
+        )
+    }
+
+    @Test
+    fun emptyPackageNameFallbackKeepsSmallWindowOfTheExpectedPackage() {
+        val candidates = listOf(
+            candidate(GuiWindowKind.APPLICATION, area = FULL_AREA, packageName = "com.example"),
+            candidate(GuiWindowKind.SYSTEM, area = 320 * 200, packageName = "com.bubble"),
+        )
+        assertEquals(1, GuiWindowSelection.select(candidates, expectedPackage = "com.bubble"))
     }
 
     @Test
@@ -209,6 +269,16 @@ class GuiDisplayActionsTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun windowKindNamesAreStable() {
+        assertEquals("application", windowKindName(GuiWindowKind.APPLICATION))
+        assertEquals("system", windowKindName(GuiWindowKind.SYSTEM))
+        assertEquals("input_method", windowKindName(GuiWindowKind.INPUT_METHOD))
+        assertEquals("accessibility_overlay", windowKindName(GuiWindowKind.ACCESSIBILITY_OVERLAY))
+        assertEquals("magnification_overlay", windowKindName(GuiWindowKind.MAGNIFICATION_OVERLAY))
+        assertEquals("other", windowKindName(GuiWindowKind.OTHER))
     }
 
     private companion object {

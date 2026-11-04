@@ -55,12 +55,33 @@ data class GuiSnapshotNode(
     val token: Any? = null,
 )
 
+enum class GuiWindowKind {
+    APPLICATION,
+    SYSTEM,
+    INPUT_METHOD,
+    ACCESSIBILITY_OVERLAY,
+    MAGNIFICATION_OVERLAY,
+    OTHER,
+}
+
+data class GuiWindowInfo(
+    val packageName: String?,
+    val title: String?,
+    val kind: GuiWindowKind,
+    val bounds: GuiBounds = GuiBounds(0, 0, 0, 0),
+    val focused: Boolean = false,
+    val active: Boolean = false,
+    val readable: Boolean = false,
+    val selected: Boolean = false,
+)
+
 data class GuiSnapshot(
     val packageName: String?,
     val windowTitle: String?,
     val nodes: List<GuiSnapshotNode>,
     val truncated: Boolean,
     val scanned: Int = nodes.size,
+    val windows: List<GuiWindowInfo> = emptyList(),
 )
 
 sealed interface GuiSelector {

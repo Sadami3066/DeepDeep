@@ -14,6 +14,8 @@ import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
 import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
 import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
+import io.github.whywood.deepdeep.plugin.gui.GuiWindowInfo
+import io.github.whywood.deepdeep.plugin.gui.GuiWindowKind
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
@@ -641,6 +643,84 @@ class ScreenToolsTest {
         val file = screenshotDir.listFiles()!!.single()
         assertTrue(file.name.startsWith("screen-"))
         assertEquals(byteArrayOf(1, 2, 3).toList(), file.readBytes().toList())
+    }
+
+    @Test
+    fun screenshotFailureBecomesToolErrorInsteadOfThrowing() = runTest {
+        val failing = object : ScreenController by controller {
+            override suspend fun screenshot(): ScreenCapture =
+                error("The virtual screen has not rendered any content yet; open the target app on this screen with screen_launch and retry")
+        }
+        val tool = screenTools(failing, screenshotDir).first { it.name == "screen_screenshot" }
+        val result = tool.execute("call", buildJsonObject {}, null, null)
+        assertEquals(true, result.isError)
+        assertTrue(result.text().contains("not rendered any content"))
+        assertTrue(!screenshotDir.exists())
+    }
+
+    @Test
+    fun observeJsonReportsOtherWindowsOnTheSameScreen() {
+        val snapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(
+                className = "android.widget.FrameLayout",
+                bounds = GuiBounds(0, 0, 1080, 2400),
+                children = listOf(GuiNode(className = "android.widget.TextView", bounds = GuiBounds(0, 0, 100, 50), text = "OK")),
+            ),
+            packageName = "com.example",
+            windowTitle = "Main",
+        )
+        val observed = ScreenObserveResult(
+            BACKEND_ACCESSIBILITY,
+            snapshot.copy(
+                windows = listOf(
+                    GuiWindowInfo(
+                        packageName = "com.example",
+                        title = "Main",
+                        kind = GuiWindowKind.APPLICATION,
+                        bounds = GuiBounds(0, 0, 1080, 2400),
+                        focused = true,
+                        readable = true,
+                        selected = true,
+                    ),
+                    GuiWindowInfo(
+                        packageName = "com.android.permissioncontroller",
+                        title = "Allow",
+                        kind = GuiWindowKind.SYSTEM,
+                        bounds = GuiBounds(100, 900, 980, 1500),
+                        readable = true,
+                    ),
+                ),
+            ),
+        )
+        val json = observeJson(observed).toString()
+        assertTrue(json.contains("\"windows\""))
+        assertTrue(json.contains("com.android.permissioncontroller"))
+        assertTrue(json.contains("\"type\":\"system\""))
+        assertTrue(json.contains("\"selected\":true"))
+        assertTrue(json.contains("\"focused\":true"))
+    }
+
+    @Test
+    fun observeJsonHidesWindowListForSingleWindow() {
+        val snapshot = GuiNodeTree.buildSnapshot(
+            root = GuiNode(className = "android.widget.TextView", bounds = GuiBounds(0, 0, 100, 50), text = "OK"),
+            packageName = "com.example",
+        )
+        val observed = ScreenObserveResult(
+            BACKEND_ACCESSIBILITY,
+            snapshot.copy(
+                windows = listOf(
+                    GuiWindowInfo(
+                        packageName = "com.example",
+                        title = null,
+                        kind = GuiWindowKind.APPLICATION,
+                        readable = true,
+                        selected = true,
+                    ),
+                ),
+            ),
+        )
+        assertFalse(observeJson(observed).toString().contains("\"windows\""))
     }
 
     @Test

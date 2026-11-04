@@ -34,22 +34,53 @@ class GuiAccessibilityActions(
 
     override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds = requireNode(displayId, selector).bounds
 
-    override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int): GuiSnapshot {
-        require(displayId >= 0) { "Display id must not be negative" }
-        val service = requireService()
-        val snapshot = snapshotDisplayWindow(service, displayId, maxDepth, maxNodes)
-        return snapshots.store(displayId, snapshot)
-    }
-
-    private fun snapshotDisplayWindow(
-        service: GuiAccessibilityService,
+    override suspend fun observe(
         displayId: Int,
         maxDepth: Int,
         maxNodes: Int,
+        expectedPackage: String?,
     ): GuiSnapshot {
-        val window = selectDisplayWindow(service, displayId)
+        require(displayId >= 0) { "Display id must not be negative" }
+        val service = requireService()
+        val windows = displayWindows(service, displayId)
+        val candidates = windows.map { window -> windowCandidate(window) }
+        val infos = windowInfos(candidates)
+        val index = GuiWindowSelection.select(candidates, expectedPackage)
             ?: throw IllegalStateException("Cannot read the selected screen window; open the target app on that screen and retry")
-        return snapshotWindow(window, displayId, maxDepth, maxNodes)
+        val snapshot = snapshotWindow(windows[index], displayId, maxDepth, maxNodes)
+        val marked = infos.mapIndexed { windowIndex, info ->
+            if (windowIndex == index) info.copy(selected = true) else info
+        }
+        return snapshots.store(displayId, snapshot.copy(windows = marked))
+    }
+
+    private fun windowCandidate(window: AccessibilityWindowInfo): GuiWindowCandidate {
+        val bounds = Rect()
+        window.getBoundsInScreen(bounds)
+        val root = runCatching { window.root }.getOrNull()
+        return GuiWindowCandidate(
+            kind = windowKindOf(window),
+            layer = window.layer,
+            readable = root != null,
+            active = window.isActive,
+            focused = window.isFocused,
+            area = bounds.width() * bounds.height(),
+            packageName = root?.packageName?.toString(),
+            title = window.title?.toString()?.trim()?.takeIf { it.isNotEmpty() },
+            bounds = GuiBounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
+        )
+    }
+
+    private fun windowInfos(candidates: List<GuiWindowCandidate>): List<GuiWindowInfo> = candidates.map { candidate ->
+        GuiWindowInfo(
+            packageName = candidate.packageName,
+            title = candidate.title,
+            kind = candidate.kind,
+            bounds = candidate.bounds,
+            focused = candidate.focused,
+            active = candidate.active,
+            readable = candidate.readable,
+        )
     }
 
     private fun snapshotWindow(
@@ -273,19 +304,8 @@ class GuiAccessibilityActions(
     private fun selectDisplayWindow(service: GuiAccessibilityService, displayId: Int): AccessibilityWindowInfo? {
         val windows = displayWindows(service, displayId)
         if (windows.isEmpty()) return null
-        val candidates = windows.map { window ->
-            val bounds = Rect()
-            window.getBoundsInScreen(bounds)
-            GuiWindowCandidate(
-                kind = windowKindOf(window),
-                layer = window.layer,
-                readable = window.root != null,
-                active = window.isActive,
-                focused = window.isFocused,
-                area = bounds.width() * bounds.height(),
-            )
-        }
-        val index = GuiWindowSelection.topmostReadable(candidates) ?: return null
+        val index = GuiWindowSelection.select(windows.map { window -> windowCandidate(window) }, expectedPackage = null)
+            ?: return null
         return windows[index]
     }
 
@@ -434,15 +454,6 @@ class GuiAccessibilityActions(
     }
 }
 
-internal enum class GuiWindowKind {
-    APPLICATION,
-    SYSTEM,
-    INPUT_METHOD,
-    ACCESSIBILITY_OVERLAY,
-    MAGNIFICATION_OVERLAY,
-    OTHER,
-}
-
 internal data class GuiWindowCandidate(
     val kind: GuiWindowKind,
     val layer: Int,
@@ -450,33 +461,54 @@ internal data class GuiWindowCandidate(
     val active: Boolean = false,
     val focused: Boolean = false,
     val area: Int = 0,
+    val packageName: String? = null,
+    val title: String? = null,
+    val bounds: GuiBounds = GuiBounds(0, 0, 0, 0),
 )
 
 internal object GuiWindowSelection {
-    private const val MIN_AREA_RATIO = 0.1f
+    private const val MIN_AREA_RATIO = 0.15f
 
-    fun topmostReadable(candidates: List<GuiWindowCandidate>): Int? {
-        val readable = candidates.indices.filter { index ->
+    fun topmostReadable(candidates: List<GuiWindowCandidate>): Int? = select(candidates, expectedPackage = null)
+
+    fun select(candidates: List<GuiWindowCandidate>, expectedPackage: String?): Int? {
+        val eligible = candidates.indices.filter { index ->
             val candidate = candidates[index]
-            candidate.readable && candidate.kind in PREFERRED_KINDS && candidate.area > 0
+            candidate.readable &&
+                candidate.kind in PREFERRED_KINDS &&
+                candidate.area > 0 &&
+                (expectedPackage == null || candidate.packageName == expectedPackage)
         }
-        if (readable.isEmpty()) return null
-        val largestArea = readable.maxOf { index -> candidates[index].area }
+        if (eligible.isEmpty()) return null
+        val largestArea = eligible.maxOf { index -> candidates[index].area }
         val minimumArea = (largestArea * MIN_AREA_RATIO).toInt()
-        return readable
-            .filter { index ->
-                val candidate = candidates[index]
-                candidate.active || candidate.focused || candidate.area >= minimumArea
-            }
+        return eligible
+            .filter { index -> candidates[index].area >= minimumArea }
             .maxWithOrNull(
-                compareBy<Int> { index -> candidates[index].active }
+                compareBy<Int> { index -> kindPriority(candidates[index].kind) }
                     .thenBy { index -> candidates[index].focused }
                     .thenBy { index -> candidates[index].area }
+                    .thenBy { index -> candidates[index].active }
                     .thenBy { index -> candidates[index].layer },
             )
     }
 
+    private fun kindPriority(kind: GuiWindowKind): Int = when (kind) {
+        GuiWindowKind.APPLICATION -> 2
+        GuiWindowKind.SYSTEM -> 1
+        else -> 0
+    }
+
     private val PREFERRED_KINDS = setOf(GuiWindowKind.APPLICATION, GuiWindowKind.SYSTEM)
+}
+
+internal fun windowKindName(kind: GuiWindowKind): String = when (kind) {
+    GuiWindowKind.APPLICATION -> "application"
+    GuiWindowKind.SYSTEM -> "system"
+    GuiWindowKind.INPUT_METHOD -> "input_method"
+    GuiWindowKind.ACCESSIBILITY_OVERLAY -> "accessibility_overlay"
+    GuiWindowKind.MAGNIFICATION_OVERLAY -> "magnification_overlay"
+    GuiWindowKind.OTHER -> "other"
 }
 
 internal fun missingSnapshotMessage(displayId: Int): String =

@@ -36,7 +36,7 @@ class MainScreenController(
 
     override suspend fun observe(maxDepth: Int, maxNodes: Int, expectedPackage: String?): ScreenObserveResult {
         requireNodes()
-        val snapshot = actions.observe(0, maxDepth, maxNodes)
+        val snapshot = actions.observe(0, maxDepth, maxNodes, expectedPackage)
         val pruned = snapshot.usableOn(bounds())
         check(expectedPackage == null || pruned.packageName == expectedPackage) { "Main screen current window is not $expectedPackage; call screen_launch(target=main) explicitly and observe again" }
         return ScreenObserveResult(BACKEND_ACCESSIBILITY, pruned, snapshot.nodes.size - pruned.nodes.size)
