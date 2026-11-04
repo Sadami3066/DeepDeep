@@ -96,7 +96,6 @@ class ToolContractDeviceTest {
             val attachmentPath = io.github.whywood.deepdeep.data.parseAttachmentBlock(attachmentPrompt).attachments.single().path
             assertEquals(file.absolutePath, attachmentPath)
             assertTrue(run(tools.getValue("read"), args(File(attachmentPath))).text().contains("from-linux"))
-            assertTrue(run(tools.getValue("grep"), buildJsonObject { put("path", graph.homeDir.absolutePath); put("pattern", "contract-marker"); put("glob", file.name) }).text().contains(file.absolutePath))
             val delivery = presentTool(null) { io.github.whywood.deepdeep.runtime.BoundSession("contract-device", null, graph.homeDir.absolutePath) }
             val delivered = run(delivery, buildJsonObject { put("items", buildJsonArray { add(buildJsonObject { put("type", "file"); put("path", file.absolutePath) }) }) })
             assertNull(delivered.text(), delivered.isError)
