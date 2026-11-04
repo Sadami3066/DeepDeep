@@ -74,6 +74,12 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.ui.common.scan.ScanDecision
+import io.github.whywood.deepdeep.ui.common.scan.ScanLauncher
+import io.github.whywood.deepdeep.ui.common.scan.ScanMatcher
+import io.github.whywood.deepdeep.ui.common.scan.ScanPrimary
+import io.github.whywood.deepdeep.ui.common.scan.ScanStrategy
+import io.github.whywood.deepdeep.ui.common.scan.ScanStrategyStore
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -83,7 +89,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
-private const val SCAN_CARD_HIDE_MS = 1800L
+private const val SCAN_CARD_HIDE_MS = 1200L
 
 @Composable
 internal fun CameraCaptureSheet(
@@ -103,9 +109,14 @@ internal fun CameraCaptureSheet(
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
+    val strategies = remember { ScanStrategyStore(context).load().strategies }
     DdSheet(onDismiss = onDismiss, fullBleed = true) {
         if (granted) {
-            CameraBody(onCaptured = onCaptured, onDismiss = onDismiss)
+            CameraBody(
+                strategies = strategies,
+                onCaptured = onCaptured,
+                onDismiss = onDismiss,
+            )
         } else {
             CameraPermissionHint(
                 onOpenSettings = {
@@ -163,7 +174,11 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
 }
 
 @Composable
-private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
+private fun CameraBody(
+    strategies: List<ScanStrategy>,
+    onCaptured: (Uri) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val captureFailed = stringResource(R.string.camera_failed)
@@ -174,7 +189,7 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
     var capturing by remember { mutableStateOf(false) }
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     val active = remember { mutableStateOf(true) }
-    val scanDecision = remember { mutableStateOf<ScanDecision?>(null) }
+    val detected = remember { mutableStateOf<List<DetectedCode>>(emptyList()) }
     val lastBarcodeAt = remember { mutableLongStateOf(0L) }
     val installedPackages: (String) -> Boolean = remember {
         { packageName ->
@@ -182,21 +197,20 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
         }
     }
     val analyzer = remember {
-        CameraBarcodeAnalyzer { raw ->
+        CameraBarcodeAnalyzer { codes ->
             lastBarcodeAt.longValue = SystemClock.elapsedRealtime()
-            val decision = ScanRouting.resolve(raw, installedPackages)
-            if (scanDecision.value != decision) scanDecision.value = decision
+            if (codes.isNotEmpty()) detected.value = codes
         }
     }
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     LaunchedEffect(Unit) {
         while (true) {
             delay(300)
-            val decision = scanDecision.value
-            if (decision != null &&
+            val codes = detected.value
+            if (codes.isNotEmpty() &&
                 SystemClock.elapsedRealtime() - lastBarcodeAt.longValue > SCAN_CARD_HIDE_MS
             ) {
-                scanDecision.value = null
+                detected.value = emptyList()
             }
         }
     }
@@ -298,12 +312,21 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
             )
         }
     }
-    val scanCard = scanDecision.value
-    var lastCard by remember { mutableStateOf<ScanDecision?>(null) }
-    LaunchedEffect(scanCard) {
-        if (scanCard != null) lastCard = scanCard
+    val decisions = remember(detected.value, strategies) {
+        detected.value
+            .map { code -> ScanMatcher.resolve(code.raw, strategies, installedPackages) }
+            .sortedBy { priorityOf(it.primary) }
     }
-    val cardContent = scanCard ?: lastCard
+    var pickerOpen by remember { mutableStateOf(false) }
+    val scanCard = decisions.ifEmpty { null }
+    var lastDecisions by remember { mutableStateOf<List<ScanDecision>>(emptyList()) }
+    LaunchedEffect(scanCard) {
+        if (scanCard != null) lastDecisions = scanCard
+    }
+    val cardDecisions = scanCard ?: lastDecisions
+    val pickerStrategies = remember(strategies) {
+        strategies.filter { installedPackages(it.packageName) }.distinctBy { it.packageName }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,7 +404,7 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
             )
         }
         AnimatedVisibility(
-            visible = scanCard != null,
+            visible = scanCard != null && !pickerOpen,
             enter = fadeIn(tween(140)) + slideInVertically(tween(160)) { height -> height / 4 },
             exit = fadeOut(tween(120)),
             modifier = Modifier
@@ -390,18 +413,33 @@ private fun CameraBody(onCaptured: (Uri) -> Unit, onDismiss: () -> Unit) {
                 .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
         ) {
-            cardContent?.let { decision ->
-                ScanResultCard(
-                    decision = decision,
-                    onActivate = {
-                        ScanLauncher.launch(context, decision)
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            ScanResultCard(
+                decisions = cardDecisions,
+                showAppPicker = cardDecisions.any { it.primary is ScanPrimary.Copy },
+                onActivate = { decision ->
+                    if (ScanLauncher.launch(context, decision)) onDismiss()
+                },
+                onOpenAppPicker = { pickerOpen = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (pickerOpen) {
+            ScanAppPickerOverlay(
+                strategies = pickerStrategies,
+                onSelect = { strategy ->
+                    if (ScanLauncher.launchStrategy(context, strategy)) onDismiss()
+                },
+                onDismiss = { pickerOpen = false },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
+}
+
+private fun priorityOf(primary: ScanPrimary): Int = when (primary) {
+    is ScanPrimary.AppScan -> 0
+    is ScanPrimary.Browse -> 1
+    ScanPrimary.Copy -> 2
 }
 
 @Composable

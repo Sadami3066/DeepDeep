@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.settings.ScanSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 import io.github.whywood.deepdeep.ui.workshop.WorkshopScreen
@@ -124,6 +125,7 @@ internal fun AppRouteContent(
             onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
             overlayEntryMode = overlayEntryMode,
             onOpenUsageHabits = { navigator.push(AppDestination.UsageHabits) },
+            onOpenScan = { navigator.push(AppDestination.Scan) },
             onOpenAssistant = onOpenAssistantSettings,
             onOpenProviders = { navigator.push(AppDestination.Providers) },
             onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
@@ -233,6 +235,8 @@ internal fun AppRouteContent(
                 scope.launch { dependencies.overlayEntryPreferences.setMode(mode) }
             },
         )
+
+        AppDestination.Scan -> ScanSettingsScreen(onBack = onBack)
 
         is AppDestination.ProviderDetail -> {
             val provider = dependencies.providerCatalog.summary(destination.id)

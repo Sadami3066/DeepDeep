@@ -43,6 +43,7 @@ object DdIcons {
     val Brain = DdIcon(R.drawable.ic_dd_brain)
     val Paperclip = DdIcon(R.drawable.ic_dd_paperclip)
     val Camera = DdIcon(R.drawable.ic_dd_camera)
+    val Scan = DdIcon(R.drawable.ic_dd_scan)
     val Image = DdIcon(R.drawable.ic_dd_image)
     val File = DdIcon(R.drawable.ic_dd_file)
     val Globe = DdIcon(R.drawable.ic_dd_globe)

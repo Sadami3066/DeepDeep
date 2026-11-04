@@ -11,8 +11,10 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.atomic.AtomicBoolean
 
+internal data class DetectedCode(val raw: String, val area: Long)
+
 internal class CameraBarcodeAnalyzer(
-    private val onBarcode: (String) -> Unit,
+    private val onCodes: (List<DetectedCode>) -> Unit,
 ) : ImageAnalysis.Analyzer {
     private val scanner: BarcodeScanner = BarcodeScanning.getClient(
         BarcodeScannerOptions.Builder()
@@ -35,15 +37,16 @@ internal class CameraBarcodeAnalyzer(
         val input = InputImage.fromMediaImage(media, image.imageInfo.rotationDegrees)
         scanner.process(input)
             .addOnSuccessListener { barcodes ->
-                barcodes
+                val codes = barcodes
                     .mapNotNull { barcode ->
                         val value = barcode.rawValue?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                         val box = barcode.boundingBox
-                        value to (if (box == null) 0L else box.width().toLong() * box.height())
+                        DetectedCode(value, if (box == null) 0L else box.width().toLong() * box.height())
                     }
-                    .maxByOrNull { it.second }
-                    ?.first
-                    ?.let(onBarcode)
+                    .groupBy { it.raw }
+                    .map { (_, same) -> same.maxBy { it.area } }
+                    .sortedByDescending { it.area }
+                onCodes(codes)
             }
             .addOnCompleteListener {
                 busy.set(false)

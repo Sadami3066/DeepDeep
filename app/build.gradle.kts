@@ -83,6 +83,7 @@ dependencies {
 
     debugImplementation(libs.compose.tooling)
     testImplementation(libs.junit)
+    testImplementation(libs.json.org)
     testImplementation(libs.coroutines.test)
 
     androidTestImplementation(platform(libs.compose.bom))

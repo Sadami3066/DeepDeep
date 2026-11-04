@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "package": "com.tencent.mm",
+      "hosts": ["weixin.qq.com", "u.wechat.com", "mp.weixin.qq.com"],
+      "schemes": ["weixin", "wxp"],
+      "scan": {
+        "activity": "com.tencent.mm.ui.LauncherUI",
+        "action": "com.tencent.mm.ui.ShortCutDispatchAction",
+        "extras": { "LauncherUI.Shortcut.LaunchType": "launch_type_scan_qrcode" },
+        "flags": ["CLEAR_TOP"]
+      },
+      "note": "微信给桌面快捷方式用的派发入口"
+    },
+    {
+      "package": "com.eg.android.AlipayGphone",
+      "hosts": ["alipay.com", "alipay.cn"],
+      "schemes": ["alipay", "alipays", "alipayqr"],
+      "scan": { "uri": "alipays://platformapi/startapp?appId=10000007" }
+    },
+    {
+      "package": "com.tencent.mobileqq",
+      "hosts": ["qq.com"],
+      "schemes": ["mqq", "mqqapi"],
+      "scan": { "uri": "mqqapi://qrscan/open?source=1" }
+    },
+    {
+      "package": "com.sankuai.meituan",
+      "hosts": ["meituan.com", "dianping.com", "dpurl.cn"],
+      "schemes": ["imeituan", "dianping"],
+      "scan": { "uri": "imeituan://www.meituan.com/page/scanQRCodeForMBarResult?openAR=0&shortcuts=true" }
+    },
+    {
+      "package": "com.jingdong.app.mall",
+      "hosts": ["jd.com", "jd.cn", "3.cn"],
+      "schemes": ["openapp.jdmobile", "jingdong"],
+      "scan": { "uri": "openapp.jdmobile://virtual?params=%7B%22category%22%3A%22jump%22%2C%22des%22%3A%22scan%22%7D" }
+    },
+    {
+      "package": "com.ss.android.ugc.aweme",
+      "hosts": ["douyin.com", "iesdouyin.com"],
+      "schemes": ["snssdk1128", "snssdk1349"],
+      "scan": { "uri": "snssdk1128://scan" }
+    },
+    {
+      "package": "com.ss.android.lark",
+      "hosts": ["feishu.cn", "larksuite.com"],
+      "schemes": ["lark", "feishu"],
+      "contains": ["feishu", "lark"],
+      "scan": {
+        "activity": "com.ss.android.lark.main.app.MainActivity",
+        "action": "android.intent.action.VIEW",
+        "extras": { "is_from_scan_shortcut": true }
+      },
+      "note": "飞书登录/会议码常见为纯字符串 token"
+    }
+  ]
+}

@@ -82,6 +82,7 @@ fun SettingsScreen(
     onOpenChatSettings: () -> Unit,
     overlayEntryMode: OverlayEntryMode = OverlayEntryMode.VOICE,
     onOpenUsageHabits: () -> Unit = {},
+    onOpenScan: () -> Unit = {},
     onOpenAssistant: () -> Unit = {},
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
@@ -264,6 +265,14 @@ fun SettingsScreen(
                     onClick = onOpenUsageHabits,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_usage_habits"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Scan,
+                    title = stringResource(R.string.scan_settings_title),
+                    onClick = onOpenScan,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_scan"),
                 )
             }
 
