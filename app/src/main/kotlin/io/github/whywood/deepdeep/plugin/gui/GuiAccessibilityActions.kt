@@ -46,7 +46,7 @@ class GuiAccessibilityActions(
         val candidates = windows.map { window -> windowCandidate(window) }
         val infos = windowInfos(candidates)
         val index = GuiWindowSelection.select(candidates, expectedPackage)
-            ?: throw IllegalStateException("Cannot read the selected screen window; open the target app on that screen and retry")
+            ?: throw IllegalStateException(missingWindowMessage(infos, expectedPackage))
         val snapshot = snapshotWindow(windows[index], displayId, maxDepth, maxNodes)
         val marked = infos.mapIndexed { windowIndex, info ->
             if (windowIndex == index) info.copy(selected = true) else info
@@ -510,6 +510,31 @@ internal fun windowKindName(kind: GuiWindowKind): String = when (kind) {
     GuiWindowKind.MAGNIFICATION_OVERLAY -> "magnification_overlay"
     GuiWindowKind.OTHER -> "other"
 }
+
+internal fun missingWindowMessage(windows: List<GuiWindowInfo>, expectedPackage: String?): String {
+    val visible = windows.take(MAX_VISIBLE_WINDOWS).joinToString("; ") { window ->
+        buildString {
+            append(windowKindName(window.kind))
+            append(' ')
+            append(window.packageName ?: "unknown app")
+            window.title?.let { append(" \"").append(it).append('\"') }
+            if (window.focused) append(" focused")
+            if (window.selected) append(" selected")
+        }
+    }
+    val suffix = if (windows.size > MAX_VISIBLE_WINDOWS) "; and ${windows.size - MAX_VISIBLE_WINDOWS} more" else ""
+    val listing = if (windows.isEmpty()) "" else ". Visible windows: $visible$suffix"
+    return when {
+        windows.isEmpty() ->
+            "This screen has no windows yet; launch the target app with screen_launch on this screen, then observe again"
+        expectedPackage != null && windows.none { window -> window.packageName == expectedPackage } ->
+            "No window of $expectedPackage is on this screen; launch it with screen_launch$listing"
+        else ->
+            "This screen has no readable application window yet; launch the target app with screen_launch, then observe again$listing"
+    }
+}
+
+internal const val MAX_VISIBLE_WINDOWS = 5
 
 internal fun missingSnapshotMessage(displayId: Int): String =
     "The snapshot for display $displayId is stale; call screen_observe for the same target before using a ref or text selector"

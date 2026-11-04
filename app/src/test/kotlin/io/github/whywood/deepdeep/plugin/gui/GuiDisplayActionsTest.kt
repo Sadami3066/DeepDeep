@@ -272,6 +272,35 @@ class GuiDisplayActionsTest {
     }
 
     @Test
+    fun missingWindowMessagesPointAtScreenLaunch() {
+        val noWindows = missingWindowMessage(emptyList(), expectedPackage = null)
+        assertTrue(noWindows.contains("no windows"))
+        assertTrue(noWindows.contains("screen_launch"))
+
+        val unreadable = listOf(
+            GuiWindowInfo(
+                packageName = "com.example",
+                title = "Bubble",
+                kind = GuiWindowKind.SYSTEM,
+                readable = false,
+                focused = true,
+            ),
+        )
+        val listed = missingWindowMessage(unreadable, expectedPackage = null)
+        assertTrue(listed.contains("no readable application window"))
+        assertTrue(listed.contains("system com.example"))
+        assertTrue(listed.contains("focused"))
+        assertTrue(listed.contains("screen_launch"))
+
+        val missingPackage = missingWindowMessage(
+            listOf(GuiWindowInfo(packageName = "com.example", title = null, kind = GuiWindowKind.APPLICATION, readable = true)),
+            expectedPackage = "com.other",
+        )
+        assertTrue(missingPackage.contains("com.other"))
+        assertTrue(missingPackage.contains("com.example"))
+    }
+
+    @Test
     fun windowKindNamesAreStable() {
         assertEquals("application", windowKindName(GuiWindowKind.APPLICATION))
         assertEquals("system", windowKindName(GuiWindowKind.SYSTEM))
