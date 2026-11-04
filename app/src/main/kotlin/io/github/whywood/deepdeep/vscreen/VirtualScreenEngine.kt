@@ -395,7 +395,7 @@ class VirtualScreenEngine(
                             TAG,
                             VirtualScreenTransportLog.event(
                                 "idle_stop",
-                                "idleMs" to IdlePolicy.IDLE_TIMEOUT_MS,
+                                "idleTimeoutMs" to IdlePolicy.IDLE_TIMEOUT_MS,
                                 "backend" to connectedBackend,
                                 "helperPid" to connectedHelperPid,
                             ),

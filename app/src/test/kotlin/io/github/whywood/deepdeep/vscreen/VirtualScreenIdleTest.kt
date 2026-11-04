@@ -14,6 +14,15 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class VirtualScreenIdleTest {
     @Test
+    fun defaultIdleTimeoutIsFifteenMinutes() {
+        assertEquals(15 * 60_000L, IdlePolicy.IDLE_TIMEOUT_MS)
+        val policy = IdlePolicy()
+        policy.onConnected(0L)
+        assertFalse(policy.isIdle(14 * 60_000L))
+        assertTrue(policy.isIdle(15 * 60_000L))
+    }
+
+    @Test
     fun onlineTimeIsNotIdleBeforeTheWindowEnds() {
         val policy = IdlePolicy(timeoutMs = 300_000L)
         policy.onConnected(1_000L)

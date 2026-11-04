@@ -25,7 +25,7 @@ internal class IdlePolicy(private val timeoutMs: Long = IDLE_TIMEOUT_MS) {
     }
 
     companion object {
-        const val IDLE_TIMEOUT_MS = 5 * 60_000L
+        const val IDLE_TIMEOUT_MS = 15 * 60_000L
         const val CHECK_INTERVAL_MS = 30_000L
         private const val NO_ACTIVITY = -1L
     }
