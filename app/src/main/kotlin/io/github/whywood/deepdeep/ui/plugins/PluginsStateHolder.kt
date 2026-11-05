@@ -69,10 +69,7 @@ internal class PluginsStateHolder(
         }
     }
 
-    fun stageUpdate(pluginId: String) {
-        scope.launch {
-            runCatching { manager.stageExternalUpdate(pluginId) }
-            runCatching { manager.refreshNow() }
-        }
-    }
+    suspend fun stageUpdate(pluginId: String): String? =
+        runCatching { manager.stageExternalUpdate(pluginId) }
+            .getOrElse { error -> error.message ?: error.javaClass.simpleName }
 }

@@ -20,6 +20,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -40,6 +41,7 @@ internal fun PluginImportDialog(
     inspection: ExternalInspectionUi,
     trustPublisher: Boolean,
     busy: Boolean,
+    error: String?,
     onTrustChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -112,6 +114,15 @@ internal fun PluginImportDialog(
                             )
                         }
                     }
+                    error?.let { message ->
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = message,
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
+                    }
                 }
             }
         },
@@ -135,6 +146,9 @@ internal fun PluginImportDialog(
 @Composable
 internal fun PluginUpdatesDialog(
     updates: List<PluginUpdateUi>,
+    busyId: String?,
+    stagedIds: Set<String>,
+    error: String?,
     onUpdate: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -182,13 +196,32 @@ internal fun PluginUpdatesDialog(
                                     style = DdType.bodySmall,
                                     color = colors.inkTertiary,
                                 )
-                                DdTextAction(
-                                    text = stringResource(R.string.plugins_updates_install),
-                                    onClick = { onUpdate(update.pluginId) },
-                                    color = colors.accent,
-                                )
+                                when {
+                                    update.pluginId in stagedIds -> Text(
+                                        text = stringResource(R.string.plugins_update_staged),
+                                        style = DdType.bodySmall,
+                                        color = colors.inkTertiary,
+                                    )
+
+                                    busyId == update.pluginId -> DdSpinner(size = 16.dp, strokeWidth = 2.dp)
+
+                                    else -> DdTextAction(
+                                        text = stringResource(R.string.plugins_updates_install),
+                                        onClick = { onUpdate(update.pluginId) },
+                                        color = colors.accent,
+                                    )
+                                }
                             }
                         }
+                    }
+                    error?.let { message ->
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = message,
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
                     }
                 }
             }

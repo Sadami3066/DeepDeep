@@ -89,6 +89,10 @@ internal fun PluginsScreen(
     var trustPublisher by remember { mutableStateOf(false) }
     var importBusy by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<Boolean?>(null) }
+    var importError by remember { mutableStateOf<String?>(null) }
+    var updateBusyId by remember { mutableStateOf<String?>(null) }
+    var updateError by remember { mutableStateOf<String?>(null) }
+    var stagedUpdateIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var updates by remember { mutableStateOf<List<PluginUpdateUi>?>(null) }
     var updateBusy by remember { mutableStateOf(false) }
     var sourceSettings by remember { mutableStateOf<PluginSourceSettings?>(null) }
@@ -99,6 +103,7 @@ internal fun PluginsScreen(
             val file = withContext(Dispatchers.IO) { copyToCache(context, uri) } ?: return@launch
             inspection = holder.inspectExternal(file)
             trustPublisher = false
+            importError = null
         }
     }
 
@@ -128,6 +133,8 @@ internal fun PluginsScreen(
             scope.launch {
                 updateBusy = true
                 updates = runCatching { holder.checkExternalUpdates() }.getOrDefault(emptyList())
+                updateError = null
+                stagedUpdateIds = emptySet()
                 updateBusy = false
             }
         },
@@ -140,10 +147,12 @@ internal fun PluginsScreen(
             inspection = current,
             trustPublisher = trustPublisher,
             busy = importBusy,
+            error = importError,
             onTrustChange = { trustPublisher = it },
             onConfirm = {
                 scope.launch {
                     importBusy = true
+                    importError = null
                     val result = holder.installExternal(current.file, current.trusted || trustPublisher)
                     importBusy = false
                     when {
@@ -153,6 +162,7 @@ internal fun PluginsScreen(
                         }
 
                         result.requiresConfirmation -> trustPublisher = true
+                        else -> importError = result.error ?: result.toString()
                     }
                 }
             },
@@ -165,7 +175,26 @@ internal fun PluginsScreen(
     }
 
     updates?.let { list ->
-        PluginUpdatesDialog(updates = list, onUpdate = holder::stageUpdate, onDismiss = { updates = null })
+        PluginUpdatesDialog(
+            updates = list,
+            busyId = updateBusyId,
+            stagedIds = stagedUpdateIds,
+            error = updateError,
+            onUpdate = { pluginId ->
+                scope.launch {
+                    updateBusyId = pluginId
+                    updateError = null
+                    val failure = holder.stageUpdate(pluginId)
+                    updateBusyId = null
+                    if (failure == null) {
+                        stagedUpdateIds = stagedUpdateIds + pluginId
+                    } else {
+                        updateError = failure
+                    }
+                }
+            },
+            onDismiss = { updates = null },
+        )
     }
 
     sourceSettings?.let { settings ->

@@ -95,4 +95,5 @@
     <string name="plugins_source_url">https://example.com/plugins/index.json</string>
     <string name="plugins_source_auto_check">启动时自动检查更新</string>
     <string name="plugins_source_save">保存</string>
+    <string name="plugins_update_staged">已暂存，重启 App 后生效</string>
 </resources>
