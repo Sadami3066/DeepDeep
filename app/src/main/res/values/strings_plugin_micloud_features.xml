@@ -1,6 +1,4 @@
 <resources>
-    <string name="micloud_features_title">云数据开关</string>
-    <string name="micloud_features_login_required">登录小米账号后可开启这些功能</string>
 
     <string name="micloud_feature_notes">笔记</string>
     <string name="micloud_feature_todos">待办</string>

@@ -1,6 +1,4 @@
 <resources>
-    <string name="micloud_features_title">Cloud data</string>
-    <string name="micloud_features_login_required">Sign in to your Xiaomi account to enable these features</string>
 
     <string name="micloud_feature_notes">Notes</string>
     <string name="micloud_feature_todos">To-dos</string>
