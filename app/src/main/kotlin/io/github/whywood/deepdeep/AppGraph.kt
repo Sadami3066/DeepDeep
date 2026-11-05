@@ -123,6 +123,7 @@ class AppGraph(context: Context) : AppDependencies {
     private val appContext = context.applicationContext
     val uiContext: Context = LocalizedContext(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val virtualScreenFeature by lazy { VirtualScreenFeature.install(uiContext, privilege, adbBridge) }
     val appScope: CoroutineScope get() = scope
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
@@ -153,7 +154,7 @@ class AppGraph(context: Context) : AppDependencies {
             adbBridge = adbBridge,
             scope = scope,
         ) {
-            scope.launch { runCatching { pluginManager.refreshNow() } }
+            scope.launch { pluginManager.refreshAndSyncSkills() }
             host.reconfigure()
         }
     }
@@ -291,7 +292,7 @@ class AppGraph(context: Context) : AppDependencies {
             privilege = privilege,
             adbBridge = adbBridge,
             mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
-            virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
+            virtualScreen = virtualScreenFeature,
             screenshotDir = File(appContext.filesDir, "gui/screenshots"),
             onCapabilitiesChanged = { scope.launch { host.reconfigure() } },
             onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
@@ -364,7 +365,7 @@ class AppGraph(context: Context) : AppDependencies {
                                 )
                             McpModelMapping.result(mcpPluginBridge.callTool(server, config, tool, arguments))
                         },
-                        virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
+                        virtualScreen = virtualScreenFeature,
                         screenshotDir = File(appContext.filesDir, "gui/screenshots"),
                         sharedStorageDir = if (isSharedStorageGranted()) File("/storage/emulated/0") else null,
                         bus = pluginBus,
@@ -632,7 +633,7 @@ class AppGraph(context: Context) : AppDependencies {
     }
 }
 
-internal const val PLUGIN_REFRESH_MIN_INTERVAL_MS = 15_000L
+internal const val PLUGIN_REFRESH_MIN_INTERVAL_MS = 120_000L
 
 private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
     RootStatus.Unsupported -> RootToolStatus.Unsupported

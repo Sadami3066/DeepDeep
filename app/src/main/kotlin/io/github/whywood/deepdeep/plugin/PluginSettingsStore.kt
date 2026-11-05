@@ -33,6 +33,13 @@ class PluginSettingsStore(
         }
     }
 
+    suspend fun warm(pluginIds: Collection<String>) = mutex.withLock {
+        withContext(ioDispatcher) {
+            val all = loadLocked()
+            pluginIds.forEach { pluginId -> cache[pluginId] = all[pluginId].orEmpty() }
+        }
+    }
+
     suspend fun set(pluginId: String, key: String, value: String) = mutex.withLock {
         withContext(ioDispatcher) {
             val all = loadLocked().toMutableMap()

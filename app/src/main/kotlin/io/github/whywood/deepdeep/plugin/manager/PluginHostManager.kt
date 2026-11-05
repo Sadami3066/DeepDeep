@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
@@ -59,6 +60,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class PluginHostManager internal constructor(
     private val context: Context,
@@ -93,6 +95,7 @@ class PluginHostManager internal constructor(
     private val busy = AtomicBoolean(false)
     private val confirmWaiter = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val setupCancelled = AtomicBoolean(false)
+    private val setupFinished = AtomicBoolean(false)
     private val setupJob = AtomicReference<Job?>(null)
     private val setupPluginId = AtomicReference<String?>(null)
     private val textResolver = PluginTextResolver(
@@ -106,7 +109,7 @@ class PluginHostManager internal constructor(
 
     override val setupPluginIds: List<String>
         get() = plugins.values
-            .filter { it.manifest.installable && (it.builtin || it.installedVersion != null) }
+            .filter { it.manifest.source == PluginSource.EXTERNAL && it.builtin }
             .map { it.manifest.id }
             .sorted()
 
@@ -157,12 +160,19 @@ class PluginHostManager internal constructor(
                 }
                 attachExternalHandle(record)
             }
+            settingsStore.warm(plugins.keys)
             plugins.values.forEach { managed ->
-                if (managed.installable()) {
+                if (managed.enabled && (managed.installedVersion != null || !managed.installable())) {
                     runCatching { managed.plugin?.onSettingsChanged(managed.host, settingsFor(managed)) }
                 }
             }
             refreshLocked()
+            plugins.values.forEach { managed ->
+                if (managed.enabled && (managed.installedVersion != null || !managed.installable())) {
+                    runCatching { managed.plugin?.onEnable(managed.host) }
+                    syncSkillsLocked(managed)
+                }
+            }
             scheduleUpdateCheck()
         } finally {
             _state.update { it.copy(loading = false) }
@@ -185,6 +195,15 @@ class PluginHostManager internal constructor(
         scope.launch { refreshNow() }
     }
 
+    override fun refreshAndSyncSkills() {
+        scope.launch {
+            refreshNow()
+            mutex.withLock {
+                plugins.values.forEach { managed -> syncSkillsLocked(managed) }
+            }
+        }
+    }
+
     override fun refreshIfStale(minIntervalMillis: Long) {
         if (System.currentTimeMillis() - lastRefreshAt < minIntervalMillis) return
         refresh()
@@ -194,9 +213,16 @@ class PluginHostManager internal constructor(
 
     override fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool> {
         val snapshot = registrySnapshot
-        val session = binding.current()
-            ?.let { PluginSessionInfo(it.sessionId, it.cwd, it.sessionFile, binding.supportsChatDelivery) }
-            ?: PluginSessionInfo("", "", null, binding.supportsChatDelivery)
+        val session = PluginSessionInfo(binding.supportsChatDelivery) {
+            binding.current()?.let { bound ->
+                io.github.whywood.deepdeep.plugin.api.PluginSessionSnapshot(
+                    sessionId = bound.sessionId,
+                    file = bound.sessionFile,
+                    cwd = bound.cwd,
+                )
+            }
+        }
+        val sessionId = { binding.current()?.sessionId.orEmpty() }
         val activeIds = snapshot.plugins
             .filter { descriptor -> plugins[descriptor.id]?.isActive() == true }
             .map { it.id }
@@ -208,7 +234,7 @@ class PluginHostManager internal constructor(
                     managed.error = error.message
                     Contributions()
                 }
-            PluginToolAdapter.toCodingTools(contributions.tools, session.sessionId)
+            PluginToolAdapter.toCodingTools(contributions.tools, sessionId)
         }.distinctBy { it.name }
     }
 
@@ -276,6 +302,7 @@ class PluginHostManager internal constructor(
         scope.launch {
             launchBusy {
                 val managed = plugins[pluginId] ?: return@launchBusy
+                if (!managed.manifest.installable) return@launchBusy
                 installInternal(managed)
                 refreshLocked()
                 syncSkillsLocked(managed)
@@ -291,7 +318,9 @@ class PluginHostManager internal constructor(
     override fun uninstall(pluginId: String) {
         scope.launch {
             launchBusy {
-                val managed = plugins.remove(pluginId) ?: return@launchBusy
+                val managed = plugins[pluginId] ?: return@launchBusy
+                if (!managed.manifest.installable) return@launchBusy
+                plugins.remove(pluginId)
                 if (managed.builtin) {
                     runCatching { managed.plugin?.uninstall(managed.host) }
                     builtinStateStore.remove(pluginId)
@@ -343,8 +372,9 @@ class PluginHostManager internal constructor(
         scope.launch {
             val status = runCatching { managed.plugin?.status(managed.host) }.getOrNull()
             if (status is PluginStatus.Ready) {
-                externalReady = true
                 completeConfirm(true)
+                setupFinished.set(true)
+                setupJob.getAndSet(null)?.cancel()
                 _state.update { it.copy(interaction = null) }
                 onSetupReady(interaction.title)
             }
@@ -359,8 +389,7 @@ class PluginHostManager internal constructor(
         setupCancelled.set(true)
         setupJob.getAndSet(null)?.cancel()
         completeConfirm(false)
-        busy.set(false)
-        _state.update { it.copy(interaction = null, busy = false) }
+        _state.update { it.copy(interaction = null) }
     }
 
     override fun cancelSetup(pluginId: String) {
@@ -371,6 +400,7 @@ class PluginHostManager internal constructor(
     override suspend fun setup(pluginId: String): PluginSetupResult {
         setupPluginId.set(pluginId)
         setupCancelled.set(false)
+        setupFinished.set(false)
         return try {
             setupInternal(pluginId)
         } finally {
@@ -394,10 +424,20 @@ class PluginHostManager internal constructor(
                 return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_busy))
             }
             try {
-                if (!awaitInstall(managed, plugin)) {
+                if (!awaitInstall(managed)) {
                     return PluginSetupResult(false, pluginId, false, false, cancelled = setupCancelled.get())
                 }
-                installInternal(managed)
+                val installCall = scope.async { installInternal(managed) }
+                setupJob.set(installCall)
+                try {
+                    installCall.await()
+                } catch (error: CancellationException) {
+                    installCall.cancel()
+                    if (!setupCancelled.get()) throw error
+                    return PluginSetupResult(false, pluginId, false, false, cancelled = true)
+                } finally {
+                    setupJob.compareAndSet(installCall, null)
+                }
             } finally {
                 finishBusy()
             }
@@ -419,9 +459,15 @@ class PluginHostManager internal constructor(
                 if (setupCancelled.get()) cancelled = true
             } catch (error: CancellationException) {
                 call.cancel()
-                if (!setupCancelled.get()) throw error
-                cancelled = true
-                if (!currentCoroutineContext().isActive) throw error
+                when {
+                    setupCancelled.get() -> {
+                        cancelled = true
+                        if (!currentCoroutineContext().isActive) throw error
+                    }
+
+                    setupFinished.get() -> Unit
+                    else -> throw error
+                }
             }
             refreshNow()
             val status = runCatching { plugin.status(managed.host) }.getOrNull()
@@ -438,6 +484,7 @@ class PluginHostManager internal constructor(
             PluginSetupResult(false, pluginId, true, false, error = error.message)
         } finally {
             setupJob.compareAndSet(call, null)
+            setupFinished.set(false)
             finishBusy()
         }
     }
@@ -479,36 +526,43 @@ class PluginHostManager internal constructor(
 
     override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi {
         val runtime = external ?: return ExternalInstallUi(false, strings.get(R.string.plugins_error_unknown))
-        return try {
-            when (val result = runtime.install(file, acceptPublisher)) {
-                is InstallResult.Installed -> {
-                    runtime.activate(result.record)
-                    activateRecordLocked(result.record)
-                    refreshNow()
-                    ExternalInstallUi(true, null, restartRequired = false)
-                }
-
-                is InstallResult.Staged -> {
-                    plugins[result.record.id]?.let { managed ->
-                        managed.phase = PluginPhase.PENDING_RESTART
-                        registry.updatePhase(result.record.id, PluginPhase.PENDING_RESTART)
+        return withContext(Dispatchers.IO) {
+            try {
+                when (val result = runtime.install(file, acceptPublisher)) {
+                    is InstallResult.Installed -> {
+                        runtime.activate(result.record)
+                        activateRecordLocked(result.record)
+                        refreshNow()
+                        plugins[result.record.id]?.let { managed ->
+                            runCatching { managed.plugin?.onEnable(managed.host) }
+                            syncSkillsLocked(managed)
+                        }
+                        onContributionsChanged()
+                        ExternalInstallUi(true, null, restartRequired = false)
                     }
-                    refreshNow()
-                    ExternalInstallUi(true, null, restartRequired = true)
+
+                    is InstallResult.Staged -> {
+                        plugins[result.record.id]?.let { managed ->
+                            managed.phase = PluginPhase.PENDING_RESTART
+                            registry.updatePhase(result.record.id, PluginPhase.PENDING_RESTART)
+                        }
+                        refreshNow()
+                        ExternalInstallUi(true, null, restartRequired = true)
+                    }
+
+                    is InstallResult.AlreadyInstalled -> ExternalInstallUi(true, null)
+
+                    is InstallResult.NeedsPublisherConfirmation -> ExternalInstallUi(
+                        success = false,
+                        error = null,
+                        requiresConfirmation = true,
+                    )
+
+                    is InstallResult.Rejected -> ExternalInstallUi(false, rejectionText(result.reason))
                 }
-
-                is InstallResult.AlreadyInstalled -> ExternalInstallUi(true, null)
-
-                is InstallResult.NeedsPublisherConfirmation -> ExternalInstallUi(
-                    success = false,
-                    error = null,
-                    requiresConfirmation = true,
-                )
-
-                is InstallResult.Rejected -> ExternalInstallUi(false, rejectionText(result.code, result.reason))
+            } catch (error: Exception) {
+                ExternalInstallUi(false, error.message)
             }
-        } catch (error: Exception) {
-            ExternalInstallUi(false, error.message)
         }
     }
 
@@ -608,12 +662,14 @@ class PluginHostManager internal constructor(
     private suspend fun installInternal(managed: ManagedPlugin) {
         val plugin = managed.plugin ?: throw IllegalStateException(managed.error ?: "plugin unavailable")
         val label = textResolver.resolve(managed.manifest.name)
+        val firstInstall = managed.installedVersion == null
         setOperation(managed.manifest.id, label, strings.get(R.string.plugins_stage_preparing))
         notifyInstall(label, strings.get(R.string.plugins_stage_preparing), null)
         try {
             plugin.install(managed.host, progressUi(managed, label))
             managed.installedVersion = managed.manifest.version
             managed.phase = PluginPhase.INSTALLED
+            managed.error = null
             if (managed.builtin) {
                 builtinStateStore.upsert(
                     managed.manifest.id,
@@ -624,7 +680,8 @@ class PluginHostManager internal constructor(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            runCatching { plugin.uninstall(managed.host) }
+            managed.error = error.message
+            if (firstInstall) runCatching { plugin.uninstall(managed.host) }
             notifyInstallFinished(label, false, error.message)
             throw error
         } finally {
@@ -930,8 +987,17 @@ class PluginHostManager internal constructor(
         object : io.github.whywood.deepdeep.plugin.api.PluginProgress {
             override fun report(percent: Int?, label: LocalizedText) {
                 val stage = textResolver.resolve(label)
-                _state.update {
-                    it.copy(operation = PluginOperation(managed.manifest.id, label(managed), stage, percent))
+                _state.update { state ->
+                    state.copy(
+                        operation = PluginOperation(managed.manifest.id, label(managed), stage, percent),
+                        interaction = state.interaction?.let { interaction ->
+                            if (interaction.pluginId == managed.manifest.id) {
+                                interaction.copy(stageTitle = stage, progress = percent)
+                            } else {
+                                interaction
+                            }
+                        },
+                    )
                 }
                 notifyInstall(label(managed), stage, percent)
             }
@@ -939,7 +1005,7 @@ class PluginHostManager internal constructor(
 
     private fun label(managed: ManagedPlugin): String = textResolver.resolve(managed.manifest.name)
 
-    private suspend fun awaitInstall(managed: ManagedPlugin, plugin: DeepDeepPlugin): Boolean {
+    private suspend fun awaitInstall(managed: ManagedPlugin): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         confirmWaiter.set(deferred)
         _state.update {
@@ -957,7 +1023,19 @@ class PluginHostManager internal constructor(
             deferred.await()
         } finally {
             confirmWaiter.set(null)
-            _state.update { it.copy(interaction = null) }
+        }
+        _state.update { state ->
+            state.copy(
+                interaction = if (confirmed) {
+                    state.interaction?.copy(
+                        confirmInstall = false,
+                        stageTitle = strings.get(R.string.plugins_stage_installing),
+                        stageMessage = null,
+                    )
+                } else {
+                    null
+                },
+            )
         }
         return confirmed
     }
@@ -1005,13 +1083,7 @@ class PluginHostManager internal constructor(
         _state.update { it.copy(error = message) }
     }
 
-    private fun rejectionText(code: InstallRejection, reason: String): String = reason
-
-    private var externalReady = false
-
-    private fun finishExternalReady() {
-        externalReady = false
-    }
+    private fun rejectionText(reason: String): String = reason
 
     private data class ManagedPlugin(
         var manifest: PluginManifest,
@@ -1034,10 +1106,6 @@ class PluginHostManager internal constructor(
     private object PlaceholderPlugin : DeepDeepPlugin {
         override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Unavailable("")
         override suspend fun status(host: PluginHost): PluginStatus = PluginStatus.Failed("")
-    }
-
-    private companion object {
-        const val REFRESH_STALE_MS = 15_000L
     }
 }
 

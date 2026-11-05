@@ -44,6 +44,21 @@ class PluginSettingsStoreTest {
     }
 
     @Test
+    fun warmPrimesCacheForAllPlugins() = runTest {
+        settingsFile().parentFile?.mkdirs()
+        settingsFile().writeText(
+            """{"schemaVersion":1,"plugins":{"goal":{"max_rounds":"4"},"jobs":{"max_running":"2"}}}""",
+        )
+        val store = PluginSettingsStore(settingsFile(), StandardTestDispatcher(testScheduler))
+
+        store.warm(listOf("goal", "jobs", "missing"))
+
+        assertEquals(4, store.cachedInt("goal", "max_rounds", 0))
+        assertEquals(2, store.cachedInt("jobs", "max_running", 10))
+        assertEquals(9, store.cachedInt("missing", "max_rounds", 9))
+    }
+
+    @Test
     fun brokenFileFallsBackAndThenRecovers() = runTest {
         settingsFile().parentFile?.mkdirs()
         settingsFile().writeText("not json")

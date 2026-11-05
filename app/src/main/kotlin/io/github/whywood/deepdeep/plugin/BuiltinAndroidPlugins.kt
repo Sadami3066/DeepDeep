@@ -70,6 +70,7 @@ internal fun androidMiCloudManifest(): PluginManifest = PluginManifest(
     sizeLabel = LocalizedText.Resource(R.string.plugin_micloud_size),
     icon = IconRef.Resource(DdIcons.Cloud.res),
     source = PluginSource.EXTERNAL,
+    installable = false,
     provides = Provides(
         tools = MICLOUD_TOOLS,
         skills = listOf("deepdeep-micloud"),

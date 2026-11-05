@@ -38,6 +38,7 @@ internal fun cliFeishuManifest(): PluginManifest = builtinPluginManifest(
     sizeLabelRes = R.string.plugin_feishu_size,
     skills = listOf(FEISHU_SKILL_ID),
     source = PluginSource.EXTERNAL,
+    installable = true,
     tintIcon = false,
 )
 
@@ -61,6 +62,7 @@ internal fun cliWecomManifest(): PluginManifest = builtinPluginManifest(
     sizeLabelRes = R.string.plugin_wecom_size,
     skills = listOf(WECOM_SKILL_ID),
     source = PluginSource.EXTERNAL,
+    installable = true,
 )
 
 internal fun cliJwxt(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
@@ -82,4 +84,5 @@ internal fun cliJwxtManifest(): PluginManifest = builtinPluginManifest(
     skills = listOf(JwxtCli.SKILL_ID),
     settings = listOf(JWXT_SETTING_NETID, JWXT_SETTING_PASSWORD),
     source = PluginSource.EXTERNAL,
+    installable = true,
 )

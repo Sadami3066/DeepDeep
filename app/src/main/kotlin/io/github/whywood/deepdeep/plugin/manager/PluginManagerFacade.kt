@@ -29,7 +29,9 @@ interface PluginManagerFacade : PluginController {
 
     fun refresh()
 
-    fun refreshIfStale(minIntervalMillis: Long = 15_000L)
+    fun refreshAndSyncSkills()
+
+    fun refreshIfStale(minIntervalMillis: Long = 120_000L)
 
     fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool>
 
