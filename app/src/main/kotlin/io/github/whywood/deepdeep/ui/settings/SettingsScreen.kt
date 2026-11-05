@@ -99,6 +99,7 @@ fun SettingsScreen(
     onOpenPrivacy: () -> Unit,
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
+    onLanguageChange: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -246,6 +247,7 @@ fun SettingsScreen(
                         if (selected != language) {
                             language = selected
                             languagePreferences.save(selected)
+                            onLanguageChange()
                             Handler(Looper.getMainLooper()).post {
                                 context.findActivity()?.recreate()
                             }

@@ -58,6 +58,8 @@
     <string name="mcp_error_name_duplicate">已有同名服务器</string>
     <string name="mcp_error_url_invalid">地址需以 http:// 或 https:// 开头</string>
     <string name="mcp_error_headers_invalid">请求头格式应为 Key: Value</string>
+    <string name="mcp_error_not_found">服务器配置不存在</string>
+    <string name="mcp_error_json_invalid">JSON 配置不正确</string>
     <string name="mcp_error_save_failed">保存失败</string>
     <string name="mcp_error_delete_failed">删除失败</string>
     <string name="mcp_error_toggle_failed">切换启用状态失败</string>

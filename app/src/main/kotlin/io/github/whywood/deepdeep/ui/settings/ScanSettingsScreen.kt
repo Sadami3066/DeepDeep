@@ -505,7 +505,7 @@ private fun StrategyEditorDialog(
                 FormField(stringResource(R.string.scan_settings_field_host), hosts, { hosts = it }, "example.com, example.cn")
                 FormField(stringResource(R.string.scan_settings_field_scheme), schemes, { schemes = it }, "example")
                 FormField(stringResource(R.string.scan_settings_field_contains), contains, { contains = it }, "brand")
-                FormField(stringResource(R.string.scan_settings_field_regex), regex, { regex = it }, "每行一条", singleLine = false)
+                FormField(stringResource(R.string.scan_settings_field_regex), regex, { regex = it }, stringResource(R.string.scan_settings_hint_lines), singleLine = false)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     DdChip(
                         text = stringResource(R.string.scan_settings_kind_uri),
@@ -521,7 +521,7 @@ private fun StrategyEditorDialog(
                 }
                 Spacer(Modifier.height(10.dp))
                 if (uriKind) {
-                    FormField(stringResource(R.string.scan_settings_field_uri), uri, { uri = it }, "https://… 或 scheme://…")
+                    FormField(stringResource(R.string.scan_settings_field_uri), uri, { uri = it }, stringResource(R.string.scan_settings_hint_uri))
                 } else {
                     FormField(stringResource(R.string.scan_settings_field_activity), activity, { activity = it }, "com.example.app.ScanActivity")
                     FormField(stringResource(R.string.scan_settings_field_action), action, { action = it }, "android.intent.action.VIEW")

@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -393,7 +394,7 @@ fun DdSheetHeader(
         DdIconButton(
             icon = DdIcons.Close,
             onClick = onClose,
-            contentDescription = "关闭",
+            contentDescription = stringResource(R.string.dd_close),
             tint = colors.inkSecondary,
             iconSize = 20.dp,
         )

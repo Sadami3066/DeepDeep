@@ -1,7 +1,9 @@
 package io.github.whywood.deepdeep.data
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.res.Configuration
+import android.content.res.Resources
 import java.util.Locale
 
 enum class AppLanguage(val tag: String) {
@@ -34,12 +36,33 @@ class LanguagePreferences(context: Context) {
         private const val FILE_NAME = "language_settings"
         private const val KEY_LANGUAGE = "language"
 
-        fun wrap(context: Context): Context {
-            val locale = LanguagePreferences(context).read().locale ?: return context
+        fun wrap(context: Context): Context = wrap(context, LanguagePreferences(context).read())
+
+        fun wrap(context: Context, language: AppLanguage): Context {
+            val locale = language.locale ?: return context
             val configuration = Configuration(context.resources.configuration)
             configuration.setLocale(locale)
             configuration.setLayoutDirection(locale)
             return context.createConfigurationContext(configuration)
         }
     }
+}
+
+class LocalizedContext(base: Context) : ContextWrapper(base) {
+    private val preferences = LanguagePreferences(base)
+
+    @Volatile
+    private var cached: Pair<AppLanguage, Context>? = null
+
+    private fun localized(): Context {
+        val language = preferences.read()
+        cached?.let { (cachedLanguage, context) ->
+            if (cachedLanguage == language) return context
+        }
+        val context = LanguagePreferences.wrap(baseContext, language)
+        cached = language to context
+        return context
+    }
+
+    override fun getResources(): Resources = localized().resources
 }

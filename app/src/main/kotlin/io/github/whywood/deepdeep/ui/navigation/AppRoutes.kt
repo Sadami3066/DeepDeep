@@ -140,6 +140,7 @@ internal fun AppRouteContent(
             onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
             archivedCount = state.archivedCount,
             onOpenArchived = { navigator.push(AppDestination.Archived) },
+            onLanguageChange = { dependencies.pluginManager.refresh() },
         )
 
         AppDestination.Providers -> ProviderListScreen(

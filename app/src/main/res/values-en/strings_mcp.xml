@@ -58,6 +58,8 @@
     <string name="mcp_error_name_duplicate">A server with this name already exists</string>
     <string name="mcp_error_url_invalid">URL must start with http:// or https://</string>
     <string name="mcp_error_headers_invalid">Each header must be Key: Value</string>
+    <string name="mcp_error_not_found">Server configuration not found</string>
+    <string name="mcp_error_json_invalid">Invalid JSON configuration</string>
     <string name="mcp_error_save_failed">Could not save</string>
     <string name="mcp_error_delete_failed">Could not delete</string>
     <string name="mcp_error_toggle_failed">Could not change enabled state</string>

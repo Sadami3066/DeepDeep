@@ -82,13 +82,17 @@ internal fun McpEditorSheet(
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<McpProbeResult?>(null) }
     var showDelete by remember { mutableStateOf(false) }
+    val notFoundMessage = stringResource(R.string.mcp_error_not_found)
+    val jsonInvalidMessage = stringResource(R.string.mcp_error_json_invalid)
+    val saveFailedMessage = stringResource(R.string.mcp_error_save_failed)
+    val deleteFailedMessage = stringResource(R.string.mcp_error_delete_failed)
 
     LaunchedEffect(target.name) {
         if (!loaded && !missing) {
             val stored = store.entryJson(target.name)
             if (stored == null) {
                 missing = true
-                error = "服务器配置不存在"
+                error = notFoundMessage
             } else {
                 text = stored
                 loaded = true
@@ -120,14 +124,14 @@ internal fun McpEditorSheet(
                     onCommitted()
                     onDismiss()
                 },
-                onFailure = { failure -> error = failure.message ?: "保存失败" },
+                onFailure = { failure -> error = failure.message ?: saveFailedMessage },
             )
         }
     }
 
     fun test() {
         val entry = parsed ?: run {
-            error = "JSON 配置不正确"
+            error = jsonInvalidMessage
             return
         }
         if (testing || saving) return
@@ -153,7 +157,7 @@ internal fun McpEditorSheet(
                 onCommitted()
                 onDismiss()
             } else {
-                error = "删除失败"
+                error = deleteFailedMessage
             }
         }
     }

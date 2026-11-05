@@ -7,6 +7,7 @@ import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBootstrap
+import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.plugin.PluginAction
 import io.github.whywood.deepdeep.plugin.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.PluginAvailability
@@ -95,13 +96,14 @@ class VirtualScreenFeature internal constructor(
             adb: AdbBootstrap,
         ): VirtualScreenFeature {
             val appContext = context.applicationContext
+            val localizedContext = LocalizedContext(appContext)
             val engine = VirtualScreenRuntime.install(
                 VirtualScreenEngine(
-                    appContext,
+                    localizedContext,
                     PrivilegedLauncher(appContext, adb, privilege),
                 ),
             )
-            return VirtualScreenFeature(appContext, EngineScreen(engine))
+            return VirtualScreenFeature(localizedContext, EngineScreen(engine))
         }
     }
 }

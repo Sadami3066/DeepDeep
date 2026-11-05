@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -106,6 +107,7 @@ import kotlinx.coroutines.withContext
 
 class AppGraph(context: Context) : AppDependencies {
     private val appContext = context.applicationContext
+    val uiContext: Context = LocalizedContext(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val appScope: CoroutineScope get() = scope
     private val jobWake = MutableStateFlow(true)
@@ -146,7 +148,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val appPreferences = AppPreferences(appContext)
     override val voicePreferences = VoicePreferences(appContext)
     override val overlayEntryPreferences = OverlayEntryPreferences(appContext)
-    override val shareStaging = ShareStaging(appContext)
+    override val shareStaging = ShareStaging(uiContext)
 
     fun linuxBinds(): List<Pair<File, String>> = listOf(File("/data") to "/data")
 
@@ -205,7 +207,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
     override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
-    private val pluginStrings = AndroidPluginStrings(appContext)
+    private val pluginStrings = AndroidPluginStrings(uiContext)
     override val goalService: GoalService by lazy { GoalService() }
     override val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -225,14 +227,14 @@ class AppGraph(context: Context) : AppDependencies {
         PluginManager(
             plugins = listOf(
                 FeishuPlugin(
-                    context = appContext,
+                    context = uiContext,
                     linux = linuxEnvironment,
                     linuxSettings = linuxSettings,
                     downloader = PluginDownloader(),
                     cacheDir = appContext.cacheDir,
                 ),
                 WebSearchPlugin(
-                    context = appContext,
+                    context = uiContext,
                     apiKeyProvider = {
                         credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
                             credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
@@ -241,15 +243,15 @@ class AppGraph(context: Context) : AppDependencies {
                     },
                 ),
                 GuiPlugin(
-                    context = appContext,
+                    context = uiContext,
                     screenshotDir = File(appContext.filesDir, "gui/screenshots"),
                     mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
                     privilege = privilege,
-                    virtualScreen = VirtualScreenFeature.install(appContext, privilege, adbBridge),
+                    virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
                 ),
-                ArrangePlugin(context = appContext),
+                ArrangePlugin(context = uiContext),
                 MiCloudPlugin(
-                    context = appContext,
+                    context = uiContext,
                     onCapabilitiesChanged = {
                         scope.launch { host.reconfigure() }
                     },
@@ -258,14 +260,14 @@ class AppGraph(context: Context) : AppDependencies {
                     },
                 ),
                 WecomPlugin(
-                    context = appContext,
+                    context = uiContext,
                     linux = linuxEnvironment,
                     linuxSettings = linuxSettings,
                     downloader = PluginDownloader(),
                     workspaceDir = homeDir,
                 ),
                 JwxtPlugin(
-                    context = appContext,
+                    context = uiContext,
                     linux = linuxEnvironment,
                     linuxSettings = linuxSettings,
                 ),
@@ -427,7 +429,7 @@ class AppGraph(context: Context) : AppDependencies {
     )
 
     val notificationCenter: NotificationCenter by lazy {
-        NotificationCenter(appContext, host, questionCenter.pending)
+        NotificationCenter(uiContext, host, questionCenter.pending)
     }
     override val timerService: TimerService by lazy {
         TimerService(
@@ -437,7 +439,7 @@ class AppGraph(context: Context) : AppDependencies {
             intentsFile = File(appContext.filesDir, "timers/delivery-intents.json"),
         )
     }
-    override val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }
+    override val devPackageManager: DevPackageManager by lazy { DevPackageManager(uiContext, linuxEnvironment, notificationCenter) }
 
     init {
         scope.launch {

@@ -2,11 +2,15 @@ package io.github.whywood.deepdeep.plugin
 
 import android.content.Context
 import androidx.annotation.StringRes
+import io.github.whywood.deepdeep.data.LocalizedContext
 
 class AndroidPluginStrings(
-    private val context: Context,
+    context: Context,
 ) : PluginStrings {
-    override fun get(@StringRes id: Int): String = context.getString(id)
+    private val localized = LocalizedContext(context)
 
-    override fun format(@StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+    override fun get(@StringRes id: Int): String = localized.resources.getString(id)
+
+    override fun format(@StringRes id: Int, vararg args: Any): String =
+        localized.resources.getString(id, *args)
 }

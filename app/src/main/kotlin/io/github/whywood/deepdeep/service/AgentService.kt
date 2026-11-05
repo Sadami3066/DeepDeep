@@ -98,7 +98,7 @@ class AgentService : Service() {
                         pluginId = interaction.pluginId,
                         pluginName = state.plugins
                             .firstOrNull { it.plugin.id == interaction.pluginId }
-                            ?.plugin?.let { getString(it.nameRes) }
+                            ?.plugin?.let { graph.uiContext.getString(it.nameRes) }
                             ?: interaction.pluginId,
                         stage = interaction.stageTitle,
                     )

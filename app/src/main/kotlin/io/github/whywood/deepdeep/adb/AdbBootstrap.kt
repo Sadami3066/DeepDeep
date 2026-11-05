@@ -8,6 +8,7 @@ import io.github.muntashirakon.adb.AdbPairingRequiredException
 import io.github.muntashirakon.adb.AdbStream
 import io.github.muntashirakon.adb.android.AdbMdns
 import io.github.whywood.deepdeep.runtime.RootCommandResult
+import io.github.whywood.deepdeep.data.LocalizedContext
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,7 +28,7 @@ data class AdbEndpoint(val host: String, val port: Int)
 class AdbBootstrap(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    private val notifier = AdbPairingNotifier(appContext)
+    private val notifier = AdbPairingNotifier(LocalizedContext(appContext))
     private val operationLock = Mutex()
     private val manager by lazy { LocalAdbManager(appContext) }
     private val shell by lazy { ShellClient(daemonPort, token) }

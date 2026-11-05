@@ -60,6 +60,8 @@
     <string name="scan_settings_field_fallback">Open app home when launch fails</string>
     <string name="scan_settings_field_launch">Launch</string>
     <string name="scan_settings_field_note">Note</string>
+    <string name="scan_settings_hint_lines">One per line</string>
+    <string name="scan_settings_hint_uri">https://… or scheme://…</string>
     <string name="scan_settings_kind_uri">URI</string>
     <string name="scan_settings_kind_component">Component</string>
     <string name="scan_settings_invalid_package">Package name is required</string>

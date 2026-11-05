@@ -37,7 +37,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.assistant.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
-import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
@@ -83,7 +83,7 @@ class FloatingWindowController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val feedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope, pluginSetup) { AppVisibility.foreground }
-    private val windowContext = LanguagePreferences.wrap(context.applicationContext)
+    private val windowContext = LocalizedContext(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)
     private val previewOpen = MutableStateFlow(false)
@@ -520,7 +520,7 @@ class FloatingWindowController(
         if (!settingsState.value.enabled || !Settings.canDrawOverlays(context)) return
         if (previewOpen.value) return
         previewOpen.value = true
-        Toast.makeText(context, R.string.floating_preview_auto_hint, Toast.LENGTH_LONG).show()
+        Toast.makeText(windowContext, R.string.floating_preview_auto_hint, Toast.LENGTH_LONG).show()
     }
 
     private fun removeSurfaceWindow() {

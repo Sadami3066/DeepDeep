@@ -169,6 +169,7 @@
     <string name="dev_bundle_dev">开发编程</string>
     <string name="dev_package_curl">命令行请求 HTTP 接口</string>
     <string name="dev_package_wget">下载网页与文件</string>
+    <string name="dev_package_ca_certificates_name">CA 证书</string>
     <string name="dev_package_ca_certificates">校验 HTTPS 站点证书</string>
     <string name="dev_package_jq">解析与筛选 JSON</string>
     <string name="dev_package_python3">运行 Python 脚本</string>
@@ -182,10 +183,14 @@
     <string name="dev_package_unzip">解压 zip 文件</string>
     <string name="dev_package_zip">创建 zip 压缩包</string>
     <string name="dev_package_tree">树形查看目录结构</string>
+    <string name="dev_package_pdf_name">PDF 工具</string>
     <string name="dev_package_pdf">PDF 转文本与图片</string>
     <string name="dev_package_qpdf">PDF 合并、拆分与加密</string>
+    <string name="dev_package_excel_name">Excel 读写</string>
     <string name="dev_package_excel">读写 Excel 文件</string>
+    <string name="dev_package_excel_writer_name">Excel 生成</string>
     <string name="dev_package_excel_writer">生成 Excel 文件</string>
+    <string name="dev_package_image_name">图像处理</string>
     <string name="dev_package_image">图片裁剪与处理</string>
     <string name="dev_package_ocr">识别图片中的文字</string>
     <string name="dev_package_git">版本管理与仓库操作</string>

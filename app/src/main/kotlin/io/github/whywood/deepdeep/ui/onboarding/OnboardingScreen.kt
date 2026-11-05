@@ -168,6 +168,7 @@ fun OnboardingScreen(
         if (next.tag == languageTag) return
         languageTag = next.tag
         languagePreferences.save(next)
+        graph.pluginManager.refresh()
         Handler(Looper.getMainLooper()).post { context.findActivity()?.recreate() }
     }
 

@@ -234,7 +234,7 @@ private fun DevBundleDetailDialog(
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    text = packageInfo.displayName,
+                                    text = packageInfo.displayNameRes?.let { stringResource(it) } ?: packageInfo.displayName,
                                     style = DdType.body,
                                     color = colors.ink,
                                     maxLines = 1,

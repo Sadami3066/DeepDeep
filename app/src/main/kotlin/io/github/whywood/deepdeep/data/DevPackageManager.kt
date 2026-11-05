@@ -78,7 +78,7 @@ class DevPackageManager(
 
     fun installPackage(packageId: String) {
         val packageInfo = DevPackageCatalog.packageById(packageId) ?: return
-        install(listOf(packageId), packageInfo.displayName)
+        install(listOf(packageId), packageInfo.label(context))
     }
 
     fun uninstallPackage(packageId: String) {
@@ -92,7 +92,7 @@ class DevPackageManager(
         scope.launch {
             _state.update {
                 it.copy(
-                    operation = DevPackageOperation(context.getString(R.string.dev_uninstalling, packageInfo.displayName)),
+                    operation = DevPackageOperation(context.getString(R.string.dev_uninstalling, packageInfo.label(context))),
                     error = null,
                 )
             }

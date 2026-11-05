@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.data
 
+import android.content.Context
 import androidx.annotation.StringRes
 import io.github.whywood.deepdeep.R
 
@@ -8,7 +9,11 @@ data class DevPackage(
     val displayName: String,
     val sizeLabel: String,
     @StringRes val descriptionRes: Int,
+    @StringRes val displayNameRes: Int? = null,
 )
+
+fun DevPackage.label(context: Context): String =
+    displayNameRes?.let(context::getString) ?: displayName
 
 data class DevBundle(
     val id: String,
@@ -23,7 +28,7 @@ object DevPackageCatalog {
     val packages = listOf(
         DevPackage("curl", "curl", "~1 MB", R.string.dev_package_curl),
         DevPackage("wget", "wget", "~1 MB", R.string.dev_package_wget),
-        DevPackage("ca-certificates", "CA 证书", "<1 MB", R.string.dev_package_ca_certificates),
+        DevPackage("ca-certificates", "CA certificates", "<1 MB", R.string.dev_package_ca_certificates, displayNameRes = R.string.dev_package_ca_certificates_name),
         DevPackage("jq", "jq", "<1 MB", R.string.dev_package_jq),
         DevPackage("python3", "Python 3", "~40 MB", R.string.dev_package_python3),
         DevPackage("py3-pip", "pip", "~10 MB", R.string.dev_package_pip),
@@ -36,11 +41,11 @@ object DevPackageCatalog {
         DevPackage("unzip", "unzip", "<1 MB", R.string.dev_package_unzip),
         DevPackage("zip", "zip", "<1 MB", R.string.dev_package_zip),
         DevPackage("tree", "tree", "<1 MB", R.string.dev_package_tree),
-        DevPackage("poppler-utils", "PDF 工具", "~20 MB", R.string.dev_package_pdf),
+        DevPackage("poppler-utils", "PDF tools", "~20 MB", R.string.dev_package_pdf, displayNameRes = R.string.dev_package_pdf_name),
         DevPackage("qpdf", "qpdf", "~8 MB", R.string.dev_package_qpdf),
-        DevPackage("py3-openpyxl", "Excel 读写", "~115 MB", R.string.dev_package_excel),
-        DevPackage("py3-xlsxwriter", "Excel 生成", "~2 MB", R.string.dev_package_excel_writer),
-        DevPackage("py3-pillow", "图像处理", "~10 MB", R.string.dev_package_image),
+        DevPackage("py3-openpyxl", "Excel read/write", "~115 MB", R.string.dev_package_excel, displayNameRes = R.string.dev_package_excel_name),
+        DevPackage("py3-xlsxwriter", "Excel generation", "~2 MB", R.string.dev_package_excel_writer, displayNameRes = R.string.dev_package_excel_writer_name),
+        DevPackage("py3-pillow", "Image processing", "~10 MB", R.string.dev_package_image, displayNameRes = R.string.dev_package_image_name),
         DevPackage("tesseract-ocr", "OCR", "~35 MB", R.string.dev_package_ocr),
         DevPackage("git", "Git", "~10 MB", R.string.dev_package_git),
         DevPackage("github-cli", "GitHub CLI", "~45 MB", R.string.dev_package_github_cli),

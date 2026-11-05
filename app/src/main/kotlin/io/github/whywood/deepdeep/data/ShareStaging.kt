@@ -34,6 +34,7 @@ data class ShareStagingResult(
 
 class ShareStaging(context: Context) {
     private val appContext = context.applicationContext
+    private val messageContext = LocalizedContext(appContext)
     private val root = File(appContext.cacheDir, DIRECTORY)
     private val resolver: ContentResolver = appContext.contentResolver
 
@@ -91,8 +92,8 @@ class ShareStaging(context: Context) {
     }
 
     fun messageFor(failure: ShareStageFailure): String = when (failure) {
-        is ShareStageFailure.TooLarge -> appContext.getString(R.string.share_error_too_large, failure.name)
-        is ShareStageFailure.Unreadable -> appContext.getString(R.string.share_error_unreadable, failure.name)
+        is ShareStageFailure.TooLarge -> messageContext.getString(R.string.share_error_too_large, failure.name)
+        is ShareStageFailure.Unreadable -> messageContext.getString(R.string.share_error_unreadable, failure.name)
     }
 
     private data class Meta(val name: String, val mime: String, val size: Long)
