@@ -6,7 +6,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 
 目录级速查（文件 → 职责）写在各级 `AGENTS.md` 里：开始任务先读本文件，再读目标目录树的 `AGENTS.md`；新增目录按同样格式补一份。
 
-- 产品能力与边界：[docs/GUIDE.md](docs/GUIDE.md)；设计取舍：[docs/DECISIONS.md](docs/DECISIONS.md)；变更记录：[CHANGELOG.md](CHANGELOG.md)
+- 产品能力与边界：[docs/GUIDE.md](docs/GUIDE.md)；设计取舍：[docs/DECISIONS.md](docs/DECISIONS.md)；插件作者文档：[docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)；变更记录：[CHANGELOG.md](CHANGELOG.md)
 - 构建脚本：`scripts/`（`check.sh` 完整验证、`gradlew-locked` 全局串行锁、`dev-setup.sh` 首次环境）
 - `assets/` 是设计源素材与第三方图标，**不是** App 运行时资源（运行时资源在 `app/src/main/assets` 与各模块 `res/`）
 - `reference/`、`.agents/` 是本机参考源码与 git worktree，不进版本库，别在里面改

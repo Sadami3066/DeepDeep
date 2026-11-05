@@ -23,6 +23,8 @@
 
 测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较、UiNode/槽位、设置 normalize、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。
 
+对外发布：`./scripts/gradlew-locked :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，artifact `plugin-api`，版本 `pluginApiVersion` 默认 `0.2.0`；改 ABI 时同时升版本与 `PLUGIN_API_LEVEL`）。
+
 ## ABI 规则（对外承诺）
 
 - `PLUGIN_API_LEVEL` 现在是 1。同一 level 内**只允许加法**：新类型、新可选参数（必须带默认值）、接口新方法（必须带默认实现）、data class 新字段（必须带默认值）。删除/改签名/改默认语义必须升 level，宿主加载时拒绝 `apiLevel > 宿主` 的插件。
