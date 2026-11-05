@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.onboarding
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -44,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
@@ -62,7 +64,10 @@ import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.runtime.InteractionStyle
 import io.github.whywood.deepdeep.runtime.ModelConfig
+import io.github.whywood.deepdeep.runtime.ProviderAuthKind
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
+import io.github.whywood.deepdeep.ui.common.OAuthLoginSession
+import io.github.whywood.deepdeep.ui.common.OAuthLoginSheet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -105,6 +110,12 @@ fun OnboardingScreen(
     val provider = remember(providers, providerId) { providers.firstOrNull { it.id == providerId } }
     val deepseek = remember(providers) { providers.firstOrNull { it.id == ProviderCatalog.DEFAULT_PROVIDER_ID } }
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
+    val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle()
+    val oauthSignedIn = provider?.let { authKinds[it.id] == ProviderAuthKind.OAUTH } == true
+    var oauthSession by remember(providerId) { mutableStateOf<OAuthLoginSession?>(null) }
+    var oauthBusy by remember(providerId) { mutableStateOf(false) }
+    var oauthError by remember(providerId) { mutableStateOf<String?>(null) }
+    val oauthFailedText = stringResource(R.string.onboarding_provider_oauth_failed)
     val avatarFailedText = stringResource(R.string.onboarding_avatar_failed)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -187,6 +198,44 @@ fun OnboardingScreen(
                 }
                 if (step == STEP_PROVIDER) step = STEP_PERMISSIONS
             }
+        }
+    }
+
+    fun beginOAuthLogin() {
+        val target = provider ?: return
+        if (oauthSession != null) return
+        oauthError = null
+        val session = OAuthLoginSession(
+            providerName = target.name,
+            onOpenUrl = { url ->
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                }
+            },
+        )
+        oauthSession = session
+        oauthBusy = true
+        scope.launch {
+            val result = graph.providerOAuthService.login(target.id, session)
+            oauthBusy = false
+            if (oauthSession !== session) return@launch
+            if (result.isSuccess) {
+                session.succeed()
+                oauthSession = null
+            } else {
+                val detail = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() }
+                val message = if (detail == null) oauthFailedText else "$oauthFailedText: $detail"
+                session.fail(message)
+                oauthError = message
+            }
+        }
+    }
+
+    fun signOutOAuth() {
+        val target = provider ?: return
+        oauthError = null
+        scope.launch {
+            runCatching { graph.providerOAuthService.logout(target.id) }
         }
     }
 
@@ -276,6 +325,9 @@ fun OnboardingScreen(
                         if (keyState != KEY_STATE_SAVING) keyState = KEY_STATE_IDLE
                     },
                     keyState = keyState,
+                    oauthSignedIn = oauthSignedIn,
+                    oauthBusy = oauthBusy,
+                    oauthError = oauthError,
                     onPickDeepSeek = {
                         providerId = ProviderCatalog.DEFAULT_PROVIDER_ID
                         apiKey = ""
@@ -286,6 +338,8 @@ fun OnboardingScreen(
                         apiKey = ""
                         keyState = KEY_STATE_IDLE
                     },
+                    onStartOAuth = ::beginOAuthLogin,
+                    onSignOutOAuth = ::signOutOAuth,
                 )
 
                 STEP_PERMISSIONS -> PermissionsStep()
@@ -311,6 +365,18 @@ fun OnboardingScreen(
             secondaryLabel = secondaryLabel,
             secondaryEnabled = secondaryEnabled,
             onSecondary = ::goNext,
+        )
+    }
+
+    oauthSession?.let { session ->
+        OAuthLoginSheet(
+            providerName = provider?.name.orEmpty(),
+            session = session,
+            onDismiss = {
+                session.cancel()
+                oauthBusy = false
+                if (oauthSession === session) oauthSession = null
+            },
         )
     }
 }

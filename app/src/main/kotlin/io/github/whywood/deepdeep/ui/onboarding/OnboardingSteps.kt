@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -90,6 +89,7 @@ import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.shell.LinuxInstallState
+import io.github.whywood.deepdeep.ui.common.ProviderIcon
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -264,8 +264,13 @@ internal fun ProviderStep(
     apiKey: String,
     onApiKeyChange: (String) -> Unit,
     keyState: Int,
+    oauthSignedIn: Boolean,
+    oauthBusy: Boolean,
+    oauthError: String?,
     onPickDeepSeek: () -> Unit,
     onSelectProvider: (ProviderSummary) -> Unit,
+    onStartOAuth: () -> Unit,
+    onSignOutOAuth: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -295,13 +300,51 @@ internal fun ProviderStep(
             )
             DdHairline()
             OtherProviderRow(
-                selectedName = if (deepSeekSelected) null else provider?.name,
+                selectedProvider = if (deepSeekSelected) null else provider,
                 count = (providers.size - 1).coerceAtLeast(0),
                 onClick = { sheetOpen = true },
             )
         }
         Spacer(Modifier.height(24.dp))
         if (provider != null) {
+            val showOAuth = provider.hasOAuth
+            if (showOAuth) {
+                DdSectionLabel(
+                    text = stringResource(R.string.onboarding_provider_oauth_label),
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                DdGroupCard {
+                    OAuthOptionRow(
+                        signedIn = oauthSignedIn,
+                        busy = oauthBusy,
+                        onLogin = onStartOAuth,
+                    )
+                    if (oauthSignedIn) {
+                        DdHairline()
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            DdTextAction(
+                                text = stringResource(R.string.onboarding_provider_oauth_sign_out),
+                                onClick = onSignOutOAuth,
+                                color = colors.inkTertiary,
+                            )
+                        }
+                    }
+                    if (oauthError != null) {
+                        DdHairline()
+                        Text(
+                            text = oauthError,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .testTag("onboarding_provider_oauth_error"),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
             if (provider.supportsApiKey) {
                 DdSectionLabel(
                     text = stringResource(R.string.onboarding_provider_api_key_label),
@@ -351,9 +394,9 @@ internal fun ProviderStep(
                         )
                     }
                 }
-            } else {
+            } else if (!showOAuth) {
                 Text(
-                    text = stringResource(R.string.onboarding_provider_api_key_unsupported),
+                    text = stringResource(R.string.onboarding_provider_extra_config),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
@@ -596,22 +639,16 @@ private fun ProviderOption(
     testTag: String,
 ) {
     val colors = deepDeepColors()
-    val background by androidx.compose.animation.animateColorAsState(
-        targetValue = if (selected) colors.accentSoft else colors.surface,
-        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-        label = "onboarding-provider-background",
-    )
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().testTag(testTag),
         shape = RoundedCornerShape(20.dp),
-        background = background,
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProviderAvatar(providerId = providerId, name = name, size = 40.dp)
+            ProviderIcon(providerId, name, size = 40.dp, iconSize = 24.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(text = name, style = DdType.body, color = colors.ink)
@@ -626,27 +663,30 @@ private fun ProviderOption(
 
 @Composable
 private fun OtherProviderRow(
-    selectedName: String?,
+    selectedProvider: ProviderSummary?,
     count: Int,
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
-    val selected = selectedName != null
+    val selected = selectedProvider != null
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().testTag("onboarding_provider_other"),
         shape = RoundedCornerShape(20.dp),
-        background = Color.Transparent,
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(colors.wash),
-                contentAlignment = Alignment.Center,
-            ) {
-                DdIcon(icon = DdIcons.Apps, tint = colors.inkSecondary, size = 20.dp)
+            if (selectedProvider != null) {
+                ProviderIcon(selectedProvider.id, selectedProvider.name, size = 40.dp, iconSize = 24.dp)
+            } else {
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).background(colors.wash),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DdIcon(icon = DdIcons.Apps, tint = colors.inkSecondary, size = 20.dp)
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -656,7 +696,8 @@ private fun OtherProviderRow(
                     color = colors.ink,
                 )
                 Text(
-                    text = selectedName ?: stringResource(R.string.onboarding_provider_other_count, count),
+                    text = selectedProvider?.name
+                        ?: stringResource(R.string.onboarding_provider_other_count, count),
                     style = DdType.bodySmall,
                     color = if (selected) colors.accent else colors.inkTertiary,
                 )
@@ -666,6 +707,37 @@ private fun OtherProviderRow(
             DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 16.dp)
         }
     }
+}
+
+@Composable
+private fun OAuthOptionRow(
+    signedIn: Boolean,
+    busy: Boolean,
+    onLogin: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdListRow(
+        icon = DdIcons.Shield,
+        title = when {
+            signedIn -> stringResource(R.string.onboarding_provider_oauth_signed_in)
+            busy -> stringResource(R.string.onboarding_provider_oauth_signing_in)
+            else -> stringResource(R.string.onboarding_provider_oauth_login)
+        },
+        onClick = if (signedIn || busy) null else onLogin,
+        showChevron = !signedIn && !busy,
+        modifier = Modifier.testTag("onboarding_provider_oauth"),
+        trailing = when {
+            signedIn -> {
+                { DdIcon(icon = DdIcons.Check, tint = colors.success, size = 16.dp) }
+            }
+
+            busy -> {
+                { DdSpinner(size = 14.dp, strokeWidth = 1.5.dp) }
+            }
+
+            else -> null
+        },
+    )
 }
 
 @Composable

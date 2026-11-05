@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.settings
+package io.github.whywood.deepdeep.ui.common
 
 import android.content.Intent
 import android.net.Uri

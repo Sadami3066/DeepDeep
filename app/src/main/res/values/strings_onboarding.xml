@@ -32,6 +32,13 @@
     <string name="onboarding_provider_key_saving">保存中…</string>
     <string name="onboarding_provider_key_saved">已保存</string>
     <string name="onboarding_provider_key_failed">保存失败，请重试</string>
+    <string name="onboarding_provider_oauth_label">登录方式</string>
+    <string name="onboarding_provider_oauth_login">使用浏览器登录</string>
+    <string name="onboarding_provider_oauth_signing_in">正在登录…</string>
+    <string name="onboarding_provider_oauth_signed_in">已登录</string>
+    <string name="onboarding_provider_oauth_sign_out">退出登录</string>
+    <string name="onboarding_provider_oauth_failed">登录失败</string>
+    <string name="onboarding_provider_extra_config">需要额外配置，请到 设置 → 厂商 中连接。</string>
     <string name="onboarding_provider_other">其他厂商</string>
     <string name="onboarding_provider_other_count">其他 %1$d 家厂商</string>
     <string name="onboarding_provider_models">%1$d 个模型</string>
@@ -39,7 +46,6 @@
     <string name="onboarding_search_clear">清除</string>
     <string name="onboarding_provider_no_result">没有匹配的厂商</string>
     <string name="onboarding_provider_sheet_title">选择厂商</string>
-    <string name="onboarding_provider_api_key_unsupported">该厂商暂不支持 API Key，稍后可到 设置 → 厂商 中连接。</string>
 
     <string name="onboarding_permissions_title">通知与权限</string>
     <string name="onboarding_permissions_subtitle">按需开启，之后也可以在设置里打开。</string>

@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.ui.common.ProviderIcon
 
 @Composable
 fun ProviderListScreen(

@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,13 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
@@ -58,15 +56,15 @@ import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.ui.common.ProviderIcon
 
 internal const val ONBOARDING_STEP_COUNT = 6
 
@@ -249,41 +247,6 @@ internal fun IndeterminateBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun ProviderBadge(name: String, size: Dp = 40.dp) {
-    val colors = deepDeepColors()
-    Box(
-        Modifier.size(size).clip(CircleShape).background(colors.wash),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = name.trim().take(1).uppercase(),
-            style = DdType.label,
-            color = colors.inkSecondary,
-        )
-    }
-}
-
-@Composable
-internal fun ProviderAvatar(providerId: String, name: String, size: Dp = 40.dp) {
-    val colors = deepDeepColors()
-    if (providerId == ProviderCatalog.DEFAULT_PROVIDER_ID) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(colors.wash),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.provider_deepseek),
-                contentDescription = null,
-                modifier = Modifier.size(size * 0.58f),
-                contentScale = ContentScale.Fit,
-            )
-        }
-    } else {
-        ProviderBadge(name = name, size = size)
-    }
-}
-
-@Composable
 internal fun ProviderPickerSheet(
     providers: List<ProviderSummary>,
     selectedId: String,
@@ -323,23 +286,60 @@ internal fun ProviderPickerSheet(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     items(filtered, key = { it.id }) { provider ->
-                        DdListRow(
-                            title = provider.name,
-                            subtitle = stringResource(R.string.onboarding_provider_models, provider.modelCount),
+                        ProviderPickerRow(
+                            provider = provider,
+                            selected = provider.id == selectedId,
                             onClick = { onSelect(provider) },
-                            modifier = Modifier.testTag("onboarding_provider_${provider.id}"),
-                            trailing = if (provider.id == selectedId) {
-                                {
-                                    DdIcon(icon = DdIcons.Check, tint = deepDeepColors().accent, size = 16.dp)
-                                }
-                            } else {
-                                null
-                            },
                         )
                     }
                 }
             }
             Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun ProviderPickerRow(
+    provider: ProviderSummary,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().testTag("onboarding_provider_${provider.id}"),
+        shape = RoundedCornerShape(20.dp),
+        contentDescription = provider.name,
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProviderIcon(provider.id, provider.name, size = 34.dp, iconSize = 21.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = provider.name,
+                    style = DdType.body,
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_provider_models, provider.modelCount),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                )
+            }
+            if (selected) {
+                Spacer(Modifier.width(12.dp))
+                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
+            }
         }
     }
 }

@@ -32,6 +32,13 @@
     <string name="onboarding_provider_key_saving">Saving…</string>
     <string name="onboarding_provider_key_saved">Saved</string>
     <string name="onboarding_provider_key_failed">Couldn\'t save. Try again.</string>
+    <string name="onboarding_provider_oauth_label">Sign-in method</string>
+    <string name="onboarding_provider_oauth_login">Sign in with browser</string>
+    <string name="onboarding_provider_oauth_signing_in">Signing in…</string>
+    <string name="onboarding_provider_oauth_signed_in">Signed in</string>
+    <string name="onboarding_provider_oauth_sign_out">Sign out</string>
+    <string name="onboarding_provider_oauth_failed">Sign-in failed</string>
+    <string name="onboarding_provider_extra_config">Extra setup needed. Connect it in Settings → Providers.</string>
     <string name="onboarding_provider_other">Other providers</string>
     <string name="onboarding_provider_other_count">Other providers: %1$d</string>
     <string name="onboarding_provider_models">Models: %1$d</string>
@@ -39,7 +46,6 @@
     <string name="onboarding_search_clear">Clear</string>
     <string name="onboarding_provider_no_result">No matching providers</string>
     <string name="onboarding_provider_sheet_title">Choose a provider</string>
-    <string name="onboarding_provider_api_key_unsupported">This provider doesn\'t take an API key. Connect it later in Settings → Providers.</string>
 
     <string name="onboarding_permissions_title">Notifications &amp; permissions</string>
     <string name="onboarding_permissions_subtitle">Turn on what you need now, or set it up later in Settings.</string>
