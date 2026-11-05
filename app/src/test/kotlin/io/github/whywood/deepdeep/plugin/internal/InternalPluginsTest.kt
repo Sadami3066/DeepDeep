@@ -33,6 +33,9 @@ class InternalPluginsTest {
     private suspend fun executeText(tool: PluginTool, action: String): String =
         (tool.execute(PluginToolCall("call-1", buildJsonObject { put("action", action) })) as PluginToolResult.Text).text
 
+    private suspend fun executeNoArgs(tool: PluginTool): String =
+        (tool.execute(PluginToolCall("call-1", buildJsonObject {})) as PluginToolResult.Text).text
+
     @Test
     fun goalPluginExposesGoalToolsAndRoundsSetting() = runTest {
         val plugin = GoalPlugin(GoalService())
@@ -57,10 +60,10 @@ class InternalPluginsTest {
         var live: PluginSessionSnapshot? = null
         val getGoal = plugin.contributionsFor(host, session { live }).tools.first { it.name == "get_goal" }
 
-        assertTrue(executeText(getGoal, "get").contains("No session is bound"))
+        assertTrue(executeNoArgs(getGoal).contains("No session is bound"))
 
         live = PluginSessionSnapshot("session-live", "/tmp/session-live.jsonl", "/workspace")
-        assertFalse(executeText(getGoal, "get").contains("No session is bound"))
+        assertFalse(executeNoArgs(getGoal).contains("No session is bound"))
     }
 
     @Test
