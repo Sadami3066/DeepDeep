@@ -8,7 +8,10 @@ data class BoundSession(
     val cwd: String,
 )
 
-class SessionBinding(val supportsChatDelivery: Boolean = true) {
+class SessionBinding(
+    val supportsChatDelivery: Boolean = true,
+    private val live: (() -> BoundSession?)? = null,
+) {
     @Volatile
     private var bound: BoundSession? = null
 
@@ -24,5 +27,5 @@ class SessionBinding(val supportsChatDelivery: Boolean = true) {
         bound = session
     }
 
-    fun current(): BoundSession? = bound
+    fun current(): BoundSession? = live?.invoke() ?: bound
 }

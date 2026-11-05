@@ -96,12 +96,18 @@ interface PluginHost {
     fun chat(): ChatService = throw PluginServiceUnavailable("chat")
 }
 
-data class PluginSessionInfo(
+data class PluginSessionSnapshot(
     val sessionId: String,
+    val file: String?,
     val cwd: String,
-    val file: String? = null,
-    val supportsChatDelivery: Boolean = true,
 )
+
+class PluginSessionInfo(
+    val supportsChatDelivery: Boolean,
+    private val lookup: () -> PluginSessionSnapshot?,
+) {
+    fun snapshot(): PluginSessionSnapshot? = lookup()
+}
 
 sealed interface PluginAvailability {
     data object Available : PluginAvailability
