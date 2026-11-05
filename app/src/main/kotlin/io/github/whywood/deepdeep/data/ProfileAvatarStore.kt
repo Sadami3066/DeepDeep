@@ -11,9 +11,12 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 
-class ProfileAvatarStore(context: Context) {
+class ProfileAvatarStore(
+    context: Context,
+    baseDirectory: File = context.applicationContext.filesDir,
+) {
     private val appContext = context.applicationContext
-    private val directory = File(appContext.filesDir, DIRECTORY)
+    private val directory = File(baseDirectory, DIRECTORY)
 
     val file: File get() = File(directory, FILE_NAME)
 
@@ -52,17 +55,25 @@ class ProfileAvatarStore(context: Context) {
     private fun decode(uri: Uri): Bitmap? {
         val resolver = appContext.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        runCatching {
+        try {
             resolver.openInputStream(uri)?.use { stream -> BitmapFactory.decodeStream(stream, null, bounds) }
-        }.getOrNull() ?: return null
+        } catch (_: IOException) {
+            return null
+        } catch (_: SecurityException) {
+            return null
+        }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         val options = BitmapFactory.Options().apply {
             inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight)
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        val decoded = runCatching {
+        val decoded = try {
             resolver.openInputStream(uri)?.use { stream -> BitmapFactory.decodeStream(stream, null, options) }
-        }.getOrNull() ?: return null
+        } catch (_: IOException) {
+            null
+        } catch (_: SecurityException) {
+            null
+        } ?: return null
         val oriented = applyOrientation(decoded, readOrientation(uri))
         if (oriented !== decoded) decoded.recycle()
         val square = centerCrop(oriented)
