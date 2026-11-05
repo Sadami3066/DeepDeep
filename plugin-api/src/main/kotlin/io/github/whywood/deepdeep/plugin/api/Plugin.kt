@@ -159,6 +159,7 @@ data class PluginSkill(
     val id: String,
     val markdown: String,
     val files: List<PluginSkillFile> = emptyList(),
+    val legacyOwned: Boolean = false,
 )
 
 data class PluginSkillFile(

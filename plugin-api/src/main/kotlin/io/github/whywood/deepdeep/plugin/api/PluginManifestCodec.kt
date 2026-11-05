@@ -45,6 +45,7 @@ object PluginManifestCodec {
         order = json.int("order") ?: 0,
         requiresPrivilege = json.boolean("requiresPrivilege") ?: false,
         defaultEnabled = json.boolean("defaultEnabled") ?: true,
+        tintIcon = json.boolean("tintIcon") ?: true,
     )
 
     fun validate(

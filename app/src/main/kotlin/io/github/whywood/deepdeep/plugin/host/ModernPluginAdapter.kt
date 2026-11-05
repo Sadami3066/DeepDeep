@@ -44,6 +44,8 @@ internal class ModernPluginAdapter(
 
     override val defaultEnabled: Boolean get() = manifest.defaultEnabled
 
+    override val tintIcon: Boolean get() = manifest.tintIcon
+
     override val icon: DdIcon
         get() = (manifest.icon as? IconRef.Resource)?.let { DdIcon(it.id) } ?: DdIcons.Puzzle
 
@@ -188,6 +190,7 @@ internal class ModernPluginAdapter(
         id = id,
         markdown = markdown,
         files = files.map { PluginSkillFile(path = it.path, content = it.content.orEmpty()) },
+        legacyOwned = legacyOwned,
     )
 
     private fun resource(text: LocalizedText, fallback: Int): Int =

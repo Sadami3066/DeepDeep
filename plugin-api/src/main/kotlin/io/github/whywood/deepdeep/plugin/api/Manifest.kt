@@ -52,4 +52,5 @@ data class PluginManifest(
     val order: Int = 0,
     val requiresPrivilege: Boolean = false,
     val defaultEnabled: Boolean = true,
+    val tintIcon: Boolean = true,
 )
