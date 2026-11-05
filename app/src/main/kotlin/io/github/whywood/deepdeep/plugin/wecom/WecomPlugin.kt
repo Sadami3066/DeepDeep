@@ -3,18 +3,19 @@ package io.github.whywood.deepdeep.plugin.wecom
 import android.content.Context
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginActionStyle
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.PluginDownloader
-import io.github.whywood.deepdeep.plugin.PluginProgress
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginProgress
+import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.PromptSection
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
@@ -33,7 +34,7 @@ class WecomPlugin internal constructor(
     private val stagingRuntime: (File) -> WecomRuntime,
     private val downloader: PluginDownloader,
     private val workspaceDir: File,
-) : OfficialPlugin {
+) : DeepDeepPlugin {
     constructor(
         context: Context,
         linux: LinuxEnvironment,
@@ -54,55 +55,61 @@ class WecomPlugin internal constructor(
         workspaceDir = workspaceDir,
     )
 
-    override val id: String = "wecom"
-    override val icon: DdIcon = DdIcons.Message
-    override val nameRes: Int = R.string.plugin_wecom_name
-    override val summaryRes: Int = R.string.plugin_wecom_summary
-    override val version: String = WecomCli.VERSION
-    override val sizeLabelRes: Int = R.string.plugin_wecom_size
-
     @Volatile private var lastVersion: String? = null
     @Volatile private var lastBotId: String? = null
+    @Volatile private var lastStatus: PluginStatus? = null
 
-    override suspend fun availability(): PluginAvailability {
+    override suspend fun availability(host: PluginHost): PluginAvailability {
         if (!runtime.isSupported) {
-            return PluginAvailability.Unavailable(context.resources.getString(R.string.plugin_wecom_unavailable_device))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_wecom_unavailable_device)),
+            )
         }
         if (!runtime.isInstalled()) {
-            return PluginAvailability.Unavailable(context.resources.getString(R.string.plugin_wecom_unavailable_linux))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_wecom_unavailable_linux)),
+            )
         }
         if (!runtime.isEnabled()) {
-            return PluginAvailability.Unavailable(context.resources.getString(R.string.plugin_wecom_unavailable_disabled))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_wecom_unavailable_disabled)),
+            )
         }
         return PluginAvailability.Available
     }
 
-    override suspend fun install(progress: PluginProgress) {
-        requireAvailable()
+    override suspend fun install(host: PluginHost, progress: PluginProgress) {
+        requireAvailable(host)
         val hadBinary = hasExistingBinary()
-        val staging = File(context.cacheDir, "plugin-staging/$id")
+        val staging = File(context.cacheDir, "plugin-staging/${host.manifest.id}")
         staging.deleteRecursively()
         staging.mkdirs()
         val archive = File(staging, WecomCli.ARCHIVE_NAME)
         try {
             downloader.download(WecomCli.DOWNLOAD_URLS, WecomCli.ARCHIVE_SHA256, archive) { percent ->
-                progress.report(percent, R.string.plugin_wecom_stage_downloading)
+                progress.report(percent, LocalizedText.Resource(R.string.plugin_wecom_stage_downloading))
             }
-            progress.report(null, R.string.plugin_wecom_stage_verifying)
+            progress.report(null, LocalizedText.Resource(R.string.plugin_wecom_stage_verifying))
             val runner = stagingRuntime(staging)
             val extract = runner.executeStreaming(WecomCli.extractCommand(), EXTRACT_TIMEOUT_MS) { }
             val stagedVersion = WecomCli.parseVersion(extract.output)
             if (extract.exitCode != 0 || stagedVersion != WecomCli.VERSION) {
                 throw IllegalStateException(
-                    context.resources.getString(R.string.plugin_wecom_error_version, extract.output.takeLast(400).trim()),
+                    host.text(
+                        LocalizedText.Resource(R.string.plugin_wecom_error_version),
+                        extract.output.takeLast(400).trim(),
+                    ),
                 )
             }
-            progress.report(null, R.string.plugin_wecom_stage_installing)
+            progress.report(null, LocalizedText.Resource(R.string.plugin_wecom_stage_installing))
             val install = runner.executeStreaming(WecomCli.installCommand(), INSTALL_TIMEOUT_MS) { }
             val installedVersion = WecomCli.parseVersion(install.output)
             if (install.exitCode != 0 || installedVersion != WecomCli.VERSION) {
                 throw IllegalStateException(
-                    context.resources.getString(R.string.plugin_wecom_error_install, install.output.takeLast(400).trim()),
+                    host.text(
+                        LocalizedText.Resource(R.string.plugin_wecom_error_install),
+                        install.output.takeLast(400).trim(),
+                    ),
                 )
             }
             lastVersion = installedVersion
@@ -114,73 +121,86 @@ class WecomPlugin internal constructor(
         }
     }
 
-    override suspend fun uninstall() {
+    override suspend fun uninstall(host: PluginHost) {
         runtime.execute(WecomCli.uninstallCommand(), UNINSTALL_TIMEOUT_MS)
         lastVersion = null
         lastBotId = null
+        lastStatus = null
     }
 
-    override suspend fun recover() {
-        runCatching { File(context.cacheDir, "plugin-staging/$id").deleteRecursively() }
-    }
+    override suspend fun status(host: PluginHost): PluginStatus = cache(
+        when (val availability = availability(host)) {
+            is PluginAvailability.Unavailable -> PluginStatus.Failed(availability.reason)
+            PluginAvailability.Available -> readStatus(host)
+        },
+    )
 
-    override suspend fun status(): PluginStatus {
-        val availability = availability()
-        if (availability is PluginAvailability.Unavailable) {
-            return PluginStatus.Failed(availability.reason)
-        }
+    private suspend fun readStatus(host: PluginHost): PluginStatus {
         val versionResult = runtime.execute(WecomCli.versionCommand(), VERSION_TIMEOUT_MS)
         val installedVersion = WecomCli.parseVersion(versionResult.output)
         if (versionResult.exitCode != 0 || installedVersion == null) {
-            return PluginStatus.Failed(context.resources.getString(R.string.plugin_wecom_status_broken))
+            return PluginStatus.Failed(host.text(LocalizedText.Resource(R.string.plugin_wecom_status_broken)))
         }
         lastVersion = installedVersion
         val statusResult = runtime.execute(WecomCli.authStatusCommand(), STATUS_TIMEOUT_MS)
         val authorized = WecomCli.parseAuthStatus(statusResult.output)
             ?: return PluginStatus.Failed(
-                context.resources.getString(R.string.plugin_wecom_status_error, statusResult.output.takeLast(200).trim()),
+                host.text(
+                    LocalizedText.Resource(R.string.plugin_wecom_status_error),
+                    statusResult.output.takeLast(200).trim(),
+                ),
             )
         if (!authorized) {
             lastBotId = null
-            return PluginStatus.NotReady(context.resources.getString(R.string.plugin_wecom_status_not_connected))
+            return PluginStatus.NotReady(
+                host.text(LocalizedText.Resource(R.string.plugin_wecom_status_not_connected)),
+            )
         }
         val showResult = runtime.execute(WecomCli.authShowCommand(), STATUS_TIMEOUT_MS)
         lastBotId = WecomCli.parseBotId(showResult.output) ?: lastBotId
-        val connected = context.resources.getString(R.string.plugin_wecom_status_connected)
+        val connected = host.text(LocalizedText.Resource(R.string.plugin_wecom_status_connected))
         val label = lastBotId?.let { "$connected · $it" } ?: connected
         return PluginStatus.Ready(label, lastBotId)
     }
 
-    override suspend fun setup(ui: PluginUi) {
-        requireAvailable()
-        if (status() is PluginStatus.Ready) return
-        authorize(ui)
+    override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
+        requireAvailable(host)
+        if (status(host) is PluginStatus.Ready) return
+        authorize(host, ui)
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = if (status is PluginStatus.Ready) {
-        listOf(
-            PluginAction(ACTION_REAUTHORIZE, R.string.plugin_wecom_action_reauthorize),
-            PluginAction(ACTION_LOGOUT, R.string.plugin_wecom_action_logout, PluginActionStyle.DESTRUCTIVE),
-        )
-    } else {
-        listOf(PluginAction(ACTION_CONNECT, R.string.plugin_wecom_action_connect))
-    }
+    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> =
+        if (status is PluginStatus.Ready) {
+            listOf(
+                PluginAction(ACTION_REAUTHORIZE, LocalizedText.Resource(R.string.plugin_wecom_action_reauthorize)),
+                PluginAction(
+                    ACTION_LOGOUT,
+                    LocalizedText.Resource(R.string.plugin_wecom_action_logout),
+                    PluginActionStyle.DESTRUCTIVE,
+                ),
+            )
+        } else {
+            listOf(PluginAction(ACTION_CONNECT, LocalizedText.Resource(R.string.plugin_wecom_action_connect)))
+        }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
         when (actionId) {
-            ACTION_CONNECT -> setup(ui)
+            ACTION_CONNECT -> setup(host, ui)
 
             ACTION_REAUTHORIZE -> {
-                requireAvailable()
-                authorize(ui)
+                requireAvailable(host)
+                authorize(host, ui)
             }
 
             ACTION_LOGOUT -> {
-                ui.progress(null, R.string.plugin_wecom_stage_signing_out)
+                ui.progress(null, LocalizedText.Resource(R.string.plugin_wecom_stage_signing_out))
                 val result = runtime.execute(WecomCli.logoutCommand(), LOGOUT_TIMEOUT_MS)
                 if (result.exitCode != 0) {
                     throw IllegalStateException(
-                        context.resources.getString(R.string.plugin_wecom_error_logout, result.output.takeLast(300).trim()),
+                        host.text(
+                            LocalizedText.Resource(R.string.plugin_wecom_error_logout),
+                            result.output.takeLast(300).trim(),
+                        ),
                     )
                 }
                 lastBotId = null
@@ -188,14 +208,23 @@ class WecomPlugin internal constructor(
         }
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = buildList {
-        lastVersion?.let { add(PluginDetailRow(R.string.plugin_wecom_detail_cli_version, it)) }
-        lastBotId?.let { add(PluginDetailRow(R.string.plugin_wecom_detail_bot_id, it)) }
+    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> = buildList {
+        lastVersion?.let { add(PluginDetailRow(LocalizedText.Resource(R.string.plugin_wecom_detail_cli_version), it)) }
+        lastBotId?.let { add(PluginDetailRow(LocalizedText.Resource(R.string.plugin_wecom_detail_bot_id), it)) }
     }
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN.replace("<download-directory>", File(workspaceDir, "tmp").absolutePath)))
+    override fun skills(host: PluginHost): List<PluginSkill> = listOf(
+        PluginSkill(
+            SKILL_ID,
+            SKILL_MARKDOWN.replace("<download-directory>", File(workspaceDir, "tmp").absolutePath),
+        ),
+    )
 
-    override fun promptBody(status: PluginStatus): String = when (status) {
+    override fun promptSections(host: PluginHost): List<PromptSection> = listOf(
+        PromptSection(SECTION_ID, promptBody(host, lastStatus ?: notConnectedStatus(host))),
+    )
+
+    private fun promptBody(host: PluginHost, status: PluginStatus): String = when (status) {
         is PluginStatus.Ready -> buildString {
             appendLine(
                 "企业微信插件已安装并已连接" +
@@ -214,22 +243,33 @@ class WecomPlugin internal constructor(
         }
     }
 
-    private suspend fun authorize(ui: PluginUi) {
+    private fun notConnectedStatus(host: PluginHost): PluginStatus =
+        PluginStatus.NotReady(host.text(LocalizedText.Resource(R.string.plugin_wecom_status_not_connected)))
+
+    private fun cache(status: PluginStatus): PluginStatus {
+        lastStatus = status
+        return status
+    }
+
+    private suspend fun authorize(host: PluginHost, ui: PluginSetupUi) {
         val qrFile = File(workspaceDir, WecomCli.QR_HOST_FILE)
         workspaceDir.mkdirs()
         qrFile.delete()
-        ui.stage(R.string.plugin_wecom_stage_scan, messageRes = R.string.plugin_wecom_hint_scan)
+        ui.stage(
+            LocalizedText.Resource(R.string.plugin_wecom_stage_scan),
+            message = LocalizedText.Resource(R.string.plugin_wecom_hint_scan),
+        )
         val pageUrl = AtomicReference<String?>(null)
         try {
             val result = coroutineScope {
-                val poller = launch { publishQrCode(ui, qrFile, pageUrl) }
+                val poller = launch { publishQrCode(host, ui, qrFile, pageUrl) }
                 try {
                     runtime.executeStreaming(WecomCli.authInitCommand(qrFile), INIT_TIMEOUT_MS) { line ->
                         val url = WecomCli.parseQrPageUrl(line)
                         if (url != null && pageUrl.compareAndSet(null, url)) {
                             ui.stage(
-                                R.string.plugin_wecom_stage_scan,
-                                messageRes = R.string.plugin_wecom_hint_scan,
+                                LocalizedText.Resource(R.string.plugin_wecom_stage_scan),
+                                message = LocalizedText.Resource(R.string.plugin_wecom_hint_scan),
                                 url = url,
                                 imagePath = qrFile.takeIf(WecomCli::isCompleteQrCode)?.absolutePath,
                             )
@@ -241,28 +281,41 @@ class WecomPlugin internal constructor(
             }
             if (ui.cancelled()) throw CancellationException("cancelled")
             when {
-                result.timedOut -> throw IllegalStateException(context.resources.getString(R.string.plugin_wecom_error_timeout))
+                result.timedOut -> throw IllegalStateException(
+                    host.text(LocalizedText.Resource(R.string.plugin_wecom_error_timeout)),
+                )
+
                 result.exitCode != 0 -> throw IllegalStateException(
-                    context.resources.getString(R.string.plugin_wecom_error_auth, result.output.takeLast(300).trim()),
+                    host.text(
+                        LocalizedText.Resource(R.string.plugin_wecom_error_auth),
+                        result.output.takeLast(300).trim(),
+                    ),
                 )
             }
-            ui.stage(R.string.plugin_wecom_stage_finishing)
-            val current = status()
+            ui.stage(LocalizedText.Resource(R.string.plugin_wecom_stage_finishing))
+            val current = status(host)
             if (current !is PluginStatus.Ready) {
-                throw IllegalStateException(context.resources.getString(R.string.plugin_wecom_error_auth, current.label))
+                throw IllegalStateException(
+                    host.text(LocalizedText.Resource(R.string.plugin_wecom_error_auth), current.label),
+                )
             }
         } finally {
             qrFile.delete()
         }
     }
 
-    private suspend fun publishQrCode(ui: PluginUi, qrFile: File, pageUrl: AtomicReference<String?>) {
+    private suspend fun publishQrCode(
+        host: PluginHost,
+        ui: PluginSetupUi,
+        qrFile: File,
+        pageUrl: AtomicReference<String?>,
+    ) {
         while (currentCoroutineContext().isActive) {
             val ready = withContext(Dispatchers.IO) { WecomCli.isCompleteQrCode(qrFile) }
             if (ready) {
                 ui.stage(
-                    R.string.plugin_wecom_stage_scan,
-                    messageRes = R.string.plugin_wecom_hint_scan,
+                    LocalizedText.Resource(R.string.plugin_wecom_stage_scan),
+                    message = LocalizedText.Resource(R.string.plugin_wecom_hint_scan),
                     url = pageUrl.get(),
                     imagePath = qrFile.absolutePath,
                 )
@@ -279,15 +332,16 @@ class WecomPlugin internal constructor(
         ).output.contains("yes")
     }.getOrDefault(false)
 
-    private suspend fun requireAvailable() {
-        val availability = availability()
+    private suspend fun requireAvailable(host: PluginHost) {
+        val availability = availability(host)
         if (availability is PluginAvailability.Unavailable) {
             throw IllegalStateException(availability.reason)
         }
     }
 
     private companion object {
-        const val SKILL_ID = "deepdeep-wecom"
+        const val SKILL_ID = WECOM_SKILL_ID
+        const val SECTION_ID = "wecom_prompt"
 
         const val ACTION_CONNECT = "connect"
         const val ACTION_REAUTHORIZE = "reauthorize"
@@ -324,3 +378,5 @@ class WecomPlugin internal constructor(
         """.trimIndent()
     }
 }
+
+internal const val WECOM_SKILL_ID = "deepdeep-wecom"

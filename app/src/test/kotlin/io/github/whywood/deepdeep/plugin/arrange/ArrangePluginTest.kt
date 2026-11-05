@@ -4,73 +4,90 @@ import android.content.ContextWrapper
 import android.content.res.Resources
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.androidArrangeManifest
+import io.github.whywood.deepdeep.plugin.api.IconRef
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.internal.testPluginHost
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ArrangePluginTest {
     private val context = FakeContext()
     private val calendar = FakeCalendarGateway()
+    private val host = testPluginHost(androidArrangeManifest())
 
     @Test
-    fun identityMatchesPluginContract() {
-        val plugin = plugin()
+    fun manifestMatchesPluginContract() {
+        val manifest = androidArrangeManifest()
 
-        assertEquals("arrange", plugin.id)
-        assertEquals("3.0.0", plugin.version)
-        assertEquals(DdIcons.Clock, plugin.icon)
-        assertEquals(R.string.plugin_arrange_name, plugin.nameRes)
-        assertEquals(R.string.plugin_arrange_summary, plugin.summaryRes)
-        assertEquals(R.string.plugin_arrange_size, plugin.sizeLabelRes)
-        assertEquals(listOf("arrange_calendar"), plugin.tools().map { it.name })
+        assertEquals("arrange", manifest.id)
+        assertEquals("3.0.0", manifest.version)
+        assertEquals(IconRef.Resource(DdIcons.Clock.res), manifest.icon)
+        assertEquals(LocalizedText.Resource(R.string.plugin_arrange_name), manifest.name)
+        assertEquals(LocalizedText.Resource(R.string.plugin_arrange_summary), manifest.summary)
+        assertEquals(LocalizedText.Resource(R.string.plugin_arrange_size), manifest.sizeLabel)
+        assertEquals(listOf("arrange_calendar"), manifest.provides.tools)
+        assertEquals(listOf("deepdeep-arrange"), manifest.provides.skills)
+        assertTrue(manifest.provides.settings.isEmpty())
+    }
+
+    @Test
+    fun contributionsExposeCalendarTool() {
+        val tools = plugin().contributionsFor(host, session()).tools
+
+        assertEquals(listOf("arrange_calendar"), tools.map { it.name })
+        assertTrue(tools.single().promptGuidelines.contains(ARRANGE_CALENDAR_GUIDELINE))
     }
 
     @Test
     fun availabilityIsAlwaysAvailable() = runTest {
-        assertEquals(PluginAvailability.Available, plugin().availability())
+        assertEquals(PluginAvailability.Available, plugin().availability(host))
     }
 
     @Test
     fun statusReflectsCalendarPermission() = runTest {
-        assertEquals("res:${R.string.plugin_arrange_status_ready}", plugin().status().label)
+        assertEquals(expectedLabel(R.string.plugin_arrange_status_ready), plugin().status(host).label)
 
         calendar.readAllowed = false
         assertEquals(
-            "res:${R.string.plugin_arrange_status_calendar_permission}",
-            plugin().status().label,
+            expectedLabel(R.string.plugin_arrange_status_calendar_permission),
+            plugin().status(host).label,
         )
     }
 
     @Test
-    fun actionsOnlyOfferCalendarPermissionWhenMissing() = runTest {
+    fun actionsOnlyOfferCalendarPermissionWhenMissing() {
         val plugin = plugin()
-        assertTrue(plugin.actions(PluginStatus.Ready("x")).isEmpty())
+        assertTrue(plugin.actions(host, PluginStatus.Ready("x")).isEmpty())
 
         calendar.readAllowed = false
-        val actions = plugin.actions(PluginStatus.Ready("x"))
+        val actions = plugin.actions(host, PluginStatus.Ready("x"))
         assertEquals(listOf("permission"), actions.map { it.id })
-        assertEquals(listOf(R.string.plugin_arrange_action_permission), actions.map { it.labelRes })
+        assertEquals(
+            listOf(LocalizedText.Resource(R.string.plugin_arrange_action_permission)),
+            actions.map { it.label },
+        )
     }
 
     @Test
-    fun noCustomDetailRows() = runTest {
-        assertTrue(plugin().detailRows(PluginStatus.Ready("x")).isEmpty())
+    fun noCustomDetailRows() {
+        assertTrue(plugin().detailRows(host, PluginStatus.Ready("x")).isEmpty())
     }
 
     @Test
-    fun promptBodyStaysEmptyBecauseTheToolOwnsItsGuidance() = runTest {
-        assertNull(plugin().promptBody(PluginStatus.Ready("x")))
-        assertTrue(plugin().tools().single().promptGuidelines.orEmpty().contains(ARRANGE_CALENDAR_GUIDELINE))
+    fun promptSectionsStayEmptyBecauseTheToolOwnsItsGuidance() {
+        assertTrue(plugin().promptSections(host).isEmpty())
     }
 
     @Test
     fun skillHasFrontmatterAndCalendarOnly() {
-        val skills = plugin().skills()
+        val skills = plugin().skills(host)
 
         assertEquals(1, skills.size)
         val skill = skills.single()
@@ -87,6 +104,10 @@ class ArrangePluginTest {
             assertFalse(word, skill.markdown.contains(word))
         }
     }
+
+    private fun expectedLabel(id: Int): String = "text:$id"
+
+    private fun session(): PluginSessionInfo = PluginSessionInfo(sessionId = "session", cwd = "/tmp")
 
     private fun plugin(): ArrangePlugin = ArrangePlugin(context, calendar)
 

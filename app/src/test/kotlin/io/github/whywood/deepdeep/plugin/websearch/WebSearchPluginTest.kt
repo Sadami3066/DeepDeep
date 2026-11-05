@@ -2,12 +2,15 @@ package io.github.whywood.deepdeep.plugin.websearch
 
 import android.content.ContextWrapper
 import android.content.res.Resources
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.TextContent
-import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.PluginTool
+import io.github.whywood.deepdeep.plugin.api.PluginToolCall
+import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.internal.testBuiltinManifest
+import io.github.whywood.deepdeep.plugin.internal.testPluginHost
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -23,59 +26,61 @@ import org.junit.Test
 class WebSearchPluginTest {
     private val provider = FakeProvider()
     private val context = FakeContext()
+    private val host = testPluginHost(testBuiltinManifest("web-search"))
 
     @Test
-    fun identityAndTools() {
-        val plugin = newPlugin()
-        assertEquals("web-search", plugin.id)
-        assertEquals("1.0.0", plugin.version)
-        assertEquals(R.string.plugin_web_search_name, plugin.nameRes)
-        assertEquals(R.string.plugin_web_search_summary, plugin.summaryRes)
-        assertEquals(R.string.plugin_web_search_size, plugin.sizeLabelRes)
-        assertEquals(listOf("web_search", "web_fetch"), plugin.tools().map { it.name })
+    fun exposesWebTools() {
+        val names = newPlugin().contributionsFor(host, null).tools.map { it.name }
+        assertEquals(listOf("web_search", "web_fetch"), names)
     }
 
     @Test
     fun availabilityIsAlwaysAvailable() = runTest {
-        assertEquals(PluginAvailability.Available, newPlugin().availability())
+        assertEquals(PluginAvailability.Available, newPlugin().availability(host))
     }
 
     @Test
     fun keyConfiguredIsReady() = runTest {
-        assertTrue(newPlugin("sk-test").status() is PluginStatus.Ready)
+        val status = newPlugin("sk-test").status(host)
+        assertTrue(status is PluginStatus.Ready)
+        assertEquals("text:${R.string.plugin_web_search_status_ready}", status.label)
     }
 
     @Test
     fun missingKeyIsNotReady() = runTest {
-        assertTrue(newPlugin(null).status() is PluginStatus.NotReady)
-        assertTrue(newPlugin("   ").status() is PluginStatus.NotReady)
+        val missing = newPlugin(null).status(host)
+        assertTrue(missing is PluginStatus.NotReady)
+        assertEquals("text:${R.string.plugin_web_search_status_not_ready}", missing.label)
+        assertTrue(newPlugin("   ").status(host) is PluginStatus.NotReady)
     }
 
     @Test
-    fun detailRowsReportSourceAndKeyState() = runTest {
-        val rows = newPlugin("sk-test").detailRows(PluginStatus.Ready("ready"))
+    fun detailRowsReportSourceAndKeyState() {
+        val rows = newPlugin("sk-test").detailRows(host, PluginStatus.Ready("ready"))
         assertEquals(2, rows.size)
-        assertEquals(R.string.plugin_web_search_detail_source, rows[0].labelRes)
-        assertEquals("res:${R.string.plugin_web_search_source_deepseek}", rows[0].value)
-        assertEquals(R.string.plugin_web_search_detail_api_key, rows[1].labelRes)
-        assertEquals("res:${R.string.plugin_web_search_api_key_configured}", rows[1].value)
+        assertEquals(R.string.plugin_web_search_detail_source, (rows[0].label as LocalizedText.Resource).id)
+        assertEquals("text:${R.string.plugin_web_search_source_deepseek}", rows[0].value)
+        assertEquals(R.string.plugin_web_search_detail_api_key, (rows[1].label as LocalizedText.Resource).id)
+        assertEquals("text:${R.string.plugin_web_search_api_key_configured}", rows[1].value)
 
-        val missing = newPlugin(null).detailRows(PluginStatus.NotReady("missing"))
-        assertEquals("res:${R.string.plugin_web_search_api_key_missing}", missing[1].value)
+        val missing = newPlugin(null).detailRows(host, PluginStatus.NotReady("missing"))
+        assertEquals("text:${R.string.plugin_web_search_api_key_missing}", missing[1].value)
     }
 
     @Test
-    fun promptBodyIsSilentWhenReady() {
-        assertNull(newPlugin().promptBody(PluginStatus.Ready("ready")))
+    fun promptSectionIsSilentWhenReady() = runTest {
+        val plugin = newPlugin()
+        plugin.status(host)
+        assertTrue(plugin.promptSections(host).isEmpty())
     }
 
     @Test
     fun toolTextFollowsTaskLanguage() {
-        val tools = newPlugin().tools()
+        val tools = newPlugin().contributionsFor(host, null).tools
         assertEquals(listOf("web_search", "web_fetch"), tools.map { it.name })
         tools.forEach { tool ->
             assertNull(tool.promptSnippet)
-            assertTrue(tool.promptGuidelines.orEmpty().isNotEmpty())
+            assertTrue(tool.promptGuidelines.isNotEmpty())
             assertTrue(tool.description.isNotBlank())
             val properties = tool.parameters["properties"] as JsonObject
             properties.values.forEach { property ->
@@ -88,8 +93,10 @@ class WebSearchPluginTest {
     }
 
     @Test
-    fun promptBodyExplainsMissingKey() {
-        val prompt = newPlugin(null).promptBody(PluginStatus.NotReady("missing")).orEmpty()
+    fun promptSectionExplainsMissingKey() = runTest {
+        val plugin = newPlugin(null)
+        plugin.status(host)
+        val prompt = plugin.promptSections(host).joinToString("\n") { it.body }
         assertTrue(prompt.contains("API Key"))
         assertTrue(prompt.contains("web_search"))
         assertTrue(prompt.contains("web_fetch"))
@@ -112,7 +119,7 @@ class WebSearchPluginTest {
             "web_search",
             buildJsonObject { put("query", "深度求索") },
         )
-        assertNull(result.isError)
+        assertFalse(result.isError)
         val text = result.text()
         assertTrue(text.contains("深度求索"))
         assertTrue(text.contains("https://example.com/a"))
@@ -125,7 +132,7 @@ class WebSearchPluginTest {
     @Test
     fun searchReportsNoResults() = runTest {
         val result = newPlugin().runTool("web_search", buildJsonObject { put("query", "nothing") })
-        assertNull(result.isError)
+        assertFalse(result.isError)
         assertTrue(result.text().contains("No results found"))
     }
 
@@ -157,14 +164,14 @@ class WebSearchPluginTest {
     fun searchProviderFailureBecomesErrorResult() = runTest {
         provider.failWith = IllegalStateException("搜索服务不可用")
         val result = newPlugin().runTool("web_search", buildJsonObject { put("query", "q") })
-        assertEquals(true, result.isError)
+        assertTrue(result.isError)
         assertTrue(result.text().contains("搜索服务不可用"))
     }
 
     @Test
     fun blankQueryBecomesErrorResult() = runTest {
         val result = newPlugin().runTool("web_search", buildJsonObject { put("query", "   ") })
-        assertEquals(true, result.isError)
+        assertTrue(result.isError)
         assertTrue(result.text().contains("query"))
     }
 
@@ -175,7 +182,7 @@ class WebSearchPluginTest {
             "web_fetch",
             buildJsonObject { put("url", "https://example.com/page") },
         )
-        assertNull(result.isError)
+        assertFalse(result.isError)
         val text = result.text()
         assertTrue(text.contains("https://example.com/page"))
         assertTrue(text.contains("Body text."))
@@ -211,30 +218,29 @@ class WebSearchPluginTest {
             "web_fetch",
             buildJsonObject { put("url", "https://example.com/page") },
         )
-        assertEquals(true, result.isError)
+        assertTrue(result.isError)
         assertTrue(result.text().contains("Fetch failed"))
     }
 
     @Test
     fun missingKeyFailsToolsAndStatus() = runTest {
         val plugin = WebSearchPlugin(context, { null })
-        assertTrue(plugin.status() is PluginStatus.NotReady)
+        assertTrue(plugin.status(host) is PluginStatus.NotReady)
         val result = plugin.runTool("web_search", buildJsonObject { put("query", "q") })
-        assertEquals(true, result.isError)
+        assertTrue(result.isError)
         assertTrue(result.text().contains("API key"))
     }
-
 
     private fun newPlugin(key: String? = "sk-test"): WebSearchPlugin =
         WebSearchPlugin(context, { key }, provider)
 
-    private suspend fun WebSearchPlugin.runTool(name: String, args: JsonObject): AgentToolResult =
-        tools().first { it.name == name }.run(args)
+    private suspend fun WebSearchPlugin.runTool(name: String, args: JsonObject): PluginToolResult =
+        firstTool(name).execute(PluginToolCall(callId = "test-call", args = args))
 
-    private suspend fun CodingTool.run(args: JsonObject): AgentToolResult =
-        execute("test-call", args, null, null)
+    private fun WebSearchPlugin.firstTool(name: String): PluginTool =
+        contributionsFor(host, null).tools.first { it.name == name }
 
-    private fun AgentToolResult.text(): String = (content.single() as TextContent).text
+    private fun PluginToolResult.text(): String = (this as PluginToolResult.Text).text
 
     private class FakeContext : ContextWrapper(null) {
         private val fakeResources = FakeResources()

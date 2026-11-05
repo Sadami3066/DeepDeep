@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -98,6 +99,8 @@ internal fun MiCloudCapabilities.withWrite(feature: MiCloudFeature, enabled: Boo
 interface MiCloudSettings {
     val capabilities: StateFlow<MiCloudCapabilities>
 
+    fun snapshot(): MiCloudCapabilities = capabilities.value
+
     suspend fun setRead(feature: MiCloudFeature, enabled: Boolean)
 
     suspend fun setWrite(feature: MiCloudFeature, enabled: Boolean)
@@ -133,6 +136,11 @@ class MiCloudPreferences(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val capabilities: StateFlow<MiCloudCapabilities> = mutableCapabilities.asStateFlow()
+
+    override fun snapshot(): MiCloudCapabilities {
+        if (!loaded.isCompleted) runBlocking(Dispatchers.IO) { loaded.await() }
+        return mutableCapabilities.value
+    }
 
     init {
         scope.launch {

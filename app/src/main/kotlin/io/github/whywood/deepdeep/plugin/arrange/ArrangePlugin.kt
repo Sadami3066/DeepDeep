@@ -2,49 +2,39 @@ package io.github.whywood.deepdeep.plugin.arrange
 
 import android.content.Context
 import android.content.Intent
-import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginProgress
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.api.Contributions
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 class ArrangePlugin(
     private val context: Context,
     private val calendar: ArrangeCalendarGateway = AndroidArrangeCalendarGateway(context),
-) : OfficialPlugin {
-    override val id: String = "arrange"
-    override val kind: PluginKind = PluginKind.INTERNAL
-    override val icon: DdIcon = DdIcons.Clock
-    override val nameRes: Int = R.string.plugin_arrange_name
-    override val summaryRes: Int = R.string.plugin_arrange_summary
-    override val version: String = "3.0.0"
-    override val sizeLabelRes: Int = R.string.plugin_arrange_size
+) : DeepDeepPlugin {
+    override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
 
-    override suspend fun availability(): PluginAvailability = PluginAvailability.Available
-
-    override suspend fun install(progress: PluginProgress) = Unit
-
-    override suspend fun uninstall() = Unit
-
-    override suspend fun status(): PluginStatus = if (hasCalendarPermission()) {
-        PluginStatus.Ready(string(R.string.plugin_arrange_status_ready))
+    override suspend fun status(host: PluginHost): PluginStatus = if (hasCalendarPermission()) {
+        PluginStatus.Ready(host.text(LocalizedText.Resource(R.string.plugin_arrange_status_ready)))
     } else {
-        PluginStatus.Ready(string(R.string.plugin_arrange_status_calendar_permission))
+        PluginStatus.Ready(host.text(LocalizedText.Resource(R.string.plugin_arrange_status_calendar_permission)))
     }
 
-    override suspend fun setup(ui: PluginUi) {
+    override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
         if (hasCalendarPermission()) return
-        ui.stage(R.string.plugin_arrange_permission_title, messageRes = R.string.plugin_arrange_permission_message)
+        ui.stage(
+            LocalizedText.Resource(R.string.plugin_arrange_permission_title),
+            message = LocalizedText.Resource(R.string.plugin_arrange_permission_message),
+        )
         context.startActivity(
             Intent(context, ArrangePermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
@@ -54,31 +44,35 @@ class ArrangePlugin(
             delay(PERMISSION_POLL_MS)
             if (hasCalendarPermission()) return
         }
-        throw IllegalStateException(string(R.string.plugin_arrange_error_calendar_permission))
+        throw IllegalStateException(
+            host.text(LocalizedText.Resource(R.string.plugin_arrange_error_calendar_permission)),
+        )
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = buildList {
+    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = buildList {
         if (!hasCalendarPermission()) {
-            add(PluginAction(ACTION_PERMISSION, R.string.plugin_arrange_action_permission))
+            add(
+                PluginAction(
+                    ACTION_PERMISSION,
+                    LocalizedText.Resource(R.string.plugin_arrange_action_permission),
+                ),
+            )
         }
     }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
         if (actionId != ACTION_PERMISSION) return
         context.startActivity(
             Intent(context, ArrangePermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = emptyList()
+    override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions =
+        Contributions(tools = CodingToolPluginAdapter.toPluginTools(arrangeTools(calendar)))
 
-    override fun tools(): List<CodingTool> = arrangeTools(calendar)
-
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+    override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
 
     private fun hasCalendarPermission(): Boolean = calendar.hasReadPermission() && calendar.hasWritePermission()
-
-    private fun string(id: Int): String = context.resources.getString(id)
 
     private companion object {
         const val ACTION_PERMISSION = "permission"

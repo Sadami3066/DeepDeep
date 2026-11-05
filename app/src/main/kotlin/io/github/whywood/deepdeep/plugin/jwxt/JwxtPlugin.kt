@@ -4,17 +4,18 @@ import android.content.Context
 import android.system.Os
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginProgress
-import io.github.whywood.deepdeep.plugin.PluginSettingSpec
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginProgress
+import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.PromptSection
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import java.io.File
@@ -25,43 +26,45 @@ class JwxtPlugin(
     private val context: Context,
     private val linux: LinuxEnvironment,
     private val linuxSettings: LinuxSettingsStore,
-) : OfficialPlugin {
-    override val id: String = "jwxt"
-    override val icon: DdIcon = DdIcons.Globe
-    override val nameRes: Int = R.string.plugin_jwxt_name
-    override val summaryRes: Int = R.string.plugin_jwxt_summary
-    override val version: String = JwxtCli.VERSION
-    override val sizeLabelRes: Int = R.string.plugin_jwxt_size
-
+) : DeepDeepPlugin {
     @Volatile private var settingsValues: Map<String, String> = emptyMap()
     @Volatile private var lastVersion: String? = null
     @Volatile private var lastNodeVersion: String? = null
     @Volatile private var lastAccount: String? = null
     @Volatile private var lastLoggedIn: Boolean = false
+    @Volatile private var lastStatus: PluginStatus? = null
 
-    override suspend fun availability(): PluginAvailability {
+    override suspend fun availability(host: PluginHost): PluginAvailability {
         if (!linux.isSupported) {
-            return PluginAvailability.Unavailable(context.getString(R.string.plugin_jwxt_unavailable_device))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_jwxt_unavailable_device)),
+            )
         }
         if (linux.state.value !is LinuxInstallState.Installed) {
-            return PluginAvailability.Unavailable(context.getString(R.string.plugin_jwxt_unavailable_linux))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_jwxt_unavailable_linux)),
+            )
         }
         if (!linuxSettings.isEnabled()) {
-            return PluginAvailability.Unavailable(context.getString(R.string.plugin_jwxt_unavailable_disabled))
+            return PluginAvailability.Unavailable(
+                host.text(LocalizedText.Resource(R.string.plugin_jwxt_unavailable_disabled)),
+            )
         }
         return PluginAvailability.Available
     }
 
-    override suspend fun install(progress: PluginProgress) {
-        requireAvailable()
-        progress.report(null, R.string.plugin_jwxt_stage_checking)
+    override suspend fun install(host: PluginHost, progress: PluginProgress) {
+        requireAvailable(host)
+        progress.report(null, LocalizedText.Resource(R.string.plugin_jwxt_stage_checking))
         val nodeVersion = probeNodeVersion()
-            ?: throw IllegalStateException(context.getString(R.string.plugin_jwxt_error_node_missing))
+            ?: throw IllegalStateException(host.text(LocalizedText.Resource(R.string.plugin_jwxt_error_node_missing)))
         val nodeMajor = JwxtCli.parseNodeMajor(nodeVersion)
         if (nodeMajor == null || nodeMajor < JwxtCli.MIN_NODE_MAJOR) {
-            throw IllegalStateException(context.getString(R.string.plugin_jwxt_error_node_old, nodeVersion))
+            throw IllegalStateException(
+                host.text(LocalizedText.Resource(R.string.plugin_jwxt_error_node_old), nodeVersion),
+            )
         }
-        progress.report(null, R.string.plugin_jwxt_stage_installing)
+        progress.report(null, LocalizedText.Resource(R.string.plugin_jwxt_stage_installing))
         val target = installDir()
         target.deleteRecursively()
         try {
@@ -71,7 +74,10 @@ class JwxtPlugin(
             val installedVersion = JwxtCli.parseVersion(result.output)
             if (result.exitCode != 0 || installedVersion != JwxtCli.VERSION) {
                 throw IllegalStateException(
-                    context.getString(R.string.plugin_jwxt_error_install, result.output.takeLast(400).trim()),
+                    host.text(
+                        LocalizedText.Resource(R.string.plugin_jwxt_error_install),
+                        result.output.takeLast(400).trim(),
+                    ),
                 )
             }
             lastVersion = installedVersion
@@ -85,7 +91,7 @@ class JwxtPlugin(
         }
     }
 
-    override suspend fun uninstall() {
+    override suspend fun uninstall(host: PluginHost) {
         runCatching { File(linux.rootfsDir, JwxtCli.BIN_RELATIVE).delete() }
         runCatching { installDir().deleteRecursively() }
         runCatching { credentialsDir().deleteRecursively() }
@@ -93,37 +99,43 @@ class JwxtPlugin(
         lastNodeVersion = null
         lastAccount = null
         lastLoggedIn = false
+        lastStatus = null
     }
 
-    override suspend fun status(): PluginStatus {
-        val availability = availability()
-        if (availability is PluginAvailability.Unavailable) {
-            return PluginStatus.Failed(availability.reason)
-        }
+    override suspend fun status(host: PluginHost): PluginStatus = cache(
+        when (val availability = availability(host)) {
+            is PluginAvailability.Unavailable -> PluginStatus.Failed(availability.reason)
+            PluginAvailability.Available -> readStatus(host)
+        },
+    )
+
+    private suspend fun readStatus(host: PluginHost): PluginStatus {
         if (!File(linux.rootfsDir, JwxtCli.INSTALLED_ENTRY_RELATIVE).isFile) {
             lastVersion = null
             lastLoggedIn = false
-            return PluginStatus.Failed(context.getString(R.string.plugin_jwxt_status_needs_reinstall))
+            return PluginStatus.Failed(host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_needs_reinstall)))
         }
         val nodeVersion = probeNodeVersion()
         if (nodeVersion == null) {
             lastVersion = null
             lastNodeVersion = null
             lastLoggedIn = false
-            return PluginStatus.Failed(context.getString(R.string.plugin_jwxt_status_no_node))
+            return PluginStatus.Failed(host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_no_node)))
         }
         lastNodeVersion = nodeVersion
         val nodeMajor = JwxtCli.parseNodeMajor(nodeVersion)
         if (nodeMajor == null || nodeMajor < JwxtCli.MIN_NODE_MAJOR) {
             lastVersion = null
             lastLoggedIn = false
-            return PluginStatus.Failed(context.getString(R.string.plugin_jwxt_status_node_old, nodeVersion))
+            return PluginStatus.Failed(
+                host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_node_old), nodeVersion),
+            )
         }
         val versionResult = linux.execute(JwxtCli.versionCommand(), VERSION_TIMEOUT_MS)
         val installedVersion = JwxtCli.parseVersion(versionResult.output)
         if (versionResult.exitCode != 0 || installedVersion == null) {
             lastVersion = null
-            return PluginStatus.Failed(context.getString(R.string.plugin_jwxt_status_needs_reinstall))
+            return PluginStatus.Failed(host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_needs_reinstall)))
         }
         lastVersion = installedVersion
         val credentials = readRootfsText(JwxtCli.CREDENTIALS_RELATIVE)
@@ -131,68 +143,82 @@ class JwxtPlugin(
         lastAccount = account
         lastLoggedIn = JwxtCli.isLoggedIn(readRootfsText(JwxtCli.SESSION_RELATIVE))
         return if (lastLoggedIn) {
-            PluginStatus.Ready(context.getString(R.string.plugin_jwxt_status_logged_in), account)
+            PluginStatus.Ready(host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_logged_in)), account)
         } else {
-            PluginStatus.NotReady(context.getString(R.string.plugin_jwxt_status_not_logged_in))
+            PluginStatus.NotReady(host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_not_logged_in)))
         }
     }
 
-    override suspend fun setup(ui: PluginUi) {
-        requireAvailable()
-        if (status() is PluginStatus.Ready) return
+    override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
+        requireAvailable(host)
+        if (status(host) is PluginStatus.Ready) return
         throw IllegalStateException(
-            context.getString(
-                if (settingsNetId() == null || settingsPassword().isEmpty()) {
-                    R.string.plugin_jwxt_setup_no_credentials
-                } else {
-                    R.string.plugin_jwxt_setup_needs_login
-                },
+            host.text(
+                LocalizedText.Resource(
+                    if (settingsNetId() == null || settingsPassword().isEmpty()) {
+                        R.string.plugin_jwxt_setup_no_credentials
+                    } else {
+                        R.string.plugin_jwxt_setup_needs_login
+                    },
+                ),
             ),
         )
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = when (status) {
-        is PluginStatus.Ready -> listOf(PluginAction(ACTION_RELOGIN, R.string.plugin_jwxt_action_relogin))
+    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = when (status) {
+        is PluginStatus.Ready -> listOf(
+            PluginAction(ACTION_RELOGIN, LocalizedText.Resource(R.string.plugin_jwxt_action_relogin)),
+        )
+
         else -> emptyList()
     }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
         if (actionId != ACTION_RELOGIN) return
-        ui.progress(null, R.string.plugin_jwxt_stage_relogin)
+        ui.progress(null, LocalizedText.Resource(R.string.plugin_jwxt_stage_relogin))
         runCatching { File(linux.rootfsDir, JwxtCli.SESSION_RELATIVE).delete() }
         lastLoggedIn = false
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = buildList {
-        lastVersion?.let { add(PluginDetailRow(R.string.plugin_jwxt_detail_cli_version, it)) }
-        lastNodeVersion?.let { add(PluginDetailRow(R.string.plugin_jwxt_detail_node, it)) }
+    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> = buildList {
+        lastVersion?.let { add(PluginDetailRow(LocalizedText.Resource(R.string.plugin_jwxt_detail_cli_version), it)) }
+        lastNodeVersion?.let { add(PluginDetailRow(LocalizedText.Resource(R.string.plugin_jwxt_detail_node), it)) }
         if (status !is PluginStatus.Failed) {
             add(
                 PluginDetailRow(
-                    R.string.plugin_jwxt_detail_account,
-                    lastAccount ?: context.getString(R.string.plugin_jwxt_account_missing),
+                    LocalizedText.Resource(R.string.plugin_jwxt_detail_account),
+                    lastAccount ?: host.text(LocalizedText.Resource(R.string.plugin_jwxt_account_missing)),
                 ),
             )
             add(
                 PluginDetailRow(
-                    R.string.plugin_jwxt_detail_login,
-                    context.getString(if (lastLoggedIn) R.string.plugin_jwxt_login_on else R.string.plugin_jwxt_login_off),
+                    LocalizedText.Resource(R.string.plugin_jwxt_detail_login),
+                    host.text(
+                        LocalizedText.Resource(
+                            if (lastLoggedIn) R.string.plugin_jwxt_login_on else R.string.plugin_jwxt_login_off,
+                        ),
+                    ),
                 ),
             )
         }
     }
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(JwxtCli.SKILL_ID, JwxtContent.skillMarkdown()))
+    override fun skills(host: PluginHost): List<PluginSkill> =
+        listOf(PluginSkill(JwxtCli.SKILL_ID, JwxtContent.skillMarkdown()))
 
-    override fun promptBody(status: PluginStatus): String =
-        JwxtContent.promptBody(status is PluginStatus.Ready, lastAccount, status.label)
+    override fun promptSections(host: PluginHost): List<PromptSection> {
+        val status = lastStatus ?: PluginStatus.NotReady(
+            host.text(LocalizedText.Resource(R.string.plugin_jwxt_status_not_logged_in)),
+        )
+        return listOf(PromptSection(SECTION_ID, JwxtContent.promptBody(status is PluginStatus.Ready, lastAccount, status.label)))
+    }
 
-    override fun settings(): List<PluginSettingSpec> = listOf(
-        PluginSettingSpec.Text(KEY_NETID, R.string.plugin_jwxt_setting_netid),
-        PluginSettingSpec.Text(KEY_PASSWORD, R.string.plugin_jwxt_setting_password, secret = true),
+    override fun settings(): List<SettingSpec> = listOf(
+        SettingSpec.Text(KEY_NETID, LocalizedText.Resource(R.string.plugin_jwxt_setting_netid)),
+        SettingSpec.Text(KEY_PASSWORD, LocalizedText.Resource(R.string.plugin_jwxt_setting_password), secret = true),
     )
 
-    override suspend fun onSettingsChanged(values: Map<String, String>) {
+    override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
         val previousNetId = settingsNetId()
         settingsValues = values
         if (linux.state.value !is LinuxInstallState.Installed) return
@@ -204,6 +230,11 @@ class JwxtPlugin(
                 runCatching { File(linux.rootfsDir, JwxtCli.SESSION_RELATIVE).delete() }
             }
         }
+    }
+
+    private fun cache(status: PluginStatus): PluginStatus {
+        lastStatus = status
+        return status
     }
 
     private suspend fun syncCredentials() {
@@ -252,18 +283,19 @@ class JwxtPlugin(
 
     private fun settingsPassword(): String = settingsValues[KEY_PASSWORD].orEmpty()
 
-    private suspend fun requireAvailable() {
-        val availability = availability()
+    private suspend fun requireAvailable(host: PluginHost) {
+        val availability = availability(host)
         if (availability is PluginAvailability.Unavailable) {
             throw IllegalStateException(availability.reason)
         }
     }
 
     private companion object {
-        const val KEY_NETID = "netid"
-        const val KEY_PASSWORD = "password"
+        const val KEY_NETID = JWXT_SETTING_NETID
+        const val KEY_PASSWORD = JWXT_SETTING_PASSWORD
         const val CREDENTIALS_NAME = "credentials"
         const val ACTION_RELOGIN = "relogin"
+        const val SECTION_ID = "jwxt_prompt"
 
         const val CONFIG_DIR_MODE = 0x1C0
         const val CREDENTIALS_MODE = 0x180
@@ -273,3 +305,6 @@ class JwxtPlugin(
         const val INSTALL_TIMEOUT_MS = 120_000L
     }
 }
+
+internal const val JWXT_SETTING_NETID = "netid"
+internal const val JWXT_SETTING_PASSWORD = "password"

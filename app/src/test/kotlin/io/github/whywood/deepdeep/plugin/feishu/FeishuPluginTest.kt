@@ -1,5 +1,10 @@
 package io.github.whywood.deepdeep.plugin.feishu
 
+import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.plugin.api.IconRef
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.cliFeishuManifest
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,6 +16,20 @@ import org.junit.rules.TemporaryFolder
 class FeishuPluginTest {
     @get:Rule
     val folder = TemporaryFolder()
+
+    @Test
+    fun manifestMatchesPluginContract() {
+        val manifest = cliFeishuManifest()
+        assertEquals("feishu", manifest.id)
+        assertEquals(FEISHU_VERSION, manifest.version)
+        assertEquals(PluginSource.EXTERNAL, manifest.source)
+        assertEquals(LocalizedText.Resource(R.string.plugin_feishu_name), manifest.name)
+        assertEquals(LocalizedText.Resource(R.string.plugin_feishu_summary), manifest.summary)
+        assertEquals(LocalizedText.Resource(R.string.plugin_feishu_size), manifest.sizeLabel)
+        assertEquals(IconRef.Resource(R.drawable.ic_plugin_feishu), manifest.icon)
+        assertEquals(listOf(FEISHU_SKILL_ID), manifest.provides.skills)
+        assertTrue(manifest.installable)
+    }
 
     @Test
     fun restoreCommandKeepsExistingBinaryOnRollback() {

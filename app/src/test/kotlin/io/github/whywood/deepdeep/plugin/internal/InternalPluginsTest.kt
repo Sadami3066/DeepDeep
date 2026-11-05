@@ -1,11 +1,12 @@
 package io.github.whywood.deepdeep.plugin.internal
 
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginSettingSpec
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
-import io.github.whywood.deepdeep.runtime.SessionBinding
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -46,14 +47,18 @@ class InternalPluginsTest {
             notifier = { _, _, _ -> },
         )
         val plugin = JobsPlugin(registry, strings)
+        val host = testPluginHost(testBuiltinManifest("jobs"))
 
-        assertEquals(PluginKind.INTERNAL, plugin.kind)
-        val names = plugin.tools(SessionBinding()).map { it.name }
+        assertEquals(PluginAvailability.Available, plugin.availability(host))
+        val session = PluginSessionInfo(sessionId = "session", cwd = "/tmp")
+        val names = plugin.contributionsFor(host, session).tools.map { it.name }
         assertEquals(listOf("job_start", "job_output", "job_list", "job_kill"), names)
-        val setting = plugin.settings().single() as PluginSettingSpec.Number
+        assertTrue(plugin.contributionsFor(host, null).tools.isEmpty())
+        val setting = plugin.settings().single() as SettingSpec.Number
         assertEquals("max_running", setting.key)
         assertEquals(1, setting.min)
         assertEquals(20, setting.max)
         assertEquals("10", setting.default)
+        assertTrue((plugin.status(host) as PluginStatus.Ready).label.isNotBlank())
     }
 }

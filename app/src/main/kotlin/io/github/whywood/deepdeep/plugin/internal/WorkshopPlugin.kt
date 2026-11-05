@@ -1,14 +1,20 @@
 package io.github.whywood.deepdeep.plugin.internal
 
 import android.content.res.AssetManager
-import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginSettingSpec
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginSkillFile
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.Contributions
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginSkillFile
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
+import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
+import io.github.whywood.deepdeep.runtime.BoundSession
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.runtime.workshopEditTool
@@ -18,45 +24,60 @@ class WorkshopPlugin(
     private val store: WorkshopStore,
     private val assets: AssetManager,
     strings: PluginStrings,
-) : InternalPlugin(strings) {
-    override val id: String = "workshop"
-    override val icon: DdIcon = DdIcons.Apps
-    override val nameRes: Int = R.string.plugins_internal_workshop_name
-    override val summaryRes: Int = R.string.plugins_internal_workshop_summary
-    override val version: String = "1.0"
+) : DeepDeepPlugin {
+    @Volatile
+    private var values: Map<String, String> = emptyMap()
 
-    override fun settings(): List<PluginSettingSpec> = listOf(
-        PluginSettingSpec.Toggle(
+    override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
+
+    override suspend fun status(host: PluginHost): PluginStatus =
+        PluginStatus.Ready(host.text(LocalizedText.Resource(R.string.plugins_status_builtin)))
+
+    override fun settings(): List<SettingSpec> = listOf(
+        SettingSpec.Toggle(
             key = SKILL_ENABLED_KEY,
-            titleRes = R.string.plugins_setting_skill_enabled,
+            title = LocalizedText.Resource(R.string.plugins_setting_skill_enabled),
             defaultValue = true,
         ),
-        PluginSettingSpec.Number(
+        SettingSpec.Number(
             key = MAX_TURNS_KEY,
-            titleRes = R.string.plugins_setting_max_turns,
+            title = LocalizedText.Resource(R.string.plugins_setting_max_turns),
             min = 1,
             max = 32,
             defaultValue = 16,
         ),
     )
 
-    override fun tools(binding: SessionBinding): List<CodingTool> =
-        workshopTools(store, binding.supportsChatDelivery) + workshopEditTool(store)
+    override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
+        this.values = values
+    }
 
-    override fun skills(): List<PluginSkill> {
+    override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions {
+        val bound = session ?: return Contributions()
+        val binding = SessionBinding(bound.supportsChatDelivery).apply {
+            bind(BoundSession(bound.sessionId, bound.file, bound.cwd))
+        }
+        val tools = workshopTools(store, binding.supportsChatDelivery) + workshopEditTool(store)
+        return Contributions(tools = CodingToolPluginAdapter.toPluginTools(tools))
+    }
+
+    override fun skills(host: PluginHost): List<PluginSkill> {
         if (!settingBool(SKILL_ENABLED_KEY, true)) return emptyList()
         val files = readWorkshopSkillFiles(assets)
         val skill = files.firstOrNull { it.path == SKILL_FILE_NAME } ?: return emptyList()
-        if (skill.content.isBlank()) return emptyList()
+        val markdown = skill.content?.takeIf { it.isNotBlank() } ?: return emptyList()
         return listOf(
             PluginSkill(
                 id = SKILL_ID,
-                markdown = skill.content,
+                markdown = markdown,
                 files = files.filter { it.path != SKILL_FILE_NAME },
                 legacyOwned = true,
             ),
         )
     }
+
+    private fun settingBool(key: String, default: Boolean): Boolean =
+        values[key]?.toBooleanStrictOrNull() ?: default
 
     companion object {
         const val SKILL_ID = "workshop"

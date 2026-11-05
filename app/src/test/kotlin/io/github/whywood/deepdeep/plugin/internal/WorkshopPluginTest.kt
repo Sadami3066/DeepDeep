@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.plugin.internal
 
-import io.github.whywood.deepdeep.plugin.PluginSkillFile
+import io.github.whywood.deepdeep.plugin.api.PluginSkillFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

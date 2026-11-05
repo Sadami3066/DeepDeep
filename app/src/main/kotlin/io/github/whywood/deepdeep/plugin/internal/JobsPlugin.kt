@@ -1,11 +1,17 @@
 package io.github.whywood.deepdeep.plugin.internal
 
-import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginSettingSpec
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.Contributions
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
+import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
+import io.github.whywood.deepdeep.runtime.BoundSession
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.jobTools
@@ -13,25 +19,29 @@ import io.github.whywood.deepdeep.runtime.jobTools
 class JobsPlugin(
     private val jobRegistry: JobRegistry,
     strings: PluginStrings,
-) : InternalPlugin(strings) {
-    override val id: String = "jobs"
-    override val icon: DdIcon = DdIcons.Clock
-    override val nameRes: Int = R.string.plugins_internal_jobs_name
-    override val summaryRes: Int = R.string.plugins_internal_jobs_summary
-    override val version: String = "1.0"
+) : DeepDeepPlugin {
+    override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
 
-    override fun settings(): List<PluginSettingSpec> = listOf(
-        PluginSettingSpec.Number(
+    override suspend fun status(host: PluginHost): PluginStatus =
+        PluginStatus.Ready(host.text(LocalizedText.Resource(R.string.plugins_status_builtin)))
+
+    override fun settings(): List<SettingSpec> = listOf(
+        SettingSpec.Number(
             key = MAX_RUNNING_KEY,
-            titleRes = R.string.plugins_setting_max_running,
+            title = LocalizedText.Resource(R.string.plugins_setting_max_running),
             min = 1,
             max = 20,
             defaultValue = 10,
         ),
     )
 
-    override fun tools(binding: SessionBinding): List<CodingTool> =
-        jobTools(binding, jobRegistry)
+    override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions {
+        val bound = session ?: return Contributions()
+        val binding = SessionBinding(bound.supportsChatDelivery).apply {
+            bind(BoundSession(bound.sessionId, bound.file, bound.cwd))
+        }
+        return Contributions(tools = CodingToolPluginAdapter.toPluginTools(jobTools(binding, jobRegistry)))
+    }
 
     private companion object {
         const val MAX_RUNNING_KEY = "max_running"

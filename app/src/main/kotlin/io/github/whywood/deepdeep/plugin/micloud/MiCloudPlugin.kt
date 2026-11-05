@@ -2,30 +2,51 @@ package io.github.whywood.deepdeep.plugin.micloud
 
 import android.content.Context
 import android.content.Intent
-import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginActionStyle
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginProgress
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.api.Contributions
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.PromptSection
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
+import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+internal object MiCloudSettingKeys {
+    const val NOTES = "notes"
+    const val TODOS = "todos"
+    const val SMS = "sms"
+    const val CONTACTS = "contacts"
+    const val GALLERY = "gallery"
+    const val RECORDINGS = "recordings"
+    const val ACCOUNT = "account"
+
+    val ALL: List<String> = listOf(NOTES, TODOS, SMS, CONTACTS, GALLERY, RECORDINGS, ACCOUNT)
+}
+
 class MiCloudPlugin(
     private val context: Context,
     private val onCapabilitiesChanged: () -> Unit = {},
     private val onSessionInvalidated: () -> Unit = {},
-) : OfficialPlugin {
+) : DeepDeepPlugin {
+    private var settingsOverride: MiCloudSettings? = null
+
+    internal constructor(context: Context, settings: MiCloudSettings) : this(context) {
+        settingsOverride = settings
+    }
+
     private val cookieStore by lazy { MiCloudCookieStore(context) }
     private val probeClient by lazy {
         MiCloudClient(
@@ -47,55 +68,55 @@ class MiCloudPlugin(
         )
     }
     @Volatile private var writer: MiCloudWebWriter? = null
+    @Volatile private var lastStatus: PluginStatus? = null
 
-    val preferences: MiCloudPreferences by lazy { MiCloudPreferences(context, onCapabilitiesChanged) }
+    val preferences: MiCloudSettings by lazy {
+        settingsOverride ?: MiCloudPreferences(context, onCapabilitiesChanged)
+    }
 
-    override val id: String = "micloud"
-    override val icon: DdIcon = DdIcons.Cloud
-    override val nameRes: Int = R.string.plugin_micloud_name
-    override val summaryRes: Int = R.string.plugin_micloud_summary
-    override val version: String = "1.0.0"
-    override val sizeLabelRes: Int = R.string.plugin_micloud_size
+    override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
 
-    override suspend fun availability(): PluginAvailability = PluginAvailability.Available
-
-    override suspend fun install(progress: PluginProgress) = Unit
-
-    override suspend fun uninstall() {
+    override suspend fun uninstall(host: PluginHost) {
         cookieStore.clear()
         preferences.clear()
         withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
         session.markSignedOut()
         writer?.destroy()
         writer = null
+        lastStatus = null
     }
 
-    override suspend fun recover() = Unit
+    override suspend fun status(host: PluginHost): PluginStatus =
+        miCloudStatusOf(session.status(), host).also { lastStatus = it }
 
-    override suspend fun status(): PluginStatus = miCloudStatusOf(session.status())
-
-    internal fun miCloudStatusOf(view: MiCloudSessionView): PluginStatus = when (view.state) {
+    internal fun miCloudStatusOf(view: MiCloudSessionView, host: PluginHost): PluginStatus = when (view.state) {
         MiCloudSessionState.SIGNED_OUT ->
-            PluginStatus.NotReady(string(R.string.plugin_micloud_status_not_logged_in))
+            PluginStatus.NotReady(host.text(LocalizedText.Resource(R.string.plugin_micloud_status_not_logged_in)))
 
         MiCloudSessionState.VERIFIED -> PluginStatus.Ready(
-            view.nickname ?: string(R.string.plugin_micloud_status_ready_unknown),
+            view.nickname ?: host.text(LocalizedText.Resource(R.string.plugin_micloud_status_ready_unknown)),
             view.nickname,
         )
 
         MiCloudSessionState.EXPIRED ->
-            PluginStatus.NotReady(string(R.string.plugin_micloud_status_expired))
+            PluginStatus.NotReady(host.text(LocalizedText.Resource(R.string.plugin_micloud_status_expired)))
 
         MiCloudSessionState.UNVERIFIED -> if (view.nickname != null) {
-            PluginStatus.Ready(string(R.string.plugin_micloud_status_unverified), view.nickname)
+            PluginStatus.Ready(
+                host.text(LocalizedText.Resource(R.string.plugin_micloud_status_unverified)),
+                view.nickname,
+            )
         } else {
-            PluginStatus.NotReady(string(R.string.plugin_micloud_status_unverifiable))
+            PluginStatus.NotReady(host.text(LocalizedText.Resource(R.string.plugin_micloud_status_unverifiable)))
         }
     }
 
-    override suspend fun setup(ui: PluginUi) {
+    override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
         val before = cookieStore.read()
-        ui.stage(R.string.plugin_micloud_stage_login, messageRes = R.string.plugin_micloud_hint_login)
+        ui.stage(
+            LocalizedText.Resource(R.string.plugin_micloud_stage_login),
+            message = LocalizedText.Resource(R.string.plugin_micloud_hint_login),
+        )
         context.startActivity(
             Intent(context, MiCloudLoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
@@ -109,46 +130,50 @@ class MiCloudPlugin(
             if (cookie == null || cookie == before || cookie == checked) continue
             checked = cookie
             verifyAttempts = 0
-            ui.stage(R.string.plugin_micloud_stage_verifying)
+            ui.stage(LocalizedText.Resource(R.string.plugin_micloud_stage_verifying))
             while (verifyAttempts < VERIFY_ATTEMPTS) {
                 val profile = verifySession()
                 if (profile != null) {
                     session.markVerified(profile)
-                    ui.progress(null, R.string.plugin_micloud_stage_signed_in)
+                    ui.progress(null, LocalizedText.Resource(R.string.plugin_micloud_stage_signed_in))
                     return
                 }
                 verifyAttempts += 1
                 if (verifyAttempts < VERIFY_ATTEMPTS) delay(VERIFY_RETRY_MS)
             }
-            throw IllegalStateException(string(R.string.plugin_micloud_error_verify_failed))
+            throw IllegalStateException(
+                host.text(LocalizedText.Resource(R.string.plugin_micloud_error_verify_failed)),
+            )
         }
-        throw IllegalStateException(string(R.string.plugin_micloud_error_login_timeout))
+        throw IllegalStateException(
+            host.text(LocalizedText.Resource(R.string.plugin_micloud_error_login_timeout)),
+        )
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = buildList {
+    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = buildList {
         if (status is PluginStatus.Ready) {
-            add(PluginAction(ACTION_RELOGIN, R.string.plugin_micloud_action_relogin))
+            add(PluginAction(ACTION_RELOGIN, LocalizedText.Resource(R.string.plugin_micloud_action_relogin)))
             add(
                 PluginAction(
                     ACTION_LOGOUT,
-                    R.string.plugin_micloud_action_logout,
+                    LocalizedText.Resource(R.string.plugin_micloud_action_logout),
                     PluginActionStyle.DESTRUCTIVE,
                 ),
             )
         } else {
-            add(PluginAction(ACTION_LOGIN, R.string.plugin_micloud_action_login))
+            add(PluginAction(ACTION_LOGIN, LocalizedText.Resource(R.string.plugin_micloud_action_login)))
         }
     }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
         when (actionId) {
             ACTION_LOGIN, ACTION_RELOGIN -> {
                 cookieStore.clear()
-                setup(ui)
+                setup(host, ui)
             }
 
             ACTION_LOGOUT -> {
-                ui.progress(null, R.string.plugin_micloud_stage_logging_out)
+                ui.progress(null, LocalizedText.Resource(R.string.plugin_micloud_stage_logging_out))
                 cookieStore.clear()
                 withContext(Dispatchers.Main) { clearMiCloudWebCookies() }
                 session.markSignedOut()
@@ -156,34 +181,108 @@ class MiCloudPlugin(
         }
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = listOf(
+    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> = listOf(
         PluginDetailRow(
-            R.string.plugin_micloud_detail_account,
+            LocalizedText.Resource(R.string.plugin_micloud_detail_account),
             (status as? PluginStatus.Ready)?.account ?: status.label,
         ),
         PluginDetailRow(
-            R.string.plugin_micloud_detail_features,
-            context.getString(
-                R.string.plugin_micloud_detail_feature_count,
+            LocalizedText.Resource(R.string.plugin_micloud_detail_features),
+            host.text(
+                LocalizedText.Resource(R.string.plugin_micloud_detail_feature_count),
                 enabledFeatureCount(preferences.capabilities.value),
                 MiCloudFeature.entries.size,
             ),
         ),
     )
 
-    override fun tools(): List<CodingTool> = miCloudTools(
-        client = client,
-        settings = preferences,
-        writer = webWriter(),
-        downloadDir = File(context.filesDir, "micloud/recordings"),
+    override fun promptSections(host: PluginHost): List<PromptSection> {
+        val status = lastStatus
+            ?: PluginStatus.NotReady(
+                host.text(LocalizedText.Resource(R.string.plugin_micloud_status_not_logged_in)),
+            )
+        return listOf(
+            PromptSection(
+                id = PROMPT_ID,
+                body = miCloudPromptBody(status, preferences.capabilities.value),
+            ),
+        )
+    }
+
+    override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+
+    override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions = Contributions(
+        tools = CodingToolPluginAdapter.toPluginTools(
+            miCloudTools(
+                client = client,
+                settings = preferences,
+                writer = webWriter(),
+                downloadDir = File(context.filesDir, "micloud/recordings"),
+            ),
+        ),
     )
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+    override fun settings(): List<SettingSpec> {
+        val capabilities = preferences.snapshot()
+        return listOf(
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.NOTES,
+                title = LocalizedText.Resource(R.string.micloud_feature_notes),
+                defaultValue = capabilities.notesRead && capabilities.notesWrite,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.TODOS,
+                title = LocalizedText.Resource(R.string.micloud_feature_todos),
+                defaultValue = capabilities.todosRead && capabilities.todosWrite,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.SMS,
+                title = LocalizedText.Resource(R.string.micloud_feature_sms),
+                defaultValue = capabilities.smsRead,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.CONTACTS,
+                title = LocalizedText.Resource(R.string.micloud_feature_contacts),
+                defaultValue = capabilities.contactsRead,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.GALLERY,
+                title = LocalizedText.Resource(R.string.micloud_feature_gallery),
+                defaultValue = capabilities.galleryRead,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.RECORDINGS,
+                title = LocalizedText.Resource(R.string.micloud_feature_recordings),
+                defaultValue = capabilities.recordingsRead,
+            ),
+            SettingSpec.Toggle(
+                key = MiCloudSettingKeys.ACCOUNT,
+                title = LocalizedText.Resource(R.string.micloud_feature_account),
+                defaultValue = capabilities.accountRead,
+            ),
+        )
+    }
 
-    override fun promptBody(status: PluginStatus): String =
-        miCloudPromptBody(status, preferences.capabilities.value)
+    override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
+        val settings = preferences
+        applyToggle(settings, values, MiCloudSettingKeys.NOTES, MiCloudFeature.NOTES)
+        applyToggle(settings, values, MiCloudSettingKeys.TODOS, MiCloudFeature.TODOS)
+        applyToggle(settings, values, MiCloudSettingKeys.SMS, MiCloudFeature.SMS)
+        applyToggle(settings, values, MiCloudSettingKeys.CONTACTS, MiCloudFeature.CONTACTS)
+        applyToggle(settings, values, MiCloudSettingKeys.GALLERY, MiCloudFeature.GALLERY)
+        applyToggle(settings, values, MiCloudSettingKeys.RECORDINGS, MiCloudFeature.RECORDINGS)
+        applyToggle(settings, values, MiCloudSettingKeys.ACCOUNT, MiCloudFeature.ACCOUNT)
+    }
 
-    private fun string(id: Int): String = context.resources.getString(id)
+    private suspend fun applyToggle(
+        settings: MiCloudSettings,
+        values: Map<String, String>,
+        key: String,
+        feature: MiCloudFeature,
+    ) {
+        val enabled = values[key]?.toBooleanStrictOrNull() ?: return
+        settings.setFeature(feature, enabled)
+    }
 
     private fun webWriter(): MiCloudWebWriter = writer
         ?: MiCloudWebWriter(context, cookieStore, onAuthExpired = ::invalidateSession)
@@ -211,6 +310,7 @@ class MiCloudPlugin(
         const val VERIFY_ATTEMPTS = 3
         const val VERIFY_RETRY_MS = 1_200L
         const val SKILL_ID = "deepdeep-micloud"
+        const val PROMPT_ID = "micloud"
 
         val SKILL_MARKDOWN = """
             ---

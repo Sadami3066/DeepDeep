@@ -4,10 +4,15 @@ import android.content.ContextWrapper
 import android.content.res.Resources
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginActionStyle
-import io.github.whywood.deepdeep.plugin.PluginAvailability
 import io.github.whywood.deepdeep.plugin.PluginDownloader
-import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.IconRef
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.cliWecomManifest
 import io.github.whywood.deepdeep.shell.LinuxResult
 import java.io.File
 import kotlinx.coroutines.test.runTest
@@ -17,40 +22,44 @@ import org.junit.Test
 
 class WecomPluginTest {
     private val context = FakeContext()
+    private val host = testPluginHost(cliWecomManifest())
 
     @Test
-    fun identityMatchesPluginContract() {
-        val plugin = plugin()
-        assertEquals("wecom", plugin.id)
-        assertEquals("1.3.4", plugin.version)
-        assertEquals(DdIcons.Message, plugin.icon)
-        assertEquals(R.string.plugin_wecom_name, plugin.nameRes)
-        assertEquals(R.string.plugin_wecom_summary, plugin.summaryRes)
-        assertEquals(R.string.plugin_wecom_size, plugin.sizeLabelRes)
+    fun manifestMatchesPluginContract() {
+        val manifest = cliWecomManifest()
+        assertEquals("wecom", manifest.id)
+        assertEquals(WecomCli.VERSION, manifest.version)
+        assertEquals(PluginSource.EXTERNAL, manifest.source)
+        assertEquals(LocalizedText.Resource(R.string.plugin_wecom_name), manifest.name)
+        assertEquals(LocalizedText.Resource(R.string.plugin_wecom_summary), manifest.summary)
+        assertEquals(LocalizedText.Resource(R.string.plugin_wecom_size), manifest.sizeLabel)
+        assertEquals(IconRef.Resource(DdIcons.Message.res), manifest.icon)
+        assertEquals(listOf(WECOM_SKILL_ID), manifest.provides.skills)
+        assertTrue(manifest.installable)
     }
 
     @Test
     fun availabilityRequiresLinuxEnvironment() = runTest {
         assertEquals(
-            "res:${R.string.plugin_wecom_unavailable_device}",
+            "text:${R.string.plugin_wecom_unavailable_device}",
             unavailableReason(plugin(FakeRuntime(supported = false))),
         )
         assertEquals(
-            "res:${R.string.plugin_wecom_unavailable_linux}",
+            "text:${R.string.plugin_wecom_unavailable_linux}",
             unavailableReason(plugin(FakeRuntime(installed = false))),
         )
         assertEquals(
-            "res:${R.string.plugin_wecom_unavailable_disabled}",
+            "text:${R.string.plugin_wecom_unavailable_disabled}",
             unavailableReason(plugin(FakeRuntime(enabled = false))),
         )
-        assertEquals(PluginAvailability.Available, plugin().availability())
+        assertEquals(PluginAvailability.Available, plugin().availability(host))
     }
 
     @Test
     fun authorizedStatusReportsBotIdAndDetails() = runTest {
         val runtime = FakeRuntime()
         val plugin = plugin(runtime)
-        val status = plugin.status()
+        val status = plugin.status(host)
         assertTrue(status is PluginStatus.Ready)
         assertEquals("bot-123", (status as PluginStatus.Ready).account)
         assertTrue(status.label.endsWith("bot-123"))
@@ -58,37 +67,37 @@ class WecomPluginTest {
         assertTrue(runtime.commands.any { it.contains("auth show --status") })
         assertTrue(runtime.commands.any { it.contains("auth show") })
 
-        val rows = plugin.detailRows(status)
+        val rows = plugin.detailRows(host, status)
         assertEquals(2, rows.size)
-        assertEquals(R.string.plugin_wecom_detail_cli_version, rows[0].labelRes)
+        assertEquals(R.string.plugin_wecom_detail_cli_version, labelRes(rows[0].label))
         assertEquals("1.3.4", rows[0].value)
-        assertEquals(R.string.plugin_wecom_detail_bot_id, rows[1].labelRes)
+        assertEquals(R.string.plugin_wecom_detail_bot_id, labelRes(rows[1].label))
         assertEquals("bot-123", rows[1].value)
     }
 
     @Test
     fun unauthorizedStatusIsNotReady() = runTest {
         val plugin = plugin(FakeRuntime(statusOutput = "unauthorized\n"))
-        val status = plugin.status()
+        val status = plugin.status(host)
         assertTrue(status is PluginStatus.NotReady)
-        assertEquals("res:${R.string.plugin_wecom_status_not_connected}", status.label)
-        assertEquals(1, plugin.detailRows(status).size)
+        assertEquals("text:${R.string.plugin_wecom_status_not_connected}", status.label)
+        assertEquals(1, plugin.detailRows(host, status).size)
     }
 
     @Test
     fun actionsFollowConnectionState() {
-        val readyActions = plugin().actions(PluginStatus.Ready("connected"))
+        val readyActions = plugin().actions(host, PluginStatus.Ready("connected"))
         assertEquals(listOf("reauthorize", "logout"), readyActions.map { it.id })
         assertEquals(PluginActionStyle.DESTRUCTIVE, readyActions[1].style)
 
-        val idleActions = plugin().actions(PluginStatus.NotReady("idle"))
+        val idleActions = plugin().actions(host, PluginStatus.NotReady("idle"))
         assertEquals(listOf("connect"), idleActions.map { it.id })
-        assertEquals(R.string.plugin_wecom_action_connect, idleActions.single().labelRes)
+        assertEquals(R.string.plugin_wecom_action_connect, labelRes(idleActions.single().label))
     }
 
     @Test
     fun skillCoversWecomCliWorkflow() {
-        val skill = plugin().skills().single()
+        val skill = plugin().skills(host).single()
         assertEquals("deepdeep-wecom", skill.id)
         assertTrue(skill.markdown.startsWith("---\n"))
         val frontmatter = skill.markdown.substringAfter("---\n").substringBefore("\n---")
@@ -106,17 +115,25 @@ class WecomPluginTest {
     }
 
     @Test
-    fun promptBodyKeepsAuthorizationInThePluginPage() {
-        val ready = plugin().promptBody(PluginStatus.Ready("connected", "bot-123")).orEmpty()
-        assertTrue(ready.contains("bot-123"))
-        assertTrue(ready.contains("auth init"))
-        val idle = plugin().promptBody(PluginStatus.NotReady("idle")).orEmpty()
-        assertTrue(idle.contains("plugin_setup"))
-        assertTrue(idle.contains("auth init"))
+    fun promptSectionKeepsAuthorizationInThePluginPage() = runTest {
+        val ready = plugin()
+        ready.status(host)
+        val readySection = ready.promptSections(host).single()
+        assertEquals("wecom_prompt", readySection.id)
+        assertTrue(readySection.body.contains("bot-123"))
+        assertTrue(readySection.body.contains("auth init"))
+
+        val idle = plugin(FakeRuntime(statusOutput = "unauthorized\n"))
+        idle.status(host)
+        val idleSection = idle.promptSections(host).single()
+        assertTrue(idleSection.body.contains("plugin_setup"))
+        assertTrue(idleSection.body.contains("auth init"))
     }
 
+    private fun labelRes(label: LocalizedText): Int = (label as LocalizedText.Resource).id
+
     private suspend fun unavailableReason(plugin: WecomPlugin): String? =
-        (plugin.availability() as? PluginAvailability.Unavailable)?.reason
+        (plugin.availability(host) as? PluginAvailability.Unavailable)?.reason
 
     private fun plugin(runtime: FakeRuntime = FakeRuntime()): WecomPlugin = WecomPlugin(
         context = context,
