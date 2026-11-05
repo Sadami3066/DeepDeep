@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
 import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.settings.ScanJsonScreen
 import io.github.whywood.deepdeep.ui.settings.ScanSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
@@ -236,7 +237,12 @@ internal fun AppRouteContent(
             },
         )
 
-        AppDestination.Scan -> ScanSettingsScreen(onBack = onBack)
+        AppDestination.Scan -> ScanSettingsScreen(
+            onBack = onBack,
+            onOpenJsonEditor = { navigator.push(AppDestination.ScanJson) },
+        )
+
+        AppDestination.ScanJson -> ScanJsonScreen(onBack = onBack)
 
         is AppDestination.ProviderDetail -> {
             val provider = dependencies.providerCatalog.summary(destination.id)

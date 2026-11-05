@@ -85,7 +85,9 @@ import java.util.UUID
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
@@ -109,7 +111,11 @@ internal fun CameraCaptureSheet(
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
-    val strategies = remember { ScanStrategyStore(context).load().strategies }
+    val store = remember(context) { ScanStrategyStore(context) }
+    var strategies by remember { mutableStateOf<List<ScanStrategy>>(emptyList()) }
+    LaunchedEffect(store) {
+        strategies = withContext(Dispatchers.IO) { store.load().matching }
+    }
     DdSheet(onDismiss = onDismiss, fullBleed = true) {
         if (granted) {
             CameraBody(

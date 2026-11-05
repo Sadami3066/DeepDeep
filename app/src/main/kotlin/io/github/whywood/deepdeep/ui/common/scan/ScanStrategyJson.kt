@@ -4,22 +4,21 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal object ScanStrategyJson {
-    data class Parsed(val strategies: List<ScanStrategy>, val error: String?)
+    const val CURRENT_VERSION = 2
+
+    data class Parsed(val strategies: List<ScanStrategy>, val version: Int, val skipped: Int)
 
     fun parse(text: String): Parsed? {
         val root = runCatching { JSONObject(text) }.getOrNull() ?: return null
         val apps = root.optJSONArray("apps") ?: return null
         val strategies = mutableListOf<ScanStrategy>()
-        val skipped = mutableListOf<Int>()
+        var skipped = 0
         for (index in 0 until apps.length()) {
             val item = apps.optJSONObject(index) ?: continue
             val strategy = parseStrategy(item)
-            if (strategy == null) skipped += index + 1 else strategies += strategy
+            if (strategy == null) skipped += 1 else strategies += strategy
         }
-        val error = skipped
-            .takeIf { it.isNotEmpty() }
-            ?.let { "已跳过无效策略：${it.joinToString("、")}" }
-        return Parsed(strategies, error)
+        return Parsed(strategies, root.optInt("version", 1), skipped)
     }
 
     fun parseExtrasText(text: String): Map<String, ScanExtra>? {
@@ -42,9 +41,9 @@ internal object ScanStrategyJson {
         return json.toString()
     }
 
-    fun render(strategies: List<ScanStrategy>): String {
+    fun render(strategies: List<ScanStrategy>, version: Int = CURRENT_VERSION): String {
         val root = JSONObject()
-        root.put("version", 1)
+        root.put("version", version)
         val apps = JSONArray()
         strategies.forEach { apps.put(renderStrategy(it)) }
         root.put("apps", apps)

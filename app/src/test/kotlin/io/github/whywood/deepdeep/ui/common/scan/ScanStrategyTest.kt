@@ -43,7 +43,7 @@ class ScanStrategyTest {
         assertEquals(listOf("app"), strategy.schemes)
         assertEquals(listOf("demo"), strategy.contains)
         assertEquals(ScanLaunch.Uri("app://scan"), strategy.launch)
-        assertNull(parsed.error)
+        assertEquals(0, parsed.skipped)
     }
 
     @Test
@@ -81,7 +81,7 @@ class ScanStrategyTest {
         """.trimIndent()
         val parsed = ScanStrategyJson.parse(text)!!
         assertEquals(listOf("com.example.e"), parsed.strategies.map { it.packageName })
-        assertNotNull(parsed.error)
+        assertEquals(3, parsed.skipped)
     }
 
     @Test
@@ -201,7 +201,7 @@ class ScanStrategyTest {
         val file = File("src/main/assets/scan/strategies.json")
         assertTrue("missing ${file.absolutePath}", file.isFile)
         val parsed = ScanStrategyJson.parse(file.readText())!!
-        assertNull(parsed.error)
+        assertEquals(0, parsed.skipped)
         assertEquals(
             setOf(
                 "com.tencent.mm",
