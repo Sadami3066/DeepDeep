@@ -44,6 +44,9 @@ class PiSessionEngine(
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
     private val supportsChatDelivery: Boolean = true,
+    private val promptTransform: PromptTransform? = null,
+    private val inputHandler: InputHandler? = null,
+    private val toolHooks: ToolExecutionHooks? = null,
 ) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -106,7 +109,8 @@ class PiSessionEngine(
                 sessionFile = file,
                 tools = tools,
                 shellExecutor = activeShell,
-                hooks = CodingHooks(extraSystemPromptSections = { currentSections() }),
+                hooks = CodingHooks(extraSystemPromptSections = { currentSections() })
+                    .withPluginHooks(promptTransform, inputHandler),
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 initialSystemPromptSections = currentSections(),
@@ -147,7 +151,7 @@ class PiSessionEngine(
         toolContext?.let { context ->
             addAll(appTools(cwd, context, binding))
         }
-    }
+    }.map { it.withExecutionHooks(toolHooks) }
 
     override suspend fun loadMcpServers(): Map<String, McpServerConfig> {
         val settings = SettingsManager.forPaths(paths, fs)

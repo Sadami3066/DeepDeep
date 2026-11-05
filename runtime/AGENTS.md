@@ -10,6 +10,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 |---|---|
 | `AgentRuntimeHost.kt` | 会话总管：句柄池、事件流、忙闲与工作区 |
 | `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP 与系统提示词 |
+| `PluginRuntimeHooks.kt` | 插件钩子桥：工具执行前后决策、提示词变换与输入处理，经引擎装配 |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
 | `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量 |
 | `SessionBinding.kt` | 会话身份（id、文件、cwd）的绑定容器 |
