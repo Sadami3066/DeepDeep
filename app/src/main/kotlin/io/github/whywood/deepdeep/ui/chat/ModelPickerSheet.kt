@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.runtime.ThinkingLevel
 internal fun ModelPickerSheet(
     providerId: String,
     modelId: String,
+    configured: Boolean,
     providers: List<ProviderSummary>,
     models: List<ModelOption>,
     thinkingLevel: ThinkingLevel,
@@ -113,67 +114,59 @@ internal fun ModelPickerSheet(
                 DdHairline()
             }
 
-            if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
-                DdDropdown(
-                    expanded = showThinking,
-                    onDismissRequest = { showThinking = false },
-                    anchor = {
-                        DdListRow(
-                            title = stringResource(R.string.assistant_thinking_sheet),
-                            trailing = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = thinkingLabel(thinkingLevel),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkTertiary,
-                                        maxLines = 1,
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
-                                }
-                            },
-                            onClick = { showThinking = true },
-                            modifier = Modifier.testTag("assistant_thinking_row"),
-                        )
-                    },
-                ) {
-                    thinkingLevels.forEach { level ->
-                        DdMenuItem(
-                            text = thinkingLabel(level),
-                            onClick = {
-                                showThinking = false
-                                onDismiss()
-                                onThinkingLevelChange(level)
-                            },
-                            selected = level == thinkingLevel,
-                            trailing = if (level == thinkingLevel) {
-                                {
-                                    DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
-                                }
-                            } else {
-                                null
-                            },
-                            testTag = "assistant_thinking_${level.name.lowercase()}",
-                        )
-                    }
-                }
-            }
-            if (models.isEmpty()) {
+            if (!configured) {
                 DdListRow(
                     title = stringResource(R.string.assistant_model_unconfigured),
                     onClick = null,
                     enabled = false,
                 )
                 DdHairline()
-                DdListRow(
-                    title = stringResource(R.string.assistant_open_settings),
-                    onClick = {
-                        onDismiss()
-                        onOpenSettings()
-                    },
-                    showChevron = true,
-                )
             } else {
+                if (thinkingLevels.any { it != ThinkingLevel.OFF }) {
+                    DdDropdown(
+                        expanded = showThinking,
+                        onDismissRequest = { showThinking = false },
+                        anchor = {
+                            DdListRow(
+                                title = stringResource(R.string.assistant_thinking_sheet),
+                                trailing = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = thinkingLabel(thinkingLevel),
+                                            style = DdType.bodySmall,
+                                            color = colors.inkTertiary,
+                                            maxLines = 1,
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
+                                    }
+                                },
+                                onClick = { showThinking = true },
+                                modifier = Modifier.testTag("assistant_thinking_row"),
+                            )
+                        },
+                    ) {
+                        thinkingLevels.forEach { level ->
+                            DdMenuItem(
+                                text = thinkingLabel(level),
+                                onClick = {
+                                    showThinking = false
+                                    onDismiss()
+                                    onThinkingLevelChange(level)
+                                },
+                                selected = level == thinkingLevel,
+                                trailing = if (level == thinkingLevel) {
+                                    {
+                                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
+                                    }
+                                } else {
+                                    null
+                                },
+                                testTag = "assistant_thinking_${level.name.lowercase()}",
+                            )
+                        }
+                    }
+                }
                 models.forEachIndexed { index, option ->
                     DdListRow(
                         title = option.displayName,
@@ -192,5 +185,16 @@ internal fun ModelPickerSheet(
             }
             Spacer(Modifier.height(28.dp))
         }
+        DdHairline(Modifier.padding(horizontal = 24.dp))
+        DdListRow(
+            title = stringResource(R.string.assistant_model_manage_providers),
+            onClick = {
+                onDismiss()
+                onOpenSettings()
+            },
+            showChevron = true,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(Modifier.height(20.dp))
     }
 }

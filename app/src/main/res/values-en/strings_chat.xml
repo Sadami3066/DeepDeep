@@ -38,6 +38,7 @@
     <string name="assistant_loading">Loading…</string>
     <string name="assistant_menu">Open menu</string>
     <string name="assistant_model_chip">Switch model, current %1$s</string>
+    <string name="assistant_model_manage_providers">Manage providers</string>
     <string name="assistant_model_sheet">Select model</string>
     <string name="assistant_model_unconfigured">No model configured</string>
     <string name="assistant_more">More actions</string>

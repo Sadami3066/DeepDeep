@@ -291,7 +291,7 @@ internal fun ChatComposer(
                             canSend = canSend,
                             sendDescription = sendDescription,
                             onExpand = {
-                                if (state.configured) {
+                                if (state.configured || state.providers.isNotEmpty()) {
                                     pendingExpand = true
                                 } else {
                                     actions.onOpenSettings()
@@ -306,7 +306,7 @@ internal fun ChatComposer(
                 }
             }
         }
-        if (!state.configured) {
+        if (state.providers.isEmpty()) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 Row(
                     modifier = Modifier
@@ -334,6 +334,7 @@ internal fun ChatComposer(
         ModelPickerSheet(
             providerId = state.providerId,
             modelId = state.modelId,
+            configured = state.configured,
             providers = state.providers,
             models = state.models,
             thinkingLevel = state.thinkingLevel,
@@ -589,7 +590,11 @@ private fun ChatComposerExpandedContent(
         ComposerChip(
             text = label,
             onClick = {
-                if (state.configured) actions.onModelsOpenChange(true) else actions.onOpenSettings()
+                if (state.configured || state.providers.isNotEmpty()) {
+                    actions.onModelsOpenChange(true)
+                } else {
+                    actions.onOpenSettings()
+                }
             },
             enabled = !state.sending,
             contentDescription = stringResource(R.string.assistant_model_chip, label),

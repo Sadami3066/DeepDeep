@@ -38,6 +38,7 @@
     <string name="assistant_loading">正在载入…</string>
     <string name="assistant_menu">打开菜单</string>
     <string name="assistant_model_chip">切换模型，当前 %1$s</string>
+    <string name="assistant_model_manage_providers">管理厂商</string>
     <string name="assistant_model_sheet">选择模型</string>
     <string name="assistant_model_unconfigured">未配置模型</string>
     <string name="assistant_more">更多操作</string>

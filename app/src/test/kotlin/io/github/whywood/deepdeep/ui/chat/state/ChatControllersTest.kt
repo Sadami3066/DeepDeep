@@ -149,6 +149,65 @@ class ChatControllersTest {
     }
 
     @Test
+    fun adoptConfiguredModelSwitchesEmptySession() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val runtime = FakeAgentRuntime()
+        state = state.copy(
+            conversationId = "session-1",
+            providerId = "stale",
+            modelId = "old",
+            conversation = ConversationState(loaded = true),
+        )
+        val settings = FakeSettings()
+        val controller = ModelController(
+            runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
+            ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
+            cacheCurrentSession = {}, userFacingError = { it },
+            switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
+        )
+
+        controller.adoptConfiguredModel(ModelConfig("p", "m2", ThinkingLevel.HIGH))
+        advanceUntilIdle()
+
+        assertEquals("p", state.providerId)
+        assertEquals("m2", state.modelId)
+        assertEquals(ThinkingLevel.HIGH, state.thinkingLevel)
+        assertEquals(ModelConfig("p", "m2", ThinkingLevel.HIGH), settings.saved.lastOrNull())
+        assertEquals("m2", runtime.sessionModels["session-1"]?.modelId)
+    }
+
+    @Test
+    fun adoptConfiguredModelKeepsConversationWithMessages() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val runtime = FakeAgentRuntime()
+        state = state.copy(
+            conversationId = "session-1",
+            providerId = "stale",
+            modelId = "old",
+            conversation = ConversationState(
+                loaded = true,
+                messages = listOf(
+                    AssistantMessage(0, AssistantRole.USER, "hello", status = MessageStatus.DONE),
+                ),
+            ),
+        )
+        val settings = FakeSettings()
+        val controller = ModelController(
+            runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
+            ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
+            cacheCurrentSession = {}, userFacingError = { it },
+            switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
+        )
+
+        controller.adoptConfiguredModel(ModelConfig("p", "m2", ThinkingLevel.OFF))
+        advanceUntilIdle()
+
+        assertEquals("stale", state.providerId)
+        assertTrue(settings.saved.isEmpty())
+        assertTrue(runtime.sessionModels.isEmpty())
+    }
+
+    @Test
     fun thinkingLevelOnlyUpdatesThinking() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val runtime = FakeAgentRuntime()

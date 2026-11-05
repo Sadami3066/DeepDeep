@@ -4,6 +4,7 @@ import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.core.ModelSelection
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.DevPackageManager
@@ -172,6 +173,14 @@ class AppGraph(context: Context) : AppDependencies {
     private val httpTransport = okHttpTransport()
     override val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
     override val providerCatalog = ProviderCatalog(httpTransport, credentials)
+    val modelSelection = ModelSelection(providerCatalog, modelConfigStore)
+    init {
+        scope.launch {
+            credentials.authKinds.collect { kinds ->
+                if (kinds.isNotEmpty()) modelSelection.ensure(kinds.keys)
+            }
+        }
+    }
     override val providerOAuthService = ProviderOAuthService(
         credentials = credentials,
         transport = httpTransport,
@@ -475,6 +484,7 @@ class AppGraph(context: Context) : AppDependencies {
             importDebugKey()
         }
         credentials.preloadAll()
+        modelSelection.ensure(credentials.authKinds.value.keys)
     }
 
     private suspend fun importDebugKey() {

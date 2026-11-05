@@ -72,6 +72,20 @@ internal class ModelController(
 
     fun applyConfig(config: ModelConfig) = applySessionModel(config.toSnapshot())
 
+    fun adoptConfiguredModel(config: ModelConfig) {
+        val current = state()
+        if (current.sending || current.switchingConversation) return
+        val sessionId = current.conversationId
+        if (sessionId != null && current.messages.isNotEmpty()) return
+        val model = config.toSnapshot()
+        if (sessionId == null) {
+            applySessionModel(model)
+            scope.launch { settings.save(config) }
+        } else {
+            changeSessionModel(model, thinkingOnly = false)
+        }
+    }
+
     private fun changeSessionModel(model: SessionModelSnapshot, thinkingOnly: Boolean) {
         val sessionId = state().conversationId ?: return
         applySessionModel(model)

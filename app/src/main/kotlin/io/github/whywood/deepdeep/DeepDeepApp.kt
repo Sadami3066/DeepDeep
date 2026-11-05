@@ -182,12 +182,19 @@ internal fun DeepDeepApp(
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }
     }
-    val defaultModelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = ModelConfig())
+    val storedModelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = null)
+    val defaultModelConfig = storedModelConfig ?: ModelConfig()
     val defaultProvider = graph.providerCatalog.summary(defaultModelConfig.providerId)
     val defaultModelLabel = graph.providerCatalog.models(defaultModelConfig.providerId)
         .firstOrNull { it.id == defaultModelConfig.modelId }
         ?.displayName
         ?: defaultModelConfig.modelId
+    LaunchedEffect(authKinds, storedModelConfig, state.providerId, state.conversationId, state.ready) {
+        val config = storedModelConfig ?: return@LaunchedEffect
+        if (!state.ready || state.providerId.isBlank() || authKinds.isEmpty()) return@LaunchedEffect
+        if (state.providerId in authKinds || config.providerId !in authKinds) return@LaunchedEffect
+        chatViewModel.adoptConfiguredModel(config)
+    }
     val timers by graph.timerService.timers.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)

@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.runtime.InterruptedQuestion
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -525,6 +526,8 @@ class ChatViewModel(
     fun setProvider(providerId: String) = modelController.setProvider(providerId)
 
     fun setThinkingLevel(level: ThinkingLevel) = modelController.setThinkingLevel(level)
+
+    fun adoptConfiguredModel(config: ModelConfig) = modelController.adoptConfiguredModel(config)
 
     fun compactContext() {
         deltaBatcher.flush()

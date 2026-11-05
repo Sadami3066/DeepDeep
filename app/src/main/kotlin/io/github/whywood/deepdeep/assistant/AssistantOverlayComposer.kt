@@ -240,6 +240,7 @@ internal fun AssistantOverlayComposer(
         ModelPickerSheet(
             providerId = state.providerId,
             modelId = state.modelId,
+            configured = state.providers.any { it.id == state.providerId },
             providers = state.providers,
             models = state.models,
             thinkingLevel = state.thinkingLevel,
