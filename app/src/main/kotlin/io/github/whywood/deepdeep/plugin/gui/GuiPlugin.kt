@@ -2,25 +2,33 @@ package io.github.whywood.deepdeep.plugin.gui
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
+import android.os.Build
 import android.provider.Settings
+import android.util.DisplayMetrics
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginProgress
-import io.github.whywood.deepdeep.plugin.PluginSkill
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.PluginUi
+import io.github.whywood.deepdeep.plugin.PluginAction as LegacyPluginAction
+import io.github.whywood.deepdeep.plugin.PluginActionStyle as LegacyPluginActionStyle
+import io.github.whywood.deepdeep.plugin.PluginDetailRow as LegacyPluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.Contributions
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.plugin.virtualscreen.virtualScreenAvailability
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
 import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
+import io.github.whywood.deepdeep.screen.MainScreenController
+import io.github.whywood.deepdeep.screen.MainScreenShell
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.screen.ScreenRouter
 import io.github.whywood.deepdeep.screen.VirtualEngineBackend
@@ -29,11 +37,6 @@ import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import io.github.whywood.deepdeep.service.KeepAlive
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import java.io.File
-import android.os.Build
-import android.hardware.display.DisplayManager
-import android.util.DisplayMetrics
-import io.github.whywood.deepdeep.screen.MainScreenController
-import io.github.whywood.deepdeep.screen.MainScreenShell
 
 class GuiPlugin(
     private val context: Context,
@@ -43,7 +46,7 @@ class GuiPlugin(
     private val mainActions: GuiActions = GuiAccessibilityActions(),
     private val privilege: PrivilegeController? = null,
     private val virtualScreen: VirtualScreenFeature? = null,
-) : OfficialPlugin {
+) : DeepDeepPlugin {
     private val resolvedScreenshotDir: File by lazy {
         screenshotDir ?: File(File(context.filesDir, "gui"), "screenshots")
     }
@@ -73,45 +76,42 @@ class GuiPlugin(
         )
     }
 
-    override val id: String = "gui"
-    override val kind: PluginKind = PluginKind.INTERNAL
-    override val icon: DdIcon = DdIcons.HandClick
-    override val nameRes: Int = R.string.plugin_screen_name
-    override val summaryRes: Int = R.string.plugin_screen_summary
-    override val version: String = "3.1.0"
-    override val sizeLabelRes: Int = R.string.plugin_gui_size
-    override val requiresPrivilege: Boolean get() = true
-    override val defaultEnabled: Boolean get() = false
-
-    override suspend fun availability(): PluginAvailability = virtualScreenAvailability(
-        virtualScreenAvailable,
-        string(R.string.plugin_screen_privilege_required),
-    )
-
-    override suspend fun install(progress: PluginProgress) = Unit
-
-    override suspend fun uninstall() = Unit
-
-    override suspend fun recover() = Unit
-
-    override suspend fun status(): PluginStatus = when {
-        actions.connected -> PluginStatus.Ready(string(R.string.plugin_gui_status_connected))
-        GuiAccessibilityState.isEnabled(context) -> PluginStatus.NotReady(string(R.string.plugin_gui_status_disconnected))
-        else -> PluginStatus.NotReady(string(R.string.plugin_gui_status_disabled))
+    override suspend fun availability(host: PluginHost): PluginAvailability = if (virtualScreenAvailable) {
+        PluginAvailability.Available
+    } else {
+        PluginAvailability.Unavailable(
+            host.text(LocalizedText.Resource(R.string.plugin_screen_privilege_required)),
+        )
     }
 
-    override fun actions(status: PluginStatus): List<PluginAction> = buildList {
-        if (virtualScreenAvailable) virtualScreen?.let { addAll(it.actions()) }
-        add(PluginAction(ACTION_ACCESSIBILITY_SETTINGS, R.string.plugin_gui_action_settings))
+    override suspend fun status(host: PluginHost): PluginStatus = when {
+        actions.connected -> PluginStatus.Ready(
+            host.text(LocalizedText.Resource(R.string.plugin_gui_status_connected)),
+        )
+
+        GuiAccessibilityState.isEnabled(context) -> PluginStatus.NotReady(
+            host.text(LocalizedText.Resource(R.string.plugin_gui_status_disconnected)),
+        )
+
+        else -> PluginStatus.NotReady(
+            host.text(LocalizedText.Resource(R.string.plugin_gui_status_disabled)),
+        )
+    }
+
+    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = buildList {
+        if (virtualScreenAvailable) {
+            virtualScreen?.actions().orEmpty().forEach { add(it.toPluginAction()) }
+        }
+        add(PluginAction(ACTION_ACCESSIBILITY_SETTINGS, LocalizedText.Resource(R.string.plugin_gui_action_settings)))
         if (!KeepAlive.isIgnoringBatteryOptimizations(context)) {
-            add(PluginAction(ACTION_BATTERY_EXEMPTION, R.string.plugin_gui_action_battery))
+            add(PluginAction(ACTION_BATTERY_EXEMPTION, LocalizedText.Resource(R.string.plugin_gui_action_battery)))
         }
         if (KeepAlive.supportsAutostartSettings(context)) {
-            add(PluginAction(ACTION_AUTOSTART, R.string.plugin_gui_action_autostart))
+            add(PluginAction(ACTION_AUTOSTART, LocalizedText.Resource(R.string.plugin_gui_action_autostart)))
         }
     }
 
-    override suspend fun runAction(actionId: String, ui: PluginUi) {
+    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
         when (actionId) {
             VirtualScreenFeature.ACTION_START, VirtualScreenFeature.ACTION_STOP ->
                 virtualScreen?.runAction(actionId)
@@ -128,25 +128,32 @@ class GuiPlugin(
         }
     }
 
-    override suspend fun detailRows(status: PluginStatus): List<PluginDetailRow> = buildList {
+    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> = buildList {
         add(
             PluginDetailRow(
-                R.string.plugin_gui_detail_service,
-                string(
-                    when {
-                        status is PluginStatus.Ready -> R.string.plugin_gui_detail_enabled
-                        GuiAccessibilityState.isEnabled(context) -> R.string.plugin_gui_detail_disconnected
-                        else -> R.string.plugin_gui_detail_disabled
-                    },
+                LocalizedText.Resource(R.string.plugin_gui_detail_service),
+                host.text(
+                    LocalizedText.Resource(
+                        when {
+                            status is PluginStatus.Ready -> R.string.plugin_gui_detail_enabled
+                            GuiAccessibilityState.isEnabled(context) -> R.string.plugin_gui_detail_disconnected
+                            else -> R.string.plugin_gui_detail_disabled
+                        },
+                    ),
                 ),
             ),
         )
         virtualScreen?.let { feature ->
-            addAll(feature.detailRows(feature.status()))
+            feature.detailRows(feature.status()).forEach { add(it.toPluginDetailRow()) }
         }
     }
 
-    override fun tools(): List<CodingTool> = if (virtualScreenAvailable) {
+    override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
+
+    override fun contributions(host: PluginHost): Contributions =
+        Contributions(tools = CodingToolPluginAdapter.toPluginTools(tools()))
+
+    private fun tools(): List<CodingTool> = if (virtualScreenAvailable) {
         screenTools(
             screenController,
             resolvedScreenshotDir,
@@ -157,12 +164,20 @@ class GuiPlugin(
         emptyList()
     }
 
-    override fun skills(): List<PluginSkill> = listOf(PluginSkill(SKILL_ID, SKILL_MARKDOWN))
-
     private val virtualScreenAvailable: Boolean
         get() = privilege?.state?.value?.virtualScreenAvailable ?: true
 
-    private fun string(id: Int): String = context.resources.getString(id)
+    private fun LegacyPluginAction.toPluginAction(): PluginAction = PluginAction(
+        id = id,
+        label = LocalizedText.Resource(labelRes),
+        style = when (style) {
+            LegacyPluginActionStyle.DESTRUCTIVE -> PluginActionStyle.DESTRUCTIVE
+            LegacyPluginActionStyle.NORMAL -> PluginActionStyle.NORMAL
+        },
+    )
+
+    private fun LegacyPluginDetailRow.toPluginDetailRow(): PluginDetailRow =
+        PluginDetailRow(LocalizedText.Resource(labelRes), value)
 
     private companion object {
         const val ACTION_ACCESSIBILITY_SETTINGS = "accessibility_settings"

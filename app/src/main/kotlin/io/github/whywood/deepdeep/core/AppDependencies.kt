@@ -10,7 +10,7 @@ import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
-import io.github.whywood.deepdeep.plugin.PluginManager
+import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.GoalService
@@ -82,7 +82,7 @@ interface FeatureDependencies {
 
     val skillCatalog: SkillCatalog
 
-    val pluginManager: PluginManager
+    val pluginManager: PluginManagerFacade
 
     val questionCenter: QuestionCenter
 

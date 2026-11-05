@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.plugin
 
+import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginEntry
+
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
@@ -16,7 +18,8 @@ import io.github.whywood.deepdeep.plugin.wecom.WECOM_SKILL_ID
 import io.github.whywood.deepdeep.plugin.wecom.WecomCli
 import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
 
-internal fun cliFeishu(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.modern(
+internal fun cliFeishu(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+cliFeishuManifest(),
     FeishuPlugin(
         context = wiring.uiContext,
         linux = wiring.linux,
@@ -24,7 +27,6 @@ internal fun cliFeishu(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.mod
         downloader = PluginDownloader(),
         cacheDir = wiring.cacheDir,
     ),
-    cliFeishuManifest(),
 )
 
 internal fun cliFeishuManifest(): PluginManifest = builtinPluginManifest(
@@ -39,7 +41,8 @@ internal fun cliFeishuManifest(): PluginManifest = builtinPluginManifest(
     tintIcon = false,
 )
 
-internal fun cliWecom(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.modern(
+internal fun cliWecom(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+cliWecomManifest(),
     WecomPlugin(
         context = wiring.uiContext,
         linux = wiring.linux,
@@ -47,7 +50,6 @@ internal fun cliWecom(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.mode
         downloader = PluginDownloader(),
         workspaceDir = wiring.workspaceDir,
     ),
-    cliWecomManifest(),
 )
 
 internal fun cliWecomManifest(): PluginManifest = builtinPluginManifest(
@@ -61,13 +63,13 @@ internal fun cliWecomManifest(): PluginManifest = builtinPluginManifest(
     source = PluginSource.EXTERNAL,
 )
 
-internal fun cliJwxt(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.modern(
+internal fun cliJwxt(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+cliJwxtManifest(),
     JwxtPlugin(
         context = wiring.uiContext,
         linux = wiring.linux,
         linuxSettings = wiring.linuxSettings,
     ),
-    cliJwxtManifest(),
 )
 
 internal fun cliJwxtManifest(): PluginManifest = builtinPluginManifest(

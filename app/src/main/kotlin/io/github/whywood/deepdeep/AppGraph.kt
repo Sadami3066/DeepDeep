@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.core.AppDependencies
@@ -24,17 +27,25 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
+import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
+import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
+import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
+import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
+import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
+import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
+import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
+import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginStateStore
+import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
+import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
 import io.github.whywood.deepdeep.plugin.builtinPlugins
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.privilege.shellBackendsFor
-import io.github.whywood.deepdeep.plugin.PluginRecordStore
 import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -130,7 +141,7 @@ class AppGraph(context: Context) : AppDependencies {
             adbBridge = adbBridge,
             scope = scope,
         ) {
-            pluginManager.refreshAndSyncSkills()
+            scope.launch { runCatching { pluginManager.refreshNow() } }
             host.reconfigure()
         }
     }
@@ -199,6 +210,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(uiContext)
+    private val pluginBus = PluginBusImpl()
 
     override val goalService: GoalService by lazy { GoalService() }
     override val jobRegistry: JobRegistry by lazy {
@@ -242,17 +254,81 @@ class AppGraph(context: Context) : AppDependencies {
             onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
         )
     }
-    override val pluginManager: PluginManager by lazy {
-        PluginManager(
-            plugins = builtinPlugins(builtinWiring),
-            recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
+    override val pluginManager: PluginHostManager by lazy {
+        val pluginsRoot = File(appContext.filesDir, "plugins")
+        val trustStore = PublisherTrustStore(File(pluginsRoot, "trusted_publishers.json"))
+        val recordStore = ExternalPluginRecordStore(File(pluginsRoot, "plugins.json"))
+        val installer = PluginInstaller(
+            pluginsRoot = pluginsRoot,
+            trustStore = trustStore,
+            recordStore = recordStore,
+            hostVersion = BuildConfig.VERSION_NAME,
+            reservedPluginIds = { builtinPlugins(builtinWiring).map { it.manifest.id }.toSet() },
+            reservedToolNames = { builtinPlugins(builtinWiring).flatMap { it.manifest.provides.tools }.toSet() },
+        )
+        PluginHostManager(
+            context = appContext,
+            strings = pluginStrings,
+            filesDir = appContext.filesDir,
+            scope = scope,
+            language = { LanguagePreferences(appContext).read().tag },
+            builtins = builtinPlugins(builtinWiring),
+            servicesFactory = { pluginId, dataDir ->
+                buildPluginServices(
+                    PluginServiceDependencies(
+                        context = uiContext,
+                        scope = scope,
+                        pluginId = pluginId,
+                        pluginDataDir = dataDir,
+                        workspaceDir = homeDir,
+                        versionName = BuildConfig.VERSION_NAME,
+                        versionCode = BuildConfig.VERSION_CODE.toLong(),
+                        language = { LanguagePreferences(appContext).read().tag },
+                        installationId = { installationId.get() },
+                        linux = linuxEnvironment,
+                        privilege = privilege,
+                        rootShell = rootShell,
+                        adbBridge = adbBridge,
+                        secrets = secretStore,
+                        network = httpTransport,
+                        sessions = host,
+                        sessionCommands = host,
+                        activeSessionId = activeSessionId,
+                        jobs = jobRegistry,
+                        timers = timerService,
+                        goals = goalService,
+                        workshopStore = workshopStore,
+                        workshopAgent = workshopAgentService,
+                        workshopMaxTurns = { pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+                        mcpConfig = mcpConfigStore,
+                        mcpProbe = mcpServerProbe,
+                        virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
+                        screenshotDir = File(appContext.filesDir, "gui/screenshots"),
+                        sharedStorageDir = if (isSharedStorageGranted()) File("/storage/emulated/0") else null,
+                        bus = pluginBus,
+                        openUrl = { url ->
+                            runCatching {
+                                appContext.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        },
+                        toast = { text ->
+                            scope.launch(Dispatchers.Main) {
+                                Toast.makeText(uiContext, text, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                    ),
+                )
+            },
+            builtinStateStore = BuiltinPluginStateStore(File(pluginsRoot, "builtin_state.json")),
+            settingsStore = pluginSettingsStore,
             skillStore = PluginSkillStore(
                 skillsDir = File(agentDir, "skills"),
                 repoDir = File(appContext.filesDir, "skills"),
             ),
-            settingsStore = pluginSettingsStore,
-            strings = pluginStrings,
-            scope = scope,
+            external = ExternalPluginRuntime(appContext, installer, BuildConfig.VERSION_NAME),
             isForeground = { AppVisibility.foreground },
             notifyInstall = { label, stage, progress ->
                 notificationCenter.notifyInstall(label, stage, progress)
@@ -357,6 +433,7 @@ class AppGraph(context: Context) : AppDependencies {
     }
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+        val hooksDelegate = PluginHooksDelegate()
         PiSessionEngine(
             workspace = cwd,
             agentDir = agentDir,
@@ -368,6 +445,11 @@ class AppGraph(context: Context) : AppDependencies {
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { pluginManager.promptBody() },
             toolContext = appToolContext,
+            promptTransform = hooksDelegate.promptTransform,
+            inputHandler = hooksDelegate.inputHandler,
+            toolHooks = hooksDelegate.toolHooks,
+            onSessionBound = { bound -> pluginManager.bindSessionHooks(bound, hooksDelegate) },
+            onSessionClosed = { sessionId -> pluginManager.onSessionClosed(sessionId) },
         )
     }
 
@@ -412,11 +494,12 @@ class AppGraph(context: Context) : AppDependencies {
 
     init {
         scope.launch {
-            pluginManager.start()
+            runCatching { pluginManager.start() }
             host.reconfigure()
         }
         scope.launch {
             host.events.collect { event ->
+                pluginManager.onRuntimeEvent(event)
                 when (event.event) {
                     is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
                         runCatching { skillRepository.syncIfChanged() }

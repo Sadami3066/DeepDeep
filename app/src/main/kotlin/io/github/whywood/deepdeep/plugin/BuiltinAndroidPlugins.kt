@@ -10,20 +10,36 @@ import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.arrange.ArrangePlugin
 import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
 import io.github.whywood.deepdeep.plugin.host.builtinPluginManifest
+import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginEntry
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudSettingKeys
 
-internal fun androidGui(wiring: BuiltinPluginWiring): OfficialPlugin = GuiPlugin(
-    context = wiring.uiContext,
-    screenshotDir = wiring.screenshotDir,
-    mainShell = wiring.mainShell,
-    privilege = wiring.privilege,
-    virtualScreen = wiring.virtualScreen,
+internal fun androidGui(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+    manifest = androidGuiManifest(),
+    plugin = GuiPlugin(
+        context = wiring.uiContext,
+        screenshotDir = wiring.screenshotDir,
+        mainShell = wiring.mainShell,
+        privilege = wiring.privilege,
+        virtualScreen = wiring.virtualScreen,
+    ),
 )
 
-internal fun androidArrange(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.modern(
-    plugin = ArrangePlugin(context = wiring.uiContext),
+internal fun androidGuiManifest(): PluginManifest = builtinPluginManifest(
+    id = "gui",
+    version = "3.1.0",
+    nameRes = R.string.plugin_screen_name,
+    summaryRes = R.string.plugin_screen_summary,
+    iconRes = DdIcons.HandClick.res,
+    sizeLabelRes = R.string.plugin_gui_size,
+    requiresPrivilege = true,
+    defaultEnabled = false,
+    skills = listOf("deepdeep-gui"),
+)
+
+internal fun androidArrange(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
     manifest = androidArrangeManifest(),
+    plugin = ArrangePlugin(context = wiring.uiContext),
 )
 
 internal fun androidArrangeManifest(): PluginManifest = builtinPluginManifest(
@@ -37,13 +53,13 @@ internal fun androidArrangeManifest(): PluginManifest = builtinPluginManifest(
     skills = listOf("deepdeep-arrange"),
 )
 
-internal fun androidMiCloud(wiring: BuiltinPluginWiring): OfficialPlugin = wiring.modern(
+internal fun androidMiCloud(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+    manifest = androidMiCloudManifest(),
     plugin = MiCloudPlugin(
         context = wiring.uiContext,
         onCapabilitiesChanged = { wiring.onCapabilitiesChanged() },
         onSessionInvalidated = { wiring.onSessionInvalidated() },
     ),
-    manifest = androidMiCloudManifest(),
 )
 
 internal fun androidMiCloudManifest(): PluginManifest = PluginManifest(

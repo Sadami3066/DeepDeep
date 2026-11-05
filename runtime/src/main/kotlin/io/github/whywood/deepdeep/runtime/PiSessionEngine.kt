@@ -47,6 +47,8 @@ class PiSessionEngine(
     private val promptTransform: PromptTransform? = null,
     private val inputHandler: InputHandler? = null,
     private val toolHooks: ToolExecutionHooks? = null,
+    private val onSessionBound: ((BoundSession) -> Unit)? = null,
+    internal val onSessionClosed: ((String) -> Unit)? = null,
 ) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -126,6 +128,7 @@ class PiSessionEngine(
         )
         created = session
         binding.attach(session)
+        binding.current()?.let { bound -> onSessionBound?.invoke(bound) }
         return session
     }
 
@@ -245,7 +248,9 @@ internal class PiSessionHandle(
     }
 
     override suspend fun close() {
+        val sessionId = session.sessionId
         session.close()
+        engine.onSessionClosed?.let { it(sessionId) }
     }
 
     override fun subscribe(listener: suspend (SessionEvent) -> Unit): () -> Unit =

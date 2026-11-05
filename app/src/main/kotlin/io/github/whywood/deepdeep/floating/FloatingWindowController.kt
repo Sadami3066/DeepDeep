@@ -41,7 +41,7 @@ import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
-import io.github.whywood.deepdeep.plugin.PluginSetupNotice
+import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer

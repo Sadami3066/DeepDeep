@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.floating.FloatingWindowController
-import io.github.whywood.deepdeep.plugin.PluginSetupNotice
+import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -97,9 +97,9 @@ class AgentService : Service() {
                     PluginSetupNotice(
                         pluginId = interaction.pluginId,
                         pluginName = state.plugins
-                            .firstOrNull { it.plugin.id == interaction.pluginId }
-                            ?.plugin?.let { graph.uiContext.getString(it.nameRes) }
-                            ?: interaction.pluginId,
+                            .firstOrNull { it.id == interaction.pluginId }
+                            ?.name
+                            ?: interaction.title,
                         stage = interaction.stageTitle,
                     )
                 }

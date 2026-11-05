@@ -11,6 +11,8 @@ object SlotIds {
 
     const val CHAT_MESSAGE_PREFIX: String = "chat.message:"
 
+    const val PAGE_PREFIX: String = "plugin.page:"
+
     fun setupContent(): String = SETUP_CONTENT
 
     fun detailSection(sectionId: String): String = DETAIL_SECTION_PREFIX + sectionId
@@ -19,11 +21,14 @@ object SlotIds {
 
     fun chatMessage(customType: String): String = CHAT_MESSAGE_PREFIX + customType
 
+    fun page(pageId: String): String = PAGE_PREFIX + pageId
+
     fun matches(slotId: String): Boolean = when {
         slotId == SETUP_CONTENT -> true
         slotId.startsWith(DETAIL_SECTION_PREFIX) -> DETAIL_SUFFIX.matches(slotId.removePrefix(DETAIL_SECTION_PREFIX))
         slotId.startsWith(TOOL_CARD_PREFIX) -> TOOL_SUFFIX.matches(slotId.removePrefix(TOOL_CARD_PREFIX))
         slotId.startsWith(CHAT_MESSAGE_PREFIX) -> MESSAGE_SUFFIX.matches(slotId.removePrefix(CHAT_MESSAGE_PREFIX))
+        slotId.startsWith(PAGE_PREFIX) -> MESSAGE_SUFFIX.matches(slotId.removePrefix(PAGE_PREFIX))
         else -> false
     }
 

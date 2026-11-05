@@ -3,12 +3,16 @@ package io.github.whywood.deepdeep.plugin.gui
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Resources
-import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBridgeState
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.PluginToolCall
+import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.internal.testBuiltinManifest
+import io.github.whywood.deepdeep.plugin.internal.testPluginHost
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenAccess
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.privilege.PrivilegeController
@@ -23,11 +27,10 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -38,151 +41,142 @@ class GuiPluginTest {
     val temporaryFolder = TemporaryFolder()
 
     private val context = FakeContext()
+    private val host = testPluginHost(testBuiltinManifest("gui"))
     private val screenshotDir: File get() = File(temporaryFolder.root, "gui/screenshots")
 
     @Test
-    fun identityMatchesPluginContract() {
-        val plugin = plugin()
-        assertEquals("gui", plugin.id)
-        assertEquals("3.1.0", plugin.version)
-        assertEquals(DdIcons.HandClick, plugin.icon)
-        assertEquals(R.string.plugin_screen_name, plugin.nameRes)
-        assertEquals(R.string.plugin_screen_summary, plugin.summaryRes)
-        assertEquals(R.string.plugin_gui_size, plugin.sizeLabelRes)
-        assertEquals(screenToolNames(), plugin.tools().map { it.name })
-        assertEquals(11, plugin.tools().size)
-        assertTrue(plugin.requiresPrivilege)
-        assertFalse(plugin.defaultEnabled)
+    fun contributionsExposeScreenToolSurface() {
+        val tools = plugin().contributions(host).tools
+        assertEquals(screenToolNames(), tools.map { it.name })
+        assertEquals(11, tools.size)
     }
 
     @Test
     fun availabilityFollowsPrivilegeState() = runTest {
-        assertEquals(PluginAvailability.Available, plugin().availability())
+        assertEquals(PluginAvailability.Available, plugin().availability(host))
 
         val privilege = FakePrivilege(available = false)
-        val unauthorized = plugin(privilege = privilege).availability()
+        val unauthorized = plugin(privilege = privilege).availability(host)
         assertTrue(unauthorized is PluginAvailability.Unavailable)
         assertEquals(
-            "res:${R.string.plugin_screen_privilege_required}",
+            "text:${R.string.plugin_screen_privilege_required}",
             (unauthorized as PluginAvailability.Unavailable).reason,
         )
 
         privilege.setAvailable(true)
-        assertEquals(PluginAvailability.Available, plugin(privilege = privilege).availability())
+        assertEquals(PluginAvailability.Available, plugin(privilege = privilege).availability(host))
     }
 
     @Test
     fun disconnectedServiceIsNotReady() = runTest {
-        val status = plugin(FakeActions(disconnected = true)).status()
-        assertEquals("res:${R.string.plugin_gui_status_disabled}", status.label)
+        val status = plugin(FakeActions(disconnected = true)).status(host)
+        assertEquals("text:${R.string.plugin_gui_status_disabled}", status.label)
         assertTrue(status is PluginStatus.NotReady)
     }
 
     @Test
     fun connectedServiceIsReady() = runTest {
-        val status = plugin().status()
-        assertEquals("res:${R.string.plugin_gui_status_connected}", status.label)
+        val status = plugin().status(host)
+        assertEquals("text:${R.string.plugin_gui_status_connected}", status.label)
         assertTrue(status is PluginStatus.Ready)
     }
 
     @Test
     fun actionsOpenAccessibilitySettingsAndOfferBatteryExemption() {
-        val actions = plugin().actions(PluginStatus.NotReady("x"))
+        val actions = plugin().actions(host, PluginStatus.NotReady("x"))
         assertEquals(
             listOf("accessibility_settings", "battery_exemption"),
             actions.map { it.id },
         )
-        assertEquals(R.string.plugin_gui_action_settings, actions.first().labelRes)
-        assertEquals(R.string.plugin_gui_action_battery, actions.last().labelRes)
+        assertEquals(R.string.plugin_gui_action_settings, labelRes(actions.first().label))
+        assertEquals(R.string.plugin_gui_action_battery, labelRes(actions.last().label))
     }
 
     @Test
     fun actionsIncludeVirtualScreenLifecycleWhenFeatureIsPresent() {
-        val actions = plugin(virtualScreen = feature()).actions(PluginStatus.NotReady("x"))
+        val actions = plugin(virtualScreen = feature()).actions(host, PluginStatus.NotReady("x"))
         assertEquals(
             listOf("virtual_start", "accessibility_settings", "battery_exemption"),
             actions.map { it.id },
         )
-        assertEquals(R.string.plugin_virtual_screen_action_start, actions.first().labelRes)
+        assertEquals(R.string.plugin_virtual_screen_action_start, labelRes(actions.first().label))
     }
 
     @Test
     fun stoppedVirtualScreenOffersStopAction() {
         val actions = plugin(virtualScreen = feature(FakeScreen(VirtualScreenState.Online(3, 1080, 1920, "adb"))))
-            .actions(PluginStatus.Ready("x"))
+            .actions(host, PluginStatus.Ready("x"))
         assertEquals("virtual_stop", actions.first().id)
-        assertEquals(R.string.plugin_virtual_screen_action_stop, actions.first().labelRes)
+        assertEquals(R.string.plugin_virtual_screen_action_stop, labelRes(actions.first().label))
     }
 
     @Test
     fun privilegeGatesVirtualScreenToolsAndActions() {
         val privilege = FakePrivilege(available = false)
         val plugin = plugin(privilege = privilege, virtualScreen = feature())
-        assertTrue(plugin.tools().isEmpty())
-        assertTrue(plugin.actions(PluginStatus.Ready("x")).none { it.id.startsWith("virtual_") })
+        assertTrue(plugin.contributions(host).tools.isEmpty())
+        assertTrue(plugin.actions(host, PluginStatus.Ready("x")).none { it.id.startsWith("virtual_") })
 
         privilege.setAvailable(true)
-        assertEquals(screenToolNames() + "virtual_screen", plugin.tools().map { it.name })
-        assertEquals("virtual_start", plugin.actions(PluginStatus.Ready("x")).first().id)
+        assertEquals(
+            screenToolNames() + "virtual_screen",
+            plugin.contributions(host).tools.map { it.name },
+        )
+        assertEquals("virtual_start", plugin.actions(host, PluginStatus.Ready("x")).first().id)
     }
 
     @Test
     fun detailRowsReportAccessibilityAndVirtualScreenState() = runTest {
-        val connected = plugin().detailRows(PluginStatus.Ready("x"))
+        val connected = plugin().detailRows(host, PluginStatus.Ready("x"))
         assertEquals(1, connected.size)
-        assertEquals(R.string.plugin_gui_detail_service, connected[0].labelRes)
-        assertEquals("res:${R.string.plugin_gui_detail_enabled}", connected[0].value)
+        assertEquals(R.string.plugin_gui_detail_service, labelRes(connected[0].label))
+        assertEquals("text:${R.string.plugin_gui_detail_enabled}", connected[0].value)
 
-        val disabled = plugin(FakeActions(disconnected = true)).detailRows(PluginStatus.NotReady("x"))
-        assertEquals("res:${R.string.plugin_gui_detail_disabled}", disabled[0].value)
+        val disabled = plugin(FakeActions(disconnected = true)).detailRows(host, PluginStatus.NotReady("x"))
+        assertEquals("text:${R.string.plugin_gui_detail_disabled}", disabled[0].value)
 
         val online = plugin(virtualScreen = feature(FakeScreen(VirtualScreenState.Online(3, 1080, 1920, "adb"))))
-            .detailRows(PluginStatus.Ready("x"))
+            .detailRows(host, PluginStatus.Ready("x"))
         assertEquals(3, online.size)
-        assertEquals(R.string.plugin_virtual_screen_detail_state, online[1].labelRes)
+        assertEquals(R.string.plugin_virtual_screen_detail_state, labelRes(online[1].label))
         assertEquals("res:${R.string.plugin_virtual_screen_status_online}", online[1].value)
-        assertEquals(R.string.plugin_virtual_screen_detail_resolution, online[2].labelRes)
+        assertEquals(R.string.plugin_virtual_screen_detail_resolution, labelRes(online[2].label))
         assertEquals("1080 × 1920", online[2].value)
 
-        val offline = plugin(virtualScreen = feature()).detailRows(PluginStatus.Ready("x"))
+        val offline = plugin(virtualScreen = feature()).detailRows(host, PluginStatus.Ready("x"))
         assertEquals("res:${R.string.plugin_virtual_screen_status_offline}", offline[1].value)
         assertEquals("res:${R.string.plugin_virtual_screen_value_offline}", offline[2].value)
     }
 
     @Test
     fun toolsIncludeVirtualScreenLifecycleWhenFeatureIsPresent() {
-        val tools = plugin(virtualScreen = feature()).tools()
+        val tools = plugin(virtualScreen = feature()).contributions(host).tools
         assertEquals(screenToolNames() + "virtual_screen", tools.map { it.name })
         assertEquals(12, tools.size)
     }
 
     @Test
     fun mainScreenshotWithoutAccessibilityFailsBeforeWriting() = runTest {
-        val tool = plugin().tools().first { it.name == "screen_screenshot" }
-        val result = tool.execute("legacy", buildJsonObject { put("target", "main") }, null, null)
+        val result = runTool(plugin(), "screen_screenshot", buildJsonObject { put("target", "main") })
         assertEquals(true, result.isError)
-        assertTrue((result.content.single() as TextContent).text.contains("accessibility"))
+        assertTrue(resultText(result).contains("accessibility"))
         assertTrue(!screenshotDir.exists())
     }
 
     @Test
     fun virtualScreenshotDoesNotFallBackToMain() = runTest {
-        val actions = FakeActions()
-        val plugin = plugin(actions = actions)
-        val tool = plugin.tools().first { it.name == "screen_screenshot" }
-        val result = tool.execute(
-            "call",
+        val result = runTool(
+            plugin(actions = FakeActions()),
+            "screen_screenshot",
             buildJsonObject { put("target", "virtual") },
-            null,
-            null,
         )
         assertEquals(true, result.isError)
-        assertTrue((result.content.single() as TextContent).text.contains("Virtual screen engine is not ready"))
+        assertTrue(resultText(result).contains("Virtual screen engine is not ready"))
     }
 
     @Test
     fun skillHasFrontmatterAndScreenGuidance() {
-        val skills = plugin().skills()
+        val skills = plugin().skills(host)
         assertEquals(1, skills.size)
         val skill = skills.single()
         assertEquals("deepdeep-gui", skill.id)
@@ -209,12 +203,22 @@ class GuiPluginTest {
 
     @Test
     fun skillDropsUnsupportedToolNames() {
-        val markdown = plugin().skills().single().markdown.lowercase()
+        val markdown = plugin().skills(host).single().markdown.lowercase()
         listOf(
             "screen_find",
             "virtual_screen_start",
         ).forEach { forbidden -> assertTrue(forbidden, !markdown.contains(forbidden)) }
     }
+
+    private fun labelRes(label: LocalizedText): Int = (label as LocalizedText.Resource).id
+
+    private fun resultText(result: PluginToolResult): String = when (result) {
+        is PluginToolResult.Text -> result.text
+        is PluginToolResult.Rich -> result.blocks.filterIsInstance<ToolBlock.Text>().joinToString("") { it.text }
+    }
+
+    private suspend fun runTool(plugin: GuiPlugin, name: String, args: JsonObject): PluginToolResult =
+        plugin.contributions(host).tools.first { it.name == name }.execute(PluginToolCall("call", args))
 
     private fun plugin(
         actions: GuiActions = FakeActions(),

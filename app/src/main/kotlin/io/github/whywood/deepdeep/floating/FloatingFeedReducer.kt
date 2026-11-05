@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.floating
 
-import io.github.whywood.deepdeep.plugin.PluginSetupNotice
+import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus

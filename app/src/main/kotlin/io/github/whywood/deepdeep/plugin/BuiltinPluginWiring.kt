@@ -1,13 +1,11 @@
 package io.github.whywood.deepdeep.plugin
 
+import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginEntry
+
 import android.content.Context
 import android.content.res.AssetManager
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
-import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
-import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.host.ModernPluginAdapter
-import io.github.whywood.deepdeep.plugin.host.builtinPluginHost
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.GoalService
@@ -45,22 +43,9 @@ internal class BuiltinPluginWiring(
     val screenshotDir: File,
     val onCapabilitiesChanged: () -> Unit,
     val onSessionInvalidated: () -> Unit,
-) {
-    fun modern(plugin: DeepDeepPlugin, manifest: PluginManifest): OfficialPlugin =
-        ModernPluginAdapter(
-            modern = plugin,
-            manifest = manifest,
-            host = builtinPluginHost(
-                manifest = manifest,
-                context = uiContext,
-                filesDir = filesDir,
-                scope = scope,
-                language = language,
-            ),
-        )
-}
+)
 
-internal fun builtinPlugins(wiring: BuiltinPluginWiring): List<OfficialPlugin> = listOf(
+internal fun builtinPlugins(wiring: BuiltinPluginWiring): List<BuiltinPluginEntry> = listOf(
     cliFeishu(wiring),
     internalWebSearch(wiring),
     androidGui(wiring),

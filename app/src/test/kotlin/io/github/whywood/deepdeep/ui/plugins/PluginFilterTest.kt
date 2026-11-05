@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import io.github.whywood.deepdeep.plugin.PluginKind
+import io.github.whywood.deepdeep.plugin.api.PluginSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,9 +8,9 @@ import org.junit.Test
 
 class PluginFilterTest {
     @Test
-    fun tabIndexMapsToKind() {
-        assertEquals(PluginKind.EXTERNAL, pluginTabKind(0))
-        assertEquals(PluginKind.INTERNAL, pluginTabKind(1))
+    fun tabIndexMapsToSource() {
+        assertEquals(PluginSource.EXTERNAL, pluginTabSource(0))
+        assertEquals(PluginSource.BUILTIN, pluginTabSource(1))
     }
 
     @Test

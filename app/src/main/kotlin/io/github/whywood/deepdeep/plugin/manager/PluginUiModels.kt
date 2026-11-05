@@ -8,7 +8,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.PublisherInfo
 import io.github.whywood.deepdeep.plugin.api.SettingSpec
 
-internal enum class PluginPhaseUi {
+enum class PluginPhaseUi {
     IMPORTED,
     INSTALLED,
     ACTIVE,
@@ -19,13 +19,13 @@ internal enum class PluginPhaseUi {
     UNLOADED,
 }
 
-internal sealed interface PluginAvailabilityUi {
+sealed interface PluginAvailabilityUi {
     data object Available : PluginAvailabilityUi
 
     data class Unavailable(val reason: String) : PluginAvailabilityUi
 }
 
-internal sealed interface PluginStatusUi {
+sealed interface PluginStatusUi {
     val label: String
 
     data class Ready(
@@ -38,7 +38,7 @@ internal sealed interface PluginStatusUi {
     data class Failed(override val label: String) : PluginStatusUi
 }
 
-internal data class PluginSnapshot(
+data class PluginSnapshot(
     val id: String,
     val name: String,
     val summary: String,
@@ -69,14 +69,14 @@ internal data class PluginSnapshot(
     val ready: Boolean get() = status is PluginStatusUi.Ready
 }
 
-internal data class PluginOperation(
+data class PluginOperation(
     val pluginId: String,
     val title: String,
     val stage: String? = null,
     val progress: Int? = null,
 )
 
-internal data class PluginInteraction(
+data class PluginInteraction(
     val pluginId: String,
     val title: String,
     val stageTitle: String,
@@ -88,13 +88,13 @@ internal data class PluginInteraction(
     val cancellable: Boolean = true,
 )
 
-internal data class PluginSetupNotice(
+data class PluginSetupNotice(
     val pluginId: String,
     val pluginName: String,
     val stage: String,
 )
 
-internal data class PluginsUiState(
+data class PluginsUiState(
     val plugins: List<PluginSnapshot> = emptyList(),
     val loading: Boolean = false,
     val busy: Boolean = false,
@@ -107,7 +107,7 @@ internal data class PluginsUiState(
     val installablePlugins: List<PluginSnapshot> get() = plugins.filter { it.installable }
 }
 
-internal fun PluginStatus.toUi(): PluginStatusUi = when (this) {
+fun PluginStatus.toUi(): PluginStatusUi = when (this) {
     is PluginStatus.Ready -> PluginStatusUi.Ready(label, account)
     is PluginStatus.NotReady -> PluginStatusUi.NotReady(label)
     is PluginStatus.Failed -> PluginStatusUi.Failed(label)

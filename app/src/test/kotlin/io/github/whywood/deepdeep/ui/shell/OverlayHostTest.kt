@@ -2,7 +2,7 @@ package io.github.whywood.deepdeep.ui.shell
 
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
-import io.github.whywood.deepdeep.plugin.PluginInteraction
+import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.SessionUsage

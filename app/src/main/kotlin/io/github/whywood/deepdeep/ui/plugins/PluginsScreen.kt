@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import androidx.compose.foundation.Image
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -22,15 +24,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -40,9 +42,9 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
@@ -51,70 +53,132 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginManager
-import io.github.whywood.deepdeep.plugin.PluginOperation
-import io.github.whywood.deepdeep.plugin.PluginSnapshot
-import io.github.whywood.deepdeep.ui.settings.SettingsGroup
+import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
+import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.plugin.manager.PluginOperation
+import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
+import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
+import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun PluginsScreen(
-    manager: PluginManager,
+internal fun PluginsScreen(
+    manager: PluginManagerFacade,
     onBack: () -> Unit,
     onOpenPlugin: (String) -> Unit,
     modifier: Modifier = Modifier,
+    pluginsRoot: File? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val resolvedPluginsRoot = pluginsRoot ?: remember(context) { File(context.filesDir, "plugins") }
     val holder = remember(manager) { PluginsStateHolder(manager, scope) }
     val state by holder.state.collectAsStateWithLifecycle()
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var inspection by remember { mutableStateOf<ExternalInspectionUi?>(null) }
+    var trustPublisher by remember { mutableStateOf(false) }
+    var importBusy by remember { mutableStateOf(false) }
+    var importResult by remember { mutableStateOf<Boolean?>(null) }
+    var updates by remember { mutableStateOf<List<PluginUpdateUi>?>(null) }
+    var updateBusy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(holder) { holder.load() }
+    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val file = withContext(Dispatchers.IO) { copyToCache(context, uri) } ?: return@launch
+            inspection = holder.inspectExternal(file)
+            trustPublisher = false
+        }
+    }
+
+    LaunchedEffect(Unit) { holder.load() }
     LifecycleResumeEffect(holder) {
-        scope.launch { holder.load() }
+        holder.load()
         onPauseOrDispose { }
     }
 
     PluginsContent(
         state = state,
         tabIndex = tabIndex,
+        pluginsRoot = resolvedPluginsRoot,
         onBack = onBack,
         onTabSelected = { tabIndex = it },
         onQueryChange = holder::setQuery,
-        onRefresh = { scope.launch { holder.refresh() } },
-        onRetry = { scope.launch { holder.retry() } },
+        onRefresh = holder::refresh,
         onOpenPlugin = onOpenPlugin,
-        onDownload = { pluginId -> scope.launch { holder.install(pluginId) } },
-        onToggle = { pluginId, enabled -> scope.launch { holder.setEnabled(pluginId, enabled) } },
+        onInstall = holder::install,
+        onToggle = holder::setEnabled,
+        onImport = { importPicker.launch(arrayOf("*/*")) },
+        onCheckUpdates = {
+            scope.launch {
+                updateBusy = true
+                updates = runCatching { holder.checkExternalUpdates() }.getOrDefault(emptyList())
+                updateBusy = false
+            }
+        },
+        updateBusy = updateBusy,
         modifier = modifier,
     )
+
+    inspection?.let { current ->
+        PluginImportDialog(
+            inspection = current,
+            trustPublisher = trustPublisher,
+            busy = importBusy,
+            onTrustChange = { trustPublisher = it },
+            onConfirm = {
+                scope.launch {
+                    importBusy = true
+                    val result = holder.installExternal(current.file, current.trusted || trustPublisher)
+                    importBusy = false
+                    when {
+                        result.success -> {
+                            inspection = null
+                            importResult = result.restartRequired
+                        }
+
+                        result.requiresConfirmation -> trustPublisher = true
+                    }
+                }
+            },
+            onDismiss = { inspection = null },
+        )
+    }
+
+    importResult?.let { restartRequired ->
+        PluginImportResultDialog(restartRequired = restartRequired, onDismiss = { importResult = null })
+    }
+
+    updates?.let { list ->
+        PluginUpdatesDialog(updates = list, onDismiss = { updates = null })
+    }
 }
 
 @Composable
 private fun PluginsContent(
     state: PluginsUiState,
     tabIndex: Int,
+    pluginsRoot: File?,
     onBack: () -> Unit,
     onTabSelected: (Int) -> Unit,
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
-    onRetry: () -> Unit,
     onOpenPlugin: (String) -> Unit,
-    onDownload: (String) -> Unit,
+    onInstall: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
+    onImport: () -> Unit,
+    onCheckUpdates: () -> Unit,
+    updateBusy: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val colors = deepDeepColors()
-    val kind = pluginTabKind(tabIndex)
-    val items = (if (kind == PluginKind.EXTERNAL) state.external else state.internal).map { snapshot ->
-        PluginListItem(
-            snapshot = snapshot,
-            name = stringResource(snapshot.plugin.nameRes),
-            summary = stringResource(snapshot.plugin.summaryRes),
-        )
-    }
+    val tabSource = pluginTabSource(tabIndex)
+    val items = (if (tabSource == PluginSource.EXTERNAL) state.external else state.builtin).map(::PluginListItem)
     val visible = filterPlugins(items, state.searchQuery)
 
     Column(
@@ -178,131 +242,108 @@ private fun PluginsContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
         ) {
-            Spacer(Modifier.height(8.dp))
-            when {
-                items.isEmpty() -> Text(
+            if (tabSource == PluginSource.EXTERNAL) {
+                Spacer(Modifier.height(8.dp))
+                PluginGroup {
+                    DdListRow(
+                        title = stringResource(R.string.plugins_import_title),
+                        subtitle = stringResource(R.string.plugins_import_pick),
+                        onClick = onImport,
+                        showChevron = true,
+                        modifier = Modifier.testTag("plugins_import"),
+                    )
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.plugins_check_updates),
+                        value = if (updateBusy) stringResource(R.string.plugins_stage_preparing) else null,
+                        onClick = if (updateBusy) null else onCheckUpdates,
+                        showChevron = !updateBusy,
+                        enabled = !updateBusy,
+                        modifier = Modifier.testTag("plugins_check_updates"),
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+            if (visible.isEmpty()) {
+                Text(
                     text = stringResource(
-                        if (kind == PluginKind.EXTERNAL) R.string.plugins_empty_external
-                        else R.string.plugins_empty_internal,
+                        if (tabSource == PluginSource.EXTERNAL) {
+                            R.string.plugins_empty_external
+                        } else {
+                            R.string.plugins_empty_internal
+                        },
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 48.dp)
-                        .testTag(if (kind == PluginKind.EXTERNAL) "plugins_empty_external" else "plugins_empty_internal"),
+                        .padding(vertical = 32.dp)
+                        .testTag("plugins_empty"),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
-
-                visible.isEmpty() -> Text(
-                    text = stringResource(R.string.search_no_match),
-                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
+            }
+            visible.forEach { item ->
+                PluginRow(
+                    snapshot = item.snapshot,
+                    pluginsRoot = pluginsRoot,
+                    operation = state.operation?.takeIf { it.pluginId == item.snapshot.id },
+                    interactive = state.interactive && !state.isToggling(item.snapshot.id),
+                    onOpen = { onOpenPlugin(item.snapshot.id) },
+                    onInstall = { onInstall(item.snapshot.id) },
+                    onToggle = { enabled -> onToggle(item.snapshot.id, enabled) },
                 )
-
-                else -> SettingsGroup {
-                    visible.forEachIndexed { index, item ->
-                        if (index > 0) DdHairline()
-                        PluginRow(
-                            snapshot = item.snapshot,
-                            name = item.name,
-                            summary = item.summary,
-                            operation = state.operation?.takeIf { it.pluginId == item.snapshot.plugin.id },
-                            interactive = state.interactive,
-                            onOpen = { onOpenPlugin(item.snapshot.plugin.id) },
-                            onDownload = { onDownload(item.snapshot.plugin.id) },
-                            onToggle = { enabled -> onToggle(item.snapshot.plugin.id, enabled) },
-                        )
-                    }
-                }
             }
             state.error?.let { error ->
-                Spacer(Modifier.height(12.dp))
-                PluginsErrorRow(error = error, onRetry = onRetry)
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = error,
+                        modifier = Modifier.weight(1f).testTag("plugins_error"),
+                        style = DdType.bodySmall,
+                        color = colors.danger,
+                    )
+                    DdTextAction(
+                        text = stringResource(R.string.assistant_retry),
+                        onClick = onRefresh,
+                        modifier = Modifier.testTag("plugins_error_retry"),
+                    )
+                }
             }
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun PluginsErrorRow(error: String, onRetry: () -> Unit) {
-    val colors = deepDeepColors()
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = error,
-            modifier = Modifier.weight(1f).testTag("plugins_error"),
-            style = DdType.bodySmall,
-            color = colors.danger,
-        )
-        DdTextAction(
-            text = stringResource(R.string.assistant_retry),
-            onClick = onRetry,
-            modifier = Modifier.testTag("plugins_error_retry"),
-        )
-    }
-}
-
-internal data class PluginListItem(
-    val snapshot: PluginSnapshot,
-    val name: String,
-    val summary: String,
-)
-
-internal fun pluginTabKind(index: Int): PluginKind =
-    if (index == 0) PluginKind.EXTERNAL else PluginKind.INTERNAL
-
-internal fun pluginMatchesQuery(
-    query: String,
-    id: String,
-    name: String,
-    summary: String,
-): Boolean {
-    val normalized = query.trim()
-    if (normalized.isEmpty()) return true
-    return id.contains(normalized, ignoreCase = true) ||
-        name.contains(normalized, ignoreCase = true) ||
-        summary.contains(normalized, ignoreCase = true)
-}
-
-internal fun filterPlugins(items: List<PluginListItem>, query: String): List<PluginListItem> =
-    items.filter { item ->
-        pluginMatchesQuery(query, item.snapshot.plugin.id, item.name, item.summary)
-    }
-
-@Composable
 private fun PluginRow(
     snapshot: PluginSnapshot,
-    name: String,
-    summary: String,
+    pluginsRoot: File?,
     operation: PluginOperation?,
     interactive: Boolean,
     onOpen: () -> Unit,
-    onDownload: () -> Unit,
+    onInstall: () -> Unit,
     onToggle: (Boolean) -> Unit,
 ) {
     val colors = deepDeepColors()
-    val plugin = snapshot.plugin
+    val enabled = interactive && operation == null
+    val available = snapshot.availability is io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi.Available
     val stage = operation?.let {
         it.stage
             ?: it.progress?.let { percent -> stringResource(R.string.plugins_downloading_percent, percent) }
             ?: stringResource(R.string.plugins_stage_preparing)
     }
-    val enabled = interactive && operation == null
-    val available = snapshot.availability is PluginAvailability.Available
-    val description = if (available) {
-        summary
-    } else {
-        (snapshot.availability as? PluginAvailability.Unavailable)?.reason ?: summary
+    val description = when {
+        !available -> (snapshot.availability as? io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi.Unavailable)?.reason
+            ?: snapshot.summary
+        stage != null -> stage
+        snapshot.phase == PluginPhaseUi.PENDING_RESTART -> stringResource(R.string.plugins_phase_pending_restart)
+        else -> snapshot.summary
     }
-    val brandIcon = VendorPluginIcons[plugin.id]
-        ?.takeIf { plugin.kind == PluginKind.EXTERNAL }
     DdPressable(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth().testTag("plugin_row_${plugin.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("plugin_row_${snapshot.id}"),
         shape = RoundedCornerShape(20.dp),
         enabled = snapshot.installed,
     ) {
@@ -310,33 +351,19 @@ private fun PluginRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp)
-                .padding(
-                    horizontal = LocalDdRowHorizontalPadding.current,
-                    vertical = 12.dp,
-                ),
+                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            when {
-                brandIcon != null -> Image(
-                    painter = painterResource(brandIcon),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    contentScale = ContentScale.Fit,
-                )
-
-                plugin.tintIcon -> DdIcon(icon = plugin.icon, tint = colors.ink, size = 24.dp)
-
-                else -> Image(
-                    painter = painterResource(plugin.icon.res),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            }
+            PluginIcon(
+                icon = snapshot.icon,
+                assetsDir = pluginAssetsDir(pluginsRoot, snapshot),
+                tint = colors.ink,
+                size = 24.dp,
+            )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = name,
+                    text = snapshot.name,
                     style = DdType.body,
                     color = colors.ink,
                     maxLines = 1,
@@ -344,7 +371,7 @@ private fun PluginRow(
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = stage ?: description,
+                    text = description,
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 2,
@@ -362,19 +389,28 @@ private fun PluginRow(
                             if (snapshot.enabled) R.string.plugins_enable else R.string.plugins_disable,
                         ),
                         modifier = Modifier
-                            .testTag("plugin_switch_${plugin.id}")
-                            .semantics { contentDescription = name },
+                            .testTag("plugin_switch_${snapshot.id}")
+                            .semantics { contentDescription = snapshot.name },
                         activeColor = if (snapshot.enabled && !available) colors.warning else null,
                     )
-                } else if (plugin.kind != PluginKind.INTERNAL) {
+                } else if (snapshot.installable) {
                     DdTextAction(
                         text = stringResource(R.string.plugins_action_download),
-                        onClick = onDownload,
+                        onClick = onInstall,
                         enabled = enabled && available,
-                        modifier = Modifier.testTag("plugin_download_${plugin.id}"),
+                        modifier = Modifier.testTag("plugin_download_${snapshot.id}"),
                     )
                 }
             }
         }
     }
 }
+
+private fun copyToCache(context: Context, uri: Uri): File? = runCatching {
+    val directory = File(context.cacheDir, "plugin-import").apply { mkdirs() }
+    val target = File(directory, "plugin-${System.currentTimeMillis()}.ddplugin")
+    context.contentResolver.openInputStream(uri)?.use { input ->
+        target.outputStream().use { output -> input.copyTo(output) }
+    } ?: return@runCatching null
+    target
+}.getOrNull()

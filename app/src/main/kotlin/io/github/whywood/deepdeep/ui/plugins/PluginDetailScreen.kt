@@ -12,130 +12,91 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
-import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdHairline
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpinner
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
-import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginKind
-import io.github.whywood.deepdeep.plugin.PluginManager
-import io.github.whywood.deepdeep.plugin.PluginSettingSpec
-import io.github.whywood.deepdeep.plugin.PluginSnapshot
-import io.github.whywood.deepdeep.plugin.PluginStatus
-import io.github.whywood.deepdeep.plugin.micloud.MiCloudFeatureSection
-import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
-import io.github.whywood.deepdeep.ui.settings.SettingsGroup
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi
+import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
+import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
+import java.io.File
 
 @Composable
-fun PluginDetailScreen(
-    manager: PluginManager,
+internal fun PluginDetailScreen(
+    manager: PluginManagerFacade,
     pluginId: String,
     onBack: () -> Unit,
     onOpenPermission: () -> Unit,
     modifier: Modifier = Modifier,
+    pluginsRoot: File? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val resolvedPluginsRoot = pluginsRoot ?: remember(context) { File(context.filesDir, "plugins") }
     val holder = remember(manager) { PluginsStateHolder(manager, scope) }
     val state by holder.state.collectAsStateWithLifecycle()
     var deleteOpen by remember { mutableStateOf(false) }
-    var detailRows by remember(pluginId) { mutableStateOf<List<PluginDetailRow>>(emptyList()) }
-    var detailRowsFailed by remember(pluginId) { mutableStateOf(false) }
-    var detailRefresh by remember(pluginId) { mutableIntStateOf(0) }
     val snapshot = state.snapshot(pluginId)
 
     LaunchedEffect(holder) { holder.load() }
     LifecycleResumeEffect(holder) {
-        detailRefresh += 1
-        scope.launch { holder.load() }
+        holder.load()
         onPauseOrDispose { }
     }
-    LaunchedEffect(pluginId, state.plugins, state.loading) {
-        if (!state.loading && snapshot == null) {
-            delay(120)
-            onBack()
-        }
-    }
-    LaunchedEffect(snapshot?.status, snapshot?.installedVersion, detailRefresh) {
-        val current = snapshot ?: return@LaunchedEffect
-        val status = current.status ?: return@LaunchedEffect
-        runCatching { current.plugin.detailRows(status) }.fold(
-            onSuccess = {
-                detailRows = it
-                detailRowsFailed = false
-            },
-            onFailure = { detailRowsFailed = true },
-        )
+    LaunchedEffect(state.loading, snapshot) {
+        if (!state.loading && snapshot == null) onBack()
     }
 
     val current = snapshot ?: return
-
     PluginDetailContent(
-        state = state,
         snapshot = current,
-        pluginId = pluginId,
-        detailRows = detailRows,
-        detailRowsFailed = detailRowsFailed,
+        state = state,
+        pluginsRoot = resolvedPluginsRoot,
         deleteOpen = deleteOpen,
         onDeleteOpenChange = { deleteOpen = it },
         onBack = onBack,
         onOpenPermission = onOpenPermission,
-        onRefresh = { scope.launch { holder.refresh() } },
-        onInstall = { scope.launch { holder.install(pluginId) } },
-        onUpdate = { scope.launch { holder.update(pluginId) } },
-        onUninstall = { scope.launch { holder.uninstall(pluginId) } },
-        onRunAction = { actionId -> scope.launch { holder.runAction(pluginId, actionId) } },
-        onSetting = { key, value -> scope.launch { holder.setSetting(pluginId, key, value) } },
-        onRetry = { scope.launch { holder.retry() } },
+        onRefresh = holder::refresh,
+        onInstall = { holder.install(pluginId) },
+        onUpdate = { holder.update(pluginId) },
+        onUninstall = { holder.uninstall(pluginId) },
+        onRunAction = { actionId -> holder.runAction(pluginId, actionId) },
+        onSetting = { key, value -> holder.setSetting(pluginId, key, value) },
         modifier = modifier,
     )
 }
 
 @Composable
 private fun PluginDetailContent(
-    state: PluginsUiState,
     snapshot: PluginSnapshot,
-    pluginId: String,
-    detailRows: List<PluginDetailRow>,
-    detailRowsFailed: Boolean,
+    state: PluginsUiState,
+    pluginsRoot: File?,
     deleteOpen: Boolean,
     onDeleteOpenChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -146,22 +107,28 @@ private fun PluginDetailContent(
     onUninstall: () -> Unit,
     onRunAction: (String) -> Unit,
     onSetting: (String, String) -> Unit,
-    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val plugin = snapshot.plugin
-    val name = stringResource(plugin.nameRes)
-    val operation = state.operation?.takeIf { it.pluginId == pluginId }
+    val context = LocalContext.current
+    val resolver = rememberPluginTextResolver()
+    val operation = state.operation?.takeIf { it.pluginId == snapshot.id }
     val busy = state.busy || state.interaction != null
+    val availability = snapshot.availability
+    val phaseLabel = stringResource(pluginPhaseLabelRes(snapshot.phase))
     val statusLabel = when {
         operation != null -> operation.stage
             ?: operation.progress?.let { stringResource(R.string.plugins_downloading_percent, it) }
             ?: stringResource(R.string.plugins_stage_preparing)
 
-        !snapshot.installed -> stringResource(R.string.plugins_status_not_installed)
-        !snapshot.enabled -> stringResource(R.string.plugins_status_disabled)
-        else -> snapshot.status?.label ?: stringResource(R.string.plugins_status_installed)
+        snapshot.status != null -> snapshot.status.label
+        snapshot.installed -> phaseLabel
+        else -> stringResource(R.string.plugins_status_not_installed)
+    }
+    val sizeValue = when {
+        snapshot.installedSizeBytes != null -> formatPluginSize(context, snapshot.installedSizeBytes)
+        snapshot.sizeLabel != null -> snapshot.sizeLabel
+        else -> stringResource(R.string.plugins_size_builtin)
     }
 
     Column(
@@ -170,7 +137,7 @@ private fun PluginDetailContent(
             .background(colors.paper)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .testTag("plugin_detail_$pluginId"),
+            .testTag("plugin_detail_${snapshot.id}"),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
@@ -184,11 +151,19 @@ private fun PluginDetailContent(
                 iconSize = 21.dp,
             )
             Spacer(Modifier.width(4.dp))
+            PluginIcon(
+                icon = snapshot.icon,
+                assetsDir = pluginAssetsDir(pluginsRoot, snapshot),
+                tint = colors.ink,
+                size = 22.dp,
+            )
+            Spacer(Modifier.width(10.dp))
             Text(
-                text = name,
+                text = snapshot.name,
                 modifier = Modifier.weight(1f),
                 style = DdType.heading,
                 color = colors.ink,
+                maxLines = 1,
             )
             if (operation != null) {
                 DdSpinner(size = 18.dp, strokeWidth = 2.dp)
@@ -207,190 +182,221 @@ private fun PluginDetailContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = stringResource(plugin.summaryRes),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
-            Spacer(Modifier.height(18.dp))
-            SettingsGroup {
-                DdListRow(
-                    title = stringResource(R.string.plugins_detail_status),
-                    value = statusLabel,
+            Column(Modifier.padding(horizontal = 24.dp)) {
+                Text(
+                    text = snapshot.summary,
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
                 )
-                DdHairline()
-                DdListRow(
-                    title = stringResource(R.string.plugins_detail_version),
-                    value = snapshot.installedVersion ?: plugin.version,
-                )
-                DdHairline()
-                DdListRow(
-                    title = stringResource(R.string.plugins_detail_size),
-                    value = stringResource(plugin.sizeLabelRes),
-                )
-                if (detailRows.isNotEmpty()) {
-                    detailRows.forEach { row ->
+                snapshot.description?.let { description ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = description,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+                Spacer(Modifier.height(18.dp))
+                PluginGroup {
+                    DdListRow(title = stringResource(R.string.plugins_detail_status), value = statusLabel)
+                    DdHairline()
+                    DdListRow(title = stringResource(R.string.plugins_detail_phase), value = phaseLabel)
+                    DdHairline()
+                    DdListRow(title = stringResource(R.string.plugins_detail_version), value = snapshot.version)
+                    if (snapshot.installedVersion != null && snapshot.installedVersion != snapshot.version) {
                         DdHairline()
                         DdListRow(
-                            title = stringResource(row.labelRes),
-                            value = row.value,
+                            title = stringResource(R.string.plugins_detail_installed_version),
+                            value = snapshot.installedVersion,
+                        )
+                    }
+                    DdHairline()
+                    DdListRow(title = stringResource(R.string.plugins_detail_size), value = sizeValue)
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.plugins_detail_source),
+                        value = stringResource(
+                            if (snapshot.source == PluginSource.EXTERNAL) {
+                                R.string.plugins_source_external
+                            } else {
+                                R.string.plugins_source_builtin
+                            },
+                        ),
+                    )
+                    if (snapshot.requiresPrivilege) {
+                        DdHairline()
+                        DdListRow(title = stringResource(R.string.plugins_detail_requires_privilege))
+                    }
+                    snapshot.publisher?.let { publisher ->
+                        if (publisher.keyId.isNotBlank()) {
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.plugins_detail_publisher),
+                                value = publisher.name.ifBlank { publisher.keyId.take(12) },
+                                subtitle = publisher.keyId,
+                            )
+                        }
+                    }
+                    if (snapshot.skills.isNotEmpty()) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_detail_skills),
+                            value = snapshot.skills.joinToString("、"),
+                        )
+                    }
+                    if (snapshot.phase == PluginPhaseUi.PENDING_RESTART) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_phase_pending_restart),
+                            subtitle = stringResource(R.string.plugins_pending_restart_notice),
                         )
                     }
                 }
-                val skills = plugin.skills()
-                if (skills.isNotEmpty()) {
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_detail_skills),
-                        value = stringResource(
-                            R.string.plugins_detail_skills_value,
-                            skills.joinToString("、") { it.id },
-                        ),
-                    )
+            }
+
+            if (snapshot.detailRows.isNotEmpty()) {
+                Spacer(Modifier.height(18.dp))
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    PluginGroup {
+                        snapshot.detailRows.forEachIndexed { index, row ->
+                            if (index > 0) DdHairline()
+                            DdListRow(
+                                title = resolver.resolve(row.label),
+                                value = row.value,
+                            )
+                        }
+                    }
                 }
             }
 
-            if (detailRowsFailed) {
-                Spacer(Modifier.height(10.dp))
+            val availabilityReason = (availability as? PluginAvailabilityUi.Unavailable)?.reason
+            if (availabilityReason != null) {
+                Spacer(Modifier.height(14.dp))
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    Text(
+                        text = availabilityReason,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                    if (snapshot.requiresPrivilege) {
+                        Spacer(Modifier.height(8.dp))
+                        PluginGroup {
+                            DdListRow(
+                                title = stringResource(R.string.plugin_screen_open_permission),
+                                onClick = onOpenPermission,
+                                showChevron = true,
+                                modifier = Modifier.testTag("plugin_permission_guide"),
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (snapshot.settings.isNotEmpty()) {
+                Spacer(Modifier.height(18.dp))
+                PluginSettingsSection(
+                    settings = snapshot.settings,
+                    values = snapshot.settingsValues,
+                    enabled = !busy && snapshot.enabled,
+                    resolver = resolver,
+                    onSetting = onSetting,
+                )
+            }
+
+            snapshot.lastError?.let { error ->
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    text = stringResource(R.string.plugins_error_title),
-                    modifier = Modifier.padding(horizontal = 4.dp).testTag("plugin_detail_rows_error"),
+                    text = error,
+                    modifier = Modifier.padding(horizontal = 28.dp).testTag("plugin_detail_last_error"),
                     style = DdType.bodySmall,
                     color = colors.danger,
                 )
             }
 
-            if (snapshot.installed && plugin.settings().isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = stringResource(R.string.plugins_setting_section),
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-                Spacer(Modifier.height(6.dp))
-                SettingsGroup {
-                    PluginSettingsRows(
-                        plugin = plugin,
-                        settings = snapshot.settings,
-                        enabled = !busy && snapshot.enabled,
-                        onSetting = onSetting,
-                    )
-                }
-            }
-
-            val micloud = plugin as? MiCloudPlugin
-            if (micloud != null && snapshot.installed && snapshot.enabled) {
-                Spacer(Modifier.height(16.dp))
-                MiCloudFeatureSection(
-                    preferences = micloud.preferences,
-                    enabled = snapshot.status is PluginStatus.Ready,
-                )
-            }
-
-            val availability = snapshot.availability
-            if (availability is PluginAvailability.Unavailable) {
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    text = availability.reason,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-                if (plugin.requiresPrivilege) {
-                    Spacer(Modifier.height(8.dp))
-                    SettingsGroup {
-                        DdListRow(
-                            title = stringResource(R.string.plugin_screen_open_permission),
-                            onClick = onOpenPermission,
-                            showChevron = true,
-                            modifier = Modifier.testTag("plugin_permission_guide"),
-                        )
-                    }
-                }
-            }
-
             Spacer(Modifier.height(24.dp))
             if (snapshot.installed && snapshot.enabled) {
-                val actions = snapshot.status?.let { plugin.actions(it) }.orEmpty()
-                if (actions.isNotEmpty()) {
-                    SettingsGroup {
-                        actions.forEachIndexed { index, action ->
-                            if (index > 0) DdHairline()
-                            DdListRow(
-                                title = stringResource(action.labelRes),
-                                onClick = { if (!busy) onRunAction(action.id) },
-                                enabled = !busy,
-                                modifier = Modifier.testTag("plugin_action_${action.id}"),
-                            )
+                if (snapshot.actions.isNotEmpty()) {
+                    Column(Modifier.padding(horizontal = 24.dp)) {
+                        PluginGroup {
+                            snapshot.actions.forEachIndexed { index, action ->
+                                if (index > 0) DdHairline()
+                                DdListRow(
+                                    title = resolver.resolve(action.label),
+                                    onClick = { if (!busy) onRunAction(action.id) },
+                                    enabled = !busy && action.enabled,
+                                    modifier = Modifier.testTag("plugin_action_${action.id}"),
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(24.dp))
                 }
             }
-            when {
-                plugin.kind == PluginKind.INTERNAL -> Unit
 
-                !snapshot.installed -> {
-                    DdPrimaryButton(
-                        text = stringResource(R.string.plugins_action_download),
-                        onClick = onInstall,
-                        modifier = Modifier.fillMaxWidth().testTag("plugin_detail_download"),
-                        enabled = availability is PluginAvailability.Available && !busy,
-                    )
-                }
+            Column(Modifier.padding(horizontal = 24.dp)) {
+                when {
+                    !snapshot.installable -> Unit
 
-                else -> {
-                    if (snapshot.updateAvailable) {
+                    !snapshot.installed -> {
                         DdPrimaryButton(
-                            text = stringResource(R.string.plugins_action_update),
-                            onClick = onUpdate,
-                            modifier = Modifier.fillMaxWidth().testTag("plugin_detail_update"),
-                            enabled = !busy,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    SettingsGroup {
-                        DdListRow(
-                            title = stringResource(R.string.plugins_action_reinstall),
-                            onClick = { if (!busy) onUpdate() },
-                            enabled = !busy,
-                            modifier = Modifier.testTag("plugin_detail_reinstall"),
-                        )
-                        DdHairline()
-                        DdListRow(
-                            title = stringResource(R.string.plugins_action_delete),
-                            onClick = { onDeleteOpenChange(true) },
-                            enabled = !busy,
-                            modifier = Modifier.testTag("plugin_detail_delete"),
+                            text = stringResource(R.string.plugins_action_download),
+                            onClick = onInstall,
+                            modifier = Modifier.fillMaxWidth().testTag("plugin_detail_download"),
+                            enabled = availability is PluginAvailabilityUi.Available && !busy,
                         )
                     }
-                }
-            }
 
-            state.error?.let { error ->
-                Spacer(Modifier.height(14.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.weight(1f).testTag("plugin_detail_error"),
-                        style = DdType.bodySmall,
-                        color = colors.danger,
-                    )
-                    DdTextAction(
-                        text = stringResource(R.string.assistant_retry),
-                        onClick = onRetry,
-                        modifier = Modifier.testTag("plugin_detail_error_retry"),
-                    )
+                    else -> {
+                        if (snapshot.updateAvailable) {
+                            DdPrimaryButton(
+                                text = stringResource(R.string.plugins_action_update),
+                                onClick = onUpdate,
+                                modifier = Modifier.fillMaxWidth().testTag("plugin_detail_update"),
+                                enabled = !busy,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        PluginGroup {
+                            DdListRow(
+                                title = stringResource(R.string.plugins_action_reinstall),
+                                onClick = { if (!busy) onUpdate() },
+                                enabled = !busy,
+                                modifier = Modifier.testTag("plugin_detail_reinstall"),
+                            )
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.plugins_action_delete),
+                                onClick = { onDeleteOpenChange(true) },
+                                enabled = !busy,
+                                modifier = Modifier.testTag("plugin_detail_delete"),
+                            )
+                        }
+                    }
                 }
+                state.error?.let { error ->
+                    Spacer(Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.weight(1f).testTag("plugin_detail_error"),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                        )
+                        DdTextAction(
+                            text = stringResource(R.string.assistant_retry),
+                            onClick = onRefresh,
+                            modifier = Modifier.testTag("plugin_detail_error_retry"),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(40.dp))
             }
-            Spacer(Modifier.height(40.dp))
         }
     }
 
@@ -400,7 +406,7 @@ private fun PluginDetailContent(
             title = stringResource(R.string.plugins_delete_title),
             content = {
                 Text(
-                    text = stringResource(R.string.plugins_delete_message, name),
+                    text = stringResource(R.string.plugins_delete_message, snapshot.name),
                     style = DdType.bodySmall,
                     color = colors.inkSecondary,
                 )
@@ -422,206 +428,4 @@ private fun PluginDetailContent(
             },
         )
     }
-}
-
-@Composable
-private fun PluginSettingsRows(
-    plugin: OfficialPlugin,
-    settings: Map<String, String>,
-    enabled: Boolean,
-    onSetting: (String, String) -> Unit,
-) {
-    plugin.settings().forEachIndexed { index, spec ->
-        if (index > 0) DdHairline()
-        when (spec) {
-            is PluginSettingSpec.Toggle -> PluginToggleSettingRow(spec, settings, enabled, onSetting)
-            is PluginSettingSpec.Choice -> PluginChoiceSettingRow(spec, settings, enabled, onSetting)
-            is PluginSettingSpec.Number -> PluginNumberSettingRow(spec, settings, enabled, onSetting)
-            is PluginSettingSpec.Text -> PluginTextSettingRow(spec, settings, enabled, onSetting)
-        }
-    }
-}
-
-@Composable
-private fun PluginToggleSettingRow(
-    spec: PluginSettingSpec.Toggle,
-    settings: Map<String, String>,
-    enabled: Boolean,
-    onSetting: (String, String) -> Unit,
-) {
-    val checked = settings[spec.key]?.toBooleanStrictOrNull() ?: spec.defaultValue
-    DdListRow(
-        title = stringResource(spec.titleRes),
-        trailing = {
-            DdSwitch(
-                checked = checked,
-                onCheckedChange = { onSetting(spec.key, it.toString()) },
-                enabled = enabled,
-                modifier = Modifier.testTag("plugin_setting_${spec.key}"),
-            )
-        },
-    )
-}
-
-@Composable
-private fun PluginChoiceSettingRow(
-    spec: PluginSettingSpec.Choice,
-    settings: Map<String, String>,
-    enabled: Boolean,
-    onSetting: (String, String) -> Unit,
-) {
-    val colors = deepDeepColors()
-    var expanded by remember(spec.key) { mutableStateOf(false) }
-    val stored = settings[spec.key]
-    val current = spec.options.firstOrNull { it.value == stored }?.value ?: spec.default
-    val currentLabel = spec.options.firstOrNull { it.value == current }?.labelRes?.let { stringResource(it) } ?: current
-    DdDropdown(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        anchor = {
-            DdListRow(
-                title = stringResource(spec.titleRes),
-                value = currentLabel,
-                showChevron = true,
-                enabled = enabled,
-                onClick = if (enabled) {
-                    { expanded = true }
-                } else {
-                    null
-                },
-                modifier = Modifier.testTag("plugin_setting_${spec.key}"),
-            )
-        },
-    ) {
-        spec.options.forEach { option ->
-            DdMenuItem(
-                text = stringResource(option.labelRes),
-                onClick = {
-                    expanded = false
-                    onSetting(spec.key, option.value)
-                },
-                selected = option.value == current,
-                trailing = if (option.value == current) {
-                    {
-                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun PluginTextSettingRow(
-    spec: PluginSettingSpec.Text,
-    settings: Map<String, String>,
-    enabled: Boolean,
-    onSetting: (String, String) -> Unit,
-) {
-    val colors = deepDeepColors()
-    var editing by remember(spec.key) { mutableStateOf(false) }
-    var draft by remember(spec.key) { mutableStateOf("") }
-    val stored = settings[spec.key] ?: spec.default
-    val display = when {
-        stored.isBlank() -> stringResource(R.string.plugins_setting_unset)
-        spec.secret -> stringResource(R.string.plugins_setting_secret_set)
-        else -> stored
-    }
-    DdListRow(
-        title = stringResource(spec.titleRes),
-        value = display,
-        showChevron = true,
-        enabled = enabled,
-        onClick = if (enabled) {
-            {
-                draft = stored
-                editing = true
-            }
-        } else {
-            null
-        },
-        modifier = Modifier.testTag("plugin_setting_${spec.key}"),
-    )
-    if (editing) {
-        val save = {
-            editing = false
-            onSetting(spec.key, draft)
-        }
-        DdDialog(
-            onDismissRequest = { editing = false },
-            title = stringResource(spec.titleRes),
-            content = {
-                DdTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    placeholder = "",
-                    visualTransformation = if (spec.secret) {
-                        PasswordVisualTransformation()
-                    } else {
-                        VisualTransformation.None
-                    },
-                    keyboardOptions = if (spec.secret) {
-                        KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
-                    } else {
-                        KeyboardOptions.Default
-                    },
-                    onDone = save,
-                    testTag = "plugin_setting_${spec.key}_input",
-                )
-            },
-            actions = {
-                DdTextAction(
-                    text = stringResource(R.string.plugins_cancel),
-                    onClick = { editing = false },
-                    color = colors.inkSecondary,
-                )
-                DdTextAction(
-                    text = stringResource(R.string.plugins_setting_save),
-                    onClick = save,
-                    color = colors.accent,
-                )
-            },
-        )
-    }
-}
-
-@Composable
-private fun PluginNumberSettingRow(
-    spec: PluginSettingSpec.Number,
-    settings: Map<String, String>,
-    enabled: Boolean,
-    onSetting: (String, String) -> Unit,
-) {
-    val colors = deepDeepColors()
-    val current = (settings[spec.key]?.toIntOrNull() ?: spec.defaultValue).coerceIn(spec.min, spec.max)
-    DdListRow(
-        title = stringResource(spec.titleRes),
-        trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DdTextAction(
-                    text = "−",
-                    onClick = { onSetting(spec.key, (current - 1).toString()) },
-                    enabled = enabled && current > spec.min,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.testTag("plugin_setting_${spec.key}_dec"),
-                )
-                Text(
-                    text = current.toString(),
-                    modifier = Modifier.width(36.dp).testTag("plugin_setting_${spec.key}_value"),
-                    style = DdType.body,
-                    color = colors.ink,
-                    textAlign = TextAlign.Center,
-                )
-                DdTextAction(
-                    text = "+",
-                    onClick = { onSetting(spec.key, (current + 1).toString()) },
-                    enabled = enabled && current < spec.max,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.testTag("plugin_setting_${spec.key}_inc"),
-                )
-            }
-        },
-    )
 }
