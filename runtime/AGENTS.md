@@ -16,7 +16,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `SessionCommandPlane.kt` | 会话运行状态机：忙闲、runId、停止、重配 |
 | `SessionIndex.kt` | 扫 JSONL 建索引，按大小与时间戳增量缓存 |
 | `SessionCatalog.kt` | 会话列表：合并 JSONL 与置顶/归档/重命名 |
-| `SessionMetaStore.kt` | 会话元数据存 DataStore，附未接线的旧仓库 |
+| `SessionMetaStore.kt` | 会话元数据（置顶/归档/重命名）存 DataStore |
 | `HistoryMapper.kt` | JSONL 条目转消息与工具轨迹，识别定时提醒 |
 | `RunLedger.kt` | 落盘未完成运行，重启后提示被中断 |
 | `HandleBudget.kt` | 句柄上限与空闲淘汰规则（6 个 / 10 分钟） |

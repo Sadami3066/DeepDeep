@@ -5,12 +5,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 private val Context.sessionMetaStore by preferencesDataStore(name = "session_meta")
@@ -80,45 +78,5 @@ class SessionMetaStore(context: Context) {
             )
         }
         return root.toString()
-    }
-}
-
-class SessionRepository(
-    private val engine: PiSessionEngine,
-    private val metaStore: SessionMetaStore,
-) {
-    suspend fun list(includeArchived: Boolean = false): List<ConversationSummary> = withContext(Dispatchers.IO) {
-        val metas = metaStore.read()
-        engine.listSessions()
-            .map { base ->
-                val meta = metas[base.id]
-                base.copy(
-                    title = meta?.titleOverride ?: base.title,
-                    pinned = meta?.pinned ?: false,
-                    archived = meta?.archived ?: false,
-                )
-            }
-            .filter { includeArchived || !it.archived }
-            .sortedWith(compareByDescending<ConversationSummary> { it.pinned }.thenByDescending { it.updatedAt })
-    }
-
-    suspend fun archivedCount(): Int = list(includeArchived = true).count { it.archived }
-
-    suspend fun rename(id: String, title: String) {
-        metaStore.update(id) { it.copy(titleOverride = title.trim().takeIf { value -> value.isNotEmpty() }) }
-    }
-
-    suspend fun setPinned(id: String, pinned: Boolean) {
-        metaStore.update(id) { it.copy(pinned = pinned) }
-    }
-
-    suspend fun setArchived(id: String, archived: Boolean) {
-        metaStore.update(id) { it.copy(archived = archived) }
-    }
-
-    suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        val target = engine.listSessions().firstOrNull { it.id == id }
-        if (target != null) engine.deleteSessionFile(target.filePath)
-        metaStore.remove(id)
     }
 }
