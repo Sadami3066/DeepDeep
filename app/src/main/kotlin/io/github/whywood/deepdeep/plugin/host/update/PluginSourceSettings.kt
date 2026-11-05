@@ -13,7 +13,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 
-internal data class PluginSourceSettings(
+data class PluginSourceSettings(
     val indexUrl: String? = null,
     val autoCheck: Boolean = true,
     val intervalHours: Int = PluginUpdateDefaults.DEFAULT_INTERVAL_HOURS,

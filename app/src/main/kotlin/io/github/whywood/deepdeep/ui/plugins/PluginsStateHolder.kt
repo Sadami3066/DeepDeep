@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.plugin.manager.PluginOperation
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState as ManagerPluginsUiState
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -102,6 +103,15 @@ internal class PluginsStateHolder(
         manager.installExternal(file, acceptPublisher)
 
     suspend fun checkExternalUpdates(): List<PluginUpdateUi> = manager.checkExternalUpdates()
+
+    suspend fun loadSourceSettings(): PluginSourceSettings = manager.pluginSourceSettings()
+
+    fun saveSourceSettings(settings: PluginSourceSettings) {
+        scope.launch {
+            runCatching { manager.savePluginSourceSettings(settings) }
+            runCatching { manager.refreshAvailableUpdates() }
+        }
+    }
 
     fun stageUpdate(pluginId: String) {
         scope.launch {

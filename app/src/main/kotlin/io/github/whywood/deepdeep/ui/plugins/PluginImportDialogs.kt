@@ -25,6 +25,14 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import io.github.whywood.deepdeep.design.DdSwitch
+import io.github.whywood.deepdeep.design.DdTextField
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 
 @Composable
@@ -189,6 +197,69 @@ internal fun PluginUpdatesDialog(
             DdTextAction(
                 text = stringResource(R.string.plugins_close),
                 onClick = onDismiss,
+                color = colors.accent,
+            )
+        },
+    )
+}
+
+@Composable
+internal fun PluginSourceDialog(
+    settings: PluginSourceSettings,
+    onSave: (PluginSourceSettings) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    var url by remember(settings) { mutableStateOf(settings.indexUrl.orEmpty()) }
+    var autoCheck by remember(settings) { mutableStateOf(settings.autoCheck) }
+    DdDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.plugins_source_title),
+        content = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.plugins_source_hint),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                )
+                DdTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    placeholder = stringResource(R.string.plugins_source_url),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    testTag = "plugins_source_url",
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.plugins_source_auto_check),
+                        modifier = Modifier.weight(1f),
+                        style = DdType.body,
+                        color = colors.ink,
+                    )
+                    DdSwitch(checked = autoCheck, onCheckedChange = { autoCheck = it })
+                }
+            }
+        },
+        actions = {
+            DdTextAction(
+                text = stringResource(R.string.plugins_close),
+                onClick = onDismiss,
+                color = colors.inkSecondary,
+            )
+            DdTextAction(
+                text = stringResource(R.string.plugins_source_save),
+                onClick = {
+                    onSave(
+                        PluginSourceSettings(
+                            indexUrl = url.trim().takeIf { it.isNotEmpty() },
+                            autoCheck = autoCheck,
+                        ),
+                    )
+                },
                 color = colors.accent,
             )
         },

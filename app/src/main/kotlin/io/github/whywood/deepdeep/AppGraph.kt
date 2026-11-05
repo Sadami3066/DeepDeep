@@ -39,6 +39,17 @@ import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginStateStore
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
+import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
+import io.github.whywood.deepdeep.plugin.host.services.McpModelMapping
+import io.github.whywood.deepdeep.runtime.McpPluginBridge
+import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
+import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
+import io.github.whywood.deepdeep.screen.MainScreenController
+import io.github.whywood.deepdeep.screen.ScreenController
+import io.github.whywood.deepdeep.screen.ScreenRouter
+import io.github.whywood.deepdeep.screen.VirtualEngineBackend
+import io.github.whywood.deepdeep.service.GuiAccessibilityState
+import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import io.github.whywood.deepdeep.plugin.builtinPlugins
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.adb.AdbBootstrap
@@ -228,6 +239,37 @@ class AppGraph(context: Context) : AppDependencies {
     override val questionCenter = QuestionCenter(
         persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
     )
+    private val pluginScreenActions = GuiAccessibilityActions()
+
+    private val pluginScreenController: ScreenController by lazy {
+        ScreenRouter(
+            accessibility = AccessibilityScreenBackend(pluginScreenActions),
+            virtual = VirtualEngineBackend { VirtualScreenRuntime.engine() },
+            apps = AndroidScreenAppCatalog(appContext),
+            accessibilityEnabled = { GuiAccessibilityState.isEnabled(appContext) },
+        )
+    }
+
+    private val pluginMainScreenController: ScreenController by lazy {
+        MainScreenController(
+            actions = pluginScreenActions,
+            apps = AndroidScreenAppCatalog(appContext),
+            displaySize = {
+                val manager = appContext.getSystemService(Context.DISPLAY_SERVICE) as? android.hardware.display.DisplayManager
+                val metrics = android.util.DisplayMetrics()
+                checkNotNull(manager?.getDisplay(0)) { "Main screen is unavailable" }.getRealMetrics(metrics)
+                metrics.widthPixels to metrics.heightPixels
+            },
+            virtualStatus = { pluginScreenController.status() },
+            shell = builtinWiring.mainShell,
+            screenshotSupported = { android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R },
+        )
+    }
+
+    private val mcpPluginBridge: McpPluginBridge by lazy {
+        McpPluginBridge(httpTransport, mcpTokenStore)
+    }
+
     private val builtinWiring: BuiltinPluginWiring by lazy {
         BuiltinPluginWiring(
             uiContext = uiContext,
@@ -294,6 +336,8 @@ class AppGraph(context: Context) : AppDependencies {
                         network = httpTransport,
                         sessions = host,
                         sessionCommands = host,
+                        screen = pluginScreenController,
+                        mainScreen = pluginMainScreenController,
                         activeSessionId = activeSessionId,
                         jobs = jobRegistry,
                         timers = timerService,
@@ -303,10 +347,30 @@ class AppGraph(context: Context) : AppDependencies {
                         workshopMaxTurns = { pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
                         mcpConfig = mcpConfigStore,
                         mcpProbe = mcpServerProbe,
+                        mcpTools = { server ->
+                            mcpConfigStore.loadServers()[server]?.let { config ->
+                                mcpPluginBridge.listTools(server, config).map(McpModelMapping::tool)
+                            }.orEmpty()
+                        },
+                        mcpCall = call@{ server, tool, arguments ->
+                            val config = mcpConfigStore.loadServers()[server]
+                                ?: return@call io.github.whywood.deepdeep.plugin.api.McpCallResult(
+                                    blocks = listOf(
+                                        io.github.whywood.deepdeep.plugin.api.ToolBlock.Text(
+                                            "unknown MCP server: $server",
+                                        ),
+                                    ),
+                                    isError = true,
+                                )
+                            McpModelMapping.result(mcpPluginBridge.callTool(server, config, tool, arguments))
+                        },
                         virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
                         screenshotDir = File(appContext.filesDir, "gui/screenshots"),
                         sharedStorageDir = if (isSharedStorageGranted()) File("/storage/emulated/0") else null,
                         bus = pluginBus,
+                        chatSink = { sessionId, customType, payload, text, display ->
+                            host.postPluginMessage(sessionId, customType, payload.toString(), text, display)
+                        },
                         openUrl = { url ->
                             runCatching {
                                 appContext.startActivity(
@@ -504,6 +568,11 @@ class AppGraph(context: Context) : AppDependencies {
         scope.launch {
             runCatching { pluginManager.start() }
             host.reconfigure()
+        }
+        scope.launch {
+            host.sdkEvents.collect { event ->
+                pluginManager.onSessionSdkEvent(event.sessionId, event.event)
+            }
         }
         scope.launch {
             host.events.collect { event ->

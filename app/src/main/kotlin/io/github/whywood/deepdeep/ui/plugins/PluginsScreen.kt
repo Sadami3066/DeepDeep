@@ -55,6 +55,7 @@ import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginOperation
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
@@ -85,6 +86,7 @@ internal fun PluginsScreen(
     var importResult by remember { mutableStateOf<Boolean?>(null) }
     var updates by remember { mutableStateOf<List<PluginUpdateUi>?>(null) }
     var updateBusy by remember { mutableStateOf(false) }
+    var sourceSettings by remember { mutableStateOf<PluginSourceSettings?>(null) }
 
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -114,6 +116,7 @@ internal fun PluginsScreen(
         onToggle = holder::setEnabled,
         onImport = { importPicker.launch(arrayOf("*/*")) },
         onShowUpdates = { updates = state.availableUpdates },
+        onOpenSource = { scope.launch { sourceSettings = holder.loadSourceSettings() } },
         onCheckUpdates = {
             scope.launch {
                 updateBusy = true
@@ -157,6 +160,17 @@ internal fun PluginsScreen(
     updates?.let { list ->
         PluginUpdatesDialog(updates = list, onUpdate = holder::stageUpdate, onDismiss = { updates = null })
     }
+
+    sourceSettings?.let { settings ->
+        PluginSourceDialog(
+            settings = settings,
+            onSave = { updated ->
+                holder.saveSourceSettings(updated)
+                sourceSettings = null
+            },
+            onDismiss = { sourceSettings = null },
+        )
+    }
 }
 
 @Composable
@@ -174,6 +188,7 @@ private fun PluginsContent(
     onImport: () -> Unit,
     onCheckUpdates: () -> Unit,
     onShowUpdates: () -> Unit,
+    onOpenSource: () -> Unit,
     updateBusy: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -267,6 +282,13 @@ private fun PluginsContent(
                         )
                         DdHairline()
                     }
+                    DdListRow(
+                        title = stringResource(R.string.plugins_source_row),
+                        onClick = onOpenSource,
+                        showChevron = true,
+                        modifier = Modifier.testTag("plugins_source"),
+                    )
+                    DdHairline()
                     DdListRow(
                         title = stringResource(R.string.plugins_check_updates),
                         value = if (updateBusy) stringResource(R.string.plugins_stage_preparing) else null,
