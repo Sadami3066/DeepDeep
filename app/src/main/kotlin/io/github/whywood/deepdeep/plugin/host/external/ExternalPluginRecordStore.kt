@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.plugin.host.external
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -119,10 +118,12 @@ internal class ExternalPluginRecordStore(
             publisherKeyId = publisherKeyId,
             apiLevel = json.int("apiLevel") ?: PLUGIN_API_LEVEL,
             uiApiLevel = json.int("uiApiLevel") ?: HOST_UI_API_LEVEL,
-            phase = json.enumValue("phase", PluginPhase.INSTALLED),
             lastError = json.string("lastError"),
             pendingVersion = json.string("pendingVersion"),
             pendingBundleSha256 = json.string("pendingBundleSha256"),
+            previousVersion = json.string("previousVersion"),
+            previousInstallPath = json.string("previousInstallPath"),
+            previousBundleSha256 = json.string("previousBundleSha256"),
         )
     }
 
@@ -152,10 +153,12 @@ internal class ExternalPluginRecordStore(
                                 put("publisherKeyId", record.publisherKeyId)
                                 put("apiLevel", record.apiLevel)
                                 put("uiApiLevel", record.uiApiLevel)
-                                put("phase", record.phase.name)
                                 record.lastError?.let { put("lastError", it) }
                                 record.pendingVersion?.let { put("pendingVersion", it) }
                                 record.pendingBundleSha256?.let { put("pendingBundleSha256", it) }
+                                record.previousVersion?.let { put("previousVersion", it) }
+                                record.previousInstallPath?.let { put("previousInstallPath", it) }
+                                record.previousBundleSha256?.let { put("previousBundleSha256", it) }
                             },
                         )
                     }

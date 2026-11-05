@@ -196,8 +196,9 @@ class AssistantOverlayController(
         withContext(ioDispatcher) {
             refs.mapNotNull { ref ->
                 try {
-                    normalizeImage(attachmentStore.file(ref, root), ref.mime)
-                        ?.let { image -> ImagePart(image.data, image.mimeType) }
+                    val file = attachmentStore.file(ref, root)
+                    normalizeImage(file, ref.mime)
+                        ?.let { image -> ImagePart(image.data, image.mimeType, path = file.absolutePath) }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {

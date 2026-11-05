@@ -1,44 +1,92 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
-import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
+import io.github.whywood.deepdeep.plugin.host.PluginRecord
+import io.github.whywood.deepdeep.plugin.host.PluginRuntimeFacts
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
+import io.github.whywood.deepdeep.plugin.host.external.LoadedPluginHandle
+import kotlinx.coroutines.CoroutineScope
 
-internal data class ManagedPlugin(
-    var manifest: PluginManifest,
-    var plugin: DeepDeepPlugin?,
+internal class ManagedPlugin(
+    val id: String,
     val builtin: Boolean,
+    var manifest: PluginManifest,
     var source: PluginSource,
-    var installedVersion: String?,
-    var enabled: Boolean,
-    var phase: PluginPhase,
-    var error: String? = null,
+    var plugin: DeepDeepPlugin?,
+    var host: PluginHost,
+    var scope: CoroutineScope,
+    var externalHandle: LoadedPluginHandle? = null,
+    var externalRecord: ExternalPluginRecord? = null,
+    var contributions: PluginContributions = PluginContributions.Empty,
     var availability: PluginAvailabilityUi = PluginAvailabilityUi.Available,
     var status: PluginStatusUi? = null,
-    var contributions: PluginContributions = PluginContributions.Empty,
-    var externalRecord: ExternalPluginRecord? = null,
     var skillIds: List<String> = emptyList(),
+    var failure: String? = null,
+    var materializationFailure: String? = null,
 ) {
-    lateinit var host: PluginHost
+    fun view(record: PluginRecord): PluginRuntimeView = PluginRuntimeView(
+        record = record,
+        builtin = builtin,
+        manifest = manifest,
+        source = source,
+        plugin = plugin,
+        host = host,
+        scope = scope,
+        externalHandle = externalHandle,
+        externalRecord = externalRecord,
+        contributions = contributions,
+        availability = availability,
+        status = status,
+        skillIds = skillIds,
+        failure = failure,
+        materializationFailure = materializationFailure,
+    )
 }
 
-internal object PlaceholderPlugin : DeepDeepPlugin {
-    override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Unavailable("")
-    override suspend fun status(host: PluginHost): PluginStatus = PluginStatus.Failed("")
+internal data class PluginRuntimeView(
+    val record: PluginRecord,
+    val builtin: Boolean,
+    val manifest: PluginManifest,
+    val source: PluginSource,
+    val plugin: DeepDeepPlugin?,
+    val host: PluginHost,
+    val scope: CoroutineScope,
+    val externalHandle: LoadedPluginHandle?,
+    val externalRecord: ExternalPluginRecord?,
+    val contributions: PluginContributions,
+    val availability: PluginAvailabilityUi,
+    val status: PluginStatusUi?,
+    val skillIds: List<String>,
+    val failure: String?,
+    val materializationFailure: String?,
+) {
+    val id: String get() = record.id
+
+    val enabled: Boolean get() = record.enabled
+
+    val installed: Boolean get() = record.installedVersion != null
+
+    val facts: PluginRuntimeFacts
+        get() = PluginRuntimeFacts(
+            loaded = plugin != null,
+            installable = manifest.installable,
+            failed = failure ?: materializationFailure ?: (status as? PluginStatusUi.Failed)?.label,
+            degraded = (availability as? PluginAvailabilityUi.Unavailable)?.reason,
+        )
+
+    val phase: PluginPhase get() = PluginPhase.derive(record, facts)
 }
 
-internal fun ManagedPlugin.toDescriptor(): PluginDescriptor = PluginDescriptor(
+internal fun PluginRuntimeView.toDescriptor(): PluginDescriptor = PluginDescriptor(
     manifest = manifest,
-    plugin = plugin ?: PlaceholderPlugin,
     source = source,
     phase = phase,
-    error = error,
+    error = record.lastError,
     contributions = contributions,
 )

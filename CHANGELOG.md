@@ -2,6 +2,16 @@
 
 ## HEAD (since m2)
 
+- docs: 按 AI 插件作者演练补全 `docs/PLUGIN_DEV.md` 与 `plugin-template/README.md`（构建前置与 SDK/JDK、产物命名、hooks 字段对照表、安装前自查清单、SettingSpec/PluginStatus 细节）[docs] [插件]
+- docs: 重写插件作者文档 `docs/PLUGIN_DEV.md`（代码插件模型、21 观察 + 4 变换 hooks、Compose 槽位、18 个宿主服务、`.ddp` 签名/TOFU/激活/回滚、作者工作流），同步 `plugin-template`/`plugin-sample` 与各级 `AGENTS.md` [docs] [插件]
+- feat: 插件失败可恢复：激活中断/同版本连续 2 次启动失败后跳过或自动停用，详情页「插件故障」区提供重试激活与回滚上一版本（外部插件）[插件]
+- feat: 插件错误可见统一：`lastError` 进详情页、插件日志走 `LogService`、Compose 槽位崩溃标记可查可恢复 [插件]
+- feat: 插件 UI 契约闭环：详情区块按注册 sectionId 查询（支持多区块）、设置 Group 叶子保存、输入区动作、`share`/`openPage` 真接线、自定义消息卡结构化载荷 [插件]
+- refactor: 插件系统收敛：用户意图与运行期事实分离、相位纯函数派生、每插件 `SupervisorJob` scope、启停/卸载/更新统一收尾（取消 scope → close → 释放句柄/会话 → 清贡献）[插件]
+- refactor: 插件贡献一次物化，工具/提示词/技能/槽位/UI/冲突诊断统一消费不可变快照，消费路径不再调用插件 [插件]
+- refactor: 插件 hooks 收敛为唯一管线：21 个观察事件按会话单泵串行（结构事件优先、delta 过载丢最旧）、4 个变换/闸门统一 2s/5s 超时与 fail-open/fail-closed；工具钩子挂 Agent 级，覆盖 MCP/tool_search 等动态工具 [插件] [运行时]
+- refactor: 删除声明式 UI（`UiNode`/`Declarative`/`DeclarativeUiRenderer`）、旧 `ExternalPluginLoader` 与未接线 API，插件 UI 只保留自由 Compose 槽位；`plugin-api` 升 0.4.0（`BASELINE_API_LEVEL`、ABI golden 测试、`ui.kotlin`/`ui.compose` 兼容判定）[插件]
+- feat: 工具调用全链路结构化载荷（原始参数 + 文本/图片/文件结果），工具卡与自定义消息卡可读结构化参数与结果；`inputTransform` 的图片路径真实生效 [插件] [运行时]
 - refactor: 清理历史未使用字符串资源（ask/mcp/timer/settings/present/scan 等 65 个键 × 中英两份），lint UnusedResources 归零
 - fix: 内置插件安装语义：不可下载的内置插件恒为已安装，不再因缺少 `builtin_state.json` 全部变成「下载」；只有 feishu/wecom/jwxt 需要下载 [插件]
 - fix: 插件设置缓存启动预热，冷启动不再用默认值覆盖已存设置（jwxt 凭据不再被误删，jobs/workshop 限额恢复） [插件]

@@ -6,8 +6,8 @@ import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.SessionCommands
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 internal class SessionPluginService(
     private val runtime: ConversationQueries,
@@ -19,19 +19,16 @@ internal class SessionPluginService(
             SessionInfo(id = id, busy = id in runtime.busySessionIds.value)
         }
 
-    override fun observe(): Flow<SessionInfo?> = flow {
-        activeSessionId.collect { id ->
-            emit(
-                id?.let { current ->
-                    SessionInfo(
-                        id = current,
-                        title = runCatching { runtime.sessionTitle(current) }.getOrNull(),
-                        busy = current in runtime.busySessionIds.value,
-                    )
-                },
-            )
-        }
-    }
+    override fun observe(): Flow<SessionInfo?> =
+        combine(activeSessionId, runtime.busySessionIds) { id, busy ->
+            id?.let { current ->
+                SessionInfo(
+                    id = current,
+                    title = runCatching { runtime.sessionTitle(current) }.getOrNull(),
+                    busy = current in busy,
+                )
+            }
+        }.distinctUntilChanged()
 
     override suspend fun list(): List<SessionInfo> {
         val busy = runtime.busySessionIds.value

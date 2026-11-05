@@ -94,8 +94,6 @@ internal class EventRecordingHooks : PluginHooks {
     override suspend fun thinkingLevelChanged(event: PluginEvent.ThinkingLevelChanged) =
         record("thinkingLevelChanged", event)
 
-    override suspend fun toolSetChanged(event: PluginEvent.ToolSetChanged) = record("toolSetChanged", event)
-
     override suspend fun retryScheduled(event: PluginEvent.RetryScheduled) = record("retryScheduled", event)
 
     override suspend fun retrySucceeded(event: PluginEvent.RetrySucceeded) = record("retrySucceeded", event)
@@ -130,7 +128,6 @@ internal fun allPluginEvents(): List<PluginEvent> = listOf(
     PluginEvent.CompactionFailed("session-1", "boom"),
     PluginEvent.ModelChanged("session-1", "model"),
     PluginEvent.ThinkingLevelChanged("session-1", "high"),
-    PluginEvent.ToolSetChanged("session-1", listOf("bash")),
     PluginEvent.RetryScheduled("session-1", 1, 500L, "rate limited"),
     PluginEvent.RetrySucceeded("session-1", 1),
     PluginEvent.RetryExhausted("session-1", 3, "boom"),
@@ -155,7 +152,6 @@ internal val pluginEventMethodNames: List<String> = listOf(
     "compactionFailed",
     "modelChanged",
     "thinkingLevelChanged",
-    "toolSetChanged",
     "retryScheduled",
     "retrySucceeded",
     "retryExhausted",

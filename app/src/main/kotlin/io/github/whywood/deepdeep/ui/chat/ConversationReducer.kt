@@ -102,6 +102,7 @@ internal fun reduce(
                         id = nextStepId(message.steps),
                         name = event.name,
                         arguments = event.arguments,
+                        rawArguments = event.rawArguments,
                         toolCallId = event.callId,
                         startedAt = event.startedAt,
                     ),
@@ -418,6 +419,7 @@ private fun AssistantMessage.withToolResult(event: RuntimeEvent.ToolFinished): A
                     error = error,
                     toolCallId = event.callId,
                     durationMs = event.durationMs,
+                    resultPayload = event.payload,
                 ),
             ),
         )
@@ -427,6 +429,7 @@ private fun AssistantMessage.withToolResult(event: RuntimeEvent.ToolFinished): A
         output = output,
         error = error,
         durationMs = event.durationMs,
+        resultPayload = event.payload,
     )
     return copy(steps = steps.toMutableList().also { it[index] = AssistantStep.Tool(trace) })
 }

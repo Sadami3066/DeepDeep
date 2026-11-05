@@ -39,9 +39,32 @@ class PluginVersionTest {
     }
 
     @Test
-    fun ignoresSuffixWhenComparing() {
-        assertEquals(0, PluginVersion.parse("1.0.0-dev")!!.compareTo(PluginVersion.parse("1.0.0")!!))
-        assertEquals(0, PluginVersion.compare("0.2.0-dev", "0.2.0"))
+    fun compareCoreIgnoresSuffix() {
+        assertEquals(0, PluginVersion.parse("1.0.0-dev")!!.compareCore(PluginVersion.parse("1.0.0")!!))
+        assertEquals(0, PluginVersion.parse("0.2.0-dev")!!.compareCore(PluginVersion.parse("0.2.0+build.9")!!))
+        assertTrue(PluginVersion.parse("1.0.0")!!.compareCore(PluginVersion.parse("1.0.1")!!) < 0)
+    }
+
+    @Test
+    fun releaseIsNewerThanPrerelease() {
+        assertTrue(PluginVersion.parse("1.0.0")!! > PluginVersion.parse("1.0.0-dev")!!)
+        assertTrue(PluginVersion.parse("1.0.0-rc.1")!! < PluginVersion.parse("1.0.0")!!)
+        assertTrue(PluginVersion.compare("1.0.0-dev", "1.0.0")!! < 0)
+    }
+
+    @Test
+    fun comparesPrereleaseIdentifiers() {
+        assertTrue(PluginVersion.parse("1.0.0-alpha")!! < PluginVersion.parse("1.0.0-beta")!!)
+        assertTrue(PluginVersion.parse("1.0.0-alpha")!! < PluginVersion.parse("1.0.0-alpha.1")!!)
+        assertTrue(PluginVersion.parse("1.0.0-alpha.1")!! < PluginVersion.parse("1.0.0-alpha.2")!!)
+        assertTrue(PluginVersion.parse("1.0.0-alpha.2")!! < PluginVersion.parse("1.0.0-alpha.10")!!)
+        assertTrue(PluginVersion.parse("1.0.0-1")!! < PluginVersion.parse("1.0.0-alpha")!!)
+        assertEquals(0, PluginVersion.parse("1.0.0-alpha")!!.compareTo(PluginVersion.parse("1.0.0-alpha")!!))
+    }
+
+    @Test
+    fun ignoresBuildMetadata() {
+        assertEquals(0, PluginVersion.parse("1.0.0+build.9")!!.compareTo(PluginVersion.parse("1.0.0")!!))
         assertEquals(0, PluginVersion.compare("1.0.0", "v1.0.0+build.9"))
     }
 
@@ -52,11 +75,11 @@ class PluginVersionTest {
     }
 
     @Test
-    fun sortsByCoreVersion() {
-        val sorted = listOf("2.0.0", "1.2.0", "1.10.0", "1.2.1")
+    fun sortsBySemverOrder() {
+        val sorted = listOf("2.0.0", "1.2.0", "1.10.0", "1.2.1", "1.2.1-rc.1")
             .map { PluginVersion.parse(it)!! }
             .sorted()
             .map { it.toString() }
-        assertEquals(listOf("1.2.0", "1.2.1", "1.10.0", "2.0.0"), sorted)
+        assertEquals(listOf("1.2.0", "1.2.1-rc.1", "1.2.1", "1.10.0", "2.0.0"), sorted)
     }
 }

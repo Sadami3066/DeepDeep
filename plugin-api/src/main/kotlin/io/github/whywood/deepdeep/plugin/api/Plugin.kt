@@ -57,8 +57,6 @@ interface PluginHost {
 
     fun text(source: LocalizedText, vararg args: Any): String
 
-    fun log(level: Int, message: String)
-
     fun linux(): LinuxService
 
     fun privilege(): PrivilegeService
@@ -167,7 +165,6 @@ data class PluginSkill(
     val id: String,
     val markdown: String,
     val files: List<PluginSkillFile> = emptyList(),
-    val legacyOwned: Boolean = false,
 )
 
 data class PluginSkillFile(

@@ -20,7 +20,10 @@ internal fun testBuiltinManifest(id: String, version: String = "1.0"): PluginMan
     source = PluginSource.BUILTIN,
 )
 
-internal fun testPluginHost(manifest: PluginManifest): PluginHost =
+internal fun testPluginHost(
+    manifest: PluginManifest,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+): PluginHost =
     Proxy.newProxyInstance(
         PluginHost::class.java.classLoader,
         arrayOf(PluginHost::class.java),
@@ -29,9 +32,8 @@ internal fun testPluginHost(manifest: PluginManifest): PluginHost =
             "getManifest" -> manifest
             "getDataDir" -> File("/tmp/deepdeep-plugin-test/data")
             "getAssetsDir" -> File("/tmp/deepdeep-plugin-test/assets")
-            "getScope" -> CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            "getScope" -> scope
             "text" -> "text:${(args?.getOrNull(0) as? LocalizedText.Resource)?.id ?: "literal"}"
-            "log" -> null
             else -> error("test host does not implement ${method.name}")
         }
     } as PluginHost

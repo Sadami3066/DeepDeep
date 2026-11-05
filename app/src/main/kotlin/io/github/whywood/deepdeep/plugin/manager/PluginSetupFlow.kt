@@ -6,7 +6,6 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginProgress
 import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
 import java.util.concurrent.atomic.AtomicBoolean
@@ -28,13 +27,14 @@ internal class PluginSetupFlow(
     private val strings: PluginStrings,
     private val textResolver: PluginTextResolver,
     private val busy: AtomicBoolean,
-    private val managedPlugin: (String) -> ManagedPlugin?,
+    private val gate: PluginRuntimeRegistry,
     private val isForeground: () -> Boolean,
     private val builtinStateStore: BuiltinPluginStateStore,
     private val notifyInstall: (String, String?, Int?) -> Unit,
     private val notifyInstallFinished: (String, Boolean, String?) -> Unit,
     private val refresh: suspend () -> Unit,
-    private val syncSkills: suspend (ManagedPlugin) -> Unit,
+    private val syncSkills: suspend (String) -> Unit,
+    private val activate: suspend (PluginRuntimeView) -> String?,
     private val onContributionsChanged: () -> Unit,
     private val onSetupReady: (String) -> Unit,
     private val onError: (String) -> Unit,
@@ -54,13 +54,13 @@ internal class PluginSetupFlow(
         scope.launch {
             setupCancelled.set(false)
             withBusy {
-                val managed = managedPlugin(pluginId) ?: return@withBusy
-                if (!managed.enabled) {
+                val view = gate.view(pluginId) ?: return@withBusy
+                if (!view.enabled) {
                     onError(strings.get(R.string.plugins_error_disabled))
                     return@withBusy
                 }
-                val plugin = managed.plugin ?: return@withBusy
-                val call = scope.async { plugin.runAction(managed.host, actionId, setupUi(managed)) }
+                val plugin = view.plugin ?: return@withBusy
+                val call = scope.async { plugin.runAction(view.host, actionId, setupUi(view)) }
                 setupJob.set(call)
                 try {
                     call.await()
@@ -77,9 +77,9 @@ internal class PluginSetupFlow(
     fun onAppForeground() {
         if (!busy.get()) return
         val interaction = state.value.interaction ?: return
-        val managed = managedPlugin(interaction.pluginId) ?: return
+        val view = gate.view(interaction.pluginId) ?: return
         scope.launch {
-            val status = runCatching { managed.plugin?.status(managed.host) }.getOrNull()
+            val status = runCatching { view.plugin?.status(view.host) }.getOrNull()
             if (status is PluginStatus.Ready) {
                 completeConfirm(true)
                 setupFinished.set(true)
@@ -118,34 +118,35 @@ internal class PluginSetupFlow(
     }
 
     private suspend fun installManaged(pluginId: String) {
-        val managed = managedPlugin(pluginId) ?: return
-        if (!PluginRules.canInstall(managed.manifest)) return
-        installInternal(managed)
+        val view = gate.view(pluginId) ?: return
+        if (!PluginRules.canInstall(view.manifest)) return
+        installInternal(view)
+        gate.view(pluginId)?.let { installed -> activate(installed) }
         refresh()
-        syncSkills(managed)
+        syncSkills(pluginId)
         onContributionsChanged()
     }
 
     private suspend fun setupInternal(pluginId: String): PluginSetupResult {
-        val managed = managedPlugin(pluginId)
+        val view = gate.view(pluginId)
             ?: return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_unknown))
-        val plugin = managed.plugin
-            ?: return PluginSetupResult(false, pluginId, false, false, error = managed.error)
-        if (!managed.enabled) {
-            return PluginSetupResult(false, pluginId, managed.installedVersion != null, false, error = strings.get(R.string.plugins_error_disabled))
+        val plugin = view.plugin
+            ?: return PluginSetupResult(false, pluginId, false, false, error = view.record.lastError)
+        if (!view.enabled) {
+            return PluginSetupResult(false, pluginId, view.installed, false, error = strings.get(R.string.plugins_error_disabled))
         }
         if (!isForeground()) {
-            return PluginSetupResult(false, pluginId, managed.installedVersion != null, false, error = strings.get(R.string.plugins_error_foreground))
+            return PluginSetupResult(false, pluginId, view.installed, false, error = strings.get(R.string.plugins_error_foreground))
         }
-        if (managed.manifest.installable && managed.installedVersion == null && managed.builtin) {
+        if (view.manifest.installable && view.record.installedVersion == null && view.builtin) {
             if (!beginBusy()) {
                 return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_busy))
             }
             try {
-                if (!awaitInstall(managed)) {
+                if (!awaitInstall(view)) {
                     return PluginSetupResult(false, pluginId, false, false, cancelled = setupCancelled.get())
                 }
-                val installCall = scope.async { installInternal(managed) }
+                val installCall = scope.async { installInternal(view) }
                 setupJob.set(installCall)
                 try {
                     installCall.await()
@@ -160,7 +161,8 @@ internal class PluginSetupFlow(
                 finishBusy()
             }
         }
-        val current = runCatching { plugin.status(managed.host) }.getOrNull()
+        val installed = gate.view(pluginId) ?: view
+        val current = runCatching { plugin.status(installed.host) }.getOrNull()
         if (current is PluginStatus.Ready) {
             refresh()
             return PluginSetupResult(true, pluginId, true, true, current.label, current.account)
@@ -168,7 +170,7 @@ internal class PluginSetupFlow(
         if (!beginBusy()) {
             return PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_busy))
         }
-        val call = scope.async { plugin.setup(managed.host, setupUi(managed)) }
+        val call = scope.async { plugin.setup(installed.host, setupUi(installed)) }
         setupJob.set(call)
         var cancelled = false
         return try {
@@ -188,7 +190,7 @@ internal class PluginSetupFlow(
                 }
             }
             refresh()
-            val status = runCatching { plugin.status(managed.host) }.getOrNull()
+            val status = runCatching { plugin.status(installed.host) }.getOrNull()
             when {
                 cancelled -> PluginSetupResult(false, pluginId, true, false, cancelled = true)
                 status is PluginStatus.Ready -> PluginSetupResult(true, pluginId, true, true, status.label, status.account)
@@ -207,29 +209,30 @@ internal class PluginSetupFlow(
         }
     }
 
-    private suspend fun installInternal(managed: ManagedPlugin) {
-        val plugin = managed.plugin ?: throw IllegalStateException(managed.error ?: "plugin unavailable")
-        val label = textResolver.resolve(managed.manifest.name)
-        val firstInstall = managed.installedVersion == null
-        onOperation(managed.manifest.id, label, strings.get(R.string.plugins_stage_preparing))
+    private suspend fun installInternal(view: PluginRuntimeView) {
+        val plugin = view.plugin ?: throw IllegalStateException(view.record.lastError ?: "plugin unavailable")
+        val label = textResolver.resolve(view.manifest.name)
+        val firstInstall = view.record.installedVersion == null
+        onOperation(view.id, label, strings.get(R.string.plugins_stage_preparing))
         notifyInstall(label, strings.get(R.string.plugins_stage_preparing), null)
         try {
-            plugin.install(managed.host, progressUi(managed, label))
-            managed.installedVersion = managed.manifest.version
-            managed.phase = PluginPhase.INSTALLED
-            managed.error = null
-            if (managed.builtin) {
+            plugin.install(view.host, progressUi(view, label))
+            gate.updateRecord(view.id) { record ->
+                record.copy(installedVersion = view.manifest.version, lastError = null)
+            }
+            if (view.builtin) {
+                val current = gate.view(view.id) ?: view
                 builtinStateStore.upsert(
-                    managed.manifest.id,
-                    BuiltinPluginState(true, managed.enabled, managed.manifest.version),
+                    view.id,
+                    BuiltinPluginState(true, current.enabled, view.manifest.version),
                 )
             }
             notifyInstallFinished(label, true, null)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            managed.error = error.message
-            if (firstInstall) runCatching { plugin.uninstall(managed.host) }
+            gate.updateRecord(view.id) { record -> record.copy(lastError = error.message) }
+            if (firstInstall) runCatching { plugin.uninstall(view.host) }
             notifyInstallFinished(label, false, error.message)
             throw error
         } finally {
@@ -237,7 +240,7 @@ internal class PluginSetupFlow(
         }
     }
 
-    private fun setupUi(managed: ManagedPlugin): PluginSetupUi = object : PluginSetupUi {
+    private fun setupUi(view: PluginRuntimeView): PluginSetupUi = object : PluginSetupUi {
         override fun stage(
             title: LocalizedText,
             message: LocalizedText?,
@@ -249,8 +252,8 @@ internal class PluginSetupFlow(
             state.update {
                 it.copy(
                     interaction = PluginInteraction(
-                        pluginId = managed.manifest.id,
-                        title = textResolver.resolve(managed.manifest.name),
+                        pluginId = view.id,
+                        title = textResolver.resolve(view.manifest.name),
                         stageTitle = titleText,
                         stageMessage = message?.let(textResolver::resolve),
                         url = url,
@@ -275,15 +278,15 @@ internal class PluginSetupFlow(
         override fun cancelled(): Boolean = setupCancelled.get()
     }
 
-    private fun progressUi(managed: ManagedPlugin, label: String): PluginProgress =
+    private fun progressUi(view: PluginRuntimeView, name: String): PluginProgress =
         object : PluginProgress {
             override fun report(percent: Int?, label: LocalizedText) {
                 val stage = textResolver.resolve(label)
                 state.update { current ->
                     current.copy(
-                        operation = PluginOperation(managed.manifest.id, label(managed), stage, percent),
+                        operation = PluginOperation(view.id, name, stage, percent),
                         interaction = current.interaction?.let { interaction ->
-                            if (interaction.pluginId == managed.manifest.id) {
+                            if (interaction.pluginId == view.id) {
                                 interaction.copy(stageTitle = stage, progress = percent)
                             } else {
                                 interaction
@@ -291,20 +294,18 @@ internal class PluginSetupFlow(
                         },
                     )
                 }
-                notifyInstall(label(managed), stage, percent)
+                notifyInstall(name, stage, percent)
             }
         }
 
-    private fun label(managed: ManagedPlugin): String = textResolver.resolve(managed.manifest.name)
-
-    private suspend fun awaitInstall(managed: ManagedPlugin): Boolean {
+    private suspend fun awaitInstall(view: PluginRuntimeView): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         confirmWaiter.set(deferred)
         state.update {
             it.copy(
                 interaction = PluginInteraction(
-                    pluginId = managed.manifest.id,
-                    title = textResolver.resolve(managed.manifest.name),
+                    pluginId = view.id,
+                    title = textResolver.resolve(view.manifest.name),
                     stageTitle = strings.get(R.string.plugins_stage_confirm),
                     confirmInstall = true,
                 ),

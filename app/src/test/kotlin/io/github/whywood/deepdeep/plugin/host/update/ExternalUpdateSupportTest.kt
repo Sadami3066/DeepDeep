@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.update
 
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.external.BundleState
 import io.github.whywood.deepdeep.plugin.host.external.DdpSigning
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
@@ -152,7 +151,6 @@ class ExternalUpdateSupportTest {
         val record = requireNotNull(installer.record(SyntheticDdp.PLUGIN_ID))
         assertEquals("1.0.0", record.version)
         assertEquals("1.1.0", record.pendingVersion)
-        assertEquals(PluginPhase.PENDING_RESTART, record.phase)
         assertTrue(installer.pendingBundle(SyntheticDdp.PLUGIN_ID) is BundleState.Ready)
     }
 

@@ -17,26 +17,38 @@ import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.screen.ScreenController
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal class ScreenPluginService(
     private val virtual: ScreenController?,
     private val main: ScreenController?,
     private val virtualScreen: VirtualScreenFeature?,
     private val screenshotDir: File?,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
+    private val refreshIntervalMs: Long = STATUS_REFRESH_INTERVAL_MS,
 ) : ScreenService {
     @Volatile
     private var cachedStatus: ScreenStatus = ScreenStatus()
+
+    private val refreshMutex = Mutex()
+    private val following = AtomicBoolean(false)
 
     init {
         scope.launch { refreshStatus() }
     }
 
     override val status: ScreenStatus
-        get() = cachedStatus
+        get() {
+            startFollowing()
+            return cachedStatus
+        }
 
     override suspend fun startVirtual(): ScreenStatus {
         val feature = virtualScreen ?: throw IllegalStateException("virtual screen control is not available")
@@ -122,14 +134,30 @@ internal class ScreenPluginService(
         ScreenTarget.MAIN -> main ?: throw IllegalStateException("main screen control is not available")
     }
 
+    private fun startFollowing() {
+        if (!following.compareAndSet(false, true)) return
+        scope.launch {
+            while (isActive) {
+                delay(refreshIntervalMs)
+                refreshStatus()
+            }
+        }
+    }
+
     private suspend fun refreshStatus() {
+        refreshMutex.withLock {
+            cachedStatus = readStatus()
+        }
+    }
+
+    private suspend fun readStatus(): ScreenStatus {
         val virtualSnapshot = runCatching { virtual?.status() }.getOrNull()
         val mainSnapshot = runCatching { main?.status() }.getOrNull()
         val lifecycleOnline = runCatching {
             virtualScreen?.status() is io.github.whywood.deepdeep.plugin.api.PluginStatus.Ready
         }.getOrDefault(false)
         val virtualAvailable = virtualSnapshot?.virtual != null || lifecycleOnline
-        cachedStatus = ScreenStatus(
+        return ScreenStatus(
             virtual = ScreenCapability(
                 available = virtualAvailable,
                 accessibility = virtualSnapshot?.accessibilityConnected == true,
@@ -172,5 +200,7 @@ internal class ScreenPluginService(
         const val SCROLL_PIXELS_PER_STEP = 300
 
         const val MAX_SCROLL_STEPS = 10
+
+        const val STATUS_REFRESH_INTERVAL_MS = 1_000L
     }
 }

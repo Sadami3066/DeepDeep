@@ -23,7 +23,6 @@
   "ui": {
     "apiLevel": 1
   },
-  "requires": [],
   "provides": {
     "tools": [
       "template_echo",
@@ -38,17 +37,12 @@
       "mode",
       "max_results"
     ],
-    "events": [
-      "turnFinished",
-      "beforeToolCall"
-    ],
     "uiSlots": [
       "setup.content",
       "tool.card.content:template_echo"
     ]
   },
   "installable": true,
-  "order": 100,
   "requiresPrivilege": false,
   "defaultEnabled": true
 }

@@ -1,18 +1,17 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
-import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginManifestCodec
+import io.github.whywood.deepdeep.plugin.api.PluginProgress
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.Provides
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
+import io.github.whywood.deepdeep.plugin.host.PluginRecord
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.external.BundleState
-import io.github.whywood.deepdeep.plugin.host.external.DdpPackage
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.InspectionResult
 import io.github.whywood.deepdeep.plugin.host.external.InstallResult
@@ -21,6 +20,7 @@ import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi
 import io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,56 +31,93 @@ import kotlinx.coroutines.withContext
 internal class PluginExternalFlow(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<PluginsUiState>,
-    private val plugins: MutableMap<String, ManagedPlugin>,
+    private val gate: PluginRuntimeRegistry,
     private val registry: PluginRegistry,
     private val external: ExternalPluginRuntime?,
     private val externalUpdates: ExternalUpdateSupport?,
     private val strings: PluginStrings,
     private val textResolver: PluginTextResolver,
-    private val hostFor: (ManagedPlugin) -> PluginHost,
+    private val lifecycle: PluginLifecycle,
+    private val settingsStore: PluginSettingsStore,
     private val refresh: suspend () -> Unit,
-    private val syncSkills: suspend (ManagedPlugin) -> Unit,
     private val onContributionsChanged: () -> Unit,
 ) {
+    private val activation = PluginExternalActivation(
+        gate = gate,
+        lifecycle = lifecycle,
+        external = external,
+        settingsStore = settingsStore,
+    )
+
     suspend fun registerRecords() {
         val runtime = external ?: return
         runtime.records().forEach { record ->
-            if (plugins.containsKey(record.id)) return@forEach
-            val managed = ManagedPlugin(
-                manifest = manifestForRecord(record),
-                plugin = null,
-                builtin = false,
-                source = PluginSource.EXTERNAL,
-                installedVersion = record.version,
-                enabled = record.enabled,
-                phase = if (record.enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
-            )
-            managed.host = hostFor(managed)
-            managed.externalRecord = record
-            plugins[managed.manifest.id] = managed
-            registry.register(managed.toDescriptor())
+            if (gate.contains(record.id)) return@forEach
+            registerRecord(record)
         }
     }
 
-    suspend fun activateEnabled() {
+    suspend fun registerRecord(record: ExternalPluginRecord) {
+        if (gate.contains(record.id)) return
+        val manifest = external?.manifestFor(record) ?: fallbackManifest(record)
+        val pluginRecord = record.toPluginRecord()
+        val managed = lifecycle.createRuntime(
+            record = pluginRecord,
+            manifest = manifest,
+            builtin = false,
+            source = PluginSource.EXTERNAL,
+            externalRecord = record,
+        )
+        gate.register(pluginRecord, managed)
+    }
+
+    suspend fun activateEnabledRecords(skipPluginIds: Set<String> = emptySet()) {
         val runtime = external ?: return
-        runtime.records().filter { it.enabled }.forEach { record ->
-            val previousVersion = plugins[record.id]?.externalRecord?.version
-            val activated = runtime.activate(record) ?: return@forEach
-            plugins[record.id]?.let { managed ->
-                managed.externalRecord = activated
-                managed.installedVersion = activated.version
-                managed.enabled = activated.enabled
+        gate.views()
+            .filter { view ->
+                view.source == PluginSource.EXTERNAL && view.enabled && view.plugin == null && view.id !in skipPluginIds
             }
-            attach(activated)
-            if (previousVersion != null && previousVersion != activated.version) {
-                plugins[record.id]?.let { managed ->
-                    managed.plugin?.let { plugin ->
-                        runCatching { plugin.onUpgrade(managed.host, previousVersion) }
-                    }
+            .forEach { view ->
+                val record = view.externalRecord ?: runtime.record(view.id) ?: return@forEach
+                if (record.pendingVersion != null) return@forEach
+                val activated = try {
+                    runtime.activate(record)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Throwable) {
+                    persistFailure(view.id, error.message ?: error.javaClass.simpleName)
+                    runtime.clearStartupCount(view.id)
+                    return@forEach
+                } ?: run {
+                    runtime.clearStartupCount(view.id)
+                    return@forEach
                 }
+                val handle = runtime.handle(view.id) ?: run {
+                    runtime.clearStartupCount(view.id)
+                    return@forEach
+                }
+                gate.attachExternalRecord(view.id, activated)
+                gate.updateRecord(view.id) {
+                    it.copy(installedVersion = activated.version, enabled = activated.enabled)
+                }
+                val current = gate.view(view.id) ?: run {
+                    runtime.clearStartupCount(view.id)
+                    return@forEach
+                }
+                if (lifecycle.attachHandle(current, handle) == null) {
+                    runtime.clearStartupCount(view.id)
+                    return@forEach
+                }
+                runtime.clearStartupCount(view.id)
+                clearErrors(view.id)
             }
-        }
+    }
+
+    suspend fun activatePendingVersions(skipPluginIds: Set<String> = emptySet()) {
+        if (external == null) return
+        gate.views()
+            .filter { view -> view.enabled && view.record.pendingVersion != null && view.id !in skipPluginIds }
+            .forEach { view -> activation.activate(view.id) }
     }
 
     fun scheduleUpdateCheck() {
@@ -93,6 +130,35 @@ internal class PluginExternalFlow(
                 state.update { it.copy(availableUpdates = updates) }
             }
         }
+    }
+
+    suspend fun loadForEnable(pluginId: String): Boolean {
+        val runtime = external ?: return false
+        val view = gate.view(pluginId) ?: return false
+        if (view.plugin != null) return true
+        val record = runtime.record(pluginId) ?: return false
+        val activated = try {
+            runtime.activate(record)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            persistFailure(pluginId, error.message ?: error.javaClass.simpleName)
+            return false
+        } ?: return false
+        val handle = runtime.handle(pluginId) ?: return false
+        gate.attachExternalRecord(pluginId, activated)
+        gate.updateRecord(pluginId) {
+            it.copy(installedVersion = activated.version, enabled = activated.enabled)
+        }
+        val current = gate.view(pluginId) ?: return false
+        if (lifecycle.attachHandle(current, handle) == null) return false
+        clearErrors(pluginId)
+        return true
+    }
+
+    suspend fun persistEnabled(pluginId: String, enabled: Boolean) {
+        external?.setEnabled(pluginId, enabled)
+        external?.record(pluginId)?.let { record -> gate.attachExternalRecord(pluginId, record) }
     }
 
     suspend fun inspectExternal(file: File): ExternalInspectionUi? {
@@ -130,39 +196,29 @@ internal class PluginExternalFlow(
         }
     }
 
-    suspend fun activateExisting(pluginId: String) {
-        val record = external?.record(pluginId) ?: return
-        external?.activate(record)?.let(::attach)
-    }
-
-    suspend fun setExternalEnabled(pluginId: String, enabled: Boolean) {
-        external?.setEnabled(pluginId, enabled)
-        if (enabled) activateExisting(pluginId)
-    }
-
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi {
         val runtime = external ?: return ExternalInstallUi(false, strings.get(R.string.plugins_error_unknown))
         return withContext(Dispatchers.IO) {
             try {
                 when (val result = runtime.install(file, acceptPublisher)) {
                     is InstallResult.Installed -> {
-                        runtime.activate(result.record)
-                        activateRecord(result.record)
+                        registerRecord(result.record)
+                        val error = installFresh(result.record, runtime)
                         refresh()
-                        plugins[result.record.id]?.let { managed ->
-                            runCatching { managed.plugin?.onEnable(managed.host) }
-                            syncSkills(managed)
-                        }
                         onContributionsChanged()
-                        ExternalInstallUi(true, null, restartRequired = false)
+                        ExternalInstallUi(error == null, error, restartRequired = false)
                     }
 
                     is InstallResult.Staged -> {
-                        plugins[result.record.id]?.let { managed ->
-                            managed.phase = PluginPhase.PENDING_RESTART
-                            registry.updatePhase(result.record.id, PluginPhase.PENDING_RESTART)
+                        registerRecord(result.record)
+                        runtime.record(result.record.id)?.let { staged ->
+                            gate.attachExternalRecord(staged.id, staged)
+                            gate.updateRecord(staged.id) {
+                                it.copy(pendingVersion = staged.pendingVersion, enabled = staged.enabled)
+                            }
                         }
                         refresh()
+                        onContributionsChanged()
                         ExternalInstallUi(true, null, restartRequired = true)
                     }
 
@@ -176,8 +232,10 @@ internal class PluginExternalFlow(
 
                     is InstallResult.Rejected -> ExternalInstallUi(false, result.reason)
                 }
-            } catch (error: Exception) {
-                ExternalInstallUi(false, error.message)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                ExternalInstallUi(false, error.message ?: error.javaClass.simpleName)
             }
         }
     }
@@ -188,7 +246,9 @@ internal class PluginExternalFlow(
             is UpdateCheckResultUi.Ready -> typedResult.candidates.map { candidate ->
                 PluginUpdateUi(
                     pluginId = candidate.pluginId,
-                    name = plugins[candidate.pluginId]?.let { textResolver.resolve(it.manifest.name) } ?: candidate.pluginId,
+                    name = gate.view(candidate.pluginId)?.let { view ->
+                        textResolver.resolve(view.manifest.name)
+                    } ?: candidate.pluginId,
                     installedVersion = candidate.installedVersion,
                     availableVersion = candidate.availableVersion,
                     bundleSha256 = candidate.sha256,
@@ -216,11 +276,8 @@ internal class PluginExternalFlow(
         return when (val result = support.stageUpdate(pluginId)) {
             is UpdateStageResultUi.Staged -> {
                 external?.record(pluginId)?.let { record ->
-                    plugins[pluginId]?.let { managed ->
-                        managed.externalRecord = record
-                        managed.phase = PluginPhase.PENDING_RESTART
-                        registry.updatePhase(pluginId, PluginPhase.PENDING_RESTART)
-                    }
+                    gate.updateRecord(pluginId) { it.copy(pendingVersion = record.pendingVersion) }
+                    gate.attachExternalRecord(pluginId, record)
                 }
                 refresh()
                 null
@@ -230,63 +287,104 @@ internal class PluginExternalFlow(
         }
     }
 
-    private fun attach(record: ExternalPluginRecord) {
-        val managed = plugins[record.id] ?: return
-        val handle = external?.handle(record.id) ?: return
-        managed.plugin = handle.plugin
-        managed.manifest = handle.manifest
-        managed.externalRecord = record
-        managed.installedVersion = record.version
-        managed.enabled = record.enabled
-        managed.host = hostFor(managed)
-        registry.update(record.id) { descriptor ->
-            descriptor.copy(
-                manifest = handle.manifest,
-                plugin = handle.plugin,
-                source = PluginSource.EXTERNAL,
-                phase = if (record.enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
-            )
+    private suspend fun installFresh(record: ExternalPluginRecord, runtime: ExternalPluginRuntime): String? {
+        val pluginId = record.id
+        val activated = try {
+            runtime.activate(record)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            val message = error.message ?: error.javaClass.simpleName
+            persistFailure(pluginId, message)
+            return message
+        } ?: run {
+            val message = runtime.record(pluginId)?.lastError ?: "plugin bundle could not be loaded"
+            persistFailure(pluginId, message)
+            return message
+        }
+        val handle = runtime.handle(pluginId) ?: run {
+            persistFailure(pluginId, "plugin bundle could not be loaded")
+            return "plugin bundle could not be loaded"
+        }
+        gate.attachExternalRecord(pluginId, activated)
+        gate.updateRecord(pluginId) {
+            it.copy(installedVersion = activated.version, enabled = activated.enabled, pendingVersion = null)
+        }
+        val view = gate.view(pluginId) ?: run {
+            persistFailure(pluginId, "plugin is not registered")
+            return "plugin is not registered"
+        }
+        val attached = lifecycle.attachHandle(view, handle) ?: run {
+            persistFailure(pluginId, "plugin is not registered")
+            return "plugin is not registered"
+        }
+        val installFailure = try {
+            attached.plugin?.install(attached.host, progressFor(pluginId))
+            null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            error.message ?: error.javaClass.simpleName
+        }
+        state.update { it.copy(operation = null) }
+        if (installFailure != null) {
+            persistFailure(pluginId, installFailure)
+            return installFailure
+        }
+        val settingsFailure = lifecycle.applySettings(attached)
+        val enableFailure = if (settingsFailure == null && attached.enabled) lifecycle.enable(attached) else settingsFailure
+        if (enableFailure != null) {
+            persistFailure(pluginId, enableFailure)
+            return enableFailure
+        }
+        runtime.clearStartupCount(pluginId)
+        lifecycle.syncSkills(pluginId)
+        return null
+    }
+
+    suspend fun recordFailure(pluginId: String, message: String?) {
+        if (message == null) {
+            clearErrors(pluginId)
+        } else {
+            persistFailure(pluginId, message)
         }
     }
 
-    private suspend fun activateRecord(record: ExternalPluginRecord) {
-        if (!plugins.containsKey(record.id)) {
-            val managed = ManagedPlugin(
-                manifest = manifestForRecord(record),
-                plugin = null,
-                builtin = false,
-                source = PluginSource.EXTERNAL,
-                installedVersion = record.version,
-                enabled = record.enabled,
-                phase = PluginPhase.INSTALLED,
-            )
-            managed.host = hostFor(managed)
-            plugins[record.id] = managed
-            registry.register(managed.toDescriptor())
-        }
-        attach(record)
-    }
-
-    private suspend fun manifestForRecord(record: ExternalPluginRecord): PluginManifest {
-        val bundleFile = runCatching {
-            when (val active = external?.activeBundle(record.id)) {
-                is BundleState.Ready -> active.bundleFile
-                else -> null
+    private fun progressFor(pluginId: String): PluginProgress = object : PluginProgress {
+        override fun report(percent: Int?, label: LocalizedText) {
+            state.update {
+                it.copy(operation = PluginOperation(pluginId, textResolver.resolve(label), null, percent))
             }
-        }.getOrNull()
-        if (bundleFile != null) {
-            runCatching {
-                val pkg = DdpPackage.read(bundleFile)
-                PluginManifestCodec.parse(pkg.manifestJson())
-            }.getOrNull()?.let { return it }
         }
-        return PluginManifest(
-            id = record.id,
-            version = record.version,
-            name = LocalizedText.Literal(record.id),
-            summary = LocalizedText.Literal(""),
-            source = PluginSource.EXTERNAL,
-            installable = true,
-        )
     }
+
+    private suspend fun persistFailure(pluginId: String, message: String) {
+        external?.markFailure(pluginId, message)
+        gate.markFailure(pluginId, message)
+        external?.record(pluginId)?.let { record -> gate.attachExternalRecord(pluginId, record) }
+    }
+
+    private suspend fun clearErrors(pluginId: String) {
+        external?.markFailure(pluginId, null)
+        gate.clearFailure(pluginId)
+        external?.record(pluginId)?.let { record -> gate.attachExternalRecord(pluginId, record) }
+    }
+
+    private fun fallbackManifest(record: ExternalPluginRecord): PluginManifest = PluginManifest(
+        id = record.id,
+        version = record.version,
+        name = LocalizedText.Literal(record.id),
+        summary = LocalizedText.Literal(""),
+        source = PluginSource.EXTERNAL,
+        installable = true,
+    )
+
+    private fun ExternalPluginRecord.toPluginRecord(): PluginRecord = PluginRecord(
+        id = id,
+        enabled = enabled,
+        installedVersion = version,
+        pendingVersion = pendingVersion,
+        previousVersion = previousVersion,
+        lastError = lastError,
+    )
 }

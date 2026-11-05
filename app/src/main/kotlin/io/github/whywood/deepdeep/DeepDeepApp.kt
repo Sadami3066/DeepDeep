@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
 import io.github.whywood.deepdeep.ui.chat.AttachmentSource
 import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
@@ -223,6 +224,13 @@ internal fun DeepDeepApp(
     }
     val navigator = rememberAppNavigator()
     var drawerOpen by rememberSaveable { mutableStateOf(false) }
+    val pendingPluginPage by PluginUiBridge.pendingPage.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingPluginPage) {
+        val request = pendingPluginPage ?: return@LaunchedEffect
+        drawerOpen = false
+        navigator.push(AppDestination.PluginPage(request.pluginId, request.pageId))
+        PluginUiBridge.consumePage(request)
+    }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()
     val activeQuestions = pendingQuestions.filter { it.sessionId == state.conversationId }

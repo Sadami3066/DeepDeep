@@ -142,14 +142,15 @@ internal class SessionDraftStore(
         val parts = try {
             withContext(ioDispatcher) {
                 refs.mapNotNull { ref ->
+                    val source = attachmentStore.file(ref, root)
                     val normalized = runCatching {
-                        normalizeImage(attachmentStore.file(ref, root), ref.mime)
+                        normalizeImage(source, ref.mime)
                     }.getOrNull()
                     if (normalized == null) {
                         failed = true
                         null
                     } else {
-                        ImagePart(normalized.data, normalized.mimeType)
+                        ImagePart(normalized.data, normalized.mimeType, source.absolutePath)
                     }
                 }
             }

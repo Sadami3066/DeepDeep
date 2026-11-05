@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.AfterToolCallContext
 import dev.pi.agent.AgentToolResult
-import dev.pi.agent.AgentToolUpdateCallback
-import dev.pi.ai.RunSignal
+import dev.pi.agent.BeforeToolCallContext
 import dev.pi.ai.TextContent
 import dev.pi.ai.auth.Credential
 import dev.pi.ai.auth.CredentialInfo
@@ -11,10 +11,6 @@ import dev.pi.ai.http.HttpRequest
 import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.session.CodingHooks
-import dev.pi.coding.session.InputDecision
-import dev.pi.coding.session.InputRequest
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
@@ -26,9 +22,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okio.FileSystem
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PluginRuntimeHooksTest {
@@ -51,141 +48,143 @@ class PluginRuntimeHooksTest {
         override fun readRaw(): Map<String, JsonElement> = emptyMap()
     }
 
-    private fun sampleTool(
-        name: String = "demo",
-        execute: suspend (String, JsonObject, RunSignal?, AgentToolUpdateCallback?) -> AgentToolResult,
-    ): CodingTool = CodingTool(
-        name = name,
-        description = "$name description",
-        parameters = buildJsonObject { put("type", "object") },
-        label = "$name label",
-        promptSnippet = "$name snippet",
-        promptGuidelines = listOf("$name guideline"),
-        prepareArguments = { args -> args },
-        execute = execute,
+    private fun assistantMessage(): dev.pi.ai.AssistantMessage = dev.pi.ai.AssistantMessage(
+        content = mutableListOf(),
+        api = "test",
+        provider = "test",
+        model = "test",
+        usage = dev.pi.ai.Usage.empty(),
+        stopReason = dev.pi.ai.StopReason.Stop,
+        timestamp = 1L,
+    )
+
+    private fun beforeContext(args: JsonObject = buildJsonObject { put("x", 1) }): BeforeToolCallContext =
+        BeforeToolCallContext(
+            assistantMessage = assistantMessage(),
+            toolCall = dev.pi.ai.ToolCall("call-1", "demo", args),
+            args = LinkedHashMap(args),
+            context = dev.pi.agent.AgentContext(emptyList(), emptyList()),
+        )
+
+    private fun afterContext(
+        result: AgentToolResult = AgentToolResult(content = listOf(TextContent("raw"))),
+    ): AfterToolCallContext = AfterToolCallContext(
+        assistantMessage = assistantMessage(),
+        toolCall = dev.pi.ai.ToolCall("call-1", "demo", buildJsonObject { put("x", 1) }),
+        args = LinkedHashMap(buildJsonObject { put("x", 1) }),
+        result = result,
+        isError = false,
+        context = dev.pi.agent.AgentContext(emptyList(), emptyList()),
     )
 
     private fun AgentToolResult.text(): String =
         content.filterIsInstance<TextContent>().joinToString("") { it.text }
 
     @Test
-    fun nullHooksReturnSameToolAndDelegateExactly() = runTest {
-        val result = textResult("ok")
-        val underlying = sampleTool { _, _, _, _ -> result }
-        val wrapped = underlying.withExecutionHooks(null)
-        assertSame(underlying, wrapped)
-        assertSame(result, wrapped.execute("call-1", buildJsonObject { put("x", 1) }, null, null))
+    fun beforeBridgeContinuesToChainedHook() = runTest {
+        val calls = mutableListOf<String>()
+        val bridge = bridgeBeforeToolCall(
+            object : ToolExecutionHooks {
+                override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision {
+                    calls += "plugin:${context.toolName}"
+                    return ToolCallDecision.Continue
+                }
+            },
+            chained = { _, _ ->
+                calls += "chained"
+                null
+            },
+        )
+        bridge(beforeContext(), null)
+        assertEquals(listOf("plugin:demo", "chained"), calls)
     }
 
     @Test
-    fun hooksPreserveToolMetadata() {
-        val underlying = sampleTool { _, _, _, _ -> textResult("ok") }
-        val wrapped = underlying.withExecutionHooks(object : ToolExecutionHooks {})
-        assertEquals(underlying.name, wrapped.name)
-        assertEquals(underlying.description, wrapped.description)
-        assertSame(underlying.parameters, wrapped.parameters)
-        assertEquals(underlying.label, wrapped.label)
-        assertEquals(underlying.promptSnippet, wrapped.promptSnippet)
-        assertEquals(underlying.promptGuidelines, wrapped.promptGuidelines)
-        assertSame(underlying.prepareArguments, wrapped.prepareArguments)
+    fun beforeBridgeBlockReturnsReasonWithoutRunningChain() = runTest {
+        var chained = 0
+        val bridge = bridgeBeforeToolCall(
+            object : ToolExecutionHooks {
+                override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
+                    ToolCallDecision.Block("blocked by plugin")
+            },
+            chained = { _, _ ->
+                chained += 1
+                null
+            },
+        )
+        val result = bridge(beforeContext(), null)
+        assertEquals("blocked by plugin", result?.reason)
+        assertEquals(true, result?.block)
+        assertEquals(0, chained)
     }
 
     @Test
-    fun blockReturnsErrorResultWithoutExecutingTool() = runTest {
-        var executions = 0
-        val wrapped = sampleTool { _, _, _, _ ->
-            executions += 1
-            textResult("executed")
-        }.withExecutionHooks(object : ToolExecutionHooks {
-            override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision {
-                assertEquals("demo", context.toolName)
-                assertEquals("call-1", context.callId)
-                assertEquals(1, context.args.getValue("x").jsonPrimitive.int)
-                return ToolCallDecision.Block("blocked by plugin")
-            }
-        })
-        val result = wrapped.execute("call-1", buildJsonObject { put("x", 1) }, null, null)
-        assertEquals(0, executions)
-        assertEquals(true, result.isError)
-        assertEquals("blocked by plugin", result.text())
+    fun beforeBridgeRewriteMutatesArgsSeenByTool() = runTest {
+        val bridge = bridgeBeforeToolCall(
+            object : ToolExecutionHooks {
+                override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
+                    ToolCallDecision.Rewrite(buildJsonObject { put("x", 42) })
+            },
+            chained = null,
+        )
+        val context = beforeContext()
+        bridge(context, null)
+        assertEquals(42, context.args["x"]?.jsonPrimitive?.int)
     }
 
     @Test
-    fun rewriteRunsToolAndAfterHookWithNewArguments() = runTest {
-        val executedArgs = mutableListOf<JsonObject>()
-        val afterArgs = mutableListOf<JsonObject>()
-        val wrapped = sampleTool { _, args, _, _ ->
-            executedArgs += args
-            textResult("done")
-        }.withExecutionHooks(object : ToolExecutionHooks {
-            override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
-                ToolCallDecision.Rewrite(buildJsonObject { put("x", 2) })
-
-            override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision {
-                afterArgs += context.args
-                return ToolResultDecision.Keep
-            }
-        })
-        val result = wrapped.execute("call-1", buildJsonObject { put("x", 1) }, null, null)
-        assertEquals(2, executedArgs.single().getValue("x").jsonPrimitive.int)
-        assertEquals(2, afterArgs.single().getValue("x").jsonPrimitive.int)
-        assertEquals("done", result.text())
+    fun afterBridgeKeepsChainedResult() = runTest {
+        val bridge = bridgeAfterToolCall(
+            object : ToolExecutionHooks {},
+            chained = { _, _ -> dev.pi.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
+        )
+        val result = bridge(afterContext(), null)
+        assertEquals("normalized", (result?.content?.first() as TextContent).text)
     }
 
     @Test
-    fun continueRunsToolWithOriginalArguments() = runTest {
-        val executedArgs = mutableListOf<JsonObject>()
-        val wrapped = sampleTool { _, args, _, _ ->
-            executedArgs += args
-            textResult("done")
-        }.withExecutionHooks(object : ToolExecutionHooks {
-            override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
-                ToolCallDecision.Continue
-        })
-        wrapped.execute("call-1", buildJsonObject { put("x", 7) }, null, null)
-        assertEquals(7, executedArgs.single().getValue("x").jsonPrimitive.int)
+    fun afterBridgeSeesNormalizedResultAndReplacesIt() = runTest {
+        val seen = mutableListOf<String>()
+        val bridge = bridgeAfterToolCall(
+            object : ToolExecutionHooks {
+                override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision {
+                    seen += context.result.text()
+                    return ToolResultDecision.Replace(
+                        AgentToolResult(content = listOf(TextContent("replaced")), isError = true),
+                    )
+                }
+            },
+            chained = { _, _ -> dev.pi.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
+        )
+        val result = bridge(afterContext(), null)
+        assertEquals(listOf("normalized"), seen)
+        assertEquals("replaced", (result?.content?.first() as TextContent).text)
+        assertEquals(true, result?.isError)
     }
 
     @Test
-    fun afterHookReplacesResult() = runTest {
-        val original = textResult("original")
-        val replacement = textResult("replacement")
-        val wrapped = sampleTool { _, _, _, _ -> original }.withExecutionHooks(object : ToolExecutionHooks {
-            override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision {
-                assertEquals("original", context.result.text())
-                return ToolResultDecision.Replace(replacement)
-            }
-        })
-        assertSame(replacement, wrapped.execute("call-1", buildJsonObject { put("x", 1) }, null, null))
+    fun afterBridgeWithoutChainReturnsPluginResult() = runTest {
+        val bridge = bridgeAfterToolCall(
+            object : ToolExecutionHooks {
+                override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision =
+                    ToolResultDecision.Replace(AgentToolResult(content = listOf(TextContent("plugin"))))
+            },
+            chained = null,
+        )
+        val result = bridge(afterContext(), null)
+        assertEquals("plugin", (result?.content?.first() as TextContent).text)
     }
 
     @Test
-    fun afterHookKeepReturnsOriginalResult() = runTest {
-        val original = textResult("original")
-        val wrapped = sampleTool { _, _, _, _ -> original }.withExecutionHooks(object : ToolExecutionHooks {})
-        assertSame(original, wrapped.execute("call-1", buildJsonObject { put("x", 1) }, null, null))
-    }
-
-    @Test
-    fun signalAndUpdateCallbackReachUnderlyingTool() = runTest {
-        val signal = RunSignal()
-        val update: AgentToolUpdateCallback = {}
-        var seenSignal: RunSignal? = null
-        var seenUpdate: AgentToolUpdateCallback? = null
-        val wrapped = sampleTool { _, _, receivedSignal, receivedUpdate ->
-            seenSignal = receivedSignal
-            seenUpdate = receivedUpdate
-            textResult("done")
-        }.withExecutionHooks(object : ToolExecutionHooks {})
-        wrapped.execute("call-1", buildJsonObject { put("x", 1) }, signal, update)
-        assertSame(signal, seenSignal)
-        assertSame(update, seenUpdate)
+    fun afterBridgeKeepsOriginalWhenPluginKeeps() = runTest {
+        val bridge = bridgeAfterToolCall(object : ToolExecutionHooks {}, chained = null)
+        assertNull(bridge(afterContext(), null))
     }
 
     @Test
     fun withPluginHooksReturnsSameHooksWhenNothingToAdd() {
         val hooks = CodingHooks(transformPrompt = { "base:$it" })
-        assertSame(hooks, hooks.withPluginHooks(null, null))
+        assertSame(hooks, hooks.withPluginHooks(null))
     }
 
     @Test
@@ -200,7 +199,6 @@ class PluginRuntimeHooksTest {
                 calls += "plugin"
                 "$text/plugin"
             },
-            inputHandler = null,
         )
         assertEquals("hi/base/plugin", composed.transformPrompt!!("hi"))
         assertEquals(listOf("base", "plugin"), calls)
@@ -209,7 +207,7 @@ class PluginRuntimeHooksTest {
 
     @Test
     fun pluginPromptTransformWithoutExistingTransform() = runTest {
-        val composed = CodingHooks().withPluginHooks(promptTransform = { "plugin:$it" }, inputHandler = null)
+        val composed = CodingHooks().withPluginHooks(promptTransform = { "plugin:$it" })
         assertEquals("plugin:hi", composed.transformPrompt!!("hi"))
     }
 
@@ -217,64 +215,25 @@ class PluginRuntimeHooksTest {
     fun withPluginHooksKeepsExtraSystemPromptSections() = runTest {
         val sections: suspend () -> Map<String, String> = { mapOf("custom" to "value") }
         val base = CodingHooks(extraSystemPromptSections = sections)
-        val composed = base.withPluginHooks(promptTransform = { it }, inputHandler = null)
+        val composed = base.withPluginHooks(promptTransform = { it })
         assertEquals(mapOf("custom" to "value"), composed.extraSystemPromptSections!!())
     }
 
     @Test
-    fun pluginInputHandlerReceivesRequest() = runTest {
-        val received = mutableListOf<InputRequest>()
-        val composed = CodingHooks().withPluginHooks(
-            promptTransform = null,
-            inputHandler = { request ->
-                received += request
-                InputDecision.Handled
-            },
-        )
-        assertEquals(InputDecision.Handled, composed.onInput!!(InputRequest("hello")))
-        assertEquals("hello", received.single().text)
-    }
-
-    @Test
-    fun existingInputContinueFeedsPluginHandler() = runTest {
-        val received = mutableListOf<String>()
-        val base = CodingHooks(onInput = { request -> InputDecision.Continue("${request.text}/base") })
-        val composed = base.withPluginHooks(
-            promptTransform = null,
-            inputHandler = { request ->
-                received += request.text
-                InputDecision.Continue("${request.text}/plugin")
-            },
-        )
-        val decision = composed.onInput!!(InputRequest("hi"))
-        assertEquals("hi/base/plugin", (decision as InputDecision.Continue).text)
-        assertEquals("hi/base", received.single())
-    }
-
-    @Test
-    fun existingInputHandledSkipsPluginHandler() = runTest {
-        var pluginCalls = 0
-        val base = CodingHooks(onInput = { InputDecision.Handled })
-        val composed = base.withPluginHooks(
-            promptTransform = null,
-            inputHandler = {
-                pluginCalls += 1
-                InputDecision.Handled
-            },
-        )
-        assertEquals(InputDecision.Handled, composed.onInput!!(InputRequest("hi")))
-        assertEquals(0, pluginCalls)
-    }
-
-    @Test
-    fun engineAppliesPluginHooksToSessionAndTools() = runTest {
+    fun engineAppliesInputHooksAndAgentLevelToolHooks() = runTest {
         val root = Files.createTempDirectory("deepdeep-plugin-hooks").toFile()
         val workspace = File(root, "workspace").apply { mkdirs() }
         val agentDir = File(root, "agent").apply { mkdirs() }
-        val blocked = object : ToolExecutionHooks {
-            override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
-                if (context.toolName == "read") ToolCallDecision.Block("blocked by plugin") else ToolCallDecision.Continue
-        }
+        val seenImages = mutableListOf<List<ImagePart>>()
+        val image = ImagePart("aGVsbG8=", "image/png", "/tmp/photo.png")
+        val runtimeHooks = RuntimeHooks(
+            promptTransform = { "plugin:$it" },
+            inputHandler = { request ->
+                seenImages += request.images
+                InputDecision.Continue("${request.text}/plugin", request.images)
+            },
+            toolHooks = object : ToolExecutionHooks {},
+        )
         try {
             val engine = PiSessionEngine(
                 workspace = workspace,
@@ -283,10 +242,8 @@ class PluginRuntimeHooksTest {
                 transport = transport,
                 shellExecutor = null,
                 providers = ProviderCatalog(transport, credentials),
-                promptTransform = { "plugin:$it" },
-                inputHandler = { request -> InputDecision.Continue("${request.text}/plugin") },
-                toolHooks = blocked,
                 fs = FileSystem.SYSTEM,
+                hooks = runtimeHooks,
             )
             val session = engine.createSession(
                 file = null,
@@ -296,22 +253,83 @@ class PluginRuntimeHooksTest {
             )
             try {
                 assertEquals("plugin:hello", session.hooks.transformPrompt!!("hello"))
-                val decision = session.hooks.onInput!!(InputRequest("hello"))
-                assertEquals("hello/plugin", (decision as InputDecision.Continue).text)
+                assertNotNull(session.agent.beforeToolCall)
+                assertNotNull(session.agent.afterToolCall)
+                val prepared = engine.prepareInput("hello", listOf(image)) as PreparedPrompt.Ready
+                assertEquals("hello/plugin", prepared.text)
+                assertEquals(listOf(image), seenImages.single())
+                assertEquals(listOf(image), prepared.images)
             } finally {
                 session.close()
             }
-            val read = engine.availableTools().first { tool -> tool.name == "read" }
-            val result = read.execute(
-                "call-1",
-                buildJsonObject { put("path", File(workspace, "notes.txt").absolutePath) },
-                null,
-                null,
-            )
-            assertEquals(true, result.isError)
-            assertEquals("blocked by plugin", result.text())
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun engineInputHookHandledStopsPrompt() = runTest {
+        val root = Files.createTempDirectory("deepdeep-plugin-handled").toFile()
+        val workspace = File(root, "workspace").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        try {
+            val engine = PiSessionEngine(
+                workspace = workspace,
+                agentDir = agentDir,
+                credentials = credentials,
+                transport = transport,
+                shellExecutor = null,
+                providers = ProviderCatalog(transport, credentials),
+                fs = FileSystem.SYSTEM,
+                hooks = RuntimeHooks(inputHandler = { InputDecision.Handled }),
+            )
+            assertEquals(PreparedPrompt.Handled, engine.prepareInput("drop me", emptyList()))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun engineWithoutHooksLeavesAgentHooksUntouchedAndPassesInputThrough() = runTest {
+        val root = Files.createTempDirectory("deepdeep-plugin-no-hooks").toFile()
+        val workspace = File(root, "workspace").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        val image = ImagePart("aGVsbG8=", "image/png", "/tmp/photo.png")
+        try {
+            val engine = PiSessionEngine(
+                workspace = workspace,
+                agentDir = agentDir,
+                credentials = credentials,
+                transport = transport,
+                shellExecutor = null,
+                providers = ProviderCatalog(transport, credentials),
+                fs = FileSystem.SYSTEM,
+            )
+            val session = engine.createSession(
+                file = null,
+                config = null,
+                shellEnabled = false,
+                mcpEnabled = false,
+            )
+            try {
+                val prepared = engine.prepareInput("hello", listOf(image))
+                assertEquals(PreparedPrompt.Ready("hello", listOf(image)), prepared)
+                assertNull(session.agent.beforeToolCall)
+            } finally {
+                session.close()
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun displayArgumentsKeepScalarText() {
+        val args = buildJsonObject {
+            put("command", "ls -la")
+            put("limit", 5)
+        }
+        assertEquals(mapOf("command" to "ls -la", "limit" to "5"), args.toDisplayArguments())
+        assertFalse(args.isEmpty())
     }
 }

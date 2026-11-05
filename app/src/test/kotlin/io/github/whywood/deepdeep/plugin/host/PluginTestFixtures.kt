@@ -22,12 +22,10 @@ internal fun testManifest(
     id: String,
     version: String = "1.0.0",
     source: PluginSource = PluginSource.BUILTIN,
-    order: Int = 0,
 ): PluginManifest = PluginManifest(
     id = id,
     version = version,
     source = source,
-    order = order,
     name = LocalizedText.Literal(mapOf("default" to id, "en" to "name of $id")),
     summary = LocalizedText.Literal("summary of $id"),
 )
@@ -50,7 +48,6 @@ internal fun testDescriptor(
     contributions: PluginContributions = PluginContributions.Empty,
 ): PluginDescriptor = PluginDescriptor(
     manifest = testManifest(id, source = source),
-    plugin = TestPlugin(),
     source = source,
     phase = phase,
     contributions = contributions,

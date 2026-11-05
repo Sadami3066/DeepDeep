@@ -19,11 +19,9 @@ object PluginValidation {
         INVALID_TEXT,
         INVALID_ICON,
         INVALID_URL,
-        INVALID_REQUIRES,
         INVALID_PROVIDES,
         INVALID_UI_SLOT,
         INVALID_SKILL,
-        INVALID_UI_NODE,
     }
 
     data class Issue(
@@ -34,10 +32,6 @@ object PluginValidation {
     )
 
     const val MAX_ID_LENGTH: Int = 128
-
-    const val MAX_UI_DEPTH: Int = 8
-
-    const val MAX_UI_NODES: Int = 200
 
     private val EXTERNAL_ID = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$")
 
@@ -51,33 +45,6 @@ object PluginValidation {
 
     private val SKILL_ID = Regex("^[a-z][a-z0-9_-]*$")
 
-    private val TEXT_STYLES = setOf("body", "title", "label", "caption", "code")
-
-    private val PROGRESS_BOUNDS = 0..100
-
-    private val SPACER_BOUNDS = 0..480
-
-    private class NodeRule(
-        val requiredProps: Set<String> = emptySet(),
-        val optionalProps: Set<String> = emptySet(),
-        val text: Boolean = false,
-        val children: Boolean = false,
-    )
-
-    private val NODE_RULES: Map<String, NodeRule> = mapOf(
-        UiNodeTypes.COLUMN to NodeRule(children = true),
-        UiNodeTypes.ROW to NodeRule(children = true),
-        UiNodeTypes.TEXT to NodeRule(optionalProps = setOf("style"), text = true),
-        UiNodeTypes.MARKDOWN to NodeRule(text = true),
-        UiNodeTypes.IMAGE to NodeRule(requiredProps = setOf("source"), optionalProps = setOf("content_description")),
-        UiNodeTypes.BUTTON to NodeRule(requiredProps = setOf("action"), text = true),
-        UiNodeTypes.LINK to NodeRule(requiredProps = setOf("url"), text = true),
-        UiNodeTypes.PROGRESS to NodeRule(optionalProps = setOf("value")),
-        UiNodeTypes.QR_CODE to NodeRule(requiredProps = setOf("data")),
-        UiNodeTypes.DIVIDER to NodeRule(),
-        UiNodeTypes.SPACER to NodeRule(optionalProps = setOf("height")),
-    )
-
     fun isValidExternalId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && EXTERNAL_ID.matches(id)
 
     fun isValidBuiltinId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && BUILTIN_ID.matches(id)
@@ -85,19 +52,6 @@ object PluginValidation {
     fun isValidEntryClass(value: String): Boolean = value.length <= 256 && ENTRY_CLASS.matches(value)
 
     fun isValidToolName(value: String): Boolean = TOOL_NAME.matches(value)
-
-    fun isCompatible(
-        manifest: PluginManifest,
-        hostApiLevel: Int = PLUGIN_API_LEVEL,
-        hostVersion: String? = null,
-    ): Boolean {
-        if (manifest.apiLevel !in 1..hostApiLevel) return false
-        val uiLevel = manifest.ui?.apiLevel
-        if (uiLevel != null && uiLevel !in 1..HOST_UI_API_LEVEL) return false
-        val minimum = manifest.minHostVersion?.let(PluginVersion::parse) ?: return manifest.minHostVersion == null
-        val host = hostVersion?.let(PluginVersion::parse) ?: return true
-        return host >= minimum
-    }
 
     fun validate(
         manifest: PluginManifest,
@@ -122,7 +76,7 @@ object PluginValidation {
                 add(error(Code.INVALID_MIN_HOST_VERSION, "minHostVersion", "minHostVersion is not a valid version: $raw"))
             } else {
                 val host = hostVersion?.let(PluginVersion::parse)
-                if (host != null && host < minimum) {
+                if (host != null && host.compareCore(minimum) < 0) {
                     add(error(Code.HOST_VERSION_UNSUPPORTED, "minHostVersion", "host $hostVersion is older than required $minimum"))
                 }
             }
@@ -154,9 +108,6 @@ object PluginValidation {
                 !isValidEntryClass(entry) -> add(error(Code.INVALID_ENTRY_CLASS, "entryClass", "entryClass is not a valid class name: $entry"))
             }
         }
-        manifest.requires.forEachIndexed { index, value ->
-            if (value.isBlank()) add(error(Code.INVALID_REQUIRES, "requires[$index]", "requires entry must not be blank"))
-        }
         validateProvides(manifest.provides)
     }
 
@@ -182,32 +133,6 @@ object PluginValidation {
         }
     }
 
-    fun validateUiNode(node: UiNode): List<Issue> {
-        val issues = mutableListOf<Issue>()
-        var visited = 0
-        var depthReported = false
-        fun walk(current: UiNode, path: String, depth: Int) {
-            visited += 1
-            if (visited > MAX_UI_NODES) {
-                if (visited == MAX_UI_NODES + 1) {
-                    issues += error(Code.INVALID_UI_NODE, path, "too many ui nodes (max $MAX_UI_NODES)")
-                }
-                return
-            }
-            if (depth > MAX_UI_DEPTH) {
-                if (!depthReported) {
-                    depthReported = true
-                    issues += error(Code.INVALID_UI_NODE, path, "ui tree is nested too deep (max $MAX_UI_DEPTH)")
-                }
-                return
-            }
-            validateNode(current, path, issues)
-            current.children.forEachIndexed { index, child -> walk(child, "$path.children[$index]", depth + 1) }
-        }
-        walk(node, "node", 0)
-        return issues
-    }
-
     fun isSafeRelativePath(path: String): Boolean =
         path.isNotBlank() &&
             !path.startsWith("/") &&
@@ -215,67 +140,6 @@ object PluginValidation {
             !path.contains('\\') &&
             !path.contains(':') &&
             path.length <= 512
-
-    private fun validateNode(node: UiNode, path: String, issues: MutableList<Issue>) {
-        val rule = NODE_RULES[node.type]
-        if (rule == null) {
-            issues += error(Code.INVALID_UI_NODE, path, "unsupported node type: ${node.type}")
-            return
-        }
-        if (rule.text && node.text.isNullOrBlank()) {
-            issues += error(Code.INVALID_UI_NODE, "$path.text", "node type ${node.type} requires text")
-        }
-        if (!rule.text && !node.text.isNullOrBlank()) {
-            issues += warning(Code.INVALID_UI_NODE, "$path.text", "node type ${node.type} ignores text")
-        }
-        if (!rule.children && node.children.isNotEmpty()) {
-            issues += error(Code.INVALID_UI_NODE, "$path.children", "node type ${node.type} cannot have children")
-        }
-        val allowed = rule.requiredProps + rule.optionalProps
-        val unknown = node.props.keys - allowed
-        if (unknown.isNotEmpty()) {
-            issues += warning(Code.INVALID_UI_NODE, "$path.props", "unsupported props for ${node.type}: ${unknown.sorted().joinToString()}")
-        }
-        rule.requiredProps.forEach { prop ->
-            if (node.props[prop].isNullOrBlank()) {
-                issues += error(Code.INVALID_UI_NODE, "$path.props.$prop", "node type ${node.type} requires prop $prop")
-            }
-        }
-        when (node.type) {
-            UiNodeTypes.TEXT -> node.props["style"]?.let { style ->
-                if (style !in TEXT_STYLES) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.style", "unsupported text style: $style")
-                }
-            }
-            UiNodeTypes.IMAGE -> node.props["source"]?.let { source ->
-                if (!isImageSource(source)) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.source", "image source must be an http(s) url or an asset path: $source")
-                }
-            }
-            UiNodeTypes.BUTTON -> node.props["action"]?.let { action ->
-                if (!PROVIDES_ID.matches(action)) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.action", "invalid action id: $action")
-                }
-            }
-            UiNodeTypes.LINK -> node.props["url"]?.let { url ->
-                if (!isLinkUrl(url)) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.url", "link must be an http(s) or mailto url: $url")
-                }
-            }
-            UiNodeTypes.PROGRESS -> node.props["value"]?.let { value ->
-                val parsed = value.toIntOrNull()
-                if (parsed == null || parsed !in PROGRESS_BOUNDS) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.value", "progress value must be an integer in $PROGRESS_BOUNDS: $value")
-                }
-            }
-            UiNodeTypes.SPACER -> node.props["height"]?.let { value ->
-                val parsed = value.toIntOrNull()
-                if (parsed == null || parsed !in SPACER_BOUNDS) {
-                    issues += error(Code.INVALID_UI_NODE, "$path.props.height", "spacer height must be an integer in $SPACER_BOUNDS: $value")
-                }
-            }
-        }
-    }
 
     private fun MutableList<Issue>.validateText(
         text: LocalizedText,
@@ -321,7 +185,6 @@ object PluginValidation {
         validateIds(provides.skills, "provides.skills", PROVIDES_ID)
         validateIds(provides.settings, "provides.settings", PROVIDES_ID)
         validateIds(provides.actions, "provides.actions", PROVIDES_ID)
-        validateIds(provides.events, "provides.events", PROVIDES_ID)
         validateIds(provides.pages, "provides.pages", PROVIDES_ID)
         provides.uiSlots.forEachIndexed { index, slot ->
             if (!SlotIds.matches(slot)) {
@@ -342,12 +205,6 @@ object PluginValidation {
 
     private fun isHttpUrl(value: String): Boolean =
         value.startsWith("http://") || value.startsWith("https://")
-
-    private fun isImageSource(value: String): Boolean =
-        isHttpUrl(value) || (value.startsWith("asset:") && isSafeRelativePath(value.removePrefix("asset:")))
-
-    private fun isLinkUrl(value: String): Boolean =
-        isHttpUrl(value) || (value.startsWith("mailto:") && value.length > "mailto:".length)
 
     private fun error(code: Code, field: String, message: String): Issue =
         Issue(code, field, message, Severity.ERROR)

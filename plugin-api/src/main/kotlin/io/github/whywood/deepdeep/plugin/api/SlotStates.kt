@@ -34,12 +34,6 @@ data class CustomMessageSlotState(
     val payload: JsonObject = JsonObject(emptyMap()),
 ) : SlotState
 
-data class ComposerActionState(
-    val actionId: String,
-    val input: String = "",
-    val sessionId: String? = null,
-) : SlotState
-
 data class PluginPageState(
     val pluginId: String,
     val pageId: String,

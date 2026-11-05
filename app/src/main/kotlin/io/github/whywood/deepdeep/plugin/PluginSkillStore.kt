@@ -97,7 +97,7 @@ class PluginSkillStore(
         if (targetMarker != null && targetMarker != pluginId) {
             throw IOException("skill directory already exists: ${skill.id}")
         }
-        if (target.exists() && targetMarker == null && !skill.legacyOwned) {
+        if (target.exists() && targetMarker == null) {
             val existing = runCatching { File(target, SKILL_FILE).readText() }.getOrNull() ?: return false
             if (existing != skill.markdown) return false
         }
@@ -132,11 +132,9 @@ class PluginSkillStore(
         val targetMarker = marker(target)
         if (target.exists() && targetMarker != pluginId) {
             if (targetMarker != null) throw IOException("skill directory already exists: ${skill.id}")
-            if (!skill.legacyOwned) {
-                val sourceMarkdown = runCatching { File(source, SKILL_FILE).readText() }.getOrNull() ?: return false
-                val targetMarkdown = runCatching { File(target, SKILL_FILE).readText() }.getOrNull() ?: return false
-                if (sourceMarkdown != targetMarkdown) return false
-            }
+            val sourceMarkdown = runCatching { File(source, SKILL_FILE).readText() }.getOrNull() ?: return false
+            val targetMarkdown = runCatching { File(target, SKILL_FILE).readText() }.getOrNull() ?: return false
+            if (sourceMarkdown != targetMarkdown) return false
         }
         targetParent.mkdirs()
         val temp = File(targetParent, ".tmp-${skill.id}-${UUID.randomUUID()}")

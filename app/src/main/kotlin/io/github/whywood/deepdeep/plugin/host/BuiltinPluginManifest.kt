@@ -16,14 +16,12 @@ internal fun builtinPluginManifest(
     sizeLabelRes: Int = R.string.plugins_size_builtin,
     requiresPrivilege: Boolean = false,
     defaultEnabled: Boolean = true,
-    order: Int = 0,
     source: PluginSource = PluginSource.BUILTIN,
     installable: Boolean = false,
     tintIcon: Boolean = true,
     tools: List<String> = emptyList(),
     skills: List<String> = emptyList(),
     settings: List<String> = emptyList(),
-    events: List<String> = emptyList(),
     uiSlots: List<String> = emptyList(),
 ): PluginManifest = PluginManifest(
     id = id,
@@ -37,12 +35,10 @@ internal fun builtinPluginManifest(
     tintIcon = tintIcon,
     requiresPrivilege = requiresPrivilege,
     defaultEnabled = defaultEnabled,
-    order = order,
     provides = Provides(
         tools = tools,
         skills = skills,
         settings = settings,
-        events = events,
         uiSlots = uiSlots,
     ),
 )

@@ -71,7 +71,6 @@ class WorkshopPlugin(
                 id = SKILL_ID,
                 markdown = markdown,
                 files = files.filter { it.path != SKILL_FILE_NAME },
-                legacyOwned = true,
             ),
         )
     }

@@ -14,12 +14,14 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ## 命令
 
 ```bash
-./scripts/check.sh             # 完整验证：编译 + 单测 + lint + 模块/包边界 + APK
+./scripts/check.sh --full      # 交付前完整验证：编译 + 单测 + lint + 模块/包边界 + APK + ABI 基线 + 插件样例 + 插件模板
 ./scripts/check.sh --device    # 再加覆盖安装到手机并启动
+./scripts/plugin-e2e.sh        # 真机插件端到端（安装→启用→工具→卡片→停用→卸载）
+./scripts/plugin-api-abi.sh    # 单独校验插件 SDK ABI 基线（--update 更新）
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2263（app 1645 / runtime 499 / shell 50 / plugin-api 69）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2381（app 1761 / runtime 510 / shell 50 / plugin-api 60）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 

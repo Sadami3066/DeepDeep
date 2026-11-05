@@ -19,7 +19,9 @@ Android 上的个人 agent：pi2kotlin 运行时 + proot Linux + 插件 + 创意
 ```bash
 ./scripts/dev-setup.sh        # 首次：检查环境、写 local.properties、拉 SDK、出 APK
 ./scripts/check.sh            # 日常：编译 + 单测 + lint + 模块边界 + APK
+./scripts/check.sh --full     # 交付前：再加 ABI 基线、插件样例、插件模板签名自检
 ./scripts/check.sh --device   # 再加覆盖安装到手机并启动
+./scripts/plugin-e2e.sh       # 真机插件端到端（需连接设备）
 ```
 
 `dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.4.0` Release 下载并校验 sha256，不依赖本机 `~/.m2`。无线调试客户端依赖 `com.github.MuntashirAkon:libadb-android:3.1.1`（JitPack），首次构建需能访问 JitPack/Maven Central。所有 Gradle 调用走 `./scripts/gradlew-locked`（全局串行锁；本机并发构建会 OOM）。

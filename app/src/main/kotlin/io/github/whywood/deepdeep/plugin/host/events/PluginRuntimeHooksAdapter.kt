@@ -1,7 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.coding.session.InputDecision as SdkInputDecision
-import dev.pi.coding.session.InputRequest as SdkInputRequest
 import io.github.whywood.deepdeep.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest as PluginInputRequest
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
@@ -11,6 +9,8 @@ import io.github.whywood.deepdeep.plugin.api.ToolCallDecision as PluginToolCallD
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult
 import io.github.whywood.deepdeep.plugin.api.ToolResultDecision as PluginToolResultDecision
+import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputDecision as RuntimeInputDecision
 import io.github.whywood.deepdeep.runtime.InputHandler
 import io.github.whywood.deepdeep.runtime.PromptTransform
 import io.github.whywood.deepdeep.runtime.ToolCallContext
@@ -18,6 +18,8 @@ import io.github.whywood.deepdeep.runtime.ToolCallDecision as RuntimeToolCallDec
 import io.github.whywood.deepdeep.runtime.ToolExecutionHooks
 import io.github.whywood.deepdeep.runtime.ToolResultContext
 import io.github.whywood.deepdeep.runtime.ToolResultDecision as RuntimeToolResultDecision
+import java.io.File
+import java.util.Base64
 
 internal class PluginRuntimeHooksAdapter(
     val session: PluginHookSession,
@@ -30,6 +32,8 @@ internal class PluginRuntimeHooksAdapter(
 
     val events: PluginEventBus = PluginEventBus(source, reporter, observeTimeoutMs)
 
+    internal val eventIds: PluginEventIds = PluginEventIds()
+
     val promptTransform: PromptTransform = { prompt ->
         dispatchers.transformPrompt(PromptRequest(session.sessionId, prompt))
     }
@@ -39,11 +43,16 @@ internal class PluginRuntimeHooksAdapter(
             PluginInputRequest(
                 sessionId = session.sessionId,
                 text = request.text,
+                imagePaths = request.images.mapNotNull { image -> image.path },
             ),
         )
         when (decision) {
-            is PluginInputDecision.Continue -> SdkInputDecision.Continue(decision.text, request.images)
-            PluginInputDecision.Handled -> SdkInputDecision.Handled
+            is PluginInputDecision.Continue -> RuntimeInputDecision.Continue(
+                text = decision.text,
+                images = resolveImages(decision.imagePaths, request.images),
+            )
+
+            PluginInputDecision.Handled -> RuntimeInputDecision.Handled
         }
     }
 
@@ -81,4 +90,28 @@ internal class PluginRuntimeHooksAdapter(
     }
 
     suspend fun emit(event: PluginEvent): List<PluginHookFailure> = events.emit(event)
+
+    private fun resolveImages(paths: List<String>, current: List<ImagePart>): List<ImagePart> {
+        if (paths.isEmpty()) return emptyList()
+        val byPath = current.mapNotNull { image -> image.path?.let { path -> path to image } }.toMap()
+        return paths.mapNotNull { path -> byPath[path] ?: readImagePart(path) }
+    }
+
+    private fun readImagePart(path: String): ImagePart? = runCatching {
+        val file = File(path)
+        if (!file.isFile) return@runCatching null
+        val mime = imageMimeOf(file.extension) ?: return@runCatching null
+        ImagePart(Base64.getEncoder().encodeToString(file.readBytes()), mime, path)
+    }.getOrNull()
+
+    private fun imageMimeOf(extension: String): String? = when (extension.lowercase()) {
+        "png" -> "image/png"
+        "jpg", "jpeg" -> "image/jpeg"
+        "webp" -> "image/webp"
+        "gif" -> "image/gif"
+        "bmp" -> "image/bmp"
+        "heic", "heif" -> "image/heic"
+        "avif" -> "image/avif"
+        else -> null
+    }
 }

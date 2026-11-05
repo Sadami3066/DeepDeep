@@ -26,7 +26,7 @@ object PluginManifestCodec {
     fun parse(json: JsonObject, source: PluginSource = PluginSource.EXTERNAL): PluginManifest = PluginManifest(
         id = json.string("id").orEmpty(),
         version = json.string("version").orEmpty(),
-        apiLevel = json.int("apiLevel") ?: PLUGIN_API_LEVEL,
+        apiLevel = json.int("apiLevel") ?: BASELINE_API_LEVEL,
         minHostVersion = json.string("minHostVersion"),
         ui = json.objectOrNull("ui")?.let(::parseUiManifest),
         name = json.text("name"),
@@ -39,10 +39,8 @@ object PluginManifestCodec {
         source = source,
         entryClass = json.string("entryClass"),
         publisher = json.objectOrNull("publisher")?.let(::parsePublisher),
-        requires = json.stringList("requires"),
         provides = json.objectOrNull("provides")?.let(::parseProvides) ?: Provides(),
         installable = json.boolean("installable") ?: true,
-        order = json.int("order") ?: 0,
         requiresPrivilege = json.boolean("requiresPrivilege") ?: false,
         defaultEnabled = json.boolean("defaultEnabled") ?: true,
         tintIcon = json.boolean("tintIcon") ?: true,
@@ -85,7 +83,6 @@ object PluginManifestCodec {
         skills = json.stringList("skills"),
         settings = json.stringList("settings"),
         actions = json.stringList("actions"),
-        events = json.stringList("events"),
         uiSlots = json.stringList("uiSlots"),
         pages = json.stringList("pages"),
     )

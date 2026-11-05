@@ -1,9 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.ai.ImageContent
 import dev.pi.ai.TextContent
-import dev.pi.coding.session.InputDecision as SdkInputDecision
-import dev.pi.coding.session.InputRequest as SdkInputRequest
 import io.github.whywood.deepdeep.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -12,10 +9,15 @@ import io.github.whywood.deepdeep.plugin.api.ToolCallDecision as PluginToolCallD
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest as PluginToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult as PluginToolExecutionResult
 import io.github.whywood.deepdeep.plugin.api.ToolResultDecision as PluginToolResultDecision
+import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputDecision as RuntimeInputDecision
+import io.github.whywood.deepdeep.runtime.InputRequest as RuntimeInputRequest
 import io.github.whywood.deepdeep.runtime.ToolCallContext
 import io.github.whywood.deepdeep.runtime.ToolCallDecision as RuntimeToolCallDecision
 import io.github.whywood.deepdeep.runtime.ToolResultContext
 import io.github.whywood.deepdeep.runtime.ToolResultDecision as RuntimeToolResultDecision
+import java.nio.file.Files
+import java.util.Base64
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -23,7 +25,6 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,22 +55,72 @@ class PluginRuntimeHooksAdapterTest {
     }
 
     @Test
-    fun inputHandlerMapsContinueAndKeepsImages() = runTest {
-        val images = listOf(ImageContent("aGk=", "image/png"))
-        val request = SdkInputRequest("hi", images)
-        val hooks = probeHooks(onInput = { pluginRequest -> PluginInputDecision.Continue("${pluginRequest.text}!") })
-        val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).inputHandler(request)
-        assertTrue(decision is SdkInputDecision.Continue)
-        val continued = decision as SdkInputDecision.Continue
-        assertEquals("hi!", continued.text)
-        assertSame(images, continued.images)
+    fun inputHandlerPassesImagePathsAndKeepsImagesWhenUnchanged() = runTest {
+        val images = listOf(ImagePart("aGk=", "image/png", "/tmp/photo.png"))
+        val seenPaths = mutableListOf<List<String>>()
+        val hooks = probeHooks(onInput = { pluginRequest ->
+            seenPaths += pluginRequest.imagePaths
+            PluginInputDecision.Continue("${pluginRequest.text}!", pluginRequest.imagePaths)
+        })
+        val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
+            .inputHandler(RuntimeInputRequest("hi", images)) as RuntimeInputDecision.Continue
+        assertEquals("hi!", decision.text)
+        assertEquals(listOf("/tmp/photo.png"), seenPaths.single())
+        assertEquals(images, decision.images)
+    }
+
+    @Test
+    fun inputHandlerAdoptsReturnedImagePaths() = runTest {
+        val file = Files.createTempFile("plugin-input", ".png").toFile().apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("rewritten", listOf(file.absolutePath)) })
+        val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
+            .inputHandler(RuntimeInputRequest("hi")) as RuntimeInputDecision.Continue
+        assertEquals("rewritten", decision.text)
+        val image = decision.images.single()
+        assertEquals("image/png", image.mimeType)
+        assertEquals(file.absolutePath, image.path)
+        assertEquals(Base64.getEncoder().encodeToString(byteArrayOf(1, 2, 3)), image.data)
+    }
+
+    @Test
+    fun inputHandlerDropsImagesWhenPluginReturnsNoPaths() = runTest {
+        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("no images") })
+        val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
+            .inputHandler(RuntimeInputRequest("hi", listOf(ImagePart("aGk=", "image/png", "/tmp/photo.png"))))
+            as RuntimeInputDecision.Continue
+        assertEquals("no images", decision.text)
+        assertTrue(decision.images.isEmpty())
+    }
+
+    @Test
+    fun inputHandlerSkipsUnreadableReturnedPaths() = runTest {
+        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("rewritten", listOf("/no/such/file.png")) })
+        val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
+            .inputHandler(RuntimeInputRequest("hi")) as RuntimeInputDecision.Continue
+        assertTrue(decision.images.isEmpty())
     }
 
     @Test
     fun inputHandlerMapsHandled() = runTest {
         val hooks = probeHooks(onInput = { PluginInputDecision.Handled })
-        val request = SdkInputRequest("hi")
-        assertEquals(SdkInputDecision.Handled, adapter(TestHookSource(listOf(hookEntry("p", hooks)))).inputHandler(request))
+        assertEquals(
+            RuntimeInputDecision.Handled,
+            adapter(TestHookSource(listOf(hookEntry("p", hooks)))).inputHandler(RuntimeInputRequest("hi")),
+        )
+    }
+
+    @Test
+    fun inputHandlerFailsOpenWhenPluginThrows() = runTest {
+        val hooks = probeHooks(onInput = { error("boom") })
+        val images = listOf(ImagePart("aGk=", "image/png", "/tmp/photo.png"))
+        val decision = adapter(TestHookSource(listOf(hookEntry("failing", hooks))))
+            .inputHandler(RuntimeInputRequest("hi", images)) as RuntimeInputDecision.Continue
+        assertEquals("hi", decision.text)
+        assertEquals(images, decision.images)
+        assertEquals(PluginHookStage.INPUT_TRANSFORM, reporter.failures.single().stage)
     }
 
     @Test

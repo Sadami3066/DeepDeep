@@ -34,6 +34,7 @@ import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
 import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
+import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
 import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginStateStore
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
@@ -81,6 +82,7 @@ import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
+import io.github.whywood.deepdeep.runtime.RuntimeHooks
 import io.github.whywood.deepdeep.runtime.rootShellTool
 import io.github.whywood.deepdeep.runtime.adbShellTool
 import io.github.whywood.deepdeep.runtime.TurnSource
@@ -317,11 +319,11 @@ class AppGraph(context: Context) : AppDependencies {
             scope = scope,
             language = { LanguagePreferences(appContext).read().tag },
             builtins = builtinPlugins(builtinWiring),
-            servicesFactory = { pluginId, dataDir ->
+            servicesFactory = { pluginId, dataDir, pluginScope ->
                 buildPluginServices(
                     PluginServiceDependencies(
                         context = uiContext,
-                        scope = scope,
+                        scope = pluginScope,
                         pluginId = pluginId,
                         pluginDataDir = dataDir,
                         workspaceDir = homeDir,
@@ -385,6 +387,8 @@ class AppGraph(context: Context) : AppDependencies {
                                 Toast.makeText(uiContext, text, Toast.LENGTH_SHORT).show()
                             }
                         },
+                        share = { request -> PluginUiBridge.share(uiContext, request) },
+                        openPage = { pageId -> PluginUiBridge.openPage(uiContext, pluginId, pageId) },
                     ),
                 )
             },
@@ -502,11 +506,22 @@ class AppGraph(context: Context) : AppDependencies {
             workspace = homeDir,
             shellExecutorFor = shellExecutorFor,
             backgroundRunnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
+            hooksFactory = { pluginRuntimeHooks() },
+        )
+    }
+
+    private fun pluginRuntimeHooks(): RuntimeHooks {
+        val delegate = PluginHooksDelegate()
+        return RuntimeHooks(
+            promptTransform = delegate.promptTransform,
+            inputHandler = delegate.inputHandler,
+            toolHooks = delegate.toolHooks,
+            onSessionBound = { bound -> pluginManager.bindSessionHooks(bound, delegate) },
+            onSessionClosed = { sessionId -> pluginManager.onSessionClosed(sessionId) },
         )
     }
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        val hooksDelegate = PluginHooksDelegate()
         PiSessionEngine(
             workspace = cwd,
             agentDir = agentDir,
@@ -518,11 +533,7 @@ class AppGraph(context: Context) : AppDependencies {
             sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { pluginManager.promptBody() },
             toolContext = appToolContext,
-            promptTransform = hooksDelegate.promptTransform,
-            inputHandler = hooksDelegate.inputHandler,
-            toolHooks = hooksDelegate.toolHooks,
-            onSessionBound = { bound -> pluginManager.bindSessionHooks(bound, hooksDelegate) },
-            onSessionClosed = { sessionId -> pluginManager.onSessionClosed(sessionId) },
+            hooks = pluginRuntimeHooks(),
         )
     }
 

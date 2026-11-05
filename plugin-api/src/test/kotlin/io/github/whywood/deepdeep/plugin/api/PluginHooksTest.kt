@@ -51,7 +51,6 @@ class PluginHooksTest {
         hooks.compactionFailed(PluginEvent.CompactionFailed("s", "error"))
         hooks.modelChanged(PluginEvent.ModelChanged("s", "model"))
         hooks.thinkingLevelChanged(PluginEvent.ThinkingLevelChanged("s", "high"))
-        hooks.toolSetChanged(PluginEvent.ToolSetChanged("s", listOf("read")))
         hooks.retryScheduled(PluginEvent.RetryScheduled("s", 1, 1_000))
         hooks.retrySucceeded(PluginEvent.RetrySucceeded("s", 1))
         hooks.retryExhausted(PluginEvent.RetryExhausted("s", 3, "error"))

@@ -96,4 +96,18 @@
     <string name="plugins_source_auto_check">启动时自动检查更新</string>
     <string name="plugins_source_save">保存</string>
     <string name="plugins_update_staged">已暂存，重启 App 后生效</string>
+    <string name="plugins_slot_issues_section">插件槽位</string>    <string name="plugins_slot_crash_reason">上次渲染该槽位时 DeepDeep 异常退出，已暂时禁用</string>
+    <string name="plugins_slot_recover">恢复</string>
+    <string name="plugins_slot_ui_api_unsupported">插件 UI API 等级 %1$d 超出宿主支持的 %2$d</string>
+    <string name="plugins_slot_compose_api_unsupported">插件 Compose 槽 API 等级 %1$d 超出宿主支持的 %2$d</string>
+    <string name="plugins_slot_kotlin_mismatch">插件 Kotlin 版本 %1$s 与宿主 %2$s 不一致</string>
+    <string name="plugins_slot_compose_mismatch">插件 Compose 版本 %1$s 与宿主 %2$s 不一致</string>
+    <string name="plugins_slot_compose_unavailable">无法读取宿主 Compose 版本，已禁用声明版本约束的绑定</string>
+    <string name="plugins_slot_compose_unavailable_id">无法读取宿主 Compose 版本（兼容编号 %1$d），已禁用声明版本约束的绑定</string>
+    <string name="plugins_connect">连接 / 配置</string>
+    <string name="plugins_recovery_section">插件故障</string>
+    <string name="plugins_recovery_retry">重试激活</string>
+    <string name="plugins_recovery_rollback">回滚到 %1$s</string>
+    <string name="plugins_recovery_retry_failed">重试激活失败</string>
+    <string name="plugins_recovery_rollback_failed">回滚失败</string>
 </resources>

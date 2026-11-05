@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.update
 
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import java.io.File
 import java.io.IOException
@@ -102,7 +101,6 @@ internal object UpdateFixtures {
         publisherKeyId = publisherKeyId,
         apiLevel = 1,
         uiApiLevel = 1,
-        phase = PluginPhase.INSTALLED,
         pendingVersion = pendingVersion,
         pendingBundleSha256 = pendingVersion?.let { "1".repeat(64) },
     )

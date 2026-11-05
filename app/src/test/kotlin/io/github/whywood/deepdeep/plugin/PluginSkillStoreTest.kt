@@ -231,37 +231,4 @@ class PluginSkillStoreTest {
         assertEquals("# New", File(foreign, "references/new.md").readText())
         assertEquals("workshop", File(foreign, ".deepdeep-plugin").readText())
     }
-
-    @Test
-    fun legacyOwnedSkillReplacesUnownedDirectory() = runTest {
-        val legacyRepo = File(repoDir, "workshop")
-        legacyRepo.mkdirs()
-        File(legacyRepo, "SKILL.md").writeText("old builtin body")
-        File(legacyRepo, "old-examples").mkdirs()
-        File(legacyRepo, "old-examples/keep.html").writeText("old")
-        val legacyActive = File(activeDir, "workshop")
-        legacyActive.mkdirs()
-        File(legacyActive, "SKILL.md").writeText("old builtin body")
-
-        store().sync(
-            "workshop",
-            listOf(
-                PluginSkill(
-                    id = "workshop",
-                    markdown = "new body",
-                    files = listOf(PluginSkillFile("examples/01-hello.html", "<html></html>")),
-                    legacyOwned = true,
-                ),
-            ),
-            emptyList(),
-            active = true,
-        )
-
-        listOf(legacyRepo, legacyActive).forEach { dir ->
-            assertEquals("new body", File(dir, "SKILL.md").readText())
-            assertEquals("workshop", File(dir, ".deepdeep-plugin").readText())
-            assertEquals("<html></html>", File(dir, "examples/01-hello.html").readText())
-            assertFalse(File(dir, "old-examples").exists())
-        }
-    }
 }

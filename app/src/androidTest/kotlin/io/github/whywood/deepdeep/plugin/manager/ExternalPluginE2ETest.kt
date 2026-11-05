@@ -1,10 +1,10 @@
 package io.github.whywood.deepdeep.plugin.manager
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.runtime.SessionBinding
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -12,6 +12,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -21,7 +22,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ExternalPluginE2ETest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
     private val graph get() = (context.applicationContext as DeepDeepApplication).graph
+
     private val manager get() = graph.pluginManager
 
     private val bundle: File = File(
@@ -29,11 +32,14 @@ class ExternalPluginE2ETest {
         "plugin-sample-signed.ddp",
     )
 
+    private val fixtureDirectory: File by lazy { File(context.cacheDir, "plugin-e2e-fixtures") }
+
     @Test
-    fun installsRunsAndUninstallsExternalPlugin() = runBlocking {
+    fun installsRunsDisablesAndUninstallsExternalPlugin() = runBlocking {
         assertTrue("push the signed sample first: ${bundle.absolutePath}", bundle.isFile)
         withTimeout(60_000) { manager.start() }
         try {
+            uninstallIfPresent(PLUGIN_ID)
             val inspection = manager.inspectExternal(bundle)
             assertNotNull(inspection)
             assertNull(inspection!!.error)
@@ -43,43 +49,170 @@ class ExternalPluginE2ETest {
             val install = manager.installExternal(bundle, acceptPublisher = true)
             assertTrue("install failed: ${install.error}", install.success)
 
-            manager.refreshNow()
-            val snapshot = withTimeout(30_000) {
-                while (true) {
-                    val current = manager.state.value.snapshot(PLUGIN_ID)
-                    if (current != null && current.installed) return@withTimeout current
-                    delay(200)
-                }
-                error("unreachable")
-            }
-            assertTrue(snapshot.enabled)
-            assertEquals(IconRef.Asset("icon.png"), snapshot.icon)
+            val installed = awaitSnapshot(PLUGIN_ID) { it.installed }
+            assertTrue(installed.enabled)
+            assertEquals(IconRef.Asset("icon.png"), installed.icon)
             val icon = File(
                 File(File(context.filesDir, "plugins"), PLUGIN_ID),
-                snapshot.installedVersion.orEmpty() + "/assets/icon.png",
+                installed.installedVersion.orEmpty() + "/assets/icon.png",
             )
             assertTrue("plugin icon was not extracted: ${icon.absolutePath}", icon.isFile)
 
-            val tools = manager.tools(SessionBinding())
-            val tool = tools.firstOrNull { it.name == "sample_echo" }
-            assertNotNull("sample_echo missing from ${tools.map { it.name }}", tool)
-            val result = tool!!.execute(
-                "e2e-call",
-                buildJsonObject { put("text", "e2e") },
-                null,
-                null,
+            assertEquals("echo: e2e", callEcho("e2e"))
+
+            manager.setEnabled(PLUGIN_ID, false)
+            val disabled = awaitSnapshot(PLUGIN_ID) { !it.enabled }
+            assertEquals(PluginPhaseUi.DISABLED, disabled.phase)
+            assertNull(
+                "disabled plugin must not contribute tools",
+                manager.tools(SessionBinding()).firstOrNull { it.name == ECHO_TOOL },
             )
-            val text = result.content.toString()
-            assertTrue("unexpected tool result: $text", text.contains("echo: e2e"))
+
+            manager.setEnabled(PLUGIN_ID, true)
+            val enabled = awaitSnapshot(PLUGIN_ID) { it.enabled }
+            assertEquals(PluginPhaseUi.ACTIVE, enabled.phase)
+            assertEquals("echo: after-enable", callEcho("after-enable"))
         } finally {
-            manager.uninstall(PLUGIN_ID)
-            withTimeout(30_000) {
-                while (manager.state.value.snapshot(PLUGIN_ID) != null) delay(200)
+            uninstallIfPresent(PLUGIN_ID)
+        }
+    }
+
+    @Test
+    fun rejectsTamperedPackageWithoutInstalling() = runBlocking {
+        withTimeout(60_000) { manager.start() }
+        val fixture = ExternalPluginDdpFixture(fixtureDirectory)
+        val pluginId = "io.github.whywood.deepdeep.e2etampered"
+        val tampered = fixture.build(
+            name = "tampered.dpp",
+            pluginId = pluginId,
+            dexes = listOf(ExternalPluginDdpFixture.corruptDex()),
+            tamperedSignature = true,
+        )
+
+        val inspection = manager.inspectExternal(tampered)
+        assertNotNull(inspection)
+        assertNotNull("tampered package must be rejected at inspection", inspection!!.error)
+        val install = manager.installExternal(tampered, acceptPublisher = true)
+        assertFalse("tampered package must not install", install.success)
+        assertNotNull(install.error)
+        assertNull(manager.state.value.snapshot(pluginId))
+    }
+
+    @Test
+    fun brokenCandidatesFailWithoutBreakingOtherPlugins() = runBlocking {
+        withTimeout(60_000) { manager.start() }
+        val fixture = ExternalPluginDdpFixture(fixtureDirectory)
+        val plugins = listOf(
+            "io.github.whywood.deepdeep.e2ebaddex" to fixture.build(
+                name = "bad-dex.dpp",
+                pluginId = "io.github.whywood.deepdeep.e2ebaddex",
+                dexes = listOf(ExternalPluginDdpFixture.corruptDex()),
+            ),
+            "io.github.whywood.deepdeep.e2elink" to fixture.build(
+                name = "bad-link.dpp",
+                pluginId = "io.github.whywood.deepdeep.e2elink",
+                entryClass = "io.github.whywood.deepdeep.e2elink.MissingPlugin",
+                dexes = ExternalPluginDdpFixture.sampleDexes(bundle),
+            ),
+        )
+        try {
+            plugins.forEach { (pluginId, file) ->
+                val install = manager.installExternal(file, acceptPublisher = true)
+                assertFalse("$pluginId must not activate: ${install.error}", install.success)
+                val failed = awaitSnapshot(pluginId) { it.lastError != null }
+                assertNotNull(failed.lastError)
+                assertEquals(PluginPhaseUi.FAILED, failed.phase)
             }
+            manager.refreshNow()
+            assertFalse(manager.state.value.loading)
+            assertTrue(
+                "other plugins must keep running after broken candidates",
+                manager.state.value.plugins.size >= plugins.size,
+            )
+        } finally {
+            plugins.forEach { (pluginId, _) -> uninstallIfPresent(pluginId) }
+        }
+    }
+
+    @Test
+    fun updateStagesThenActivatesOnRestartWithPreviousVersion() = runBlocking {
+        assertTrue("push the signed sample first: ${bundle.absolutePath}", bundle.isFile)
+        withTimeout(60_000) { manager.start() }
+        val fixture = ExternalPluginDdpFixture(fixtureDirectory)
+        val dexes = ExternalPluginDdpFixture.sampleDexes(bundle)
+        try {
+            uninstallIfPresent(PLUGIN_ID)
+            val v1 = fixture.build(
+                name = "update-v1.dpp",
+                pluginId = PLUGIN_ID,
+                version = "1.0.0",
+                entryClass = SAMPLE_ENTRY_CLASS,
+                dexes = dexes,
+            )
+            val first = manager.installExternal(v1, acceptPublisher = true)
+            assertTrue("v1 install failed: ${first.error}", first.success)
+            val active = awaitSnapshot(PLUGIN_ID) { it.installed && it.phase == PluginPhaseUi.ACTIVE }
+            assertEquals("1.0.0", active.installedVersion)
+            assertEquals("echo: v1", callEcho("v1"))
+
+            val v2 = fixture.build(
+                name = "update-v2.dpp",
+                pluginId = PLUGIN_ID,
+                version = "2.0.0",
+                entryClass = SAMPLE_ENTRY_CLASS,
+                dexes = dexes,
+            )
+            val staged = manager.installExternal(v2, acceptPublisher = true)
+            assertTrue("v2 stage failed: ${staged.error}", staged.success)
+            assertTrue("update must require restart", staged.restartRequired)
+            val pending = awaitSnapshot(PLUGIN_ID) { it.phase == PluginPhaseUi.PENDING_RESTART }
+            assertEquals("1.0.0", pending.installedVersion)
+
+            withTimeout(120_000) { manager.start() }
+            val upgraded = awaitSnapshot(PLUGIN_ID) { it.installedVersion == "2.0.0" }
+            assertEquals(PluginPhaseUi.ACTIVE, upgraded.phase)
+            assertEquals("echo: v2", callEcho("v2"))
+        } finally {
+            uninstallIfPresent(PLUGIN_ID)
+        }
+    }
+
+    private suspend fun callEcho(text: String): String {
+        val tools = manager.tools(SessionBinding())
+        val tool = tools.firstOrNull { it.name == ECHO_TOOL }
+        assertNotNull("$ECHO_TOOL missing from ${tools.map { it.name }}", tool)
+        val result = tool!!.execute("e2e-call", buildJsonObject { put("text", text) }, null, null)
+        val content = result.content.toString()
+        assertTrue("unexpected tool result: $content", content.contains("echo: $text"))
+        return "echo: $text"
+    }
+
+    private suspend fun awaitSnapshot(
+        pluginId: String,
+        timeoutMillis: Long = 30_000,
+        predicate: (PluginSnapshot) -> Boolean,
+    ): PluginSnapshot = withTimeout(timeoutMillis) {
+        while (true) {
+            val snapshot = manager.state.value.snapshot(pluginId)
+            if (snapshot != null && predicate(snapshot)) return@withTimeout snapshot
+            delay(200)
+        }
+        error("unreachable")
+    }
+
+    private suspend fun uninstallIfPresent(pluginId: String) {
+        if (manager.state.value.snapshot(pluginId) == null) return
+        manager.uninstall(pluginId)
+        withTimeout(30_000) {
+            while (manager.state.value.snapshot(pluginId) != null) delay(200)
         }
     }
 
     private companion object {
         const val PLUGIN_ID = "io.github.whywood.deepdeep.pluginsample"
+
+        const val ECHO_TOOL = "sample_echo"
+
+        const val SAMPLE_ENTRY_CLASS = "io.github.whywood.deepdeep.pluginsample.SamplePlugin"
     }
 }

@@ -1,18 +1,51 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.agent.AfterToolCall
+import dev.pi.agent.Agent
 import dev.pi.agent.AgentToolResult
 import dev.pi.agent.AgentToolUpdateCallback
+import dev.pi.agent.AfterToolCallContext
+import dev.pi.agent.AfterToolCallResult
+import dev.pi.agent.BeforeToolCall
+import dev.pi.agent.BeforeToolCallContext
+import dev.pi.agent.BeforeToolCallResult
+import dev.pi.ai.ImageContent
 import dev.pi.ai.RunSignal
 import dev.pi.coding.session.CodingHooks
-import dev.pi.coding.session.InputDecision
-import dev.pi.coding.session.InputRequest
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
 import kotlinx.serialization.json.JsonObject
 
 typealias PromptTransform = suspend (String) -> String
 
+data class InputRequest(
+    val text: String,
+    val images: List<ImagePart> = emptyList(),
+)
+
+sealed interface InputDecision {
+    data class Continue(
+        val text: String,
+        val images: List<ImagePart> = emptyList(),
+    ) : InputDecision
+
+    data object Handled : InputDecision
+}
+
 typealias InputHandler = suspend (InputRequest) -> InputDecision
+
+internal fun List<ImagePart>.toImageContents(): List<ImageContent>? =
+    map { ImageContent(it.data, it.mimeType) }.takeIf { it.isNotEmpty() }
+
+data class RuntimeHooks(
+    val promptTransform: PromptTransform? = null,
+    val inputHandler: InputHandler? = null,
+    val toolHooks: ToolExecutionHooks? = null,
+    val onSessionBound: ((BoundSession) -> Unit)? = null,
+    val onSessionClosed: ((String) -> Unit)? = null,
+) {
+    companion object {
+        val None: RuntimeHooks = RuntimeHooks()
+    }
+}
 
 data class ToolCallContext(
     val toolName: String,
@@ -47,49 +80,90 @@ interface ToolExecutionHooks {
     suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision = ToolResultDecision.Keep
 }
 
-fun CodingTool.withExecutionHooks(hooks: ToolExecutionHooks?): CodingTool {
-    if (hooks == null) return this
-    val tool = this
-    return CodingTool(
-        name = tool.name,
-        description = tool.description,
-        parameters = tool.parameters,
-        label = tool.label,
-        promptSnippet = tool.promptSnippet,
-        promptGuidelines = tool.promptGuidelines,
-        prepareArguments = tool.prepareArguments,
-        execute = { toolCallId, args, signal, onUpdate ->
-            when (val decision = hooks.beforeToolCall(ToolCallContext(tool.name, toolCallId, args))) {
-                is ToolCallDecision.Block -> textResult(decision.reason, isError = true)
-                is ToolCallDecision.Rewrite -> tool.runWithAfterHooks(hooks, toolCallId, decision.args, signal, onUpdate)
-                ToolCallDecision.Continue -> tool.runWithAfterHooks(hooks, toolCallId, args, signal, onUpdate)
-            }
-        },
-    )
+fun Agent.installToolExecutionHooks(hooks: ToolExecutionHooks?) {
+    if (hooks == null) return
+    val previousBefore = beforeToolCall
+    beforeToolCall = bridgeBeforeToolCall(hooks, previousBefore)
+    val previousAfter = afterToolCall
+    afterToolCall = bridgeAfterToolCall(hooks, previousAfter)
 }
 
-private suspend fun CodingTool.runWithAfterHooks(
+internal fun bridgeBeforeToolCall(
     hooks: ToolExecutionHooks,
-    toolCallId: String,
-    args: JsonObject,
-    signal: RunSignal?,
-    onUpdate: AgentToolUpdateCallback?,
-): AgentToolResult {
-    val result = execute(toolCallId, args, signal, onUpdate)
-    return when (val decision = hooks.afterToolResult(ToolResultContext(name, toolCallId, args, result))) {
-        is ToolResultDecision.Replace -> decision.result
-        ToolResultDecision.Keep -> result
+    chained: BeforeToolCall?,
+): BeforeToolCall = { context, signal ->
+    val decision = hooks.beforeToolCall(context.toolCallContext())
+    when (decision) {
+        is ToolCallDecision.Block -> BeforeToolCallResult(block = true, reason = decision.reason)
+        is ToolCallDecision.Rewrite -> {
+            context.args.clear()
+            context.args.putAll(decision.args)
+            chained?.invoke(context, signal)
+        }
+
+        ToolCallDecision.Continue -> chained?.invoke(context, signal)
     }
 }
 
-fun CodingHooks.withPluginHooks(
-    promptTransform: PromptTransform?,
-    inputHandler: InputHandler?,
-): CodingHooks {
-    if (promptTransform == null && inputHandler == null) return this
+internal fun bridgeAfterToolCall(
+    hooks: ToolExecutionHooks,
+    chained: AfterToolCall?,
+): AfterToolCall = { context, signal ->
+    val normalized = chained?.invoke(context, signal)
+    val effective = if (normalized == null) context else context.withResult(normalized)
+    when (val decision = hooks.afterToolResult(effective.toolResultContext())) {
+        is ToolResultDecision.Replace -> decision.result.asAfterToolCallResult()
+        ToolResultDecision.Keep -> normalized
+    }
+}
+
+private fun BeforeToolCallContext.toolCallContext(): ToolCallContext = ToolCallContext(
+    toolName = toolCall.name,
+    callId = toolCall.id,
+    args = JsonObject(args),
+)
+
+private fun AfterToolCallContext.toolResultContext(): ToolResultContext = ToolResultContext(
+    toolName = toolCall.name,
+    callId = toolCall.id,
+    args = JsonObject(args),
+    result = result,
+)
+
+private fun AfterToolCallContext.withResult(normalized: AfterToolCallResult): AfterToolCallContext {
+    val current = result
+    val merged = AgentToolResult(
+        content = normalized.content ?: current.content,
+        details = normalized.details ?: current.details,
+        structuredContent = normalized.structuredContent
+            ?: if (normalized.content != null) null else current.structuredContent,
+        usage = normalized.usage ?: current.usage,
+        isError = normalized.isError ?: current.isError,
+        terminate = normalized.terminate ?: current.terminate,
+    )
+    return AfterToolCallContext(
+        assistantMessage = assistantMessage,
+        toolCall = toolCall,
+        args = args,
+        result = merged,
+        isError = normalized.isError ?: isError,
+        context = context,
+    )
+}
+
+private fun AgentToolResult.asAfterToolCallResult(): AfterToolCallResult = AfterToolCallResult(
+    content = content,
+    details = details,
+    structuredContent = structuredContent,
+    isError = isError,
+    usage = usage,
+    terminate = terminate,
+)
+
+fun CodingHooks.withPluginHooks(promptTransform: PromptTransform?): CodingHooks {
+    if (promptTransform == null) return this
     return CodingHooks(
         transformPrompt = chainPromptTransforms(transformPrompt, promptTransform),
-        onInput = chainInputHandlers(onInput, inputHandler),
         extraSystemPromptSections = extraSystemPromptSections,
         onSessionStart = onSessionStart,
         onSessionShutdown = onSessionShutdown,
@@ -103,18 +177,4 @@ private fun chainPromptTransforms(
     plugin == null -> existing
     existing == null -> plugin
     else -> { text -> plugin(existing(text)) }
-}
-
-private fun chainInputHandlers(
-    existing: (suspend (InputRequest) -> InputDecision)?,
-    plugin: InputHandler?,
-): (suspend (InputRequest) -> InputDecision)? = when {
-    plugin == null -> existing
-    existing == null -> plugin
-    else -> { request ->
-        when (val decision = existing(request)) {
-            is InputDecision.Continue -> plugin(InputRequest(decision.text, decision.images))
-            InputDecision.Handled -> decision
-        }
-    }
 }

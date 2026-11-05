@@ -1,19 +1,28 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
 import dev.pi.agent.AgentEvent
+import dev.pi.agent.AgentMessage
+import dev.pi.agent.AgentToolResult
+import dev.pi.agent.StandardAgentMessage
+import dev.pi.ai.AssistantMessage as PiAssistantMessage
+import dev.pi.ai.TextContent
+import dev.pi.ai.TextDeltaEvent
+import dev.pi.ai.ThinkingDeltaEvent
+import dev.pi.ai.ToolCall
+import dev.pi.ai.Usage
 import dev.pi.coding.mcp.McpServerState
 import dev.pi.coding.mcp.McpServerStatus as SdkMcpStatus
 import dev.pi.coding.session.SessionEvent
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus as PluginMcpStatus
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
-import io.github.whywood.deepdeep.runtime.NoticeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeActivity
+import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
-import io.github.whywood.deepdeep.runtime.TurnNotice
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,8 +38,26 @@ class RuntimeEventMapperTest {
         }
     }
 
-    private fun mapper(sink: Sink, includeRuntimeFallbacks: Boolean = true): RuntimeEventMapper =
-        RuntimeEventMapper(sink::emit, includeRuntimeFallbacks)
+    private fun mapper(sink: Sink): RuntimeEventMapper = RuntimeEventMapper(sink::emit)
+
+    private fun assistant(
+        content: List<dev.pi.ai.Content> = emptyList(),
+        timestamp: Long = 10L,
+        stopReason: dev.pi.ai.StopReason = dev.pi.ai.StopReason.Stop,
+    ): AgentMessage = StandardAgentMessage(
+        PiAssistantMessage(
+            content = content.toMutableList(),
+            api = "test",
+            provider = "test",
+            model = "test",
+            usage = Usage.empty(),
+            stopReason = stopReason,
+            timestamp = timestamp,
+        ),
+    )
+
+    private fun toolPartial(text: String): AgentToolResult =
+        AgentToolResult(content = listOf(TextContent(text)))
 
     @Test
     fun mapsRunLifecycle() = runTest {
@@ -54,7 +81,7 @@ class RuntimeEventMapperTest {
     }
 
     @Test
-    fun mapsToolExecutionPhases() = runTest {
+    fun ignoresRuntimeToolAndDeltaEventsToAvoidDuplicates() = runTest {
         val sink = Sink()
         val mapper = mapper(sink)
 
@@ -63,33 +90,10 @@ class RuntimeEventMapperTest {
             RuntimeEvent.ToolStarted("run-1", "call-1", "bash", mapOf("command" to "ls"), 1_000L),
         )
         mapper.dispatch("session-1", RuntimeEvent.ToolFinished("run-1", "call-1", "bash", "ok", false, 10L))
-        mapper.dispatch("session-1", RuntimeEvent.ToolFinished("run-1", "call-2", "bash", "bad", true, 20L))
-
-        assertEquals(
-            listOf(
-                PluginEvent.ToolExecutionUpdate("session-1", "call-1", "bash", PluginEvent.ToolPhase.STARTED),
-                PluginEvent.ToolExecutionUpdate("session-1", "call-1", "bash", PluginEvent.ToolPhase.FINISHED),
-                PluginEvent.ToolExecutionUpdate("session-1", "call-2", "bash", PluginEvent.ToolPhase.FAILED),
-            ),
-            sink.events,
-        )
-    }
-
-    @Test
-    fun mapsDeltasToRunScopedMessageDelta() = runTest {
-        val sink = Sink()
-        val mapper = mapper(sink)
-
         mapper.dispatch("session-1", RuntimeEvent.TextDelta("run-1", "hello"))
         mapper.dispatch("session-1", RuntimeEvent.ReasoningDelta("run-1", "thinking"))
 
-        assertEquals(
-            listOf(
-                PluginEvent.MessageDelta("session-1", "run-1:assistant", "hello"),
-                PluginEvent.MessageDelta("session-1", "run-1:assistant", "thinking"),
-            ),
-            sink.events,
-        )
+        assertTrue(sink.events.isEmpty())
     }
 
     @Test
@@ -112,82 +116,168 @@ class RuntimeEventMapperTest {
     }
 
     @Test
-    fun mapsCompactionFallbacksFromActivity() = runTest {
+    fun mapsAgentTurnAndMessageLifecycle() = runTest {
         val sink = Sink()
         val mapper = mapper(sink)
+        val partial = assistant(content = listOf(TextContent("")), timestamp = 10L)
 
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Compacting))
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.CompactionFailed))
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Thinking))
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.RunningTool("bash")))
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", null))
+        mapper.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.TurnStart))
+        mapper.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.MessageStart(partial)))
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.MessageUpdate(partial, TextDeltaEvent(0, "hello", (partial as StandardAgentMessage).message as PiAssistantMessage)),
+            ),
+        )
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.MessageEnd(assistant(content = listOf(TextContent("hello")), timestamp = 10L)),
+            ),
+        )
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(AgentEvent.TurnEnd(assistant(timestamp = 10L), emptyList())),
+        )
 
         assertEquals(
             listOf(
-                PluginEvent.CompactionStarted("session-1"),
-                PluginEvent.CompactionFailed("session-1", ""),
+                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
+                PluginEvent.MessageStarted("session-1", "session-1:assistant:10", PluginEvent.MessageRole.ASSISTANT),
+                PluginEvent.MessageDelta("session-1", "session-1:assistant:10", "hello"),
+                PluginEvent.MessageFinished("session-1", "session-1:assistant:10", "hello"),
+                PluginEvent.TurnFinished("session-1", "session-1:turn:1", false),
             ),
             sink.events,
         )
     }
 
     @Test
-    fun mapsRetryFallbackFromActivity() = runTest {
+    fun mapsAgentThinkingDeltaAsMessageDelta() = runTest {
         val sink = Sink()
         val mapper = mapper(sink)
+        val partial = assistant(timestamp = 11L)
 
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Retrying(2)))
-
-        assertEquals(
-            listOf(PluginEvent.RetryScheduled("session-1", 2, 0L, null)),
-            sink.events,
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.MessageUpdate(
+                    partial,
+                    ThinkingDeltaEvent(0, "hmm", (partial as StandardAgentMessage).message as PiAssistantMessage),
+                ),
+            ),
         )
+
+        assertEquals(listOf(PluginEvent.MessageDelta("session-1", "session-1:assistant:11", "hmm")), sink.events)
     }
 
     @Test
-    fun runtimeFallbacksCanBeDisabled() = runTest {
+    fun mapsAgentToolExecutionPhasesWithPartialAndResult() = runTest {
         val sink = Sink()
-        val mapper = mapper(sink, includeRuntimeFallbacks = false)
+        val mapper = mapper(sink)
+        val arguments = buildJsonObject { put("command", "ls") }
 
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Compacting))
-        mapper.dispatch("session-1", RuntimeEvent.ActivityChanged("run-1", RuntimeActivity.Retrying(1)))
-        mapper.dispatch("session-1", NoticeEvent("run-1", TurnNotice.Compacted(120L, 80L)))
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(AgentEvent.ToolExecutionStart("call-1", "bash", arguments)),
+        )
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.ToolExecutionUpdate("call-1", "bash", arguments, toolPartial("partial")),
+            ),
+        )
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.ToolExecutionEnd("call-1", "bash", toolPartial("ok"), isError = false, durationMs = 10L),
+            ),
+        )
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.ToolExecutionEnd("call-2", "bash", toolPartial("bad"), isError = true, durationMs = 20L),
+            ),
+        )
 
-        assertTrue(sink.events.isEmpty())
+        val events = sink.events.filterIsInstance<PluginEvent.ToolExecutionUpdate>()
+        assertEquals(
+            listOf(
+                PluginEvent.ToolPhase.STARTED,
+                PluginEvent.ToolPhase.PARTIAL,
+                PluginEvent.ToolPhase.FINISHED,
+                PluginEvent.ToolPhase.FAILED,
+            ),
+            events.map { it.phase },
+        )
+        assertEquals(PluginToolResult.Text("partial"), events[1].partial)
+        assertEquals(PluginToolResult.Text("ok"), events[2].partial)
+        assertEquals(PluginToolResult.Text("bad", isError = true), events[3].partial)
     }
 
     @Test
-    fun mapsCompactionFinishedFromNoticeEvent() = runTest {
+    fun marksFailedTurnEnd() = runTest {
         val sink = Sink()
         val mapper = mapper(sink)
 
-        mapper.dispatch("session-1", NoticeEvent("run-1", TurnNotice.Compacted(120L, 80L)))
-        mapper.dispatch("session-1", NoticeEvent("run-1", TurnNotice.Compacted(120L, null)))
-        mapper.dispatch("session-1", NoticeEvent("run-1", TurnNotice.GoalFinished(true)))
-        mapper.dispatch("session-1", NoticeEvent("run-1", TurnNotice.JobFinished("job", false)))
+        mapper.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.TurnStart))
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(
+                AgentEvent.TurnEnd(assistant(stopReason = dev.pi.ai.StopReason.Error), emptyList()),
+            ),
+        )
 
         assertEquals(
             listOf(
-                PluginEvent.CompactionFinished("session-1", 120L, 80L),
-                PluginEvent.CompactionFinished("session-1", 120L, 0L),
+                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
+                PluginEvent.TurnFinished("session-1", "session-1:turn:1", true),
             ),
             sink.events,
         )
     }
 
     @Test
-    fun ignoresSessionLevelAndQueueRuntimeEvents() = runTest {
+    fun ignoresAgentStartAndAgentEnd() = runTest {
         val sink = Sink()
         val mapper = mapper(sink)
 
-        mapper.dispatch("session-1", RuntimeEvent.QueueChanged("run-1", listOf("a"), listOf("b")))
-        mapper.dispatch("session-1", RuntimeEvent.QueuedInputsDropped(listOf("a")))
-        mapper.dispatch("session-1", RuntimeEvent.SessionRemoved())
-        mapper.dispatch("session-1", RuntimeEvent.SessionArchived(archived = true))
-        mapper.dispatch("session-1", RuntimeEvent.SessionListChanged())
-        mapper.dispatch("session-1", io.github.whywood.deepdeep.runtime.BackgroundTurnStarted("run-1"))
+        mapper.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.AgentStart))
+        mapper.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(AgentEvent.AgentEnd(emptyList())),
+        )
 
         assertTrue(sink.events.isEmpty())
+    }
+
+    @Test
+    fun turnIdsStayConsistentAcrossMappersSharingAdapterIds() = runTest {
+        val sink = Sink()
+        val ids = PluginEventIds()
+        val first = RuntimeEventMapper(sink::emit, ids)
+        val second = RuntimeEventMapper(sink::emit, ids)
+
+        first.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.TurnStart))
+        second.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(AgentEvent.TurnEnd(assistant(), emptyList())),
+        )
+        second.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.TurnStart))
+        first.dispatchSessionEvent(
+            "session-1",
+            SessionEvent.AgentEventReceived(AgentEvent.TurnEnd(assistant(), emptyList())),
+        )
+
+        assertEquals(
+            listOf(
+                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
+                PluginEvent.TurnFinished("session-1", "session-1:turn:1", false),
+                PluginEvent.TurnStarted("session-1", "session-1:turn:2"),
+                PluginEvent.TurnFinished("session-1", "session-1:turn:2", false),
+            ),
+            sink.events,
+        )
     }
 
     @Test
@@ -205,6 +295,7 @@ class RuntimeEventMapperTest {
         assertEquals(
             listOf(
                 PluginEvent.ModelChanged("session-1", "deepseek/deepseek-chat"),
+                PluginEvent.ThinkingLevelChanged("session-1", "high"),
                 PluginEvent.CompactionStarted("session-1"),
                 PluginEvent.CompactionFinished("session-1", 120L, 80L),
                 PluginEvent.CompactionFinished("session-1", 120L, 0L),
@@ -282,7 +373,6 @@ class RuntimeEventMapperTest {
         val sink = Sink()
         val mapper = mapper(sink)
 
-        mapper.dispatchSessionEvent("session-1", SessionEvent.AgentEventReceived(AgentEvent.TurnStart))
         mapper.dispatchSessionEvent("session-1", SessionEvent.Settled)
         mapper.dispatchSessionEvent("session-1", SessionEvent.SessionError("boom"))
         mapper.dispatchSessionEvent("session-1", SessionEvent.InputHandled("text"))
@@ -329,18 +419,16 @@ class RuntimeEventMapperTest {
         val mapper = RuntimeEventMapper(adapter)
 
         mapper.dispatch("session-1", RuntimeEvent.RunStarted("run-1", 1_000L, "hi"))
-        mapper.dispatch(
-            "session-1",
-            RuntimeEvent.ToolStarted("run-1", "call-1", "bash", emptyMap(), 2_000L),
-        )
+        mapper.dispatch("session-1", RuntimeEvent.TurnInjected("run-1", "reminder", null))
 
         assertEquals(
             listOf(
                 PluginEvent.RunStarted("session-1", "run-1"),
-                PluginEvent.ToolExecutionUpdate("session-1", "call-1", "bash", PluginEvent.ToolPhase.STARTED),
+                PluginEvent.MessageStarted("session-1", "run-1:system", PluginEvent.MessageRole.SYSTEM),
+                PluginEvent.MessageFinished("session-1", "run-1:system", "reminder"),
             ),
             hooks.events,
         )
-        assertEquals(listOf("runStarted", "toolExecutionUpdate"), hooks.calls)
+        assertEquals(listOf("runStarted", "messageStarted", "messageFinished"), hooks.calls)
     }
 }

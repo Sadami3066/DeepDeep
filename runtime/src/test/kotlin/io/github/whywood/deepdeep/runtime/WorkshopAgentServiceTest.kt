@@ -477,6 +477,64 @@ class WorkshopAgentServiceTest {
         WorkshopAgentModel("openai", "gpt", "GPT", listOf("off", "medium", "high")),
     )
 
+    @Test
+    fun runAppliesRuntimeHooksAndBindsWorkshopSession() = runBlocking {
+        val root = tempDir("one-shot-hooks")
+        val workspace = File(root, "home").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        val runRoot = File(root, "runs")
+        val modelRequests = mutableListOf<JsonObject>()
+        val hookTransport = object : HttpTransport {
+            override suspend fun execute(request: HttpRequest): HttpResponse {
+                modelRequests += Json.parseToJsonElement(request.body!!.toString(Charsets.UTF_8)).jsonObject
+                val payload = "{\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"finished\"},\"finish_reason\":\"stop\"}]}"
+                return HttpResponse(
+                    200,
+                    mapOf("content-type" to "text/event-stream"),
+                    Buffer().writeUtf8("data: $payload\n\ndata: [DONE]\n\n"),
+                )
+            }
+        }
+        val catalog = ProviderCatalog(hookTransport, credentials)
+        val bound = mutableListOf<BoundSession>()
+        val closed = mutableListOf<String>()
+        var factoryCalls = 0
+        val service = WorkshopAgentService(
+            providers = catalog,
+            credentials = credentials,
+            transport = hookTransport,
+            agentDir = agentDir,
+            runRoot = runRoot,
+            appToolContext = AppToolContext(QuestionCenter()),
+            defaultConfig = { ModelConfig("deepseek", catalog.defaultModel("deepseek")!!.id, ThinkingLevel.OFF) },
+            configuredProviders = { setOf("deepseek") },
+            personalization = { Personalization() },
+            pluginPromptBody = { null },
+            sharedStorage = { false },
+            workspace = workspace,
+            hooksFactory = {
+                factoryCalls += 1
+                RuntimeHooks(
+                    promptTransform = { "$it/plugin" },
+                    inputHandler = { input -> InputDecision.Continue("${input.text}-input", input.images) },
+                    onSessionBound = { session -> bound += session },
+                    onSessionClosed = { sessionId -> closed += sessionId },
+                )
+            },
+        )
+        try {
+            assertEquals("finished", service.run(request(prompt = "hello")) {})
+
+            assertEquals(1, factoryCalls)
+            assertEquals(1, bound.size)
+            assertEquals(workspace.absolutePath, bound.single().cwd)
+            assertEquals(listOf(bound.single().sessionId), closed)
+            assertTrue(modelRequests.last().toString().contains("hello-input/plugin"))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
     private fun request(
         prompt: String = "hello",
         providerId: String? = null,

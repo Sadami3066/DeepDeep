@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host
 
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
-import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.PluginAction
 import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
@@ -21,12 +20,21 @@ internal enum class PluginPhase {
     ACTIVE,
     DEGRADED,
     FAILED,
-    DISABLED,
-    PENDING_RESTART,
-    UNLOADED;
+    DISABLED;
 
     val contributes: Boolean
-        get() = this == ACTIVE || this == DEGRADED || this == PENDING_RESTART
+        get() = this == ACTIVE || this == DEGRADED
+
+    companion object {
+        fun derive(record: PluginRecord, facts: PluginRuntimeFacts): PluginPhase = when {
+            !record.enabled -> DISABLED
+            record.installedVersion == null && facts.installable -> INSTALLED
+            facts.failed != null -> FAILED
+            !facts.loaded -> INSTALLED
+            facts.degraded != null -> DEGRADED
+            else -> ACTIVE
+        }
+    }
 }
 
 internal data class PluginContributions(
@@ -46,7 +54,6 @@ internal data class PluginContributions(
 
 internal data class PluginDescriptor(
     val manifest: PluginManifest,
-    val plugin: DeepDeepPlugin,
     val source: PluginSource = manifest.source,
     val phase: PluginPhase = PluginPhase.IMPORTED,
     val error: String? = null,
@@ -217,12 +224,6 @@ internal class PluginRegistry {
             true
         }
     }
-
-    fun updatePhase(pluginId: String, phase: PluginPhase, error: String? = null): Boolean =
-        update(pluginId) { it.copy(phase = phase, error = error) }
-
-    fun updateContributions(pluginId: String, contributions: PluginContributions): Boolean =
-        update(pluginId) { it.copy(contributions = contributions) }
 
     fun descriptor(pluginId: String): PluginDescriptor? = synchronized(lock) {
         descriptors.firstOrNull { it.id == pluginId }

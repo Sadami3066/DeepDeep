@@ -7,6 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `RuntimeTypes.kt` | 核心模型、事件流与 AgentRuntime 五个接口 |
+| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime） |
 | `GoalContracts.kt` | 目标阶段、轮次模型与两个驱动接口 |
 | `JobContracts.kt` | 后台任务快照、状态与 JobController |
 | `Notices.kt` | 回合来源、回合提示与三类带外事件 |
@@ -19,5 +20,5 @@
 ## 要点
 
 - 与 `:runtime` 同包名 `io.github.whywood.deepdeep.runtime`，import 上看不出模块边界；改契约要同时改 `:runtime` 实现和 `:app` 消费方。
-- 只依赖 kotlinx-coroutines，不引 Android；不要在这里放 Context、IO 或平台实现。
+- 只依赖 kotlinx-coroutines 与 kotlinx-serialization-json，不引 Android；不要在这里放 Context、IO 或平台实现。
 - `RuntimeEvent` 接口在 `RuntimeTypes.kt`，`Notices.kt` 的三个事件也扩展它，新增事件别另起体系。

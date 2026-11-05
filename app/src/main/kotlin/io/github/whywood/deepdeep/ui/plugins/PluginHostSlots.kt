@@ -5,7 +5,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.plugin.api.CustomMessageSlotState
 import io.github.whywood.deepdeep.plugin.api.DetailSlotState
@@ -13,7 +12,6 @@ import io.github.whywood.deepdeep.plugin.api.PluginPageState
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.SetupSlotState
 import io.github.whywood.deepdeep.plugin.api.SlotIds
-import io.github.whywood.deepdeep.plugin.api.SlotState
 import io.github.whywood.deepdeep.plugin.api.ToolCardSlotState
 import io.github.whywood.deepdeep.plugin.host.ui.PluginSlotHost
 import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
@@ -33,8 +31,6 @@ internal fun PluginToolCardSlot(
     callId: String,
     args: JsonObject,
     result: io.github.whywood.deepdeep.plugin.api.PluginToolResult? = null,
-    modifier: Modifier = Modifier,
-    onAction: (String) -> Unit = {},
     fallback: @Composable () -> Unit,
 ) {
     val manager = LocalPluginManager.current ?: run { fallback(); return }
@@ -43,9 +39,7 @@ internal fun PluginToolCardSlot(
     PluginSlotHost(
         entries = entries,
         state = ToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
-        modifier = modifier,
         failureGuard = manager.slotFailureGuard(),
-        onAction = onAction,
         fallback = fallback,
     )
 }
@@ -53,9 +47,7 @@ internal fun PluginToolCardSlot(
 @Composable
 internal fun PluginSetupContentSlot(
     interaction: io.github.whywood.deepdeep.plugin.manager.PluginInteraction,
-    modifier: Modifier = Modifier,
     failureGuard: io.github.whywood.deepdeep.plugin.host.PluginFailureGuard? = null,
-    onAction: (String) -> Unit = {},
     fallback: @Composable () -> Unit,
 ) {
     val manager = LocalPluginManager.current ?: run { fallback(); return }
@@ -72,25 +64,24 @@ internal fun PluginSetupContentSlot(
             imagePath = interaction.imagePath,
             progress = interaction.progress,
         ),
-        modifier = modifier,
         failureGuard = failureGuard ?: manager.slotFailureGuard(),
-        onAction = onAction,
         fallback = fallback,
     )
 }
 
 @Composable
 internal fun PluginDetailSectionSlot(
-    pluginId: String,
+    entries: List<io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry>,
     status: io.github.whywood.deepdeep.plugin.manager.PluginStatusUi,
     rows: List<io.github.whywood.deepdeep.plugin.api.PluginDetailRow>,
-    modifier: Modifier = Modifier,
-    onAction: (String) -> Unit = {},
+    failureGuard: io.github.whywood.deepdeep.plugin.host.PluginFailureGuard? = null,
     fallback: @Composable () -> Unit,
 ) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, pluginId) { manager.slotEntries(SlotIds.detailSection(pluginId)) }
+    val pluginId = entries.firstOrNull()?.pluginId
+    if (pluginId == null) {
+        fallback()
+        return
+    }
     val apiStatus: PluginStatus = when (status) {
         is io.github.whywood.deepdeep.plugin.manager.PluginStatusUi.Ready -> PluginStatus.Ready(status.label, status.account)
         is io.github.whywood.deepdeep.plugin.manager.PluginStatusUi.NotReady -> PluginStatus.NotReady(status.label)
@@ -99,9 +90,7 @@ internal fun PluginDetailSectionSlot(
     PluginSlotHost(
         entries = entries,
         state = DetailSlotState(pluginId = pluginId, status = apiStatus, rows = rows),
-        modifier = modifier,
-        failureGuard = manager.slotFailureGuard(),
-        onAction = onAction,
+        failureGuard = failureGuard,
         fallback = fallback,
     )
 }
@@ -111,8 +100,6 @@ internal fun PluginCustomMessageSlot(
     messageId: String,
     customType: String,
     payload: JsonObject,
-    modifier: Modifier = Modifier,
-    onAction: (String) -> Unit = {},
     fallback: @Composable () -> Unit,
 ) {
     val manager = LocalPluginManager.current ?: run { fallback(); return }
@@ -121,9 +108,7 @@ internal fun PluginCustomMessageSlot(
     PluginSlotHost(
         entries = entries,
         state = CustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
-        modifier = modifier,
         failureGuard = manager.slotFailureGuard(),
-        onAction = onAction,
         fallback = fallback,
     )
 }
@@ -132,8 +117,6 @@ internal fun PluginCustomMessageSlot(
 internal fun PluginPageSlot(
     pluginId: String,
     pageId: String,
-    modifier: Modifier = Modifier,
-    onAction: (String) -> Unit = {},
     fallback: @Composable () -> Unit,
 ) {
     val manager = LocalPluginManager.current ?: run { fallback(); return }
@@ -144,9 +127,7 @@ internal fun PluginPageSlot(
     PluginSlotHost(
         entries = entries,
         state = PluginPageState(pluginId = pluginId, pageId = pageId),
-        modifier = modifier,
         failureGuard = manager.slotFailureGuard(),
-        onAction = onAction,
         fallback = fallback,
     )
 }

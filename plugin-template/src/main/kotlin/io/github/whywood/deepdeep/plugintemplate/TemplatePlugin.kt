@@ -1,13 +1,15 @@
 package io.github.whywood.deepdeep.plugintemplate
 
-import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
@@ -40,8 +42,6 @@ import io.github.whywood.deepdeep.plugin.api.SlotState
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
-import io.github.whywood.deepdeep.plugin.api.UiNode
-import io.github.whywood.deepdeep.plugin.api.UiNodeTypes
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonPrimitive
@@ -81,11 +81,11 @@ class TemplatePlugin : DeepDeepPlugin {
     }
 
     override suspend fun onDisable(host: PluginHost) {
-        host.log(Log.INFO, "template plugin disabled")
+        host.logs().info("template plugin disabled")
     }
 
     override suspend fun onUpgrade(host: PluginHost, fromVersion: String) {
-        host.log(Log.INFO, "template plugin upgraded from $fromVersion")
+        host.logs().info("template plugin upgraded from $fromVersion")
     }
 
     override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
@@ -232,14 +232,14 @@ class TemplatePlugin : DeepDeepPlugin {
 
     override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
         settings = values
-        host.log(Log.INFO, "template settings changed: ${values.keys.sorted()}")
+        host.logs().info("template settings changed: ${values.keys.sorted()}")
     }
 
     override fun contributions(host: PluginHost): Contributions = Contributions(
         tools = listOf(echoTool()),
         hooks = object : PluginHooks {
             override suspend fun turnFinished(event: PluginEvent.TurnFinished) {
-                host.log(Log.DEBUG, "template plugin observed turn ${event.turnId} failed=${event.failed}")
+                host.logs().debug("template plugin observed turn ${event.turnId} failed=${event.failed}")
             }
 
             override suspend fun beforeToolCall(request: ToolCallRequest): ToolCallDecision {
@@ -271,27 +271,12 @@ class TemplatePlugin : DeepDeepPlugin {
             SlotBinding(
                 slotId = SlotIds.toolCard("template_echo"),
                 priority = 0,
-                content = SlotContent.Declarative(toolCardTree(host)),
+                content = SlotContent.Compose(uiApiLevel = 1) {
+                    TemplateToolCard(host)
+                },
             ),
         )
     }
-
-    private fun toolCardTree(host: PluginHost): UiNode = UiNode(
-        type = UiNodeTypes.COLUMN,
-        children = listOf(
-            UiNode(
-                type = UiNodeTypes.TEXT,
-                text = host.text(literal("Template echo", "模板回显")),
-                props = mapOf("style" to "title"),
-            ),
-            UiNode(type = UiNodeTypes.DIVIDER),
-            UiNode(
-                type = UiNodeTypes.LINK,
-                text = host.text(literal("Plugin development guide", "插件开发文档")),
-                props = mapOf("url" to "https://example.com/plugin-template/docs"),
-            ),
-        ),
-    )
 
     private fun echoTool(): PluginTool = PluginTool(
         name = "template_echo",
@@ -405,3 +390,25 @@ private fun TemplateSetupSlot(host: PluginHost, state: SlotState) {
 
 private fun literal(default: String, zh: String, en: String = default): LocalizedText =
     LocalizedText.Literal(mapOf("default" to default, "zh" to zh, "en" to en))
+
+@Composable
+private fun TemplateToolCard(host: PluginHost) {
+    Column(
+        modifier = Modifier.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = host.text(literal("Template echo", "模板回显")),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        HorizontalDivider()
+        val uriHandler = LocalUriHandler.current
+        Text(
+            text = host.text(literal("Plugin development guide", "插件开发文档")),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.clickable {
+                uriHandler.openUri("https://example.com/plugin-template/docs")
+            },
+        )
+    }
+}

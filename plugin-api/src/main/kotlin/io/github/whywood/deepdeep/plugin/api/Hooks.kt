@@ -98,11 +98,6 @@ sealed interface PluginEvent {
         val level: String,
     ) : PluginEvent
 
-    data class ToolSetChanged(
-        val sessionId: String,
-        val tools: List<String>,
-    ) : PluginEvent
-
     data class RetryScheduled(
         val sessionId: String,
         val attempt: Int,
@@ -216,8 +211,6 @@ interface PluginHooks {
     suspend fun modelChanged(event: PluginEvent.ModelChanged) = Unit
 
     suspend fun thinkingLevelChanged(event: PluginEvent.ThinkingLevelChanged) = Unit
-
-    suspend fun toolSetChanged(event: PluginEvent.ToolSetChanged) = Unit
 
     suspend fun retryScheduled(event: PluginEvent.RetryScheduled) = Unit
 

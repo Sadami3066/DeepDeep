@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
 import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
@@ -116,11 +115,10 @@ class ExternalPluginRecordStoreTest {
         store.upsert(record)
 
         store.mutate { current ->
-            current.mapValues { (_, value) -> value.copy(phase = PluginPhase.ACTIVE, lastError = "boom") }
+            current.mapValues { (_, value) -> value.copy(lastError = "boom") }
         }
 
         val updated = store.get(record.id)!!
-        assertEquals(PluginPhase.ACTIVE, updated.phase)
         assertEquals("boom", updated.lastError)
     }
 
@@ -136,6 +134,37 @@ class ExternalPluginRecordStoreTest {
         assertEquals(record, ExternalPluginRecordStore(file).get(record.id))
     }
 
+    @Test
+    fun persistsPreviousFields() = runBlocking {
+        val store = ExternalPluginRecordStore(file)
+        val base = record()
+        val record = base.copy(
+            previousVersion = "0.9.0",
+            previousInstallPath = "/tmp/plugins/${base.id}/0.9.0",
+            previousBundleSha256 = "previous-sha",
+        )
+        store.upsert(record)
+
+        assertEquals(record, ExternalPluginRecordStore(file).get(record.id))
+    }
+
+    @Test
+    fun loadsV4RecordWithoutPreviousFields() = runBlocking {
+        file.writeText(
+            """{"schemaVersion":4,"plugins":[{"id":"old","version":"1.0.0","installedAt":1,"enabled":true,""" +
+                """"skillIds":[],"source":"EXTERNAL","installPath":"/tmp/plugins/old/1.0.0",""" +
+                """"activeBundleSha256":"abc","size":1,"publisherKeyId":"ed25519:aa","apiLevel":1,"uiApiLevel":1}]}""",
+        )
+
+        val loaded = ExternalPluginRecordStore(file).get("old")
+
+        assertEquals("1.0.0", loaded?.version)
+        assertNull(loaded?.previousVersion)
+        assertNull(loaded?.previousInstallPath)
+        assertNull(loaded?.previousBundleSha256)
+        assertNull(loaded?.pendingVersion)
+    }
+
     private fun record(id: String = "io.github.whywood.deepdeep.plugintest"): ExternalPluginRecord = ExternalPluginRecord(
         id = id,
         version = "1.0.0",
@@ -149,6 +178,5 @@ class ExternalPluginRecordStoreTest {
         publisherKeyId = "ed25519:deadbeef",
         apiLevel = 1,
         uiApiLevel = 1,
-        phase = PluginPhase.INSTALLED,
     )
 }

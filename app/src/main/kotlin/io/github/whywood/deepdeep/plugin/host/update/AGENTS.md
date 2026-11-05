@@ -1,6 +1,6 @@
 # plugin/host/update · 插件更新索引与暂存
 
-外部插件的更新链路：拉取并解析分发索引 `index.json`、按已安装记录筛选可更新项、下载 `.ddp` 并校验 sha256、验签后交给 `PluginInstaller` 暂存为 `PENDING_RESTART`。只负责"下载 + 验签 + 暂存"，不提交 pending、不改 UI、不接 `AppGraph`；启动时激活由 `external/PluginInstaller` + `plugin/manager/ExternalPluginRuntime` 负责。
+外部插件的更新链路：拉取并解析分发索引 `index.json`、按已安装记录筛选可更新项、下载 `.ddp` 并校验 sha256、验签后交给 `PluginInstaller` 暂存为 pending。只负责「下载 + 验签 + 暂存」，不提交 pending、不改 UI；通过 `ExternalUpdateSupport` 接入 `AppGraph`/`PluginExternalFlow`，启动时激活由 `external/PluginInstaller` + `plugin/manager/ExternalPluginRuntime` 负责。
 
 ## 文件
 
@@ -21,8 +21,8 @@
 
 - 契约来源：`docs/PLUGIN_DEV.md` 的「信任（TOFU）与更新」「分发索引」。更新必须**同钥**；索引里的 `publisherKeyId` 只用于筛选与展示，信任仍以 TOFU 库为准（`PublisherTrustStore`），`downloadAndStage` 对未信任发布者直接拒绝，绝不因索引声明而自动信任。
 - 索引 sha256 是整包 `.ddp`（含签名文件）的 sha256，与安装记录 `activeBundleSha256` 同口径；下载后先比对索引 sha256，再由 `PluginPackageVerifier` 用签名与清单复核，两处都必须过。
-- 暂存即 `PluginInstaller.install()` 的更新分支：写入 `pendingVersion`/`pendingBundleSha256` 与 `PENDING_RESTART`；管理器不调用 `commitPending`，由下一次进程启动的激活流程提交；激活失败时丢弃 pending、继续使用当前版本（旧版本目录保留）。
+- 暂存即 `PluginInstaller.install()` 的更新分支：写入 `pendingVersion`/`pendingBundleSha256`（UI 相位由 record 派生为 `PENDING_RESTART`）；管理器不调用 `commitPending`，由下一次进程启动的激活流程提交；激活失败时丢弃 pending、继续使用当前版本（旧版本目录保留）。
 - 缓存只在网络/索引解析失败时兜底，且来源 URL 必须匹配，避免切换源后拿旧源索引；缓存损坏直接视为不可用。
 - 测试注入 `PluginFetcher`（fake 或 `file:`），不联网、不新增依赖；`HttpPluginFetcher` 的默认实现只依赖 JDK。
 - 集成入口是 `ExternalUpdateSupport(filesDir, hostVersion, installer, trustStore, recordStore, fetcher = HttpPluginFetcher())`：`filesDir` 传 App 的 `filesDir`（内部拼 `files/plugins/{sources.json,sources_cache.json,downloads/}`）；`hostVersion` 与 `PluginInstaller` 构造用同一个值（App 现为 `BuildConfig.VERSION_NAME`）；`checkUpdates()` 只读+写缓存，`stageUpdate(pluginId)` 只暂存不生效。
-- 新增文件时同步本索引，并把目录补进 `../AGENTS.md` 的文件表（该文件由集成阶段维护，本任务不改）。
+- 新增文件时同步本索引，并把目录补进 `../AGENTS.md` 的文件表。

@@ -14,7 +14,6 @@ import dev.pi.coding.session.CompactionEntry
 import dev.pi.coding.session.CustomMessageEntry
 import dev.pi.coding.session.SessionEntry
 import dev.pi.coding.session.SessionMessageEntry
-import kotlinx.serialization.json.JsonObject
 
 private const val REMINDER_PREFIX = "[定时提醒]"
 
@@ -22,14 +21,18 @@ object HistoryMapper {
     fun mapEntries(entries: List<SessionEntry>): List<AssistantMessage> {
         val result = mutableListOf<AssistantMessage>()
         val traces = mutableMapOf<String, ToolTrace>()
+        val toolOwners = mutableMapOf<String, Int>()
         var current: AssistantMessage? = null
         var messageId = 0L
         var stepId = 0L
 
         fun flush() {
-            current?.let { message ->
-                if (message.text.isNotBlank() || message.steps.isNotEmpty() || message.status == MessageStatus.FAILED) {
-                    result += message
+            val message = current ?: return
+            if (message.text.isNotBlank() || message.steps.isNotEmpty() || message.status == MessageStatus.FAILED) {
+                val index = result.size
+                result += message
+                message.steps.forEach { step ->
+                    if (step is AssistantStep.Tool) toolOwners[step.trace.toolCallId] = index
                 }
             }
             current = null
@@ -101,8 +104,9 @@ object HistoryMapper {
                                     val trace = ToolTrace(
                                         id = stepId++,
                                         name = content.name,
-                                        arguments = content.arguments.toStringMap(),
+                                        arguments = content.arguments.toDisplayArguments(),
                                         toolCallId = content.id,
+                                        rawArguments = content.arguments,
                                     )
                                     traces[content.id] = trace
                                     newSteps += AssistantStep.Tool(trace)
@@ -133,47 +137,45 @@ object HistoryMapper {
                     }
 
                     is ToolResultMessage -> {
-                        val output = message.content.filterIsInstance<TextContent>().joinToString("") { it.text }
+                        val payload = message.content.toToolResultPayload()
+                        val status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE
                         val existing = traces[message.toolCallId]
-                        val base = current ?: AssistantMessage(
-                            id = messageId++,
-                            role = AssistantRole.ASSISTANT,
-                            text = "",
-                            status = MessageStatus.DONE,
-                            startedAt = message.timestamp,
-                        )
-                        if (existing == null) {
+                        if (existing != null) {
+                            val updated = existing.copy(
+                                status = status,
+                                output = payload.text().takeIf { it.isNotBlank() && !message.isError },
+                                error = payload.text().takeIf { it.isNotBlank() && message.isError },
+                                resultPayload = payload,
+                                durationMs = message.durationMs ?: existing.durationMs,
+                            )
+                            traces[message.toolCallId] = updated
+                            val messageWithStep = current
+                            val ownerIndex = toolOwners[message.toolCallId]
+                            when {
+                                messageWithStep != null && messageWithStep.hasToolCall(message.toolCallId) ->
+                                    current = messageWithStep.replaceTool(updated, message.timestamp)
+
+                                ownerIndex != null -> result[ownerIndex] =
+                                    result[ownerIndex].replaceTool(updated, message.timestamp)
+
+                                else -> current = (messageWithStep ?: emptyAssistant(messageId++, message.timestamp))
+                                    .appendTool(updated, message.timestamp)
+                            }
+                        } else {
                             val trace = ToolTrace(
                                 id = stepId++,
                                 name = message.toolName,
                                 arguments = emptyMap(),
-                                status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                                output = output.takeIf { it.isNotBlank() && !message.isError },
-                                error = output.takeIf { it.isNotBlank() && message.isError },
+                                status = status,
+                                output = payload.text().takeIf { it.isNotBlank() && !message.isError },
+                                error = payload.text().takeIf { it.isNotBlank() && message.isError },
                                 toolCallId = message.toolCallId,
+                                resultPayload = payload,
+                                durationMs = message.durationMs,
                             )
                             traces[message.toolCallId] = trace
-                            current = base.copy(
-                                steps = base.steps + AssistantStep.Tool(trace),
-                                finishedAt = message.timestamp,
-                            )
-                        } else {
-                            val updated = existing.copy(
-                                status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE,
-                                output = output.takeIf { it.isNotBlank() && !message.isError },
-                                error = output.takeIf { it.isNotBlank() && message.isError },
-                            )
-                            traces[message.toolCallId] = updated
-                            current = base.copy(
-                                steps = base.steps.map { step ->
-                                    if (step is AssistantStep.Tool && step.trace.toolCallId == message.toolCallId) {
-                                        AssistantStep.Tool(updated)
-                                    } else {
-                                        step
-                                    }
-                                },
-                                finishedAt = message.timestamp,
-                            )
+                            current = (current ?: emptyAssistant(messageId++, message.timestamp))
+                                .appendTool(trace, message.timestamp)
                         }
                     }
 
@@ -215,6 +217,33 @@ object HistoryMapper {
         return result
     }
 
+    private fun emptyAssistant(id: Long, timestamp: Long): AssistantMessage = AssistantMessage(
+        id = id,
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        status = MessageStatus.DONE,
+        startedAt = timestamp,
+    )
+
+    private fun AssistantMessage.hasToolCall(toolCallId: String): Boolean =
+        steps.any { step -> step is AssistantStep.Tool && step.trace.toolCallId == toolCallId }
+
+    private fun AssistantMessage.replaceTool(trace: ToolTrace, timestamp: Long): AssistantMessage = copy(
+        steps = steps.map { step ->
+            if (step is AssistantStep.Tool && step.trace.toolCallId == trace.toolCallId) {
+                AssistantStep.Tool(trace)
+            } else {
+                step
+            }
+        },
+        finishedAt = finishedAt ?: timestamp,
+    )
+
+    private fun AssistantMessage.appendTool(trace: ToolTrace, timestamp: Long): AssistantMessage = copy(
+        steps = steps + AssistantStep.Tool(trace),
+        finishedAt = finishedAt ?: timestamp,
+    )
+
     private data class ReminderMessage(
         val name: String,
         val body: String,
@@ -248,9 +277,5 @@ object HistoryMapper {
     private fun dev.pi.ai.MessageContent.asText(): String = when (this) {
         is PlainTextContent -> text
         is BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
-    }
-
-    private fun JsonObject.toStringMap(): Map<String, String> = entries.associate { (key, value) ->
-        key to value.toString().trim('"')
     }
 }

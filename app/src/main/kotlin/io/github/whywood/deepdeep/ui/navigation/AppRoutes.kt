@@ -469,8 +469,6 @@ private fun PluginPageRoute(
         PluginPageSlot(
             pluginId = destination.pluginId,
             pageId = destination.pageId,
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            onAction = { actionId -> manager.runAction(destination.pluginId, actionId) },
             fallback = {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(

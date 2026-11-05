@@ -75,8 +75,6 @@ internal fun PluginSetupSheet(
                 Spacer(Modifier.height(8.dp))
                 PluginSetupContentSlot(
                     interaction = interaction,
-                    modifier = Modifier.fillMaxWidth(),
-                    onAction = { actionId -> manager.runAction(interaction.pluginId, actionId) },
                     fallback = { PluginSetupStageBody(interaction = interaction, onOpenUrl = ::openUrl) },
                 )
                 if (interaction.confirmInstall) {

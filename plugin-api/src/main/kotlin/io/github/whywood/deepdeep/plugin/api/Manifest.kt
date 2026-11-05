@@ -16,7 +16,6 @@ data class Provides(
     val skills: List<String> = emptyList(),
     val settings: List<String> = emptyList(),
     val actions: List<String> = emptyList(),
-    val events: List<String> = emptyList(),
     val uiSlots: List<String> = emptyList(),
     val pages: List<String> = emptyList(),
 ) {
@@ -25,7 +24,6 @@ data class Provides(
             skills.isEmpty() &&
             settings.isEmpty() &&
             actions.isEmpty() &&
-            events.isEmpty() &&
             uiSlots.isEmpty() &&
             pages.isEmpty()
 }
@@ -46,10 +44,8 @@ data class PluginManifest(
     val source: PluginSource = PluginSource.EXTERNAL,
     val entryClass: String? = null,
     val publisher: PublisherInfo? = null,
-    val requires: List<String> = emptyList(),
     val provides: Provides = Provides(),
     val installable: Boolean = true,
-    val order: Int = 0,
     val requiresPrivilege: Boolean = false,
     val defaultEnabled: Boolean = true,
     val tintIcon: Boolean = true,

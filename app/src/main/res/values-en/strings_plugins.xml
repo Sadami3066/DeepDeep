@@ -96,4 +96,19 @@
     <string name="plugins_source_auto_check">Check for updates on launch</string>
     <string name="plugins_source_save">Save</string>
     <string name="plugins_update_staged">Staged; applies after restart</string>
+    <string name="plugins_slot_issues_section">Plugin slots</string>
+    <string name="plugins_slot_crash_reason">DeepDeep crashed while rendering this slot last time, so it is disabled for now</string>
+    <string name="plugins_slot_recover">Recover</string>
+    <string name="plugins_slot_ui_api_unsupported">Plugin UI API level %1$d is above the host level %2$d</string>
+    <string name="plugins_slot_compose_api_unsupported">Plugin Compose slot API level %1$d is above the host level %2$d</string>
+    <string name="plugins_slot_kotlin_mismatch">Plugin Kotlin version %1$s does not match host %2$s</string>
+    <string name="plugins_slot_compose_mismatch">Plugin Compose version %1$s does not match host %2$s</string>
+    <string name="plugins_slot_compose_unavailable">Host Compose version is unavailable, so bindings with a declared version are disabled</string>
+    <string name="plugins_slot_compose_unavailable_id">Host Compose version is unavailable (compatibility id %1$d), so bindings with a declared version are disabled</string>
+    <string name="plugins_connect">Connect / Configure</string>
+    <string name="plugins_recovery_section">Plugin failure</string>
+    <string name="plugins_recovery_retry">Retry activation</string>
+    <string name="plugins_recovery_rollback">Roll back to %1$s</string>
+    <string name="plugins_recovery_retry_failed">Retry activation failed</string>
+    <string name="plugins_recovery_rollback_failed">Rollback failed</string>
 </resources>

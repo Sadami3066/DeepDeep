@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentMessage
-import dev.pi.ai.ImageContent
 import dev.pi.ai.Model
 import dev.pi.ai.auth.CredentialStore
 import dev.pi.ai.http.HttpTransport
@@ -44,11 +43,7 @@ class PiSessionEngine(
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
     private val supportsChatDelivery: Boolean = true,
-    private val promptTransform: PromptTransform? = null,
-    private val inputHandler: InputHandler? = null,
-    private val toolHooks: ToolExecutionHooks? = null,
-    private val onSessionBound: ((BoundSession) -> Unit)? = null,
-    internal val onSessionClosed: ((String) -> Unit)? = null,
+    internal val hooks: RuntimeHooks = RuntimeHooks.None,
 ) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
@@ -112,7 +107,7 @@ class PiSessionEngine(
                 tools = tools,
                 shellExecutor = activeShell,
                 hooks = CodingHooks(extraSystemPromptSections = { currentSections() })
-                    .withPluginHooks(promptTransform, inputHandler),
+                    .withPluginHooks(hooks.promptTransform),
                 credentials = credentials,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 initialSystemPromptSections = currentSections(),
@@ -127,9 +122,18 @@ class PiSessionEngine(
             ),
         )
         created = session
+        session.agent.installToolExecutionHooks(hooks.toolHooks)
         binding.attach(session)
-        binding.current()?.let { bound -> onSessionBound?.invoke(bound) }
+        binding.current()?.let { bound -> hooks.onSessionBound?.invoke(bound) }
         return session
+    }
+
+    internal suspend fun prepareInput(text: String, images: List<ImagePart>): PreparedPrompt {
+        val handler = hooks.inputHandler ?: return PreparedPrompt(text, images)
+        return when (val decision = handler(InputRequest(text, images))) {
+            is InputDecision.Continue -> PreparedPrompt(decision.text, decision.images)
+            InputDecision.Handled -> PreparedPrompt.Handled
+        }
     }
 
     override suspend fun create(file: String?, config: ModelConfig): SessionHandle =
@@ -154,7 +158,7 @@ class PiSessionEngine(
         toolContext?.let { context ->
             addAll(appTools(cwd, context, binding))
         }
-    }.map { it.withExecutionHooks(toolHooks) }
+    }
 
     override suspend fun loadMcpServers(): Map<String, McpServerConfig> {
         val settings = SettingsManager.forPaths(paths, fs)
@@ -215,6 +219,19 @@ fun ThinkingLevel.displayName(): String = when (this) {
     ThinkingLevel.MAX -> "最大"
 }
 
+internal sealed interface PreparedPrompt {
+    data class Ready(
+        val text: String,
+        val images: List<ImagePart>,
+    ) : PreparedPrompt
+
+    data object Handled : PreparedPrompt
+
+    companion object {
+        operator fun invoke(text: String, images: List<ImagePart>): PreparedPrompt = Ready(text, images)
+    }
+}
+
 internal class PiSessionHandle(
     private val engine: PiSessionEngine,
     private val session: AgentSession,
@@ -237,10 +254,13 @@ internal class PiSessionHandle(
 
     override suspend fun prompt(
         text: String,
-        images: List<ImageContent>?,
+        images: List<ImagePart>?,
         behavior: QueueBehavior?,
     ) {
-        session.prompt(text, images, behavior)
+        when (val prepared = engine.prepareInput(text, images.orEmpty())) {
+            is PreparedPrompt.Ready -> session.prompt(prepared.text, prepared.images.toImageContents(), behavior)
+            PreparedPrompt.Handled -> Unit
+        }
     }
 
     override fun abort() {
@@ -250,7 +270,7 @@ internal class PiSessionHandle(
     override suspend fun close() {
         val sessionId = session.sessionId
         session.close()
-        engine.onSessionClosed?.let { it(sessionId) }
+        engine.hooks.onSessionClosed?.let { it(sessionId) }
     }
 
     override fun subscribe(listener: suspend (SessionEvent) -> Unit): () -> Unit =

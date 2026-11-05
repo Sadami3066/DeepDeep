@@ -32,6 +32,7 @@ import io.github.whywood.deepdeep.ui.chat.AttachmentSource
 import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
+import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
 import io.github.whywood.deepdeep.ui.common.shareChooser
 
@@ -131,6 +132,7 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
 
             DeepDeepTheme(theme, fontStyle) {
+                ProvidePluginManager(graph.pluginManager) {
                 AssistantOverlayScreen(
                     state = state,
                     pendingQuestions = sessionQuestions,
@@ -207,6 +209,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                             controller.attach(uri)
                         },
                     )
+                }
                 }
             }
         }

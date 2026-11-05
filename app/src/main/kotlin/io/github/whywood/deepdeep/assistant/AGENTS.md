@@ -20,5 +20,6 @@
 ## 要点
 
 - 是独立 Activity（透明、edge-to-edge），语言在 `attachBaseContext` 包装；关闭浮层不取消正在进行的运行，右上角全屏才切回 `MainActivity`。
+- `setContent` 根用 `ProvidePluginManager(graph.pluginManager)` 包住内容，浮层里的自定义消息卡与工具卡才能渲染插件 Compose 槽位（与 `MainActivity` 同源）；输入图片经 `normalizeImages` 带原始附件路径，供插件输入钩子使用。
 - 会话状态投影自 `AgentRuntimeHost`，不复制真相；运行中发送是插话、长按发送是排队。
 - 光效与玻璃输入卡是同一套视觉：`OverlayGlow` 出状态、`OverlayEffects` 负责绘制，别绕开它们另画。

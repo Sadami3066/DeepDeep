@@ -28,7 +28,6 @@ class PluginManifestCodecTest {
           "name": { "default": "Sample Plugin", "zh": "示例插件", "en": "Sample Plugin" },
           "summary": { "default": "External plugin sample", "zh": "外部插件示例", "en": "External plugin sample" },
           "icon": "asset:icon.png",
-          "requires": [],
           "provides": { "tools": ["sample_echo"], "uiSlots": ["setup.content"] },
           "installable": true
         }
@@ -49,7 +48,6 @@ class PluginManifestCodecTest {
         assertEquals(listOf("sample_echo"), manifest.provides.tools)
         assertEquals(listOf("setup.content"), manifest.provides.uiSlots)
         assertTrue(manifest.installable)
-        assertEquals(0, manifest.order)
         assertEquals(true, manifest.defaultEnabled)
         assertEquals(false, manifest.requiresPrivilege)
         assertNull(manifest.ui)
@@ -84,6 +82,7 @@ class PluginManifestCodecTest {
             ),
         )
         assertEquals(LocalizedText.Literal("Minimal"), manifest.name)
+        assertEquals(BASELINE_API_LEVEL, manifest.apiLevel)
     }
 
     @Test
@@ -106,28 +105,23 @@ class PluginManifestCodecTest {
                   "icon": "asset:assets/icon.png",
                   "entryClass": "com.example.demo.DemoPlugin",
                   "publisher": { "name": "Example", "keyId": "key-1" },
-                  "requires": ["host:linux", "privilege:adb"],
                   "provides": {
                     "tools": ["demo_echo"],
                     "skills": ["demo-skill"],
                     "settings": ["api_key"],
                     "actions": ["login"],
-                    "events": ["ready"],
                     "uiSlots": ["setup.content", "tool.card.content:demo_echo"],
                     "pages": ["home"]
                   },
                   "installable": true,
-                  "order": 7,
                   "requiresPrivilege": true,
                   "defaultEnabled": false
                 }
                 """.trimIndent(),
             ),
         )
-        assertEquals(7, manifest.order)
         assertEquals(true, manifest.requiresPrivilege)
         assertEquals(false, manifest.defaultEnabled)
-        assertEquals(listOf("host:linux", "privilege:adb"), manifest.requires)
         assertEquals(PublisherInfo("Example", "key-1"), manifest.publisher)
         assertEquals("https://example.com/demo", manifest.homepage)
         assertEquals("Initial release", manifest.changelog)
@@ -140,7 +134,6 @@ class PluginManifestCodecTest {
                 skills = listOf("demo-skill"),
                 settings = listOf("api_key"),
                 actions = listOf("login"),
-                events = listOf("ready"),
                 uiSlots = listOf("setup.content", "tool.card.content:demo_echo"),
                 pages = listOf("home"),
             ),
@@ -161,16 +154,14 @@ class PluginManifestCodecTest {
                   "summary": { "default": "Tolerant plugin" },
                   "apiLevel": "one",
                   "installable": "false",
-                  "requiresPrivilege": "maybe",
-                  "order": "3"
+                  "requiresPrivilege": "maybe"
                 }
                 """.trimIndent(),
             ),
         )
-        assertEquals(PLUGIN_API_LEVEL, manifest.apiLevel)
+        assertEquals(BASELINE_API_LEVEL, manifest.apiLevel)
         assertEquals(false, manifest.installable)
         assertEquals(false, manifest.requiresPrivilege)
-        assertEquals(3, manifest.order)
     }
 
     @Test

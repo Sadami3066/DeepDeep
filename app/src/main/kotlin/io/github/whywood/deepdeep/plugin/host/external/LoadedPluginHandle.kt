@@ -11,6 +11,7 @@ import java.nio.ByteBuffer
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import kotlinx.coroutines.CancellationException
 
 internal class PluginLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -55,13 +56,29 @@ internal class LoadedPluginHandle private constructor(
         ): LoadedPluginHandle {
             val pkg = try {
                 DdpPackage.read(bundleFile)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: DdpPackageException) {
                 throw PluginLoadException("invalid plugin bundle: ${error.message}", error)
+            } catch (error: Throwable) {
+                throw PluginLoadException(
+                    "failed to read plugin bundle: ${error.message ?: error.javaClass.simpleName}",
+                    error,
+                )
             }
             if (!pkg.bundleSha256.equals(expectedSha256, ignoreCase = true)) {
                 throw PluginLoadException("plugin bundle sha256 mismatch: ${bundleFile.path}")
             }
-            val verification = PluginPackageVerifier.verify(pkg, hostApiLevel, hostVersion)
+            val verification = try {
+                PluginPackageVerifier.verify(pkg, hostApiLevel, hostVersion)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                throw PluginLoadException(
+                    "plugin signature verification failed: ${error.message ?: error.javaClass.simpleName}",
+                    error,
+                )
+            }
             if (verification is VerificationResult.Rejected) {
                 throw PluginLoadException("plugin bundle verification failed: ${verification.reason}")
             }
@@ -81,7 +98,9 @@ internal class LoadedPluginHandle private constructor(
             if (!bundleFile.isFile) throw PluginLoadException("plugin bundle not found: ${bundleFile.path}")
             val actualSha256 = try {
                 DdpSigning.sha256Hex(bundleFile)
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
                 throw PluginLoadException("failed to read plugin bundle: ${error.message}", error)
             }
             if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
@@ -102,7 +121,9 @@ internal class LoadedPluginHandle private constructor(
                     classLoader = loader,
                     fallbackJar = null,
                 )
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
                 error
             }
             val jar = writeReadOnlyJar(context, manifest.id, actualSha256, dexBytes)
@@ -117,7 +138,10 @@ internal class LoadedPluginHandle private constructor(
                     classLoader = loader,
                     fallbackJar = jar,
                 )
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {
+                jar.delete()
+                throw error
+            } catch (error: Throwable) {
                 jar.delete()
                 val failure = PluginLoadException(
                     "failed to load plugin ${manifest.id}: ${error.message ?: error.javaClass.simpleName}",
@@ -131,8 +155,10 @@ internal class LoadedPluginHandle private constructor(
         private fun instantiate(entryClass: String, loader: ClassLoader): DeepDeepPlugin {
             val type = try {
                 Class.forName(entryClass, true, loader)
-            } catch (error: Exception) {
-                throw PluginLoadException("plugin entry class not found: $entryClass", error)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                throw PluginLoadException("plugin entry class could not be loaded: $entryClass", error)
             }
             if (!DeepDeepPlugin::class.java.isAssignableFrom(type)) {
                 throw PluginLoadException("$entryClass does not implement DeepDeepPlugin")
@@ -141,7 +167,9 @@ internal class LoadedPluginHandle private constructor(
                 val constructor = type.getDeclaredConstructor()
                 constructor.isAccessible = true
                 constructor.newInstance() as DeepDeepPlugin
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
                 throw PluginLoadException("failed to instantiate plugin entry class: $entryClass", error)
             }
         }
@@ -157,7 +185,9 @@ internal class LoadedPluginHandle private constructor(
                         .map { (_, entry) -> zip.getInputStream(entry).use { it.readBytes() } }
                         .toList()
                 }
-            } catch (error: Exception) {
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
                 throw PluginLoadException("failed to read plugin dex: ${error.message}", error)
             }
             if (dex.isEmpty()) throw PluginLoadException("plugin bundle has no classes*.dex")

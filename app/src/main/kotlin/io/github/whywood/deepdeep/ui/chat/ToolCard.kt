@@ -44,9 +44,14 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.runtime.text
 import io.github.whywood.deepdeep.ui.plugins.PluginToolCardSlot
+import java.util.Base64
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -66,10 +71,11 @@ internal fun ToolCard(
     val state = stringResource(
         if (tool.expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val preview = remember(tool.arguments, titleOverride) {
-        if (titleOverride == null) toolArgsPreview(tool.arguments) else ""
+    val rawArguments = tool.rawArguments
+    val preview = remember(rawArguments, tool.arguments, titleOverride) {
+        if (titleOverride == null) toolArgsPreview(rawArguments, tool.arguments) else ""
     }
-    val output = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() }
+    val output = tool.resultText()
     val duration = tool.durationMs?.takeIf { it > 0L }
     val statusText = when (tool.status) {
         ToolActivityStatus.RUNNING -> stringResource(R.string.assistant_tool_running)
@@ -157,7 +163,7 @@ internal fun ToolCard(
             PluginToolCardSlot(
                 toolName = tool.name,
                 callId = tool.toolCallId,
-                args = remember(tool.arguments) { toolArgumentsJson(tool.arguments) },
+                args = remember(rawArguments, tool.arguments) { toolArgumentsJson(rawArguments, tool.arguments) },
                 result = toolSlotResult(tool),
             ) {
                 ToolCardDefaultBody(tool = tool, output = output, onCopyOutput = onCopyOutput)
@@ -173,8 +179,10 @@ private fun ToolCardDefaultBody(
     onCopyOutput: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
+    val rawArguments = tool.rawArguments
+    val argumentsText = remember(rawArguments, tool.arguments) { formatToolArguments(rawArguments, tool.arguments) }
     Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
-        if (tool.arguments.isNotEmpty()) {
+        if (argumentsText.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.assistant_tool_args),
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
@@ -182,7 +190,7 @@ private fun ToolCardDefaultBody(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = tool.arguments.entries.joinToString("\n") { "${it.key} = ${it.value}" },
+                text = argumentsText,
                 style = DdType.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
@@ -192,7 +200,7 @@ private fun ToolCardDefaultBody(
             )
         }
         if (output != null) {
-            if (tool.arguments.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            if (argumentsText.isNotEmpty()) Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -230,15 +238,55 @@ private fun ToolCardDefaultBody(
     }
 }
 
-private fun toolArgumentsJson(arguments: Map<String, String>): JsonObject =
-    JsonObject(arguments.mapValues { (_, value) -> JsonPrimitive(value) })
+private fun toolArgumentsJson(raw: JsonObject?, legacy: Map<String, String>): JsonObject =
+    raw ?: JsonObject(legacy.mapValues { (_, value) -> JsonPrimitive(value) })
+
+private fun formatToolArguments(raw: JsonObject?, legacy: Map<String, String>): String =
+    if (raw != null) {
+        raw.entries.joinToString("\n") { (key, value) -> "$key = ${value.displayValue()}" }
+    } else {
+        legacy.entries.joinToString("\n") { (key, value) -> "$key = $value" }
+    }
+
+private fun JsonElement.displayValue(): String = if (this is JsonPrimitive && isString) content else toString()
+
+private fun ToolTrace.resultText(): String? =
+    resultPayload?.text()?.takeIf { it.isNotBlank() }
+        ?: error?.takeIf { it.isNotBlank() }
+        ?: output?.takeIf { it.isNotBlank() }
 
 private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
+    val isError = tool.status == ToolActivityStatus.FAILED
+    val payload = tool.resultPayload
+    if (payload != null) {
+        val blocks = payload.toToolBlocks()
+        if (blocks.isEmpty()) return null
+        val first = blocks.firstOrNull()
+        return if (blocks.size == 1 && first is ToolBlock.Text) {
+            PluginToolResult.Text(text = first.text, isError = isError)
+        } else {
+            PluginToolResult.Rich(blocks = blocks, isError = isError)
+        }
+    }
     val text = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() } ?: return null
-    return PluginToolResult.Text(text = text, isError = tool.status == ToolActivityStatus.FAILED)
+    return PluginToolResult.Text(text = text, isError = isError)
 }
 
-private fun toolArgsPreview(arguments: Map<String, String>): String {
+private fun ToolResultPayload.toToolBlocks(): List<ToolBlock> = when (this) {
+    is ToolResultPayload.Text -> listOf(ToolBlock.Text(text))
+    is ToolResultPayload.Empty -> emptyList()
+    is ToolResultPayload.Blocks -> blocks.map { block ->
+        when (block) {
+            is ToolResultPayload.Block.Text -> ToolBlock.Text(block.text)
+            is ToolResultPayload.Block.Image -> ToolBlock.Image(
+                data = runCatching { Base64.getDecoder().decode(block.data) }.getOrDefault(ByteArray(0)),
+                mimeType = block.mimeType,
+            )
+        }
+    }
+}
+
+private fun toolArgsPreview(raw: JsonObject?, legacy: Map<String, String>): String {
     val preferred = listOf(
         "command",
         "cmd",
@@ -250,8 +298,15 @@ private fun toolArgsPreview(arguments: Map<String, String>): String {
         "description",
         "prompt",
     )
-    val value = preferred.firstNotNullOfOrNull { key -> arguments[key]?.takeIf { it.isNotBlank() } }
-        ?: arguments.values.firstOrNull { it.isNotBlank() }
-        ?: return ""
+    val value = if (raw != null) {
+        preferred.firstNotNullOfOrNull { key ->
+            (raw[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+                ?: raw[key]?.toString()?.takeIf { it.isNotBlank() && it != "null" && it != "\"\"" }
+        } ?: raw.values.firstOrNull { it.toString().let { value -> value.isNotBlank() && value != "null" } }
+            ?.let { if (it is JsonPrimitive && it.isString) it.content else it.toString() }
+    } else {
+        preferred.firstNotNullOfOrNull { key -> legacy[key]?.takeIf { it.isNotBlank() } }
+            ?: legacy.values.firstOrNull { it.isNotBlank() }
+    } ?: return ""
     return value.replace('\n', ' ').trim()
 }

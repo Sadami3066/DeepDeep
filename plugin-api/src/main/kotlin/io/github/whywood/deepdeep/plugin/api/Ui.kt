@@ -39,30 +39,6 @@ object SlotIds {
     private val MESSAGE_SUFFIX = Regex("^[a-z][a-z0-9_.-]*$")
 }
 
-object UiNodeTypes {
-    const val COLUMN: String = "column"
-
-    const val ROW: String = "row"
-
-    const val TEXT: String = "text"
-
-    const val MARKDOWN: String = "markdown"
-
-    const val IMAGE: String = "image"
-
-    const val BUTTON: String = "button"
-
-    const val LINK: String = "link"
-
-    const val PROGRESS: String = "progress"
-
-    const val QR_CODE: String = "qr_code"
-
-    const val DIVIDER: String = "divider"
-
-    const val SPACER: String = "spacer"
-}
-
 data class SlotBinding(
     val slotId: String,
     val priority: Int = 0,
@@ -70,20 +46,11 @@ data class SlotBinding(
 )
 
 sealed interface SlotContent {
-    data class Declarative(val tree: UiNode) : SlotContent
-
     data class Compose(
         val uiApiLevel: Int,
         val render: @Composable (SlotState) -> Unit,
     ) : SlotContent
 }
-
-data class UiNode(
-    val type: String,
-    val text: String? = null,
-    val props: Map<String, String> = emptyMap(),
-    val children: List<UiNode> = emptyList(),
-)
 
 data class PluginPage(
     val id: String,

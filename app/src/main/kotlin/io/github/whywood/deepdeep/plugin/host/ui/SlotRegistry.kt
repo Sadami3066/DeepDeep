@@ -1,9 +1,10 @@
 package io.github.whywood.deepdeep.plugin.host.ui
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
-import io.github.whywood.deepdeep.plugin.api.PluginValidation
 import io.github.whywood.deepdeep.plugin.api.SlotContent
+import io.github.whywood.deepdeep.plugin.api.SlotIds
 import io.github.whywood.deepdeep.plugin.api.UiManifest
+import io.github.whywood.deepdeep.plugin.host.PluginBindingEntry
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import java.io.File
@@ -11,18 +12,30 @@ import java.io.File
 internal data class HostUiVersions(
     val kotlin: String?,
     val compose: String?,
+    val composeCompatibilityId: Int? = null,
 ) {
     companion object {
-        fun current(): HostUiVersions = HostUiVersions(
-            kotlin = KotlinVersion.CURRENT.toString(),
-            compose = composeVersion(),
-        )
-
-        private fun composeVersion(): String? = runCatching {
-            val type = Class.forName("androidx.compose.runtime.ComposeVersion")
-            type.getField("version").get(null) as String
-        }.getOrNull()
+        fun current(): HostUiVersions {
+            val detected = ComposeVersionDetector.detect()
+            return HostUiVersions(
+                kotlin = KotlinVersion.CURRENT.toString(),
+                compose = detected.version,
+                composeCompatibilityId = detected.compatibilityId,
+            )
+        }
     }
+}
+
+sealed interface SlotDisabledReason {
+    data class UiApiLevelUnsupported(val declared: Int, val host: Int) : SlotDisabledReason
+
+    data class ComposeApiLevelUnsupported(val declared: Int, val host: Int) : SlotDisabledReason
+
+    data class KotlinVersionMismatch(val declared: String, val host: String) : SlotDisabledReason
+
+    data class ComposeVersionMismatch(val declared: String, val host: String) : SlotDisabledReason
+
+    data class ComposeVersionUnavailable(val compatibilityId: Int?) : SlotDisabledReason
 }
 
 data class SlotRenderEntry(
@@ -30,72 +43,68 @@ data class SlotRenderEntry(
     val manifestVersion: String,
     val slotId: String,
     val priority: Int,
-    val content: SlotContent,
+    val content: SlotContent.Compose,
     val assetsDir: File,
-    val composeCompatible: Boolean,
-    val uiTreeValid: Boolean = true,
-)
+    val disabledReason: SlotDisabledReason? = null,
+) {
+    val composeCompatible: Boolean get() = disabledReason == null
+}
 
 class SlotRegistry internal constructor(
     private val snapshotProvider: () -> PluginRegistrySnapshot,
     private val pluginsRoot: File,
     private val hostVersions: HostUiVersions = HostUiVersions.current(),
 ) {
-    fun bindings(slotId: String): List<SlotRenderEntry> {
+    fun bindings(slotId: String): List<SlotRenderEntry> = resolve { it.binding.slotId == slotId }
+
+    fun entriesOf(pluginId: String): List<SlotRenderEntry> = resolve { it.pluginId == pluginId }
+
+    fun detailSectionsOf(pluginId: String): List<SlotRenderEntry> =
+        entriesOf(pluginId).filter { it.slotId.startsWith(SlotIds.DETAIL_SECTION_PREFIX) }
+
+    private fun resolve(predicate: (PluginBindingEntry) -> Boolean): List<SlotRenderEntry> {
         val snapshot = snapshotProvider()
         val order = snapshot.plugins.mapIndexed { index, descriptor -> descriptor.id to index }.toMap()
         return snapshot.bindings
-            .filter { it.binding.slotId == slotId }
+            .filter(predicate)
             .mapNotNull { entry ->
                 val descriptor = snapshot.plugin(entry.pluginId) ?: return@mapNotNull null
                 if (!descriptor.phase.contributes) return@mapNotNull null
+                val content = entry.binding.content as? SlotContent.Compose ?: return@mapNotNull null
                 SlotRenderEntry(
                     pluginId = entry.pluginId,
                     manifestVersion = descriptor.manifest.version,
-                    slotId = slotId,
+                    slotId = entry.binding.slotId,
                     priority = entry.binding.priority,
-                    content = entry.binding.content,
+                    content = content,
                     assetsDir = PluginPaths.assetsDir(pluginsRoot, descriptor.id, descriptor.manifest.version),
-                    composeCompatible = isComposeCompatible(entry.binding.content, descriptor.manifest.ui),
-                    uiTreeValid = isUiTreeValid(entry.binding.content),
+                    disabledReason = disabledReasonFor(content, descriptor.manifest.ui),
                 )
             }
-            .sortedWith(
-                compareByDescending<SlotRenderEntry> { it.priority }
-                    .thenBy { order[it.pluginId] ?: Int.MAX_VALUE },
-            )
+            .sortedWith(compareByDescending<SlotRenderEntry> { it.priority }.thenBy { order[it.pluginId] ?: Int.MAX_VALUE })
     }
 
-    fun firstRenderable(slotId: String): SlotRenderEntry? = bindings(slotId).firstOrNull { it.isRenderable() }
-
-    fun hasOverride(slotId: String): Boolean = firstRenderable(slotId) != null
-
-    private fun SlotRenderEntry.isRenderable(): Boolean = when (content) {
-        is SlotContent.Declarative -> uiTreeValid
-        is SlotContent.Compose -> composeCompatible
-    }
-
-    private fun isUiTreeValid(content: SlotContent): Boolean = when (content) {
-        is SlotContent.Declarative -> PluginValidation.validateUiNode(content.tree).isEmpty()
-        is SlotContent.Compose -> true
-    }
-
-    private fun isComposeCompatible(content: SlotContent, manifest: UiManifest?): Boolean {
-        if (content !is SlotContent.Compose) return true
-        if (content.uiApiLevel > HOST_UI_API_LEVEL) return false
-        manifest ?: return true
-        if (manifest.apiLevel > HOST_UI_API_LEVEL) return false
-        val pluginKotlin = manifest.kotlin
-        val hostKotlin = hostVersions.kotlin
-        if (pluginKotlin != null && hostKotlin != null && !sameKotlinMinor(pluginKotlin, hostKotlin)) {
-            return false
+    private fun disabledReasonFor(content: SlotContent.Compose, manifest: UiManifest?): SlotDisabledReason? {
+        if (content.uiApiLevel > HOST_UI_API_LEVEL) {
+            return SlotDisabledReason.ComposeApiLevelUnsupported(content.uiApiLevel, HOST_UI_API_LEVEL)
         }
-        val pluginCompose = manifest.compose
-        val hostCompose = hostVersions.compose
-        if (pluginCompose != null && hostCompose != null && pluginCompose != hostCompose) {
-            return false
+        if (manifest == null) return null
+        if (manifest.apiLevel > HOST_UI_API_LEVEL) {
+            return SlotDisabledReason.UiApiLevelUnsupported(manifest.apiLevel, HOST_UI_API_LEVEL)
         }
-        return true
+        manifest.kotlin?.let { declared ->
+            val host = hostVersions.kotlin
+            if (host != null && !sameKotlinMinor(declared, host)) {
+                return SlotDisabledReason.KotlinVersionMismatch(declared, host)
+            }
+        }
+        manifest.compose?.let { declared ->
+            val host = hostVersions.compose
+                ?: return SlotDisabledReason.ComposeVersionUnavailable(hostVersions.composeCompatibilityId)
+            val declaredVersion = ComposeVersionDetector.normalizeVersion(declared) ?: declared
+            if (declaredVersion != host) return SlotDisabledReason.ComposeVersionMismatch(declaredVersion, host)
+        }
+        return null
     }
 
     private fun sameKotlinMinor(plugin: String, host: String): Boolean {

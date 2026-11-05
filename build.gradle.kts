@@ -113,8 +113,10 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
         layout.projectDirectory.dir("$module/src/main/kotlin")
     }
     val allowlistFile = layout.projectDirectory.file("gradle/package-boundaries.allow")
+    val strictBoundaries = providers.gradleProperty("deepdeep.strictBoundaries").orNull == "true"
     inputs.files(sourceRoots.values)
     inputs.file(allowlistFile)
+    inputs.property("strictBoundaries", strictBoundaries)
     doLast {
         val base = "io.github.whywood.deepdeep"
         val allowlist = allowlistFile.asFile.readLines()
@@ -165,8 +167,10 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
         logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/DeepDeepApplication")
         val stale = allowlist - observed
         if (stale.isNotEmpty()) {
-            logger.lifecycle("Package boundary allowlist has ${stale.size} stale entries (remove them):")
-            stale.sorted().forEach { logger.lifecycle("  - $it") }
+            val message = "Package boundary allowlist has ${stale.size} stale entries (remove them):\n" +
+                stale.sorted().joinToString("\n")
+            check(!strictBoundaries) { message }
+            logger.lifecycle(message)
         }
         check(introduced.isEmpty()) {
             "New package boundary violations (fix the import, or add to gradle/package-boundaries.allow only if intentional):\n" +

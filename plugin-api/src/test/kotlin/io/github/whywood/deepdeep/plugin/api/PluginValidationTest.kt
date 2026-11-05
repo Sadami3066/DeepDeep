@@ -19,7 +19,6 @@ class PluginValidationTest {
         summary: LocalizedText = this.summary,
         entryClass: String? = "com.example.plugin.Plugin",
         source: PluginSource = PluginSource.EXTERNAL,
-        requires: List<String> = emptyList(),
         provides: Provides = Provides(),
         homepage: String? = null,
         icon: IconRef? = null,
@@ -35,7 +34,6 @@ class PluginValidationTest {
         icon = icon,
         source = source,
         entryClass = entryClass,
-        requires = requires,
         provides = provides,
     )
 
@@ -151,25 +149,10 @@ class PluginValidationTest {
     }
 
     @Test
-    fun rejectsBlankRequiresEntry() {
-        assertEquals(listOf(PluginValidation.Code.INVALID_REQUIRES), codes(manifest(requires = listOf("host:linux", " "))))
-    }
-
-    @Test
     fun uiApiLevelMismatchIsOnlyWarning() {
         val result = issues(manifest(ui = UiManifest(apiLevel = 2)))
         assertEquals(listOf(PluginValidation.Code.UI_API_LEVEL_UNSUPPORTED), result.map { it.code })
         assertEquals(PluginValidation.Severity.WARNING, result.single().severity)
-    }
-
-    @Test
-    fun compatibilityChecksAbiFields() {
-        assertTrue(PluginValidation.isCompatible(manifest()))
-        assertFalse(PluginValidation.isCompatible(manifest(apiLevel = 2)))
-        assertFalse(PluginValidation.isCompatible(manifest(ui = UiManifest(apiLevel = 2))))
-        assertFalse(PluginValidation.isCompatible(manifest(minHostVersion = "0.3.0"), hostVersion = "0.2.0"))
-        assertTrue(PluginValidation.isCompatible(manifest(minHostVersion = "0.2.0"), hostVersion = "0.2.0-dev"))
-        assertFalse(PluginValidation.isCompatible(manifest(minHostVersion = "broken")))
     }
 
     @Test

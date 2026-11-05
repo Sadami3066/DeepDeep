@@ -69,15 +69,15 @@ class PluginRegistryTest {
         registry.register(testDescriptor("alpha", phase = PluginPhase.IMPORTED, contributions = contributions))
         assertEquals(0, registry.snapshot().tools.size)
 
-        assertTrue(registry.updatePhase("alpha", PluginPhase.ACTIVE))
+        assertTrue(registry.update("alpha") { it.copy(phase = PluginPhase.ACTIVE) })
         val active = registry.snapshot()
         assertEquals(2L, active.version)
         assertEquals(listOf("alpha_tool"), active.tools.map { it.tool.name })
 
-        assertTrue(registry.updatePhase("alpha", PluginPhase.DISABLED))
+        assertTrue(registry.update("alpha") { it.copy(phase = PluginPhase.DISABLED) })
         assertEquals(0, registry.snapshot().tools.size)
 
-        assertEquals(false, registry.updatePhase("missing", PluginPhase.ACTIVE))
+        assertEquals(false, registry.update("missing") { it })
     }
 
     @Test
@@ -86,7 +86,7 @@ class PluginRegistryTest {
         registry.register(testDescriptor("alpha"))
         val contributions = PluginContributions(tools = listOf(testTool("late_tool")))
 
-        assertTrue(registry.updateContributions("alpha", contributions))
+        assertTrue(registry.update("alpha") { it.copy(contributions = contributions) })
         val snapshot = registry.snapshot()
         assertEquals(2L, snapshot.version)
         assertEquals(listOf("late_tool"), snapshot.tools.map { it.tool.name })
@@ -209,7 +209,7 @@ class PluginRegistryTest {
         val registry = PluginRegistry()
         registry.register(testDescriptor("alpha"))
         registry.register(testDescriptor("beta"))
-        assertTrue(registry.updatePhase("alpha", PluginPhase.DEGRADED, "boom"))
+        assertTrue(registry.update("alpha") { it.copy(phase = PluginPhase.DEGRADED, error = "boom") })
 
         val snapshot = registry.snapshot()
         assertEquals(listOf("alpha", "beta"), snapshot.plugins.map { it.id })

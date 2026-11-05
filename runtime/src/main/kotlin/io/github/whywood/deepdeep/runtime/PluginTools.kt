@@ -29,9 +29,9 @@ private fun pluginSetupParameters(ids: List<String>): JsonObject = buildJsonObje
             put(
                 "description",
                 if (ids.isEmpty()) {
-                    "Official plugin id"
+                    "Plugin id (builtin installable or external .ddp plugin)"
                 } else {
-                    "Official plugin id: ${ids.joinToString(", ")}"
+                    "Plugin id (builtin installable or external .ddp plugin): ${ids.joinToString(", ")}"
                 },
             )
         }
@@ -44,7 +44,7 @@ fun pluginSetupTool(controller: PluginController?): CodingTool? {
     val ids = controller.setupPluginIds
     return CodingTool(
         name = "plugin_setup",
-        description = "Install and run the setup flow of an official DeepDeep plugin such as Feishu, WeCom or Xiaomi Cloud. Opens an in-app sheet and waits for the user; only works while DeepDeep is in the foreground.",
+        description = "Install or run the setup flow of a DeepDeep plugin (builtin installable or external .ddp). Opens an in-app sheet and waits for the user; only works while DeepDeep is in the foreground.",
         parameters = pluginSetupParameters(ids),
         label = "plugin_setup",
         execute = { _, args, signal, _ ->

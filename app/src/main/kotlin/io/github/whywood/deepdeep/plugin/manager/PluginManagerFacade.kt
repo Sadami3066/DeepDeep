@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
-import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
@@ -24,6 +23,8 @@ interface PluginManagerFacade : PluginController {
     override val setupPluginIds: List<String>
 
     suspend fun start()
+
+    suspend fun shutdown()
 
     suspend fun refreshNow()
 
@@ -71,7 +72,13 @@ interface PluginManagerFacade : PluginController {
 
     suspend fun refreshAvailableUpdates(): List<PluginUpdateUi>
 
+    suspend fun retryActivation(pluginId: String): PluginSetupResult
+
+    suspend fun rollbackPlugin(pluginId: String): Boolean
+
     fun slotEntries(slotId: String): List<SlotRenderEntry>
+
+    fun pluginSlotEntries(pluginId: String): List<SlotRenderEntry>
 
     fun pagesOf(pluginId: String): List<PluginPage>
 

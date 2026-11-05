@@ -6,7 +6,6 @@ import dev.pi.agent.AgentMessage
 import dev.pi.agent.asAssistantMessage
 import dev.pi.agent.asLlmMessage
 import dev.pi.ai.BlockContent
-import dev.pi.ai.ImageContent
 import dev.pi.ai.PlainTextContent
 import dev.pi.ai.StopReason
 import dev.pi.ai.TextContent
@@ -295,7 +294,7 @@ class AgentRuntimeHost internal constructor(
     override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
         val handle = handleFor(sessionId)
         val start = begin(handle, TurnSource.USER) ?: error("Agent session is busy")
-        runTurn(handle, start.runId, text, images.toImageContents())
+        runTurn(handle, start.runId, text, images)
     }
 
     override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
@@ -325,16 +324,15 @@ class AgentRuntimeHost internal constructor(
         images: List<ImagePart>,
     ) {
         val handle = handleFor(sessionId)
-        val contents = images.toImageContents()
         val start = begin(handle, TurnSource.USER)
         if (start != null) {
-            runTurn(handle, start.runId, text, contents)
+            runTurn(handle, start.runId, text, images)
             return
         }
         handle.pending.enqueue(kind, text)
         emitQueueChanged(handle, handle.state.runId.orEmpty())
         try {
-            handle.session.prompt(text, contents, kind.behavior())
+            handle.session.prompt(text, images, kind.behavior())
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -518,7 +516,7 @@ class AgentRuntimeHost internal constructor(
         handle: Handle,
         runId: String,
         text: String,
-        images: List<ImageContent>? = null,
+        images: List<ImagePart> = emptyList(),
         setTitle: Boolean = true,
     ) {
         try {
@@ -1095,25 +1093,26 @@ class AgentRuntimeHost internal constructor(
                         runId = runId,
                         callId = event.toolCallId,
                         name = event.toolName,
-                        arguments = event.args.entries.associate { (key, value) ->
-                            key to value.toString().trim('"')
-                        },
+                        arguments = event.args.toDisplayArguments(),
                         startedAt = System.currentTimeMillis(),
+                        rawArguments = event.args,
                     ),
                 )
                 emitActivity(handle, runId, RuntimeActivity.RunningTool(event.toolName))
             }
 
             is AgentEvent.ToolExecutionEnd -> {
+                val payload = event.result.toToolResultPayload()
                 emit(
                     handle,
                     RuntimeEvent.ToolFinished(
                         runId = runId,
                         callId = event.toolCallId,
                         name = event.toolName,
-                        result = event.result.content.filterIsInstance<TextContent>().joinToString("") { it.text },
+                        result = payload.text(),
                         isError = event.isError,
                         durationMs = event.durationMs,
+                        payload = payload,
                     ),
                 )
                 emitActivity(handle, runId, RuntimeActivity.Thinking)
@@ -1175,9 +1174,6 @@ private fun AgentMessage.userText(): String? {
         is BlockContent -> content.blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
     }
 }
-
-private fun List<ImagePart>.toImageContents(): List<ImageContent>? =
-    map { ImageContent(it.data, it.mimeType) }.takeIf { it.isNotEmpty() }
 
 private fun InputQueueKind.behavior(): QueueBehavior = when (this) {
     InputQueueKind.STEER -> QueueBehavior.Steer

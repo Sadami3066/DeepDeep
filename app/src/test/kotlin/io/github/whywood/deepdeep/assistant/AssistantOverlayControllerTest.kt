@@ -824,7 +824,7 @@ class AssistantOverlayControllerTest {
         assertTrue(prompt.startsWith("<attachments>"))
         assertTrue(prompt.contains("- $HOME_CWD/attachments/a1 |"))
         assertTrue(prompt.endsWith("hello"))
-        assertEquals(listOf(ImagePart("BASE64", "image/jpeg")), runtime.sentImages.single())
+        assertEquals(listOf(ImagePart("BASE64", "image/jpeg", path = "$HOME_CWD/attachments/a1")), runtime.sentImages.single())
         assertTrue(controller.state.value.attachments.isEmpty())
         controller.reset()
     }
@@ -854,7 +854,7 @@ class AssistantOverlayControllerTest {
         val steer = runtime.steered.single()
         assertTrue(steer.startsWith("<attachments>"))
         assertTrue(steer.endsWith("two"))
-        assertEquals(listOf(ImagePart("BASE64", "image/jpeg")), runtime.sentImages.last())
+        assertEquals(listOf(ImagePart("BASE64", "image/jpeg", path = "$HOME_CWD/attachments/a1")), runtime.sentImages.last())
         controller.reset()
     }
 

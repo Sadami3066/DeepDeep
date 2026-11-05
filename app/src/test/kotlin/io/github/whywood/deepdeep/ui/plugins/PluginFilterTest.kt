@@ -101,6 +101,7 @@ class PluginFilterTest {
         description = null,
         version = "1.0",
         installedVersion = installedVersion,
+        previousVersion = null,
         sizeLabel = null,
         icon = null,
         source = source,

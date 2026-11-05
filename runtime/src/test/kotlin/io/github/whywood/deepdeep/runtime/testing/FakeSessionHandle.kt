@@ -1,13 +1,13 @@
 package io.github.whywood.deepdeep.runtime.testing
 
 import dev.pi.agent.AgentMessage
-import dev.pi.ai.ImageContent
 import dev.pi.ai.Model
 import dev.pi.ai.ModelCost
 import dev.pi.coding.session.QueueBehavior
 import dev.pi.coding.session.SessionEvent
 import dev.pi.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.SessionCompaction
 import io.github.whywood.deepdeep.runtime.SessionHandle
 import io.github.whywood.deepdeep.runtime.SessionUsage
@@ -17,7 +17,7 @@ import kotlinx.coroutines.CompletableDeferred
 
 data class PromptRecord(
     val text: String,
-    val images: List<ImageContent>?,
+    val images: List<ImagePart>?,
     val behavior: QueueBehavior?,
 )
 
@@ -71,7 +71,7 @@ class FakeSessionHandle(
     @Volatile
     private var listener: (suspend (SessionEvent) -> Unit)? = null
 
-    override suspend fun prompt(text: String, images: List<ImageContent>?, behavior: QueueBehavior?) {
+    override suspend fun prompt(text: String, images: List<ImagePart>?, behavior: QueueBehavior?) {
         prompts += PromptRecord(text, images, behavior)
         onPrompt?.invoke(text)
         if (suspendPrompt) promptGate.await()

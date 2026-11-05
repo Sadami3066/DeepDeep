@@ -13,6 +13,7 @@ import dev.pi.ai.UserMessage
 import dev.pi.coding.session.BranchSummaryEntry
 import dev.pi.coding.session.CompactionEntry
 import dev.pi.coding.session.ContextEditEntry
+import dev.pi.coding.session.CustomMessageEntry
 import dev.pi.coding.session.ModelChangeEntry
 import dev.pi.coding.session.SessionEntry
 import dev.pi.coding.session.SessionManager
@@ -194,6 +195,85 @@ class HistoryMapperTest {
         assertEquals(ToolActivityStatus.DONE, tool.trace.status)
         assertEquals("ok", tool.trace.output)
         assertEquals(MessageStatus.DONE, answer.status)
+    }
+
+    @Test
+    fun toolResultStillBackfillsToolRecordAfterCustomCard() {
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                user("check", 1L),
+                assistant(
+                    content = listOf(toolCall("call-1", "bash")),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 2L,
+                ),
+                customCard("plugin.card", "卡片内容", timestamp = 3L),
+                toolResult("call-1", "ok", timestamp = 4L),
+            ),
+        )
+
+        assertEquals(3, messages.size)
+        assertEquals(AssistantRole.USER, messages[0].role)
+        val toolMessage = messages[1]
+        assertEquals(AssistantRole.ASSISTANT, toolMessage.role)
+        assertEquals(1, toolMessage.steps.size)
+        val trace = (toolMessage.steps.single() as AssistantStep.Tool).trace
+        assertEquals(ToolActivityStatus.DONE, trace.status)
+        assertEquals("ok", trace.output)
+        assertEquals("卡片内容", messages[2].text)
+    }
+
+    @Test
+    fun toolTraceKeepsStructuredArgumentsAndResultPayload() {
+        val arguments = JsonObject(mapOf("command" to kotlinx.serialization.json.JsonPrimitive("ls -la")))
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                assistant(
+                    content = listOf(ToolCall("call-1", "bash", arguments)),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 1L,
+                ),
+                toolResult("call-1", "ok", timestamp = 2L),
+            ),
+        )
+
+        val trace = (messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals(arguments, trace.rawArguments)
+        assertEquals("ls -la", trace.arguments["command"])
+        assertEquals(ToolResultPayload.Text("ok"), trace.resultPayload)
+    }
+
+    @Test
+    fun toolResultImagesSurviveAsStructuredBlocks() {
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                assistant(
+                    content = listOf(toolCall("call-1", "screenshot")),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 1L,
+                ),
+                messageEntry(
+                    ToolResultMessage(
+                        toolCallId = "call-1",
+                        toolName = "screenshot",
+                        content = listOf(TextContent("took one"), dev.pi.ai.ImageContent("aGVsbG8=", "image/png")),
+                        isError = false,
+                        timestamp = 2L,
+                    ),
+                ),
+            ),
+        )
+
+        val payload = (messages.single().steps.single() as AssistantStep.Tool).trace.resultPayload
+        assertEquals(
+            ToolResultPayload.Blocks(
+                listOf(
+                    ToolResultPayload.Block.Text("took one"),
+                    ToolResultPayload.Block.Image("aGVsbG8=", "image/png"),
+                ),
+            ),
+            payload,
+        )
     }
 
     @Test
@@ -393,6 +473,16 @@ class HistoryMapperTest {
 
     private fun toolCall(id: String, name: String): ToolCall =
         ToolCall(id, name, JsonObject(emptyMap<String, JsonElement>()))
+
+    private fun customCard(customType: String, text: String, timestamp: Long): SessionEntry = CustomMessageEntry(
+        id = nextId(),
+        parentId = null,
+        timestamp = "2026-10-29T10:00:00Z",
+        customType = customType,
+        content = PlainTextContent(text),
+        display = true,
+        details = null,
+    )
 
     private companion object {
         const val TIMESTAMP = "2026-10-29T10:00:00Z"

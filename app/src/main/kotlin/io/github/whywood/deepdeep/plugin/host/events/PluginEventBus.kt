@@ -60,7 +60,6 @@ private suspend fun PluginHooks.observe(event: PluginEvent) {
         is PluginEvent.CompactionFailed -> compactionFailed(event)
         is PluginEvent.ModelChanged -> modelChanged(event)
         is PluginEvent.ThinkingLevelChanged -> thinkingLevelChanged(event)
-        is PluginEvent.ToolSetChanged -> toolSetChanged(event)
         is PluginEvent.RetryScheduled -> retryScheduled(event)
         is PluginEvent.RetrySucceeded -> retrySucceeded(event)
         is PluginEvent.RetryExhausted -> retryExhausted(event)

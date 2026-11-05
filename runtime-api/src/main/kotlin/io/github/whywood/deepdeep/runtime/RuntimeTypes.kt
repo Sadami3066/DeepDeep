@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.json.JsonObject
 
 enum class ThinkingLevel {
     OFF,
@@ -84,6 +85,7 @@ data class InterruptedQuestion(
 data class ImagePart(
     val data: String,
     val mimeType: String,
+    val path: String? = null,
 )
 
 enum class InputQueueKind {
@@ -150,6 +152,8 @@ data class ToolTrace(
     val toolCallId: String = "",
     val startedAt: Long = 0,
     val durationMs: Long? = null,
+    val rawArguments: JsonObject? = null,
+    val resultPayload: ToolResultPayload? = null,
 )
 
 enum class MessageSummaryKind {
@@ -233,6 +237,7 @@ sealed interface RuntimeEvent {
         val name: String,
         val arguments: Map<String, String>,
         val startedAt: Long,
+        val rawArguments: JsonObject? = null,
     ) : RuntimeEvent
 
     data class ToolFinished(
@@ -242,6 +247,7 @@ sealed interface RuntimeEvent {
         val result: String,
         val isError: Boolean,
         val durationMs: Long?,
+        val payload: ToolResultPayload? = null,
     ) : RuntimeEvent
 
     data class RunFinished(

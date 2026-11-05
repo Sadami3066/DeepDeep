@@ -81,8 +81,13 @@ data class PluginServiceDependencies(
 internal fun buildPluginServices(deps: PluginServiceDependencies): PluginServices {
     deps.pluginDataDir.mkdirs()
     deps.pluginCacheDir.mkdirs()
+    val logs = LogPluginService(deps.pluginId, deps.logSink)
     return PluginServices(
-        linux = deps.linux?.let { LinuxPluginService(it) },
+        linux = deps.linux?.let {
+            LinuxPluginService(it) { dropped ->
+                logs.warn("linux stream dropped $dropped output lines")
+            }
+        },
         privilege = deps.privilege?.let {
             PrivilegePluginService(
                 privilege = it,
@@ -169,7 +174,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
             scope = deps.scope,
         ),
         bus = deps.bus?.let { ScopedPluginBus(it, deps.pluginId) },
-        logs = LogPluginService(deps.pluginId, deps.logSink),
+        logs = logs,
         chat = deps.chatSink?.let { ChatPluginService(it) },
     )
 }

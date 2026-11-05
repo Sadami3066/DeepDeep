@@ -84,7 +84,7 @@ internal class NotificationPluginService(
         ApiChannel.ALERT -> ChannelKind.ALERT
     }
 
-    private fun channelId(kind: ChannelKind): String = "deepdeep_plugin_${pluginId.take(24)}_${kind.id}"
+    private fun channelId(kind: ChannelKind): String = pluginChannelId(pluginId, kind.id)
 
     private fun notificationId(id: String): Int = PLUGIN_NOTIFICATION_BASE + (("$pluginId:$id").hashCode() and 0x3FFFF)
 
@@ -115,3 +115,5 @@ internal class NotificationPluginService(
         const val PLUGIN_NOTIFICATION_BASE = 10_000
     }
 }
+
+internal fun pluginChannelId(pluginId: String, kind: String): String = "deepdeep_plugin_${pluginId}_$kind"

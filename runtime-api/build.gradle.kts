@@ -16,4 +16,5 @@ kotlin {
 
 dependencies {
     api(libs.coroutines.core)
+    api(libs.kotlinx.serialization.json)
 }

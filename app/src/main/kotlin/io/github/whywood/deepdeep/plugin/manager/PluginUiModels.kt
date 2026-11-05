@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.IconRef
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginAction
 import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
@@ -45,6 +46,7 @@ data class PluginSnapshot(
     val description: String?,
     val version: String,
     val installedVersion: String?,
+    val previousVersion: String?,
     val sizeLabel: String?,
     val icon: IconRef?,
     val source: PluginSource,
@@ -112,4 +114,15 @@ fun PluginStatus.toUi(): PluginStatusUi = when (this) {
     is PluginStatus.Ready -> PluginStatusUi.Ready(label, account)
     is PluginStatus.NotReady -> PluginStatusUi.NotReady(label)
     is PluginStatus.Failed -> PluginStatusUi.Failed(label)
+}
+
+internal fun PluginAvailability.toUi(): PluginAvailabilityUi = when (this) {
+    is PluginAvailability.Available -> PluginAvailabilityUi.Available
+    is PluginAvailability.Unavailable -> PluginAvailabilityUi.Unavailable(reason)
+}
+
+internal fun PluginStatusUi.toApi(): PluginStatus = when (this) {
+    is PluginStatusUi.Ready -> PluginStatus.Ready(label, account)
+    is PluginStatusUi.NotReady -> PluginStatus.NotReady(label)
+    is PluginStatusUi.Failed -> PluginStatus.Failed(label)
 }

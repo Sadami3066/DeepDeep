@@ -62,6 +62,20 @@ class PluginFailureGuardTest {
     }
 
     @Test
+    fun detectForListsOnlyPluginMarkers() {
+        val guard = PluginFailureGuard(dir)
+        guard.mark("alpha@1.0.0:setup.content", "crash", 1L)
+        guard.mark("alpha@1.0.0:tool.card.content:card", "crash", 2L)
+        guard.mark("beta@1.0.0:setup.content", "crash", 3L)
+
+        assertEquals(
+            listOf("alpha@1.0.0:setup.content", "alpha@1.0.0:tool.card.content:card"),
+            guard.detectFor("alpha").map { it.key },
+        )
+        assertTrue(guard.detectFor("missing").isEmpty())
+    }
+
+    @Test
     fun clearForRemovesOnlyPluginMarkers() {
         val guard = PluginFailureGuard(dir)
         guard.mark("alpha@1.0.0:setup.content")

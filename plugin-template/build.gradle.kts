@@ -18,7 +18,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
 }
 
-val pluginApiVersion = "0.3.0"
+val pluginApiVersion = "0.4.0"
 
 android {
     namespace = "io.github.whywood.deepdeep.plugintemplate"
@@ -64,7 +64,12 @@ dependencies {
     compileOnly("androidx.compose.material3:material3")
 }
 
+private val SIGNING_FILE_SUFFIX_PRIVATE = ".pem"
+private val SIGNING_FILE_SUFFIX_PUBLIC = ".pub"
+
 val signingKeyFile = layout.projectDirectory.file(providers.gradleProperty("pluginSigningKey").getOrElse("keys/plugin-signing"))
+val signingPrivateKeyFile = File(signingKeyFile.asFile.parentFile, signingKeyFile.asFile.name + SIGNING_FILE_SUFFIX_PRIVATE)
+val signingPublicKeyFile = File(signingKeyFile.asFile.parentFile, signingKeyFile.asFile.name + SIGNING_FILE_SUFFIX_PUBLIC)
 val unsignedBundle = layout.buildDirectory.file("plugin/${project.name}.unsigned.ddp")
 val signedBundle = layout.buildDirectory.file("plugin/${project.name}.ddp")
 
@@ -118,6 +123,7 @@ val signPlugin = tasks.register("signPlugin") {
     description = "Signs the .ddp with an Ed25519 key and writes META-INF/plugin-signature.json."
     dependsOn(assemblePlugin)
     inputs.file(unsignedBundle)
+    inputs.files(signingPrivateKeyFile, signingPublicKeyFile)
     outputs.file(signedBundle)
     doLast {
         val source = unsignedBundle.get().asFile
@@ -169,8 +175,6 @@ private val SIGNATURE_ENTRY = "META-INF/plugin-signature.json"
 private val FIXED_ENTRY_TIME = 315532800000L
 private val DEX_ENTRY = Regex("classes[0-9]*\\.dex")
 private val NATIVE_ENTRY = Regex("lib/[^/]+/.+")
-private val SIGNING_FILE_SUFFIX_PRIVATE = ".pem"
-private val SIGNING_FILE_SUFFIX_PUBLIC = ".pub"
 
 private fun loadOrCreateEd25519KeyPair(base: File): KeyPair {
     val privateFile = File(base.parentFile, base.name + SIGNING_FILE_SUFFIX_PRIVATE)
@@ -190,6 +194,7 @@ private fun loadOrCreateEd25519KeyPair(base: File): KeyPair {
     publicFile.writeText(encodePem("PUBLIC KEY", keyPair.public.encoded))
     privateFile.setReadable(false, false)
     privateFile.setReadable(true, true)
+    privateFile.setWritable(false, false)
     privateFile.setWritable(true, true)
     privateFile.setExecutable(false, false)
     logger.lifecycle("Generated a new plugin signing key at ${privateFile.absolutePath}")

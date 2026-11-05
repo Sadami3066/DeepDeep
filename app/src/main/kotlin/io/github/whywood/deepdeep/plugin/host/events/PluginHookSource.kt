@@ -10,12 +10,20 @@ internal data class PluginHookSession(
     val file: String? = null,
 )
 
+internal data class HookSnapshot(
+    val version: Long,
+    val entries: List<PluginHooksEntry>,
+)
+
 internal fun interface PluginHookSource {
     fun entries(): List<PluginHooksEntry>
 }
 
-internal fun registryHookSource(registry: PluginRegistry): PluginHookSource =
-    PluginHookSource { registry.snapshot().hooks }
+internal class RuntimeHookSource(private val registry: PluginRegistry) : PluginHookSource {
+    override fun entries(): List<PluginHooksEntry> = registry.snapshot().hooks
+
+    fun snapshot(): HookSnapshot = registry.snapshot().let { HookSnapshot(it.version, it.hooks) }
+}
 
 internal class PluginRuntimeHooksFactory(
     private val source: PluginHookSource,

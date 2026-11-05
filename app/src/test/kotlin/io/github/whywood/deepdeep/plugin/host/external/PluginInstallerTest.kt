@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
-import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
@@ -46,7 +45,6 @@ class PluginInstallerTest {
         val record = (result as InstallResult.Installed).record
         assertEquals(SyntheticDdp.PLUGIN_ID, record.id)
         assertEquals(SyntheticDdp.PLUGIN_VERSION, record.version)
-        assertEquals(PluginPhase.INSTALLED, record.phase)
         assertEquals(key.keyId, record.publisherKeyId)
         assertTrue(record.enabled)
         assertEquals(PluginPaths.versionRoot(pluginsRoot, record.id, record.version).absolutePath, record.installPath)
@@ -132,7 +130,6 @@ class PluginInstallerTest {
         val pendingRecord = (staged as InstallResult.Staged).record
         assertEquals(SyntheticDdp.PLUGIN_VERSION, pendingRecord.version)
         assertEquals("2.0.0", pendingRecord.pendingVersion)
-        assertEquals(PluginPhase.PENDING_RESTART, pendingRecord.phase)
         assertTrue(installer.pendingBundle(pendingRecord.id) is BundleState.Ready)
         assertTrue(installer.activeBundle(pendingRecord.id) is BundleState.Ready)
 
@@ -141,7 +138,6 @@ class PluginInstallerTest {
         val record = (committed as CommitResult.Committed).record
         assertEquals("2.0.0", record.version)
         assertNull(record.pendingVersion)
-        assertEquals(PluginPhase.INSTALLED, record.phase)
         assertEquals(PluginPaths.versionRoot(pluginsRoot, record.id, "2.0.0").absolutePath, record.installPath)
         assertTrue(installer.activeBundle(record.id) is BundleState.Ready)
     }
@@ -157,7 +153,6 @@ class PluginInstallerTest {
         val record = installer.record(installed.id)!!
         assertEquals(SyntheticDdp.PLUGIN_VERSION, record.version)
         assertNull(record.pendingVersion)
-        assertEquals(PluginPhase.DEGRADED, record.phase)
         assertEquals("activation failed", record.lastError)
         assertTrue(installer.activeBundle(installed.id) is BundleState.Ready)
         assertFalse(PluginPaths.versionRoot(pluginsRoot, installed.id, "2.0.0").exists())
@@ -295,14 +290,90 @@ class PluginInstallerTest {
     }
 
     @Test
-    fun setEnabledUpdatesPhase() = runBlocking {
+    fun setEnabledUpdatesRecord() = runBlocking {
         val installer = installer()
         val record = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
 
         assertTrue(installer.setEnabled(record.id, false))
-        assertEquals(PluginPhase.DISABLED, installer.record(record.id)?.phase)
+        assertEquals(false, installer.record(record.id)?.enabled)
         assertTrue(installer.setEnabled(record.id, true))
-        assertEquals(PluginPhase.INSTALLED, installer.record(record.id)?.phase)
+        assertEquals(true, installer.record(record.id)?.enabled)
+    }
+
+    @Test
+    fun commitRecordsPreviousVersionAndKeepsItsFiles() = runBlocking {
+        val installer = installer()
+        val installed = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+        installer.install(packageV2())
+        val v2Path = PluginPaths.versionRoot(pluginsRoot, installed.id, "2.0.0").absolutePath
+
+        val committed = (installer.commitPending(installed.id) as CommitResult.Committed).record
+
+        assertEquals("2.0.0", committed.version)
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, committed.previousVersion)
+        assertEquals(installed.installPath, committed.previousInstallPath)
+        assertEquals(installed.activeBundleSha256, committed.previousBundleSha256)
+        assertEquals(v2Path, committed.installPath)
+        assertTrue(File(installed.installPath).isDirectory)
+        assertTrue(installer.activeBundle(installed.id) is BundleState.Ready)
+    }
+
+    @Test
+    fun laterCommitPrunesOldestPreviousVersion() = runBlocking {
+        val installer = installer()
+        val installed = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+        installer.install(packageV2())
+        val firstCommit = (installer.commitPending(installed.id) as CommitResult.Committed).record
+        installer.install(packageV3())
+
+        val committed = (installer.commitPending(installed.id) as CommitResult.Committed).record
+
+        assertEquals("3.0.0", committed.version)
+        assertEquals("2.0.0", committed.previousVersion)
+        assertEquals(firstCommit.installPath, committed.previousInstallPath)
+        assertFalse(File(installed.installPath).exists())
+        assertTrue(File(firstCommit.installPath).isDirectory)
+    }
+
+    @Test
+    fun markFailurePersistsLastErrorWithoutTouchingVersion() = runBlocking {
+        val installer = installer()
+        val installed = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+
+        assertTrue(installer.markFailure(installed.id, "activation failed"))
+        assertEquals("activation failed", installer.record(installed.id)?.lastError)
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, installer.record(installed.id)?.version)
+
+        assertTrue(installer.markFailure(installed.id, null))
+        assertNull(installer.record(installed.id)?.lastError)
+    }
+
+    @Test
+    fun rejectsHostReservedToolNames() = runBlocking {
+        val installer = installer()
+        val conflicting = SyntheticDdp.build(
+            dir,
+            "host-tool.dpp",
+            SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(tools = listOf("bash")), key = key),
+        )
+
+        val result = installer.install(conflicting, acceptPublisher = true)
+
+        assertEquals(InstallRejection.TOOL_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun uninstallRemovesActivePendingAndPreviousVersions() = runBlocking {
+        val installer = installer()
+        val installed = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+        installer.install(packageV2())
+        installer.commitPending(installed.id)
+        installer.install(packageV3())
+
+        assertTrue(installer.uninstall(installed.id))
+
+        assertNull(installer.record(installed.id))
+        assertFalse(PluginPaths.pluginRoot(pluginsRoot, installed.id).exists())
     }
 
     private fun installer(
@@ -323,5 +394,11 @@ class PluginInstallerTest {
         dir,
         "v2.dpp",
         SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(version = "2.0.0"), key = key),
+    )
+
+    private fun packageV3(): File = SyntheticDdp.build(
+        dir,
+        "v3.dpp",
+        SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(version = "3.0.0"), key = key),
     )
 }

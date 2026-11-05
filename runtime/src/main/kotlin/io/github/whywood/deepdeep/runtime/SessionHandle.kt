@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentMessage
-import dev.pi.ai.ImageContent
 import dev.pi.ai.Model
 import dev.pi.coding.session.QueueBehavior
 import dev.pi.coding.session.SessionEvent
@@ -26,7 +25,7 @@ interface SessionHandle {
     val model: Model
     val thinkingLevel: String
 
-    suspend fun prompt(text: String, images: List<ImageContent>? = null, behavior: QueueBehavior? = null)
+    suspend fun prompt(text: String, images: List<ImagePart>? = null, behavior: QueueBehavior? = null)
     fun abort()
     suspend fun close()
     fun subscribe(listener: suspend (SessionEvent) -> Unit): () -> Unit

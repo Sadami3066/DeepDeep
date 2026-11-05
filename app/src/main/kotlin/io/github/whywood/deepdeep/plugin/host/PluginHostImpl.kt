@@ -14,7 +14,6 @@ import io.github.whywood.deepdeep.plugin.api.NetworkService
 import io.github.whywood.deepdeep.plugin.api.NotificationService
 import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginHost
-import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import io.github.whywood.deepdeep.plugin.api.PrivilegeService
@@ -66,10 +65,6 @@ internal class PluginHostImpl(
 
     override fun text(source: LocalizedText, vararg args: Any): String = textResolver.resolve(source, args)
 
-    override fun log(level: Int, message: String) {
-        services.logs?.log(androidLogLevelToPluginLogLevel(level), message)
-    }
-
     override fun linux(): LinuxService = service("linux", services.linux)
 
     override fun privilege(): PrivilegeService = service("privilege", services.privilege)
@@ -109,15 +104,3 @@ internal class PluginHostImpl(
     private fun <T : Any> service(name: String, value: T?): T = value ?: throw PluginServiceUnavailable(name)
 }
 
-internal fun androidLogLevelToPluginLogLevel(level: Int): PluginLogLevel = when {
-    level >= ANDROID_LOG_ERROR -> PluginLogLevel.ERROR
-    level >= ANDROID_LOG_WARN -> PluginLogLevel.WARN
-    level >= ANDROID_LOG_INFO -> PluginLogLevel.INFO
-    else -> PluginLogLevel.DEBUG
-}
-
-private const val ANDROID_LOG_INFO = 4
-
-private const val ANDROID_LOG_WARN = 5
-
-private const val ANDROID_LOG_ERROR = 6

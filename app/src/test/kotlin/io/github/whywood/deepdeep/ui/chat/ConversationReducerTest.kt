@@ -10,7 +10,12 @@ import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -489,5 +494,83 @@ class ConversationReducerTest {
         val state = ConversationState(queuedInputs = listOf(QueuedInput(InputQueueKind.STEER, "s1")))
         val reduced = reduce(state, RuntimeEvent.QueuedInputsDropped(listOf("s1"), "run-1"), strings)
         assertTrue(reduced.queuedInputs.isEmpty())
+    }
+
+    @Test
+    fun toolEventsKeepStructuredArgumentsAndResultPayload() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        val rawArguments = buildJsonObject {
+            put("command", "ls")
+            put("limit", 5)
+        }
+        val payload = ToolResultPayload.Blocks(
+            listOf(
+                ToolResultPayload.Block.Text("hello"),
+                ToolResultPayload.Block.Image("aGk=", "image/png"),
+            ),
+        )
+        state = reduce(
+            state,
+            RuntimeEvent.ToolStarted(
+                runId = "run-1",
+                callId = "call-1",
+                name = "bash",
+                arguments = mapOf("command" to "ls"),
+                startedAt = 100L,
+                rawArguments = rawArguments,
+            ),
+            strings,
+        )
+        state = reduce(
+            state,
+            RuntimeEvent.ToolFinished(
+                runId = "run-1",
+                callId = "call-1",
+                name = "bash",
+                result = "hello",
+                isError = false,
+                durationMs = 10L,
+                payload = payload,
+            ),
+            strings,
+        )
+
+        val trace = (state.messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals(rawArguments, trace.rawArguments)
+        assertEquals(payload, trace.resultPayload)
+        assertEquals(5, trace.rawArguments!!["limit"]!!.jsonPrimitive.int)
+        assertEquals(ToolActivityStatus.DONE, trace.status)
+        assertEquals("hello", trace.output)
+    }
+
+    @Test
+    fun toolResultMatchesTraceByCallIdWhenInterleaved() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        state = reduce(
+            state,
+            RuntimeEvent.ToolStarted("run-1", "call-1", "bash", emptyMap(), 100L),
+            strings,
+        )
+        state = reduce(
+            state,
+            RuntimeEvent.ToolStarted("run-1", "call-2", "read", emptyMap(), 200L),
+            strings,
+        )
+        state = reduce(
+            state,
+            RuntimeEvent.ToolFinished("run-1", "call-2", "read", "second", false, 5L),
+            strings,
+        )
+        val steps = state.messages.single().steps.filterIsInstance<AssistantStep.Tool>().map { it.trace }
+        assertEquals("", steps[0].output.orEmpty())
+        assertEquals("second", steps[1].output)
+        assertEquals(ToolActivityStatus.RUNNING, steps[0].status)
+        assertEquals(ToolActivityStatus.DONE, steps[1].status)
     }
 }

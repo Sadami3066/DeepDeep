@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.plugin.api.AppInfo
 import io.github.whywood.deepdeep.plugin.api.AppInfoService
 import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
+import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.api.UiService
 import kotlinx.coroutines.CoroutineScope
@@ -20,20 +21,23 @@ internal class UiPluginService(
     private val openPageCallback: ((String) -> Unit)?,
 ) : UiService {
     override fun openUrl(url: String) {
-        openUrlCallback?.invoke(url)
+        callback(openUrlCallback, "ui.openUrl")(url)
     }
 
     override fun share(request: ShareRequest) {
-        shareCallback?.invoke(request)
+        callback(shareCallback, "ui.share")(request)
     }
 
     override fun toast(message: String) {
-        toastCallback?.invoke(message)
+        callback(toastCallback, "ui.toast")(message)
     }
 
     override fun openPage(pageId: String) {
-        openPageCallback?.invoke(pageId)
+        callback(openPageCallback, "ui.openPage")(pageId)
     }
+
+    private fun <T> callback(value: T?, service: String): T =
+        value ?: throw PluginServiceUnavailable(service)
 }
 
 internal class AppInfoPluginService(
