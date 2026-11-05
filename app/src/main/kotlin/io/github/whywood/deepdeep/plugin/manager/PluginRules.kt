@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
-import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 
 internal object PluginRules {
     fun installedVersion(manifest: PluginManifest, persistedVersion: String?, persistedInstalled: Boolean?): String? =
@@ -22,10 +21,11 @@ internal object PluginRules {
 
     fun canUninstall(manifest: PluginManifest): Boolean = manifest.installable
 
-    fun updateAvailable(record: ExternalPluginRecord?, installedVersion: String?): Boolean {
-        val pending = record?.pendingVersion ?: return false
-        return pending != installedVersion
-    }
+    fun updateAvailable(
+        manifestVersion: String,
+        installedVersion: String?,
+        pendingVersion: String?,
+    ): Boolean = pendingVersion == null && installedVersion != null && manifestVersion != installedVersion
 
     fun phase(
         enabled: Boolean,

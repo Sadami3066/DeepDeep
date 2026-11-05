@@ -42,15 +42,6 @@ internal class ExternalPluginRuntime(
     suspend fun markPhase(pluginId: String, phase: PluginPhase, error: String? = null): Boolean =
         installer.markPhase(pluginId, phase, error)
 
-    suspend fun activateOnStartup(): List<ExternalPluginRecord> {
-        val loaded = mutableListOf<ExternalPluginRecord>()
-        installer.records().forEach { record ->
-            val activated = activate(record)
-            if (activated != null) loaded += activated
-        }
-        return loaded
-    }
-
     suspend fun activate(record: ExternalPluginRecord): ExternalPluginRecord? {
         handles[record.id]?.let { existing ->
             if (!existing.isClosed && existing.matches(record.version, record.activeBundleSha256)) return record

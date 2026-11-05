@@ -154,13 +154,22 @@ class PluginHostManager internal constructor(
                 plugins[managed.manifest.id] = managed
                 registry.register(managed.toDescriptor())
             }
-            external?.activateOnStartup()?.forEach { record ->
+            external?.records()?.filter { it.enabled }?.forEach { record ->
+                val previousVersion = plugins[record.id]?.externalRecord?.version
+                val activated = external?.activate(record) ?: return@forEach
                 plugins[record.id]?.let { managed ->
-                    managed.externalRecord = record
-                    managed.installedVersion = record.version
-                    managed.enabled = record.enabled
+                    managed.externalRecord = activated
+                    managed.installedVersion = activated.version
+                    managed.enabled = activated.enabled
                 }
-                attachExternalHandle(record)
+                attachExternalHandle(activated)
+                if (previousVersion != null && previousVersion != activated.version) {
+                    plugins[record.id]?.let { managed ->
+                        managed.plugin?.let { plugin ->
+                            runCatching { plugin.onUpgrade(managed.host, previousVersion) }
+                        }
+                    }
+                }
             }
             settingsStore.warm(plugins.keys)
             plugins.values.forEach { managed ->
@@ -269,6 +278,11 @@ class PluginHostManager internal constructor(
                     )
                 } else {
                     external?.setEnabled(pluginId, enabled)
+                    if (enabled && managed.plugin == null) {
+                        external?.record(pluginId)?.let { record ->
+                            external?.activate(record)?.let(::attachExternalHandle)
+                        }
+                    }
                 }
                 managed.enabled = enabled
                 if (enabled) {
@@ -604,6 +618,13 @@ class PluginHostManager internal constructor(
         val support = externalUpdates ?: return "plugin updates are unavailable"
         return when (val result = support.stageUpdate(pluginId)) {
             is io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi.Staged -> {
+                external?.record(pluginId)?.let { record ->
+                    plugins[pluginId]?.let { managed ->
+                        managed.externalRecord = record
+                        managed.phase = PluginPhase.PENDING_RESTART
+                        registry.updatePhase(pluginId, PluginPhase.PENDING_RESTART)
+                    }
+                }
                 refreshNow()
                 null
             }
@@ -753,13 +774,17 @@ class PluginHostManager internal constructor(
             PluginContributions.Empty
         }
         managed.contributions = contributions
-        managed.phase = PluginRules.phase(
-            enabled = managed.enabled,
-            installedVersion = managed.installedVersion,
-            installable = managed.manifest.installable,
-            availability = managed.availability,
-            status = managed.status,
-        )
+        managed.phase = if (managed.externalRecord?.pendingVersion != null) {
+            PluginPhase.PENDING_RESTART
+        } else {
+            PluginRules.phase(
+                enabled = managed.enabled,
+                installedVersion = managed.installedVersion,
+                installable = managed.manifest.installable,
+                availability = managed.availability,
+                status = managed.status,
+            )
+        }
         registry.updatePhase(managed.manifest.id, managed.phase, managed.error)
         registry.updateContributions(managed.manifest.id, contributions)
     }
@@ -916,7 +941,7 @@ class PluginHostManager internal constructor(
         PluginRules.isActive(enabled, installedVersion, availability, phase)
 
     private fun ManagedPlugin.updateAvailable(): Boolean =
-        PluginRules.updateAvailable(externalRecord, installedVersion)
+        PluginRules.updateAvailable(manifest.version, installedVersion, externalRecord?.pendingVersion)
 
     private fun ManagedPlugin.toDescriptor(): PluginDescriptor = PluginDescriptor(
         manifest = manifest,

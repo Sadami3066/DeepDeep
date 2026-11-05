@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
-import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,20 +45,11 @@ class PluginRulesTest {
     }
 
     @Test
-    fun updateAvailabilityComesFromPendingRecord() {
-        assertFalse(PluginRules.updateAvailable(null, "1.0.0"))
-        assertFalse(
-            PluginRules.updateAvailable(
-                record(version = "1.0.0", pendingVersion = null),
-                "1.0.0",
-            ),
-        )
-        assertTrue(
-            PluginRules.updateAvailable(
-                record(version = "1.0.0", pendingVersion = "1.1.0"),
-                "1.0.0",
-            ),
-        )
+    fun updateAvailabilityNeedsVersionMismatchAndNoPendingRestart() {
+        assertFalse(PluginRules.updateAvailable("1.0.0", null, null))
+        assertFalse(PluginRules.updateAvailable("1.0.0", "1.0.0", null))
+        assertFalse(PluginRules.updateAvailable("1.1.0", "1.0.0", "1.1.0"))
+        assertTrue(PluginRules.updateAvailable("1.1.0", "1.0.0", null))
     }
 
     @Test
@@ -104,20 +94,4 @@ class PluginRulesTest {
         )
     }
 
-    private fun record(version: String, pendingVersion: String?): ExternalPluginRecord =
-        ExternalPluginRecord(
-            id = "test",
-            version = version,
-            installedAt = 0,
-            enabled = true,
-            skillIds = emptyList(),
-            installPath = "/tmp/test",
-            activeBundleSha256 = "0".repeat(64),
-            size = 0,
-            publisherKeyId = "ed25519:test",
-            apiLevel = 1,
-            uiApiLevel = 1,
-            phase = PluginPhase.INSTALLED,
-            pendingVersion = pendingVersion,
-        )
 }
