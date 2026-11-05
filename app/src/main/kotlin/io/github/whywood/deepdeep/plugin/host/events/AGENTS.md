@@ -11,6 +11,7 @@
 | `PluginEventBus.kt` | 观察型事件总线：每次分发取一次快照、逐个插件按 5s 超时派发、异常/超时隔离并聚合失败 |
 | `PluginHookDispatchers.kt` | 四类变换/闸门：提示词链式变换（fail-open）、输入变换（Handled 短路、错误 fail-open）、工具前闸门（Block 短路、错误/超时 fail-closed）、工具后结果链（错误/超时 fail-open） |
 | `PluginToolResultConversion.kt` | SDK `AgentToolResult` ↔ `PluginToolResult` 边界转换（文本/Rich/图片 base64/FileRef 文本行/details/isError） |
+| `RuntimeEventMapper.kt` | runtime `RuntimeEvent`/pi SDK `SessionEvent` → `PluginEvent` 映射与分发（emit 注入，runtime fallback 开关） |
 | `PluginRuntimeHooksAdapter.kt` | 绑定单个会话，把分派器暴露为 runtime 的 `promptTransform`/`inputHandler`/`toolHooks` 与 `emit(event)` |
 
 ## 要点
