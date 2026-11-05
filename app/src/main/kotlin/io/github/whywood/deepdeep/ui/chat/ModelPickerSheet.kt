@@ -49,7 +49,7 @@ internal fun ModelPickerSheet(
     onProviderChange: (String) -> Unit,
     onModelChange: (String) -> Unit,
     onThinkingLevelChange: (ThinkingLevel) -> Unit,
-    onOpenSettings: () -> Unit,
+    onManageProviders: () -> Unit,
 ) {
     val colors = deepDeepColors()
     var showProviders by remember { mutableStateOf(false) }
@@ -190,7 +190,7 @@ internal fun ModelPickerSheet(
             title = stringResource(R.string.assistant_model_manage_providers),
             onClick = {
                 onDismiss()
-                onOpenSettings()
+                onManageProviders()
             },
             showChevron = true,
             modifier = Modifier.padding(horizontal = 24.dp),

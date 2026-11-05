@@ -114,7 +114,7 @@ data class ChatScreenActions(
     val onSend: () -> Unit,
     val onStop: () -> Unit,
     val onOpenDrawer: () -> Unit,
-    val onOpenSettings: () -> Unit,
+    val onManageProviders: () -> Unit,
     val onReload: () -> Unit,
     val onModelChange: (String) -> Unit,
     val onProviderChange: (String) -> Unit,
@@ -174,7 +174,7 @@ fun ChatScreen(
     voiceLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
     val (
-        onInputChange, onSend, onStop, onOpenDrawer, onOpenSettings, onReload,
+        onInputChange, onSend, onStop, onOpenDrawer, onManageProviders, onReload,
         onModelChange, onProviderChange, onThinkingLevelChange, onToggleStep,
         onQuoteMessage, onClearQuote, onPickAttachment, onRemoveAttachment,
         onOpenAttachment, onOpenFile, onOpenTimers, onRetry, onPickCommand,
@@ -570,7 +570,7 @@ fun ChatScreen(
                         onPickAttachment = onPickAttachment,
                         onRemoveAttachment = onRemoveAttachment,
                         onOpenAttachment = onOpenAttachment,
-                        onOpenSettings = onOpenSettings,
+                        onManageProviders = onManageProviders,
                         onFollowUp = onFollowUp,
                         onClearQueue = onClearQueue,
                         onModelsOpenChange = onModelsOpenChange,

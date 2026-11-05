@@ -416,6 +416,11 @@ internal fun DeepDeepApp(
         navigator.push(AppDestination.Settings)
     }
 
+    fun openProviders() {
+        drawerOpen = false
+        navigator.push(AppDestination.Providers)
+    }
+
     fun back() {
         if (drawerOpen) {
             drawerOpen = false
@@ -460,7 +465,7 @@ internal fun DeepDeepApp(
                         onSend = ::submitChatInput,
                         onStop = chatViewModel::stop,
                         onOpenDrawer = { drawerOpen = true },
-                        onOpenSettings = ::openSettings,
+                        onManageProviders = ::openProviders,
                         onReload = {
                                                 scope.launch {
                                                     val result = chatViewModel.reloadSession()

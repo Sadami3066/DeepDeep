@@ -119,7 +119,7 @@ data class ChatComposerActions(
     val onPickAttachment: () -> Unit,
     val onRemoveAttachment: (String) -> Unit,
     val onOpenAttachment: (AttachmentRef) -> Unit,
-    val onOpenSettings: () -> Unit,
+    val onManageProviders: () -> Unit,
     val onFollowUp: () -> Unit,
     val onClearQueue: () -> Unit,
     val onModelsOpenChange: (Boolean) -> Unit,
@@ -294,7 +294,7 @@ internal fun ChatComposer(
                                 if (state.configured || state.providers.isNotEmpty()) {
                                     pendingExpand = true
                                 } else {
-                                    actions.onOpenSettings()
+                                    actions.onManageProviders()
                                 }
                             },
                             onPickAttachment = actions.onPickAttachment,
@@ -323,7 +323,7 @@ internal fun ChatComposer(
                     Spacer(Modifier.weight(1f))
                     DdTextAction(
                         text = stringResource(R.string.assistant_open_settings),
-                        onClick = actions.onOpenSettings,
+                        onClick = actions.onManageProviders,
                     )
                 }
             }
@@ -343,7 +343,7 @@ internal fun ChatComposer(
             onProviderChange = actions.onProviderChange,
             onModelChange = actions.onModelChange,
             onThinkingLevelChange = actions.onThinkingLevelChange,
-            onOpenSettings = actions.onOpenSettings,
+            onManageProviders = actions.onManageProviders,
         )
     }
 }
@@ -593,7 +593,7 @@ private fun ChatComposerExpandedContent(
                 if (state.configured || state.providers.isNotEmpty()) {
                     actions.onModelsOpenChange(true)
                 } else {
-                    actions.onOpenSettings()
+                    actions.onManageProviders()
                 }
             },
             enabled = !state.sending,

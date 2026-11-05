@@ -258,7 +258,7 @@ internal fun AssistantOverlayComposer(
                 showModelSheet = false
                 actions.onSelectThinking(level)
             },
-            onOpenSettings = {
+            onManageProviders = {
                 showModelSheet = false
                 state.sessionId?.let(actions.onOpenInApp)
             },
