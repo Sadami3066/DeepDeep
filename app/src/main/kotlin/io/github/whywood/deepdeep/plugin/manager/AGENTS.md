@@ -20,3 +20,4 @@
 - 外部记录 v4 在 `host/external/ExternalPluginRecordStore`；内置启用/安装状态在本目录 store；两者都原子写。
 - `bindSessionHooks` 把会话级 `PluginRuntimeHooksAdapter` 绑定到 engine 的 hooks delegate，`onRuntimeEvent` 负责运行期事件派发；会话关闭解绑。
 - 外部安装/更新只做「校验 + 暂存」，不静默生效；`PENDING_RESTART` 在下一次进程启动提交。
+- setup 与插件动作在独立 `Job` 上执行：`cancelInteraction` 取消 sheet 并立即中断正在跑的 CLI/登录流程；`cancelSetup(pluginId)` 供 `plugin_setup` 的运行取消信号同步取消，取消结果以 `PluginSetupResult.cancelled` 返回而不是抛异常。

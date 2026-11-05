@@ -2,6 +2,9 @@
 
 ## HEAD (since m2)
 
+- fix: 插件详情页首次进入立即返回（列表状态未镜像前误判插件不存在） [插件]
+- fix: 插件 setup / 插件动作取消后仍阻塞到 CLI 超时；sheet 取消与对话停止现在会立即取消底层流程 [插件] [运行时]
+- fix: 示例外部插件补齐 `assets/icon.png`，安装后列表/详情显示插件图标 [插件]
 - feat: 插件自定义消息卡：`host.chat().postCustomMessage` 写入会话 JSONL、实时出现在聊天、`chat.message:<type>` 槽位自绘，重开会话仍可还原
 - feat: runtime 暴露 SDK 会话事件流，插件事件面补齐模型/压缩/重试/MCP 事件（不再依赖 fallback）
 - feat: 插件页新增「插件源」设置（索 URL 与启动自动检查），检查到更新后直接暂存、下次启动生效

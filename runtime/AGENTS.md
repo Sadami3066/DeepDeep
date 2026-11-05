@@ -42,7 +42,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |
 | `QuestionPersistence.kt` | 待答问题落盘，重启后提示曾中断 |
 | `PresentTool.kt` | present 交付：文件、图片、视频、HTML、创意 |
-| `PluginTools.kt` | plugin_setup：拉起插件安装与连接流程 |
+| `PluginTools.kt` | plugin_setup：拉起插件安装与连接流程；监听运行取消信号并同步取消插件 setup |
 | `WorkspacePaths.kt` | 强制文件工具绝对路径，输出补全目录前缀 |
 
 ### Provider、凭据与 MCP
