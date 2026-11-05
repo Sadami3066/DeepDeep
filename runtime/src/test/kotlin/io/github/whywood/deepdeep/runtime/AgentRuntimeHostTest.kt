@@ -206,6 +206,23 @@ class AgentRuntimeHostTest {
 
 
     @Test
+    fun reconfigureKeepsUnpersistedSessionAttached() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val opened = fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+            assertEquals(1, fixture.engine.createCount)
+
+            fixture.host.reconfigure()
+
+            assertEquals(1, fixture.engine.createCount)
+            fixture.host.send(opened.sessionId, "first")
+            assertEquals(listOf("first"), fixture.engine.handles[0].prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun activityFollowsRetryLifecycleAndResetsOnRecovery() = runTest {
         val fixture = Fixture(backgroundScope)
         val received = mutableListOf<SessionRuntimeEvent>()
@@ -336,6 +353,10 @@ class AgentRuntimeHostTest {
 
         fun addSession(id: String): String {
             val file = sessionFile(id)
+            File(file).apply {
+                parentFile?.mkdirs()
+                writeText("{}")
+            }
             catalog.sessions += ConversationSummary(
                 id = id,
                 title = id,

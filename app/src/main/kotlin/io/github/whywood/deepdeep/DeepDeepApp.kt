@@ -167,7 +167,10 @@ internal fun DeepDeepApp(
         if (onboardingDecision == ONBOARDING_DECISION_ONBOARDING) {
             OnboardingScreen(
                 graph = graph,
-                onFinished = { onboardingDecision = ONBOARDING_DECISION_CHAT },
+                onFinished = {
+                    onboardingDecision = ONBOARDING_DECISION_CHAT
+                    chatViewModel.newSession(AgentRuntimeHost.HOME_ID)
+                },
             )
         } else {
             OnboardingSplash()

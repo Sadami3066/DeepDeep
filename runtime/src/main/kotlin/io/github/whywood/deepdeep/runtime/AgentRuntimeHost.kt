@@ -698,6 +698,7 @@ class AgentRuntimeHost internal constructor(
                 mutex.withLock {
                     if (!commands.ownsReconfigure(sessionId, token)) return@withLock
                     val handle = handles[sessionId] ?: return@withLock
+                    if (!isPersistedSession(handle)) return@withLock
                     val cwd = handle.cwd
                     val file = handle.session.sessionFile
                     val selected = lastOpenedSessionId == sessionId
@@ -714,6 +715,12 @@ class AgentRuntimeHost internal constructor(
             if (reattached) sweepIdleHandles()
             if (!again) return
         }
+    }
+
+    private fun isPersistedSession(handle: Handle): Boolean {
+        val path = handle.session.sessionFile ?: return false
+        val file = File(path)
+        return file.isFile && file.length() > 0L
     }
 
     private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
