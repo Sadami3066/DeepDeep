@@ -62,6 +62,19 @@ class PluginFailureGuardTest {
     }
 
     @Test
+    fun clearForRemovesOnlyPluginMarkers() {
+        val guard = PluginFailureGuard(dir)
+        guard.mark("alpha@1.0.0:setup.content")
+        guard.mark("alpha@1.0.0:tool.card.content:card")
+        guard.mark("beta@1.0.0:setup.content")
+
+        assertEquals(2, guard.clearFor("alpha"))
+        assertNull(guard.detect("alpha@1.0.0:setup.content"))
+        assertNull(guard.detect("alpha@1.0.0:tool.card.content:card"))
+        assertEquals("beta@1.0.0:setup.content", guard.detect("beta@1.0.0:setup.content")?.key)
+    }
+
+    @Test
     fun keyCharactersAreSafeForFileNames() {
         val guard = PluginFailureGuard(dir)
         guard.mark("plugin.detail.section:my-section", "boom", 7L)

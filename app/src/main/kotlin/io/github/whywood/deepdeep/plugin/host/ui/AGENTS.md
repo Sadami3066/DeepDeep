@@ -1,4 +1,4 @@
-# plugin/host/ui · 插件 UI 宿主
+# plugin/host/ui · 插件 UI 宿主（图标渲染由 `ui/plugins/PluginUiSupport.kt` 的 `PluginIcon` 负责）
 
 插件 UI 贡献的宿主侧：槽位注册与解析、声明式节点渲染、Compose 槽宿主、图标解析与崩溃标记。插件只提供 `plugin-api` 数据（`PluginUiContributions`、`UiNode`、`SlotState`）；本目录不持有插件实例，也不做业务装配。
 
@@ -9,7 +9,6 @@
 | `SlotRegistry.kt` | 从 `PluginRegistrySnapshot` 解析槽位绑定：按 slotId 过滤、只保留可贡献相位、按 priority 降序 + 插件注册顺序排序、Compose 兼容性判定、解析每个绑定的 `assetsDir` |
 | `PluginSlotHost.kt` | 槽位渲染入口：取第一个可渲染绑定，声明式交给渲染器、Compose 直接 `render(state)`；无绑定/不可渲染/上次崩溃时走 fallback；渲染前写崩溃标记、成功后清除 |
 | `DeclarativeUiRenderer.kt` | `UiNode` 树 → Compose（column/row/text/markdown/image/button/link/progress/divider/spacer/qr_code），图片按插件 `assetsDir` 读本地文件 |
-| `PluginIconHost.kt` | `IconRef` → Compose：`Resource` 走 DdIcon，`Asset` 按 `assetsDir` 解码本地图片（路径安全校验，失败不渲染） |
 
 ## 要点
 

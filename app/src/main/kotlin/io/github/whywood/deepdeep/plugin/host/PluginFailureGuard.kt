@@ -46,6 +46,13 @@ class PluginFailureGuard(private val dir: File) {
         return files.count { it.delete() }
     }
 
+    fun clearFor(pluginId: String): Int {
+        val prefix = "$pluginId@"
+        return detectAll()
+            .filter { marker -> marker.key.startsWith(prefix) }
+            .count { marker -> clear(marker.key) }
+    }
+
     private fun markerFiles(): List<File> =
         dir.listFiles { file ->
             file.isFile && file.name.startsWith(FILE_PREFIX) && file.name.endsWith(FILE_SUFFIX)
