@@ -116,14 +116,14 @@ private val Dark = DeepDeepColors(
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }
 
 enum class DdFontStyle(val id: String, val displayName: String) {
-    OPEN_RUNDE("open-runde", "Open Runde"),
     FREDOKA("fredoka", "Fredoka"),
+    OPEN_RUNDE("open-runde", "Open Runde"),
     LORA("lora", "Lora"),
     MANROPE("manrope", "Manrope"),
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: OPEN_RUNDE
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: FREDOKA
     }
 }
 
@@ -144,7 +144,7 @@ object DdFonts {
 
     private val preloadedFonts = openRundeFonts + fredokaFonts + loraFonts + manropeFonts
 
-    var style: DdFontStyle = DdFontStyle.OPEN_RUNDE
+    var style: DdFontStyle = DdFontStyle.FREDOKA
         private set
 
     fun apply(style: DdFontStyle) {
