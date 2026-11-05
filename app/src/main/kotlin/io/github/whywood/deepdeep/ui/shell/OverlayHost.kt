@@ -209,7 +209,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },
                 onOpenMcp = { actions.onNavigate(AppDestination.Mcp) },
                 onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },
-                onScheduled = { actions.onNavigate(AppDestination.Schedules) },
+                onOpenTimers = { actions.onNavigate(AppDestination.Timers) },
                 onCreateWorkspace = actions.onCreateWorkspace,
                 onToggleWorkspaceExpanded = actions.onToggleWorkspaceExpanded,
                 onToggleWorkspacePinned = actions.onToggleWorkspacePinned,

@@ -55,8 +55,8 @@
     <string name="plugins_internal_goal_summary">跨回合推进长期目标，支持暂停、恢复与自动续跑。</string>
     <string name="plugins_internal_jobs_name">后台任务</string>
     <string name="plugins_internal_jobs_summary">启动、查看并终止后台命令任务。</string>
-    <string name="plugins_internal_schedule_name">定时任务</string>
-    <string name="plugins_internal_schedule_summary">在当前会话里创建提醒和周期任务。</string>
+    <string name="plugins_internal_timer_name">定时任务</string>
+    <string name="plugins_internal_timer_summary">在当前会话里创建提醒和周期任务。</string>
     <string name="plugins_internal_workshop_name">创意工坊</string>
     <string name="plugins_internal_workshop_summary">创建、编辑并加载 Workshop 迷你应用。</string>
     <string name="plugins_tab_external">外部</string>

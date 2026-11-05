@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,7 +56,7 @@ fun DdTimePicker(
     var minute by remember { mutableStateOf(selected.minute) }
 
     DdSheet(onDismiss = onDismiss) {
-        SchedulePickerHeader(title = stringResource(R.string.schedules_time_label), onDismiss = onDismiss)
+        TimerPickerHeader(title = stringResource(R.string.timers_time_label), onDismiss = onDismiss)
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
             horizontalArrangement = Arrangement.spacedBy(24.dp),
@@ -86,7 +86,7 @@ fun DdTimePicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdTextAction(
-                text = stringResource(R.string.schedules_done),
+                text = stringResource(R.string.timers_done),
                 onClick = onDismiss,
                 color = colors.ink,
             )

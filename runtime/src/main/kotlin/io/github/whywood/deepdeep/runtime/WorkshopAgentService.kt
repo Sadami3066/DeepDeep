@@ -47,7 +47,7 @@ private const val AGENT_DIR = "agent"
 private const val APPEND_SYSTEM_PROMPT_FILE = "APPEND_SYSTEM.md"
 
 internal val ONE_SHOT_UNAVAILABLE_TOOLS = setOf(
-    "get_goal", "create_goal", "update_goal", "schedule_create", "schedule_list", "schedule_update", "schedule_delete", "present",
+    "get_goal", "create_goal", "update_goal", "timer_create", "timer_list", "timer_update", "timer_delete", "present",
 )
 
 class WorkshopAgentService(

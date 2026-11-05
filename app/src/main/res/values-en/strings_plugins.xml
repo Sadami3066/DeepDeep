@@ -55,8 +55,8 @@
     <string name="plugins_internal_goal_summary">Advance long-running goals across turns with pause, resume and automatic continuation.</string>
     <string name="plugins_internal_jobs_name">Background jobs</string>
     <string name="plugins_internal_jobs_summary">Start, inspect and stop background command jobs.</string>
-    <string name="plugins_internal_schedule_name">Schedules</string>
-    <string name="plugins_internal_schedule_summary">Create reminders and recurring tasks in this conversation.</string>
+    <string name="plugins_internal_timer_name">Timer</string>
+    <string name="plugins_internal_timer_summary">Create reminders and recurring tasks in this conversation.</string>
     <string name="plugins_internal_workshop_name">Workshop</string>
     <string name="plugins_internal_workshop_summary">Create, edit and load Workshop mini apps.</string>
     <string name="plugins_tab_external">External</string>

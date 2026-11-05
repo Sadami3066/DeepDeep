@@ -572,7 +572,7 @@ class WorkshopAgentServiceTest {
             val transcript = modelRequests.last().toString()
             assertTrue(transcript.contains("outside content"))
             assertFalse(transcript.contains("create_goal"))
-            assertFalse(transcript.contains("schedule_create"))
+            assertFalse(transcript.contains("timer_create"))
             assertFalse(transcript.contains("Deliver finished work with present"))
             modelCalls = 0
             cancelOnReply = true

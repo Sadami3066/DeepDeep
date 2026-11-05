@@ -45,7 +45,7 @@ data class ChatTopBarState(
 data class ChatTopBarActions(
     val onMenu: () -> Unit,
     val onReload: () -> Unit,
-    val onOpenSchedules: () -> Unit,
+    val onOpenTimers: () -> Unit,
     val onOpenUsage: () -> Unit,
     val onOpenJobs: () -> Unit,
     val onOpenFiles: () -> Unit = {},
@@ -113,7 +113,7 @@ internal fun ChatTopBar(
                     if (state.reminderCount > 0) {
                         DdIconButton(
                             icon = DdIcons.Clock,
-                            onClick = actions.onOpenSchedules,
+                            onClick = actions.onOpenTimers,
                             contentDescription = stringResource(R.string.assistant_reminders),
                             modifier = Modifier.testTag("assistant_reminders"),
                             size = TopBarIconButtonSize,

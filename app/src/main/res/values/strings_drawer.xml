@@ -3,7 +3,7 @@
     <string name="drawer_nav_skills">技能</string>
     <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_plugins">插件</string>
-    <string name="drawer_nav_scheduled">定时任务</string>
+    <string name="drawer_nav_timer">定时任务</string>
     <string name="drawer_account_hint">设置</string>
     <string name="drawer_archived_count">%1$d</string>
     <string name="drawer_archived_title">已归档</string>

@@ -24,7 +24,7 @@ sealed interface DeepLink {
                 "settings" -> rootPage(segments, AppDestination.Settings)
                 "mcp" -> rootPage(segments, AppDestination.Mcp)
                 "skills" -> rootPage(segments, AppDestination.Skills)
-                "schedules" -> rootPage(segments, AppDestination.Schedules)
+                "timers" -> rootPage(segments, AppDestination.Timers)
                 "plugins" -> pluginPage(segments)
                 "workshop" -> workshopPage(segments)
                 else -> null

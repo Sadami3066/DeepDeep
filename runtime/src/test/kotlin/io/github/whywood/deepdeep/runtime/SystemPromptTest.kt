@@ -118,7 +118,7 @@ class SystemPromptTest {
         val rules = buildToolRuleSection(listOf(tool("job_start", "Use job_output to read new output."))).getValue("rules")
 
         assertTrue(rules.contains("job_output"))
-        assertFalse(rules.contains("schedule_create"))
+        assertFalse(rules.contains("timer_create"))
         assertFalse(rules.contains("virtual_screen"))
     }
 

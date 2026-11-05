@@ -1,12 +1,12 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.runtime.NewSchedule
+import io.github.whywood.deepdeep.runtime.NewTimer
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
-import io.github.whywood.deepdeep.runtime.Schedule
-import io.github.whywood.deepdeep.runtime.SchedulePatch
-import io.github.whywood.deepdeep.runtime.ScheduleTrigger
+import io.github.whywood.deepdeep.runtime.Timer
+import io.github.whywood.deepdeep.runtime.TimerPatch
+import io.github.whywood.deepdeep.runtime.TimerTrigger
 import java.io.IOException
 import java.time.LocalTime
 import kotlinx.coroutines.CompletableDeferred
@@ -24,16 +24,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SchedulesStateHolderTest {
+class TimersStateHolderTest {
     @Test
     fun loadPublishesItemsAndResolvesConversationTitles() = runTest {
-        val source = FakeSchedulesSource()
+        val source = FakeTimersSource()
         source.items.value = listOf(
-            schedule("morning", "Morning brief", sessionId = "session-a"),
-            schedule("clear", "Clear inbox", sessionId = "session-b"),
+            timer("morning", "Morning brief", sessionId = "session-a"),
+            timer("clear", "Clear inbox", sessionId = "session-b"),
         )
         source.titles = mapOf("session-a" to "Weekly planning", "session-b" to null)
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val holder = TimersStateHolder(source, backgroundScope)
 
         holder.load()
         runCurrent()
@@ -47,9 +47,9 @@ class SchedulesStateHolderTest {
 
     @Test
     fun loadFailureSetsErrorAndStopsLoading() = runTest {
-        val source = FakeSchedulesSource()
+        val source = FakeTimersSource()
         source.listFailure = IOException("boom")
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val holder = TimersStateHolder(source, backgroundScope)
 
         holder.load()
 
@@ -61,9 +61,9 @@ class SchedulesStateHolderTest {
 
     @Test
     fun saveFailureKeepsEditorOpenAndSetsError() = runTest {
-        val source = FakeSchedulesSource()
+        val source = FakeTimersSource()
         source.createFailure = IOException("disk full")
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
         holder.openNew()
 
@@ -72,14 +72,14 @@ class SchedulesStateHolderTest {
         val state = holder.state.value
         assertTrue(state.editorOpen)
         assertFalse(state.busy)
-        assertEquals(R.string.schedule_error_save_failed, state.errorRes)
+        assertEquals(R.string.timer_error_save_failed, state.errorRes)
         assertEquals(1, source.createCalls)
     }
 
     @Test
     fun saveSuccessClosesEditor() = runTest {
-        val source = FakeSchedulesSource()
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val source = FakeTimersSource()
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
         holder.openNew()
 
@@ -93,42 +93,42 @@ class SchedulesStateHolderTest {
     }
 
     @Test
-    fun setEnabledWritesSchedulePatch() = runTest {
-        val source = FakeSchedulesSource()
-        source.items.value = listOf(schedule("morning", "Morning brief"))
-        val holder = SchedulesStateHolder(source, backgroundScope)
+    fun setEnabledWritesTimerPatch() = runTest {
+        val source = FakeTimersSource()
+        source.items.value = listOf(timer("morning", "Morning brief"))
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
 
         holder.setEnabled("morning", false)
         runCurrent()
 
-        assertEquals(listOf("morning" to SchedulePatch(enabled = false)), source.updates)
+        assertEquals(listOf("morning" to TimerPatch(enabled = false)), source.updates)
         assertFalse(holder.state.value.items.single().enabled)
         assertNull(holder.state.value.errorRes)
     }
 
     @Test
     fun setEnabledFailureSetsError() = runTest {
-        val source = FakeSchedulesSource()
-        source.items.value = listOf(schedule("morning", "Morning brief"))
+        val source = FakeTimersSource()
+        source.items.value = listOf(timer("morning", "Morning brief"))
         source.updateFailure = IOException("read-only")
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
 
         holder.setEnabled("morning", false)
 
-        assertEquals(R.string.schedule_error_save_failed, holder.state.value.errorRes)
+        assertEquals(R.string.timer_error_save_failed, holder.state.value.errorRes)
     }
 
     @Test
     fun queryFiltersByNamePromptAndConversationTitle() = runTest {
-        val source = FakeSchedulesSource()
+        val source = FakeTimersSource()
         source.items.value = listOf(
-            schedule("morning", "Morning brief", prompt = "Summarize today's news", sessionId = "session-a"),
-            schedule("clear", "Clear inbox", prompt = "Triage unread mail", sessionId = "session-b"),
+            timer("morning", "Morning brief", prompt = "Summarize today's news", sessionId = "session-a"),
+            timer("clear", "Clear inbox", prompt = "Triage unread mail", sessionId = "session-b"),
         )
         source.titles = mapOf("session-a" to "Weekly planning")
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
 
         holder.setQuery("planning")
@@ -143,8 +143,8 @@ class SchedulesStateHolderTest {
 
     @Test
     fun concurrentRefreshCoalescesIntoOneLoad() = runTest {
-        val source = FakeSchedulesSource()
-        val holder = SchedulesStateHolder(source, backgroundScope)
+        val source = FakeTimersSource()
+        val holder = TimersStateHolder(source, backgroundScope)
         holder.load()
         assertEquals(1, source.listCalls)
 
@@ -161,7 +161,7 @@ class SchedulesStateHolderTest {
         assertNull(holder.state.value.errorRes)
     }
 
-    private fun draft(sessionId: String = "session-a") = ScheduleDraft(
+    private fun draft(sessionId: String = "session-a") = TimerDraft(
         name = "Morning brief",
         prompt = "Summarize today's news",
         sessionId = sessionId,
@@ -169,63 +169,63 @@ class SchedulesStateHolderTest {
         cwd = "/work",
     )
 
-    private fun schedule(id: String, name: String, prompt: String = "prompt", sessionId: String = "") = Schedule(
+    private fun timer(id: String, name: String, prompt: String = "prompt", sessionId: String = "") = Timer(
         id = id,
         name = name,
         prompt = prompt,
-        trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+        trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
         sessionId = sessionId,
         sessionFile = "/work/$id.jsonl",
         cwd = "/work",
     )
 
-    private class FakeSchedulesSource : SchedulesDataSource {
-        val items = MutableStateFlow<List<Schedule>>(emptyList())
-        override val schedules: StateFlow<List<Schedule>> = items
+    private class FakeTimersSource : TimersDataSource {
+        val items = MutableStateFlow<List<Timer>>(emptyList())
+        override val timers: StateFlow<List<Timer>> = items
         var listCalls = 0
         var createCalls = 0
-        val updates = mutableListOf<Pair<String, SchedulePatch>>()
+        val updates = mutableListOf<Pair<String, TimerPatch>>()
         var listFailure: Exception? = null
         var createFailure: Exception? = null
         var updateFailure: Exception? = null
         var listGate: CompletableDeferred<Unit>? = null
         var titles: Map<String, String?> = emptyMap()
 
-        override suspend fun list(): List<Schedule> {
+        override suspend fun list(): List<Timer> {
             listCalls++
             listGate?.await()
             listFailure?.let { throw it }
             return items.value
         }
 
-        override suspend fun create(newSchedule: NewSchedule): Schedule {
+        override suspend fun create(newTimer: NewTimer): Timer {
             createCalls++
             createFailure?.let { throw it }
-            val created = Schedule(
+            val created = Timer(
                 id = "created",
-                name = newSchedule.name,
-                prompt = newSchedule.prompt,
-                trigger = newSchedule.trigger,
-                enabled = newSchedule.enabled,
-                sessionId = newSchedule.sessionId,
-                sessionFile = newSchedule.sessionFile,
-                cwd = newSchedule.cwd,
+                name = newTimer.name,
+                prompt = newTimer.prompt,
+                trigger = newTimer.trigger,
+                enabled = newTimer.enabled,
+                sessionId = newTimer.sessionId,
+                sessionFile = newTimer.sessionFile,
+                cwd = newTimer.cwd,
             )
             items.value = items.value + created
             return created
         }
 
-        override suspend fun update(id: String, patch: SchedulePatch): Schedule? {
+        override suspend fun update(id: String, patch: TimerPatch): Timer? {
             updates += id to patch
             updateFailure?.let { throw it }
-            items.value = items.value.map { schedule ->
-                if (schedule.id != id) {
-                    schedule
+            items.value = items.value.map { timer ->
+                if (timer.id != id) {
+                    timer
                 } else {
-                    schedule.copy(
-                        name = patch.name ?: schedule.name,
-                        prompt = patch.prompt ?: schedule.prompt,
-                        enabled = patch.enabled ?: schedule.enabled,
+                    timer.copy(
+                        name = patch.name ?: timer.name,
+                        prompt = patch.prompt ?: timer.prompt,
+                        enabled = patch.enabled ?: timer.enabled,
                     )
                 }
             }

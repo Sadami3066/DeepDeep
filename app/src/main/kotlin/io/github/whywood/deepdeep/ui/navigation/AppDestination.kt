@@ -106,8 +106,8 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
-    data object Schedules : AppDestination {
-        override val routeKey: String = "schedules"
+    data object Timers : AppDestination {
+        override val routeKey: String = "timers"
         override val depth: Int = 1
     }
 
@@ -171,7 +171,7 @@ sealed interface AppDestination {
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp
-            routeKey == Schedules.routeKey -> Schedules
+            routeKey == Timers.routeKey -> Timers
             routeKey == Plugins.routeKey -> Plugins
             routeKey == Workshop.routeKey -> Workshop
             routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> {

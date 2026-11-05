@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -62,7 +62,7 @@ fun DdDatePicker(
     val today = remember { LocalDate.now() }
 
     DdSheet(onDismiss = onDismiss) {
-        SchedulePickerHeader(title = stringResource(R.string.schedules_date_label), onDismiss = onDismiss)
+        TimerPickerHeader(title = stringResource(R.string.timers_date_label), onDismiss = onDismiss)
         Row(
             modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -70,7 +70,7 @@ fun DdDatePicker(
             DdIconButton(
                 icon = DdIcons.ChevronRight,
                 onClick = { month = month.minusMonths(1) },
-                contentDescription = stringResource(R.string.schedules_prev_month),
+                contentDescription = stringResource(R.string.timers_prev_month),
                 modifier = Modifier.rotate(180f),
                 tint = colors.inkSecondary,
                 iconSize = 18.dp,
@@ -85,7 +85,7 @@ fun DdDatePicker(
             DdIconButton(
                 icon = DdIcons.ChevronRight,
                 onClick = { month = month.plusMonths(1) },
-                contentDescription = stringResource(R.string.schedules_next_month),
+                contentDescription = stringResource(R.string.timers_next_month),
                 tint = colors.inkSecondary,
                 iconSize = 18.dp,
             )
@@ -105,7 +105,7 @@ fun DdDatePicker(
         Crossfade(
             targetState = month,
             animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-            label = "schedule-date-month",
+            label = "timer-date-month",
         ) { currentMonth ->
             MonthGrid(
                 month = currentMonth,
@@ -120,7 +120,7 @@ fun DdDatePicker(
 }
 
 @Composable
-internal fun SchedulePickerHeader(title: String, onDismiss: () -> Unit) {
+internal fun TimerPickerHeader(title: String, onDismiss: () -> Unit) {
     val colors = deepDeepColors()
     Row(
         modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = 24.dp, end = 12.dp),
@@ -135,7 +135,7 @@ internal fun SchedulePickerHeader(title: String, onDismiss: () -> Unit) {
         DdIconButton(
             icon = DdIcons.Close,
             onClick = onDismiss,
-            contentDescription = stringResource(R.string.schedules_close),
+            contentDescription = stringResource(R.string.timers_close),
             tint = colors.inkSecondary,
             iconSize = 20.dp,
         )

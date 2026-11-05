@@ -31,15 +31,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ScheduleServiceTest {
+class TimerServiceTest {
     @Test
     fun deliversDueReminderIntoTheSameConversation() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "写周报",
                 prompt = "提交本周周报",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -60,7 +60,7 @@ class ScheduleServiceTest {
             assertNull(updated.lastError)
             assertTrue(updated.enabled)
             assertEquals(fixture.epoch(2026, 10, 25, 9, 0), updated.nextRunAt)
-            assertEquals(updated, fixture.service.schedules.value.single())
+            assertEquals(updated, fixture.service.timers.value.single())
             assertEquals(created.id, updated.id)
         } finally {
             fixture.close()
@@ -71,16 +71,16 @@ class ScheduleServiceTest {
     fun batchesDueRemindersForTheSameConversation() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "甲",
                 prompt = "a",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
-            fixture.schedule(
+            fixture.timer(
                 name = "乙",
                 prompt = "b",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(10, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(10, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -106,16 +106,16 @@ class ScheduleServiceTest {
     fun groupsDueRemindersByConversation() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "One",
                 prompt = "first",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
-            fixture.schedule(
+            fixture.timer(
                 name = "Two",
                 prompt = "second",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-2",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -133,20 +133,20 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun skipsDisabledSchedules() = runTest {
+    fun skipsDisabledTimers() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Paused",
                 prompt = "paused",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
                 enabled = false,
             )
-            fixture.schedule(
+            fixture.timer(
                 name = "Active",
                 prompt = "active",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(10, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(10, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -167,10 +167,10 @@ class ScheduleServiceTest {
         val fixture = Fixture(backgroundScope)
         try {
             val missingFile = File(fixture.directory, "gone.jsonl").absolutePath
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Missing",
                 prompt = "x",
-                trigger = ScheduleTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0)),
                 sessionId = "session-gone",
                 sessionFile = missingFile,
             )
@@ -179,7 +179,7 @@ class ScheduleServiceTest {
 
             assertTrue(fixture.runtime.deliveries.isEmpty())
             val updated = fixture.store.list().single()
-            assertEquals(ScheduleError.SESSION_MISSING, updated.lastError)
+            assertEquals(TimerError.SESSION_MISSING, updated.lastError)
             assertFalse(updated.enabled)
             assertNull(updated.nextRunAt)
             assertEquals(created.id, updated.id)
@@ -192,10 +192,10 @@ class ScheduleServiceTest {
     fun openFailureRecordsOpenFailedAndAdvances() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Open fails",
                 prompt = "x",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.runtime.openFailure = IllegalStateException("boom")
@@ -203,7 +203,7 @@ class ScheduleServiceTest {
             fixture.service.deliverDue()
 
             val updated = fixture.store.list().single()
-            assertEquals(ScheduleError.OPEN_FAILED, updated.lastError)
+            assertEquals(TimerError.OPEN_FAILED, updated.lastError)
             assertEquals(fixture.epoch(2026, 10, 25, 9, 0), updated.nextRunAt)
             assertTrue(fixture.runtime.deliveries.isEmpty())
         } finally {
@@ -215,10 +215,10 @@ class ScheduleServiceTest {
     fun deliveryFailureRecordsDeliveryFailedAndAdvances() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Delivery fails",
                 prompt = "x",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.runtime.deliveryFailure = IllegalStateException("boom")
@@ -226,7 +226,7 @@ class ScheduleServiceTest {
             fixture.service.deliverDue()
 
             val updated = fixture.store.list().single()
-            assertEquals(ScheduleError.DELIVERY_FAILED, updated.lastError)
+            assertEquals(TimerError.DELIVERY_FAILED, updated.lastError)
             assertEquals(fixture.epoch(2026, 10, 25, 9, 0), updated.nextRunAt)
             assertNull(updated.lastDeliveredAt)
         } finally {
@@ -238,10 +238,10 @@ class ScheduleServiceTest {
     fun runNowDoesNotChangeNextRunAt() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Manual",
                 prompt = "do it",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             val result = fixture.service.runNow(created.id)
@@ -265,21 +265,21 @@ class ScheduleServiceTest {
     fun runNowReturnsErrorCodeWithoutTouchingNextRunAt() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Manual",
                 prompt = "do it",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-gone",
                 sessionFile = File(fixture.directory, "gone.jsonl").absolutePath,
             )
             val result = fixture.service.runNow(created.id)
             assertTrue(result.isFailure)
-            val exception = result.exceptionOrNull() as ScheduleDeliveryException
-            assertEquals(ScheduleError.SESSION_MISSING, exception.error)
+            val exception = result.exceptionOrNull() as TimerDeliveryException
+            assertEquals(TimerError.SESSION_MISSING, exception.error)
             val updated = fixture.store.list().single()
             assertEquals(created.nextRunAt, updated.nextRunAt)
             assertNull(updated.lastDeliveredAt)
-            assertEquals(ScheduleError.SESSION_MISSING, updated.lastError)
+            assertEquals(TimerError.SESSION_MISSING, updated.lastError)
             assertTrue(fixture.runtime.deliveries.isEmpty())
         } finally {
             fixture.close()
@@ -297,19 +297,19 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun sessionRemovedDeletesBoundSchedules() = runTest {
+    fun sessionRemovedDeletesBoundTimers() = runTest {
         val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Keep",
                 prompt = "keep",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-2",
             )
-            fixture.schedule(
+            fixture.timer(
                 name = "Remove",
                 prompt = "remove",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(10, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(10, 0)),
                 sessionId = "session-1",
             )
             fixture.service.start()
@@ -319,20 +319,20 @@ class ScheduleServiceTest {
             )
             runCurrent()
             assertEquals(listOf("Keep"), fixture.store.list().map { it.name })
-            assertEquals(listOf("Keep"), fixture.service.schedules.value.map { it.name })
+            assertEquals(listOf("Keep"), fixture.service.timers.value.map { it.name })
         } finally {
             fixture.close()
         }
     }
 
     @Test
-    fun sessionArchivedDisablesBoundSchedules() = runTest {
+    fun sessionArchivedDisablesBoundTimers() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Archive me",
                 prompt = "x",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.service.handleRuntimeEvent(
@@ -355,13 +355,13 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun textDeltasDoNotReadSchedules() = runTest {
+    fun textDeltasDoNotReadTimers() = runTest {
         val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Keep",
                 prompt = "keep",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.service.start()
@@ -391,13 +391,13 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun nonLifecycleRuntimeEventsDoNotReadSchedules() = runTest {
+    fun nonLifecycleRuntimeEventsDoNotReadTimers() = runTest {
         val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Keep",
                 prompt = "keep",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.service.start()
@@ -444,13 +444,13 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun sessionLifecycleEventsReadSchedules() = runTest {
+    fun sessionLifecycleEventsReadTimers() = runTest {
         val fixture = Fixture(backgroundScope, StandardTestDispatcher(testScheduler))
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Keep",
                 prompt = "keep",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             val before = fixture.store.loadCount.get()
@@ -480,71 +480,71 @@ class ScheduleServiceTest {
     }
 
     @Test
-    fun createUpdateDeletePublishSchedules() = runTest {
+    fun createUpdateDeletePublishTimers() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
             val created = fixture.service.create(
-                NewSchedule(
+                NewTimer(
                     name = "Draft",
                     prompt = "draft",
-                    trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                    trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                     sessionId = "session-1",
                     sessionFile = fixture.fileFor("session-1"),
                     cwd = fixture.directory.absolutePath,
                 ),
             )
-            assertEquals(created, fixture.service.schedules.value.single())
-            val updated = fixture.service.update(created.id, SchedulePatch(name = "Renamed"))
+            assertEquals(created, fixture.service.timers.value.single())
+            val updated = fixture.service.update(created.id, TimerPatch(name = "Renamed"))
             assertEquals("Renamed", updated?.name)
             assertEquals("Renamed", fixture.service.list().single().name)
             assertTrue(fixture.service.delete(created.id))
-            assertTrue(fixture.service.schedules.value.isEmpty())
+            assertTrue(fixture.service.timers.value.isEmpty())
         } finally {
             fixture.close()
         }
     }
 
     @Test
-    fun startDeliversCatchUpAndPublishesSchedules() = runTest {
+    fun startDeliversCatchUpAndPublishesTimers() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Catch up",
                 prompt = "late",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
             fixture.service.start()
             awaitStoreIo {
                 fixture.runtime.deliveries.size == 1 &&
-                    fixture.service.schedules.value.singleOrNull()?.lastDeliveredAt != null
+                    fixture.service.timers.value.singleOrNull()?.lastDeliveredAt != null
             }
 
             assertEquals(1, fixture.runtime.deliveries.size)
             assertEquals("Catch up", fixture.runtime.deliveries.single().reminder)
-            assertNotNull(fixture.service.schedules.value.single().lastDeliveredAt)
+            assertNotNull(fixture.service.timers.value.single().lastDeliveredAt)
         } finally {
             fixture.close()
         }
     }
 
     @Test
-    fun startSurvivesCorruptScheduleData() = runTest {
+    fun startSurvivesCorruptTimerData() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val file = File(fixture.directory, "schedules.json")
+            val file = File(fixture.directory, "timers.json")
             file.writeText("{not json")
             fixture.service.start()
             awaitStoreIo {
-                File(fixture.directory, "schedules.json.corrupt").isFile &&
-                    file.readText().contains("\"schemaVersion\":2")
+                File(fixture.directory, "timers.json.corrupt").isFile &&
+                    file.readText().contains("\"schemaVersion\":3")
             }
             fixture.service.stop()
 
             assertTrue(fixture.runtime.deliveries.isEmpty())
-            assertTrue(fixture.service.schedules.value.isEmpty())
-            assertEquals("{not json", File(fixture.directory, "schedules.json.corrupt").readText())
+            assertTrue(fixture.service.timers.value.isEmpty())
+            assertEquals("{not json", File(fixture.directory, "timers.json.corrupt").readText())
         } finally {
             fixture.close()
         }
@@ -554,10 +554,10 @@ class ScheduleServiceTest {
     fun recoversInterruptedDeliveryExactlyOnce() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Recover",
                 prompt = "resume",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -569,7 +569,7 @@ class ScheduleServiceTest {
                 awaitStoreIo {
                     fixture.runtime.deliveries.size == 1 &&
                         fixture.pendingIntentCount() == 0 &&
-                        restarted.schedules.value.singleOrNull()?.lastDeliveredAt != null
+                        restarted.timers.value.singleOrNull()?.lastDeliveredAt != null
                 }
             } finally {
                 restarted.stop()
@@ -588,10 +588,10 @@ class ScheduleServiceTest {
     fun alreadyDeliveredIntentIsNotDeliveredAgain() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "No duplicate",
                 prompt = "once",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -604,7 +604,7 @@ class ScheduleServiceTest {
             try {
                 restarted.start()
                 awaitStoreIo {
-                    fixture.pendingIntentCount() == 0 && fixture.service.schedules.value.isNotEmpty()
+                    fixture.pendingIntentCount() == 0 && fixture.service.timers.value.isNotEmpty()
                 }
             } finally {
                 restarted.stop()
@@ -621,10 +621,10 @@ class ScheduleServiceTest {
     fun consecutiveStartsDeliverPendingIntentOnlyOnce() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            val created = fixture.schedule(
+            val created = fixture.timer(
                 name = "Idempotent",
                 prompt = "once",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.clock.advance(Duration.ofDays(1))
@@ -634,11 +634,11 @@ class ScheduleServiceTest {
             awaitStoreIo {
                 fixture.runtime.deliveries.size == 1 &&
                     fixture.pendingIntentCount() == 0 &&
-                    fixture.service.schedules.value.isNotEmpty()
+                    fixture.service.timers.value.isNotEmpty()
             }
             fixture.service.stop()
             fixture.service.start()
-            awaitStoreIo { fixture.service.schedules.value.isNotEmpty() }
+            awaitStoreIo { fixture.service.timers.value.isNotEmpty() }
             fixture.service.stop()
 
             assertEquals(1, fixture.runtime.deliveries.size)
@@ -652,10 +652,10 @@ class ScheduleServiceTest {
     fun corruptIntentFileIsRebuilt() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
-            fixture.schedule(
+            fixture.timer(
                 name = "Corrupt",
                 prompt = "x",
-                trigger = ScheduleTrigger.Daily(LocalTime.of(9, 0)),
+                trigger = TimerTrigger.Daily(LocalTime.of(9, 0)),
                 sessionId = "session-1",
             )
             fixture.intentsFile.writeText("{not json")
@@ -667,7 +667,7 @@ class ScheduleServiceTest {
             assertTrue(fixture.runtime.deliveries.isEmpty())
             assertEquals(0, fixture.pendingIntentCount())
             val root = Json.parseToJsonElement(fixture.intentsFile.readText()) as JsonObject
-            assertEquals("1", root["schemaVersion"].toString())
+            assertEquals("2", root["schemaVersion"].toString())
             assertEquals(JsonArray(emptyList()), root["intents"])
         } finally {
             fixture.close()
@@ -704,22 +704,22 @@ class ScheduleServiceTest {
     ) {
         val zone: ZoneId = ZoneId.of("Asia/Shanghai")
         val clock = MutableTestClock(Instant.parse("2026-10-23T04:00:00Z"), zone)
-        val directory: File = Files.createTempDirectory("deepdeep-schedule-service").toFile()
+        val directory: File = Files.createTempDirectory("deepdeep-timer-service").toFile()
         val intentsFile = File(directory, "delivery-intents.json")
         val runtime = FakeAgentRuntime()
-        val store = ScheduleStore(directory, clock) { zone }
-        val service = ScheduleService(runtime, store, scope, clock, intentsFile, ioDispatcher)
+        val store = TimerStore(directory, clock) { zone }
+        val service = TimerService(runtime, store, scope, clock, intentsFile, ioDispatcher)
 
-        fun restarted(): ScheduleService = ScheduleService(runtime, store, scope, clock, intentsFile, ioDispatcher)
+        fun restarted(): TimerService = TimerService(runtime, store, scope, clock, intentsFile, ioDispatcher)
 
-        fun writeIntent(schedule: Schedule, createdAt: Long) {
+        fun writeIntent(timer: Timer, createdAt: Long) {
             val root = buildJsonObject {
-                put("schemaVersion", 1)
+                put("schemaVersion", 2)
                 putJsonArray("intents") {
                     add(buildJsonObject {
-                        put("dedupeKey", "${schedule.id}@${schedule.nextRunAt ?: "run-now-$createdAt"}")
-                        put("scheduleId", schedule.id)
-                        put("sessionId", schedule.sessionId)
+                        put("dedupeKey", "${timer.id}@${timer.nextRunAt ?: "run-now-$createdAt"}")
+                        put("timerId", timer.id)
+                        put("sessionId", timer.sessionId)
                         put("createdAt", createdAt)
                     })
                 }
@@ -741,15 +741,15 @@ class ScheduleServiceTest {
         fun epoch(year: Int, month: Int, day: Int, hour: Int, minute: Int): Long =
             ZonedDateTime.of(year, month, day, hour, minute, 0, 0, zone).toInstant().toEpochMilli()
 
-        suspend fun schedule(
+        suspend fun timer(
             name: String,
             prompt: String,
-            trigger: ScheduleTrigger,
+            trigger: TimerTrigger,
             sessionId: String,
             sessionFile: String? = null,
             enabled: Boolean = true,
-        ): Schedule = store.create(
-            NewSchedule(
+        ): Timer = store.create(
+            NewTimer(
                 name = name,
                 prompt = prompt,
                 trigger = trigger,

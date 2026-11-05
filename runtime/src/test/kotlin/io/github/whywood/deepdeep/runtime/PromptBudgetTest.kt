@@ -52,7 +52,7 @@ class PromptBudgetTest {
         assertTrue(bullets.any { it.contains("absolute paths") })
         assertTrue(bullets.any { it.contains("[exit: N]") })
         assertFalse(rules.contains("job_start"))
-        assertFalse(rules.contains("schedule_create"))
+        assertFalse(rules.contains("timer_create"))
     }
 
     private object NoopShell : ShellExecutor {

@@ -28,7 +28,7 @@ import io.github.whywood.deepdeep.ui.files.FileBrowserScreen
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
-import io.github.whywood.deepdeep.ui.schedules.ScheduleScreen
+import io.github.whywood.deepdeep.ui.timers.TimerScreen
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
 import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
@@ -327,8 +327,8 @@ internal fun AppRouteContent(
             onBack = onBack,
         )
 
-        AppDestination.Schedules -> ScheduleScreen(
-            service = dependencies.scheduleService,
+        AppDestination.Timers -> TimerScreen(
+            service = dependencies.timerService,
             runtime = dependencies.host,
             initialConversationId = state.conversationId,
             onBack = onBack,

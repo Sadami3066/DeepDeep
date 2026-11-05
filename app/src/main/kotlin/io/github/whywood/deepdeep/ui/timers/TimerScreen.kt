@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,10 +43,10 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.CronSummary
-import io.github.whywood.deepdeep.runtime.Schedule
-import io.github.whywood.deepdeep.runtime.ScheduleError
-import io.github.whywood.deepdeep.runtime.ScheduleService
-import io.github.whywood.deepdeep.runtime.ScheduleTrigger
+import io.github.whywood.deepdeep.runtime.Timer
+import io.github.whywood.deepdeep.runtime.TimerError
+import io.github.whywood.deepdeep.runtime.TimerService
+import io.github.whywood.deepdeep.runtime.TimerTrigger
 import io.github.whywood.deepdeep.runtime.summarizeCron
 import java.time.DayOfWeek
 import java.time.Instant
@@ -57,15 +57,15 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-internal val SCHEDULE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+internal val TIMER_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 private val WEEKDAY_SET = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
 private val WEEKEND_SET = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 private val NEXT_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M/d")
 
 @Composable
-fun ScheduleScreen(
-    service: ScheduleService,
+fun TimerScreen(
+    service: TimerService,
     runtime: ConversationQueries,
     initialConversationId: String?,
     onBack: () -> Unit,
@@ -74,8 +74,8 @@ fun ScheduleScreen(
 ) {
     val scope = rememberCoroutineScope()
     val holder = remember(service, runtime, initialConversationId) {
-        SchedulesStateHolder(
-            source = ScheduleServiceDataSource(service, runtime),
+        TimersStateHolder(
+            source = TimerServiceDataSource(service, runtime),
             scope = scope,
             initialConversationId = initialConversationId,
         )
@@ -83,14 +83,14 @@ fun ScheduleScreen(
     LaunchedEffect(holder) { holder.load() }
     val state by holder.state.collectAsStateWithLifecycle()
 
-    SchedulesContent(
+    TimersContent(
         state = state,
         onBack = onBack,
         onQueryChange = holder::setQuery,
         onNew = holder::openNew,
         onRetry = { scope.launch { holder.retry() } },
-        onOpen = { schedule -> scope.launch { holder.openExisting(schedule) } },
-        onToggle = { schedule, enabled -> scope.launch { holder.setEnabled(schedule.id, enabled) } },
+        onOpen = { timer -> scope.launch { holder.openExisting(timer) } },
+        onToggle = { timer, enabled -> scope.launch { holder.setEnabled(timer.id, enabled) } },
         onDismissEditor = holder::dismissEditor,
         onSave = { draft -> scope.launch { holder.save(draft) } },
         onRunNow = { draft ->
@@ -108,46 +108,46 @@ fun ScheduleScreen(
 }
 
 @Composable
-internal fun SchedulesContent(
-    state: SchedulesUiState,
+internal fun TimersContent(
+    state: TimersUiState,
     onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onNew: () -> Unit,
     onRetry: () -> Unit,
-    onOpen: (Schedule) -> Unit,
-    onToggle: (Schedule, Boolean) -> Unit,
+    onOpen: (Timer) -> Unit,
+    onToggle: (Timer, Boolean) -> Unit,
     onDismissEditor: () -> Unit,
-    onSave: (ScheduleDraft) -> Unit,
-    onRunNow: (ScheduleDraft) -> Unit,
-    onDelete: (ScheduleDraft) -> Unit,
+    onSave: (TimerDraft) -> Unit,
+    onRunNow: (TimerDraft) -> Unit,
+    onDelete: (TimerDraft) -> Unit,
     onOpenConversation: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     Column(
         modifier.fillMaxSize().background(colors.paper).statusBarsPadding().navigationBarsPadding()
-            .testTag("schedules_screen"),
+            .testTag("timers_screen"),
     ) {
         Row(
             Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIconButton(DdIcons.ArrowLeft, onBack, stringResource(R.string.schedules_back), tint = colors.ink, iconSize = 21.dp)
+            DdIconButton(DdIcons.ArrowLeft, onBack, stringResource(R.string.timers_back), tint = colors.ink, iconSize = 21.dp)
             Spacer(Modifier.width(4.dp))
-            Text(stringResource(R.string.schedules_title), Modifier.weight(1f), style = DdType.heading, color = colors.ink)
+            Text(stringResource(R.string.timers_title), Modifier.weight(1f), style = DdType.heading, color = colors.ink)
             DdIconButton(
-                DdIcons.Plus, { onNew() }, stringResource(R.string.schedules_new),
-                Modifier.testTag("schedules_new"), tint = colors.ink, iconSize = 21.dp,
+                DdIcons.Plus, { onNew() }, stringResource(R.string.timers_new),
+                Modifier.testTag("timers_new"), tint = colors.ink, iconSize = 21.dp,
             )
         }
         DdSearchField(
             query = state.query,
             onQueryChange = onQueryChange,
-            placeholder = stringResource(R.string.schedules_search_placeholder),
+            placeholder = stringResource(R.string.timers_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
-            fieldTestTag = "schedules_search_field",
-            clearTestTag = "schedules_search_clear",
+            fieldTestTag = "timers_search_field",
+            clearTestTag = "timers_search_clear",
         )
         state.errorRes?.let { message ->
             Row(
@@ -168,7 +168,7 @@ internal fun SchedulesContent(
                 DdSpinner(size = 22.dp, strokeWidth = 2.dp)
             }
 
-            state.items.isEmpty() -> EmptySchedules(Modifier.weight(1f))
+            state.items.isEmpty() -> EmptyTimers(Modifier.weight(1f))
 
             state.filtered.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.search_no_match), style = DdType.bodySmall, color = colors.inkTertiary)
@@ -176,8 +176,8 @@ internal fun SchedulesContent(
 
             else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 if (state.active.isNotEmpty()) {
-                    ScheduleGroup(
-                        stringResource(R.string.schedules_group_active),
+                    TimerGroup(
+                        stringResource(R.string.timers_group_active),
                         state.active,
                         state.titles,
                         onOpen,
@@ -186,8 +186,8 @@ internal fun SchedulesContent(
                 }
                 if (state.inactive.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
-                    ScheduleGroup(
-                        stringResource(R.string.schedules_group_inactive),
+                    TimerGroup(
+                        stringResource(R.string.timers_group_inactive),
                         state.inactive,
                         state.titles,
                         onOpen,
@@ -200,7 +200,7 @@ internal fun SchedulesContent(
     }
 
     if (state.editorOpen) {
-        ScheduleEditor(
+        TimerEditor(
             initialDraft = state.editorDraft,
             isEditing = state.editingId != null,
             externalError = state.errorRes?.let { stringResource(it) },
@@ -217,111 +217,111 @@ internal fun SchedulesContent(
 }
 
 @Composable
-private fun ScheduleGroup(
+private fun TimerGroup(
     label: String,
-    schedules: List<Schedule>,
+    timers: List<Timer>,
     titles: Map<String, String?>,
-    onOpen: (Schedule) -> Unit,
-    onToggle: (Schedule, Boolean) -> Unit,
+    onOpen: (Timer) -> Unit,
+    onToggle: (Timer, Boolean) -> Unit,
 ) {
     Text(label, Modifier.padding(top = 24.dp, bottom = 4.dp), style = DdType.micro, color = deepDeepColors().inkTertiary)
-    schedules.forEachIndexed { index, schedule ->
+    timers.forEachIndexed { index, timer ->
         val conversationText = when {
-            schedule.sessionId.isBlank() -> null
-            titles.containsKey(schedule.sessionId) -> titles[schedule.sessionId] ?: stringResource(R.string.schedules_conversation_deleted)
+            timer.sessionId.isBlank() -> null
+            titles.containsKey(timer.sessionId) -> titles[timer.sessionId] ?: stringResource(R.string.timers_conversation_deleted)
             else -> null
         }
-        ScheduleRow(schedule, conversationText, { onOpen(schedule) }, { onToggle(schedule, it) })
-        if (index != schedules.lastIndex) DdHairline()
+        TimerRow(timer, conversationText, { onOpen(timer) }, { onToggle(timer, it) })
+        if (index != timers.lastIndex) DdHairline()
     }
 }
 
 @Composable
-private fun ScheduleRow(schedule: Schedule, conversationText: String?, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun TimerRow(timer: Timer, conversationText: String?, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val colors = deepDeepColors()
-    val next = nextDeliveryLabel(schedule.nextRunAt)
-    val rule = ruleLabel(schedule.trigger)
+    val next = nextDeliveryLabel(timer.nextRunAt)
+    val rule = ruleLabel(timer.trigger)
     val subtitle = if (conversationText == null) {
-        stringResource(R.string.schedules_subtitle, next, rule)
+        stringResource(R.string.timers_subtitle, next, rule)
     } else {
-        stringResource(R.string.schedules_row_subtitle, next, rule, conversationText)
+        stringResource(R.string.timers_row_subtitle, next, rule, conversationText)
     }
     DdPressable(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth().testTag("schedule_row_${schedule.id}"),
+        modifier = Modifier.fillMaxWidth().testTag("timer_row_${timer.id}"),
         shape = RoundedCornerShape(12.dp),
-        contentDescription = schedule.name,
+        contentDescription = timer.name,
     ) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f).alpha(if (schedule.enabled) 1f else 0.55f)) {
-                Text(schedule.name, style = DdType.body, color = colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f).alpha(if (timer.enabled) 1f else 0.55f)) {
+                Text(timer.name, style = DdType.body, color = colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(2.dp))
                 Text(subtitle, style = DdType.bodySmall, color = colors.inkTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(12.dp))
-            DdSwitch(schedule.enabled, onToggle, Modifier.testTag("schedule_switch_${schedule.id}"))
+            DdSwitch(timer.enabled, onToggle, Modifier.testTag("timer_switch_${timer.id}"))
         }
     }
 }
 
 @Composable
-private fun EmptySchedules(modifier: Modifier = Modifier) {
+private fun EmptyTimers(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.schedules_empty_title), style = DdType.body, color = deepDeepColors().ink)
+        Text(stringResource(R.string.timers_empty_title), style = DdType.body, color = deepDeepColors().ink)
     }
 }
 
 @Composable
-private fun ruleLabel(trigger: ScheduleTrigger): String = when (trigger) {
-    is ScheduleTrigger.Once -> stringResource(R.string.schedules_frequency_once)
-    is ScheduleTrigger.Daily -> stringResource(R.string.schedules_frequency_daily)
-    is ScheduleTrigger.Weekly -> stringResource(
+private fun ruleLabel(trigger: TimerTrigger): String = when (trigger) {
+    is TimerTrigger.Once -> stringResource(R.string.timers_frequency_once)
+    is TimerTrigger.Daily -> stringResource(R.string.timers_frequency_daily)
+    is TimerTrigger.Weekly -> stringResource(
         when {
-            trigger.days == WEEKDAY_SET -> R.string.schedules_frequency_weekdays
-            trigger.days == WEEKEND_SET -> R.string.schedules_frequency_weekends
-            else -> R.string.schedules_frequency_weekly
+            trigger.days == WEEKDAY_SET -> R.string.timers_frequency_weekdays
+            trigger.days == WEEKEND_SET -> R.string.timers_frequency_weekends
+            else -> R.string.timers_frequency_weekly
         },
     )
 
-    is ScheduleTrigger.Cron -> cronSummaryLabel(trigger.expression) ?: trigger.expression
+    is TimerTrigger.Cron -> cronSummaryLabel(trigger.expression) ?: trigger.expression
 }
 
 @Composable
 internal fun cronSummaryLabel(expression: String): String? {
     val locale = LocalConfiguration.current.locales[0]
-    val separator = stringResource(R.string.schedules_cron_weekday_separator)
+    val separator = stringResource(R.string.timers_cron_weekday_separator)
     return when (val summary = summarizeCron(expression)) {
         null -> null
-        CronSummary.EveryMinute -> stringResource(R.string.schedules_cron_every_minute)
-        is CronSummary.EveryMinutes -> stringResource(R.string.schedules_cron_every_minutes, summary.every)
+        CronSummary.EveryMinute -> stringResource(R.string.timers_cron_every_minute)
+        is CronSummary.EveryMinutes -> stringResource(R.string.timers_cron_every_minutes, summary.every)
         is CronSummary.EveryHours -> if (summary.every == 1) {
             if (summary.minute == 0) {
-                stringResource(R.string.schedules_cron_hourly)
+                stringResource(R.string.timers_cron_hourly)
             } else {
-                stringResource(R.string.schedules_cron_hourly_at, summary.minute)
+                stringResource(R.string.timers_cron_hourly_at, summary.minute)
             }
         } else {
-            stringResource(R.string.schedules_cron_every_hours, summary.every, summary.minute)
+            stringResource(R.string.timers_cron_every_hours, summary.every, summary.minute)
         }
 
-        is CronSummary.Daily -> stringResource(R.string.schedules_cron_daily, summary.time.format(SCHEDULE_TIME_FORMAT))
+        is CronSummary.Daily -> stringResource(R.string.timers_cron_daily, summary.time.format(TIMER_TIME_FORMAT))
         is CronSummary.Weekly -> stringResource(
-            R.string.schedules_cron_weekly,
+            R.string.timers_cron_weekly,
             weekdayLabel(summary.days, locale, separator),
-            summary.time.format(SCHEDULE_TIME_FORMAT),
+            summary.time.format(TIMER_TIME_FORMAT),
         )
 
         is CronSummary.Monthly -> stringResource(
-            R.string.schedules_cron_monthly,
+            R.string.timers_cron_monthly,
             summary.day,
-            summary.time.format(SCHEDULE_TIME_FORMAT),
+            summary.time.format(TIMER_TIME_FORMAT),
         )
 
         is CronSummary.Yearly -> stringResource(
-            R.string.schedules_cron_yearly,
+            R.string.timers_cron_yearly,
             summary.month,
             summary.day,
-            summary.time.format(SCHEDULE_TIME_FORMAT),
+            summary.time.format(TIMER_TIME_FORMAT),
         )
 
         is CronSummary.Custom -> summary.expression
@@ -335,42 +335,42 @@ private fun weekdayLabel(days: Set<DayOfWeek>, locale: Locale, separator: String
 
 @Composable
 private fun nextDeliveryLabel(timestamp: Long?): String {
-    if (timestamp == null) return stringResource(R.string.schedules_never)
+    if (timestamp == null) return stringResource(R.string.timers_never)
     val next = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
     val today = LocalDate.now()
     val day = when (next.toLocalDate()) {
-        today -> stringResource(R.string.schedules_today)
-        today.plusDays(1) -> stringResource(R.string.schedules_tomorrow)
+        today -> stringResource(R.string.timers_today)
+        today.plusDays(1) -> stringResource(R.string.timers_tomorrow)
         else -> next.format(NEXT_DATE_FORMAT)
     }
-    return stringResource(R.string.schedules_day_time, day, next.format(SCHEDULE_TIME_FORMAT))
+    return stringResource(R.string.timers_day_time, day, next.format(TIMER_TIME_FORMAT))
 }
 
-internal fun deliveryErrorRes(error: ScheduleError?): Int = when (error) {
-    ScheduleError.SESSION_MISSING -> R.string.schedule_error_session_missing
-    ScheduleError.OPEN_FAILED -> R.string.schedule_error_open_failed
-    ScheduleError.DELIVERY_FAILED -> R.string.schedule_error_delivery_failed
-    null -> R.string.schedule_error_run_failed
+internal fun deliveryErrorRes(error: TimerError?): Int = when (error) {
+    TimerError.SESSION_MISSING -> R.string.timer_error_session_missing
+    TimerError.OPEN_FAILED -> R.string.timer_error_open_failed
+    TimerError.DELIVERY_FAILED -> R.string.timer_error_delivery_failed
+    null -> R.string.timer_error_run_failed
 }
 
 internal fun draftErrorRes(error: DraftError): Int = when (error) {
-    DraftError.EMPTY_NAME -> R.string.schedule_error_empty_name
-    DraftError.EMPTY_PROMPT -> R.string.schedule_error_empty_prompt
-    DraftError.PAST_TIME -> R.string.schedule_error_past_time
-    DraftError.INVALID_CRON -> R.string.schedule_error_invalid_cron
-    DraftError.NO_CONVERSATION -> R.string.schedule_error_no_conversation
+    DraftError.EMPTY_NAME -> R.string.timer_error_empty_name
+    DraftError.EMPTY_PROMPT -> R.string.timer_error_empty_prompt
+    DraftError.PAST_TIME -> R.string.timer_error_past_time
+    DraftError.INVALID_CRON -> R.string.timer_error_invalid_cron
+    DraftError.NO_CONVERSATION -> R.string.timer_error_no_conversation
 }
 
-internal fun filterSchedules(
-    schedules: List<Schedule>,
+internal fun filterTimers(
+    timers: List<Timer>,
     titles: Map<String, String?>,
     query: String,
-): List<Schedule> {
+): List<Timer> {
     val normalized = query.trim()
-    if (normalized.isEmpty()) return schedules
-    return schedules.filter { schedule ->
-        schedule.name.contains(normalized, ignoreCase = true) ||
-            schedule.prompt.contains(normalized, ignoreCase = true) ||
-            titles[schedule.sessionId]?.contains(normalized, ignoreCase = true) == true
+    if (normalized.isEmpty()) return timers
+    return timers.filter { timer ->
+        timer.name.contains(normalized, ignoreCase = true) ||
+            timer.prompt.contains(normalized, ignoreCase = true) ||
+            titles[timer.sessionId]?.contains(normalized, ignoreCase = true) == true
     }
 }

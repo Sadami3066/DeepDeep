@@ -1,9 +1,9 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
-import io.github.whywood.deepdeep.runtime.Schedule
-import io.github.whywood.deepdeep.runtime.ScheduleTrigger
+import io.github.whywood.deepdeep.runtime.Timer
+import io.github.whywood.deepdeep.runtime.TimerTrigger
 import io.github.whywood.deepdeep.runtime.nextRun
 import io.github.whywood.deepdeep.runtime.validationError
 import java.time.DayOfWeek
@@ -23,7 +23,7 @@ enum class DraftError {
     NO_CONVERSATION,
 }
 
-data class ScheduleDraft(
+data class TimerDraft(
     val id: String? = null,
     val name: String = "",
     val prompt: String = "",
@@ -37,17 +37,17 @@ data class ScheduleDraft(
     val conversationTitle: String = "",
     val enabled: Boolean = true,
 ) {
-    fun toTrigger(): ScheduleTrigger = if (repeat) {
-        ScheduleTrigger.Cron(cronExpression.trim())
+    fun toTrigger(): TimerTrigger = if (repeat) {
+        TimerTrigger.Cron(cronExpression.trim())
     } else {
-        ScheduleTrigger.Once(date, time)
+        TimerTrigger.Once(date, time)
     }
 
     fun validate(now: ZonedDateTime): DraftError? = when {
         name.isBlank() -> DraftError.EMPTY_NAME
         prompt.isBlank() -> DraftError.EMPTY_PROMPT
         !repeat && nextRunPreview(now) == null -> DraftError.PAST_TIME
-        repeat && ScheduleTrigger.Cron(cronExpression).validationError(now) != null -> DraftError.INVALID_CRON
+        repeat && TimerTrigger.Cron(cronExpression).validationError(now) != null -> DraftError.INVALID_CRON
         sessionId.isBlank() -> DraftError.NO_CONVERSATION
         else -> null
     }
@@ -57,31 +57,31 @@ data class ScheduleDraft(
     companion object {
         private const val NAME_PREVIEW_LIMIT = 28
 
-        fun from(schedule: Schedule, conversationTitle: String): ScheduleDraft {
-            val trigger = schedule.trigger
-            return ScheduleDraft(
-                id = schedule.id,
-                name = schedule.name,
-                prompt = schedule.prompt,
-                repeat = trigger !is ScheduleTrigger.Once,
-                date = (trigger as? ScheduleTrigger.Once)?.date ?: LocalDate.now(),
+        fun from(timer: Timer, conversationTitle: String): TimerDraft {
+            val trigger = timer.trigger
+            return TimerDraft(
+                id = timer.id,
+                name = timer.name,
+                prompt = timer.prompt,
+                repeat = trigger !is TimerTrigger.Once,
+                date = (trigger as? TimerTrigger.Once)?.date ?: LocalDate.now(),
                 time = when (trigger) {
-                    is ScheduleTrigger.Once -> trigger.time
-                    is ScheduleTrigger.Daily -> trigger.time
-                    is ScheduleTrigger.Weekly -> trigger.time
-                    is ScheduleTrigger.Cron -> DEFAULT_TIME
+                    is TimerTrigger.Once -> trigger.time
+                    is TimerTrigger.Daily -> trigger.time
+                    is TimerTrigger.Weekly -> trigger.time
+                    is TimerTrigger.Cron -> DEFAULT_TIME
                 },
                 cronExpression = when (trigger) {
-                    is ScheduleTrigger.Once -> DEFAULT_CRON_EXPRESSION
-                    is ScheduleTrigger.Daily -> "${trigger.time.minute} ${trigger.time.hour} * * *"
-                    is ScheduleTrigger.Weekly -> weeklyCronExpression(trigger.days, trigger.time)
-                    is ScheduleTrigger.Cron -> trigger.expression
+                    is TimerTrigger.Once -> DEFAULT_CRON_EXPRESSION
+                    is TimerTrigger.Daily -> "${trigger.time.minute} ${trigger.time.hour} * * *"
+                    is TimerTrigger.Weekly -> weeklyCronExpression(trigger.days, trigger.time)
+                    is TimerTrigger.Cron -> trigger.expression
                 },
-                sessionId = schedule.sessionId,
-                sessionFile = schedule.sessionFile,
-                cwd = schedule.cwd,
+                sessionId = timer.sessionId,
+                sessionFile = timer.sessionFile,
+                cwd = timer.cwd,
                 conversationTitle = conversationTitle,
-                enabled = schedule.enabled,
+                enabled = timer.enabled,
             )
         }
 
@@ -102,7 +102,7 @@ data class ScheduleDraft(
     }
 }
 
-internal val ScheduleDraftSaver: Saver<ScheduleDraft, Any> = listSaver<ScheduleDraft, Any>(
+internal val TimerDraftSaver: Saver<TimerDraft, Any> = listSaver<TimerDraft, Any>(
     save = { draft ->
         listOf(
             draft.id.orEmpty(),
@@ -120,7 +120,7 @@ internal val ScheduleDraftSaver: Saver<ScheduleDraft, Any> = listSaver<ScheduleD
         )
     },
     restore = { values ->
-        ScheduleDraft(
+        TimerDraft(
             id = (values[0] as String).ifEmpty { null },
             name = values[1] as String,
             prompt = values[2] as String,

@@ -9,7 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
 
-class ScheduleCronTest {
+class TimerCronTest {
     private val zone = ZoneId.of("Asia/Shanghai")
     private val now = ZonedDateTime.of(2026, 10, 23, 12, 0, 0, 0, zone)
 

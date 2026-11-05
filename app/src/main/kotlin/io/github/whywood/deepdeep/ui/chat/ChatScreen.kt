@@ -125,7 +125,7 @@ data class ChatScreenActions(
     val onRemoveAttachment: (String) -> Unit,
     val onOpenAttachment: (AttachmentRef) -> Unit,
     val onOpenFile: (String) -> Unit,
-    val onOpenSchedules: () -> Unit,
+    val onOpenTimers: () -> Unit,
     val onRetry: (Long) -> Unit,
     val onPickCommand: (CommandItem) -> Unit,
     val onPauseGoal: () -> Unit,
@@ -175,7 +175,7 @@ fun ChatScreen(
         onInputChange, onSend, onStop, onOpenDrawer, onOpenSettings, onReload,
         onModelChange, onProviderChange, onThinkingLevelChange, onToggleStep,
         onQuoteMessage, onClearQuote, onPickAttachment, onRemoveAttachment,
-        onOpenAttachment, onOpenFile, onOpenSchedules, onRetry, onPickCommand,
+        onOpenAttachment, onOpenFile, onOpenTimers, onRetry, onPickCommand,
         onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
         onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
         onOpenWorkshop, onOpenFiles, onFollowUp, onClearQueue, onScrollAnchorChange,
@@ -342,9 +342,9 @@ fun ChatScreen(
                     keyboard?.hide()
                     onReload()
                 },
-                onOpenSchedules = {
+                onOpenTimers = {
                     keyboard?.hide()
-                    onOpenSchedules()
+                    onOpenTimers()
                 },
                 onOpenUsage = {
                     keyboard?.hide()

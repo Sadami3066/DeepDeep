@@ -5,20 +5,20 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginStrings
-import io.github.whywood.deepdeep.runtime.ScheduleService
+import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SessionBinding
-import io.github.whywood.deepdeep.runtime.scheduleTools
+import io.github.whywood.deepdeep.runtime.timerTools
 
-class SchedulePlugin(
-    private val scheduleService: ScheduleService,
+class TimerPlugin(
+    private val timerService: TimerService,
     strings: PluginStrings,
 ) : InternalPlugin(strings) {
-    override val id: String = "schedule"
+    override val id: String = "timer"
     override val icon: DdIcon = DdIcons.Clock
-    override val nameRes: Int = R.string.plugins_internal_schedule_name
-    override val summaryRes: Int = R.string.plugins_internal_schedule_summary
+    override val nameRes: Int = R.string.plugins_internal_timer_name
+    override val summaryRes: Int = R.string.plugins_internal_timer_summary
     override val version: String = "1.0"
 
     override fun tools(binding: SessionBinding): List<CodingTool> =
-        scheduleTools(scheduleService, binding)
+        timerTools(timerService, binding)
 }

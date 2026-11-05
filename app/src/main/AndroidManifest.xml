@@ -148,7 +148,7 @@
                 <data android:host="plugins" />
                 <data android:host="mcp" />
                 <data android:host="skills" />
-                <data android:host="schedules" />
+                <data android:host="timers" />
                 <data android:host="workshop" />
             </intent-filter>
             <intent-filter>

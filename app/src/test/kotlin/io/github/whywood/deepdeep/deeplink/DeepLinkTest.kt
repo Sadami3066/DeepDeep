@@ -22,7 +22,7 @@ class DeepLinkTest {
             "deepdeep://plugins" to AppDestination.Plugins,
             "deepdeep://mcp" to AppDestination.Mcp,
             "deepdeep://skills" to AppDestination.Skills,
-            "deepdeep://schedules" to AppDestination.Schedules,
+            "deepdeep://timers" to AppDestination.Timers,
             "deepdeep://workshop" to AppDestination.Workshop,
         )
         pages.forEach { (raw, destination) ->
@@ -154,7 +154,7 @@ class DeepLinkTest {
             "deepdeep://settings/runtime",
             "deepdeep://mcp/extra",
             "deepdeep://skills/a/b",
-            "deepdeep://schedules/a",
+            "deepdeep://timers/a",
             "deepdeep://workshop/a/b",
         ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }
     }

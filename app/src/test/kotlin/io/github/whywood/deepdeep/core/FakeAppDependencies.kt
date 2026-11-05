@@ -22,7 +22,7 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderOAuthService
 import io.github.whywood.deepdeep.runtime.QuestionCenter
-import io.github.whywood.deepdeep.runtime.ScheduleService
+import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
@@ -78,7 +78,7 @@ internal class FakeAppDependencies(
 
     override val jobRegistry: JobRegistry get() = unavailable("jobRegistry")
 
-    override val scheduleService: ScheduleService get() = unavailable("scheduleService")
+    override val timerService: TimerService get() = unavailable("timerService")
 
     override val providerCatalog: ProviderDirectory get() = unavailable("providerCatalog")
 

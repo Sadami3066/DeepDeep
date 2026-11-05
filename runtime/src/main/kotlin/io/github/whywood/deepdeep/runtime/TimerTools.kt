@@ -26,28 +26,28 @@ private val FREQUENCY_VALUES = buildJsonArray {
     add(JsonPrimitive("cron"))
 }
 
-private val SCHEDULE_ACTION_VALUES = buildJsonArray {
+private val TIMER_ACTION_VALUES = buildJsonArray {
     add(JsonPrimitive("create"))
     add(JsonPrimitive("list"))
     add(JsonPrimitive("update"))
     add(JsonPrimitive("delete"))
 }
 
-private val scheduleParameters: JsonObject = buildJsonObject {
+private val timerParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("action") {
             put("type", "string")
-            put("enum", SCHEDULE_ACTION_VALUES)
+            put("enum", TIMER_ACTION_VALUES)
             put("description", "create, list, update or delete")
         }
         putJsonObject("id") {
             put("type", "string")
-            put("description", "Schedule id, required for update and delete")
+            put("description", "Timer id, required for update and delete")
         }
         putJsonObject("prompt") {
             put("type", "string")
-            put("description", "Message sent to the current conversation when the reminder fires")
+            put("description", "Message sent to the current conversation when the timer fires")
         }
         putJsonObject("frequency") {
             put("type", "string")
@@ -56,7 +56,7 @@ private val scheduleParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("name") {
             put("type", "string")
-            put("description", "Display name for the reminder (defaults to the prompt preview)")
+            put("description", "Display name for the timer (defaults to the prompt preview)")
         }
         putJsonObject("date") {
             put("type", "string")
@@ -72,56 +72,56 @@ private val scheduleParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("enabled") {
             put("type", "boolean")
-            put("description", "Whether the reminder is enabled")
+            put("description", "Whether the timer is enabled")
         }
     }
     put("required", buildJsonArray { add(JsonPrimitive("action")) })
 }
 
-fun scheduleTools(service: ScheduleService, binding: SessionBinding): List<CodingTool> =
-    scheduleTool(service, binding).let { delegate ->
+fun timerTools(service: TimerService, binding: SessionBinding): List<CodingTool> =
+    timerTool(service, binding).let { delegate ->
         val editable = setOf("prompt", "name", "frequency", "date", "time", "cron", "enabled")
         listOf(
-            toolVariant(delegate, "schedule_create", "Create a reminder in this conversation. once needs date/time, cron needs a five-field expression. enabled defaults to true; false creates a disabled reminder.", editable, setOf("prompt", "frequency"), "create"),
-            toolVariant(delegate, "schedule_list", "List reminders in this conversation with their ids, schedules, enabled state and delivery results.", emptySet(), fixedAction = "list"),
-            toolVariant(delegate, "schedule_update", "Update only supplied reminder fields using an id from schedule_list. The conversation cannot change.", editable + "id", setOf("id"), "update"),
-            toolVariant(delegate, "schedule_delete", "Delete a reminder by its id from schedule_list.", setOf("id"), setOf("id"), "delete"),
+            toolVariant(delegate, "timer_create", "Create a timer in this conversation. once needs date/time, cron needs a five-field expression. enabled defaults to true; false creates a disabled timer.", editable, setOf("prompt", "frequency"), "create"),
+            toolVariant(delegate, "timer_list", "List timers in this conversation with their ids, trigger details, enabled state and delivery results.", emptySet(), fixedAction = "list"),
+            toolVariant(delegate, "timer_update", "Update only supplied timer fields using an id from timer_list. The conversation cannot change.", editable + "id", setOf("id"), "update"),
+            toolVariant(delegate, "timer_delete", "Delete a timer by its id from timer_list.", setOf("id"), setOf("id"), "delete"),
         )
     }
 
-private fun scheduleTool(service: ScheduleService, binding: SessionBinding): CodingTool = CodingTool(
-    name = "schedule",
-    description = "Create, list, update or delete reminders bound to this conversation. A reminder posts a message here when it fires. frequency=once needs date/time; frequency=cron needs a five-field expression.",
-    parameters = scheduleParameters,
-    label = "schedule",
+private fun timerTool(service: TimerService, binding: SessionBinding): CodingTool = CodingTool(
+    name = "timer",
+    description = "Create, list, update or delete timers bound to this conversation. A timer posts a message here when it fires. frequency=once needs date/time; frequency=cron needs a five-field expression.",
+    parameters = timerParameters,
+    label = "timer",
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
-        scheduleToolResult {
+        timerToolResult {
             when (val action = args.requiredString("action").lowercase()) {
-                "create" -> createSchedule(service, binding, args)
-                "list" -> listSchedules(service, binding)
-                "update" -> updateSchedule(service, binding, args)
-                "delete" -> deleteSchedule(service, binding, args)
+                "create" -> createTimer(service, binding, args)
+                "list" -> listTimers(service, binding)
+                "update" -> updateTimer(service, binding, args)
+                "delete" -> deleteTimer(service, binding, args)
                 else -> textResult("action must be create, list, update or delete.", isError = true)
             }
         }
     },
 )
 
-private suspend fun createSchedule(
-    service: ScheduleService,
+private suspend fun createTimer(
+    service: TimerService,
     binding: SessionBinding,
     args: JsonObject,
 ): AgentToolResult {
     val session = requireSession(binding)
     val sessionFile = session.sessionFile
-        ?: throw IllegalArgumentException("Current conversation is not saved yet; cannot create a reminder")
+        ?: throw IllegalArgumentException("Current conversation is not saved yet; cannot create a timer")
     val prompt = args.requiredString("prompt")
     val frequency = args.requiredString("frequency")
     val name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() } ?: promptPreview(prompt)
     val trigger = parseTrigger(args, base = null, requestedFrequency = frequency)
     val created = service.create(
-        NewSchedule(
+        NewTimer(
             name = name,
             prompt = prompt,
             trigger = trigger,
@@ -131,24 +131,24 @@ private suspend fun createSchedule(
             cwd = session.cwd,
         ),
     )
-    return textResult(scheduleJson(created).toString())
+    return textResult(timerJson(created).toString())
 }
 
-private suspend fun listSchedules(service: ScheduleService, binding: SessionBinding): AgentToolResult {
+private suspend fun listTimers(service: TimerService, binding: SessionBinding): AgentToolResult {
     val session = requireSession(binding)
-    val schedules = service.list()
+    val timers = service.list()
         .filter { it.sessionId == session.sessionId }
         .sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.createdAt }))
     val result = buildJsonObject {
-        putJsonArray("schedules") {
-            schedules.forEach { add(scheduleJson(it)) }
+        putJsonArray("timers") {
+            timers.forEach { add(timerJson(it)) }
         }
     }
     return textResult(result.toString())
 }
 
-private suspend fun updateSchedule(
-    service: ScheduleService,
+private suspend fun updateTimer(
+    service: TimerService,
     binding: SessionBinding,
     args: JsonObject,
 ): AgentToolResult {
@@ -156,27 +156,27 @@ private suspend fun updateSchedule(
     val id = args.requiredString("id")
     val existing = service.list()
         .firstOrNull { it.id == id && it.sessionId == session.sessionId }
-        ?: throw IllegalArgumentException("Schedule not found: $id")
+        ?: throw IllegalArgumentException("Timer not found: $id")
     val hasTriggerArgs = listOf("frequency", "date", "time", "cron").any { args.containsKey(it) }
     val trigger = if (hasTriggerArgs) {
         parseTrigger(args, base = existing.trigger, requestedFrequency = args.stringOrNull("frequency"))
     } else {
         null
     }
-    require(args.keys.any { it !in setOf("id", "action") }) { "schedule_update requires at least one changed field" }
-    val patch = SchedulePatch(
+    require(args.keys.any { it !in setOf("id", "action") }) { "timer_update requires at least one changed field" }
+    val patch = TimerPatch(
         name = args.stringOrNull("name")?.trim()?.takeIf { it.isNotEmpty() },
         prompt = args.stringOrNull("prompt")?.takeIf { it.isNotBlank() },
         trigger = trigger,
         enabled = args.boolOrNull("enabled"),
     )
     val updated = service.update(id, patch)
-        ?: throw IllegalArgumentException("Schedule not found: $id")
-    return textResult(scheduleJson(updated).toString())
+        ?: throw IllegalArgumentException("Timer not found: $id")
+    return textResult(timerJson(updated).toString())
 }
 
-private suspend fun deleteSchedule(
-    service: ScheduleService,
+private suspend fun deleteTimer(
+    service: TimerService,
     binding: SessionBinding,
     args: JsonObject,
 ): AgentToolResult {
@@ -184,9 +184,9 @@ private suspend fun deleteSchedule(
     val id = args.requiredString("id")
     val existing = service.list()
         .firstOrNull { it.id == id && it.sessionId == session.sessionId }
-        ?: throw IllegalArgumentException("Schedule not found: $id")
+        ?: throw IllegalArgumentException("Timer not found: $id")
     if (!service.delete(existing.id)) {
-        throw IllegalArgumentException("Schedule not found: $id")
+        throw IllegalArgumentException("Timer not found: $id")
     }
     val result = buildJsonObject {
         put("deleted", true)
@@ -198,7 +198,7 @@ private suspend fun deleteSchedule(
 private fun requireSession(binding: SessionBinding): BoundSession =
     binding.current() ?: throw IllegalArgumentException("Current conversation is not bound")
 
-private suspend fun scheduleToolResult(block: suspend () -> AgentToolResult): AgentToolResult =
+private suspend fun timerToolResult(block: suspend () -> AgentToolResult): AgentToolResult =
     try {
         block()
     } catch (error: RequestAbortedException) {
@@ -206,37 +206,37 @@ private suspend fun scheduleToolResult(block: suspend () -> AgentToolResult): Ag
     } catch (error: CancellationException) {
         throw error
     } catch (error: Exception) {
-        textResult(error.message ?: "Schedule operation failed", isError = true)
+        textResult(error.message ?: "Timer operation failed", isError = true)
     }
 
-private fun scheduleJson(schedule: Schedule): JsonObject = buildJsonObject {
-    put("id", schedule.id)
-    put("name", schedule.name)
-    put("trigger", schedule.trigger.toJsonObject())
-    if (schedule.nextRunAt == null) {
+private fun timerJson(timer: Timer): JsonObject = buildJsonObject {
+    put("id", timer.id)
+    put("name", timer.name)
+    put("trigger", timer.trigger.toJsonObject())
+    if (timer.nextRunAt == null) {
         put("nextRunAt", JsonNull)
     } else {
-        put("nextRunAt", schedule.nextRunAt)
+        put("nextRunAt", timer.nextRunAt)
     }
-    put("enabled", schedule.enabled)
-    if (schedule.lastDeliveredAt == null) {
+    put("enabled", timer.enabled)
+    if (timer.lastDeliveredAt == null) {
         put("lastDeliveredAt", JsonNull)
     } else {
-        put("lastDeliveredAt", schedule.lastDeliveredAt)
+        put("lastDeliveredAt", timer.lastDeliveredAt)
     }
-    if (schedule.lastError == null) {
+    if (timer.lastError == null) {
         put("lastError", JsonNull)
     } else {
-        put("lastError", schedule.lastError.name)
+        put("lastError", timer.lastError.name)
     }
 }
 
-private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFrequency: String?): ScheduleTrigger {
+private fun parseTrigger(args: JsonObject, base: TimerTrigger?, requestedFrequency: String?): TimerTrigger {
     val frequency = requestedFrequency?.trim()?.lowercase()
         ?: args.stringOrNull("frequency")?.trim()?.lowercase()
         ?: when (base) {
-            is ScheduleTrigger.Cron -> "cron"
-            is ScheduleTrigger.Once -> "once"
+            is TimerTrigger.Cron -> "cron"
+            is TimerTrigger.Once -> "once"
             else -> null
         }
         ?: throw IllegalArgumentException("Missing frequency (once or cron)")
@@ -244,21 +244,21 @@ private fun parseTrigger(args: JsonObject, base: ScheduleTrigger?, requestedFreq
     if (frequency == "cron" && (args.containsKey("date") || args.containsKey("time"))) throw IllegalArgumentException("cron does not accept date/time")
     return when (frequency) {
         "once" -> {
-            val baseOnce = base as? ScheduleTrigger.Once
+            val baseOnce = base as? TimerTrigger.Once
             val date = args.stringOrNull("date")?.trim()?.takeIf { it.isNotEmpty() }
                 ?.let(::parseDate)
                 ?: baseOnce?.date
                 ?: throw IllegalArgumentException("once requires date (YYYY-MM-DD)")
             val time = parseTimeArg(args, baseOnce?.time)
                 ?: throw IllegalArgumentException("once requires time (HH:mm)")
-            ScheduleTrigger.Once(date, time)
+            TimerTrigger.Once(date, time)
         }
         "cron" -> {
-            val baseCron = base as? ScheduleTrigger.Cron
+            val baseCron = base as? TimerTrigger.Cron
             val expression = args.stringOrNull("cron")?.trim()?.takeIf { it.isNotEmpty() }
                 ?: baseCron?.expression
                 ?: throw IllegalArgumentException("cron requires a five-field cron expression")
-            ScheduleTrigger.Cron(expression)
+            TimerTrigger.Cron(expression)
         }
         else -> throw IllegalArgumentException("frequency must be once or cron")
     }

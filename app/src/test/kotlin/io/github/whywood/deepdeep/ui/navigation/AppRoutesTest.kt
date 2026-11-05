@@ -23,7 +23,7 @@ class AppRoutesTest {
         AppDestination.FloatingWindow,
         AppDestination.Search,
         AppDestination.Skills,
-        AppDestination.Schedules,
+        AppDestination.Timers,
         AppDestination.Plugins,
         AppDestination.Workshop,
         AppDestination.WorkshopDetail("demo-workshop"),

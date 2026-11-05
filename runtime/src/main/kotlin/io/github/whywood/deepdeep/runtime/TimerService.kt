@@ -30,18 +30,18 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
-class ScheduleDeliveryException(val error: ScheduleError) : Exception(error.name)
+class TimerDeliveryException(val error: TimerError) : Exception(error.name)
 
-class ScheduleService(
+class TimerService(
     private val runtime: AgentRuntime,
-    private val store: ScheduleStore,
+    private val store: TimerStore,
     private val scope: CoroutineScope,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val intentsFile: File? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val schedulesState = MutableStateFlow<List<Schedule>>(emptyList())
-    val schedules: StateFlow<List<Schedule>> = schedulesState.asStateFlow()
+    private val timersState = MutableStateFlow<List<Timer>>(emptyList())
+    val timers: StateFlow<List<Timer>> = timersState.asStateFlow()
 
     private val deliveryMutex = Mutex()
     private val wake = Channel<Unit>(Channel.CONFLATED)
@@ -50,18 +50,18 @@ class ScheduleService(
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
-            guard("recover pending schedules failed") { recoverPending() }
-            guard("refresh schedules failed") { refresh() }
-            guard("deliver due schedules failed") { deliverDue() }
+            guard("recover pending timers failed") { recoverPending() }
+            guard("refresh timers failed") { refresh() }
+            guard("deliver due timers failed") { deliverDue() }
             launch {
                 store.changes.collect {
-                    guard("refresh schedules failed") { refresh() }
+                    guard("refresh timers failed") { refresh() }
                     wake.trySend(Unit)
                 }
             }
             launch {
                 runtime.events.collect { event ->
-                    guard("handle schedule event failed") { handleRuntimeEvent(event) }
+                    guard("handle timer event failed") { handleRuntimeEvent(event) }
                 }
             }
             launch { timerLoop() }
@@ -83,10 +83,10 @@ class ScheduleService(
         job = null
     }
 
-    suspend fun list(): List<Schedule> {
-        val schedules = readSchedules()
-        schedulesState.value = schedules
-        return schedules
+    suspend fun list(): List<Timer> {
+        val timers = readTimers()
+        timersState.value = timers
+        return timers
     }
 
     suspend fun recomputeTargets() {
@@ -94,8 +94,8 @@ class ScheduleService(
         refresh()
     }
 
-    suspend fun create(newSchedule: NewSchedule): Schedule {
-        val created = withContext(ioDispatcher) { store.create(newSchedule) }
+    suspend fun create(newTimer: NewTimer): Timer {
+        val created = withContext(ioDispatcher) { store.create(newTimer) }
         refresh()
         return created
     }
@@ -103,13 +103,13 @@ class ScheduleService(
     suspend fun create(
         name: String,
         prompt: String,
-        trigger: ScheduleTrigger,
+        trigger: TimerTrigger,
         enabled: Boolean = true,
         sessionId: String,
         sessionFile: String,
         cwd: String,
-    ): Schedule = create(
-        NewSchedule(
+    ): Timer = create(
+        NewTimer(
             name = name,
             prompt = prompt,
             trigger = trigger,
@@ -120,7 +120,7 @@ class ScheduleService(
         ),
     )
 
-    suspend fun update(id: String, patch: SchedulePatch): Schedule? {
+    suspend fun update(id: String, patch: TimerPatch): Timer? {
         val updated = withContext(ioDispatcher) { store.update(id, patch) }
         refresh()
         return updated
@@ -133,11 +133,11 @@ class ScheduleService(
     }
 
     suspend fun runNow(id: String): Result<Unit> = deliveryMutex.withLock {
-        val schedule = readSchedules().firstOrNull { it.id == id }
-            ?: return@withLock Result.failure(IllegalArgumentException("schedule not found"))
-        val intent = intentFor(schedule, clock.millis())
+        val timer = readTimers().firstOrNull { it.id == id }
+            ?: return@withLock Result.failure(IllegalArgumentException("timer not found"))
+        val intent = intentFor(timer, clock.millis())
         addIntent(intent)
-        val error = deliverSchedules(listOf(schedule))
+        val error = deliverTimers(listOf(timer))
         val now = clock.millis()
         if (error == null) {
             withContext(ioDispatcher) { store.markRunNow(id, now) }
@@ -148,13 +148,13 @@ class ScheduleService(
             withContext(ioDispatcher) { store.markRunNow(id, now, error) }
             removeIntent(intent.dedupeKey)
             refresh()
-            Result.failure(ScheduleDeliveryException(error))
+            Result.failure(TimerDeliveryException(error))
         }
     }
 
     internal suspend fun deliverDue() = deliveryMutex.withLock {
         val now = clock.millis()
-        val due = readSchedules()
+        val due = readTimers()
             .filter { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
         if (due.isNotEmpty()) {
             due.groupBy { it.sessionId }.forEach { (_, group) ->
@@ -171,28 +171,28 @@ class ScheduleService(
             refresh()
             return@withLock
         }
-        val schedules = readSchedules().associateBy { it.id }
+        val timers = readTimers().associateBy { it.id }
         val deliverable = mutableListOf<DeliveryIntent>()
         intents.forEach { intent ->
-            val schedule = schedules[intent.scheduleId]
-            val covered = schedule?.lastDeliveredAt?.let { it >= intent.createdAt } == true
-            if (schedule == null || !schedule.enabled || covered) {
+            val timer = timers[intent.timerId]
+            val covered = timer?.lastDeliveredAt?.let { it >= intent.createdAt } == true
+            if (timer == null || !timer.enabled || covered) {
                 removeIntent(intent.dedupeKey)
             } else {
                 deliverable += intent
             }
         }
         deliverable.groupBy { it.sessionId }.forEach { (_, group) ->
-            val groupSchedules = group.mapNotNull { schedules[it.scheduleId] }
-            val error = deliverSchedules(groupSchedules)
+            val groupTimers = group.mapNotNull { timers[it.timerId] }
+            val error = deliverTimers(groupTimers)
             val at = clock.millis()
             group.forEach { intent ->
-                val schedule = schedules[intent.scheduleId]
-                if (schedule != null) {
+                val timer = timers[intent.timerId]
+                if (timer != null) {
                     if (error == null) {
-                        withContext(ioDispatcher) { store.markDelivered(schedule.id, at) }
+                        withContext(ioDispatcher) { store.markDelivered(timer.id, at) }
                     } else {
-                        withContext(ioDispatcher) { store.markDeliveryFailed(schedule.id, error, at) }
+                        withContext(ioDispatcher) { store.markDeliveryFailed(timer.id, error, at) }
                     }
                 }
                 removeIntent(intent.dedupeKey)
@@ -221,10 +221,10 @@ class ScheduleService(
         }
     }
 
-    private suspend fun deliverGroup(group: List<Schedule>, now: Long) {
+    private suspend fun deliverGroup(group: List<Timer>, now: Long) {
         val intents = group.map { intentFor(it, now) }
         intents.forEach { addIntent(it) }
-        val error = deliverSchedules(group)
+        val error = deliverTimers(group)
         val at = clock.millis()
         if (error == null) {
             withContext(ioDispatcher) { group.forEach { store.markDelivered(it.id, at) } }
@@ -234,12 +234,12 @@ class ScheduleService(
         intents.forEach { removeIntent(it.dedupeKey) }
     }
 
-    private fun intentFor(schedule: Schedule, now: Long): DeliveryIntent {
-        val runAt = schedule.nextRunAt
+    private fun intentFor(timer: Timer, now: Long): DeliveryIntent {
+        val runAt = timer.nextRunAt
         return DeliveryIntent(
-            dedupeKey = "${schedule.id}@${runAt ?: "run-now-$now"}",
-            scheduleId = schedule.id,
-            sessionId = schedule.sessionId,
+            dedupeKey = "${timer.id}@${runAt ?: "run-now-$now"}",
+            timerId = timer.id,
+            sessionId = timer.sessionId,
             createdAt = now,
         )
     }
@@ -253,7 +253,9 @@ class ScheduleService(
             ?: return rebuildIntents()
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
         val entries = root["intents"] as? JsonArray
-        if (version != INTENT_SCHEMA_VERSION || entries == null) return rebuildIntents()
+        if ((version != INTENT_SCHEMA_VERSION && version != LEGACY_INTENT_SCHEMA_VERSION) || entries == null) {
+            return rebuildIntents()
+        }
         return entries.mapNotNull { element ->
             val item = element as? JsonObject ?: return@mapNotNull null
             runCatching { intentFromJson(item) }.getOrNull()
@@ -287,7 +289,7 @@ class ScheduleService(
                 intents.forEach { intent ->
                     add(buildJsonObject {
                         put("dedupeKey", intent.dedupeKey)
-                        put("scheduleId", intent.scheduleId)
+                        put("timerId", intent.timerId)
                         put("sessionId", intent.sessionId)
                         put("createdAt", intent.createdAt)
                     })
@@ -310,17 +312,17 @@ class ScheduleService(
         }
     }
 
-    private suspend fun deliverSchedules(group: List<Schedule>): ScheduleError? {
+    private suspend fun deliverTimers(group: List<Timer>): TimerError? {
         val anchor = group.firstOrNull() ?: return null
         if (anchor.sessionFile.isBlank() || !File(anchor.sessionFile).isFile) {
-            return ScheduleError.SESSION_MISSING
+            return TimerError.SESSION_MISSING
         }
         val opened = try {
             runtime.openSession(anchor.sessionFile, anchor.cwd)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            return ScheduleError.OPEN_FAILED
+            return TimerError.OPEN_FAILED
         }
         val (text, reminder) = reminderText(group)
         return try {
@@ -329,7 +331,7 @@ class ScheduleService(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            ScheduleError.DELIVERY_FAILED
+            TimerError.DELIVERY_FAILED
         }
     }
 
@@ -337,7 +339,7 @@ class ScheduleService(
         while (currentCoroutineContext().isActive) {
             val delivered = try {
                 val now = clock.millis()
-                val current = readSchedules()
+                val current = readTimers()
                 val hasDue = current.any { it.enabled && it.nextRunAt?.let { time -> time <= now } == true }
                 if (hasDue) {
                     deliverDue()
@@ -351,7 +353,7 @@ class ScheduleService(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                logError(TAG, "schedule timer iteration failed", error)
+                logError(TAG, "timer timer iteration failed", error)
                 withTimeoutOrNull(MAX_TIMER_WAIT_MS) { wake.receive() }
                 false
             }
@@ -363,28 +365,32 @@ class ScheduleService(
         list()
     }
 
-    private suspend fun readSchedules(): List<Schedule> = withContext(ioDispatcher) {
+    private suspend fun readTimers(): List<Timer> = withContext(ioDispatcher) {
         store.list()
     }
 
     private companion object {
         const val MAX_TIMER_WAIT_MS = 15 * 60 * 1000L
-        const val INTENT_SCHEMA_VERSION = 1
+        const val INTENT_SCHEMA_VERSION = 2
+        const val LEGACY_INTENT_SCHEMA_VERSION = 1
         const val FILE_NAME = "delivery-intents.json"
-        const val TAG = "ScheduleService"
+        const val TAG = "TimerService"
     }
 }
 
 private data class DeliveryIntent(
     val dedupeKey: String,
-    val scheduleId: String,
+    val timerId: String,
     val sessionId: String,
     val createdAt: Long,
 )
 
+private const val LEGACY_INTENT_TIMER_ID_KEY = "scheduleId"
+
 private fun intentFromJson(json: JsonObject): DeliveryIntent = DeliveryIntent(
     dedupeKey = json.requiredIntentString("dedupeKey"),
-    scheduleId = json.requiredIntentString("scheduleId"),
+    timerId = (json["timerId"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() }
+        ?: json.requiredIntentString(LEGACY_INTENT_TIMER_ID_KEY),
     sessionId = json.requiredIntentString("sessionId"),
     createdAt = json.requiredIntentLong("createdAt"),
 )
@@ -397,15 +403,15 @@ private fun JsonObject.requiredIntentLong(name: String): Long =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
         ?: throw IllegalArgumentException("invalid intent field: $name")
 
-private fun reminderText(group: List<Schedule>): Pair<String, String> {
+private fun reminderText(group: List<Timer>): Pair<String, String> {
     val first = group.first()
     if (group.size == 1) {
         val text = "[定时提醒] ${first.name}\n这是你设置的定时提醒，现在到时间了。\n\n${first.prompt}"
         return text to first.name
     }
     val header = "[定时提醒] ${group.size} 个提醒\n这是你设置的定时提醒，现在到时间了。"
-    val body = group.mapIndexed { index, schedule ->
-        "\n\n${index + 1}. ${schedule.name}\n${schedule.prompt}"
+    val body = group.mapIndexed { index, timer ->
+        "\n\n${index + 1}. ${timer.name}\n${timer.prompt}"
     }.joinToString("")
     return header + body to "${group.size} 个提醒"
 }

@@ -30,7 +30,7 @@ class AgentService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
             if (action == Intent.ACTION_TIME_CHANGED || action == Intent.ACTION_TIMEZONE_CHANGED) {
-                scope.launch { graph.scheduleService.recomputeTargets() }
+                scope.launch { graph.timerService.recomputeTargets() }
             }
         }
     }
@@ -45,7 +45,7 @@ class AgentService : Service() {
         scope.launch {
             ProcessExitLog.record(this@AgentService)
             graph.host.ensureStarted()
-            graph.scheduleService.start()
+            graph.timerService.start()
         }
         scope.launch {
             delay(ACCESSIBILITY_CHECK_DELAY_MS)
@@ -84,7 +84,7 @@ class AgentService : Service() {
         runCatching { unregisterReceiver(clockReceiver) }
         floatingWindow?.stop()
         floatingWindow = null
-        graph.scheduleService.stop()
+        graph.timerService.stop()
         graph.notificationCenter.stop()
         scope.cancel()
         super.onDestroy()

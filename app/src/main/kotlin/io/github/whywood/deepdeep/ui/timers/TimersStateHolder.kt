@@ -1,14 +1,14 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.runtime.NewSchedule
+import io.github.whywood.deepdeep.runtime.NewTimer
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
-import io.github.whywood.deepdeep.runtime.Schedule
-import io.github.whywood.deepdeep.runtime.ScheduleDeliveryException
-import io.github.whywood.deepdeep.runtime.SchedulePatch
-import io.github.whywood.deepdeep.runtime.ScheduleService
+import io.github.whywood.deepdeep.runtime.Timer
+import io.github.whywood.deepdeep.runtime.TimerDeliveryException
+import io.github.whywood.deepdeep.runtime.TimerPatch
+import io.github.whywood.deepdeep.runtime.TimerService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -20,37 +20,37 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-internal data class SchedulesUiState(
+internal data class TimersUiState(
     val loading: Boolean = true,
-    val items: List<Schedule> = emptyList(),
+    val items: List<Timer> = emptyList(),
     val titles: Map<String, String?> = emptyMap(),
     val query: String = "",
     val editorOpen: Boolean = false,
     val editingId: String? = null,
-    val editorDraft: ScheduleDraft = ScheduleDraft(),
+    val editorDraft: TimerDraft = TimerDraft(),
     val busy: Boolean = false,
     val errorRes: Int? = null,
     val conversations: List<ConversationSummary> = emptyList(),
     val workspaceNames: Map<String, String> = emptyMap(),
 ) {
-    val filtered: List<Schedule> get() = filterSchedules(items, titles, query)
+    val filtered: List<Timer> get() = filterTimers(items, titles, query)
 
-    val active: List<Schedule>
+    val active: List<Timer>
         get() = filtered.filter { it.enabled }
             .sortedWith(compareBy({ it.nextRunAt ?: Long.MAX_VALUE }, { it.name }))
 
-    val inactive: List<Schedule>
+    val inactive: List<Timer>
         get() = filtered.filterNot { it.enabled }.sortedByDescending { it.updatedAt }
 }
 
-internal interface SchedulesDataSource {
-    val schedules: StateFlow<List<Schedule>>
+internal interface TimersDataSource {
+    val timers: StateFlow<List<Timer>>
 
-    suspend fun list(): List<Schedule>
+    suspend fun list(): List<Timer>
 
-    suspend fun create(newSchedule: NewSchedule): Schedule
+    suspend fun create(newTimer: NewTimer): Timer
 
-    suspend fun update(id: String, patch: SchedulePatch): Schedule?
+    suspend fun update(id: String, patch: TimerPatch): Timer?
 
     suspend fun delete(id: String): Boolean
 
@@ -63,17 +63,17 @@ internal interface SchedulesDataSource {
     suspend fun workspaces(): List<RuntimeWorkspace>
 }
 
-internal class ScheduleServiceDataSource(
-    private val service: ScheduleService,
+internal class TimerServiceDataSource(
+    private val service: TimerService,
     private val runtime: ConversationQueries,
-) : SchedulesDataSource {
-    override val schedules: StateFlow<List<Schedule>> get() = service.schedules
+) : TimersDataSource {
+    override val timers: StateFlow<List<Timer>> get() = service.timers
 
-    override suspend fun list(): List<Schedule> = service.list()
+    override suspend fun list(): List<Timer> = service.list()
 
-    override suspend fun create(newSchedule: NewSchedule): Schedule = service.create(newSchedule)
+    override suspend fun create(newTimer: NewTimer): Timer = service.create(newTimer)
 
-    override suspend fun update(id: String, patch: SchedulePatch): Schedule? = service.update(id, patch)
+    override suspend fun update(id: String, patch: TimerPatch): Timer? = service.update(id, patch)
 
     override suspend fun delete(id: String): Boolean = service.delete(id)
 
@@ -86,13 +86,13 @@ internal class ScheduleServiceDataSource(
     override suspend fun workspaces(): List<RuntimeWorkspace> = runtime.workspaces()
 }
 
-internal class SchedulesStateHolder(
-    private val source: SchedulesDataSource,
+internal class TimersStateHolder(
+    private val source: TimersDataSource,
     private val scope: CoroutineScope,
     private val initialConversationId: String? = null,
 ) {
-    private val _state = MutableStateFlow(SchedulesUiState())
-    val state: StateFlow<SchedulesUiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(TimersUiState())
+    val state: StateFlow<TimersUiState> = _state.asStateFlow()
 
     private val refreshLock = Mutex()
     private var observeJob: Job? = null
@@ -100,7 +100,7 @@ internal class SchedulesStateHolder(
     fun start() {
         if (observeJob != null) return
         observeJob = scope.launch {
-            source.schedules.collect { items ->
+            source.timers.collect { items ->
                 _state.update { it.copy(items = items) }
                 resolveTitles()
             }
@@ -166,7 +166,7 @@ internal class SchedulesStateHolder(
                 editorOpen = true,
                 editingId = null,
                 errorRes = null,
-                editorDraft = ScheduleDraft(
+                editorDraft = TimerDraft(
                     sessionId = conversation?.id.orEmpty(),
                     sessionFile = conversation?.filePath.orEmpty(),
                     cwd = conversation?.cwd.orEmpty(),
@@ -176,8 +176,8 @@ internal class SchedulesStateHolder(
         }
     }
 
-    suspend fun openExisting(schedule: Schedule) {
-        val sessionId = schedule.sessionId
+    suspend fun openExisting(timer: Timer) {
+        val sessionId = timer.sessionId
         val knownTitle = _state.value.titles[sessionId]
         val title = if (sessionId.isNotBlank() && knownTitle == null) {
             runCatching { source.sessionTitle(sessionId) }.getOrNull()
@@ -190,9 +190,9 @@ internal class SchedulesStateHolder(
         _state.update {
             it.copy(
                 editorOpen = true,
-                editingId = schedule.id,
+                editingId = timer.id,
                 errorRes = null,
-                editorDraft = ScheduleDraft.from(schedule, title.orEmpty()),
+                editorDraft = TimerDraft.from(timer, title.orEmpty()),
             )
         }
     }
@@ -201,11 +201,11 @@ internal class SchedulesStateHolder(
         _state.update { it.copy(editorOpen = false, editingId = null, errorRes = null) }
     }
 
-    suspend fun save(draft: ScheduleDraft) = mutate(R.string.schedule_error_save_failed) {
+    suspend fun save(draft: TimerDraft) = mutate(R.string.timer_error_save_failed) {
         val trigger = draft.toTrigger()
         if (draft.id == null) {
             source.create(
-                NewSchedule(
+                NewTimer(
                     draft.name,
                     draft.prompt,
                     trigger,
@@ -218,7 +218,7 @@ internal class SchedulesStateHolder(
         } else {
             source.update(
                 draft.id,
-                SchedulePatch(
+                TimerPatch(
                     draft.name,
                     draft.prompt,
                     trigger,
@@ -232,22 +232,22 @@ internal class SchedulesStateHolder(
         _state.update { it.copy(editorOpen = false, editingId = null) }
     }
 
-    suspend fun remove(id: String) = mutate(R.string.schedule_error_delete_failed) {
+    suspend fun remove(id: String) = mutate(R.string.timer_error_delete_failed) {
         source.delete(id)
         _state.update { it.copy(editorOpen = false, editingId = null) }
     }
 
     suspend fun setEnabled(id: String, enabled: Boolean) {
         try {
-            source.update(id, SchedulePatch(enabled = enabled))
+            source.update(id, TimerPatch(enabled = enabled))
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (error: Exception) {
-            _state.update { it.copy(errorRes = R.string.schedule_error_save_failed) }
+            _state.update { it.copy(errorRes = R.string.timer_error_save_failed) }
         }
     }
 
-    suspend fun runNow(draft: ScheduleDraft): Boolean {
+    suspend fun runNow(draft: TimerDraft): Boolean {
         val id = draft.id ?: return false
         _state.update { it.copy(busy = true, errorRes = null) }
         var succeeded = false
@@ -259,13 +259,13 @@ internal class SchedulesStateHolder(
                 _state.update { it.copy(editorOpen = false, editingId = null) }
             } else {
                 _state.update {
-                    it.copy(errorRes = deliveryErrorRes((error as? ScheduleDeliveryException)?.error))
+                    it.copy(errorRes = deliveryErrorRes((error as? TimerDeliveryException)?.error))
                 }
             }
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (error: Exception) {
-            _state.update { it.copy(errorRes = R.string.schedule_error_run_failed) }
+            _state.update { it.copy(errorRes = R.string.timer_error_run_failed) }
         } finally {
             _state.update { it.copy(busy = false) }
         }

@@ -131,7 +131,7 @@ internal fun DeepDeepApp(
         .firstOrNull { it.id == defaultModelConfig.modelId }
         ?.displayName
         ?: defaultModelConfig.modelId
-    val schedules by graph.scheduleService.schedules.collectAsStateWithLifecycle()
+    val timers by graph.timerService.timers.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val sharedStorageEnabled by graph.linuxSettings.sharedStorageEnabled.collectAsStateWithLifecycle(
@@ -371,8 +371,8 @@ internal fun DeepDeepApp(
 
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
-        val reminderCount = remember(schedules, state.conversationId) {
-            schedules.count { it.enabled && it.sessionId == state.conversationId }
+        val reminderCount = remember(timers, state.conversationId) {
+            timers.count { it.enabled && it.sessionId == state.conversationId }
         }
         val runningJobCount = remember(activeJobs) {
             activeJobs.count { it.status == JobStatus.RUNNING }
@@ -419,7 +419,7 @@ internal fun DeepDeepApp(
                                                 previewAttachment = it
                                             },
                         onOpenFile = openWorkspaceFile,
-                        onOpenSchedules = { navigator.push(AppDestination.Schedules) },
+                        onOpenTimers = { navigator.push(AppDestination.Timers) },
                         onRetry = chatViewModel::retry,
                         onPickCommand = ::pickCommand,
                         onPauseGoal = {
@@ -586,7 +586,7 @@ internal fun DeepDeepApp(
                 uiPreferences.pinnedWorkspaceIds,
                 expandedWorkspaceIds,
                 state.busySessionIds,
-                schedules.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
+                timers.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
                 nickname,
             ),
             drawerActions = ShellDrawerActions(

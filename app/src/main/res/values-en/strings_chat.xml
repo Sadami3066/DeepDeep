@@ -99,8 +99,8 @@
     <string name="assistant_image_preview">Preview</string>
     <string name="assistant_error_details_hide">Hide raw error</string>
     <string name="assistant_error_details_show">Show raw error</string>
-    <string name="assistant_reminder_label">Scheduled reminder · %1$s</string>
-    <string name="assistant_reminders">Scheduled reminders</string>
+    <string name="assistant_reminder_label">Timer reminder · %1$s</string>
+    <string name="assistant_reminders">Timer reminders</string>
     <string name="assistant_retry">Retry</string>
     <string name="chat_status_auto_retry">Retrying %1$d/%2$d</string>
     <string name="chat_error_with_code">%1$s (%2$s)</string>

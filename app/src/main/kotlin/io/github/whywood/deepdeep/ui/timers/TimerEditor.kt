@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -49,17 +49,17 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
-internal fun ScheduleEditor(
-    initialDraft: ScheduleDraft,
+internal fun TimerEditor(
+    initialDraft: TimerDraft,
     isEditing: Boolean,
     externalError: String?,
     saving: Boolean,
     conversations: List<ConversationSummary>,
     workspaceNames: Map<String, String>,
     onDismiss: () -> Unit,
-    onSave: (ScheduleDraft) -> Unit,
-    onRunNow: (ScheduleDraft) -> Unit,
-    onDelete: (ScheduleDraft) -> Unit,
+    onSave: (TimerDraft) -> Unit,
+    onRunNow: (TimerDraft) -> Unit,
+    onDelete: (TimerDraft) -> Unit,
     onOpenConversation: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -69,7 +69,7 @@ internal fun ScheduleEditor(
     val instantFormatter = remember(locale) {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(locale)
     }
-    var draft by rememberSaveable(initialDraft, stateSaver = ScheduleDraftSaver) { mutableStateOf(initialDraft) }
+    var draft by rememberSaveable(initialDraft, stateSaver = TimerDraftSaver) { mutableStateOf(initialDraft) }
     var validationError by remember { mutableStateOf<Int?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -77,7 +77,7 @@ internal fun ScheduleEditor(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     fun submit() {
-        val prepared = if (draft.name.isBlank() && draft.prompt.isNotBlank()) draft.copy(name = ScheduleDraft.preview(draft.prompt)) else draft
+        val prepared = if (draft.name.isBlank() && draft.prompt.isNotBlank()) draft.copy(name = TimerDraft.preview(draft.prompt)) else draft
         draft = prepared
         val error = prepared.validate(ZonedDateTime.now())
         if (error != null) {
@@ -89,16 +89,16 @@ internal fun ScheduleEditor(
     }
 
     DdSheet(onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).testTag("schedule_editor")) {
-            DdSheetHeader(stringResource(if (isEditing) R.string.schedules_edit_title else R.string.schedules_new_title), onDismiss)
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).testTag("timer_editor")) {
+            DdSheetHeader(stringResource(if (isEditing) R.string.timers_edit_title else R.string.timers_new_title), onDismiss)
             Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                FieldLabel(stringResource(R.string.schedules_name_label))
-                DdTextField(draft.name, { draft = draft.copy(name = it); validationError = null }, stringResource(R.string.schedules_name_hint))
-                FieldLabel(stringResource(R.string.schedules_prompt_label))
+                FieldLabel(stringResource(R.string.timers_name_label))
+                DdTextField(draft.name, { draft = draft.copy(name = it); validationError = null }, stringResource(R.string.timers_name_hint))
+                FieldLabel(stringResource(R.string.timers_prompt_label))
                 DdTextField(
                     draft.prompt,
                     { draft = draft.copy(prompt = it); validationError = null },
-                    stringResource(R.string.schedules_prompt_hint),
+                    stringResource(R.string.timers_prompt_hint),
                     singleLine = false,
                 )
                 RepeatRow(draft.repeat) { draft = draft.copy(repeat = it); validationError = null }
@@ -108,24 +108,24 @@ internal fun ScheduleEditor(
                         draft.cronExpression,
                         { draft = draft.copy(cronExpression = it); validationError = null },
                         DEFAULT_CRON_EXPRESSION,
-                        testTag = "schedule_cron_expression",
+                        testTag = "timer_cron_expression",
                     )
                     CronSummaryLine(draft.cronExpression)
                 } else {
                     EditorRow(
-                        stringResource(R.string.schedules_date_label),
+                        stringResource(R.string.timers_date_label),
                         dateFormatter.format(draft.date),
-                        Modifier.testTag("schedule_date_row"),
+                        Modifier.testTag("timer_date_row"),
                         0.dp,
                     ) { showDatePicker = true }
                     TimeRow(draft.time) { showTimePicker = true }
                 }
-                EditorRow(stringResource(R.string.schedules_deliver_to), conversationLabel(draft)) { showConversationPicker = true }
+                EditorRow(stringResource(R.string.timers_deliver_to), conversationLabel(draft)) { showConversationPicker = true }
                 if (isEditing && draft.sessionId.isNotBlank()) {
                     DdTextAction(
-                        stringResource(R.string.schedules_open_conversation),
+                        stringResource(R.string.timers_open_conversation),
                         { onOpenConversation(draft.sessionId) },
-                        Modifier.testTag("schedule_open_conversation"),
+                        Modifier.testTag("timer_open_conversation"),
                         colors.inkSecondary,
                         draft.conversationTitle.isNotBlank() && !saving,
                     )
@@ -134,10 +134,10 @@ internal fun ScheduleEditor(
                 val nextRun = draft.nextRunPreview(ZonedDateTime.now())
                 Text(
                     stringResource(
-                        R.string.schedules_next_run_line,
-                        nextRun?.format(instantFormatter) ?: stringResource(R.string.schedules_never),
+                        R.string.timers_next_run_line,
+                        nextRun?.format(instantFormatter) ?: stringResource(R.string.timers_never),
                     ),
-                    Modifier.padding(top = 16.dp).testTag("schedule_next_run"),
+                    Modifier.padding(top = 16.dp).testTag("timer_next_run"),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
@@ -148,13 +148,13 @@ internal fun ScheduleEditor(
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
                 if (isEditing) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        DdTextAction(stringResource(R.string.schedules_run_now), { onRunNow(draft) }, Modifier.testTag("schedule_run_now"), enabled = !saving)
+                        DdTextAction(stringResource(R.string.timers_run_now), { onRunNow(draft) }, Modifier.testTag("timer_run_now"), enabled = !saving)
                         Spacer(Modifier.weight(1f))
-                        DdTextAction(stringResource(R.string.schedules_delete), { showDeleteConfirm = true }, Modifier.testTag("schedule_delete"), colors.danger, !saving)
+                        DdTextAction(stringResource(R.string.timers_delete), { showDeleteConfirm = true }, Modifier.testTag("timer_delete"), colors.danger, !saving)
                     }
                     Spacer(Modifier.height(8.dp))
                 }
-                DdPrimaryButton(stringResource(R.string.schedules_save), { submit() }, Modifier.fillMaxWidth().testTag("schedule_save"), enabled = !saving)
+                DdPrimaryButton(stringResource(R.string.timers_save), { submit() }, Modifier.fillMaxWidth().testTag("timer_save"), enabled = !saving)
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -174,25 +174,25 @@ internal fun ScheduleEditor(
     }) { showConversationPicker = false }
     if (showDeleteConfirm) DdDialog(
         onDismissRequest = { showDeleteConfirm = false },
-        title = stringResource(R.string.schedules_delete_title),
+        title = stringResource(R.string.timers_delete_title),
         content = {
             Text(
-                stringResource(R.string.schedules_delete_message, draft.name),
+                stringResource(R.string.timers_delete_message, draft.name),
                 style = DdType.bodySmall,
                 color = colors.inkSecondary,
             )
         },
     ) {
         DdTextAction(
-            stringResource(R.string.schedules_cancel),
+            stringResource(R.string.timers_cancel),
             { showDeleteConfirm = false },
-            Modifier.testTag("schedules_delete_cancel"),
+            Modifier.testTag("timers_delete_cancel"),
             colors.inkSecondary,
         )
         DdTextAction(
-            stringResource(R.string.schedules_delete_confirm),
+            stringResource(R.string.timers_delete_confirm),
             { showDeleteConfirm = false; onDelete(draft) },
-            Modifier.testTag("schedule_delete_confirm"),
+            Modifier.testTag("timer_delete_confirm"),
             colors.danger,
         )
     }
@@ -206,9 +206,9 @@ private fun FieldLabel(text: String) {
 @Composable
 private fun TimeRow(time: LocalTime, onClick: () -> Unit) {
     EditorRow(
-        stringResource(R.string.schedules_time_label),
-        time.format(SCHEDULE_TIME_FORMAT),
-        Modifier.testTag("schedule_time_row"),
+        stringResource(R.string.timers_time_label),
+        time.format(TIMER_TIME_FORMAT),
+        Modifier.testTag("timer_time_row"),
         onClick = onClick,
     )
 }
@@ -245,7 +245,7 @@ private fun EditorRow(
 @Composable
 private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.schedules_enabled_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
+        Text(stringResource(R.string.timers_enabled_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
         DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -253,7 +253,7 @@ private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 @Composable
 private fun RepeatRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.schedules_repeat_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
+        Text(stringResource(R.string.timers_repeat_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
         DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -268,7 +268,7 @@ private fun CronSummaryLine(expression: String) {
     val colors = deepDeepColors()
     val summary = cronSummaryLabel(expression)
     Text(
-        summary ?: stringResource(R.string.schedules_cron_invalid),
+        summary ?: stringResource(R.string.timers_cron_invalid),
         Modifier.padding(top = 6.dp),
         style = DdType.bodySmall,
         color = if (summary == null) colors.danger else colors.inkTertiary,
@@ -276,10 +276,10 @@ private fun CronSummaryLine(expression: String) {
 }
 
 @Composable
-private fun conversationLabel(draft: ScheduleDraft): String = when {
+private fun conversationLabel(draft: TimerDraft): String = when {
     draft.conversationTitle.isNotBlank() -> draft.conversationTitle
-    draft.sessionId.isNotBlank() -> stringResource(R.string.schedules_conversation_deleted)
-    else -> stringResource(R.string.schedules_conversation_label)
+    draft.sessionId.isNotBlank() -> stringResource(R.string.timers_conversation_deleted)
+    else -> stringResource(R.string.timers_conversation_label)
 }
 
 @Composable
@@ -292,11 +292,11 @@ private fun ConversationPickerSheet(
 ) {
     val colors = deepDeepColors()
     DdSheet(onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).testTag("schedule_conversation_picker")) {
-            DdSheetHeader(stringResource(R.string.schedules_conversation_picker_title), onDismiss)
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).testTag("timer_conversation_picker")) {
+            DdSheetHeader(stringResource(R.string.timers_conversation_picker_title), onDismiss)
             if (conversations.isEmpty()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.schedules_conversation_empty), style = DdType.bodySmall, color = colors.inkTertiary)
+                    Text(stringResource(R.string.timers_conversation_empty), style = DdType.bodySmall, color = colors.inkTertiary)
                 }
             } else {
                 Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {

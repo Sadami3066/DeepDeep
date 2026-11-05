@@ -242,9 +242,9 @@ class GoalToolsTest {
     @Test
     fun eachManagementEntryRejectsMissingAndUnrelatedArguments() = runTest {
         val binding = SessionBinding().apply { attach(session) }
-        val schedules = ScheduleService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), ScheduleStore(File(root, "schedules")), backgroundScope)
+        val timers = TimerService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), TimerStore(File(root, "timers")), backgroundScope)
         val jobs = JobRegistry(backgroundScope, notifier = { _, _, _ -> })
-        val entries = tools + jobTools(binding, jobs) + scheduleTools(schedules, binding)
+        val entries = tools + jobTools(binding, jobs) + timerTools(timers, binding)
         assertEquals(11, entries.size)
         for (entry in entries) {
             val wrong = entry.execute("bad", buildJsonObject { put("unrelated", true) }, null, null)
@@ -256,13 +256,13 @@ class GoalToolsTest {
     }
 
     @Test
-    fun scheduleCreateHonorsDisabledAndRejectsConflictingTriggers() = runTest {
+    fun timerCreateHonorsDisabledAndRejectsConflictingTriggers() = runTest {
         val file = session.sessionFile
         assertTrue(file != null)
-        val store = ScheduleStore(File(root, "schedules"))
-        val service = ScheduleService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), store, backgroundScope)
-        val entries = scheduleTools(service, SessionBinding().apply { attach(session) })
-        val create = entries.first { it.name == "schedule_create" }
+        val store = TimerStore(File(root, "timers"))
+        val service = TimerService(io.github.whywood.deepdeep.runtime.testing.FakeAgentRuntime(), store, backgroundScope)
+        val entries = timerTools(service, SessionBinding().apply { attach(session) })
+        val create = entries.first { it.name == "timer_create" }
         val args = buildJsonObject {
             put("prompt", "检查输出")
             put("frequency", "cron")

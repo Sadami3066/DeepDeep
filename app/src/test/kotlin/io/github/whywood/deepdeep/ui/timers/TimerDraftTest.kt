@@ -1,7 +1,7 @@
-package io.github.whywood.deepdeep.ui.schedules
+package io.github.whywood.deepdeep.ui.timers
 
-import io.github.whywood.deepdeep.runtime.Schedule
-import io.github.whywood.deepdeep.runtime.ScheduleTrigger
+import io.github.whywood.deepdeep.runtime.Timer
+import io.github.whywood.deepdeep.runtime.TimerTrigger
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -12,7 +12,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ScheduleDraftTest {
+class TimerDraftTest {
     private val zone = ZoneId.of("Asia/Shanghai")
     private val now = ZonedDateTime.of(2026, 10, 23, 12, 0, 0, 0, zone)
     private val weekdays = setOf(
@@ -24,8 +24,8 @@ class ScheduleDraftTest {
     )
     private val weekends = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 
-    private fun schedule(trigger: ScheduleTrigger, enabled: Boolean = true): Schedule = Schedule(
-        id = "schedule-1",
+    private fun timer(trigger: TimerTrigger, enabled: Boolean = true): Timer = Timer(
+        id = "timer-1",
         name = "Morning brief",
         prompt = "Summarize my notes",
         trigger = trigger,
@@ -48,7 +48,7 @@ class ScheduleDraftTest {
         time: LocalTime = LocalTime.of(9, 0),
         cronExpression: String = "0 9 * * *",
         sessionId: String = "session-1",
-    ): ScheduleDraft = ScheduleDraft(
+    ): TimerDraft = TimerDraft(
         name = name,
         prompt = prompt,
         repeat = repeat,
@@ -65,12 +65,12 @@ class ScheduleDraftTest {
     @Test
     fun roundTripsOnceAndCron() {
         val triggers = listOf(
-            ScheduleTrigger.Once(LocalDate.of(2026, 12, 1), LocalTime.of(9, 30)),
-            ScheduleTrigger.Cron("0 9 * * 1-5"),
-            ScheduleTrigger.Cron("*/15 * * * *"),
+            TimerTrigger.Once(LocalDate.of(2026, 12, 1), LocalTime.of(9, 30)),
+            TimerTrigger.Cron("0 9 * * 1-5"),
+            TimerTrigger.Cron("*/15 * * * *"),
         )
         triggers.forEach { trigger ->
-            val mapped = ScheduleDraft.from(schedule(trigger), "Conversation")
+            val mapped = TimerDraft.from(timer(trigger), "Conversation")
             assertEquals(trigger, mapped.toTrigger())
         }
     }
@@ -80,51 +80,51 @@ class ScheduleDraftTest {
         val date = LocalDate.of(2026, 11, 2)
         val time = LocalTime.of(18, 45)
         assertEquals(
-            ScheduleTrigger.Once(date, time),
+            TimerTrigger.Once(date, time),
             draft(repeat = false, date = date, time = time).toTrigger(),
         )
         assertEquals(
-            ScheduleTrigger.Cron("0 9 * * 1-5"),
+            TimerTrigger.Cron("0 9 * * 1-5"),
             draft(repeat = true, cronExpression = "0 9 * * 1-5").toTrigger(),
         )
         assertEquals(
-            ScheduleTrigger.Cron("0 9 * * *"),
+            TimerTrigger.Cron("0 9 * * *"),
             draft(repeat = true).toTrigger(),
         )
         assertEquals(
-            ScheduleTrigger.Cron("*/5 * * * *"),
+            TimerTrigger.Cron("*/5 * * * *"),
             draft(repeat = true, cronExpression = "  */5 * * * *  ").toTrigger(),
         )
     }
 
     @Test
     fun migratesLegacyDailyTriggerToCron() {
-        val mapped = ScheduleDraft.from(schedule(ScheduleTrigger.Daily(LocalTime.of(7, 5))), "Conversation")
+        val mapped = TimerDraft.from(timer(TimerTrigger.Daily(LocalTime.of(7, 5))), "Conversation")
         assertTrue(mapped.repeat)
         assertEquals("5 7 * * *", mapped.cronExpression)
         assertEquals(LocalTime.of(7, 5), mapped.time)
-        assertEquals(ScheduleTrigger.Cron("5 7 * * *"), mapped.toTrigger())
+        assertEquals(TimerTrigger.Cron("5 7 * * *"), mapped.toTrigger())
     }
 
     @Test
     fun migratesLegacyWeeklyTriggerToCron() {
-        val workdays = ScheduleDraft.from(
-            schedule(ScheduleTrigger.Weekly(weekdays, LocalTime.of(8, 0))),
+        val workdays = TimerDraft.from(
+            timer(TimerTrigger.Weekly(weekdays, LocalTime.of(8, 0))),
             "Conversation",
         )
         assertTrue(workdays.repeat)
         assertEquals("0 8 * * 1,2,3,4,5", workdays.cronExpression)
-        assertEquals(ScheduleTrigger.Cron("0 8 * * 1,2,3,4,5"), workdays.toTrigger())
+        assertEquals(TimerTrigger.Cron("0 8 * * 1,2,3,4,5"), workdays.toTrigger())
 
-        val weekend = ScheduleDraft.from(
-            schedule(ScheduleTrigger.Weekly(weekends, LocalTime.of(10, 15))),
+        val weekend = TimerDraft.from(
+            timer(TimerTrigger.Weekly(weekends, LocalTime.of(10, 15))),
             "Conversation",
         )
         assertEquals("15 10 * * 0,6", weekend.cronExpression)
 
-        val picked = ScheduleDraft.from(
-            schedule(
-                ScheduleTrigger.Weekly(
+        val picked = TimerDraft.from(
+            timer(
+                TimerTrigger.Weekly(
                     setOf(DayOfWeek.FRIDAY, DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                     LocalTime.of(9, 0),
                 ),
@@ -136,11 +136,11 @@ class ScheduleDraftTest {
 
     @Test
     fun keepsExistingCronExpression() {
-        val mapped = ScheduleDraft.from(schedule(ScheduleTrigger.Cron("0 9 * * 1-5")), "Conversation")
+        val mapped = TimerDraft.from(timer(TimerTrigger.Cron("0 9 * * 1-5")), "Conversation")
         assertTrue(mapped.repeat)
         assertEquals("0 9 * * 1-5", mapped.cronExpression)
         assertEquals(LocalTime.of(9, 0), mapped.time)
-        assertEquals(ScheduleTrigger.Cron("0 9 * * 1-5"), mapped.toTrigger())
+        assertEquals(TimerTrigger.Cron("0 9 * * 1-5"), mapped.toTrigger())
     }
 
     @Test
@@ -196,13 +196,13 @@ class ScheduleDraftTest {
 
     @Test
     fun previewFillsNameFromPrompt() {
-        assertEquals("", ScheduleDraft.preview("   "))
-        assertEquals("Hello world", ScheduleDraft.preview("  Hello \n  world "))
+        assertEquals("", TimerDraft.preview("   "))
+        assertEquals("Hello world", TimerDraft.preview("  Hello \n  world "))
         val longText = "a".repeat(40)
-        val preview = ScheduleDraft.preview(longText)
+        val preview = TimerDraft.preview(longText)
         assertEquals(29, preview.length)
         assertEquals("a".repeat(28) + "…", preview)
-        assertEquals("x".repeat(28), ScheduleDraft.preview("x".repeat(28)))
+        assertEquals("x".repeat(28), TimerDraft.preview("x".repeat(28)))
     }
 
     @Test
@@ -235,12 +235,12 @@ class ScheduleDraftTest {
     }
 
     @Test
-    fun fromMapsScheduleMetadata() {
-        val mapped = ScheduleDraft.from(
-            schedule(ScheduleTrigger.Cron("0 9 * * 1-5"), enabled = false),
+    fun fromMapsTimerMetadata() {
+        val mapped = TimerDraft.from(
+            timer(TimerTrigger.Cron("0 9 * * 1-5"), enabled = false),
             "Morning conversation",
         )
-        assertEquals("schedule-1", mapped.id)
+        assertEquals("timer-1", mapped.id)
         assertEquals("Morning brief", mapped.name)
         assertEquals("Summarize my notes", mapped.prompt)
         assertEquals("session-1", mapped.sessionId)

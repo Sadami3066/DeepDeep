@@ -149,7 +149,7 @@ fun DeepDeepDrawer(
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onOpenPlugins: () -> Unit,
-    onScheduled: () -> Unit,
+    onOpenTimers: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
@@ -256,9 +256,9 @@ fun DeepDeepDrawer(
             )
             DrawerNavItem(
                 icon = DdIcons.Clock,
-                label = stringResource(R.string.drawer_nav_scheduled),
-                onClick = onScheduled,
-                testTag = "drawer_scheduled",
+                label = stringResource(R.string.drawer_nav_timer),
+                onClick = onOpenTimers,
+                testTag = "drawer_timer",
             )
         }
         Spacer(Modifier.height(18.dp))

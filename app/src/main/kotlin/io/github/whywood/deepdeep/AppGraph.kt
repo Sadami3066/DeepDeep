@@ -30,7 +30,7 @@ import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
 import io.github.whywood.deepdeep.plugin.internal.GoalPlugin
 import io.github.whywood.deepdeep.plugin.internal.JobsPlugin
-import io.github.whywood.deepdeep.plugin.internal.SchedulePlugin
+import io.github.whywood.deepdeep.plugin.internal.TimerPlugin
 import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
@@ -75,8 +75,8 @@ import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.QuestionPersistence
 import io.github.whywood.deepdeep.runtime.RunLedger
-import io.github.whywood.deepdeep.runtime.ScheduleService
-import io.github.whywood.deepdeep.runtime.ScheduleStore
+import io.github.whywood.deepdeep.runtime.TimerService
+import io.github.whywood.deepdeep.runtime.TimerStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
@@ -191,7 +191,7 @@ class AppGraph(context: Context) : AppDependencies {
         workspacesDir = workspacesDir,
     )
     override val agentDocStore = AgentDocStore()
-    val scheduleStore = ScheduleStore(File(appContext.filesDir, "schedules"))
+    val timerStore = TimerStore(TimerStore.prepareDataDirectory(appContext.filesDir))
     override val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
     override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
@@ -256,7 +256,7 @@ class AppGraph(context: Context) : AppDependencies {
                 ),
                 GoalPlugin(goalService, pluginStrings),
                 JobsPlugin(jobRegistry, pluginStrings),
-                SchedulePlugin(scheduleService, pluginStrings),
+                TimerPlugin(timerService, pluginStrings),
                 WorkshopPlugin(workshopStore, appContext.assets, pluginStrings),
             ),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
@@ -402,8 +402,8 @@ class AppGraph(context: Context) : AppDependencies {
         sessionArchived = { sessionId -> jobRegistry.clearSession(sessionId) },
         runLedger = RunLedger(File(appContext.filesDir, "tasks")),
         keepHandleAlive = { sessionId ->
-            scheduleService.schedules.value.any { schedule ->
-                schedule.sessionId == sessionId && schedule.enabled && schedule.nextRunAt != null
+            timerService.timers.value.any { timer ->
+                timer.sessionId == sessionId && timer.enabled && timer.nextRunAt != null
             } ||
                 goalService.goals.value[sessionId]?.goal?.phase == GoalPhase.ACTIVE ||
                 jobRegistry.jobs.value.any { job -> job.sessionId == sessionId && job.status == JobStatus.RUNNING } ||
@@ -414,12 +414,12 @@ class AppGraph(context: Context) : AppDependencies {
     val notificationCenter: NotificationCenter by lazy {
         NotificationCenter(appContext, host, questionCenter.pending)
     }
-    override val scheduleService: ScheduleService by lazy {
-        ScheduleService(
+    override val timerService: TimerService by lazy {
+        TimerService(
             host,
-            scheduleStore,
+            timerStore,
             scope,
-            intentsFile = File(appContext.filesDir, "schedules/delivery-intents.json"),
+            intentsFile = File(appContext.filesDir, "timers/delivery-intents.json"),
         )
     }
     override val devPackageManager: DevPackageManager by lazy { DevPackageManager(appContext, linuxEnvironment, notificationCenter) }

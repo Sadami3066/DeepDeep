@@ -53,7 +53,7 @@ class AppNavigatorTest {
             AppDestination.Archived,
             AppDestination.RuntimeSettings,
             AppDestination.Skills,
-            AppDestination.Schedules,
+            AppDestination.Timers,
             AppDestination.Workshop,
             AppDestination.WorkshopDetail("study-board"),
             AppDestination.WorkspaceSettings("workspace-1"),

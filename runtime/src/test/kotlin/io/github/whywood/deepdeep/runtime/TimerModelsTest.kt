@@ -15,34 +15,34 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ScheduleModelsTest {
+class TimerModelsTest {
     private val zone = ZoneId.of("Asia/Shanghai")
     private val now = ZonedDateTime.of(2026, 10, 23, 12, 0, 0, 0, zone)
 
     @Test
     fun onceFiresOnlyInTheFuture() {
-        val future = ScheduleTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0)).nextRun(now)
+        val future = TimerTrigger.Once(LocalDate.of(2026, 10, 24), LocalTime.of(9, 0)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, zone), future)
 
-        val past = ScheduleTrigger.Once(LocalDate.of(2026, 10, 22), LocalTime.of(9, 0)).nextRun(now)
+        val past = TimerTrigger.Once(LocalDate.of(2026, 10, 22), LocalTime.of(9, 0)).nextRun(now)
         assertNull(past)
     }
 
     @Test
     fun onceIsStrictlyAfterNow() {
-        val trigger = ScheduleTrigger.Once(now.toLocalDate(), now.toLocalTime())
+        val trigger = TimerTrigger.Once(now.toLocalDate(), now.toLocalTime())
         assertNull(trigger.nextRun(now))
     }
 
     @Test
     fun dailyMovesToNextDayWhenTimePassed() {
-        val passed = ScheduleTrigger.Daily(LocalTime.of(9, 0)).nextRun(now)
+        val passed = TimerTrigger.Daily(LocalTime.of(9, 0)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, zone), passed)
 
-        val upcoming = ScheduleTrigger.Daily(LocalTime.of(13, 30)).nextRun(now)
+        val upcoming = TimerTrigger.Daily(LocalTime.of(13, 30)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 23, 13, 30, 0, 0, zone), upcoming)
 
-        val exactlyNow = ScheduleTrigger.Daily(now.toLocalTime()).nextRun(now)
+        val exactlyNow = TimerTrigger.Daily(now.toLocalTime()).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 24, 12, 0, 0, 0, zone), exactlyNow)
     }
 
@@ -50,16 +50,16 @@ class ScheduleModelsTest {
     fun weeklyPicksNextMatchingWeekday() {
         assertEquals(DayOfWeek.FRIDAY, now.dayOfWeek)
 
-        val laterToday = ScheduleTrigger.Weekly(setOf(DayOfWeek.FRIDAY), LocalTime.of(18, 0)).nextRun(now)
+        val laterToday = TimerTrigger.Weekly(setOf(DayOfWeek.FRIDAY), LocalTime.of(18, 0)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 23, 18, 0, 0, 0, zone), laterToday)
 
-        val nextWeek = ScheduleTrigger.Weekly(setOf(DayOfWeek.FRIDAY), LocalTime.of(9, 0)).nextRun(now)
+        val nextWeek = TimerTrigger.Weekly(setOf(DayOfWeek.FRIDAY), LocalTime.of(9, 0)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 30, 9, 0, 0, 0, zone), nextWeek)
 
-        val monday = ScheduleTrigger.Weekly(setOf(DayOfWeek.MONDAY), LocalTime.of(9, 0)).nextRun(now)
+        val monday = TimerTrigger.Weekly(setOf(DayOfWeek.MONDAY), LocalTime.of(9, 0)).nextRun(now)
         assertEquals(ZonedDateTime.of(2026, 10, 26, 9, 0, 0, 0, zone), monday)
 
-        val multiple = ScheduleTrigger.Weekly(
+        val multiple = TimerTrigger.Weekly(
             setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY),
             LocalTime.of(8, 0),
         ).nextRun(now)
@@ -68,24 +68,24 @@ class ScheduleModelsTest {
 
     @Test
     fun emptyWeeklyDaysNeverFires() {
-        assertNull(ScheduleTrigger.Weekly(emptySet(), LocalTime.of(9, 0)).nextRun(now))
+        assertNull(TimerTrigger.Weekly(emptySet(), LocalTime.of(9, 0)).nextRun(now))
     }
 
     @Test
     fun triggerJsonRoundTrip() {
         val triggers = listOf(
-            ScheduleTrigger.Once(LocalDate.of(2026, 12, 1), LocalTime.of(9, 30)),
-            ScheduleTrigger.Daily(LocalTime.of(7, 5)),
-            ScheduleTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(18, 0)),
+            TimerTrigger.Once(LocalDate.of(2026, 12, 1), LocalTime.of(9, 30)),
+            TimerTrigger.Daily(LocalTime.of(7, 5)),
+            TimerTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(18, 0)),
         )
         triggers.forEach { trigger ->
-            assertEquals(trigger, scheduleTriggerFromJsonObject(trigger.toJsonObject()))
+            assertEquals(trigger, timerTriggerFromJsonObject(trigger.toJsonObject()))
         }
     }
 
     @Test
     fun weeklyDaysAreStoredAsIsoNumbers() {
-        val json = ScheduleTrigger.Weekly(
+        val json = TimerTrigger.Weekly(
             setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY),
             LocalTime.of(9, 0),
         ).toJsonObject()
@@ -104,47 +104,47 @@ class ScheduleModelsTest {
             })
         }
         assertEquals(
-            ScheduleTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(9, 0)),
-            scheduleTriggerFromJsonObject(json),
+            TimerTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(9, 0)),
+            timerTriggerFromJsonObject(json),
         )
     }
 
     @Test
-    fun scheduleJsonRoundTrip() {
-        val schedule = Schedule(
-            id = "schedule-1",
+    fun timerJsonRoundTrip() {
+        val timer = Timer(
+            id = "timer-1",
             name = "Morning brief",
             prompt = "Summarize my notes",
-            trigger = ScheduleTrigger.Daily(LocalTime.of(8, 0)),
+            trigger = TimerTrigger.Daily(LocalTime.of(8, 0)),
             enabled = false,
             sessionId = "session-1",
             sessionFile = "/data/sessions/session-1.jsonl",
             cwd = "/data/home",
             nextRunAt = 1_800_000_000_000L,
             lastDeliveredAt = 1_700_000_000_000L,
-            lastError = ScheduleError.DELIVERY_FAILED,
+            lastError = TimerError.DELIVERY_FAILED,
             createdAt = 100,
             updatedAt = 200,
         )
-        assertEquals(schedule, scheduleFromJsonObject(schedule.toJsonObject()))
-        assertEquals(ZonedDateTime.of(2026, 10, 24, 8, 0, 0, 0, zone), schedule.nextRun(now))
+        assertEquals(timer, timerFromJsonObject(timer.toJsonObject()))
+        assertEquals(ZonedDateTime.of(2026, 10, 24, 8, 0, 0, 0, zone), timer.nextRun(now))
     }
 
     @Test
     fun lastErrorIsStoredAsEnumName() {
-        val schedule = Schedule(
+        val timer = Timer(
             id = "id",
             name = "name",
             prompt = "prompt",
-            trigger = ScheduleTrigger.Daily(LocalTime.of(8, 0)),
+            trigger = TimerTrigger.Daily(LocalTime.of(8, 0)),
             sessionId = "session",
             sessionFile = "/tmp/session.jsonl",
             cwd = "/tmp",
-            lastError = ScheduleError.SESSION_MISSING,
+            lastError = TimerError.SESSION_MISSING,
         )
-        val json = schedule.toJsonObject()
+        val json = timer.toJsonObject()
         assertEquals("SESSION_MISSING", (json["lastError"] as JsonPrimitive).content)
-        assertEquals(ScheduleError.SESSION_MISSING, scheduleFromJsonObject(json).lastError)
+        assertEquals(TimerError.SESSION_MISSING, timerFromJsonObject(json).lastError)
     }
 
     @Test
@@ -153,7 +153,7 @@ class ScheduleModelsTest {
             put("id", "id-1")
             put("name", "name")
             put("prompt", "prompt")
-            put("trigger", ScheduleTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
+            put("trigger", TimerTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
             put("enabled", true)
             put("sessionId", "session-1")
             put("sessionFile", "/tmp/session.jsonl")
@@ -161,26 +161,26 @@ class ScheduleModelsTest {
             put("createdAt", 1)
             put("updatedAt", 2)
         }
-        val schedule = scheduleFromJsonObject(json)
-        assertNull(schedule.nextRunAt)
-        assertNull(schedule.lastDeliveredAt)
-        assertNull(schedule.lastError)
+        val timer = timerFromJsonObject(json)
+        assertNull(timer.nextRunAt)
+        assertNull(timer.lastDeliveredAt)
+        assertNull(timer.lastError)
     }
 
     @Test
     fun invalidJsonThrowsCorruptException() {
         val errors = listOf(
-            runCatching { scheduleFromJsonObject(buildJsonObject { }) }.exceptionOrNull(),
+            runCatching { timerFromJsonObject(buildJsonObject { }) }.exceptionOrNull(),
             runCatching {
-                scheduleFromJsonObject(
+                timerFromJsonObject(
                     buildJsonObject {
                         put("id", "x")
                     },
                 )
             }.exceptionOrNull(),
-            runCatching { scheduleTriggerFromJsonObject(buildJsonObject { }) }.exceptionOrNull(),
+            runCatching { timerTriggerFromJsonObject(buildJsonObject { }) }.exceptionOrNull(),
             runCatching {
-                scheduleTriggerFromJsonObject(
+                timerTriggerFromJsonObject(
                     buildJsonObject {
                         put("type", "weekly")
                         put("time", "09:00")
@@ -189,12 +189,12 @@ class ScheduleModelsTest {
                 )
             }.exceptionOrNull(),
             runCatching {
-                scheduleFromJsonObject(
+                timerFromJsonObject(
                     buildJsonObject {
                         put("id", "x")
                         put("name", "n")
                         put("prompt", "p")
-                        put("trigger", ScheduleTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
+                        put("trigger", TimerTrigger.Daily(LocalTime.of(8, 0)).toJsonObject())
                         put("enabled", true)
                         put("sessionId", "s")
                         put("sessionFile", "f")
@@ -206,32 +206,32 @@ class ScheduleModelsTest {
                 )
             }.exceptionOrNull(),
         )
-        assertTrue(errors.all { it is CorruptScheduleDataException })
+        assertTrue(errors.all { it is CorruptTimerDataException })
     }
 
     @Test
     fun cronPicksTheNextMatchingMinute() {
         assertEquals(
             ZonedDateTime.of(2026, 10, 26, 9, 0, 0, 0, zone),
-            ScheduleTrigger.Cron("0 9 * * 1-5").nextRun(now),
+            TimerTrigger.Cron("0 9 * * 1-5").nextRun(now),
         )
         assertEquals(
             ZonedDateTime.of(2026, 10, 23, 12, 15, 0, 0, zone),
-            ScheduleTrigger.Cron("*/15 * * * *").nextRun(now),
+            TimerTrigger.Cron("*/15 * * * *").nextRun(now),
         )
     }
 
     @Test
     fun validationRejectsInvalidTriggers() {
-        assertNotNull(ScheduleTrigger.Weekly(emptySet(), LocalTime.of(9, 0)).validationError(now))
-        assertNotNull(ScheduleTrigger.Cron("not a cron").validationError(now))
-        assertNotNull(ScheduleTrigger.Cron("0 0 30 2 *").validationError(now))
-        assertNull(ScheduleTrigger.Cron("0 9 * * 1-5").validationError(now))
+        assertNotNull(TimerTrigger.Weekly(emptySet(), LocalTime.of(9, 0)).validationError(now))
+        assertNotNull(TimerTrigger.Cron("not a cron").validationError(now))
+        assertNotNull(TimerTrigger.Cron("0 0 30 2 *").validationError(now))
+        assertNull(TimerTrigger.Cron("0 9 * * 1-5").validationError(now))
     }
 
     @Test
     fun cronTriggerJsonRoundTrip() {
-        val trigger = ScheduleTrigger.Cron("0 9 * * 1-5")
-        assertEquals(trigger, scheduleTriggerFromJsonObject(trigger.toJsonObject()))
+        val trigger = TimerTrigger.Cron("0 9 * * 1-5")
+        assertEquals(trigger, timerTriggerFromJsonObject(trigger.toJsonObject()))
     }
 }

@@ -3,7 +3,7 @@
     <string name="drawer_nav_skills">Skills</string>
     <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_plugins">Plugins</string>
-    <string name="drawer_nav_scheduled">Scheduled</string>
+    <string name="drawer_nav_timer">Timer</string>
     <string name="drawer_account_hint">Settings</string>
     <string name="drawer_archived_count">%1$d</string>
     <string name="drawer_archived_title">Archived</string>
