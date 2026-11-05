@@ -59,8 +59,6 @@ internal class ExternalUpdateSupport(
     private val policy = UpdatePolicy(hostVersion = hostVersion)
 
     private val manager = PluginUpdateManager(
-        client = client,
-        settingsStore = settingsStore,
         installer = installer,
         trustStore = trustStore,
         downloader = PluginPackageDownloader(
@@ -134,7 +132,6 @@ internal class ExternalUpdateSupport(
         val candidate = PluginUpdateCandidate(
             entry = entry,
             installedVersion = record.version,
-            installedKeyId = record.publisherKeyId,
         )
         when (val result = manager.downloadAndStage(candidate)) {
             is UpdateStageResult.Staged -> UpdateStageResultUi.Staged(

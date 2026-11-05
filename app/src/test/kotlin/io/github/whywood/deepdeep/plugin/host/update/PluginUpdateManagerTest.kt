@@ -9,12 +9,10 @@ import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
 import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
 import io.github.whywood.deepdeep.plugin.host.external.SyntheticDdp
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -26,7 +24,6 @@ class PluginUpdateManagerTest {
     private lateinit var trustStore: PublisherTrustStore
     private lateinit var recordStore: ExternalPluginRecordStore
     private lateinit var installer: PluginInstaller
-    private lateinit var settingsStore: PluginSourceSettingsStore
     private lateinit var fetcher: FakePluginFetcher
     private lateinit var manager: PluginUpdateManager
     private lateinit var key: SyntheticDdp.SigningKey
@@ -43,13 +40,9 @@ class PluginUpdateManagerTest {
             recordStore = recordStore,
             hostVersion = HOST_VERSION,
         )
-        settingsStore = PluginSourceSettingsStore(PluginUpdateDefaults.settingsFile(dir))
         fetcher = FakePluginFetcher()
-        val client = PluginIndexClient(PluginUpdateDefaults.cacheFile(dir), fetcher)
         val downloader = PluginPackageDownloader(fetcher, PluginUpdateDefaults.downloadsDir(dir))
         manager = PluginUpdateManager(
-            client = client,
-            settingsStore = settingsStore,
             installer = installer,
             trustStore = trustStore,
             downloader = downloader,
@@ -64,21 +57,11 @@ class PluginUpdateManagerTest {
     }
 
     @Test
-    fun checkFindsUpdateAndStagesItForNextRestart() = runBlocking {
+    fun stagesUpdateForNextRestart() = runBlocking {
         installV1()
-        settingsStore.save(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
         val v2 = packageV2()
-        serveV2(v2)
-
-        val check = manager.check()
-
-        assertTrue(check is UpdateCheckResult.Ready)
-        val ready = check as UpdateCheckResult.Ready
-        val candidate = ready.candidates.single()
-        assertEquals("1.1.0", candidate.entry.version)
-        assertEquals("1.0.0", candidate.installedVersion)
-        assertEquals(key.keyId, candidate.entry.publisherKeyId)
-        assertFalse(ready.fromCache)
+        fetcher.packages[UpdateFixtures.PACKAGE_URL] = v2.readBytes()
+        val candidate = PluginUpdateCandidate(entryFor(v2), "1.0.0")
 
         val progress = mutableListOf<Int?>()
         val result = manager.downloadAndStage(candidate) { progress += it }
@@ -94,24 +77,6 @@ class PluginUpdateManagerTest {
     }
 
     @Test
-    fun checkReturnsNotConfiguredWithoutSourceSettings() = runBlocking {
-        installV1()
-
-        assertEquals(UpdateCheckResult.NotConfigured, manager.check())
-    }
-
-    @Test
-    fun checkReturnsUnavailableWhenFetchFailsWithoutCache() = runBlocking {
-        installV1()
-        settingsStore.save(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
-        fetcher.textFailure = IOException("offline")
-
-        val check = manager.check()
-
-        assertTrue(check is UpdateCheckResult.Unavailable)
-    }
-
-    @Test
     fun rejectsDownloadedPackageWithWrongSha256() = runBlocking {
         installV1()
         val v2 = packageV2()
@@ -123,7 +88,7 @@ class PluginUpdateManagerTest {
             publisherKeyId = key.keyId,
         )
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.SHA256_MISMATCH, (result as UpdateStageResult.Rejected).code)
         assertNull(installer.record(SyntheticDdp.PLUGIN_ID)?.pendingVersion)
@@ -141,7 +106,7 @@ class PluginUpdateManagerTest {
             publisherKeyId = key.keyId,
         )
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.SIZE_MISMATCH, (result as UpdateStageResult.Rejected).code)
     }
@@ -151,7 +116,7 @@ class PluginUpdateManagerTest {
         installV1()
         val entry = UpdateFixtures.entry(version = "1.1.0", publisherKeyId = UpdateFixtures.OTHER_KEY_ID)
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", UpdateFixtures.OTHER_KEY_ID))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.PUBLISHER_MISMATCH, (result as UpdateStageResult.Rejected).code)
     }
@@ -173,7 +138,7 @@ class PluginUpdateManagerTest {
             publisherKeyId = key.keyId,
         )
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.PUBLISHER_MISMATCH, (result as UpdateStageResult.Rejected).code)
         assertNull(installer.record(SyntheticDdp.PLUGIN_ID)?.pendingVersion)
@@ -185,7 +150,7 @@ class PluginUpdateManagerTest {
         trustStore.untrust(key.keyId)
         val entry = entryFor(packageV2())
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.PUBLISHER_UNTRUSTED, (result as UpdateStageResult.Rejected).code)
     }
@@ -195,7 +160,7 @@ class PluginUpdateManagerTest {
         installV1()
         val entry = UpdateFixtures.entry(version = "1.0.0", publisherKeyId = key.keyId)
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.NOT_NEWER, (result as UpdateStageResult.Rejected).code)
     }
@@ -206,7 +171,7 @@ class PluginUpdateManagerTest {
         installer.install(packageV2())
         val entry = UpdateFixtures.entry(version = "1.2.0", publisherKeyId = key.keyId)
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.PENDING_EXISTS, (result as UpdateStageResult.Rejected).code)
     }
@@ -215,7 +180,7 @@ class PluginUpdateManagerTest {
     fun rejectsUnknownPlugin() = runBlocking {
         val entry = UpdateFixtures.entry(version = "1.1.0", publisherKeyId = key.keyId)
 
-        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0", key.keyId))
+        val result = manager.downloadAndStage(PluginUpdateCandidate(entry, "1.0.0"))
 
         assertEquals(UpdateRejection.UNKNOWN_PLUGIN, (result as UpdateStageResult.Rejected).code)
     }
@@ -223,19 +188,6 @@ class PluginUpdateManagerTest {
     private suspend fun installV1() {
         val result = installer.install(packageV1(), acceptPublisher = true)
         assertTrue(result is InstallResult.Installed)
-    }
-
-    private fun serveV2(v2: File) {
-        fetcher.texts[UpdateFixtures.INDEX_URL] = UpdateFixtures.indexJson(
-            UpdateFixtures.entryJson(
-                version = "1.1.0",
-                url = UpdateFixtures.PACKAGE_URL,
-                sha256 = DdpSigning.sha256Hex(v2),
-                size = v2.length(),
-                publisherKeyId = key.keyId,
-            ),
-        )
-        fetcher.packages[UpdateFixtures.PACKAGE_URL] = v2.readBytes()
     }
 
     private fun entryFor(v2: File): PluginIndexEntry = UpdateFixtures.entry(

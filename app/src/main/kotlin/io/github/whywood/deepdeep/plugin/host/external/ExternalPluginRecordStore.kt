@@ -123,8 +123,6 @@ internal class ExternalPluginRecordStore(
             lastError = json.string("lastError"),
             pendingVersion = json.string("pendingVersion"),
             pendingBundleSha256 = json.string("pendingBundleSha256"),
-            previousVersion = json.string("previousVersion"),
-            previousBundleSha256 = json.string("previousBundleSha256"),
         )
     }
 
@@ -158,8 +156,6 @@ internal class ExternalPluginRecordStore(
                                 record.lastError?.let { put("lastError", it) }
                                 record.pendingVersion?.let { put("pendingVersion", it) }
                                 record.pendingBundleSha256?.let { put("pendingBundleSha256", it) }
-                                record.previousVersion?.let { put("previousVersion", it) }
-                                record.previousBundleSha256?.let { put("previousBundleSha256", it) }
                             },
                         )
                     }

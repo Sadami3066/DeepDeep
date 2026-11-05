@@ -125,13 +125,11 @@ class ExternalPluginRecordStoreTest {
     }
 
     @Test
-    fun persistsPendingAndPreviousFields() = runBlocking {
+    fun persistsPendingFields() = runBlocking {
         val store = ExternalPluginRecordStore(file)
         val record = record().copy(
             pendingVersion = "2.0.0",
             pendingBundleSha256 = "pending-sha",
-            previousVersion = "0.9.0",
-            previousBundleSha256 = "previous-sha",
         )
         store.upsert(record)
 

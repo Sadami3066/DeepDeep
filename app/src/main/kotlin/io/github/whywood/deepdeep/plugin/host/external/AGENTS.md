@@ -1,6 +1,6 @@
 # plugin/host/external · 外部 .ddp 包管线
 
-外部插件包（`.ddp`）的读取、Ed25519 签名校验、发布者 TOFU 信任库、v4 安装记录、安装/更新/回滚与 DEX 装载。全部为 app 模块内部实现（`internal`），不接入 `AppGraph`/`PluginManager`；由后续集成阶段接线。数据目录约定见 `../PluginPaths.kt`。
+外部插件包（`.ddp`）的读取、Ed25519 签名校验、发布者 TOFU 信任库、v4 安装记录、安装/更新与 DEX 装载。全部为 app 模块内部实现（`internal`），不接入 `AppGraph`/`PluginManager`；由后续集成阶段接线。数据目录约定见 `../PluginPaths.kt`。
 
 ## 文件
 
@@ -10,9 +10,9 @@
 | `DdpSigning.kt` | 签名格式与密码学：规范化 digest bytes、sha256/hex、Ed25519 公钥解析与验签（平台优先、BouncyCastle 兜底）、`ed25519:<hex>` keyId 派生 |
 | `PluginPackageVerifier.kt` | 外部包验证：签名必需、算法/字段/ keyId/签名校验，再走 `PluginManifestCodec.decode`（宿主 apiLevel/hostVersion），返回 `Ok(manifest, publisher, digests)` / `Rejected(code, reason)` |
 | `PublisherTrustStore.kt` | `files/plugins/trusted_publishers.json`（schemaVersion 1，keyId → name/publicKey/firstSeenAt），TOFU：新增/已知/公钥冲突；原子写、损坏备份 `.corrupt` 后重建 |
-| `ExternalPluginRecord.kt` | v4 安装记录模型：version/installedAt/enabled/skillIds/source/installPath/activeBundleSha256/size/publisherKeyId/apiLevel/uiApiLevel/phase/lastError/pendingVersion/pendingBundleSha256（+ previousVersion/previousBundleSha256 用于回滚）；phase 复用 `plugin.host.PluginPhase` |
+| `ExternalPluginRecord.kt` | v4 安装记录模型：version/installedAt/enabled/skillIds/source/installPath/activeBundleSha256/size/publisherKeyId/apiLevel/uiApiLevel/phase/lastError/pendingVersion/pendingBundleSha256；phase 复用 `plugin.host.PluginPhase` |
 | `ExternalPluginRecordStore.kt` | `files/plugins/plugins.json` schemaVersion 4：非 v4/损坏时备份 `plugins.json.v2.bak` 后破坏式重建，原子写，`load/get/records/upsert/remove/setEnabled/mutate` |
-| `PluginInstaller.kt` | 安装编排：`inspect`（确认页数据）、`install`（新装/更新暂存、发布者确认、id/工具名冲突、版本冲突）、暂存到 `<id>/<version>/{bundle,assets,lib}`、pending 提交/丢弃/回滚、启用、卸载、load 前 sha256 复核 |
+| `PluginInstaller.kt` | 安装编排：`inspect`（确认页数据）、`install`（新装/更新暂存、发布者确认、id/工具名冲突、版本冲突）、暂存到 `<id>/<version>/{bundle,assets,lib}`、pending 提交/丢弃、启用、卸载；装载前 sha256 复核在 `LoadedPluginHandle` |
 | `LoadedPluginHandle.kt` | 外部插件装载句柄：校验 bundle sha256，`InMemoryDexClassLoader` 优先、只读 jar + `PathClassLoader` 兜底，实例化 `entryClass`，`close()` 调 `plugin.close()` 并释放引用/删除兜底 jar；`isLoaded`/`hasPendingUpdate` 供集成判断 |
 | `JsonFiles.kt` | JSON 原子写（tmp + ATOMIC_MOVE，失败退 REPLACE_EXISTING）与备份工具 |
 
@@ -27,7 +27,7 @@
 
 ## 要点
 
-- 安装暂存流程：解压到 `<id>/.staging-<version>-<ts>` → 复制并复核 bundle → 重命名到 `<id>/<version>`；新装写 `INSTALLED`，更新写 `pendingVersion` + `PENDING_RESTART`，下一次启动由集成层装载成功后 `commitPending()` 切换（成功后保留上一版本目录与 `previousVersion`，运行期失败可 `rollback()`）。
+- 安装暂存流程：解压到 `<id>/.staging-<version>-<ts>` → 复制并复核 bundle → 重命名到 `<id>/<version>`；新装写 `INSTALLED`，更新写 `pendingVersion` + `PENDING_RESTART`，下一次启动由集成层装载成功后 `commitPending()` 切换（成功后保留上一版本目录；运行期失败由集成层 `markPhase`/`discardPending` 处理）。
 - `PluginInstaller` 的冲突检查依赖宿主传入 `reservedPluginIds`/`reservedToolNames`（内置插件 id 与已占用工具名）；工具名冲突只看 manifest `provides.tools`，实际 `contributionsFor` 若要额外工具需在插件清单中声明。
 - 记录 v4 与旧 `PluginRecordStore`（schemaVersion 2）共用 `plugins.json`：切换到新管线时必须在同一次集成中替换旧 PluginManager/RecordStore，否则旧实现会把 v4 覆盖回 v2。
 - 签名规范变更会同时影响 plugin-template 的 `signPlugin` 与 `docs/PLUGIN_DEV.md`；改格式前先同步 contract-owner，并升 `.ddp` 格式版本。

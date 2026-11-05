@@ -215,8 +215,6 @@ internal class PluginInstaller(
             version = pendingVersion,
             installPath = pendingPath,
             activeBundleSha256 = pendingSha256,
-            previousVersion = record.version,
-            previousBundleSha256 = record.activeBundleSha256,
             pendingVersion = null,
             pendingBundleSha256 = null,
             phase = PluginPhase.INSTALLED,
@@ -241,32 +239,6 @@ internal class PluginInstaller(
             PluginPaths.versionRoot(pluginsRoot, pluginId, pendingVersion).deleteRecursively()
         }
         true
-    }
-
-    suspend fun rollback(pluginId: String, error: String): Boolean = withContext(ioDispatcher) {
-        val record = recordStore.get(pluginId) ?: return@withContext false
-        val previousVersion = record.previousVersion ?: return@withContext false
-        val previousSha256 = record.previousBundleSha256 ?: return@withContext false
-        val previousPath = PluginPaths.versionRoot(pluginsRoot, pluginId, previousVersion).absolutePath
-        if (bundleState(pluginId, previousVersion, previousPath, previousSha256) !is BundleState.Ready) {
-            return@withContext false
-        }
-        recordStore.upsert(
-            record.copy(
-                version = previousVersion,
-                installPath = previousPath,
-                activeBundleSha256 = previousSha256,
-                previousVersion = null,
-                previousBundleSha256 = null,
-                phase = PluginPhase.DEGRADED,
-                lastError = error,
-            ),
-        )
-        true
-    }
-
-    suspend fun verifyBundle(bundleFile: File, expectedSha256: String): Boolean = withContext(ioDispatcher) {
-        verifyBundleFile(bundleFile, expectedSha256)
     }
 
     private suspend fun installFresh(candidate: Candidate): InstallResult {
@@ -470,12 +442,6 @@ internal class PluginInstaller(
 
     private fun pendingInstallPath(pluginId: String, version: String): String =
         PluginPaths.versionRoot(pluginsRoot, pluginId, version).absolutePath
-
-    private fun verifyBundleFile(bundleFile: File, expectedSha256: String): Boolean {
-        if (!bundleFile.isFile) return false
-        val actual = runCatching { DdpSigning.sha256Hex(bundleFile) }.getOrNull() ?: return false
-        return actual.equals(expectedSha256, ignoreCase = true)
-    }
 
     private fun describe(state: BundleState): String = when (state) {
         is BundleState.Ready -> "ready"

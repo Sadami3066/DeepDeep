@@ -123,7 +123,7 @@ class PluginInstallerTest {
     }
 
     @Test
-    fun updateStagesThenCommitSwitchesAndKeepsPrevious() = runBlocking {
+    fun updateStagesThenCommitSwitchesVersion() = runBlocking {
         val installer = installer()
         installer.install(packageV1(), acceptPublisher = true)
 
@@ -140,17 +140,9 @@ class PluginInstallerTest {
         assertTrue(committed is CommitResult.Committed)
         val record = (committed as CommitResult.Committed).record
         assertEquals("2.0.0", record.version)
-        assertEquals(SyntheticDdp.PLUGIN_VERSION, record.previousVersion)
         assertNull(record.pendingVersion)
         assertEquals(PluginPhase.INSTALLED, record.phase)
         assertEquals(PluginPaths.versionRoot(pluginsRoot, record.id, "2.0.0").absolutePath, record.installPath)
-        assertTrue(installer.activeBundle(record.id) is BundleState.Ready)
-
-        assertTrue(installer.rollback(record.id, "load failed"))
-        val rolledBack = installer.record(record.id)!!
-        assertEquals(SyntheticDdp.PLUGIN_VERSION, rolledBack.version)
-        assertEquals(PluginPhase.DEGRADED, rolledBack.phase)
-        assertEquals("load failed", rolledBack.lastError)
         assertTrue(installer.activeBundle(record.id) is BundleState.Ready)
     }
 
@@ -279,7 +271,6 @@ class PluginInstallerTest {
         val state = installer.activeBundle(record.id)
 
         assertTrue(state is BundleState.Missing)
-        assertFalse(installer.verifyBundle(bundle, record.activeBundleSha256))
     }
 
     @Test

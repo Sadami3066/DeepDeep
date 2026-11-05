@@ -13,7 +13,6 @@ internal data class UpdatePolicy(
 internal data class PluginUpdateCandidate(
     val entry: PluginIndexEntry,
     val installedVersion: String,
-    val installedKeyId: String,
 )
 
 internal enum class UpdateRejection {
@@ -58,7 +57,6 @@ internal object PluginUpdateSelector {
             candidates += PluginUpdateCandidate(
                 entry = entry,
                 installedVersion = record.version,
-                installedKeyId = record.publisherKeyId,
             )
         }
         return candidates.sortedBy { it.entry.id }

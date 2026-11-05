@@ -20,8 +20,6 @@ internal data class ExternalPluginRecord(
     val lastError: String? = null,
     val pendingVersion: String? = null,
     val pendingBundleSha256: String? = null,
-    val previousVersion: String? = null,
-    val previousBundleSha256: String? = null,
 ) {
     val hasPendingUpdate: Boolean get() = pendingVersion != null
 }

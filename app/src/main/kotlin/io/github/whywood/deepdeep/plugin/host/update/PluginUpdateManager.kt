@@ -17,18 +17,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-internal sealed interface UpdateCheckResult {
-    data class Ready(
-        val candidates: List<PluginUpdateCandidate>,
-        val fromCache: Boolean,
-        val fetchedAt: Long,
-    ) : UpdateCheckResult
-
-    data object NotConfigured : UpdateCheckResult
-
-    data class Unavailable(val reason: String) : UpdateCheckResult
-}
-
 internal sealed interface UpdateStageResult {
     data class Staged(
         val record: ExternalPluginRecord,
@@ -39,8 +27,6 @@ internal sealed interface UpdateStageResult {
 }
 
 internal class PluginUpdateManager(
-    private val client: PluginIndexClient,
-    private val settingsStore: PluginSourceSettingsStore,
     private val installer: PluginInstaller,
     private val trustStore: PublisherTrustStore,
     private val downloader: PluginPackageDownloader,
@@ -48,23 +34,6 @@ internal class PluginUpdateManager(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val stageMutex = Mutex()
-
-    suspend fun check(): UpdateCheckResult = withContext(ioDispatcher) {
-        val settings = settingsStore.load()
-        val indexUrl = settings.indexUrl ?: return@withContext UpdateCheckResult.NotConfigured
-        when (val fetched = client.fetch(indexUrl)) {
-            is PluginIndexFetchResult.Unavailable -> UpdateCheckResult.Unavailable(fetched.reason)
-
-            is PluginIndexFetchResult.Loaded -> {
-                val installed = installer.records().associateBy { it.id }
-                UpdateCheckResult.Ready(
-                    candidates = client.updatesFor(fetched.index, installed, policy),
-                    fromCache = fetched.fromCache,
-                    fetchedAt = fetched.fetchedAt,
-                )
-            }
-        }
-    }
 
     suspend fun downloadAndStage(
         candidate: PluginUpdateCandidate,

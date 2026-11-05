@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.update
 
-import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -26,11 +25,6 @@ internal class PluginIndexClient(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
-    @Volatile
-    private var currentIndex: PluginIndex? = null
-
-    val current: PluginIndex? get() = currentIndex
-
     suspend fun fetch(indexUrl: String): PluginIndexFetchResult = withContext(ioDispatcher) {
         val url = indexUrl.trim()
         if (url.isEmpty()) return@withContext PluginIndexFetchResult.Unavailable("index url is blank")
@@ -43,7 +37,6 @@ internal class PluginIndexClient(
                 is PluginIndexParseResult.Invalid -> cacheFallback(url, "invalid index: ${parsed.reason}")
 
                 is PluginIndexParseResult.Valid -> {
-                    currentIndex = parsed.index
                     val fetchedAt = clock()
                     runCatching { PluginIndexCache.write(cacheFile, parsed.index, url, fetchedAt) }
                     PluginIndexFetchResult.Loaded(
@@ -66,23 +59,8 @@ internal class PluginIndexClient(
         if (!expected.isNullOrEmpty() && cached.indexUrl != null && cached.indexUrl != expected) {
             return@withContext null
         }
-        currentIndex = cached.index
         cached
     }
-
-    fun updatesFor(
-        installed: Map<String, ExternalPluginRecord>,
-        policy: UpdatePolicy = UpdatePolicy(),
-    ): List<PluginUpdateCandidate> {
-        val index = currentIndex ?: return emptyList()
-        return updatesFor(index, installed, policy)
-    }
-
-    fun updatesFor(
-        index: PluginIndex,
-        installed: Map<String, ExternalPluginRecord>,
-        policy: UpdatePolicy = UpdatePolicy(),
-    ): List<PluginUpdateCandidate> = PluginUpdateSelector.select(index, installed, policy)
 
     private suspend fun cacheFallback(indexUrl: String, reason: String): PluginIndexFetchResult {
         val cached = cached(indexUrl)
