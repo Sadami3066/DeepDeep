@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.ui
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
+import io.github.whywood.deepdeep.plugin.api.PluginValidation
 import io.github.whywood.deepdeep.plugin.api.SlotContent
 import io.github.whywood.deepdeep.plugin.api.UiManifest
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
@@ -26,11 +27,13 @@ internal data class HostUiVersions(
 
 data class SlotRenderEntry(
     val pluginId: String,
+    val manifestVersion: String,
     val slotId: String,
     val priority: Int,
     val content: SlotContent,
     val assetsDir: File,
     val composeCompatible: Boolean,
+    val uiTreeValid: Boolean = true,
 )
 
 class SlotRegistry internal constructor(
@@ -48,11 +51,13 @@ class SlotRegistry internal constructor(
                 if (!descriptor.phase.contributes) return@mapNotNull null
                 SlotRenderEntry(
                     pluginId = entry.pluginId,
+                    manifestVersion = descriptor.manifest.version,
                     slotId = slotId,
                     priority = entry.binding.priority,
                     content = entry.binding.content,
                     assetsDir = PluginPaths.assetsDir(pluginsRoot, descriptor.id, descriptor.manifest.version),
                     composeCompatible = isComposeCompatible(entry.binding.content, descriptor.manifest.ui),
+                    uiTreeValid = isUiTreeValid(entry.binding.content),
                 )
             }
             .sortedWith(
@@ -66,8 +71,13 @@ class SlotRegistry internal constructor(
     fun hasOverride(slotId: String): Boolean = firstRenderable(slotId) != null
 
     private fun SlotRenderEntry.isRenderable(): Boolean = when (content) {
-        is SlotContent.Declarative -> true
+        is SlotContent.Declarative -> uiTreeValid
         is SlotContent.Compose -> composeCompatible
+    }
+
+    private fun isUiTreeValid(content: SlotContent): Boolean = when (content) {
+        is SlotContent.Declarative -> PluginValidation.validateUiNode(content.tree).isEmpty()
+        is SlotContent.Compose -> true
     }
 
     private fun isComposeCompatible(content: SlotContent, manifest: UiManifest?): Boolean {

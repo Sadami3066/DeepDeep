@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -110,11 +111,14 @@ private fun RenderNode(
             Text(node.text.orEmpty())
         }
 
-        UiNodeTypes.LINK -> TextButton(
-            onClick = { node.props["url"]?.takeIf { it.isNotBlank() }?.let(onAction) },
-            modifier = modifier,
-        ) {
-            Text(node.text.orEmpty())
+        UiNodeTypes.LINK -> {
+            val uriHandler = LocalUriHandler.current
+            TextButton(
+                onClick = { node.props["url"]?.takeIf { it.isNotBlank() }?.let(uriHandler::openUri) },
+                modifier = modifier,
+            ) {
+                Text(node.text.orEmpty())
+            }
         }
 
         UiNodeTypes.PROGRESS -> LinearProgressIndicator(

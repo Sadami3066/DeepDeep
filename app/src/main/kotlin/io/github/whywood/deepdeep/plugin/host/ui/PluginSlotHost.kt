@@ -20,7 +20,7 @@ internal fun PluginSlotHost(
 ) {
     val entry = entries.firstOrNull { candidate ->
         when (candidate.content) {
-            is SlotContent.Declarative -> true
+            is SlotContent.Declarative -> candidate.uiTreeValid
             is SlotContent.Compose -> candidate.composeCompatible
         }
     } ?: run {
@@ -28,7 +28,7 @@ internal fun PluginSlotHost(
         return
     }
 
-    val guardKey = "${entry.pluginId}:${entry.slotId}"
+    val guardKey = "${entry.pluginId}@${entry.manifestVersion}:${entry.slotId}"
     val crashed = remember(entry.pluginId, entry.slotId) {
         failureGuard?.detect(guardKey) != null
     }

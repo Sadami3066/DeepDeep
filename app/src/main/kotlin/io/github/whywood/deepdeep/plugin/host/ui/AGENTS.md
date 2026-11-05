@@ -15,5 +15,6 @@
 
 - 槽位渲染只认第一个可渲染绑定（priority 大者优先、同优先按插件注册顺序），不是叠加渲染；宿主默认视图用 `fallback` 表达。
 - `SlotRegistry` 的 Compose 兼容 = `uiApiLevel <= HOST_UI_API_LEVEL` + 清单 `ui.apiLevel` + 可选的 `ui.kotlin` 主次版本 / `ui.compose` 精确版本匹配；任一不满足只禁用该 Compose 绑定。
-- 崩溃保护复用 `PluginFailureGuard`：key 为 `<pluginId>:<slotId>`，残留标记表示上次渲染导致进程死亡，下次启动该绑定走 fallback。
+- 崩溃保护复用 `PluginFailureGuard`：key 为 `<pluginId>@<manifestVersion>:<slotId>`，残留标记表示上次渲染导致进程死亡，该版本走 fallback；插件版本升级后 key 变化会自动重试。
+- 声明式 `UiNode` 渲染前用 `PluginValidation.validateUiNode` 校验（节点数/深度/字段），不合法绑定直接视为不可渲染并回退宿主默认 UI；`LINK` 节点用 `LocalUriHandler` 打开 URL。
 - 本目录 composable 只接收 `assetsDir` 等数据依赖而不是 AppGraph 依赖，方便 Lead 直接接线与 JVM 单测纯逻辑。
