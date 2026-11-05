@@ -1,8 +1,6 @@
 <resources>
     <string name="present_share">分享</string>
     <string name="present_open">打开</string>
-    <string name="present_image">图片</string>
-    <string name="present_html">网页</string>
     <string name="present_creative">创意</string>
     <string name="present_fullscreen">全屏</string>
     <string name="present_failed">无法预览</string>

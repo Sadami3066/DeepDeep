@@ -5,7 +5,6 @@
     <string name="drawer_nav_plugins">Plugins</string>
     <string name="drawer_nav_timer">Timer</string>
     <string name="drawer_account_hint">Settings</string>
-    <string name="drawer_archived_count">%1$d</string>
     <string name="drawer_archived_title">Archived</string>
     <string name="drawer_archived_empty">No archived conversations yet</string>
     <string name="drawer_back">Back</string>
@@ -23,7 +22,6 @@
     <string name="drawer_delete_confirm">Delete</string>
     <string name="drawer_cancel">Cancel</string>
     <string name="drawer_search">Search</string>
-    <string name="drawer_search_placeholder">Search chats</string>
     <string name="drawer_search_archived_placeholder">Search archived chats</string>
     <string name="drawer_search_empty">No matching chats</string>
     <string name="drawer_search_clear">Clear search</string>

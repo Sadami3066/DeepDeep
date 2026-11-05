@@ -3,12 +3,8 @@
     <string name="timers_back">返回</string>
     <string name="timers_new">新建</string>
     <string name="timers_empty_title">还没有定时任务</string>
-    <string name="timers_empty_hint">和助手约定时间，到点自动发送。</string>
     <string name="timers_group_active">已启用</string>
     <string name="timers_group_inactive">已停用</string>
-    <string name="timers_delivered">已送达</string>
-    <string name="timers_next_delivery">下次送达</string>
-    <string name="timers_last_delivery">上次送达</string>
     <string name="timers_never">未安排</string>
     <string name="timers_conversation_deleted">会话已删除</string>
     <string name="timers_open_conversation">打开会话</string>
@@ -50,11 +46,6 @@
     <string name="timer_error_open_failed">无法打开会话</string>
     <string name="timer_error_delivery_failed">消息发送失败</string>
 
-    <string name="timers_trigger_once">%1$s %2$s</string>
-    <string name="timers_trigger_daily">每天 %1$s</string>
-    <string name="timers_trigger_weekdays">工作日 %1$s</string>
-    <string name="timers_trigger_weekends">周末 %1$s</string>
-    <string name="timers_trigger_weekly">每周 %1$s · %2$s</string>
 
     <string name="timers_cron_every_minute">每分钟</string>
     <string name="timers_cron_every_minutes">每 %1$d 分钟</string>
@@ -68,21 +59,7 @@
     <string name="timers_cron_weekday_separator">、</string>
     <string name="timers_cron_invalid">表达式无效</string>
 
-    <string name="timers_note">服务存活时按计划运行；错过的任务会在下次打开 App 时补跑一次。</string>
     <string name="timers_subtitle">%1$s · %2$s</string>
-    <string name="timers_trigger">触发</string>
-    <string name="timers_workspace">工作区</string>
-    <string name="timers_next">下次运行</string>
-    <string name="timers_last">上次运行</string>
-    <string name="timers_status">状态</string>
-    <string name="timers_prompt">任务提示词</string>
-    <string name="timers_open_session">打开运行会话</string>
-    <string name="timers_arrangements">安排记录</string>
-    <string name="timers_arrangement_hint">继续与助手沟通</string>
-    <string name="timers_status_running">运行中</string>
-    <string name="timers_status_done">完成</string>
-    <string name="timers_status_stopped">已停止</string>
-    <string name="timers_status_failed">失败</string>
 
     <string name="timers_today">今天</string>
     <string name="timers_tomorrow">明天</string>

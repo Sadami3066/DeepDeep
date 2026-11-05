@@ -29,7 +29,6 @@
     <string name="scan_settings_edit">Edit strategy</string>
     <string name="scan_settings_new">New strategy</string>
     <string name="scan_settings_saved">Saved</string>
-    <string name="scan_settings_save_failed">Could not save</string>
     <string name="scan_settings_try">Try</string>
     <string name="scan_settings_try_opened">Opened</string>
     <string name="scan_settings_pick_app">Pick installed app</string>

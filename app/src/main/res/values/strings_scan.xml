@@ -29,7 +29,6 @@
     <string name="scan_settings_edit">编辑策略</string>
     <string name="scan_settings_new">新增策略</string>
     <string name="scan_settings_saved">已保存</string>
-    <string name="scan_settings_save_failed">保存失败</string>
     <string name="scan_settings_try">试一下</string>
     <string name="scan_settings_try_opened">已打开</string>
     <string name="scan_settings_pick_app">选择已安装应用</string>

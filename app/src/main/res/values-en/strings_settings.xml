@@ -69,7 +69,6 @@
     <string name="settings_provider_all_count">All providers · %1$d</string>
     <string name="settings_provider_result_count">Results · %1$d</string>
     <string name="settings_provider_models_count">%1$d models</string>
-    <string name="settings_provider_current">Current</string>
     <string name="settings_provider_no_result">No matching providers</string>
     <string name="settings_provider_extra_config">Extra setup required</string>
     <string name="settings_provider_extra_config_body">This provider does not support API keys. It requires OAuth or a dedicated sign-in.</string>
@@ -93,15 +92,9 @@
     <string name="settings_provider_api_key_required">Enter an API key</string>
     <string name="settings_provider_api_key_save">Save</string>
     <string name="settings_provider_api_key_clear">Clear</string>
-    <string name="settings_provider_model">Current model</string>
-    <string name="settings_provider_models_title">Select model</string>
     <string name="settings_provider_model_count">Models</string>
     <string name="settings_provider_base_url">Base URL</string>
     <string name="settings_provider_default_base_url">Default</string>
-    <string name="settings_provider_no_models">No models available</string>
-    <string name="settings_provider_reasoning">Reasoning</string>
-    <string name="settings_provider_activate">Set as current provider</string>
-    <string name="settings_provider_in_use">In use</string>
 
     <string name="personalization_nickname_title">Name</string>
     <string name="personalization_nickname_hint">Your name</string>

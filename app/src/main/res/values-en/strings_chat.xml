@@ -3,11 +3,9 @@
     <string name="assistant_action_select_all">Select all</string>
     <string name="assistant_action_speak">Read aloud</string>
     <string name="assistant_attach_add">Add attachment</string>
-    <string name="assistant_attach_empty">Empty file</string>
     <string name="assistant_attach_missing">File not found</string>
     <string name="assistant_attach_open">View attachment</string>
     <string name="assistant_attach_share">Share file</string>
-    <string name="assistant_attach_unpreviewable">Cannot preview this file</string>
     <string name="attach_pick_image">Photo</string>
     <string name="attach_pick_file">File</string>
     <string name="attach_take_photo">Camera</string>
@@ -103,7 +101,6 @@
     <string name="assistant_reminder_label">Timer reminder · %1$s</string>
     <string name="assistant_reminders">Timer reminders</string>
     <string name="assistant_retry">Retry</string>
-    <string name="chat_status_auto_retry">Retrying %1$d/%2$d</string>
     <string name="chat_error_with_code">%1$s (%2$s)</string>
     <string name="assistant_model_provider">Provider</string>
     <string name="chat_error_insufficient_balance">Insufficient balance. Top up and try again.</string>

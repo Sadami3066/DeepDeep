@@ -1,25 +1,15 @@
 <resources>
-    <string name="ask_title">需要你的回答</string>
     <string name="ask_progress">%1$d / %2$d</string>
-    <string name="ask_custom_label">其他</string>
-    <string name="ask_custom_placeholder">输入自定义回答…</string>
     <string name="ask_recommended">推荐</string>
     <string name="ask_multi_hint">可多选</string>
-    <string name="ask_validation">请选择或填写回答</string>
     <string name="ask_skip">跳过</string>
     <string name="ask_previous">上一题</string>
     <string name="ask_next">下一题</string>
     <string name="ask_submit">提交</string>
-    <string name="ask_cancel">取消</string>
-    <string name="ask_card_waiting">Agent 正在等待回答</string>
-    <string name="ask_card_expand">展开</string>
-    <string name="ask_card_collapse">收起</string>
     <string name="ask_card_submitted">已提交，等待 Agent 继续…</string>
     <string name="ask_card_answered_count">已回答 · %1$d 个问题</string>
     <string name="ask_card_skipped">已跳过</string>
     <string name="ask_card_custom_hint">输入你的答案</string>
     <string name="ask_card_validation">请选择一个选项或输入答案</string>
-    <string name="ask_card_answered">已回答</string>
     <string name="ask_card_question">提问</string>
-    <string name="ask_card_multi_hint">可多选</string>
 </resources>

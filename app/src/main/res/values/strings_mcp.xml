@@ -17,18 +17,7 @@
     <string name="mcp_status_unsupported">Android 不支持</string>
     <string name="mcp_state_enabled">已启用</string>
 
-    <string name="mcp_new_title">添加 MCP 服务器</string>
     <string name="mcp_edit_title">编辑「%1$s」</string>
-    <string name="mcp_name_label">名称</string>
-    <string name="mcp_name_hint">例如：github</string>
-    <string name="mcp_url_label">地址</string>
-    <string name="mcp_url_hint">https://example.com/mcp</string>
-    <string name="mcp_description_label">说明</string>
-    <string name="mcp_description_hint">可选</string>
-    <string name="mcp_headers_label">请求头</string>
-    <string name="mcp_headers_hint">可选，每行 Key: Value</string>
-    <string name="mcp_enabled_label">启用</string>
-    <string name="mcp_stdio_hint">本地 STDIO 服务器在 Android 上不可用，可以删除或停用。</string>
     <string name="mcp_save">保存</string>
     <string name="mcp_test">测试连接</string>
     <string name="mcp_test_failed">连接失败：%1$s</string>
@@ -37,7 +26,6 @@
     <string name="mcp_delete_message">「%1$s」删除后无法恢复。</string>
     <string name="mcp_delete_confirm">删除</string>
     <string name="mcp_cancel">取消</string>
-    <string name="mcp_close">关闭</string>
 
     <string name="mcp_oauth_label">授权</string>
     <string name="mcp_oauth_login">登录</string>
@@ -53,11 +41,6 @@
     <string name="mcp_oauth_failed">登录失败：%1$s</string>
 
     <string name="mcp_error_title">操作失败</string>
-    <string name="mcp_error_name_empty">请输入名称</string>
-    <string name="mcp_error_name_invalid">名称只能包含字母、数字、下划线和连字符</string>
-    <string name="mcp_error_name_duplicate">已有同名服务器</string>
-    <string name="mcp_error_url_invalid">地址需以 http:// 或 https:// 开头</string>
-    <string name="mcp_error_headers_invalid">请求头格式应为 Key: Value</string>
     <string name="mcp_error_not_found">服务器配置不存在</string>
     <string name="mcp_error_json_invalid">JSON 配置不正确</string>
     <string name="mcp_error_save_failed">保存失败</string>

@@ -17,18 +17,7 @@
     <string name="mcp_status_unsupported">Unsupported on Android</string>
     <string name="mcp_state_enabled">Enabled</string>
 
-    <string name="mcp_new_title">Add MCP server</string>
     <string name="mcp_edit_title">Edit “%1$s”</string>
-    <string name="mcp_name_label">Name</string>
-    <string name="mcp_name_hint">For example: github</string>
-    <string name="mcp_url_label">URL</string>
-    <string name="mcp_url_hint">https://example.com/mcp</string>
-    <string name="mcp_description_label">Description</string>
-    <string name="mcp_description_hint">Optional</string>
-    <string name="mcp_headers_label">Headers</string>
-    <string name="mcp_headers_hint">Optional, one Key: Value per line</string>
-    <string name="mcp_enabled_label">Enabled</string>
-    <string name="mcp_stdio_hint">Local STDIO servers do not run on Android. You can delete or disable this entry.</string>
     <string name="mcp_save">Save</string>
     <string name="mcp_test">Test connection</string>
     <string name="mcp_test_failed">Connection failed: %1$s</string>
@@ -37,7 +26,6 @@
     <string name="mcp_delete_message">“%1$s” will be deleted permanently.</string>
     <string name="mcp_delete_confirm">Delete</string>
     <string name="mcp_cancel">Cancel</string>
-    <string name="mcp_close">Close</string>
 
     <string name="mcp_oauth_label">Authorization</string>
     <string name="mcp_oauth_login">Sign in</string>
@@ -53,11 +41,6 @@
     <string name="mcp_oauth_failed">Sign-in failed: %1$s</string>
 
     <string name="mcp_error_title">Something went wrong</string>
-    <string name="mcp_error_name_empty">Enter a name</string>
-    <string name="mcp_error_name_invalid">Names can only contain letters, digits, underscores and hyphens</string>
-    <string name="mcp_error_name_duplicate">A server with this name already exists</string>
-    <string name="mcp_error_url_invalid">URL must start with http:// or https://</string>
-    <string name="mcp_error_headers_invalid">Each header must be Key: Value</string>
     <string name="mcp_error_not_found">Server configuration not found</string>
     <string name="mcp_error_json_invalid">Invalid JSON configuration</string>
     <string name="mcp_error_save_failed">Could not save</string>

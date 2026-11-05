@@ -76,7 +76,6 @@
     <string name="settings_provider_all_count">全部厂商 · %1$d</string>
     <string name="settings_provider_result_count">搜索结果 · %1$d</string>
     <string name="settings_provider_models_count">%1$d 个模型</string>
-    <string name="settings_provider_current">当前</string>
     <string name="settings_provider_no_result">没有匹配的厂商</string>
     <string name="settings_provider_extra_config">需要额外配置</string>
     <string name="settings_provider_extra_config_body">该厂商不支持 API Key，需要 OAuth 或专用登录方式。</string>
@@ -100,15 +99,9 @@
     <string name="settings_provider_api_key_required">请输入 API Key</string>
     <string name="settings_provider_api_key_save">保存</string>
     <string name="settings_provider_api_key_clear">清除</string>
-    <string name="settings_provider_model">当前模型</string>
-    <string name="settings_provider_models_title">选择模型</string>
     <string name="settings_provider_model_count">模型数量</string>
     <string name="settings_provider_base_url">接口地址</string>
     <string name="settings_provider_default_base_url">默认</string>
-    <string name="settings_provider_no_models">暂无可用模型</string>
-    <string name="settings_provider_reasoning">推理</string>
-    <string name="settings_provider_activate">设为当前厂商</string>
-    <string name="settings_provider_in_use">当前正在使用</string>
 
     <string name="personalization_nickname_title">称呼</string>
     <string name="personalization_nickname_hint">你的名字</string>

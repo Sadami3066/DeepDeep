@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- refactor: 清理历史未使用字符串资源（ask/mcp/timer/settings/present/scan 等 65 个键 × 中英两份），lint UnusedResources 归零
 - fix: 内置插件安装语义：不可下载的内置插件恒为已安装，不再因缺少 `builtin_state.json` 全部变成「下载」；只有 feishu/wecom/jwxt 需要下载 [插件]
 - fix: 插件设置缓存启动预热，冷启动不再用默认值覆盖已存设置（jwxt 凭据不再被误删，jobs/workshop 限额恢复） [插件]
 - fix: 插件工具会话绑定改为 live handle：goal/jobs/timer/workshop 工具与 `PluginToolCall.sessionId` 在执行时解析真实会话，不再报「会话未保存」 [插件] [运行时]
