@@ -1,0 +1,28 @@
+{
+  "id": "io.github.whywood.deepdeep.pluginsample",
+  "version": "1.0.0",
+  "apiLevel": 1,
+  "minHostVersion": "0.2.0",
+  "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
+  "name": {
+    "default": "Sample Plugin",
+    "zh": "示例插件",
+    "en": "Sample Plugin"
+  },
+  "summary": {
+    "default": "External plugin sample",
+    "zh": "外部插件示例",
+    "en": "External plugin sample"
+  },
+  "icon": "asset:icon.png",
+  "requires": [],
+  "provides": {
+    "tools": [
+      "sample_echo"
+    ],
+    "uiSlots": [
+      "setup.content"
+    ]
+  },
+  "installable": true
+}

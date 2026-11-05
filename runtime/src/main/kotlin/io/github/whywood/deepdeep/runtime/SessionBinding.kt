@@ -20,5 +20,9 @@ class SessionBinding(val supportsChatDelivery: Boolean = true) {
         )
     }
 
+    fun bind(session: BoundSession) {
+        bound = session
+    }
+
     fun current(): BoundSession? = bound
 }

@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":runtime"))
     implementation(project(":shell"))
     implementation(project(":design"))
+    implementation(project(":plugin-api"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

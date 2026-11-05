@@ -1,0 +1,239 @@
+package io.github.whywood.deepdeep.plugin.host
+
+import io.github.whywood.deepdeep.plugin.api.ComposerAction
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginHooks
+import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginPage
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.api.PluginTool
+import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
+import io.github.whywood.deepdeep.plugin.api.PromptSection
+import io.github.whywood.deepdeep.plugin.api.SettingSpec
+import io.github.whywood.deepdeep.plugin.api.SlotBinding
+
+internal enum class PluginPhase {
+    IMPORTED,
+    INSTALLED,
+    ACTIVE,
+    DEGRADED,
+    FAILED,
+    DISABLED,
+    PENDING_RESTART,
+    UNLOADED;
+
+    val contributes: Boolean
+        get() = this == ACTIVE || this == DEGRADED || this == PENDING_RESTART
+}
+
+internal data class PluginContributions(
+    val tools: List<PluginTool> = emptyList(),
+    val skills: List<PluginSkill> = emptyList(),
+    val promptSections: List<PromptSection> = emptyList(),
+    val settings: List<SettingSpec> = emptyList(),
+    val actions: List<PluginAction> = emptyList(),
+    val detailRows: List<PluginDetailRow> = emptyList(),
+    val ui: PluginUiContributions = PluginUiContributions.None,
+    val hooks: PluginHooks = PluginHooks.None,
+) {
+    companion object {
+        val Empty: PluginContributions = PluginContributions()
+    }
+}
+
+internal data class PluginDescriptor(
+    val manifest: PluginManifest,
+    val plugin: DeepDeepPlugin,
+    val source: PluginSource = manifest.source,
+    val phase: PluginPhase = PluginPhase.IMPORTED,
+    val error: String? = null,
+    val contributions: PluginContributions = PluginContributions.Empty,
+) {
+    val id: String get() = manifest.id
+}
+
+internal sealed interface PluginRegistration {
+    data object Registered : PluginRegistration
+
+    data class Rejected(val pluginId: String, val reason: String) : PluginRegistration
+}
+
+internal enum class PluginConflictKind {
+    TOOL,
+    SKILL,
+    PROMPT_SECTION,
+}
+
+internal data class PluginConflict(
+    val kind: PluginConflictKind,
+    val id: String,
+    val pluginIds: List<String>,
+)
+
+internal data class PluginToolEntry(val pluginId: String, val tool: PluginTool)
+
+internal data class PluginSkillEntry(val pluginId: String, val skill: PluginSkill)
+
+internal data class PluginPromptSectionEntry(val pluginId: String, val section: PromptSection)
+
+internal data class PluginSettingsEntry(val pluginId: String, val specs: List<SettingSpec>)
+
+internal data class PluginActionEntry(val pluginId: String, val actions: List<PluginAction>)
+
+internal data class PluginDetailRowsEntry(val pluginId: String, val rows: List<PluginDetailRow>)
+
+internal data class PluginUiEntry(val pluginId: String, val contributions: PluginUiContributions)
+
+internal data class PluginHooksEntry(val pluginId: String, val hooks: PluginHooks)
+
+internal data class PluginBindingEntry(val pluginId: String, val binding: SlotBinding)
+
+internal data class PluginPageEntry(val pluginId: String, val page: PluginPage)
+
+internal data class PluginComposerActionEntry(val pluginId: String, val action: ComposerAction)
+
+internal class PluginRegistrySnapshot(
+    val version: Long,
+    val plugins: List<PluginDescriptor>,
+) {
+    private val byId: Map<String, PluginDescriptor> = plugins.associateBy { it.id }
+
+    val tools: List<PluginToolEntry>
+    val skills: List<PluginSkillEntry>
+    val promptSections: List<PluginPromptSectionEntry>
+    val settings: List<PluginSettingsEntry>
+    val actions: List<PluginActionEntry>
+    val detailRows: List<PluginDetailRowsEntry>
+    val ui: List<PluginUiEntry>
+    val hooks: List<PluginHooksEntry>
+    val bindings: List<PluginBindingEntry>
+    val pages: List<PluginPageEntry>
+    val composerActions: List<PluginComposerActionEntry>
+    val conflicts: List<PluginConflict>
+
+    init {
+        val contributing = plugins.filter { it.phase.contributes }
+        val toolOwners = linkedMapOf<String, MutableList<String>>()
+        tools = buildList {
+            contributing.forEach { descriptor ->
+                descriptor.contributions.tools.forEach { tool ->
+                    val owners = toolOwners.getOrPut(tool.name) { mutableListOf() }
+                    if (owners.isEmpty()) add(PluginToolEntry(descriptor.id, tool))
+                    owners += descriptor.id
+                }
+            }
+        }
+        val skillOwners = linkedMapOf<String, MutableList<String>>()
+        skills = buildList {
+            contributing.forEach { descriptor ->
+                descriptor.contributions.skills.forEach { skill ->
+                    val owners = skillOwners.getOrPut(skill.id) { mutableListOf() }
+                    if (owners.isEmpty()) add(PluginSkillEntry(descriptor.id, skill))
+                    owners += descriptor.id
+                }
+            }
+        }
+        val sectionOwners = linkedMapOf<String, MutableList<String>>()
+        promptSections = buildList {
+            contributing.forEach { descriptor ->
+                descriptor.contributions.promptSections.forEach { section ->
+                    val owners = sectionOwners.getOrPut(section.id) { mutableListOf() }
+                    if (owners.isEmpty()) add(PluginPromptSectionEntry(descriptor.id, section))
+                    owners += descriptor.id
+                }
+            }
+        }
+        settings = contributing.map { PluginSettingsEntry(it.id, it.contributions.settings) }
+        actions = contributing.map { PluginActionEntry(it.id, it.contributions.actions) }
+        detailRows = contributing.map { PluginDetailRowsEntry(it.id, it.contributions.detailRows) }
+        ui = contributing.map { PluginUiEntry(it.id, it.contributions.ui) }
+        hooks = contributing.map { PluginHooksEntry(it.id, it.contributions.hooks) }
+        bindings = ui.flatMap { entry -> entry.contributions.bindings.map { PluginBindingEntry(entry.pluginId, it) } }
+        pages = ui.flatMap { entry -> entry.contributions.pages.map { PluginPageEntry(entry.pluginId, it) } }
+        composerActions = ui.flatMap { entry ->
+            entry.contributions.composerActions.map { PluginComposerActionEntry(entry.pluginId, it) }
+        }
+        conflicts = buildList {
+            collectConflicts(PluginConflictKind.TOOL, toolOwners, this)
+            collectConflicts(PluginConflictKind.SKILL, skillOwners, this)
+            collectConflicts(PluginConflictKind.PROMPT_SECTION, sectionOwners, this)
+        }
+    }
+
+    fun plugin(pluginId: String): PluginDescriptor? = byId[pluginId]
+
+    fun contributionsOf(pluginId: String): PluginContributions? = byId[pluginId]?.contributions
+
+    private fun collectConflicts(
+        kind: PluginConflictKind,
+        owners: Map<String, List<String>>,
+        target: MutableList<PluginConflict>,
+    ) {
+        owners.forEach { (id, pluginIds) ->
+            val distinct = pluginIds.distinct()
+            if (distinct.size > 1) target += PluginConflict(kind, id, distinct)
+        }
+    }
+}
+
+internal class PluginRegistry {
+    private val lock = Any()
+    private var version = 0L
+    private var descriptors: List<PluginDescriptor> = emptyList()
+    private var cachedSnapshot: PluginRegistrySnapshot? = null
+
+    fun register(descriptor: PluginDescriptor): PluginRegistration = synchronized(lock) {
+        if (descriptors.any { it.id == descriptor.id }) {
+            PluginRegistration.Rejected(descriptor.id, "plugin ${descriptor.id} is already registered")
+        } else {
+            descriptors = descriptors + descriptor
+            bumpVersion()
+            PluginRegistration.Registered
+        }
+    }
+
+    fun unregister(pluginId: String): Boolean = synchronized(lock) {
+        if (descriptors.none { it.id == pluginId }) {
+            false
+        } else {
+            descriptors = descriptors.filterNot { it.id == pluginId }
+            bumpVersion()
+            true
+        }
+    }
+
+    fun update(pluginId: String, transform: (PluginDescriptor) -> PluginDescriptor): Boolean = synchronized(lock) {
+        val index = descriptors.indexOfFirst { it.id == pluginId }
+        if (index < 0) {
+            false
+        } else {
+            val updated = transform(descriptors[index])
+            require(updated.id == pluginId) { "plugin id must not change during update" }
+            descriptors = descriptors.toMutableList().also { it[index] = updated }
+            bumpVersion()
+            true
+        }
+    }
+
+    fun updatePhase(pluginId: String, phase: PluginPhase, error: String? = null): Boolean =
+        update(pluginId) { it.copy(phase = phase, error = error) }
+
+    fun updateContributions(pluginId: String, contributions: PluginContributions): Boolean =
+        update(pluginId) { it.copy(contributions = contributions) }
+
+    fun descriptor(pluginId: String): PluginDescriptor? = synchronized(lock) {
+        descriptors.firstOrNull { it.id == pluginId }
+    }
+
+    fun snapshot(): PluginRegistrySnapshot = synchronized(lock) {
+        cachedSnapshot ?: PluginRegistrySnapshot(version, descriptors).also { cachedSnapshot = it }
+    }
+
+    private fun bumpVersion() {
+        version += 1
+        cachedSnapshot = null
+    }
+}

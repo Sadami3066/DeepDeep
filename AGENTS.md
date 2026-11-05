@@ -1,6 +1,6 @@
 # DeepDeep · 项目总览
 
-Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)（UI/装配）、[:runtime](runtime/AGENTS.md)（agent 运行时）、[:runtime-api](runtime-api/AGENTS.md)（纯 JVM 契约）、[:shell](shell/AGENTS.md)（proot/root）、[:design](design/AGENTS.md)（主题与组件）。
+Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)（UI/装配）、[:runtime](runtime/AGENTS.md)（agent 运行时）、[:runtime-api](runtime-api/AGENTS.md)（纯 JVM 契约）、[:shell](shell/AGENTS.md)（proot/root）、[:design](design/AGENTS.md)（主题与组件）、[:plugin-api](plugin-api/AGENTS.md)（插件契约与可发布 SDK）、[:plugin-sample](plugin-sample/AGENTS.md)（示例外部插件，不进 APK）。
 
 ## 索引
 

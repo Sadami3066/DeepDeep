@@ -178,11 +178,13 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
 
 gradle.projectsEvaluated {
     val allowed = mapOf(
-        ":app" to setOf(":runtime", ":shell", ":design"),
+        ":app" to setOf(":runtime", ":shell", ":design", ":plugin-api"),
         ":runtime" to setOf(":runtime-api"),
         ":runtime-api" to emptySet(),
         ":shell" to emptySet(),
         ":design" to emptySet(),
+        ":plugin-api" to emptySet(),
+        ":plugin-sample" to setOf(":plugin-api"),
     )
     val undeclared = subprojects.map { it.path }.filterNot { it in allowed }
     check(undeclared.isEmpty()) { "Modules missing from the boundary table: ${undeclared.joinToString()}" }
