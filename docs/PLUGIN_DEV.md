@@ -250,7 +250,7 @@ plugin.ddp
 | `promptSections(host)` | 追加系统提示词段 |
 | `settings()` / `onSettingsChanged(host, values)` | 声明式设置；保存后回调归一化后的值 |
 | `contributions(host)` | 工具 + hooks（无会话上下文时） |
-| `contributionsFor(host, session)` | 每会话构建工具时调用，`session` 为 `null` 或 `PluginSessionInfo`；默认委托 `contributions` |
+| `contributionsFor(host, session)` | 每会话构建工具时调用，`session` 为 `null` 或会话 live handle `PluginSessionInfo`；默认委托 `contributions` |
 | `ui(host)` | 槽位/页面/输入区动作贡献 |
 | `close()` | 插件停用/卸载/进程退出；宿主取消插件 scope，`close` 后不要再异步回调 |
 
@@ -295,6 +295,7 @@ override fun contributions(host: PluginHost) = Contributions(
 
 - `callId`：本次调用 id，只用于日志/关联。
 - `args: JsonObject`：模型传入参数，按 `parameters` 校验后的原始 JSON；取值用 `jsonPrimitive.contentOrNull` / `intOrNull` 等。
+- `sessionId: String`：宿主在 `execute` 时解析出的当前会话 id，没有活动会话时为空字符串；需要 cwd/会话文件时用 `contributionsFor` 的 `session.snapshot()`。
 - `signal: PluginRunSignal?`：取消信号；长任务里在阶段边界调用 `signal?.throwIfCancelled()`，不要吞取消异常。
 - `partial(result)`：流式中间结果，宿主在有实时工具卡时展示（best-effort，没有监听者时丢弃）；`execute` 的返回值才是最终结果。
 
@@ -308,7 +309,31 @@ override fun contributions(host: PluginHost) = Contributions(
 
 `isError = true` 对应一次失败的普通工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。耗时工具请配合 `signal` 支持取消。
 
-工具默认随启用插件进入会话；`contributionsFor` 里可按 `PluginSessionInfo`（`sessionId`/`cwd`/`file`/`supportsChatDelivery`）决定是否/如何暴露会话相关工具。
+工具默认随启用插件进入会话；`contributionsFor` 的 `session` 是**会话 live handle**（`PluginSessionInfo`）：
+
+- 构建贡献时不要缓存/拷贝会话字段，也不要假设调用时已有活动会话。
+- 在工具 `execute` 里调用 `session?.snapshot()` 取最新的 `PluginSessionSnapshot(sessionId, file, cwd)`；没有活动会话时返回 `null`。
+- `PluginToolCall.sessionId` 同样是宿主在 `execute` 时解析的当前会话 id，无会话时为空字符串。
+
+```kotlin
+override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = Contributions(
+    tools = listOf(
+        PluginTool(
+            name = "session_info",
+            label = "Session Info",
+            description = "Return the active session id and working directory.",
+            parameters = buildJsonObject { put("type", "object") },
+        ) { call ->
+            val snapshot = session?.snapshot()
+            if (snapshot == null) {
+                PluginToolResult.Text("No session is bound.", isError = true)
+            } else {
+                PluginToolResult.Text("session=${snapshot.sessionId} cwd=${snapshot.cwd}")
+            }
+        },
+    ),
+)
+```
 
 ## 技能
 
@@ -515,7 +540,7 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 
 **总线**：`host.bus().publish(PluginBusEvent(topic, publisher, payload, publishedAt))` 广播给所有插件；订阅 `host.bus().subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
 
-**自定义消息卡**：在工具执行里用 `host.chat().postCustomMessage(call.sessionId, "my.card", payload, text = "卡片摘要")` 把卡片写进当前会话（`PluginToolCall.sessionId` 由宿主注入）；再注册 `chat.message:my.card` 的声明式或 Compose 槽位渲染。`display=false` 只记日志不显示。消息会写入 pi JSONL 的 `custom_message` 条目，重开会话后仍由 `HistoryMapper` 还原。
+**自定义消息卡**：在工具执行里用 `host.chat().postCustomMessage(call.sessionId, "my.card", payload, text = "卡片摘要")` 把卡片写进当前会话（`PluginToolCall.sessionId` 由宿主在 `execute` 时解析）；再注册 `chat.message:my.card` 的声明式或 Compose 槽位渲染。`display=false` 只记日志不显示。消息会写入 pi JSONL 的 `custom_message` 条目，重开会话后仍由 `HistoryMapper` 还原。
 
 ## ABI 与版本
 

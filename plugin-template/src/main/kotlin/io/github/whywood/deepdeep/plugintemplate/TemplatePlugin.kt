@@ -331,7 +331,7 @@ class TemplatePlugin : DeepDeepPlugin {
     private fun sessionTool(session: PluginSessionInfo): PluginTool = PluginTool(
         name = "template_session",
         label = "Template Session Info",
-        description = "Return the active session id and working directory; only available while a session is bound.",
+        description = "Return the active session id and working directory; reports when no session is currently bound.",
         parameters = buildJsonObject {
             put("type", "object")
             putJsonObject("properties") {
@@ -344,15 +344,21 @@ class TemplatePlugin : DeepDeepPlugin {
         },
     ) { call ->
         val format = call.args["format"]?.jsonPrimitive?.contentOrNull ?: "text"
-        val body = if (format == "json") {
-            buildJsonObject {
-                put("sessionId", session.sessionId)
-                put("cwd", session.cwd)
+        val snapshot = session.snapshot()
+        val body = when {
+            snapshot == null -> null
+            format == "json" -> buildJsonObject {
+                put("sessionId", snapshot.sessionId)
+                put("cwd", snapshot.cwd)
             }.toString()
-        } else {
-            "session=${session.sessionId} cwd=${session.cwd}"
+
+            else -> "session=${snapshot.sessionId} cwd=${snapshot.cwd}"
         }
-        PluginToolResult.Text(body)
+        if (body == null) {
+            PluginToolResult.Text("No session is bound.", isError = true)
+        } else {
+            PluginToolResult.Text(body)
+        }
     }
 
     private suspend fun readToken(host: PluginHost): String? =
