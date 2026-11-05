@@ -401,5 +401,8 @@ private fun ApiKeySection(
 
 internal fun maskApiKey(key: String?): String {
     val trimmed = key?.trim().orEmpty()
-    return if (trimmed.length >= 6) trimmed.take(3) + "*****" else "*****"
+    if (trimmed.isEmpty()) return "*****"
+    val visible = if (trimmed.length > 6) 3 else 0
+    val masked = (trimmed.length - visible).coerceIn(5, 24)
+    return trimmed.take(visible) + "*".repeat(masked)
 }
