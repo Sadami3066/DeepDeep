@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
+import io.github.whywood.deepdeep.plugin.api.PluginSessionSnapshot
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.internal.testPluginHost
 import kotlinx.coroutines.test.runTest
@@ -107,7 +108,9 @@ class ArrangePluginTest {
 
     private fun expectedLabel(id: Int): String = "text:$id"
 
-    private fun session(): PluginSessionInfo = PluginSessionInfo(sessionId = "session", cwd = "/tmp")
+    private fun session(): PluginSessionInfo = PluginSessionInfo(supportsChatDelivery = true) {
+        PluginSessionSnapshot("session", null, "/tmp")
+    }
 
     private fun plugin(): ArrangePlugin = ArrangePlugin(context, calendar)
 

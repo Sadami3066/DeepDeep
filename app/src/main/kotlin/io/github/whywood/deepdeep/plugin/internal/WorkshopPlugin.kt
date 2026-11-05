@@ -53,9 +53,9 @@ class WorkshopPlugin(
     }
 
     override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions {
-        val bound = session ?: return Contributions()
-        val binding = SessionBinding(bound.supportsChatDelivery).apply {
-            bind(BoundSession(bound.sessionId, bound.file, bound.cwd))
+        val live = session ?: return Contributions()
+        val binding = SessionBinding(live.supportsChatDelivery) {
+            live.snapshot()?.let { BoundSession(it.sessionId, it.file, it.cwd) }
         }
         val tools = workshopTools(store, binding.supportsChatDelivery) + workshopEditTool(store)
         return Contributions(tools = CodingToolPluginAdapter.toPluginTools(tools))
