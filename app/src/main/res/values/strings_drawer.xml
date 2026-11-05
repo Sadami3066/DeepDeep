@@ -31,6 +31,7 @@
     <string name="drawer_workspace_settings">设置</string>
     <string name="drawer_workspace_empty">暂无会话</string>
     <string name="workspace_section">工作区</string>
+    <string name="drawer_workspace_create_short">新建</string>
     <string name="workspace_create">新建工作区</string>
     <string name="workspace_rename_title">重命名工作区</string>
     <string name="workspace_name_placeholder">工作区名称</string>

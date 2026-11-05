@@ -56,6 +56,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
@@ -406,14 +407,11 @@ private fun DrawerWorkspacesHeader(
             color = colors.inkTertiary,
             maxLines = 1,
         )
-        DdIconButton(
-            icon = DdIcons.Plus,
+        DdTextAction(
+            text = stringResource(R.string.drawer_workspace_create_short),
             onClick = onCreate,
-            contentDescription = stringResource(R.string.workspace_create),
-            modifier = Modifier.testTag("drawer_workspace_create"),
-            size = 32.dp,
-            iconSize = 16.dp,
-            tint = colors.inkTertiary,
+            modifier = Modifier.testTag("drawer_workspace_create").padding(end = 4.dp),
+            color = colors.inkTertiary,
         )
     }
 }
