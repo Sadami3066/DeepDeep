@@ -6,20 +6,15 @@ import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.api.Contributions
-import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginHost
-import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
-import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.plugin.api.normalize
-import io.github.whywood.deepdeep.plugin.host.CodingToolPluginAdapter
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
-import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import io.github.whywood.deepdeep.plugin.host.PluginHostImpl
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
@@ -33,34 +28,22 @@ import io.github.whywood.deepdeep.plugin.host.events.PluginRuntimeHooksFactory
 import io.github.whywood.deepdeep.plugin.host.events.RuntimeEventMapper
 import io.github.whywood.deepdeep.plugin.host.events.registryHookSource
 import io.github.whywood.deepdeep.plugin.host.PluginToolAdapter
-import io.github.whywood.deepdeep.plugin.host.external.BundleState
-import io.github.whywood.deepdeep.plugin.host.external.InspectionResult
-import io.github.whywood.deepdeep.plugin.host.external.InstallRejection
-import io.github.whywood.deepdeep.plugin.host.external.InstallResult
-import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
 import io.github.whywood.deepdeep.runtime.BoundSession
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 class PluginHostManager internal constructor(
     private val context: Context,
@@ -93,16 +76,42 @@ class PluginHostManager internal constructor(
     private val plugins = linkedMapOf<String, ManagedPlugin>()
     private val mutex = Mutex()
     private val busy = AtomicBoolean(false)
-    private val confirmWaiter = AtomicReference<CompletableDeferred<Boolean>?>(null)
-    private val setupCancelled = AtomicBoolean(false)
-    private val setupFinished = AtomicBoolean(false)
-    private val setupJob = AtomicReference<Job?>(null)
-    private val setupPluginId = AtomicReference<String?>(null)
     private val textResolver = PluginTextResolver(
         resourceString = { id -> strings.get(id) },
         language = language,
     )
-    private var pendingImport: File? = null
+    private val setupFlow = PluginSetupFlow(
+        scope = scope,
+        state = _state,
+        strings = strings,
+        textResolver = textResolver,
+        busy = busy,
+        managedPlugin = { pluginId -> plugins[pluginId] },
+        isForeground = isForeground,
+        builtinStateStore = builtinStateStore,
+        notifyInstall = notifyInstall,
+        notifyInstallFinished = notifyInstallFinished,
+        refresh = { refreshNow() },
+        syncSkills = { managed -> syncSkillsLocked(managed) },
+        onContributionsChanged = onContributionsChanged,
+        onSetupReady = onSetupReady,
+        onError = { message -> setError(message) },
+        onOperation = { pluginId, label, stage -> setOperation(pluginId, label, stage) },
+    )
+    private val externalFlow = PluginExternalFlow(
+        scope = scope,
+        state = _state,
+        plugins = plugins,
+        registry = registry,
+        external = external,
+        externalUpdates = externalUpdates,
+        strings = strings,
+        textResolver = textResolver,
+        hostFor = { managed -> hostFor(managed) },
+        refresh = { refreshNow() },
+        syncSkills = { managed -> syncSkillsLocked(managed) },
+        onContributionsChanged = onContributionsChanged,
+    )
     private var lastRefreshAt = 0L
 
     internal val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
@@ -139,38 +148,8 @@ class PluginHostManager internal constructor(
                 plugins[managed.manifest.id] = managed
                 registry.register(managed.toDescriptor())
             }
-            external?.records()?.forEach { record ->
-                val managed = ManagedPlugin(
-                    manifest = manifestForRecord(record),
-                    plugin = null,
-                    builtin = false,
-                    source = PluginSource.EXTERNAL,
-                    installedVersion = record.version,
-                    enabled = record.enabled,
-                    phase = if (record.enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
-                )
-                managed.host = hostFor(managed)
-                managed.externalRecord = record
-                plugins[managed.manifest.id] = managed
-                registry.register(managed.toDescriptor())
-            }
-            external?.records()?.filter { it.enabled }?.forEach { record ->
-                val previousVersion = plugins[record.id]?.externalRecord?.version
-                val activated = external?.activate(record) ?: return@forEach
-                plugins[record.id]?.let { managed ->
-                    managed.externalRecord = activated
-                    managed.installedVersion = activated.version
-                    managed.enabled = activated.enabled
-                }
-                attachExternalHandle(activated)
-                if (previousVersion != null && previousVersion != activated.version) {
-                    plugins[record.id]?.let { managed ->
-                        managed.plugin?.let { plugin ->
-                            runCatching { plugin.onUpgrade(managed.host, previousVersion) }
-                        }
-                    }
-                }
-            }
+            externalFlow.registerRecords()
+            externalFlow.activateEnabled()
             settingsStore.warm(plugins.keys)
             plugins.values.forEach { managed ->
                 if (managed.enabled && (managed.installedVersion != null || !managed.installable())) {
@@ -184,21 +163,9 @@ class PluginHostManager internal constructor(
                     syncSkillsLocked(managed)
                 }
             }
-            scheduleUpdateCheck()
+            externalFlow.scheduleUpdateCheck()
         } finally {
             _state.update { it.copy(loading = false) }
-        }
-    }
-
-    private fun scheduleUpdateCheck() {
-        val support = externalUpdates ?: return
-        scope.launch {
-            runCatching {
-                val settings = support.loadSettings()
-                if (!settings.autoCheck || settings.indexUrl.isNullOrBlank()) return@runCatching
-                val updates = checkExternalUpdates()
-                _state.update { it.copy(availableUpdates = updates) }
-            }
         }
     }
 
@@ -277,14 +244,10 @@ class PluginHostManager internal constructor(
                         ),
                     )
                 } else {
-                    external?.setEnabled(pluginId, enabled)
-                    if (enabled && managed.plugin == null) {
-                        external?.record(pluginId)?.let { record ->
-                            external?.activate(record)?.let(::attachExternalHandle)
-                        }
-                    }
+                    externalFlow.setExternalEnabled(pluginId, enabled)
                 }
                 managed.enabled = enabled
+                guard.clearFor(pluginId)
                 if (enabled) {
                     runCatching { managed.plugin?.onEnable(managed.host) }
                 } else {
@@ -314,22 +277,9 @@ class PluginHostManager internal constructor(
         }
     }
 
-    override fun install(pluginId: String) {
-        scope.launch {
-            launchBusy {
-                val managed = plugins[pluginId] ?: return@launchBusy
-                if (!PluginRules.canInstall(managed.manifest)) return@launchBusy
-                installInternal(managed)
-                refreshLocked()
-                syncSkillsLocked(managed)
-                onContributionsChanged()
-            }
-        }
-    }
+    override fun install(pluginId: String) = setupFlow.install(pluginId)
 
-    override fun update(pluginId: String) {
-        install(pluginId)
-    }
+    override fun update(pluginId: String) = setupFlow.install(pluginId)
 
     override fun uninstall(pluginId: String) {
         scope.launch {
@@ -353,285 +303,39 @@ class PluginHostManager internal constructor(
     }
 
     override fun connect(pluginId: String) {
-        scope.launch { runCatching { setup(pluginId) } }
+        scope.launch { runCatching { setupFlow.setup(pluginId) } }
     }
 
-    override fun runAction(pluginId: String, actionId: String) {
-        scope.launch {
-            setupCancelled.set(false)
-            launchBusy {
-                val managed = plugins[pluginId] ?: return@launchBusy
-                if (!managed.enabled) {
-                    setError(strings.get(R.string.plugins_error_disabled))
-                    return@launchBusy
-                }
-                val plugin = managed.plugin ?: return@launchBusy
-                val call = scope.async { plugin.runAction(managed.host, actionId, setupUi(managed)) }
-                setupJob.set(call)
-                try {
-                    call.await()
-                } catch (error: CancellationException) {
-                    call.cancel()
-                    if (!setupCancelled.get()) throw error
-                } finally {
-                    setupJob.compareAndSet(call, null)
-                }
-                refreshLocked()
-            }
-        }
+    override fun runAction(pluginId: String, actionId: String) = setupFlow.runAction(pluginId, actionId)
+
+    override fun onAppForeground() = setupFlow.onAppForeground()
+
+    override fun confirmInstall() = setupFlow.confirmInstall()
+
+    override fun cancelInteraction() = setupFlow.cancelInteraction()
+
+    override fun cancelSetup(pluginId: String) = setupFlow.cancelSetup(pluginId)
+
+    override suspend fun setup(pluginId: String): PluginSetupResult = setupFlow.setup(pluginId)
+
+    override suspend fun inspectExternal(file: File): ExternalInspectionUi? =
+        externalFlow.inspectExternal(file)
+
+    override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =
+        externalFlow.installExternal(file, acceptPublisher)
+
+    override suspend fun checkExternalUpdates(): List<PluginUpdateUi> = externalFlow.checkExternalUpdates()
+
+    override suspend fun pluginSourceSettings(): PluginSourceSettings = externalFlow.pluginSourceSettings()
+
+    override suspend fun savePluginSourceSettings(settings: PluginSourceSettings) {
+        externalFlow.savePluginSourceSettings(settings)
     }
 
-    override fun onAppForeground() {
-        if (!busy.get()) return
-        val interaction = _state.value.interaction ?: return
-        val managed = plugins[interaction.pluginId] ?: return
-        scope.launch {
-            val status = runCatching { managed.plugin?.status(managed.host) }.getOrNull()
-            if (status is PluginStatus.Ready) {
-                completeConfirm(true)
-                setupFinished.set(true)
-                setupJob.getAndSet(null)?.cancel()
-                _state.update { it.copy(interaction = null) }
-                onSetupReady(interaction.title)
-            }
-        }
-    }
+    override suspend fun refreshAvailableUpdates(): List<PluginUpdateUi> = externalFlow.checkExternalUpdates()
 
-    override fun confirmInstall() {
-        completeConfirm(true)
-    }
-
-    override fun cancelInteraction() {
-        setupCancelled.set(true)
-        setupJob.getAndSet(null)?.cancel()
-        completeConfirm(false)
-        _state.update { it.copy(interaction = null) }
-    }
-
-    override fun cancelSetup(pluginId: String) {
-        if (setupPluginId.get() != pluginId) return
-        cancelInteraction()
-    }
-
-    override suspend fun setup(pluginId: String): PluginSetupResult {
-        setupPluginId.set(pluginId)
-        setupCancelled.set(false)
-        setupFinished.set(false)
-        return try {
-            setupInternal(pluginId)
-        } finally {
-            setupPluginId.compareAndSet(pluginId, null)
-        }
-    }
-
-    private suspend fun setupInternal(pluginId: String): PluginSetupResult {
-        val managed = plugins[pluginId]
-            ?: return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_unknown))
-        val plugin = managed.plugin
-            ?: return PluginSetupResult(false, pluginId, false, false, error = managed.error)
-        if (!managed.enabled) {
-            return PluginSetupResult(false, pluginId, managed.installedVersion != null, false, error = strings.get(R.string.plugins_error_disabled))
-        }
-        if (!isForeground()) {
-            return PluginSetupResult(false, pluginId, managed.installedVersion != null, false, error = strings.get(R.string.plugins_error_foreground))
-        }
-        if (managed.manifest.installable && managed.installedVersion == null && managed.builtin) {
-            if (!beginBusy()) {
-                return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_busy))
-            }
-            try {
-                if (!awaitInstall(managed)) {
-                    return PluginSetupResult(false, pluginId, false, false, cancelled = setupCancelled.get())
-                }
-                val installCall = scope.async { installInternal(managed) }
-                setupJob.set(installCall)
-                try {
-                    installCall.await()
-                } catch (error: CancellationException) {
-                    installCall.cancel()
-                    if (!setupCancelled.get()) throw error
-                    return PluginSetupResult(false, pluginId, false, false, cancelled = true)
-                } finally {
-                    setupJob.compareAndSet(installCall, null)
-                }
-            } finally {
-                finishBusy()
-            }
-        }
-        val current = runCatching { plugin.status(managed.host) }.getOrNull()
-        if (current is PluginStatus.Ready) {
-            refreshNow()
-            return PluginSetupResult(true, pluginId, true, true, current.label, current.account)
-        }
-        if (!beginBusy()) {
-            return PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_busy))
-        }
-        val call = scope.async { plugin.setup(managed.host, setupUi(managed)) }
-        setupJob.set(call)
-        var cancelled = false
-        return try {
-            try {
-                call.await()
-                if (setupCancelled.get()) cancelled = true
-            } catch (error: CancellationException) {
-                call.cancel()
-                when {
-                    setupCancelled.get() -> {
-                        cancelled = true
-                        if (!currentCoroutineContext().isActive) throw error
-                    }
-
-                    setupFinished.get() -> Unit
-                    else -> throw error
-                }
-            }
-            refreshNow()
-            val status = runCatching { plugin.status(managed.host) }.getOrNull()
-            when {
-                cancelled -> PluginSetupResult(false, pluginId, true, false, cancelled = true)
-                status is PluginStatus.Ready -> PluginSetupResult(true, pluginId, true, true, status.label, status.account)
-                status is PluginStatus.NotReady -> PluginSetupResult(false, pluginId, true, false, status.label)
-                status is PluginStatus.Failed -> PluginSetupResult(false, pluginId, true, false, status.label, error = status.label)
-                else -> PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_status))
-            }
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            PluginSetupResult(false, pluginId, true, false, error = error.message)
-        } finally {
-            setupJob.compareAndSet(call, null)
-            setupFinished.set(false)
-            finishBusy()
-        }
-    }
-
-    override suspend fun inspectExternal(file: File): ExternalInspectionUi? {
-        val runtime = external ?: return null
-        return when (val result = runtime.inspect(file)) {
-            is InspectionResult.Ready -> ExternalInspectionUi(
-                file = file,
-                pluginId = result.manifest.id,
-                name = textResolver.resolve(result.manifest.name),
-                version = result.manifest.version,
-                size = result.digests.size,
-                sha256 = result.digests.bundleSha256,
-                publisherName = result.publisher.name.orEmpty(),
-                publisherKeyId = result.publisher.keyId,
-                trusted = result.trusted != null,
-                requiresPrivilege = result.manifest.requiresPrivilege,
-                provides = result.manifest.provides,
-                error = null,
-            )
-
-            is InspectionResult.Rejected -> ExternalInspectionUi(
-                file = file,
-                pluginId = "",
-                name = file.name,
-                version = "",
-                size = file.length(),
-                sha256 = "",
-                publisherName = "",
-                publisherKeyId = "",
-                trusted = false,
-                requiresPrivilege = false,
-                provides = io.github.whywood.deepdeep.plugin.api.Provides(),
-                error = result.reason,
-            )
-        }
-    }
-
-    override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi {
-        val runtime = external ?: return ExternalInstallUi(false, strings.get(R.string.plugins_error_unknown))
-        return withContext(Dispatchers.IO) {
-            try {
-                when (val result = runtime.install(file, acceptPublisher)) {
-                    is InstallResult.Installed -> {
-                        runtime.activate(result.record)
-                        activateRecordLocked(result.record)
-                        refreshNow()
-                        plugins[result.record.id]?.let { managed ->
-                            runCatching { managed.plugin?.onEnable(managed.host) }
-                            syncSkillsLocked(managed)
-                        }
-                        onContributionsChanged()
-                        ExternalInstallUi(true, null, restartRequired = false)
-                    }
-
-                    is InstallResult.Staged -> {
-                        plugins[result.record.id]?.let { managed ->
-                            managed.phase = PluginPhase.PENDING_RESTART
-                            registry.updatePhase(result.record.id, PluginPhase.PENDING_RESTART)
-                        }
-                        refreshNow()
-                        ExternalInstallUi(true, null, restartRequired = true)
-                    }
-
-                    is InstallResult.AlreadyInstalled -> ExternalInstallUi(true, null)
-
-                    is InstallResult.NeedsPublisherConfirmation -> ExternalInstallUi(
-                        success = false,
-                        error = null,
-                        requiresConfirmation = true,
-                    )
-
-                    is InstallResult.Rejected -> ExternalInstallUi(false, rejectionText(result.reason))
-                }
-            } catch (error: Exception) {
-                ExternalInstallUi(false, error.message)
-            }
-        }
-    }
-
-    override suspend fun checkExternalUpdates(): List<PluginUpdateUi> {
-        val support = externalUpdates ?: return emptyList()
-        val result = support.checkUpdates()
-        val updates = when (val typedResult = result) {
-            is io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi.Ready -> typedResult.candidates.map { candidate ->
-                PluginUpdateUi(
-                    pluginId = candidate.pluginId,
-                    name = plugins[candidate.pluginId]?.let { textResolver.resolve(it.manifest.name) } ?: candidate.pluginId,
-                    installedVersion = candidate.installedVersion,
-                    availableVersion = candidate.availableVersion,
-                    bundleSha256 = candidate.sha256,
-                    size = candidate.size,
-                    publisherKeyId = candidate.publisherKeyId,
-                )
-            }
-
-            else -> emptyList()
-        }
-        _state.update { it.copy(availableUpdates = updates) }
-        return updates
-    }
-
-    override suspend fun pluginSourceSettings(): io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings =
-        externalUpdates?.loadSettings() ?: io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings()
-
-    override suspend fun savePluginSourceSettings(settings: io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings) {
-        externalUpdates?.saveSettings(settings)
-        scheduleUpdateCheck()
-    }
-
-    override suspend fun refreshAvailableUpdates(): List<PluginUpdateUi> = checkExternalUpdates()
-
-    override suspend fun stageExternalUpdate(pluginId: String): String? {
-        val support = externalUpdates ?: return "plugin updates are unavailable"
-        return when (val result = support.stageUpdate(pluginId)) {
-            is io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi.Staged -> {
-                external?.record(pluginId)?.let { record ->
-                    plugins[pluginId]?.let { managed ->
-                        managed.externalRecord = record
-                        managed.phase = PluginPhase.PENDING_RESTART
-                        registry.updatePhase(pluginId, PluginPhase.PENDING_RESTART)
-                    }
-                }
-                refreshNow()
-                null
-            }
-
-            is io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi.Rejected -> result.reason
-        }
-    }
+    override suspend fun stageExternalUpdate(pluginId: String): String? =
+        externalFlow.stageExternalUpdate(pluginId)
 
     internal fun bindSessionHooks(session: BoundSession, delegate: PluginHooksDelegate) {
         val adapter = hooksFactory.create(session.sessionId, session.cwd, session.sessionFile)
@@ -675,42 +379,6 @@ class PluginHostManager internal constructor(
     override fun slotFailureGuard(): io.github.whywood.deepdeep.plugin.host.PluginFailureGuard = guard
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
-
-    internal fun slotRegistry(pluginsRoot: File): io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry =
-        io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry(
-            snapshotProvider = { registrySnapshot },
-            pluginsRoot = pluginsRoot,
-        )
-
-    private suspend fun installInternal(managed: ManagedPlugin) {
-        val plugin = managed.plugin ?: throw IllegalStateException(managed.error ?: "plugin unavailable")
-        val label = textResolver.resolve(managed.manifest.name)
-        val firstInstall = managed.installedVersion == null
-        setOperation(managed.manifest.id, label, strings.get(R.string.plugins_stage_preparing))
-        notifyInstall(label, strings.get(R.string.plugins_stage_preparing), null)
-        try {
-            plugin.install(managed.host, progressUi(managed, label))
-            managed.installedVersion = managed.manifest.version
-            managed.phase = PluginPhase.INSTALLED
-            managed.error = null
-            if (managed.builtin) {
-                builtinStateStore.upsert(
-                    managed.manifest.id,
-                    BuiltinPluginState(true, managed.enabled, managed.manifest.version),
-                )
-            }
-            notifyInstallFinished(label, true, null)
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            managed.error = error.message
-            if (firstInstall) runCatching { plugin.uninstall(managed.host) }
-            notifyInstallFinished(label, false, error.message)
-            throw error
-        } finally {
-            _state.update { it.copy(operation = null) }
-        }
-    }
 
     private suspend fun refreshLocked() {
         lastRefreshAt = System.currentTimeMillis()
@@ -855,66 +523,6 @@ class PluginHostManager internal constructor(
         )
     }
 
-    private fun attachExternalHandle(record: ExternalPluginRecord) {
-        val managed = plugins[record.id] ?: return
-        val handle = external?.handle(record.id) ?: return
-        managed.plugin = handle.plugin
-        managed.manifest = handle.manifest
-        managed.externalRecord = record
-        managed.installedVersion = record.version
-        managed.enabled = record.enabled
-        managed.host = hostFor(managed)
-        registry.update(record.id) { descriptor ->
-            descriptor.copy(
-                manifest = handle.manifest,
-                plugin = handle.plugin,
-                source = PluginSource.EXTERNAL,
-                phase = if (record.enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
-            )
-        }
-    }
-
-    private suspend fun activateRecordLocked(record: ExternalPluginRecord) {
-        if (!plugins.containsKey(record.id)) {
-            val managed = ManagedPlugin(
-                manifest = manifestForRecord(record),
-                plugin = null,
-                builtin = false,
-                source = PluginSource.EXTERNAL,
-                installedVersion = record.version,
-                enabled = record.enabled,
-                phase = PluginPhase.INSTALLED,
-            )
-            managed.host = hostFor(managed)
-            plugins[record.id] = managed
-            registry.register(managed.toDescriptor())
-        }
-        attachExternalHandle(record)
-    }
-
-    private suspend fun manifestForRecord(record: ExternalPluginRecord): PluginManifest {
-        val bundleFile = runCatching {
-            when (val active = external?.activeBundle(record.id)) {
-                is BundleState.Ready -> active.bundleFile
-                else -> null
-            }
-        }.getOrNull()
-        if (bundleFile != null) {
-            runCatching {
-                val pkg = io.github.whywood.deepdeep.plugin.host.external.DdpPackage.read(bundleFile)
-                io.github.whywood.deepdeep.plugin.api.PluginManifestCodec.parse(pkg.manifestJson())
-            }.getOrNull()?.let { return it }
-        }
-        return PluginManifest(
-            id = record.id,
-            version = record.version,
-            name = LocalizedText.Literal(record.id),
-            summary = LocalizedText.Literal(""),
-            source = PluginSource.EXTERNAL,
-            installable = true,
-        )
-    }
-
     private fun hostFor(managed: ManagedPlugin): PluginHost = PluginHostImpl(
         manifest = managed.manifest,
         context = context,
@@ -943,15 +551,6 @@ class PluginHostManager internal constructor(
     private fun ManagedPlugin.updateAvailable(): Boolean =
         PluginRules.updateAvailable(manifest.version, installedVersion, externalRecord?.pendingVersion)
 
-    private fun ManagedPlugin.toDescriptor(): PluginDescriptor = PluginDescriptor(
-        manifest = manifest,
-        plugin = plugin ?: PlaceholderPlugin,
-        source = source,
-        phase = phase,
-        error = error,
-        contributions = contributions,
-    )
-
     private fun PluginPhase.toUi(): PluginPhaseUi = when (this) {
         PluginPhase.IMPORTED -> PluginPhaseUi.IMPORTED
         PluginPhase.INSTALLED -> PluginPhaseUi.INSTALLED
@@ -967,116 +566,6 @@ class PluginHostManager internal constructor(
         is PluginStatusUi.Ready -> PluginStatus.Ready(label, account)
         is PluginStatusUi.NotReady -> PluginStatus.NotReady(label)
         is PluginStatusUi.Failed -> PluginStatus.Failed(label)
-    }
-
-    private fun setupUi(managed: ManagedPlugin): PluginSetupUi = object : PluginSetupUi {
-        override fun stage(
-            title: LocalizedText,
-            message: LocalizedText?,
-            url: String?,
-            imagePath: String?,
-            progress: Int?,
-        ) {
-            val titleText = textResolver.resolve(title)
-            _state.update {
-                it.copy(
-                    interaction = PluginInteraction(
-                        pluginId = managed.manifest.id,
-                        title = textResolver.resolve(managed.manifest.name),
-                        stageTitle = titleText,
-                        stageMessage = message?.let(textResolver::resolve),
-                        url = url,
-                        imagePath = imagePath,
-                        progress = progress,
-                    ),
-                )
-            }
-        }
-
-        override fun progress(percent: Int?, label: LocalizedText) {
-            _state.update {
-                it.copy(
-                    interaction = it.interaction?.copy(
-                        progress = percent,
-                        stageMessage = textResolver.resolve(label),
-                    ),
-                )
-            }
-        }
-
-        override fun cancelled(): Boolean = setupCancelled.get()
-    }
-
-    private fun progressUi(managed: ManagedPlugin, label: String): io.github.whywood.deepdeep.plugin.api.PluginProgress =
-        object : io.github.whywood.deepdeep.plugin.api.PluginProgress {
-            override fun report(percent: Int?, label: LocalizedText) {
-                val stage = textResolver.resolve(label)
-                _state.update { state ->
-                    state.copy(
-                        operation = PluginOperation(managed.manifest.id, label(managed), stage, percent),
-                        interaction = state.interaction?.let { interaction ->
-                            if (interaction.pluginId == managed.manifest.id) {
-                                interaction.copy(stageTitle = stage, progress = percent)
-                            } else {
-                                interaction
-                            }
-                        },
-                    )
-                }
-                notifyInstall(label(managed), stage, percent)
-            }
-        }
-
-    private fun label(managed: ManagedPlugin): String = textResolver.resolve(managed.manifest.name)
-
-    private suspend fun awaitInstall(managed: ManagedPlugin): Boolean {
-        val deferred = CompletableDeferred<Boolean>()
-        confirmWaiter.set(deferred)
-        _state.update {
-            it.copy(
-                interaction = PluginInteraction(
-                    pluginId = managed.manifest.id,
-                    title = textResolver.resolve(managed.manifest.name),
-                    stageTitle = strings.get(R.string.plugins_stage_confirm),
-                    confirmInstall = true,
-                ),
-                busy = true,
-            )
-        }
-        val confirmed = try {
-            deferred.await()
-        } finally {
-            confirmWaiter.set(null)
-        }
-        _state.update { state ->
-            state.copy(
-                interaction = if (confirmed) {
-                    state.interaction?.copy(
-                        confirmInstall = false,
-                        stageTitle = strings.get(R.string.plugins_stage_installing),
-                        stageMessage = null,
-                    )
-                } else {
-                    null
-                },
-            )
-        }
-        return confirmed
-    }
-
-    private fun completeConfirm(value: Boolean) {
-        confirmWaiter.getAndSet(null)?.complete(value)
-    }
-
-    private suspend fun beginBusy(): Boolean {
-        if (!busy.compareAndSet(false, true)) return false
-        _state.update { it.copy(busy = true, error = null) }
-        return true
-    }
-
-    private fun finishBusy() {
-        busy.set(false)
-        _state.update { it.copy(busy = false, operation = null, interaction = null) }
     }
 
     private suspend fun launchBusy(block: suspend () -> Unit) {
@@ -1107,30 +596,7 @@ class PluginHostManager internal constructor(
         _state.update { it.copy(error = message) }
     }
 
-    private fun rejectionText(reason: String): String = reason
 
-    private data class ManagedPlugin(
-        var manifest: PluginManifest,
-        var plugin: DeepDeepPlugin?,
-        val builtin: Boolean,
-        var source: PluginSource,
-        var installedVersion: String?,
-        var enabled: Boolean,
-        var phase: PluginPhase,
-        var error: String? = null,
-        var availability: PluginAvailabilityUi = PluginAvailabilityUi.Available,
-        var status: PluginStatusUi? = null,
-        var contributions: PluginContributions = PluginContributions.Empty,
-        var externalRecord: ExternalPluginRecord? = null,
-        var skillIds: List<String> = emptyList(),
-    ) {
-        lateinit var host: PluginHost
-    }
-
-    private object PlaceholderPlugin : DeepDeepPlugin {
-        override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Unavailable("")
-        override suspend fun status(host: PluginHost): PluginStatus = PluginStatus.Failed("")
-    }
 }
 
 data class ExternalInspectionUi(

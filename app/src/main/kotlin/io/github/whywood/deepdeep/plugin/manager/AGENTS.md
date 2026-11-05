@@ -6,7 +6,11 @@
 
 | 文件 | 职责 |
 |---|---|
-| `PluginHostManager.kt` | 管理器主体：内置/外部描述符、`PluginRegistry` 快照、状态刷新、贡献物化、启停/设置/安装/卸载/动作、setup 流程、会话 hooks 绑定、UI 槽位查询 |
+| `PluginHostManager.kt` | 管理器主体：内置/外部描述符注册、`PluginRegistry` 快照、状态刷新、贡献物化、启停/设置/卸载、会话 hooks 绑定、UI 槽位查询；流程细节委托给下面三个协作者 |
+| `PluginHostModels.kt` | 共享模型：`ManagedPlugin`（运行期可变插件状态）、未装载外部插件占位、`toDescriptor` |
+| `PluginSetupFlow.kt` | 安装/setup/动作流程：busy 互斥、确认安装、进度与取消、`plugin_setup` 结果、前台完成 setup |
+| `PluginExternalFlow.kt` | 外部 `.ddp` 流程：记录注册/启动激活、导入校验、启用时装载、更新检查与暂存 |
+| `PluginRules.kt` | 纯规则：安装版本、相位、活跃判定、更新可用判定（可单测） |
 | `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、操作、槽位、更新、`PluginController`） |
 | `PluginUiModels.kt` | UI 状态模型：快照/相位/可用性/状态/操作/交互/外部导入与更新模型 |
 | `BuiltinPluginEntry.kt` | 内置插件（manifest + 实例）注册项 |
@@ -20,4 +24,4 @@
 - 外部记录 v4 在 `host/external/ExternalPluginRecordStore`；内置启用/安装状态在本目录 store；两者都原子写。
 - `bindSessionHooks` 把会话级 `PluginRuntimeHooksAdapter` 绑定到 engine 的 hooks delegate，`onRuntimeEvent` 负责运行期事件派发；会话关闭解绑。
 - 外部安装/更新只做「校验 + 暂存」，不静默生效；`PENDING_RESTART` 在下一次进程启动提交。
-- setup 与插件动作在独立 `Job` 上执行：`cancelInteraction` 取消 sheet 并立即中断正在跑的 CLI/登录流程；`cancelSetup(pluginId)` 供 `plugin_setup` 的运行取消信号同步取消，取消结果以 `PluginSetupResult.cancelled` 返回而不是抛异常。
+- setup 与插件动作在独立 `Job` 上执行（由 `PluginSetupFlow` 持有），`PluginHostManager` 只做接口委托：`cancelInteraction` 取消 sheet 并立即中断正在跑的 CLI/登录流程；`cancelSetup(pluginId)` 供 `plugin_setup` 的运行取消信号同步取消，取消结果以 `PluginSetupResult.cancelled` 返回而不是抛异常。
