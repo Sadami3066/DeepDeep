@@ -188,4 +188,35 @@ class PluginToolAdapterTest {
         assertEquals("call-42", receivedCallId)
         assertEquals(args, receivedArgs)
     }
+
+    @Test
+    fun sessionIdIsResolvedAtExecuteTime() = runTest {
+        var current = "session-1"
+        var seen: String? = null
+        val tool = testTool("session_tool") { call ->
+            seen = call.sessionId
+            PluginToolResult.Text(call.sessionId)
+        }.let { PluginToolAdapter.toCodingTool(it) { current } }
+
+        val first = tool.execute("call-1", emptyArgs, null, null)
+        assertEquals("session-1", seen)
+        assertEquals("session-1", (first.content.single() as TextContent).text)
+
+        current = "session-2"
+        val second = tool.execute("call-2", emptyArgs, null, null)
+        assertEquals("session-2", seen)
+        assertEquals("session-2", (second.content.single() as TextContent).text)
+    }
+
+    @Test
+    fun sessionIdDefaultsToEmptyString() = runTest {
+        var seen: String? = null
+        val tool = testTool("session_tool") { call ->
+            seen = call.sessionId
+            PluginToolResult.Text("ok")
+        }.let(PluginToolAdapter::toCodingTool)
+
+        tool.execute("call-1", emptyArgs, null, null)
+        assertEquals("", seen)
+    }
 }

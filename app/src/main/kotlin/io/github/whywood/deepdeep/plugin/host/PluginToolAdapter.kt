@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
 internal object PluginToolAdapter {
-    fun toCodingTool(tool: PluginTool, sessionId: String = ""): CodingTool = CodingTool(
+    fun toCodingTool(tool: PluginTool, sessionId: () -> String = { "" }): CodingTool = CodingTool(
         name = tool.name,
         description = tool.description,
         parameters = tool.parameters,
@@ -33,7 +33,8 @@ internal object PluginToolAdapter {
         },
     )
 
-    fun toCodingTools(tools: List<PluginTool>, sessionId: String = ""): List<CodingTool> = tools.map { toCodingTool(it, sessionId) }
+    fun toCodingTools(tools: List<PluginTool>, sessionId: () -> String = { "" }): List<CodingTool> =
+        tools.map { toCodingTool(it, sessionId) }
 
     private suspend fun execute(
         tool: PluginTool,
@@ -41,19 +42,22 @@ internal object PluginToolAdapter {
         args: JsonObject,
         signal: RunSignal?,
         onUpdate: AgentToolUpdateCallback?,
-        sessionId: String,
+        sessionId: () -> String,
     ): AgentToolResult = coroutineScope {
         signal?.throwIfAborted()
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
+        val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            runTool { tool.execute(PluginToolCall(callId, args, pluginSignal, sessionId)) }
+            runTool { tool.execute(PluginToolCall(callId, args, pluginSignal, resolvedSessionId)) }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
                 for (partial in updates) onUpdate(partial.toAgentResult())
             }
             val result = runTool {
-                tool.execute(PluginToolCall(callId, args, pluginSignal, sessionId) { partial -> updates.trySend(partial) })
+                tool.execute(
+                    PluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial -> updates.trySend(partial) },
+                )
             }
             updates.close()
             forward.join()
