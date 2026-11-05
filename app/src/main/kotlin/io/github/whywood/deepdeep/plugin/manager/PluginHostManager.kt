@@ -120,10 +120,12 @@ class PluginHostManager internal constructor(
             builtins.forEach { entry ->
                 if (plugins.containsKey(entry.manifest.id)) return@forEach
                 val persisted = states[entry.manifest.id]
-                val installable = entry.manifest.installable
-                val installed = if (installable) persisted?.installed ?: false else true
                 val enabled = persisted?.enabled ?: entry.manifest.defaultEnabled
-                val version = if (installed) persisted?.installedVersion ?: entry.manifest.version else null
+                val version = PluginRules.installedVersion(
+                    entry.manifest,
+                    persisted?.installedVersion,
+                    persisted?.installed,
+                )
                 val managed = ManagedPlugin(
                     manifest = entry.manifest,
                     plugin = entry.plugin,
@@ -131,7 +133,7 @@ class PluginHostManager internal constructor(
                     source = entry.manifest.source,
                     installedVersion = version,
                     enabled = enabled,
-                    phase = if (installed && enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
+                    phase = if (version != null && enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
                 )
                 managed.host = hostFor(managed)
                 plugins[managed.manifest.id] = managed
@@ -302,7 +304,7 @@ class PluginHostManager internal constructor(
         scope.launch {
             launchBusy {
                 val managed = plugins[pluginId] ?: return@launchBusy
-                if (!managed.manifest.installable) return@launchBusy
+                if (!PluginRules.canInstall(managed.manifest)) return@launchBusy
                 installInternal(managed)
                 refreshLocked()
                 syncSkillsLocked(managed)
@@ -319,7 +321,7 @@ class PluginHostManager internal constructor(
         scope.launch {
             launchBusy {
                 val managed = plugins[pluginId] ?: return@launchBusy
-                if (!managed.manifest.installable) return@launchBusy
+                if (!PluginRules.canUninstall(managed.manifest)) return@launchBusy
                 plugins.remove(pluginId)
                 if (managed.builtin) {
                     runCatching { managed.plugin?.uninstall(managed.host) }
@@ -751,11 +753,13 @@ class PluginHostManager internal constructor(
             PluginContributions.Empty
         }
         managed.contributions = contributions
-        managed.phase = when {
-            managed.availability is PluginAvailabilityUi.Unavailable -> PluginPhase.DEGRADED
-            managed.status is PluginStatusUi.Failed -> PluginPhase.FAILED
-            else -> PluginPhase.ACTIVE
-        }
+        managed.phase = PluginRules.phase(
+            enabled = managed.enabled,
+            installedVersion = managed.installedVersion,
+            installable = managed.manifest.installable,
+            availability = managed.availability,
+            status = managed.status,
+        )
         registry.updatePhase(managed.manifest.id, managed.phase, managed.error)
         registry.updateContributions(managed.manifest.id, contributions)
     }
@@ -909,15 +913,10 @@ class PluginHostManager internal constructor(
     private fun ManagedPlugin.installable(): Boolean = manifest.installable
 
     private fun ManagedPlugin.isActive(): Boolean =
-        enabled &&
-            installedVersion != null &&
-            availability is PluginAvailabilityUi.Available &&
-            phase.contributes
+        PluginRules.isActive(enabled, installedVersion, availability, phase)
 
-    private fun ManagedPlugin.updateAvailable(): Boolean {
-        val record = externalRecord ?: return false
-        return record.pendingVersion != null && record.pendingVersion != installedVersion
-    }
+    private fun ManagedPlugin.updateAvailable(): Boolean =
+        PluginRules.updateAvailable(externalRecord, installedVersion)
 
     private fun ManagedPlugin.toDescriptor(): PluginDescriptor = PluginDescriptor(
         manifest = manifest,
