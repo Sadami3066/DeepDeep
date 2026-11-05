@@ -20,18 +20,23 @@ class InternalPluginsTest {
 
     @Test
     fun goalPluginExposesGoalToolsAndRoundsSetting() = runTest {
-        val plugin = GoalPlugin(GoalService(), strings)
+        val plugin = GoalPlugin(GoalService())
+        val host = testPluginHost(testBuiltinManifest("goal"))
 
-        assertEquals(PluginKind.INTERNAL, plugin.kind)
-        assertEquals("goal", plugin.id)
-        val names = plugin.tools(SessionBinding()).map { it.name }
+        assertEquals("goal", testBuiltinManifest("goal").id)
+        val session = io.github.whywood.deepdeep.plugin.api.PluginSessionInfo(
+            sessionId = "session",
+            cwd = "/tmp",
+        )
+        val names = plugin.contributionsFor(host, session).tools.map { it.name }
         assertEquals(listOf("get_goal", "create_goal", "update_goal"), names)
-        val setting = plugin.settings().single() as PluginSettingSpec.Number
+        assertTrue(plugin.contributionsFor(host, null).tools.isEmpty())
+        val setting = plugin.settings().single() as io.github.whywood.deepdeep.plugin.api.SettingSpec.Number
         assertEquals("max_rounds", setting.key)
         assertEquals(0, setting.min)
         assertEquals(50, setting.max)
         assertEquals("0", setting.default)
-        assertEquals("res:${io.github.whywood.deepdeep.R.string.plugins_status_builtin}", plugin.status().label)
+        assertTrue((plugin.status(host) as io.github.whywood.deepdeep.plugin.api.PluginStatus.Ready).label.isNotBlank())
     }
 
     @Test

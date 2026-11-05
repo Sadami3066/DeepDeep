@@ -13,6 +13,7 @@ import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.LocalizedContext
+import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -35,6 +36,13 @@ import io.github.whywood.deepdeep.plugin.internal.GoalPlugin
 import io.github.whywood.deepdeep.plugin.internal.JobsPlugin
 import io.github.whywood.deepdeep.plugin.internal.TimerPlugin
 import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
+import io.github.whywood.deepdeep.plugin.OfficialPlugin
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.host.ModernPluginAdapter
+import io.github.whywood.deepdeep.plugin.host.builtinPluginHost
+import io.github.whywood.deepdeep.plugin.host.builtinPluginManifest
+import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.adb.AdbBootstrap
@@ -208,6 +216,20 @@ class AppGraph(context: Context) : AppDependencies {
     override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(uiContext)
+
+    private fun modernBuiltin(plugin: DeepDeepPlugin, manifest: PluginManifest): OfficialPlugin =
+        ModernPluginAdapter(
+            modern = plugin,
+            manifest = manifest,
+            host = builtinPluginHost(
+                manifest = manifest,
+                context = uiContext,
+                filesDir = appContext.filesDir,
+                scope = scope,
+                language = { LanguagePreferences(appContext).read().tag },
+            ),
+        )
+
     override val goalService: GoalService by lazy { GoalService() }
     override val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -271,7 +293,18 @@ class AppGraph(context: Context) : AppDependencies {
                     linux = linuxEnvironment,
                     linuxSettings = linuxSettings,
                 ),
-                GoalPlugin(goalService, pluginStrings),
+                modernBuiltin(
+                    GoalPlugin(goalService),
+                    builtinPluginManifest(
+                        id = "goal",
+                        version = "1.0",
+                        nameRes = R.string.plugins_internal_goal_name,
+                        summaryRes = R.string.plugins_internal_goal_summary,
+                        iconRes = DdIcons.Target.res,
+                        tools = listOf("get_goal", "create_goal", "update_goal"),
+                        settings = listOf("max_rounds"),
+                    ),
+                ),
                 JobsPlugin(jobRegistry, pluginStrings),
                 TimerPlugin(timerService, pluginStrings),
                 WorkshopPlugin(workshopStore, appContext.assets, pluginStrings),
