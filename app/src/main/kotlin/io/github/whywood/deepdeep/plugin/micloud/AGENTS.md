@@ -13,7 +13,6 @@
 | `MiCloudLoginActivity.kt` | 小米账号 WebView 登录页：主题/语言适配、cookie 捕获与验证 |
 | `MiCloudCookieStore.kt` | cookie 加密存取（EncryptedSecretStore）并解析 userId/serviceToken |
 | `MiCloudPreferences.kt` | 功能开关（读写能力）DataStore 与 MiCloudSettings 接口；`snapshot()` 同步取持久值，供 `SettingSpec.Toggle` 默认值 |
-| `MiCloudFeatureSection.kt` | 旧插件详情页「功能」开关区 Composable（迁移后由通用设置项渲染，等待 UI 删除，当前不再可达） |
 | `MiCloudTools.kt` | 按能力开关组装 `mi_cloud_*` 工具列表（含 account） |
 | `MiCloudToolSupport.kt` | 工具公共设施：参数校验、结果截断、错误包装、JSON 压缩、路径拼接 |
 | `MiCloudNotesTools.kt` | `mi_cloud_notes`：列表、正文、新建、修改、删除 |
