@@ -116,21 +116,35 @@ private val Dark = DeepDeepColors(
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }
 
 enum class DdFontStyle(val id: String, val displayName: String) {
+    OPEN_RUNDE("open-runde", "Open Runde"),
+    FREDOKA("fredoka", "Fredoka"),
     LORA("lora", "Lora"),
     MANROPE("manrope", "Manrope"),
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: LORA
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: OPEN_RUNDE
     }
 }
 
 object DdFonts {
-    private val latinFamilies = listOf(R.font.lora_variable, R.font.manrope_variable)
-    private val LoraFamily = compositeFamily(R.font.lora_variable)
-    private val ManropeFamily = compositeFamily(R.font.manrope_variable)
+    private val openRundeFonts = listOf(
+        DdCompositeFont(R.font.open_runde_regular, FontWeight.Normal, variable = false),
+        DdCompositeFont(R.font.open_runde_medium, FontWeight.Medium, variable = false),
+        DdCompositeFont(R.font.open_runde_semibold, FontWeight.SemiBold, variable = false),
+    )
+    private val fredokaFonts = variableFonts(R.font.fredoka_variable)
+    private val loraFonts = variableFonts(R.font.lora_variable)
+    private val manropeFonts = variableFonts(R.font.manrope_variable)
 
-    var style: DdFontStyle = DdFontStyle.LORA
+    private val OpenRundeFamily = FontFamily(openRundeFonts)
+    private val FredokaFamily = FontFamily(fredokaFonts)
+    private val LoraFamily = FontFamily(loraFonts)
+    private val ManropeFamily = FontFamily(manropeFonts)
+
+    private val preloadedFonts = openRundeFonts + fredokaFonts + loraFonts + manropeFonts
+
+    var style: DdFontStyle = DdFontStyle.OPEN_RUNDE
         private set
 
     fun apply(style: DdFontStyle) {
@@ -138,22 +152,24 @@ object DdFonts {
     }
 
     fun familyFor(style: DdFontStyle): FontFamily = when (style) {
+        DdFontStyle.OPEN_RUNDE -> OpenRundeFamily
+        DdFontStyle.FREDOKA -> FredokaFamily
         DdFontStyle.LORA -> LoraFamily
         DdFontStyle.MANROPE -> ManropeFamily
     }
 
     fun preload(context: Context) {
-        DdCompositeTypefaceLoader.preload(context, latinFamilies)
+        DdCompositeTypefaceLoader.preload(context, preloadedFonts)
     }
 
     val Sans: FontFamily get() = familyFor(style)
 
     val Display: FontFamily get() = familyFor(style)
 
-    private fun compositeFamily(resId: Int): FontFamily = FontFamily(
-        DdCompositeFont(resId, FontWeight.Normal),
-        DdCompositeFont(resId, FontWeight.Medium),
-        DdCompositeFont(resId, FontWeight.SemiBold),
+    private fun variableFonts(resId: Int): List<DdCompositeFont> = listOf(
+        DdCompositeFont(resId, FontWeight.Normal, variable = true),
+        DdCompositeFont(resId, FontWeight.Medium, variable = true),
+        DdCompositeFont(resId, FontWeight.SemiBold, variable = true),
     )
 }
 

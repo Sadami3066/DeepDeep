@@ -68,6 +68,8 @@ private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
 private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
 private const val MANROPE_URL = "https://fonts.google.com/specimen/Manrope"
 private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
+private const val OPEN_RUNDE_URL = "https://github.com/lauridskern/open-runde"
+private const val FREDOKA_URL = "https://fonts.google.com/specimen/Fredoka"
 
 @Composable
 fun SettingsScreen(
@@ -547,6 +549,18 @@ private fun LicenseSheet(onClose: () -> Unit) {
         DdSheetHeader(stringResource(R.string.settings_license_title), onClose)
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
             Spacer(Modifier.height(8.dp))
+            LicenseRow(
+                title = stringResource(R.string.settings_license_open_runde),
+                subtitle = stringResource(R.string.settings_license_ofl),
+                onClick = { uriHandler.openUri(OPEN_RUNDE_URL) },
+            )
+            DdHairline()
+            LicenseRow(
+                title = stringResource(R.string.settings_license_fredoka),
+                subtitle = stringResource(R.string.settings_license_ofl),
+                onClick = { uriHandler.openUri(FREDOKA_URL) },
+            )
+            DdHairline()
             LicenseRow(
                 title = stringResource(R.string.settings_license_manrope),
                 subtitle = stringResource(R.string.settings_license_ofl),

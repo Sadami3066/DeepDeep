@@ -94,7 +94,7 @@ import kotlinx.coroutines.withContext
 internal fun DeepDeepApp(
     graph: AppDependencies,
     theme: ThemeMode,
-    fontStyle: DdFontStyle = DdFontStyle.LORA,
+    fontStyle: DdFontStyle = DdFontStyle.OPEN_RUNDE,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingDeepDestination: AppDestination? = null,

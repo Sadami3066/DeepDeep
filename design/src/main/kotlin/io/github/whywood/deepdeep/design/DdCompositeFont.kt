@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 class DdCompositeFont(
     @FontRes internal val latinRes: Int,
     override val weight: FontWeight,
+    internal val variable: Boolean,
 ) : AndroidFont(
     loadingStrategy = FontLoadingStrategy.Async,
     typefaceLoader = DdCompositeTypefaceLoader,
@@ -32,49 +33,48 @@ class DdCompositeFont(
 }
 
 internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
-    private val CACHE_WEIGHTS = listOf(400, 500, 600)
     private val cache = ConcurrentHashMap<Int, Typeface>()
     private val files = ConcurrentHashMap<Int, File>()
     private val lock = Any()
 
     override fun loadBlocking(context: Context, font: AndroidFont): Typeface? {
         val composite = font as? DdCompositeFont ?: return null
-        return typeface(context.applicationContext, composite.latinRes, composite.weight.weight)
+        return typeface(context.applicationContext, composite)
     }
 
     override suspend fun awaitLoad(context: Context, font: AndroidFont): Typeface? {
         val composite = font as? DdCompositeFont ?: return null
-        val weight = composite.weight.weight
-        cache[composite.latinRes * 1000 + weight]?.let { return it }
+        cache[cacheKey(composite)]?.let { return it }
         val application = context.applicationContext
-        return withContext(Dispatchers.IO) { typeface(application, composite.latinRes, weight) }
+        return withContext(Dispatchers.IO) { typeface(application, composite) }
     }
 
-    fun preload(context: Context, latinRes: List<Int>) {
+    fun preload(context: Context, fonts: List<DdCompositeFont>) {
         val application = context.applicationContext
-        latinRes.forEach { res ->
-            CACHE_WEIGHTS.forEach { weight -> runCatching { typeface(application, res, weight) } }
-        }
+        fonts.forEach { font -> runCatching { typeface(application, font) } }
     }
 
-    private fun typeface(context: Context, latinRes: Int, weight: Int): Typeface {
-        val key = latinRes * 1000 + weight
+    private fun cacheKey(font: DdCompositeFont): Int = font.latinRes * 1000 + font.weight.weight
+
+    private fun typeface(context: Context, font: DdCompositeFont): Typeface {
+        val key = cacheKey(font)
         cache[key]?.let { return it }
         synchronized(lock) {
             cache[key]?.let { return it }
-            val typeface = build(context, latinRes, weight)
+            val typeface = build(context, font)
             cache[key] = typeface
             return typeface
         }
     }
 
-    private fun build(context: Context, latinRes: Int, weight: Int): Typeface = runCatching {
-        val latin = PlatformFontFamily.Builder(
-            PlatformFont.Builder(fontFile(context, latinRes))
-                .setWeight(weight)
-                .setFontVariationSettings(variation(weight))
-                .build(),
-        ).build()
+    private fun build(context: Context, font: DdCompositeFont): Typeface = runCatching {
+        val platformFont = PlatformFont.Builder(fontFile(context, font.latinRes))
+            .setWeight(font.weight.weight)
+            .apply {
+                if (font.variable) setFontVariationSettings(variation(font.weight.weight))
+            }
+            .build()
+        val latin = PlatformFontFamily.Builder(platformFont).build()
         Typeface.CustomFallbackBuilder(latin)
             .setSystemFallback("sans-serif")
             .build()

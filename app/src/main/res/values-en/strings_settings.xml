@@ -39,6 +39,8 @@
     <string name="settings_license_icons">Tabler Icons</string>
     <string name="settings_license_provider_icons">Provider logos</string>
     <string name="settings_license_provider_icons_body">LobeHub MIT · Radius official mark</string>
+    <string name="settings_license_open_runde">Open Runde</string>
+    <string name="settings_license_fredoka">Fredoka</string>
     <string name="settings_license_manrope">Manrope</string>
     <string name="settings_license_lora">Lora</string>
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>

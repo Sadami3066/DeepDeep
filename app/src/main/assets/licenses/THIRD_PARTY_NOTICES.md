@@ -25,7 +25,7 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 | hiddenapibypass 6.1 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
 | OkHttp 5.4.0 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
 | DataStore 重打包 proto-lite | BSD-3-Clause | 可闭源使用与再分发 | 保留版权声明与许可全文 |
-| Lora / Manrope | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；字体不得单独出售 |
+| Lora / Manrope / Open Runde / Fredoka | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；字体不得单独出售 |
 | Tabler Icons / LobeHub lobe-icons | MIT | 可再分发 | 保留版权声明与许可全文 |
 | Radius 图标、App Store 公开图标、飞书插件图标 | 非开源素材 / 品牌条款 | 仅可作相应服务或厂商的识别性使用；大规模分发或商用前应替换或取得授权 | 商标归属声明；不得暗示授权、合作或隶属关系 |
 | mascot 插画 | 无（AI 生成；参考图权利未明） | 不在本仓库源码许可范围内，亦不适用 Apache-2.0 | 需项目所有者另行决定授权与分发范围 |
@@ -180,6 +180,25 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 来源：Google Fonts `ofl/manrope` <https://github.com/google/fonts/tree/main/ofl/manrope>
 - 文件 sha256：`3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6`，与 Google Fonts `Manrope[wght].ttf` 字节一致，**未修改**。
 
+### 3.3 Open Runde — `design/src/main/res/font/open_runde_regular.otf`、`open_runde_medium.otf`、`open_runde_semibold.otf`
+
+- 版权行：字体 name 表为 `Copyright 2023 Laurids Kern`；随附 OFL 文本开头为 `Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)`（Open Runde 派生自 Inter，OFL 文本按上游原样保留，未改写）
+- 许可证：SIL Open Font License 1.1（`licenses/open-runde-OFL.txt`，取自上游仓库 `LICENSE.txt`）
+- 来源：<https://github.com/lauridskern/open-runde>，提交 `3e7ed7f3cdfa5523766db7e430066472615fc935`，路径 `src/desktop/`；上游基于 Inter <https://github.com/rsms/inter>
+- 文件 sha256：
+  - `open_runde_regular.otf`：`8398c8adfc2b41a21cd1c0e00dbbd81c2ce3877cc5c9843bebd3e0b7b43cfbcc`（312,956 字节）
+  - `open_runde_medium.otf`：`163b5e80e397da746081f94ee0a2314d17d256f2ee4a06998f48ce372b56f056`（323,716 字节）
+  - `open_runde_semibold.otf`：`39d6c706cfbb9cad2a7ea2bfdbe12c4384185d8625a21208a39cbdfe1ea1790c`（315,896 字节）
+  均与上述提交的上游文件字节一致，**未修改**。
+
+### 3.4 Fredoka — `design/src/main/res/font/fredoka_variable.ttf`
+
+- 版权行：`Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)`
+- 许可证：SIL Open Font License 1.1（`licenses/fredoka-OFL.txt`，取自 Google Fonts `ofl/fredoka/OFL.txt`）
+- 来源：Google Fonts `ofl/fredoka` <https://github.com/google/fonts/tree/main/ofl/fredoka>
+- 字体类型：可变字体，轴 `wght` 300–700、`wdth` 75–125
+- 文件 sha256：`2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8`，159,184 字节，与 Google Fonts `Fredoka[wdth,wght].ttf` 字节一致，**未修改**。
+
 ## 4. 图标与品牌图形
 
 图形仅用于识别对应的服务、厂商或功能，**不表示任何授权、合作或隶属关系**；品牌名称与图形归各权利人所有。
@@ -259,6 +278,8 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt>（与 cyrealtype/Lora-Cyrillic 的 OFL.txt 字节一致） | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
 | `licenses/manrope-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt> | `58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b` |
+| `licenses/open-runde-OFL.txt` | <https://raw.githubusercontent.com/lauridskern/open-runde/3e7ed7f3cdfa5523766db7e430066472615fc935/LICENSE.txt> | `262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a` |
+| `licenses/fredoka-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/fredoka/OFL.txt> | `5c9e7eee5c6b25f4b05b8d53b2e470ea4962f9ced742d044a98f7d95d1375bab` |
 | `licenses/tabler-MIT.txt` | <https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/LICENSE> | `b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db` |
 | `licenses/PRoot-GPL-2.0.txt` | <https://raw.githubusercontent.com/OpenMinis/proot/1b444ee1cb2f4896c08166e9a12c905af5416f1c/COPYING> | `0ffa6454acbe7e410ac6f0007df83b9b3161fe55484c1f4b87487c0f2d228a6d` |
 
@@ -270,3 +291,4 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 2026-10-31：新增内嵌无线调试依赖（libadb-android、spake2-android、Bouncy Castle、hiddenapibypass、OkHttp）；移除 Shizuku 依赖；补充 Bouncy Castle 许可全文与 JitPack/Maven 来源。
 - 2026-11-01：pi2kotlin SDK 升级至 0.3.0，构件与来源提交同步更新。
 - 2026-11-01：pi2kotlin SDK 升级至 0.4.0，构件与来源提交同步更新。
+- 2026-11-05：新增 Open Runde（Regular/Medium/Semibold，静态 OTF）与 Fredoka（`wght`/`wdth` 可变 TTF）两款 OFL-1.1 字体，补充版权行、上游来源与提交、文件 sha256 及许可全文；默认字体改为 Open Runde。
