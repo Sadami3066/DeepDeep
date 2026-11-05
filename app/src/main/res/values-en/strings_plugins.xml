@@ -105,4 +105,5 @@
     <string name="plugins_page_title">Plugin page</string>
     <string name="plugins_page_unavailable">This plugin did not provide content for this page</string>
     <string name="plugins_updates_install">Install update</string>
+    <string name="plugins_updates_available">%1$d plugin updates available</string>
 </resources>

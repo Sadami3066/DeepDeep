@@ -155,8 +155,21 @@ class PluginHostManager internal constructor(
                 }
             }
             refreshLocked()
+            scheduleUpdateCheck()
         } finally {
             _state.update { it.copy(loading = false) }
+        }
+    }
+
+    private fun scheduleUpdateCheck() {
+        val support = externalUpdates ?: return
+        scope.launch {
+            runCatching {
+                val settings = support.loadSettings()
+                if (!settings.autoCheck || settings.indexUrl.isNullOrBlank()) return@runCatching
+                val updates = checkExternalUpdates()
+                _state.update { it.copy(availableUpdates = updates) }
+            }
         }
     }
 
@@ -456,8 +469,9 @@ class PluginHostManager internal constructor(
 
     override suspend fun checkExternalUpdates(): List<PluginUpdateUi> {
         val support = externalUpdates ?: return emptyList()
-        return when (val result = support.checkUpdates()) {
-            is io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi.Ready -> result.candidates.map { candidate ->
+        val result = support.checkUpdates()
+        val updates = when (val typedResult = result) {
+            is io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi.Ready -> typedResult.candidates.map { candidate ->
                 PluginUpdateUi(
                     pluginId = candidate.pluginId,
                     name = plugins[candidate.pluginId]?.let { textResolver.resolve(it.manifest.name) } ?: candidate.pluginId,
@@ -471,6 +485,8 @@ class PluginHostManager internal constructor(
 
             else -> emptyList()
         }
+        _state.update { it.copy(availableUpdates = updates) }
+        return updates
     }
 
     override suspend fun stageExternalUpdate(pluginId: String): String? {

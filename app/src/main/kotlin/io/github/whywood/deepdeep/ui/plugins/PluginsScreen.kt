@@ -113,6 +113,7 @@ internal fun PluginsScreen(
         onInstall = holder::install,
         onToggle = holder::setEnabled,
         onImport = { importPicker.launch(arrayOf("*/*")) },
+        onShowUpdates = { updates = state.availableUpdates },
         onCheckUpdates = {
             scope.launch {
                 updateBusy = true
@@ -172,6 +173,7 @@ private fun PluginsContent(
     onToggle: (String, Boolean) -> Unit,
     onImport: () -> Unit,
     onCheckUpdates: () -> Unit,
+    onShowUpdates: () -> Unit,
     updateBusy: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -253,6 +255,18 @@ private fun PluginsContent(
                         modifier = Modifier.testTag("plugins_import"),
                     )
                     DdHairline()
+                    if (state.availableUpdates.isNotEmpty()) {
+                        DdListRow(
+                            title = stringResource(
+                                R.string.plugins_updates_available,
+                                state.availableUpdates.size,
+                            ),
+                            onClick = onShowUpdates,
+                            showChevron = true,
+                            modifier = Modifier.testTag("plugins_updates_available"),
+                        )
+                        DdHairline()
+                    }
                     DdListRow(
                         title = stringResource(R.string.plugins_check_updates),
                         value = if (updateBusy) stringResource(R.string.plugins_stage_preparing) else null,

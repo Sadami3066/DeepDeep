@@ -26,6 +26,7 @@ internal data class PluginsUiState(
     val error: String? = null,
     val searchQuery: String = "",
     val togglingIds: Set<String> = emptySet(),
+    val availableUpdates: List<PluginUpdateUi> = emptyList(),
 ) {
     val external: List<PluginSnapshot> get() = plugins.filter { it.source == PluginSource.EXTERNAL }
 
@@ -118,6 +119,7 @@ internal class PluginsStateHolder(
                 operation = managerState.operation,
                 interaction = managerState.interaction,
                 error = managerState.error,
+                availableUpdates = managerState.availableUpdates,
             )
         }
     }

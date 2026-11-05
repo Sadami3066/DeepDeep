@@ -105,4 +105,5 @@
     <string name="plugins_page_title">插件页面</string>
     <string name="plugins_page_unavailable">该插件没有提供这个页面的内容</string>
     <string name="plugins_updates_install">安装更新</string>
+    <string name="plugins_updates_available">发现 %1$d 个插件更新</string>
 </resources>

@@ -101,6 +101,7 @@ data class PluginsUiState(
     val operation: PluginOperation? = null,
     val interaction: PluginInteraction? = null,
     val error: String? = null,
+    val availableUpdates: List<PluginUpdateUi> = emptyList(),
 ) {
     fun snapshot(pluginId: String): PluginSnapshot? = plugins.firstOrNull { it.id == pluginId }
 
