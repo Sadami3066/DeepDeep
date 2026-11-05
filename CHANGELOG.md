@@ -2,6 +2,10 @@
 
 ## HEAD (since m2)
 
+- feat: 插件自定义消息卡：`host.chat().postCustomMessage` 写入会话 JSONL、实时出现在聊天、`chat.message:<type>` 槽位自绘，重开会话仍可还原
+- feat: runtime 暴露 SDK 会话事件流，插件事件面补齐模型/压缩/重试/MCP 事件（不再依赖 fallback）
+- feat: 插件页新增「插件源」设置（索 URL 与启动自动检查），检查到更新后直接暂存、下次启动生效
+- feat: 宿主服务补全屏幕控制器与 MCP tools/call 注入（插件可 observe/tap/screenshot、调用 MCP 工具）
 - feat: 统一插件系统：新增 `:plugin-api` 契约/SDK 与 `:plugin-sample`；11 个内置插件迁移到 `DeepDeepPlugin`
 - feat: 外部 `.ddp` 插件：ddp-1 Ed25519 签名、TOFU 发布者信任、sha256、记录 v4、DEX in-memory 装载与只读回退、导入/卸载/更新暂存
 - feat: 插件宿主管理器：清单驱动状态、相位机、贡献快照、设置/技能同步、会话安全点重建、会话 hooks 绑定

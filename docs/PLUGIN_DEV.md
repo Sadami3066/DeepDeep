@@ -207,7 +207,7 @@ plugin.ddp
 
 ### 分发索引
 
-内部分发使用统一索引 `index.json`，App 侧索引地址与自动检查开关存在 `files/plugins/sources.json`：
+内部分发使用统一索引 `index.json`，App 侧索引地址与自动检查开关存在 `files/plugins/sources.json`（插件页「插件源」可编辑，或直接改该文件）：
 
 ```json
 {
@@ -488,7 +488,7 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 
 ## 宿主服务
 
-`PluginHost` 暴露 17 个服务访问器；宿主没提供该服务时**抛 `PluginServiceUnavailable`**（不是返回 null），插件应 `runCatching` 后降级。服务的实现由 App 装配，同一接口也可能部分能力不可用（如未装 Linux、未开特权）。
+`PluginHost` 暴露 18 个服务访问器；宿主没提供该服务时**抛 `PluginServiceUnavailable`**（不是返回 null），插件应 `runCatching` 后降级。服务的实现由 App 装配，同一接口也可能部分能力不可用（如未装 Linux、未开特权）。
 
 | 访问器 | 主要能力 | 常见不可用原因 |
 |---|---|---|
@@ -509,10 +509,13 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 | `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 宿主未提供 |
 | `bus()` | 插件总线：`publish(PluginBusEvent)`、`subscribe(topic?)` → `Flow<PluginBusEvent>` | 宿主未提供 |
 | `logs()` | `log(level, message, error?)` + `debug/info/warn/error` 便捷方法 | 宿主未提供 |
+| `chat()` | `postCustomMessage(sessionId, customType, payload, text, display)`：把插件卡片写入会话 JSONL（`custom_message`），并实时投递到聊天界面 | 无活动会话 / 宿主未提供 |
 
 `requires` 里的能力声明只用于安装提示与「插件是否可用」，不构成运行时权限边界；同进程插件本来就能直接调 Android API。
 
 **总线**：`host.bus().publish(PluginBusEvent(topic, publisher, payload, publishedAt))` 广播给所有插件；订阅 `host.bus().subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
+
+**自定义消息卡**：在工具执行里用 `host.chat().postCustomMessage(call.sessionId, "my.card", payload, text = "卡片摘要")` 把卡片写进当前会话（`PluginToolCall.sessionId` 由宿主注入）；再注册 `chat.message:my.card` 的声明式或 Compose 槽位渲染。`display=false` 只记日志不显示。消息会写入 pi JSONL 的 `custom_message` 条目，重开会话后仍由 `HistoryMapper` 还原。
 
 ## ABI 与版本
 
