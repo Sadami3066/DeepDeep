@@ -40,11 +40,14 @@ import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.api.SlotIds
 import io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
+import io.github.whywood.deepdeep.plugin.manager.PluginStatusUi
 import java.io.File
 
 @Composable
@@ -53,6 +56,7 @@ internal fun PluginDetailScreen(
     pluginId: String,
     onBack: () -> Unit,
     onOpenPermission: () -> Unit,
+    onOpenPluginPage: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     pluginsRoot: File? = null,
 ) {
@@ -74,19 +78,27 @@ internal fun PluginDetailScreen(
     }
 
     val current = snapshot ?: return
+    val pages = manager.pagesOf(pluginId)
+    val hasDetailSlot = manager.slotEntries(SlotIds.detailSection(pluginId)).isNotEmpty()
     PluginDetailContent(
         snapshot = current,
         state = state,
         pluginsRoot = resolvedPluginsRoot,
+        pages = pages,
+        hasDetailSlot = hasDetailSlot,
         deleteOpen = deleteOpen,
         onDeleteOpenChange = { deleteOpen = it },
         onBack = onBack,
         onOpenPermission = onOpenPermission,
+        onOpenPluginPage = onOpenPluginPage,
         onRefresh = holder::refresh,
         onInstall = { holder.install(pluginId) },
         onUpdate = { holder.update(pluginId) },
         onUninstall = { holder.uninstall(pluginId) },
         onRunAction = { actionId -> holder.runAction(pluginId, actionId) },
+        onSlotAction = { actionId ->
+            if (current.actions.any { it.id == actionId }) holder.runAction(pluginId, actionId)
+        },
         onSetting = { key, value -> holder.setSetting(pluginId, key, value) },
         modifier = modifier,
     )
@@ -97,15 +109,19 @@ private fun PluginDetailContent(
     snapshot: PluginSnapshot,
     state: PluginsUiState,
     pluginsRoot: File?,
+    pages: List<PluginPage>,
+    hasDetailSlot: Boolean,
     deleteOpen: Boolean,
     onDeleteOpenChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onOpenPermission: () -> Unit,
+    onOpenPluginPage: (String) -> Unit,
     onRefresh: () -> Unit,
     onInstall: () -> Unit,
     onUpdate: () -> Unit,
     onUninstall: () -> Unit,
     onRunAction: (String) -> Unit,
+    onSlotAction: (String) -> Unit,
     onSetting: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -304,6 +320,30 @@ private fun PluginDetailContent(
                     resolver = resolver,
                     onSetting = onSetting,
                 )
+            }
+
+            if (hasDetailSlot) {
+                Spacer(Modifier.height(18.dp))
+                PluginDetailSectionSlot(
+                    pluginId = snapshot.id,
+                    status = snapshot.status ?: PluginStatusUi.NotReady(phaseLabel),
+                    rows = snapshot.detailRows,
+                    onAction = onSlotAction,
+                ) { }
+            }
+
+            if (pages.isNotEmpty()) {
+                Spacer(Modifier.height(18.dp))
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    PluginGroup {
+                        DdListRow(
+                            title = stringResource(R.string.plugins_open_page),
+                            onClick = { onOpenPluginPage(pages.first().id) },
+                            showChevron = true,
+                            modifier = Modifier.testTag("plugin_open_page"),
+                        )
+                    }
+                }
             }
 
             snapshot.lastError?.let { error ->

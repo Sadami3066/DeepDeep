@@ -154,7 +154,7 @@ internal fun PluginsScreen(
     }
 
     updates?.let { list ->
-        PluginUpdatesDialog(updates = list, onDismiss = { updates = null })
+        PluginUpdatesDialog(updates = list, onUpdate = holder::stageUpdate, onDismiss = { updates = null })
     }
 }
 

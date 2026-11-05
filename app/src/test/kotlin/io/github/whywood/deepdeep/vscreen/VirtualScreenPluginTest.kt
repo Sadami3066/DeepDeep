@@ -3,7 +3,7 @@ package io.github.whywood.deepdeep.vscreen
 import dev.pi.agent.AgentToolResult
 import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
-import io.github.whywood.deepdeep.plugin.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.virtualscreen.VIRTUAL_SCREEN_DESCRIPTION
 import io.github.whywood.deepdeep.plugin.virtualscreen.VIRTUAL_SCREEN_GUIDELINE
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenAccess

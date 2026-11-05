@@ -1,11 +1,21 @@
 package io.github.whywood.deepdeep.plugin.manager
 
+import io.github.whywood.deepdeep.plugin.api.ComposerAction
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginPage
+import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
+import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.runtime.PluginController
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
+
+data class PluginComposerActionUi(
+    val pluginId: String,
+    val action: ComposerAction,
+)
 
 interface PluginManagerFacade : PluginController {
     val state: StateFlow<PluginsUiState>
@@ -49,4 +59,16 @@ interface PluginManagerFacade : PluginController {
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi
 
     suspend fun checkExternalUpdates(): List<PluginUpdateUi>
+
+    suspend fun stageExternalUpdate(pluginId: String): String?
+
+    fun slotEntries(slotId: String): List<SlotRenderEntry>
+
+    fun pagesOf(pluginId: String): List<PluginPage>
+
+    fun composerActions(): List<PluginComposerActionUi>
+
+    fun slotFailureGuard(): PluginFailureGuard
+
+    fun resolveText(text: LocalizedText): String
 }

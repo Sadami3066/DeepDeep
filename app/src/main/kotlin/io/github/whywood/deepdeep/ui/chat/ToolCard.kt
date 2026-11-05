@@ -43,8 +43,12 @@ import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.ui.plugins.PluginToolCardSlot
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
 internal fun ToolCard(
@@ -150,63 +154,88 @@ internal fun ToolCard(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
-            Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
-                if (tool.arguments.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.assistant_tool_args),
-                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                        color = colors.inkTertiary,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = tool.arguments.entries.joinToString("\n") { "${it.key} = ${it.value}" },
-                        style = DdType.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            lineHeight = 18.sp,
-                        ),
-                        color = colors.inkTertiary,
-                    )
-                }
-                if (output != null) {
-                    if (tool.arguments.isNotEmpty()) Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.assistant_tool_output),
-                            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                            color = colors.inkTertiary,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        DdPressable(
-                            onClick = { onCopyOutput(output) },
-                            modifier = Modifier.size(26.dp).testTag("tool_copy_${tool.id}"),
-                            shape = RoundedCornerShape(6.dp),
-                            contentDescription = stringResource(R.string.assistant_tool_copy),
-                        ) {
-                            DdIcon(icon = DdIcons.Copy, tint = colors.inkTertiary, size = 13.dp)
-                        }
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = output.trim(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 220.dp)
-                            .verticalScroll(rememberScrollState()),
-                        style = DdType.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            lineHeight = 18.sp,
-                        ),
-                        color = colors.inkSecondary,
-                    )
-                }
+            PluginToolCardSlot(
+                toolName = tool.name,
+                callId = tool.toolCallId,
+                args = remember(tool.arguments) { toolArgumentsJson(tool.arguments) },
+                result = toolSlotResult(tool),
+            ) {
+                ToolCardDefaultBody(tool = tool, output = output, onCopyOutput = onCopyOutput)
             }
         }
     }
+}
+
+@Composable
+private fun ToolCardDefaultBody(
+    tool: ToolTrace,
+    output: String?,
+    onCopyOutput: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
+        if (tool.arguments.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.assistant_tool_args),
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                color = colors.inkTertiary,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = tool.arguments.entries.joinToString("\n") { "${it.key} = ${it.value}" },
+                style = DdType.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 18.sp,
+                ),
+                color = colors.inkTertiary,
+            )
+        }
+        if (output != null) {
+            if (tool.arguments.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.assistant_tool_output),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.weight(1f))
+                DdPressable(
+                    onClick = { onCopyOutput(output) },
+                    modifier = Modifier.size(26.dp).testTag("tool_copy_${tool.id}"),
+                    shape = RoundedCornerShape(6.dp),
+                    contentDescription = stringResource(R.string.assistant_tool_copy),
+                ) {
+                    DdIcon(icon = DdIcons.Copy, tint = colors.inkTertiary, size = 13.dp)
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = output.trim(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState()),
+                style = DdType.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 18.sp,
+                ),
+                color = colors.inkSecondary,
+            )
+        }
+    }
+}
+
+private fun toolArgumentsJson(arguments: Map<String, String>): JsonObject =
+    JsonObject(arguments.mapValues { (_, value) -> JsonPrimitive(value) })
+
+private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
+    val text = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() } ?: return null
+    return PluginToolResult.Text(text = text, isError = tool.status == ToolActivityStatus.FAILED)
 }
 
 private fun toolArgsPreview(arguments: Map<String, String>): String {

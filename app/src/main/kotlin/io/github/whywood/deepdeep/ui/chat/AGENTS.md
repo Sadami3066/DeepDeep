@@ -46,7 +46,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PresentCard.kt` | present 交付卡：文件/图片/视频/HTML/创意解析与预览 |
-| `ToolCard.kt`、`ToolNames.kt` | 工具调用步骤卡（参数/输出/复制）与 MCP 工具名显示 |
+| `ToolCard.kt`、`ToolNames.kt` | 工具调用步骤卡（参数/输出/复制、插件 `tool.card.content:<tool>` 自绘内容体与默认兜底）与 MCP 工具名显示 |
 | `MediaSave.kt` | 媒体保存到下载与分享 |
 | `FileViewer.kt`、`HtmlFileView.kt` | 本地文件预览对话框（文本/图片/源码）与 HTML WebView 预览 |
 | `CameraCaptureSheet.kt`、`CameraBarcodeAnalyzer.kt` | 内嵌相机 sheet（拍照+扫码）与 ML Kit 条码分析 |

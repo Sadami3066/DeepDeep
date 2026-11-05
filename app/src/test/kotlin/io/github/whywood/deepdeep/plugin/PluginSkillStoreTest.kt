@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.plugin
 
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PluginSkillFile
+
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

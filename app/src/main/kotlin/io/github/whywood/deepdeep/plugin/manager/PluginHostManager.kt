@@ -67,6 +67,7 @@ class PluginHostManager internal constructor(
     private val settingsStore: PluginSettingsStore,
     private val skillStore: PluginSkillStore,
     private val external: ExternalPluginRuntime?,
+    private val externalUpdates: io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport? = null,
     private val isForeground: () -> Boolean,
     private val notifyInstall: (label: String, stage: String?, progress: Int?) -> Unit,
     private val notifyInstallFinished: (label: String, success: Boolean, error: String?) -> Unit,
@@ -77,6 +78,9 @@ class PluginHostManager internal constructor(
     override val state: StateFlow<PluginsUiState> = _state.asStateFlow()
 
     private val registry = PluginRegistry()
+    private val pluginsRootDir = File(filesDir, "plugins")
+    private val slotRegistry by lazy { io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry({ registrySnapshot }, pluginsRootDir) }
+    private val guard by lazy { io.github.whywood.deepdeep.plugin.host.PluginFailureGuard(File(pluginsRootDir, "slots")) }
     private val hooksFactory = PluginRuntimeHooksFactory(registryHookSource(registry))
     private val sessionHooks = linkedMapOf<String, PluginRuntimeHooksAdapter>()
     private val plugins = linkedMapOf<String, ManagedPlugin>()
@@ -94,7 +98,7 @@ class PluginHostManager internal constructor(
 
     override val setupPluginIds: List<String>
         get() = plugins.values
-            .filter { it.manifest.installable && it.source == PluginSource.EXTERNAL }
+            .filter { it.manifest.installable && (it.builtin || it.installedVersion != null) }
             .map { it.manifest.id }
             .sorted()
 
@@ -112,7 +116,8 @@ class PluginHostManager internal constructor(
                 val managed = ManagedPlugin(
                     manifest = entry.manifest,
                     plugin = entry.plugin,
-                    source = PluginSource.BUILTIN,
+                    builtin = true,
+                    source = entry.manifest.source,
                     installedVersion = version,
                     enabled = enabled,
                     phase = if (installed && enabled) PluginPhase.INSTALLED else PluginPhase.DISABLED,
@@ -125,6 +130,7 @@ class PluginHostManager internal constructor(
                 val managed = ManagedPlugin(
                     manifest = manifestForRecord(record),
                     plugin = null,
+                    builtin = false,
                     source = PluginSource.EXTERNAL,
                     installedVersion = record.version,
                     enabled = record.enabled,
@@ -203,7 +209,7 @@ class PluginHostManager internal constructor(
         scope.launch {
             mutex.withLock {
                 val managed = plugins[pluginId] ?: return@withLock
-                if (managed.source == PluginSource.BUILTIN) {
+                if (managed.builtin) {
                     builtinStateStore.upsert(
                         pluginId,
                         BuiltinPluginState(
@@ -265,7 +271,7 @@ class PluginHostManager internal constructor(
         scope.launch {
             launchBusy {
                 val managed = plugins.remove(pluginId) ?: return@launchBusy
-                if (managed.source == PluginSource.BUILTIN) {
+                if (managed.builtin) {
                     runCatching { managed.plugin?.uninstall(managed.host) }
                     builtinStateStore.remove(pluginId)
                 } else {
@@ -335,7 +341,7 @@ class PluginHostManager internal constructor(
         if (!isForeground()) {
             return PluginSetupResult(false, pluginId, managed.installedVersion != null, false, error = strings.get(R.string.plugins_error_foreground))
         }
-        if (managed.manifest.installable && managed.installedVersion == null) {
+        if (managed.manifest.installable && managed.installedVersion == null && managed.builtin) {
             if (!beginBusy()) {
                 return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_busy))
             }
@@ -449,19 +455,33 @@ class PluginHostManager internal constructor(
     }
 
     override suspend fun checkExternalUpdates(): List<PluginUpdateUi> {
-        val runtime = external ?: return emptyList()
-        return runtime.records().mapNotNull { record ->
-            val pending = runCatching { runtime.activate(record) }.getOrNull()
-            val updated = pending?.takeIf { it.version != record.version } ?: return@mapNotNull null
-            PluginUpdateUi(
-                pluginId = record.id,
-                name = plugins[record.id]?.let { textResolver.resolve(it.manifest.name) } ?: record.id,
-                installedVersion = record.version,
-                availableVersion = updated.version,
-                bundleSha256 = updated.activeBundleSha256,
-                size = updated.size,
-                publisherKeyId = updated.publisherKeyId,
-            )
+        val support = externalUpdates ?: return emptyList()
+        return when (val result = support.checkUpdates()) {
+            is io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi.Ready -> result.candidates.map { candidate ->
+                PluginUpdateUi(
+                    pluginId = candidate.pluginId,
+                    name = plugins[candidate.pluginId]?.let { textResolver.resolve(it.manifest.name) } ?: candidate.pluginId,
+                    installedVersion = candidate.installedVersion,
+                    availableVersion = candidate.availableVersion,
+                    bundleSha256 = candidate.sha256,
+                    size = candidate.size,
+                    publisherKeyId = candidate.publisherKeyId,
+                )
+            }
+
+            else -> emptyList()
+        }
+    }
+
+    override suspend fun stageExternalUpdate(pluginId: String): String? {
+        val support = externalUpdates ?: return "plugin updates are unavailable"
+        return when (val result = support.stageUpdate(pluginId)) {
+            is io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi.Staged -> {
+                refreshNow()
+                null
+            }
+
+            is io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi.Rejected -> result.reason
         }
     }
 
@@ -486,6 +506,19 @@ class PluginHostManager internal constructor(
         scope.launch { runCatching { RuntimeEventMapper(adapter).dispatch(event.sessionId, event) } }
     }
 
+    override fun slotEntries(slotId: String): List<io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry> =
+        slotRegistry.bindings(slotId)
+
+    override fun pagesOf(pluginId: String): List<io.github.whywood.deepdeep.plugin.api.PluginPage> =
+        registrySnapshot.pages.filter { it.pluginId == pluginId }.map { it.page }
+
+    override fun composerActions(): List<PluginComposerActionUi> =
+        registrySnapshot.composerActions.map { PluginComposerActionUi(it.pluginId, it.action) }
+
+    override fun slotFailureGuard(): io.github.whywood.deepdeep.plugin.host.PluginFailureGuard = guard
+
+    override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
+
     internal fun slotRegistry(pluginsRoot: File): io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry =
         io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry(
             snapshotProvider = { registrySnapshot },
@@ -501,7 +534,7 @@ class PluginHostManager internal constructor(
             plugin.install(managed.host, progressUi(managed, label))
             managed.installedVersion = managed.manifest.version
             managed.phase = PluginPhase.INSTALLED
-            if (managed.source == PluginSource.BUILTIN) {
+            if (managed.builtin) {
                 builtinStateStore.upsert(
                     managed.manifest.id,
                     BuiltinPluginState(true, managed.enabled, managed.manifest.version),
@@ -593,28 +626,27 @@ class PluginHostManager internal constructor(
     private suspend fun syncSkillsLocked(managed: ManagedPlugin) {
         val plugin = managed.plugin ?: return
         val skills = runCatching { plugin.skills(managed.host) }.getOrDefault(emptyList())
-        val legacy = skills.map { skill ->
-            io.github.whywood.deepdeep.plugin.PluginSkill(
-                id = skill.id,
-                markdown = skill.markdown,
-                files = skill.files.map { file ->
-                    io.github.whywood.deepdeep.plugin.PluginSkillFile(
-                        path = file.path,
-                        content = file.content ?: file.assetPath?.let { readAsset(managed, it) }.orEmpty(),
-                    )
-                },
-                legacyOwned = skill.legacyOwned,
-            )
-        }
+            .map { skill ->
+                skill.copy(
+                    files = skill.files.map { file ->
+                        val assetPath = file.assetPath
+                        if (file.content == null && assetPath != null) {
+                            file.copy(content = readAsset(managed, assetPath))
+                        } else {
+                            file
+                        }
+                    },
+                )
+            }
         runCatching {
             skillStore.sync(
                 managed.manifest.id,
-                legacy,
+                skills,
                 managed.skillIds,
                 managed.enabled && managed.availability is PluginAvailabilityUi.Available,
             )
         }
-        managed.skillIds = legacy.map { it.id }
+        managed.skillIds = skills.map { it.id }
         if (managed.source == PluginSource.EXTERNAL) {
             external?.updateSkills(managed.manifest.id, managed.skillIds)
         }
@@ -681,6 +713,7 @@ class PluginHostManager internal constructor(
             val managed = ManagedPlugin(
                 manifest = manifestForRecord(record),
                 plugin = null,
+                builtin = false,
                 source = PluginSource.EXTERNAL,
                 installedVersion = record.version,
                 enabled = record.enabled,
@@ -903,6 +936,7 @@ class PluginHostManager internal constructor(
     private data class ManagedPlugin(
         var manifest: PluginManifest,
         var plugin: DeepDeepPlugin?,
+        val builtin: Boolean,
         var source: PluginSource,
         var installedVersion: String?,
         var enabled: Boolean,

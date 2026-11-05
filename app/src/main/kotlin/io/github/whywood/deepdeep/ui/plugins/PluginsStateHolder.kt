@@ -102,6 +102,13 @@ internal class PluginsStateHolder(
 
     suspend fun checkExternalUpdates(): List<PluginUpdateUi> = manager.checkExternalUpdates()
 
+    fun stageUpdate(pluginId: String) {
+        scope.launch {
+            runCatching { manager.stageExternalUpdate(pluginId) }
+            runCatching { manager.refreshNow() }
+        }
+    }
+
     private fun mirror(managerState: ManagerPluginsUiState) {
         _state.update {
             it.copy(

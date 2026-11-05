@@ -31,6 +31,7 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.launch
 
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
             val scope = rememberCoroutineScope()
             DeepDeepTheme(theme, fontStyle) {
+                ProvidePluginManager(graph.pluginManager) {
                 DeepDeepApp(
                     graph = graph,
                     theme = theme,
@@ -76,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onThemeChange = { mode -> scope.launch { graph.themePreferences.setTheme(mode) } },
                 )
+                }
             }
         }
     }

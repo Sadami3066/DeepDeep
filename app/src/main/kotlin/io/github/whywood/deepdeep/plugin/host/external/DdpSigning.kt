@@ -76,16 +76,34 @@ internal object DdpSigning {
         return runCatching { KeyFactory.getInstance(ALGORITHM, bouncyCastle).generatePublic(spec) }.getOrNull()
     }
 
-    fun verifySignature(publicKey: PublicKey, payload: ByteArray, signature: ByteArray): Boolean {
-        if (signature.isEmpty()) return false
-        val verifier = runCatching { Signature.getInstance(ALGORITHM) }.getOrNull()
-            ?: runCatching { Signature.getInstance(ALGORITHM, bouncyCastle) }.getOrNull()
-            ?: return false
-        return runCatching {
-            verifier.initVerify(publicKey)
-            verifier.update(payload)
-            verifier.verify(signature)
-        }.getOrDefault(false)
+    fun verifySignature(publicKey: PublicKey, payload: ByteArray, signature: ByteArray): Boolean =
+        verifySignatureDer(publicKey.encoded, payload, signature)
+
+    fun verifySignatureDer(der: ByteArray, payload: ByteArray, signature: ByteArray): Boolean {
+        if (signature.isEmpty() || der.isEmpty()) return false
+        val keys = buildList {
+            runCatching {
+                KeyFactory.getInstance(ALGORITHM).generatePublic(X509EncodedKeySpec(der))
+            }.getOrNull()?.let(::add)
+            runCatching {
+                KeyFactory.getInstance(ALGORITHM, bouncyCastle).generatePublic(X509EncodedKeySpec(der))
+            }.getOrNull()?.let(::add)
+        }
+        keys.forEach { key ->
+            runCatching {
+                val verifier = Signature.getInstance(ALGORITHM)
+                verifier.initVerify(key)
+                verifier.update(payload)
+                verifier.verify(signature)
+            }.getOrDefault(false).let { if (it) return true }
+            runCatching {
+                val verifier = Signature.getInstance(ALGORITHM, bouncyCastle)
+                verifier.initVerify(key)
+                verifier.update(payload)
+                verifier.verify(signature)
+            }.getOrDefault(false).let { if (it) return true }
+        }
+        return false
     }
 
     fun keyId(publicKey: PublicKey): String = KEY_ID_PREFIX + sha256Hex(publicKey.encoded)

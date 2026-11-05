@@ -24,7 +24,7 @@ internal data class HostUiVersions(
     }
 }
 
-internal data class SlotRenderEntry(
+data class SlotRenderEntry(
     val pluginId: String,
     val slotId: String,
     val priority: Int,
@@ -33,7 +33,7 @@ internal data class SlotRenderEntry(
     val composeCompatible: Boolean,
 )
 
-internal class SlotRegistry(
+class SlotRegistry internal constructor(
     private val snapshotProvider: () -> PluginRegistrySnapshot,
     private val pluginsRoot: File,
     private val hostVersions: HostUiVersions = HostUiVersions.current(),

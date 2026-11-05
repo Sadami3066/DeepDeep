@@ -84,6 +84,7 @@ import io.github.whywood.deepdeep.ui.common.VoiceRecordingBar
 import io.github.whywood.deepdeep.ui.common.VoiceTranscriptPreview
 import io.github.whywood.deepdeep.ui.common.rememberComposerVoice
 import io.github.whywood.deepdeep.ui.common.voiceFailureText
+import io.github.whywood.deepdeep.ui.navigation.PluginComposerActionRow
 import java.io.File
 
 private enum class ComposerSurface { Collapsed, Expanded, Recording }
@@ -574,6 +575,9 @@ private fun ChatComposerExpandedContent(
             }
         }
     }
+    PluginComposerActionRow(
+        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
+    )
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -8,11 +8,12 @@ import dev.pi.coding.tools.textResult
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.LocalizedContext
-import io.github.whywood.deepdeep.plugin.PluginAction
-import io.github.whywood.deepdeep.plugin.PluginActionStyle
-import io.github.whywood.deepdeep.plugin.PluginAvailability
-import io.github.whywood.deepdeep.plugin.PluginDetailRow
-import io.github.whywood.deepdeep.plugin.PluginStatus
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginAction
+import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
+import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.vscreen.PrivilegedLauncher
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
@@ -55,12 +56,12 @@ class VirtualScreenFeature internal constructor(
         listOf(
             PluginAction(
                 ACTION_STOP,
-                R.string.plugin_virtual_screen_action_stop,
+                LocalizedText.Resource(R.string.plugin_virtual_screen_action_stop),
                 PluginActionStyle.DESTRUCTIVE,
             ),
         )
     } else {
-        listOf(PluginAction(ACTION_START, R.string.plugin_virtual_screen_action_start))
+        listOf(PluginAction(ACTION_START, LocalizedText.Resource(R.string.plugin_virtual_screen_action_start)))
     }
 
     suspend fun runAction(actionId: String) {
@@ -73,9 +74,9 @@ class VirtualScreenFeature internal constructor(
     fun detailRows(status: PluginStatus): List<PluginDetailRow> {
         val online = screen.state.value as? VirtualScreenState.Online
         return listOf(
-            PluginDetailRow(R.string.plugin_virtual_screen_detail_state, status.label),
+            PluginDetailRow(LocalizedText.Resource(R.string.plugin_virtual_screen_detail_state), status.label),
             PluginDetailRow(
-                R.string.plugin_virtual_screen_detail_resolution,
+                LocalizedText.Resource(R.string.plugin_virtual_screen_detail_resolution),
                 online?.let { "${it.width} × ${it.height}" }
                     ?: string(R.string.plugin_virtual_screen_value_offline),
             ),

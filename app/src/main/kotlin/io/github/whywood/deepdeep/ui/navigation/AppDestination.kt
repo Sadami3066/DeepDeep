@@ -131,6 +131,15 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data class PluginPage(
+        val pluginId: String,
+        val pageId: String,
+        val title: String = "",
+    ) : AppDestination {
+        override val routeKey: String = "plugins/$pluginId/page/" + encodeRoutePath(pageId)
+        override val depth: Int = 3
+    }
+
     data class WorkspaceSettings(val workspaceId: String) : AppDestination {
         override val routeKey: String = "workspaces/$workspaceId/settings"
         override val depth: Int = 1
@@ -143,6 +152,7 @@ sealed interface AppDestination {
         private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
+        private const val PLUGIN_PAGE_MARKER = "/page/"
         private val WORKSHOP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 
         fun encodeRoutePath(path: String): String =
@@ -177,6 +187,17 @@ sealed interface AppDestination {
             routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> {
                 val id = routeKey.removePrefix(WORKSHOP_DETAIL_PREFIX)
                 WorkshopDetail(id).takeIf { id.matches(WORKSHOP_ID_REGEX) }
+            }
+
+            routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey -> {
+                val rest = routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)
+                val pluginId = rest.substringBefore(PLUGIN_PAGE_MARKER)
+                val pageId = decodeRoutePath(rest.substringAfter(PLUGIN_PAGE_MARKER))
+                if (pluginId.isNotBlank() && !pluginId.contains('/') && pageId != null) {
+                    PluginPage(pluginId, pageId)
+                } else {
+                    null
+                }
             }
 
             routeKey.startsWith(PLUGIN_DETAIL_PREFIX) ->

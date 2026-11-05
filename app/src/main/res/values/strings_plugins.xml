@@ -101,4 +101,8 @@
     <string name="plugins_updates_title">插件更新</string>
     <string name="plugins_updates_empty">没有可用更新</string>
     <string name="plugins_updates_item">%1$s → %2$s</string>
+    <string name="plugins_open_page">打开插件页面</string>
+    <string name="plugins_page_title">插件页面</string>
+    <string name="plugins_page_unavailable">该插件没有提供这个页面的内容</string>
+    <string name="plugins_updates_install">安装更新</string>
 </resources>

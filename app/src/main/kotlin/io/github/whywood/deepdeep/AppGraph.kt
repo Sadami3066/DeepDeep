@@ -31,6 +31,7 @@ import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
 import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
+import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
@@ -329,6 +330,13 @@ class AppGraph(context: Context) : AppDependencies {
                 repoDir = File(appContext.filesDir, "skills"),
             ),
             external = ExternalPluginRuntime(appContext, installer, BuildConfig.VERSION_NAME),
+            externalUpdates = ExternalUpdateSupport(
+                filesDir = appContext.filesDir,
+                hostVersion = BuildConfig.VERSION_NAME,
+                installer = installer,
+                trustStore = trustStore,
+                recordStore = recordStore,
+            ),
             isForeground = { AppVisibility.foreground },
             notifyInstall = { label, stage, progress ->
                 notificationCenter.notifyInstall(label, stage, progress)

@@ -69,19 +69,19 @@ internal object PluginPackageVerifier {
             ?: return reject(VerificationCode.SIGNATURE_MALFORMED, "plugin signature is missing publicKey")
         val signatureBase64 = signatureJson.string("signature")
             ?: return reject(VerificationCode.SIGNATURE_MALFORMED, "plugin signature is missing signature")
-        val publicKey = DdpSigning.publicKeyFromBase64(publicKeyBase64)
+        val publicKeyDer = DdpSigning.decodeBase64(publicKeyBase64)
             ?: return reject(VerificationCode.SIGNATURE_MALFORMED, "invalid Ed25519 public key")
         val signature = DdpSigning.decodeBase64(signatureBase64)
             ?: return reject(VerificationCode.SIGNATURE_MALFORMED, "invalid base64 signature")
         if (signature.size != ED25519_SIGNATURE_SIZE) {
             return reject(VerificationCode.SIGNATURE_MALFORMED, "invalid Ed25519 signature length: ${signature.size}")
         }
-        val derivedKeyId = DdpSigning.keyId(publicKey)
+        val derivedKeyId = DdpSigning.keyId(publicKeyDer)
         if (!derivedKeyId.equals(keyId, ignoreCase = true)) {
             return reject(VerificationCode.KEY_ID_MISMATCH, "signature keyId does not match its public key")
         }
         val payload = DdpSigning.canonicalDigestBytes(pkg.entries)
-        if (!DdpSigning.verifySignature(publicKey, payload, signature)) {
+        if (!DdpSigning.verifySignatureDer(publicKeyDer, payload, signature)) {
             return reject(VerificationCode.SIGNATURE_INVALID, "plugin signature does not match package contents")
         }
         val manifestJson = try {
@@ -108,7 +108,7 @@ internal object PluginPackageVerifier {
             publisher = VerifiedPublisher(
                 keyId = derivedKeyId,
                 name = manifest.publisher?.name?.takeIf { it.isNotBlank() },
-                publicKey = DdpSigning.encodeBase64(publicKey.encoded),
+                publicKey = DdpSigning.encodeBase64(publicKeyDer),
             ),
             digests = PackageDigests(
                 entryDigest = DdpSigning.sha256Hex(payload),

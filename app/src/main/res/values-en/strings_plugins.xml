@@ -101,4 +101,8 @@
     <string name="plugins_updates_title">Plugin updates</string>
     <string name="plugins_updates_empty">No updates available</string>
     <string name="plugins_updates_item">%1$s → %2$s</string>
+    <string name="plugins_open_page">Open plugin page</string>
+    <string name="plugins_page_title">Plugin page</string>
+    <string name="plugins_page_unavailable">This plugin did not provide content for this page</string>
+    <string name="plugins_updates_install">Install update</string>
 </resources>

@@ -73,23 +73,12 @@ internal fun PluginSetupSheet(
                     .padding(horizontal = 24.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = interaction.stageTitle,
-                    style = DdType.label,
-                    color = deepDeepColors().ink,
+                PluginSetupContentSlot(
+                    interaction = interaction,
+                    modifier = Modifier.fillMaxWidth(),
+                    onAction = { actionId -> manager.runAction(interaction.pluginId, actionId) },
+                    fallback = { PluginSetupStageBody(interaction = interaction, onOpenUrl = ::openUrl) },
                 )
-                interaction.stageMessage?.let { message ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = message,
-                        style = DdType.bodySmall,
-                        color = deepDeepColors().inkSecondary,
-                    )
-                }
-                interaction.imagePath?.let { path ->
-                    Spacer(Modifier.height(14.dp))
-                    PluginQrCode(path = path, description = interaction.stageTitle)
-                }
                 if (interaction.confirmInstall) {
                     Spacer(Modifier.height(20.dp))
                     DdPrimaryButton(
@@ -105,44 +94,7 @@ internal fun PluginSetupSheet(
                         color = deepDeepColors().inkSecondary,
                     )
                 } else {
-                    interaction.url?.let { url ->
-                        Spacer(Modifier.height(12.dp))
-                        DdTextAction(
-                            text = stringResource(R.string.plugins_open_browser),
-                            onClick = { openUrl(url) },
-                            modifier = Modifier.testTag("plugin_setup_open_browser"),
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = url,
-                            style = DdType.bodySmall,
-                            color = deepDeepColors().inkTertiary,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    interaction.progress?.let { progress ->
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = stringResource(R.string.plugins_downloading_percent, progress),
-                            style = DdType.bodySmall,
-                            color = deepDeepColors().inkTertiary,
-                        )
-                    }
                     Spacer(Modifier.height(16.dp))
-                    if (interaction.url != null || interaction.progress != null) {
-                        DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = if (interaction.url != null) {
-                                stringResource(R.string.plugins_waiting_browser)
-                            } else {
-                                interaction.stageTitle
-                            },
-                            style = DdType.bodySmall,
-                            color = deepDeepColors().inkTertiary,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
                     DdTextAction(
                         text = stringResource(R.string.plugins_cancel),
                         onClick = onCancel,
@@ -153,6 +105,70 @@ internal fun PluginSetupSheet(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun PluginSetupStageBody(
+    interaction: PluginInteraction,
+    onOpenUrl: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    Text(
+        text = interaction.stageTitle,
+        style = DdType.label,
+        color = colors.ink,
+    )
+    interaction.stageMessage?.let { message ->
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = DdType.bodySmall,
+            color = colors.inkSecondary,
+        )
+    }
+    interaction.imagePath?.let { path ->
+        Spacer(Modifier.height(14.dp))
+        PluginQrCode(path = path, description = interaction.stageTitle)
+    }
+    if (interaction.confirmInstall) return
+    interaction.url?.let { url ->
+        Spacer(Modifier.height(12.dp))
+        DdTextAction(
+            text = stringResource(R.string.plugins_open_browser),
+            onClick = { onOpenUrl(url) },
+            modifier = Modifier.testTag("plugin_setup_open_browser"),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = url,
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+        )
+        Spacer(Modifier.height(8.dp))
+    }
+    interaction.progress?.let { progress ->
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.plugins_downloading_percent, progress),
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+        )
+    }
+    Spacer(Modifier.height(16.dp))
+    if (interaction.url != null || interaction.progress != null) {
+        DdSpinner(size = 18.dp, strokeWidth = 2.dp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = if (interaction.url != null) {
+                stringResource(R.string.plugins_waiting_browser)
+            } else {
+                interaction.stageTitle
+            },
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+        )
+        Spacer(Modifier.height(12.dp))
     }
 }
 

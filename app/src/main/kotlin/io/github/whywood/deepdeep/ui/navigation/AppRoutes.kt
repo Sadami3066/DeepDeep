@@ -1,23 +1,50 @@
 package io.github.whywood.deepdeep.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.BuildConfig
+import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.DevPackagesState
 import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
+import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
+import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ProviderAuthKind
 import io.github.whywood.deepdeep.service.AgentService
@@ -27,8 +54,13 @@ import io.github.whywood.deepdeep.ui.assistant.AssistantSettingsScreen
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.files.FileBrowserScreen
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
+import io.github.whywood.deepdeep.ui.plugins.LocalPluginManager
 import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
+import io.github.whywood.deepdeep.ui.plugins.PluginIcon
+import io.github.whywood.deepdeep.ui.plugins.PluginPageSlot
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
+import io.github.whywood.deepdeep.ui.plugins.pluginComposerActions
+import io.github.whywood.deepdeep.ui.plugins.rememberPluginTextResolver
 import io.github.whywood.deepdeep.ui.timers.TimerScreen
 import io.github.whywood.deepdeep.ui.sessions.ArchivedSessionsScreen
 import io.github.whywood.deepdeep.ui.sessions.SessionSearchScreen
@@ -60,9 +92,12 @@ data class RouteSpec(
 )
 
 private const val PLUGIN_DETAIL_PREFIX = "plugins/"
+private const val PLUGIN_PAGE_MARKER = "/page/"
 private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
 
 fun parentRouteKey(routeKey: String): String? = when {
+    routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey ->
+        PLUGIN_DETAIL_PREFIX + routeKey.removePrefix(PLUGIN_DETAIL_PREFIX).substringBefore(PLUGIN_PAGE_MARKER)
     routeKey.startsWith(PLUGIN_DETAIL_PREFIX) -> "plugins"
     routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> "workshop"
     else -> null
@@ -302,6 +337,20 @@ internal fun AppRouteContent(
             pluginId = destination.id,
             onBack = onBack,
             onOpenPermission = { navigator.push(AppDestination.Permission) },
+            onOpenPluginPage = { pageId ->
+                val title = dependencies.pluginManager.pagesOf(destination.id)
+                    .firstOrNull { it.id == pageId }
+                    ?.title
+                    ?.let(dependencies.pluginManager::resolveText)
+                    .orEmpty()
+                navigator.push(AppDestination.PluginPage(destination.id, pageId, title))
+            },
+        )
+
+        is AppDestination.PluginPage -> PluginPageRoute(
+            destination = destination,
+            manager = dependencies.pluginManager,
+            onBack = onBack,
         )
 
         AppDestination.Archived -> ArchivedSessionsScreen(
@@ -369,5 +418,119 @@ internal fun AppRouteContent(
             agentGateway = dependencies.workshopAgentService,
             onBack = onBack,
         )
+    }
+}
+
+@Composable
+private fun PluginPageRoute(
+    destination: AppDestination.PluginPage,
+    manager: PluginManagerFacade,
+    onBack: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    val title = remember(uiState, destination) {
+        destination.title.ifBlank {
+            manager.pagesOf(destination.pluginId)
+                .firstOrNull { it.id == destination.pageId }
+                ?.title
+                ?.let(manager::resolveText)
+                .orEmpty()
+        }
+    }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(colors.paper)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .testTag("plugin_page_screen"),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIconButton(
+                icon = DdIcons.ArrowLeft,
+                onClick = onBack,
+                contentDescription = stringResource(R.string.plugins_back),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = title.ifBlank { stringResource(R.string.plugins_page_title) },
+                modifier = Modifier.weight(1f),
+                style = DdType.heading,
+                color = colors.ink,
+                maxLines = 1,
+            )
+        }
+        PluginPageSlot(
+            pluginId = destination.pluginId,
+            pageId = destination.pageId,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            onAction = { actionId -> manager.runAction(destination.pluginId, actionId) },
+            fallback = {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.plugins_page_unavailable),
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+            },
+        )
+    }
+}
+
+@Composable
+internal fun PluginComposerActionRow(modifier: Modifier = Modifier) {
+    val manager = LocalPluginManager.current ?: return
+    val actions = pluginComposerActions()
+    if (actions.isEmpty()) return
+    val textResolver = rememberPluginTextResolver()
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        actions.forEach { entry ->
+            PluginComposerActionChip(
+                entry = entry,
+                label = textResolver.resolve(entry.action.label),
+                onClick = { manager.runAction(entry.pluginId, entry.action.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PluginComposerActionChip(
+    entry: PluginComposerActionUi,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.height(32.dp).testTag("plugin_composer_action"),
+        shape = RoundedCornerShape(10.dp),
+        contentDescription = label,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PluginIcon(
+                icon = entry.action.icon,
+                assetsDir = null,
+                tint = colors.inkSecondary,
+                size = 15.dp,
+            )
+            Text(text = label, style = DdType.label, color = colors.ink, maxLines = 1)
+        }
     }
 }

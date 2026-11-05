@@ -8,9 +8,6 @@ import android.provider.Settings
 import android.util.DisplayMetrics
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.plugin.PluginAction as LegacyPluginAction
-import io.github.whywood.deepdeep.plugin.PluginActionStyle as LegacyPluginActionStyle
-import io.github.whywood.deepdeep.plugin.PluginDetailRow as LegacyPluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
@@ -100,7 +97,7 @@ class GuiPlugin(
 
     override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = buildList {
         if (virtualScreenAvailable) {
-            virtualScreen?.actions().orEmpty().forEach { add(it.toPluginAction()) }
+            addAll(virtualScreen?.actions().orEmpty())
         }
         add(PluginAction(ACTION_ACCESSIBILITY_SETTINGS, LocalizedText.Resource(R.string.plugin_gui_action_settings)))
         if (!KeepAlive.isIgnoringBatteryOptimizations(context)) {
@@ -144,7 +141,7 @@ class GuiPlugin(
             ),
         )
         virtualScreen?.let { feature ->
-            feature.detailRows(feature.status()).forEach { add(it.toPluginDetailRow()) }
+            addAll(feature.detailRows(feature.status()))
         }
     }
 
@@ -166,18 +163,6 @@ class GuiPlugin(
 
     private val virtualScreenAvailable: Boolean
         get() = privilege?.state?.value?.virtualScreenAvailable ?: true
-
-    private fun LegacyPluginAction.toPluginAction(): PluginAction = PluginAction(
-        id = id,
-        label = LocalizedText.Resource(labelRes),
-        style = when (style) {
-            LegacyPluginActionStyle.DESTRUCTIVE -> PluginActionStyle.DESTRUCTIVE
-            LegacyPluginActionStyle.NORMAL -> PluginActionStyle.NORMAL
-        },
-    )
-
-    private fun LegacyPluginDetailRow.toPluginDetailRow(): PluginDetailRow =
-        PluginDetailRow(LocalizedText.Resource(labelRes), value)
 
     private companion object {
         const val ACTION_ACCESSIBILITY_SETTINGS = "accessibility_settings"

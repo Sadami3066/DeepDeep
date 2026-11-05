@@ -9,13 +9,13 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
-internal data class PluginFailureMarker(
+data class PluginFailureMarker(
     val key: String,
     val detail: String? = null,
     val markedAt: Long = 0,
 )
 
-internal class PluginFailureGuard(private val dir: File) {
+class PluginFailureGuard(private val dir: File) {
     fun mark(key: String, detail: String? = null, markedAt: Long = System.currentTimeMillis()) {
         val file = fileFor(key)
         file.parentFile?.mkdirs()

@@ -15,6 +15,7 @@
 | `PluginSourceSettings.kt` | `sources.json` 读写：`indexUrl/autoCheck/intervalHours`，schemaVersion 1，损坏备份 `.corrupt` 后重建默认值，写入前归一化（URL scheme、interval 1..720） |
 | `PluginPackageDownloader.kt` | 下载到 `downloads/*.part` → 体积比对 → sha256 比对 → 改名 `*.ddp`；失败清理残片 |
 | `PluginUpdateManager.kt` | 编排：`check()` = 设置 → 索引 → 候选；`downloadAndStage()` = TOCTOU 复核（同钥/更新/未 pending/已信任）→ 下载 → 验签与清单一致性 → `installer.install()` 暂存，返回 typed 结果，不自动生效 |
+| `ExternalUpdateSupport.kt` | AppGraph/manager 用的集成门面：构造时按 `filesDir` 组装 settings/client/downloader/manager；对外只有 `loadSettings/saveSettings/checkUpdates/stageUpdate` 与 UI 形状的结果类型（`ExternalUpdateCandidate`/`UpdateCheckResultUi`/`UpdateStageResultUi`），不暴露内部 typed 类 |
 
 ## 要点
 
@@ -23,4 +24,5 @@
 - 暂存即 `PluginInstaller.install()` 的更新分支：写入 `pendingVersion`/`pendingBundleSha256` 与 `PENDING_RESTART`；管理器不调用 `commitPending`，由下一次进程启动的激活流程提交，失败可回滚上一版本。
 - 缓存只在网络/索引解析失败时兜底，且来源 URL 必须匹配，避免切换源后拿旧源索引；缓存损坏直接视为不可用。
 - 测试注入 `PluginFetcher`（fake 或 `file:`），不联网、不新增依赖；`HttpPluginFetcher` 的默认实现只依赖 JDK。
+- 集成入口是 `ExternalUpdateSupport(filesDir, hostVersion, installer, trustStore, recordStore, fetcher = HttpPluginFetcher())`：`filesDir` 传 App 的 `filesDir`（内部拼 `files/plugins/{sources.json,sources_cache.json,downloads/}`）；`hostVersion` 与 `PluginInstaller` 构造用同一个值（App 现为 `BuildConfig.VERSION_NAME`）；`checkUpdates()` 只读+写缓存，`stageUpdate(pluginId)` 只暂存不生效。
 - 新增文件时同步本索引，并把目录补进 `../AGENTS.md` 的文件表（该文件由集成阶段维护，本任务不改）。

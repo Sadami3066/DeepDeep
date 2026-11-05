@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.plugin
 
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
+
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -113,7 +115,7 @@ class PluginSkillStore(
             skill.files.forEach { file ->
                 val destination = File(temp, file.path)
                 destination.parentFile?.mkdirs()
-                destination.writeText(file.content, Charsets.UTF_8)
+                destination.writeText(file.content.orEmpty(), Charsets.UTF_8)
             }
             File(temp, MARKER).writeText(pluginId, Charsets.UTF_8)
             replaceDirectory(temp, target)

@@ -15,3 +15,4 @@ ui/io/github/whywood/deepdeep/ui/plugins/PluginsScreen.kt|io.github.whywood.deep
 ui/io/github/whywood/deepdeep/ui/sessions/FilterSessionSearch.kt|io.github.whywood.deepdeep.ui.chat.SessionSearchHit
 ui/io/github/whywood/deepdeep/ui/sessions/SessionSearchScreen.kt|io.github.whywood.deepdeep.ui.chat.SessionSearchHit
 ui/io/github/whywood/deepdeep/ui/workspaces/WorkspaceSettingsScreen.kt|io.github.whywood.deepdeep.ui.settings.SettingsGroup
+ui/io/github/whywood/deepdeep/ui/chat/ToolCard.kt|io.github.whywood.deepdeep.ui.plugins.PluginToolCardSlot

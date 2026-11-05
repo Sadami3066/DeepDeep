@@ -127,6 +127,7 @@ internal fun PluginImportDialog(
 @Composable
 internal fun PluginUpdatesDialog(
     updates: List<PluginUpdateUi>,
+    onUpdate: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -172,6 +173,11 @@ internal fun PluginUpdatesDialog(
                                     text = formatPluginSize(context, update.size),
                                     style = DdType.bodySmall,
                                     color = colors.inkTertiary,
+                                )
+                                DdTextAction(
+                                    text = stringResource(R.string.plugins_updates_install),
+                                    onClick = { onUpdate(update.pluginId) },
+                                    color = colors.accent,
                                 )
                             }
                         }

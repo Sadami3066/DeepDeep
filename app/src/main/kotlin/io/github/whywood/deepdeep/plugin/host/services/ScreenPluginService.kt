@@ -126,7 +126,7 @@ internal class ScreenPluginService(
         val virtualSnapshot = runCatching { virtual?.status() }.getOrNull()
         val mainSnapshot = runCatching { main?.status() }.getOrNull()
         val lifecycleOnline = runCatching {
-            virtualScreen?.status() is io.github.whywood.deepdeep.plugin.PluginStatus.Ready
+            virtualScreen?.status() is io.github.whywood.deepdeep.plugin.api.PluginStatus.Ready
         }.getOrDefault(false)
         val virtualAvailable = virtualSnapshot?.virtual != null || lifecycleOnline
         cachedStatus = ScreenStatus(
