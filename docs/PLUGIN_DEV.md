@@ -211,6 +211,7 @@ plugin.ddp
 
 ```json
 {
+  "schemaVersion": 1,
   "plugins": [
     {
       "id": "io.github.whywood.deepdeep.plugintemplate",

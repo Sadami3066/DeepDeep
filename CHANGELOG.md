@@ -2,6 +2,15 @@
 
 ## HEAD (since m2)
 
+- feat: 统一插件系统：新增 `:plugin-api` 契约/SDK 与 `:plugin-sample`；11 个内置插件迁移到 `DeepDeepPlugin`
+- feat: 外部 `.ddp` 插件：ddp-1 Ed25519 签名、TOFU 发布者信任、sha256、记录 v4、DEX in-memory 装载与只读回退、导入/卸载/更新暂存
+- feat: 插件宿主管理器：清单驱动状态、相位机、贡献快照、设置/技能同步、会话安全点重建、会话 hooks 绑定
+- feat: 插件事件面：观察/变换/闸门（提示词、输入、工具前后、轮次/消息/压缩/模型/重试/MCP）与运行期事件映射
+- feat: 插件 UI 槽位：setup 自绘、工具卡内容覆写、详情页区块、插件页路由、输入区动作、声明式 UiNode + Compose 双渲染与崩溃回退
+- feat: 插件 SDK 发布（`publishToMavenLocal`）、模板工程、作者文档与签名/打包任务
+- feat: 17 个宿主服务适配器（Linux/特权/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/工坊/MCP/UI/AppInfo/总线/日志）
+- feat: 插件更新索引客户端、来源设置与暂存（下载校验签名/同钥，下次启动生效）
+- refactor: 删除旧 `OfficialPlugin`/`PluginManager`/记录 v2 代码与测试，UI 全部改为清单驱动
 - fix: 新手引导完成后的首条消息不再报「Agent session is not ready」（启动重配置会重建未落盘的占位会话并换掉 id） [聊天] [运行时]
 - fix: 开发包、扫一扫、MCP 与浮层关闭按钮的硬编码中文改为资源 [设置]
 - fix: 切换语言后立即刷新插件状态文案 [设置]
