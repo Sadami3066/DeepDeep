@@ -4,6 +4,8 @@ interface PluginController {
     val setupPluginIds: List<String> get() = emptyList()
 
     suspend fun setup(pluginId: String): PluginSetupResult
+
+    fun cancelSetup(pluginId: String) {}
 }
 
 data class PluginSetupResult(
@@ -14,4 +16,5 @@ data class PluginSetupResult(
     val status: String? = null,
     val account: String? = null,
     val error: String? = null,
+    val cancelled: Boolean = false,
 )

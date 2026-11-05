@@ -1,8 +1,11 @@
 package io.github.whywood.deepdeep.runtime
 
 import dev.pi.agent.AgentToolResult
+import dev.pi.ai.RunSignal
 import dev.pi.ai.TextContent
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -95,6 +98,46 @@ class PluginSetupToolTest {
         val result = tool!!.execute("call-2", args("feishu"), null, null)
         assertTrue(result.isError == true)
         assertEquals("boom", resultText(result))
+    }
+
+    @Test
+    fun abortCancelsSetupAndNotifiesController() = runTest {
+        val signal = RunSignal()
+        var cancelledPlugin: String? = null
+        val tool = pluginSetupTool(
+            object : PluginController {
+                override suspend fun setup(pluginId: String): PluginSetupResult {
+                    awaitCancellation()
+                }
+
+                override fun cancelSetup(pluginId: String) {
+                    cancelledPlugin = pluginId
+                }
+            },
+        )
+        var result: AgentToolResult? = null
+        val job = launch { result = tool!!.execute("call-abort", args("feishu"), signal, null) }
+        runCurrent()
+        signal.abort("user")
+        job.join()
+        assertEquals("feishu", cancelledPlugin)
+        val json = Json.parseToJsonElement(resultText(result!!)).jsonObject
+        assertEquals("false", json.getValue("ok").toString())
+        assertEquals("true", json.getValue("cancelled").toString())
+    }
+
+    @Test
+    fun cancelledSetupResultBecomesCancelledJson() = runTest {
+        val tool = pluginSetupTool(
+            object : PluginController {
+                override suspend fun setup(pluginId: String): PluginSetupResult =
+                    PluginSetupResult(false, pluginId, installed = true, ready = false, cancelled = true)
+            },
+        )
+        val result = tool!!.execute("call-cancel", args("wecom"), null, null)
+        val json = Json.parseToJsonElement(resultText(result)).jsonObject
+        assertEquals("true", json.getValue("cancelled").toString())
+        assertNull(result.isError)
     }
 
     private fun controller(): PluginController = object : PluginController {

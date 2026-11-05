@@ -4,6 +4,8 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -55,11 +57,29 @@ fun pluginSetupTool(controller: PluginController?): CodingTool? {
                     isError = true,
                 )
                 else -> try {
-                    val result = withTimeoutOrNull(SETUP_WAIT_TIMEOUT_MS) { controller.setup(pluginId) }
-                    if (result == null) {
-                        textResult("Timed out waiting for the user to complete setup.")
-                    } else {
-                        textResult(setupResultJson(result).toString())
+                    var result: PluginSetupResult? = null
+                    var timedOut = false
+                    coroutineScope {
+                        val setupJob = launch { result = controller.setup(pluginId) }
+                        val removeAbort = signal?.onAbort {
+                            controller.cancelSetup(pluginId)
+                            setupJob.cancel()
+                        }
+                        try {
+                            timedOut = withTimeoutOrNull(SETUP_WAIT_TIMEOUT_MS) { setupJob.join() } == null
+                        } finally {
+                            removeAbort?.invoke()
+                            if (timedOut) {
+                                controller.cancelSetup(pluginId)
+                                setupJob.cancel()
+                            }
+                        }
+                    }
+                    val outcome = result
+                    when {
+                        timedOut -> textResult("Timed out waiting for the user to complete setup.")
+                        outcome == null -> textResult(setupResultJson(pluginId, cancelled = true).toString())
+                        else -> textResult(setupResultJson(outcome).toString())
                     }
                 } catch (error: RequestAbortedException) {
                     throw error
@@ -78,7 +98,14 @@ private fun setupResultJson(result: PluginSetupResult): JsonObject = buildJsonOb
     put("plugin", result.pluginId)
     put("installed", result.installed)
     put("ready", result.ready)
+    put("cancelled", result.cancelled)
     result.status?.let { put("status", it) }
     result.account?.let { put("account", it) }
     result.error?.let { put("error", it) }
+}
+
+private fun setupResultJson(pluginId: String, cancelled: Boolean): JsonObject = buildJsonObject {
+    put("ok", false)
+    put("plugin", pluginId)
+    put("cancelled", cancelled)
 }

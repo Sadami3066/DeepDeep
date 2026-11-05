@@ -44,13 +44,18 @@ import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -86,7 +91,10 @@ class PluginHostManager internal constructor(
     private val plugins = linkedMapOf<String, ManagedPlugin>()
     private val mutex = Mutex()
     private val busy = AtomicBoolean(false)
-    private val confirmWaiter = java.util.concurrent.atomic.AtomicReference<CompletableDeferred<Boolean>?>(null)
+    private val confirmWaiter = AtomicReference<CompletableDeferred<Boolean>?>(null)
+    private val setupCancelled = AtomicBoolean(false)
+    private val setupJob = AtomicReference<Job?>(null)
+    private val setupPluginId = AtomicReference<String?>(null)
     private val textResolver = PluginTextResolver(
         resourceString = { id -> strings.get(id) },
         language = language,
@@ -305,6 +313,7 @@ class PluginHostManager internal constructor(
 
     override fun runAction(pluginId: String, actionId: String) {
         scope.launch {
+            setupCancelled.set(false)
             launchBusy {
                 val managed = plugins[pluginId] ?: return@launchBusy
                 if (!managed.enabled) {
@@ -312,7 +321,16 @@ class PluginHostManager internal constructor(
                     return@launchBusy
                 }
                 val plugin = managed.plugin ?: return@launchBusy
-                plugin.runAction(managed.host, actionId, setupUi(managed))
+                val call = scope.async { plugin.runAction(managed.host, actionId, setupUi(managed)) }
+                setupJob.set(call)
+                try {
+                    call.await()
+                } catch (error: CancellationException) {
+                    call.cancel()
+                    if (!setupCancelled.get()) throw error
+                } finally {
+                    setupJob.compareAndSet(call, null)
+                }
                 refreshLocked()
             }
         }
@@ -338,12 +356,29 @@ class PluginHostManager internal constructor(
     }
 
     override fun cancelInteraction() {
+        setupCancelled.set(true)
+        setupJob.getAndSet(null)?.cancel()
         completeConfirm(false)
         busy.set(false)
         _state.update { it.copy(interaction = null, busy = false) }
     }
 
+    override fun cancelSetup(pluginId: String) {
+        if (setupPluginId.get() != pluginId) return
+        cancelInteraction()
+    }
+
     override suspend fun setup(pluginId: String): PluginSetupResult {
+        setupPluginId.set(pluginId)
+        setupCancelled.set(false)
+        return try {
+            setupInternal(pluginId)
+        } finally {
+            setupPluginId.compareAndSet(pluginId, null)
+        }
+    }
+
+    private suspend fun setupInternal(pluginId: String): PluginSetupResult {
         val managed = plugins[pluginId]
             ?: return PluginSetupResult(false, pluginId, false, false, error = strings.get(R.string.plugins_error_unknown))
         val plugin = managed.plugin
@@ -360,7 +395,7 @@ class PluginHostManager internal constructor(
             }
             try {
                 if (!awaitInstall(managed, plugin)) {
-                    return PluginSetupResult(false, pluginId, false, false)
+                    return PluginSetupResult(false, pluginId, false, false, cancelled = setupCancelled.get())
                 }
                 installInternal(managed)
             } finally {
@@ -375,24 +410,34 @@ class PluginHostManager internal constructor(
         if (!beginBusy()) {
             return PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_busy))
         }
+        val call = scope.async { plugin.setup(managed.host, setupUi(managed)) }
+        setupJob.set(call)
+        var cancelled = false
         return try {
-            plugin.setup(managed.host, setupUi(managed))
+            try {
+                call.await()
+                if (setupCancelled.get()) cancelled = true
+            } catch (error: CancellationException) {
+                call.cancel()
+                if (!setupCancelled.get()) throw error
+                cancelled = true
+                if (!currentCoroutineContext().isActive) throw error
+            }
             refreshNow()
             val status = runCatching { plugin.status(managed.host) }.getOrNull()
-            when (status) {
-                is PluginStatus.Ready -> PluginSetupResult(true, pluginId, true, true, status.label, status.account)
-
-                is PluginStatus.NotReady -> PluginSetupResult(false, pluginId, true, false, status.label)
-
-                is PluginStatus.Failed -> PluginSetupResult(false, pluginId, true, false, status.label, error = status.label)
-
-                null -> PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_status))
+            when {
+                cancelled -> PluginSetupResult(false, pluginId, true, false, cancelled = true)
+                status is PluginStatus.Ready -> PluginSetupResult(true, pluginId, true, true, status.label, status.account)
+                status is PluginStatus.NotReady -> PluginSetupResult(false, pluginId, true, false, status.label)
+                status is PluginStatus.Failed -> PluginSetupResult(false, pluginId, true, false, status.label, error = status.label)
+                else -> PluginSetupResult(false, pluginId, true, false, error = strings.get(R.string.plugins_error_status))
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             PluginSetupResult(false, pluginId, true, false, error = error.message)
         } finally {
+            setupJob.compareAndSet(call, null)
             finishBusy()
         }
     }
@@ -878,7 +923,7 @@ class PluginHostManager internal constructor(
             }
         }
 
-        override fun cancelled(): Boolean = !busy.get()
+        override fun cancelled(): Boolean = setupCancelled.get()
     }
 
     private fun progressUi(managed: ManagedPlugin, label: String): io.github.whywood.deepdeep.plugin.api.PluginProgress =
