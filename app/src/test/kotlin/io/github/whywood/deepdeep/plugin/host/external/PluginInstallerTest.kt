@@ -1,0 +1,336 @@
+package io.github.whywood.deepdeep.plugin.host.external
+
+import io.github.whywood.deepdeep.plugin.host.PluginPaths
+import io.github.whywood.deepdeep.plugin.host.PluginPhase
+import java.io.File
+import java.nio.file.Files
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class PluginInstallerTest {
+    private lateinit var dir: File
+    private lateinit var pluginsRoot: File
+    private lateinit var trustStore: PublisherTrustStore
+    private lateinit var recordStore: ExternalPluginRecordStore
+    private lateinit var key: SyntheticDdp.SigningKey
+
+    @Before
+    fun setUp() {
+        dir = Files.createTempDirectory("plugin-installer").toFile()
+        pluginsRoot = File(dir, "plugins")
+        trustStore = PublisherTrustStore(File(pluginsRoot, "trusted_publishers.json"))
+        recordStore = ExternalPluginRecordStore(File(pluginsRoot, "plugins.json"))
+        key = SyntheticDdp.newSigningKey()
+    }
+
+    @After
+    fun tearDown() {
+        dir.deleteRecursively()
+    }
+
+    @Test
+    fun freshInstallStagesFilesAndRecord() = runBlocking {
+        val installer = installer()
+        val pkg = packageV1()
+
+        val result = installer.install(pkg, acceptPublisher = true)
+
+        assertTrue(result is InstallResult.Installed)
+        val record = (result as InstallResult.Installed).record
+        assertEquals(SyntheticDdp.PLUGIN_ID, record.id)
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, record.version)
+        assertEquals(PluginPhase.INSTALLED, record.phase)
+        assertEquals(key.keyId, record.publisherKeyId)
+        assertTrue(record.enabled)
+        assertEquals(PluginPaths.versionRoot(pluginsRoot, record.id, record.version).absolutePath, record.installPath)
+        val versionRoot = File(record.installPath)
+        val bundle = File(File(versionRoot, PluginPaths.BUNDLE_DIR), "plugin.dpp")
+        assertTrue(bundle.isFile)
+        assertEquals(DdpSigning.sha256Hex(bundle), record.activeBundleSha256)
+        assertTrue(File(File(versionRoot, PluginPaths.ASSETS_DIR), "icon.png").isFile)
+        assertTrue(File(File(versionRoot, PluginPaths.ASSETS_DIR), "plugin.json").isFile)
+        assertTrue(File(File(versionRoot, PluginPaths.LIB_DIR), "arm64-v8a/libsample.so").isFile)
+        assertNotNull(trustStore.trusted(key.keyId))
+        assertEquals(record, recordStore.get(record.id))
+        val state = installer.activeBundle(record.id)
+        assertTrue(state is BundleState.Ready)
+        assertEquals(bundle, (state as BundleState.Ready).bundleFile)
+    }
+
+    @Test
+    fun requiresPublisherConfirmationBeforeTrusting() = runBlocking {
+        val installer = installer()
+
+        val result = installer.install(packageV1())
+
+        assertTrue(result is InstallResult.NeedsPublisherConfirmation)
+        val confirmation = result as InstallResult.NeedsPublisherConfirmation
+        assertEquals(key.keyId, confirmation.publisher.keyId)
+        assertEquals(SyntheticDdp.PLUGIN_ID, confirmation.manifest.id)
+        assertNull(recordStore.get(SyntheticDdp.PLUGIN_ID))
+        assertNull(trustStore.trusted(key.keyId))
+        assertFalse(PluginPaths.versionRoot(pluginsRoot, SyntheticDdp.PLUGIN_ID, SyntheticDdp.PLUGIN_VERSION).exists())
+    }
+
+    @Test
+    fun inspectReportsPublisherAndTrustState() = runBlocking {
+        val installer = installer()
+        val pkg = packageV1()
+
+        val before = installer.inspect(pkg)
+        assertTrue(before is InspectionResult.Ready)
+        val beforeReady = before as InspectionResult.Ready
+        assertEquals(key.keyId, beforeReady.publisher.keyId)
+        assertNull(beforeReady.trusted)
+        assertNull(beforeReady.installed)
+
+        installer.install(pkg, acceptPublisher = true)
+        val after = installer.inspect(pkg) as InspectionResult.Ready
+        assertNotNull(after.trusted)
+        assertNotNull(after.installed)
+        assertEquals(after.digests.entryDigest, beforeReady.digests.entryDigest)
+    }
+
+    @Test
+    fun trustedPublisherSkipsConfirmationOnUpdate() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+
+        val result = installer.install(packageV2())
+
+        assertTrue(result is InstallResult.Staged)
+    }
+
+    @Test
+    fun acceptedUpdateRestoresMissingPublisherTrust() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+        trustStore.untrust(key.keyId)
+
+        val confirmation = installer.install(packageV2())
+        assertTrue(confirmation is InstallResult.NeedsPublisherConfirmation)
+
+        val staged = installer.install(packageV2(), acceptPublisher = true)
+        assertTrue(staged is InstallResult.Staged)
+        assertNotNull(trustStore.trusted(key.keyId))
+    }
+
+    @Test
+    fun updateStagesThenCommitSwitchesAndKeepsPrevious() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+
+        val staged = installer.install(packageV2())
+        assertTrue(staged is InstallResult.Staged)
+        val pendingRecord = (staged as InstallResult.Staged).record
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, pendingRecord.version)
+        assertEquals("2.0.0", pendingRecord.pendingVersion)
+        assertEquals(PluginPhase.PENDING_RESTART, pendingRecord.phase)
+        assertTrue(installer.pendingBundle(pendingRecord.id) is BundleState.Ready)
+        assertTrue(installer.activeBundle(pendingRecord.id) is BundleState.Ready)
+
+        val committed = installer.commitPending(pendingRecord.id)
+        assertTrue(committed is CommitResult.Committed)
+        val record = (committed as CommitResult.Committed).record
+        assertEquals("2.0.0", record.version)
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, record.previousVersion)
+        assertNull(record.pendingVersion)
+        assertEquals(PluginPhase.INSTALLED, record.phase)
+        assertEquals(PluginPaths.versionRoot(pluginsRoot, record.id, "2.0.0").absolutePath, record.installPath)
+        assertTrue(installer.activeBundle(record.id) is BundleState.Ready)
+
+        assertTrue(installer.rollback(record.id, "load failed"))
+        val rolledBack = installer.record(record.id)!!
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, rolledBack.version)
+        assertEquals(PluginPhase.DEGRADED, rolledBack.phase)
+        assertEquals("load failed", rolledBack.lastError)
+        assertTrue(installer.activeBundle(record.id) is BundleState.Ready)
+    }
+
+    @Test
+    fun discardPendingKeepsActiveVersion() = runBlocking {
+        val installer = installer()
+        val installed = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+        installer.install(packageV2())
+
+        assertTrue(installer.discardPending(installed.id, "activation failed"))
+
+        val record = installer.record(installed.id)!!
+        assertEquals(SyntheticDdp.PLUGIN_VERSION, record.version)
+        assertNull(record.pendingVersion)
+        assertEquals(PluginPhase.DEGRADED, record.phase)
+        assertEquals("activation failed", record.lastError)
+        assertTrue(installer.activeBundle(installed.id) is BundleState.Ready)
+        assertFalse(PluginPaths.versionRoot(pluginsRoot, installed.id, "2.0.0").exists())
+    }
+
+    @Test
+    fun commitWithoutPendingIsRejected() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+
+        val result = installer.commitPending(SyntheticDdp.PLUGIN_ID)
+
+        assertTrue(result is CommitResult.Rejected)
+    }
+
+    @Test
+    fun updateFromDifferentPublisherIsRejected() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+        val otherKey = SyntheticDdp.newSigningKey()
+        val otherPackage = SyntheticDdp.build(
+            dir,
+            "other-publisher.dpp",
+            SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(version = "2.0.0"), key = otherKey),
+        )
+
+        val result = installer.install(otherPackage, acceptPublisher = true)
+
+        assertTrue(result is InstallResult.Rejected)
+        assertEquals(InstallRejection.PUBLISHER_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun rejectsReservedPluginId() = runBlocking {
+        val installer = installer(reservedPluginIds = { setOf(SyntheticDdp.PLUGIN_ID) })
+
+        val result = installer.install(packageV1(), acceptPublisher = true)
+
+        assertEquals(InstallRejection.ID_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun rejectsDuplicateToolNames() = runBlocking {
+        val installer = installer(reservedToolNames = { setOf("sample_tool") })
+
+        val result = installer.install(packageV1(), acceptPublisher = true)
+
+        assertEquals(InstallRejection.TOOL_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun rejectsInvalidSignature() = runBlocking {
+        val installer = installer()
+        val unsigned = SyntheticDdp.build(dir, "unsigned.dpp")
+
+        val result = installer.install(unsigned, acceptPublisher = true)
+
+        assertEquals(InstallRejection.SIGNATURE_INVALID, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun reinstallingSameContentIsAlreadyInstalled() = runBlocking {
+        val installer = installer()
+        val pkg = packageV1()
+        installer.install(pkg, acceptPublisher = true)
+
+        val result = installer.install(pkg, acceptPublisher = true)
+
+        assertTrue(result is InstallResult.AlreadyInstalled)
+    }
+
+    @Test
+    fun sameVersionDifferentContentIsRejected() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+        val changed = SyntheticDdp.build(
+            dir,
+            "changed.dpp",
+            SyntheticDdp.BuildRequest(key = key, extraEntries = mapOf("assets/extra.txt" to byteArrayOf(9))),
+        )
+
+        val result = installer.install(changed, acceptPublisher = true)
+
+        assertEquals(InstallRejection.VERSION_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun downgradeIsRejected() = runBlocking {
+        val installer = installer()
+        installer.install(packageV1(), acceptPublisher = true)
+        installer.install(packageV2())
+        installer.commitPending(SyntheticDdp.PLUGIN_ID)
+        val downgrade = SyntheticDdp.build(
+            dir,
+            "downgrade.dpp",
+            SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(version = "0.9.0"), key = key),
+        )
+
+        val result = installer.install(downgrade, acceptPublisher = true)
+
+        assertEquals(InstallRejection.VERSION_CONFLICT, (result as InstallResult.Rejected).code)
+    }
+
+    @Test
+    fun tamperedBundleFailsVerification() = runBlocking {
+        val installer = installer()
+        val record = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+        val bundle = File(File(File(record.installPath), PluginPaths.BUNDLE_DIR), "plugin.dpp")
+        bundle.writeBytes(byteArrayOf(1, 2, 3))
+
+        val state = installer.activeBundle(record.id)
+
+        assertTrue(state is BundleState.Missing)
+        assertFalse(installer.verifyBundle(bundle, record.activeBundleSha256))
+    }
+
+    @Test
+    fun uninstallRemovesRecordAndFiles() = runBlocking {
+        val installer = installer()
+        val record = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+
+        assertTrue(installer.uninstall(record.id))
+        assertNull(installer.record(record.id))
+        assertFalse(PluginPaths.pluginRoot(pluginsRoot, record.id).exists())
+        assertFalse(installer.uninstall(record.id))
+    }
+
+    @Test
+    fun updateSkillsPersistsSkillIds() = runBlocking {
+        val installer = installer()
+        val record = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+
+        assertTrue(installer.updateSkills(record.id, listOf("skill_a", "skill_b")))
+        assertEquals(listOf("skill_a", "skill_b"), installer.record(record.id)?.skillIds)
+        assertFalse(installer.updateSkills("missing", listOf("x")))
+    }
+
+    @Test
+    fun setEnabledUpdatesPhase() = runBlocking {
+        val installer = installer()
+        val record = (installer.install(packageV1(), acceptPublisher = true) as InstallResult.Installed).record
+
+        assertTrue(installer.setEnabled(record.id, false))
+        assertEquals(PluginPhase.DISABLED, installer.record(record.id)?.phase)
+        assertTrue(installer.setEnabled(record.id, true))
+        assertEquals(PluginPhase.INSTALLED, installer.record(record.id)?.phase)
+    }
+
+    private fun installer(
+        reservedPluginIds: () -> Set<String> = { emptySet() },
+        reservedToolNames: () -> Set<String> = { emptySet() },
+    ): PluginInstaller = PluginInstaller(
+        pluginsRoot = pluginsRoot,
+        trustStore = trustStore,
+        recordStore = recordStore,
+        hostVersion = "0.2.0-dev",
+        reservedPluginIds = reservedPluginIds,
+        reservedToolNames = reservedToolNames,
+    )
+
+    private fun packageV1(): File = SyntheticDdp.build(dir, "v1.dpp", SyntheticDdp.BuildRequest(key = key))
+
+    private fun packageV2(): File = SyntheticDdp.build(
+        dir,
+        "v2.dpp",
+        SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(version = "2.0.0"), key = key),
+    )
+}

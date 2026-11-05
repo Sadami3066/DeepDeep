@@ -12,6 +12,12 @@
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text/log` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：`Literal` 按语言标签取、缺省回退 `default`；`Resource` 走宿主注入的 `(Int) -> String`；支持 `String.format` 参数 |
 | `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本行，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
+| `CodingToolPluginAdapter.kt` | 反向桥：内置插件沿用旧 `CodingTool` 工具工厂时，转成 `PluginTool` 接入新契约 |
+| `ModernPluginAdapter.kt` | 迁移期适配：`DeepDeepPlugin` + manifest 适配成旧 `OfficialPlugin`，供旧 `PluginManager` 过渡（P7 删除） |
+| `BuiltinPluginManifest.kt` / `BuiltinPluginHost.kt` | 内置插件 manifest 构造与宿主实例 |
+| `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
+| `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
+| `ui/` | 插件 UI 槽位：Slot 注册与解析、声明式渲染器、Compose 槽宿主、崩溃标记 |
 | `PluginScope.kt` | 插件级 `CoroutineScope`（SupervisorJob）+ 关停订阅袋，`close()` 幂等、按注册逆序执行并取消协程 |
 | `PluginFailureGuard.kt` | 槽渲染崩溃标记：`mark/clear/detect/detectAll`，JSON 存 key/detail/markedAt，key 转安全文件名 |
 
