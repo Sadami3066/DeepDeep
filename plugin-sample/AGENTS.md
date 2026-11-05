@@ -7,7 +7,8 @@
 | 文件 | 职责 |
 |---|---|
 | `build.gradle.kts` | application 模块；`compileOnly(project(":plugin-api"))`；`assemblePlugin` 产出 `build/plugin/plugin-sample.ddp`；`signPlugin` 产出 `build/plugin/plugin-sample-signed.ddp` |
-| `src/main/assets/plugin.json` | 插件清单：id/version/apiLevel/entryClass/provides |
+| `src/main/assets/plugin.json` | 插件清单：id/version/apiLevel/entryClass/provides/icon |
+| `src/main/assets/icon.png` | 清单 `icon: asset:icon.png` 引用的插件图标，安装时解到版本目录 `assets/` |
 | `src/main/kotlin/.../SamplePlugin.kt` | 入口类：一个 `sample_echo` 工具与一个 Compose 槽位 |
 | `signing/dev-ed25519.pem` | 提交进仓库的 Ed25519 **测试**私钥，仅供 sample 签名，禁止用于分发 |
 | `signing/dev-ed25519.pub` | 对应公钥；`keyId = ed25519:8bfc1ba034dbf5bc113d469ce1f1a6350bc4c104105aa92b104eda3896fad213` |

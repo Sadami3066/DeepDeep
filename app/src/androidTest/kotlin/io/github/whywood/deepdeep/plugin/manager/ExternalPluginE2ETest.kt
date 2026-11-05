@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.DeepDeepApplication
+import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -10,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -51,6 +53,12 @@ class ExternalPluginE2ETest {
                 error("unreachable")
             }
             assertTrue(snapshot.enabled)
+            assertEquals(IconRef.Asset("icon.png"), snapshot.icon)
+            val icon = File(
+                File(File(context.filesDir, "plugins"), PLUGIN_ID),
+                snapshot.installedVersion.orEmpty() + "/assets/icon.png",
+            )
+            assertTrue("plugin icon was not extracted: ${icon.absolutePath}", icon.isFile)
 
             val tools = manager.tools(SessionBinding())
             val tool = tools.firstOrNull { it.name == "sample_echo" }
