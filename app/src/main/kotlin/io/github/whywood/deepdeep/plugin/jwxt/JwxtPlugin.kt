@@ -100,7 +100,7 @@ class JwxtPlugin(
         if (availability is PluginAvailability.Unavailable) {
             return PluginStatus.Failed(availability.reason)
         }
-        if (!File(linux.rootfsDir, JwxtCli.ENTRY_RELATIVE).isFile) {
+        if (!File(linux.rootfsDir, JwxtCli.INSTALLED_ENTRY_RELATIVE).isFile) {
             lastVersion = null
             lastLoggedIn = false
             return PluginStatus.Failed(context.getString(R.string.plugin_jwxt_status_needs_reinstall))
@@ -196,7 +196,7 @@ class JwxtPlugin(
         val previousNetId = settingsNetId()
         settingsValues = values
         if (linux.state.value !is LinuxInstallState.Installed) return
-        if (!File(linux.rootfsDir, JwxtCli.ENTRY_RELATIVE).isFile) return
+        if (!File(linux.rootfsDir, JwxtCli.INSTALLED_ENTRY_RELATIVE).isFile) return
         syncCredentials()
         val netId = settingsNetId()
         if (previousNetId != null && netId != null && previousNetId != netId) {

@@ -18,6 +18,11 @@ class JwxtCliTest {
     }
 
     @Test
+    fun installedEntryRelativeMatchesInstallLayout() {
+        assertEquals("${JwxtCli.INSTALL_DIR_RELATIVE}/${JwxtCli.ENTRY_RELATIVE}", JwxtCli.INSTALLED_ENTRY_RELATIVE)
+    }
+
+    @Test
     fun commandsUseInstalledBinPath() {
         assertEquals("node --version", JwxtCli.nodeVersionCommand())
         assertEquals("${JwxtCli.BIN_PATH} --version", JwxtCli.versionCommand())

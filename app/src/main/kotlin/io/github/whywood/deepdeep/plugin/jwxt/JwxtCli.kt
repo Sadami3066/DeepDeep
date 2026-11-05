@@ -11,6 +11,7 @@ internal object JwxtCli {
 
     const val ASSET_ROOT = "jwxt"
     const val ENTRY_RELATIVE = "bin/jwxt"
+    const val INSTALLED_ENTRY_RELATIVE = "root/projects/jwxt/bin/jwxt"
     const val PACKAGE_RELATIVE = "package.json"
 
     const val INSTALL_DIR = "/root/projects/jwxt"
