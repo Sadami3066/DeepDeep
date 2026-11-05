@@ -1,0 +1,5 @@
+<resources>
+    <string name="plugins_setting_unset">Not set</string>
+    <string name="plugins_setting_secret_set">Set</string>
+    <string name="plugins_setting_save">Save</string>
+</resources>

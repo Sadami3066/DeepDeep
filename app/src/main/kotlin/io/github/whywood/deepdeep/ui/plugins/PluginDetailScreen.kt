@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -43,6 +48,7 @@ import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.OfficialPlugin
@@ -431,6 +437,7 @@ private fun PluginSettingsRows(
             is PluginSettingSpec.Toggle -> PluginToggleSettingRow(spec, settings, enabled, onSetting)
             is PluginSettingSpec.Choice -> PluginChoiceSettingRow(spec, settings, enabled, onSetting)
             is PluginSettingSpec.Number -> PluginNumberSettingRow(spec, settings, enabled, onSetting)
+            is PluginSettingSpec.Text -> PluginTextSettingRow(spec, settings, enabled, onSetting)
         }
     }
 }
@@ -503,6 +510,80 @@ private fun PluginChoiceSettingRow(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun PluginTextSettingRow(
+    spec: PluginSettingSpec.Text,
+    settings: Map<String, String>,
+    enabled: Boolean,
+    onSetting: (String, String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    var editing by remember(spec.key) { mutableStateOf(false) }
+    var draft by remember(spec.key) { mutableStateOf("") }
+    val stored = settings[spec.key] ?: spec.default
+    val display = when {
+        stored.isBlank() -> stringResource(R.string.plugins_setting_unset)
+        spec.secret -> stringResource(R.string.plugins_setting_secret_set)
+        else -> stored
+    }
+    DdListRow(
+        title = stringResource(spec.titleRes),
+        value = display,
+        showChevron = true,
+        enabled = enabled,
+        onClick = if (enabled) {
+            {
+                draft = stored
+                editing = true
+            }
+        } else {
+            null
+        },
+        modifier = Modifier.testTag("plugin_setting_${spec.key}"),
+    )
+    if (editing) {
+        val save = {
+            editing = false
+            onSetting(spec.key, draft)
+        }
+        DdDialog(
+            onDismissRequest = { editing = false },
+            title = stringResource(spec.titleRes),
+            content = {
+                DdTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    placeholder = "",
+                    visualTransformation = if (spec.secret) {
+                        PasswordVisualTransformation()
+                    } else {
+                        VisualTransformation.None
+                    },
+                    keyboardOptions = if (spec.secret) {
+                        KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
+                    } else {
+                        KeyboardOptions.Default
+                    },
+                    onDone = save,
+                    testTag = "plugin_setting_${spec.key}_input",
+                )
+            },
+            actions = {
+                DdTextAction(
+                    text = stringResource(R.string.plugins_cancel),
+                    onClick = { editing = false },
+                    color = colors.inkSecondary,
+                )
+                DdTextAction(
+                    text = stringResource(R.string.plugins_setting_save),
+                    onClick = save,
+                    color = colors.accent,
+                )
+            },
+        )
     }
 }
 

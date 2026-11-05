@@ -1,0 +1,39 @@
+<resources>
+    <string name="plugin_jwxt_name">SYSU Academic</string>
+    <string name="plugin_jwxt_summary">Timetable, grades, exams, notices and leave</string>
+    <string name="plugin_jwxt_size">about 100 KB</string>
+
+    <string name="plugin_jwxt_unavailable_device">Linux environment is not supported on this device</string>
+    <string name="plugin_jwxt_unavailable_linux">Install the Linux environment in Settings → Runtime first</string>
+    <string name="plugin_jwxt_unavailable_disabled">Enable the Linux environment in Settings → Runtime first</string>
+
+    <string name="plugin_jwxt_stage_checking">Checking Node.js…</string>
+    <string name="plugin_jwxt_stage_installing">Installing the academic CLI…</string>
+    <string name="plugin_jwxt_stage_relogin">Clearing sign-in state…</string>
+
+    <string name="plugin_jwxt_error_node_missing">Node.js not found. Install Node.js in Settings → Runtime first.</string>
+    <string name="plugin_jwxt_error_node_old">Node.js is too old (%1$s). Version 22 or newer is required; upgrade it in Settings → Runtime.</string>
+    <string name="plugin_jwxt_error_install">Install failed: %1$s</string>
+
+    <string name="plugin_jwxt_status_logged_in">Signed in</string>
+    <string name="plugin_jwxt_status_not_logged_in">Installed, not signed in</string>
+    <string name="plugin_jwxt_status_no_node">Installed, but Node.js is missing. Install Node.js in Settings → Runtime.</string>
+    <string name="plugin_jwxt_status_node_old">Installed, but Node.js is too old (%1$s). Version 22 or newer is required.</string>
+    <string name="plugin_jwxt_status_needs_reinstall">Reinstall required</string>
+
+    <string name="plugin_jwxt_action_relogin">Sign in again</string>
+
+    <string name="plugin_jwxt_detail_cli_version">CLI version</string>
+    <string name="plugin_jwxt_detail_node">Node.js version</string>
+    <string name="plugin_jwxt_detail_account">Account</string>
+    <string name="plugin_jwxt_detail_login">Sign-in status</string>
+    <string name="plugin_jwxt_login_on">Signed in</string>
+    <string name="plugin_jwxt_login_off">Not signed in</string>
+    <string name="plugin_jwxt_account_missing">Not set</string>
+
+    <string name="plugin_jwxt_setting_netid">NetID</string>
+    <string name="plugin_jwxt_setting_password">Password</string>
+
+    <string name="plugin_jwxt_setup_no_credentials">Enter NetID and password in the plugin settings first</string>
+    <string name="plugin_jwxt_setup_needs_login">Not signed in: follow the skill to sign in. Send the code first, then ask the user for the 4-digit code.</string>
+</resources>

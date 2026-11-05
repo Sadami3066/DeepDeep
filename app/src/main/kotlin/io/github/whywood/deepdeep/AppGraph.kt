@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.arrange.ArrangePlugin
 import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
 import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
+import io.github.whywood.deepdeep.plugin.jwxt.JwxtPlugin
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
 import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
@@ -253,6 +254,11 @@ class AppGraph(context: Context) : AppDependencies {
                     linuxSettings = linuxSettings,
                     downloader = PluginDownloader(),
                     workspaceDir = homeDir,
+                ),
+                JwxtPlugin(
+                    context = appContext,
+                    linux = linuxEnvironment,
+                    linuxSettings = linuxSettings,
                 ),
                 GoalPlugin(goalService, pluginStrings),
                 JobsPlugin(jobRegistry, pluginStrings),

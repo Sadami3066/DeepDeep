@@ -1,0 +1,39 @@
+<resources>
+    <string name="plugin_jwxt_name">中山大学教务</string>
+    <string name="plugin_jwxt_summary">课表、成绩、考试、公告与请假</string>
+    <string name="plugin_jwxt_size">约 100 KB</string>
+
+    <string name="plugin_jwxt_unavailable_device">当前设备不支持 Linux 环境</string>
+    <string name="plugin_jwxt_unavailable_linux">请先在 设置 → 运行环境 安装 Linux 环境</string>
+    <string name="plugin_jwxt_unavailable_disabled">请先在 设置 → 运行环境 启用 Linux 环境</string>
+
+    <string name="plugin_jwxt_stage_checking">正在检查 Node.js…</string>
+    <string name="plugin_jwxt_stage_installing">正在安装教务 CLI…</string>
+    <string name="plugin_jwxt_stage_relogin">正在清除登录状态…</string>
+
+    <string name="plugin_jwxt_error_node_missing">没有找到 Node.js：请到 设置 → 运行环境 安装 Node.js</string>
+    <string name="plugin_jwxt_error_node_old">Node.js 版本过低（%1$s）：需要 22 或更高，请到 设置 → 运行环境 升级</string>
+    <string name="plugin_jwxt_error_install">安装失败：%1$s</string>
+
+    <string name="plugin_jwxt_status_logged_in">已登录</string>
+    <string name="plugin_jwxt_status_not_logged_in">已安装，未登录</string>
+    <string name="plugin_jwxt_status_no_node">已安装，但缺少 Node.js：请到 设置 → 运行环境 安装 Node.js</string>
+    <string name="plugin_jwxt_status_node_old">已安装，但 Node.js 版本过低（%1$s）：需要 22 或更高</string>
+    <string name="plugin_jwxt_status_needs_reinstall">需要重新安装</string>
+
+    <string name="plugin_jwxt_action_relogin">重新登录</string>
+
+    <string name="plugin_jwxt_detail_cli_version">CLI 版本</string>
+    <string name="plugin_jwxt_detail_node">Node.js 版本</string>
+    <string name="plugin_jwxt_detail_account">账号</string>
+    <string name="plugin_jwxt_detail_login">登录状态</string>
+    <string name="plugin_jwxt_login_on">已登录</string>
+    <string name="plugin_jwxt_login_off">未登录</string>
+    <string name="plugin_jwxt_account_missing">未设置</string>
+
+    <string name="plugin_jwxt_setting_netid">NetID</string>
+    <string name="plugin_jwxt_setting_password">密码</string>
+
+    <string name="plugin_jwxt_setup_no_credentials">请先在插件「设置」里填写 NetID 与密码</string>
+    <string name="plugin_jwxt_setup_needs_login">未登录：在 bash 按技能说明完成登录，先发送验证码，再向用户索取 4 位验证码</string>
+</resources>

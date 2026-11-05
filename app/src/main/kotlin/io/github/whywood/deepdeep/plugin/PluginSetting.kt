@@ -49,6 +49,13 @@ sealed interface PluginSettingSpec {
 
         override val default: String get() = defaultValue.toString()
     }
+
+    data class Text(
+        override val key: String,
+        @get:StringRes override val titleRes: Int,
+        override val default: String = "",
+        val secret: Boolean = false,
+    ) : PluginSettingSpec
 }
 
 internal fun PluginSettingSpec.normalize(raw: String): String? = when (this) {
@@ -59,4 +66,5 @@ internal fun PluginSettingSpec.normalize(raw: String): String? = when (this) {
 
     is PluginSettingSpec.Choice -> raw.takeIf { candidate -> options.any { it.value == candidate } }
     is PluginSettingSpec.Number -> raw.toIntOrNull()?.coerceIn(min, max)?.toString()
+    is PluginSettingSpec.Text -> if (secret) raw else raw.trim()
 }
