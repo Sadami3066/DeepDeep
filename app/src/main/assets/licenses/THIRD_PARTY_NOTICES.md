@@ -225,27 +225,17 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
   <https://github.com/earendil-works/elanor/blob/f9e904c08d2e2274714f35b9c848ba7bab19e2b3/packages/logos/sources/radius/mark.svg>
 - 处理方式：保留官方图形、色彩 token 与 1/4 标志宽度的留白，图形未改。
 
-### 4.4 厂商图标 — `app/src/main/res/drawable-nodpi/vendor_*.png`（10 个）
-
-| 图标 | 来源 | 许可/权利 |
-|---|---|---|
-| dingtalk、github、notion、slack、telegram、discord | Tabler Icons brand 图标，提交 `ed177a085b652fe04ec4f37ced867c94621e7840`（v3.50.0） | MIT，`Copyright (c) 2020-2026 Paweł Kuna`；`licenses/tabler-MIT.txt` |
-| xiaomi | Wikimedia Commons [File:Xiaomi_logo.svg](https://commons.wikimedia.org/wiki/File:Xiaomi_logo.svg)（源自小米官方媒体素材包） | Public domain（简单几何/文字组合，低于版权独创性门槛）；"Xiaomi"/"mi" 为小米公司商标 |
-| feishu | Apple App Store 公开应用图标（iTunes Search API `artworkUrl512`，中国区，2026-10-29）：<https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/45/f4/d8/45f4d8ef-fc19-8e6e-19eb-4e1e4ee1aabd/AppIcon-0-0-1x_U007epad-0-0-0-1-0-0-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Beijing Feishu Technology Co., Ltd.（字节跳动） |
-| wecom | 同上（企业微信）：<https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3e/ba/6b/3eba6be1-a7fd-00c5-7f0d-2415c8258ef5/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Tencent Technology (Shenzhen) Company Limited |
-| wechat | 同上（微信）：<https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/84/6b/3a/846b3ab8-9dea-e3e5-861e-f6ecaa0b3387/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-0-0-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Tencent Technology (Shenzhen) Company Limited |
-
-### 4.5 飞书插件图标 — `app/src/main/res/drawable-nodpi/ic_plugin_feishu.png`
+### 4.4 飞书插件图标 — `app/src/main/res/drawable-nodpi/ic_plugin_feishu.png`
 
 - 内容：飞书品牌图形（96×96）
 - 版权行/权利人：飞书（Feishu）品牌，商标归北京字节跳动科技有限公司
 - 来源：**非开源素材**；本仓库未保留该文件的原始下载记录（该文件于提交 `41b6885` 引入）
 - 处置：公开分发前应改为与 4.4 一致的可追溯来源，或替换为已授权素材。
 
-### 4.6 非开源素材替换预案
+### 4.5 非开源素材替换预案
 
 公开分发或商用前，以下非开源素材应替换为已授权素材，或从发行版移除：
-`provider_radius.png`（Radius 品牌条款）、`vendor_feishu.png`、`vendor_wecom.png`、`vendor_wechat.png`（App Store 公开图标）、`ic_plugin_feishu.png`（来源未记录）。
+`provider_radius.png`（Radius 品牌条款）、`ic_plugin_feishu.png`（来源未记录）。
 替换时同步更新本文件对应条目与素材清单。
 
 ## 5. 应用内插画
