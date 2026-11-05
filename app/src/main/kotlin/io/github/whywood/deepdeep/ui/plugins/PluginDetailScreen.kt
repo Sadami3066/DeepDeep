@@ -73,8 +73,8 @@ internal fun PluginDetailScreen(
         holder.load()
         onPauseOrDispose { }
     }
-    LaunchedEffect(state.loading, snapshot) {
-        if (!state.loading && snapshot == null) onBack()
+    LaunchedEffect(state.loading, state.plugins.isEmpty(), snapshot) {
+        if (!state.loading && state.plugins.isNotEmpty() && snapshot == null) onBack()
     }
 
     val current = snapshot ?: return

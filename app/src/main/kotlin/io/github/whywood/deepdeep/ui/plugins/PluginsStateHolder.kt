@@ -44,7 +44,7 @@ internal class PluginsStateHolder(
     private val manager: PluginManagerFacade,
     private val scope: CoroutineScope,
 ) {
-    private val _state = MutableStateFlow(PluginsUiState())
+    private val _state = MutableStateFlow(manager.state.value.toInitialState())
     val state: StateFlow<PluginsUiState> = _state.asStateFlow()
 
     init {
@@ -134,3 +134,13 @@ internal class PluginsStateHolder(
         }
     }
 }
+
+private fun ManagerPluginsUiState.toInitialState(): PluginsUiState = PluginsUiState(
+    loading = loading,
+    plugins = plugins,
+    busy = busy,
+    operation = operation,
+    interaction = interaction,
+    error = error,
+    availableUpdates = availableUpdates,
+)
