@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +49,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -61,6 +63,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginOperation
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
+import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,7 +81,9 @@ internal fun PluginsScreen(
     val context = LocalContext.current
     val resolvedPluginsRoot = pluginsRoot ?: remember(context) { File(context.filesDir, "plugins") }
     val holder = remember(manager) { PluginsStateHolder(manager, scope) }
-    val state by holder.state.collectAsStateWithLifecycle()
+    val state by manager.state.collectAsStateWithLifecycle()
+    val query by holder.query.collectAsStateWithLifecycle()
+    val togglingIds by holder.togglingIds.collectAsStateWithLifecycle()
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     var inspection by remember { mutableStateOf<ExternalInspectionUi?>(null) }
     var trustPublisher by remember { mutableStateOf(false) }
@@ -105,6 +110,8 @@ internal fun PluginsScreen(
 
     PluginsContent(
         state = state,
+        query = query,
+        togglingIds = togglingIds,
         tabIndex = tabIndex,
         pluginsRoot = resolvedPluginsRoot,
         onBack = onBack,
@@ -176,6 +183,8 @@ internal fun PluginsScreen(
 @Composable
 private fun PluginsContent(
     state: PluginsUiState,
+    query: String,
+    togglingIds: Set<String>,
     tabIndex: Int,
     pluginsRoot: File?,
     onBack: () -> Unit,
@@ -195,8 +204,8 @@ private fun PluginsContent(
     val context = LocalContext.current
     val colors = deepDeepColors()
     val tabSource = pluginTabSource(tabIndex)
-    val items = (if (tabSource == PluginSource.EXTERNAL) state.external else state.builtin).map(::PluginListItem)
-    val visible = filterPlugins(items, state.searchQuery)
+    val visible = filterPlugins(pluginItems(state.plugins, tabSource), query)
+    val interactive = pluginListInteractive(state)
 
     Column(
         modifier
@@ -244,7 +253,7 @@ private fun PluginsContent(
             testTags = listOf("plugins_tab_external", "plugins_tab_internal"),
         )
         DdSearchField(
-            query = state.searchQuery,
+            query = query,
             onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.plugins_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
@@ -300,7 +309,17 @@ private fun PluginsContent(
                 }
                 Spacer(Modifier.height(14.dp))
             }
-            if (visible.isEmpty()) {
+            if (!pluginCatalogReady(state)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp)
+                        .testTag("plugins_loading"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DdSpinner(size = 22.dp, strokeWidth = 2.dp)
+                }
+            } else if (visible.isEmpty()) {
                 Text(
                     text = stringResource(
                         if (tabSource == PluginSource.EXTERNAL) {
@@ -322,7 +341,7 @@ private fun PluginsContent(
                     snapshot = item.snapshot,
                     pluginsRoot = pluginsRoot,
                     operation = state.operation?.takeIf { it.pluginId == item.snapshot.id },
-                    interactive = state.interactive && !state.isToggling(item.snapshot.id),
+                    interactive = interactive && item.snapshot.id !in togglingIds,
                     onOpen = { onOpenPlugin(item.snapshot.id) },
                     onInstall = { onInstall(item.snapshot.id) },
                     onToggle = { enabled -> onToggle(item.snapshot.id, enabled) },

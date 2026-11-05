@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +49,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginStatusUi
+import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import java.io.File
 
 @Composable
@@ -64,7 +66,7 @@ internal fun PluginDetailScreen(
     val context = LocalContext.current
     val resolvedPluginsRoot = pluginsRoot ?: remember(context) { File(context.filesDir, "plugins") }
     val holder = remember(manager) { PluginsStateHolder(manager, scope) }
-    val state by holder.state.collectAsStateWithLifecycle()
+    val state by manager.state.collectAsStateWithLifecycle()
     var deleteOpen by remember { mutableStateOf(false) }
     val snapshot = state.snapshot(pluginId)
 
@@ -73,11 +75,15 @@ internal fun PluginDetailScreen(
         holder.load()
         onPauseOrDispose { }
     }
-    LaunchedEffect(state.loading, state.plugins.isEmpty(), snapshot) {
-        if (!state.loading && state.plugins.isNotEmpty() && snapshot == null) onBack()
+    val missing = pluginDetailMissing(state, pluginId)
+    LaunchedEffect(missing) {
+        if (missing) onBack()
     }
-
-    val current = snapshot ?: return
+    val current = snapshot
+    if (current == null) {
+        PluginDetailLoading(onBack = onBack, modifier = modifier)
+        return
+    }
     val pages = manager.pagesOf(pluginId)
     val hasDetailSlot = manager.slotEntries(SlotIds.detailSection(pluginId)).isNotEmpty()
     PluginDetailContent(
@@ -377,19 +383,15 @@ private fun PluginDetailContent(
             }
 
             Column(Modifier.padding(horizontal = 24.dp)) {
-                when {
-                    !snapshot.installable -> Unit
-
-                    !snapshot.installed -> {
+                if (snapshot.installable) {
+                    if (!snapshot.installed) {
                         DdPrimaryButton(
                             text = stringResource(R.string.plugins_action_download),
                             onClick = onInstall,
                             modifier = Modifier.fillMaxWidth().testTag("plugin_detail_download"),
                             enabled = availability is PluginAvailabilityUi.Available && !busy,
                         )
-                    }
-
-                    else -> {
+                    } else {
                         if (snapshot.updateAvailable) {
                             DdPrimaryButton(
                                 text = stringResource(R.string.plugins_action_update),
@@ -399,20 +401,28 @@ private fun PluginDetailContent(
                             )
                             Spacer(Modifier.height(12.dp))
                         }
-                        PluginGroup {
-                            DdListRow(
-                                title = stringResource(R.string.plugins_action_reinstall),
-                                onClick = { if (!busy) onUpdate() },
-                                enabled = !busy,
-                                modifier = Modifier.testTag("plugin_detail_reinstall"),
-                            )
-                            DdHairline()
-                            DdListRow(
-                                title = stringResource(R.string.plugins_action_delete),
-                                onClick = { onDeleteOpenChange(true) },
-                                enabled = !busy,
-                                modifier = Modifier.testTag("plugin_detail_delete"),
-                            )
+                        val reinstall = pluginShowsReinstall(snapshot)
+                        val delete = pluginShowsDelete(snapshot)
+                        if (reinstall || delete) {
+                            PluginGroup {
+                                if (reinstall) {
+                                    DdListRow(
+                                        title = stringResource(R.string.plugins_action_reinstall),
+                                        onClick = { if (!busy) onUpdate() },
+                                        enabled = !busy,
+                                        modifier = Modifier.testTag("plugin_detail_reinstall"),
+                                    )
+                                }
+                                if (reinstall && delete) DdHairline()
+                                if (delete) {
+                                    DdListRow(
+                                        title = stringResource(R.string.plugins_action_delete),
+                                        onClick = { onDeleteOpenChange(true) },
+                                        enabled = !busy,
+                                        modifier = Modifier.testTag("plugin_detail_delete"),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -467,5 +477,37 @@ private fun PluginDetailContent(
                 )
             },
         )
+    }
+}
+
+@Composable
+private fun PluginDetailLoading(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(colors.paper)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .testTag("plugin_detail_loading"),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIconButton(
+                icon = DdIcons.ArrowLeft,
+                onClick = onBack,
+                contentDescription = stringResource(R.string.plugins_back),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
+        }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            DdSpinner(size = 22.dp, strokeWidth = 2.dp)
+        }
     }
 }

@@ -1,15 +1,10 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
 import io.github.whywood.deepdeep.plugin.manager.ExternalInstallUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
-import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
-import io.github.whywood.deepdeep.plugin.manager.PluginOperation
-import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
-import io.github.whywood.deepdeep.plugin.manager.PluginsUiState as ManagerPluginsUiState
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,56 +13,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-internal data class PluginsUiState(
-    val loading: Boolean = false,
-    val plugins: List<PluginSnapshot> = emptyList(),
-    val busy: Boolean = false,
-    val operation: PluginOperation? = null,
-    val interaction: PluginInteraction? = null,
-    val error: String? = null,
-    val searchQuery: String = "",
-    val togglingIds: Set<String> = emptySet(),
-    val availableUpdates: List<PluginUpdateUi> = emptyList(),
-) {
-    val external: List<PluginSnapshot> get() = plugins.filter { it.source == PluginSource.EXTERNAL }
-
-    val builtin: List<PluginSnapshot> get() = plugins.filter { it.source == PluginSource.BUILTIN }
-
-    val interactive: Boolean get() = !busy && interaction == null
-
-    fun snapshot(pluginId: String): PluginSnapshot? = plugins.firstOrNull { it.id == pluginId }
-
-    fun isToggling(pluginId: String): Boolean = pluginId in togglingIds
-}
-
 internal class PluginsStateHolder(
     private val manager: PluginManagerFacade,
     private val scope: CoroutineScope,
 ) {
-    private val _state = MutableStateFlow(manager.state.value.toInitialState())
-    val state: StateFlow<PluginsUiState> = _state.asStateFlow()
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
 
-    init {
-        scope.launch {
-            manager.state.collect { managerState -> mirror(managerState) }
-        }
-    }
+    private val _togglingIds = MutableStateFlow<Set<String>>(emptySet())
+    val togglingIds: StateFlow<Set<String>> = _togglingIds.asStateFlow()
 
     fun setQuery(query: String) {
-        _state.update { it.copy(searchQuery = query) }
+        _query.value = query
     }
 
-    fun load() {
-        manager.refreshIfStale()
-    }
+    fun load() = manager.refreshIfStale()
 
-    fun refresh() {
-        manager.refresh()
-    }
-
-    fun refreshNow() {
-        scope.launch { runCatching { manager.refreshNow() } }
-    }
+    fun refresh() = manager.refresh()
 
     fun install(pluginId: String) = manager.install(pluginId)
 
@@ -77,20 +39,14 @@ internal class PluginsStateHolder(
 
     fun runAction(pluginId: String, actionId: String) = manager.runAction(pluginId, actionId)
 
-    fun connect(pluginId: String) = manager.connect(pluginId)
-
-    fun confirmInstall() = manager.confirmInstall()
-
-    fun cancelInteraction() = manager.cancelInteraction()
-
     fun setEnabled(pluginId: String, enabled: Boolean) {
-        if (pluginId in _state.value.togglingIds) return
-        _state.update { it.copy(togglingIds = it.togglingIds + pluginId) }
+        if (pluginId in _togglingIds.value) return
+        _togglingIds.update { it + pluginId }
         scope.launch {
             try {
                 manager.setEnabled(pluginId, enabled)
             } finally {
-                _state.update { it.copy(togglingIds = it.togglingIds - pluginId) }
+                _togglingIds.update { it - pluginId }
             }
         }
     }
@@ -119,28 +75,4 @@ internal class PluginsStateHolder(
             runCatching { manager.refreshNow() }
         }
     }
-
-    private fun mirror(managerState: ManagerPluginsUiState) {
-        _state.update {
-            it.copy(
-                loading = managerState.loading,
-                plugins = managerState.plugins,
-                busy = managerState.busy,
-                operation = managerState.operation,
-                interaction = managerState.interaction,
-                error = managerState.error,
-                availableUpdates = managerState.availableUpdates,
-            )
-        }
-    }
 }
-
-private fun ManagerPluginsUiState.toInitialState(): PluginsUiState = PluginsUiState(
-    loading = loading,
-    plugins = plugins,
-    busy = busy,
-    operation = operation,
-    interaction = interaction,
-    error = error,
-    availableUpdates = availableUpdates,
-)

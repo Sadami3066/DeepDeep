@@ -35,6 +35,7 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
+import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -118,6 +119,23 @@ internal fun pluginTabSource(index: Int): PluginSource =
     if (index == 0) PluginSource.EXTERNAL else PluginSource.BUILTIN
 
 internal data class PluginListItem(val snapshot: PluginSnapshot)
+
+internal fun pluginItems(plugins: List<PluginSnapshot>, source: PluginSource): List<PluginListItem> =
+    plugins.filter { it.source == source }.map(::PluginListItem)
+
+internal fun pluginListInteractive(state: PluginsUiState): Boolean = !state.busy && state.interaction == null
+
+internal fun pluginCatalogReady(state: PluginsUiState): Boolean =
+    !state.loading && (state.plugins.isNotEmpty() || state.error != null)
+
+internal fun pluginDetailMissing(state: PluginsUiState, pluginId: String): Boolean =
+    pluginCatalogReady(state) && state.snapshot(pluginId) == null
+
+internal fun pluginShowsReinstall(snapshot: PluginSnapshot): Boolean =
+    snapshot.installable && snapshot.installed
+
+internal fun pluginShowsDelete(snapshot: PluginSnapshot): Boolean =
+    snapshot.installable && snapshot.source == PluginSource.EXTERNAL
 
 internal fun pluginMatchesQuery(query: String, id: String, name: String, summary: String): Boolean {
     val normalized = query.trim()
