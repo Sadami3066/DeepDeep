@@ -54,6 +54,7 @@ object DdIcons {
     val Phone = DdIcon(R.drawable.ic_dd_phone)
     val Info = DdIcon(R.drawable.ic_dd_info)
     val External = DdIcon(R.drawable.ic_dd_external)
+    val Expand = DdIcon(R.drawable.ic_dd_expand)
     val AudioLines = DdIcon(R.drawable.ic_dd_audio_lines)
     val Sparkles = DdIcon(R.drawable.ic_dd_sparkles)
     val Check = DdIcon(R.drawable.ic_dd_check)

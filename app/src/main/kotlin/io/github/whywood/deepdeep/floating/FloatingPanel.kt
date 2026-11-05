@@ -136,7 +136,7 @@ private fun PanelHeader(onOpenApp: () -> Unit, onCollapse: () -> Unit) {
             maxLines = 1,
         )
         DdIconButton(
-            icon = DdIcons.External,
+            icon = DdIcons.Expand,
             onClick = onOpenApp,
             contentDescription = stringResource(R.string.floating_panel_open_app),
             size = 34.dp,

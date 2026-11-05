@@ -238,7 +238,7 @@ internal fun AssistantOverlayPanel(
                     tint = colors.inkTertiary,
                 )
                 DdIconButton(
-                    icon = DdIcons.External,
+                    icon = DdIcons.Expand,
                     onClick = onOpenInApp,
                     contentDescription = stringResource(R.string.assistant_overlay_fullscreen),
                     modifier = Modifier.testTag("assistant_overlay_panel_fullscreen"),
