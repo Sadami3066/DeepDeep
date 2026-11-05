@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
@@ -81,6 +82,7 @@ data class ShellDrawerState(
     val pinnedWorkspaceIds: Set<String>, val expandedWorkspaceIds: Set<String>,
     val busySessionIds: Set<String>, val reminderSessionIds: Set<String>,
     val userName: String,
+    val avatar: ImageBitmap? = null,
 )
 data class ShellDrawerActions(
     val onNavigate: (AppDestination) -> Unit, val onDismiss: () -> Unit,
@@ -204,6 +206,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 busySessionIds = state.busySessionIds,
                 reminderSessionIds = state.reminderSessionIds,
                 userName = state.userName,
+                avatar = state.avatar,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },
                 onOpenWorkshop = { actions.onNavigate(AppDestination.Workshop) },
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },

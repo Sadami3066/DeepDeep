@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -61,6 +62,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.shell.LinuxInstallState
+import io.github.whywood.deepdeep.ui.common.AvatarBadge
 
 private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
 private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
@@ -70,6 +72,7 @@ private const val LORA_URL = "https://github.com/cyrealtype/Lora-Cyrillic"
 @Composable
 fun SettingsScreen(
     nickname: String,
+    avatar: ImageBitmap? = null,
     providerName: String?,
     modelName: String?,
     configured: Boolean,
@@ -134,6 +137,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             AccountCard(
                 userName = nickname,
+                avatar = avatar,
                 activeModel = activeModel,
                 configured = configured,
                 onClick = onOpenPersonalization,
@@ -324,6 +328,7 @@ fun SettingsScreen(
 @Composable
 private fun AccountCard(
     userName: String,
+    avatar: ImageBitmap?,
     activeModel: String,
     configured: Boolean,
     onClick: () -> Unit,
@@ -346,7 +351,7 @@ private fun AccountCard(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                InitialBadge(userName, size = 44.dp)
+                AvatarBadge(avatar = avatar, name = userName, size = 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(

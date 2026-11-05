@@ -61,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -161,6 +162,7 @@ data class ChatScreenOverlay(
 fun ChatScreen(
     state: ChatUiState,
     nickname: String,
+    avatar: ImageBitmap? = null,
     providers: List<ProviderSummary>,
     attachmentRoot: File,
     actions: ChatScreenActions,
@@ -375,6 +377,7 @@ fun ChatScreen(
                 EmptyState(
                     loaded = state.historyLoaded,
                     nickname = nickname,
+                    avatar = avatar,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = with(density) { overlayHeightPx.toDp() }),
@@ -585,6 +588,7 @@ fun ChatScreen(
 private fun EmptyState(
     loaded: Boolean,
     nickname: String,
+    avatar: ImageBitmap?,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -610,13 +614,26 @@ private fun EmptyState(
                     ),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(
-                        painter = painterResource(R.drawable.mascot_welcome),
-                        contentDescription = null,
-                        modifier = Modifier.size(148.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Spacer(Modifier.height(4.dp))
+                    if (avatar != null) {
+                        Image(
+                            bitmap = avatar,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(104.dp)
+                                .clip(CircleShape)
+                                .testTag("home_avatar"),
+                            contentScale = ContentScale.Crop,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.mascot_welcome),
+                            contentDescription = null,
+                            modifier = Modifier.size(148.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Text(
                         text = greeting(nickname),
                         modifier = Modifier.testTag("home_greeting"),

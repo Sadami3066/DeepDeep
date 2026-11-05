@@ -1,7 +1,13 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,26 +17,44 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.PersonalizationUi
+import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.TonePreset
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdGroupCard
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSegmentedControl
@@ -39,6 +63,9 @@ import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.InteractionStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 
 @Composable
@@ -49,6 +76,36 @@ fun PersonalizationScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val avatarStore = remember(context) { ProfileAvatarStore(context) }
+    var avatarStamp by remember { mutableLongStateOf(avatarStore.current()?.lastModified() ?: 0L) }
+    val avatarFile = remember(avatarStamp) { avatarStore.current() }
+    val avatarBitmap by produceState<ImageBitmap?>(initialValue = null, avatarStamp) {
+        this.value = withContext(Dispatchers.IO) { avatarStore.load()?.asImageBitmap() }
+    }
+    val avatarFailedText = stringResource(R.string.personalization_avatar_failed)
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val saved = withContext(Dispatchers.IO) { avatarStore.save(uri) }
+            if (saved) {
+                avatarStamp = avatarStore.current()?.lastModified() ?: 0L
+            } else {
+                Toast.makeText(context, avatarFailedText, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    fun removeAvatar() {
+        scope.launch {
+            val cleared = withContext(Dispatchers.IO) { avatarStore.clear() }
+            if (cleared) {
+                avatarStamp = avatarStore.current()?.lastModified() ?: 0L
+            } else {
+                Toast.makeText(context, avatarFailedText, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     var initialized by rememberSaveable { mutableStateOf(false) }
     var edited by rememberSaveable { mutableStateOf(false) }
     var nickname by rememberSaveable { mutableStateOf(value.nickname) }
@@ -128,6 +185,69 @@ fun PersonalizationScreen(
             )
             Spacer(Modifier.height(20.dp))
 
+            DdGroupCard {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.size(56.dp).clip(CircleShape).background(colors.wash),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val bitmap = avatarBitmap
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            DdIcon(icon = DdIcons.Image, tint = colors.inkTertiary, size = 22.dp)
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.personalization_avatar_title),
+                            style = DdType.body,
+                            color = colors.ink,
+                        )
+                        if (avatarFile == null) {
+                            Text(
+                                text = stringResource(R.string.personalization_avatar_empty),
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
+                    }
+                    DdTextAction(
+                        text = stringResource(
+                            if (avatarFile == null) {
+                                R.string.personalization_avatar_pick
+                            } else {
+                                R.string.personalization_avatar_change
+                            },
+                        ),
+                        onClick = {
+                            avatarPicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            )
+                        },
+                        modifier = Modifier.testTag("personalization_avatar_pick"),
+                    )
+                }
+                if (avatarFile != null) {
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.personalization_avatar_remove),
+                        onClick = { removeAvatar() },
+                        modifier = Modifier.testTag("personalization_avatar_remove"),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
             DdSectionLabel(
                 stringResource(R.string.personalization_nickname_title),
                 Modifier.padding(start = 4.dp),

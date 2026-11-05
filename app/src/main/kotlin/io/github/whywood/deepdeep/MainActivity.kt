@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.OnboardingPreferences
 import io.github.whywood.deepdeep.data.MAX_SHARE_STREAMS
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.parseSharePayload
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity() {
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT < 33) return
+        if (!OnboardingPreferences(this).isCompleted()) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         ) {

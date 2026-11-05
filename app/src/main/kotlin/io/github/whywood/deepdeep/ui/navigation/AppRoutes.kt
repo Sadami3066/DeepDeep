@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -88,7 +89,7 @@ internal fun AppRouteContent(
     dependencies: AppDependencies, scope: CoroutineScope,
     theme: ThemeMode, onThemeChange: (ThemeMode) -> Unit,
     fontStyle: DdFontStyle, onFontStyleChange: (DdFontStyle) -> Unit,
-    nickname: String, providerName: String?, modelLabel: String?,
+    nickname: String, avatar: ImageBitmap?, providerName: String?, modelLabel: String?,
     modelConfig: ModelConfig, configuredProviderIds: Set<String>,
     linuxState: LinuxInstallState, linuxEnabled: Boolean, sharedStorageEnabled: Boolean,
     devPackages: DevPackagesState, personalization: PersonalizationUi, uiPreferences: UiPreferences,
@@ -114,6 +115,7 @@ internal fun AppRouteContent(
 
         AppDestination.Settings -> SettingsScreen(
             nickname = nickname,
+            avatar = avatar,
             providerName = providerName,
             modelName = modelLabel,
             configured = modelConfig.providerId in configuredProviderIds,

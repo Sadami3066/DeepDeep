@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,6 +66,7 @@ import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.AvatarBadge
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
 import io.github.whywood.deepdeep.ui.sessions.DeleteSessionDialog
@@ -144,6 +146,7 @@ fun DeepDeepDrawer(
     busySessionIds: Set<String>,
     reminderSessionIds: Set<String>,
     userName: String,
+    avatar: ImageBitmap?,
     onOpenSearch: () -> Unit,
     onOpenWorkshop: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -358,7 +361,7 @@ fun DeepDeepDrawer(
         }
         DdHairline(color = colors.hairline.copy(alpha = 0.45f))
         Spacer(Modifier.height(12.dp))
-        DrawerAccountRow(userName = userName, onClick = onSettings)
+        DrawerAccountRow(userName = userName, avatar = avatar, onClick = onSettings)
         Spacer(Modifier.height(12.dp))
     }
     renameTarget?.let { session ->
@@ -757,6 +760,7 @@ private fun DrawerSessionRow(
 @Composable
 private fun DrawerAccountRow(
     userName: String,
+    avatar: ImageBitmap?,
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -770,19 +774,7 @@ private fun DrawerAccountRow(
             .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(colors.accentSoft),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = userName.take(1).uppercase().ifBlank { "D" },
-                style = DdType.label,
-                color = colors.accent,
-            )
-        }
+        AvatarBadge(avatar = avatar, name = userName, size = 36.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(

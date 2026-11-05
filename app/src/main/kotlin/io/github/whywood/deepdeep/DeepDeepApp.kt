@@ -10,12 +10,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
 import androidx.compose.ui.platform.LocalResources
@@ -26,7 +29,9 @@ import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.data.OnboardingPreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
+import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
@@ -68,6 +73,10 @@ import io.github.whywood.deepdeep.ui.shell.ShellOverlay
 import io.github.whywood.deepdeep.ui.shell.ShellOverlayActions
 import io.github.whywood.deepdeep.ui.shell.ShellOverlayState
 import io.github.whywood.deepdeep.ui.shell.rememberFrozenChatState
+import io.github.whywood.deepdeep.ui.onboarding.OnboardingGate
+import io.github.whywood.deepdeep.ui.onboarding.OnboardingScreen
+import io.github.whywood.deepdeep.ui.onboarding.OnboardingSplash
+import io.github.whywood.deepdeep.ui.onboarding.resolveOnboardingGate
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -121,6 +130,54 @@ internal fun DeepDeepApp(
     var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
+    val onboardingStore = remember(context) { OnboardingPreferences(context) }
+    val avatarStore = remember(context) { ProfileAvatarStore(context) }
+    var onboardingDecision by rememberSaveable {
+        mutableIntStateOf(
+            when {
+                onboardingStore.isCompleted() -> ONBOARDING_DECISION_CHAT
+                onboardingStore.isStarted() -> ONBOARDING_DECISION_ONBOARDING
+                else -> ONBOARDING_DECISION_UNDECIDED
+            },
+        )
+    }
+    LaunchedEffect(onboardingDecision, state.ready, state.conversations, authKinds) {
+        if (onboardingDecision != ONBOARDING_DECISION_UNDECIDED) return@LaunchedEffect
+        when (
+            resolveOnboardingGate(
+                completed = onboardingStore.isCompleted(),
+                started = onboardingStore.isStarted(),
+                runtimeReady = state.ready,
+                hasCredentials = authKinds.isNotEmpty(),
+                hasSessions = state.conversations.isNotEmpty(),
+            )
+        ) {
+            OnboardingGate.WAIT -> Unit
+            OnboardingGate.SHOW -> {
+                onboardingStore.markStarted()
+                onboardingDecision = ONBOARDING_DECISION_ONBOARDING
+            }
+            OnboardingGate.SKIP -> {
+                onboardingStore.markCompleted()
+                onboardingDecision = ONBOARDING_DECISION_CHAT
+            }
+        }
+    }
+    if (onboardingDecision != ONBOARDING_DECISION_CHAT) {
+        if (onboardingDecision == ONBOARDING_DECISION_ONBOARDING) {
+            OnboardingScreen(
+                graph = graph,
+                onFinished = { onboardingDecision = ONBOARDING_DECISION_CHAT },
+            )
+        } else {
+            OnboardingSplash()
+        }
+        return
+    }
+    val avatarRevision by ProfileAvatarStore.revision.collectAsStateWithLifecycle(initialValue = 0L)
+    val avatarBitmap by produceState<ImageBitmap?>(initialValue = null, avatarRevision) {
+        value = withContext(Dispatchers.IO) { avatarStore.load()?.asImageBitmap() }
+    }
     val configuredProviders = authKinds.keys
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }
@@ -388,6 +445,7 @@ internal fun DeepDeepApp(
                                             frozenState.copy(configured = frozenState.providerId in configuredProviders)
                                         },
                     nickname = nickname,
+                    avatar = avatarBitmap,
                     providers = configuredProviderList,
                     attachmentRoot = attachmentRoot,
                     actions = ChatScreenActions(
@@ -508,7 +566,7 @@ internal fun DeepDeepApp(
             AppRouteContent(
                 destination, navigator, ::back, ::openChat, ::openWorkshopCreate,
                 state, chatViewModel, graph, scope, theme, onThemeChange, fontStyle,
-                onFontStyleChange, nickname, defaultProvider?.name, defaultModelLabel,
+                onFontStyleChange, nickname, avatarBitmap, defaultProvider?.name, defaultModelLabel,
                 defaultModelConfig, configuredProviders, linuxState, linuxEnabled,
                 sharedStorageEnabled, devPackages, personalization, uiPreferences,
                 voiceAutoSpeak, authKinds, credentialRevision,
@@ -588,6 +646,7 @@ internal fun DeepDeepApp(
                 state.busySessionIds,
                 timers.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
                 nickname,
+                avatarBitmap,
             ),
             drawerActions = ShellDrawerActions(
                 onNavigate = { destination -> drawerOpen = false; navigator.push(destination) },
@@ -649,3 +708,7 @@ internal fun DeepDeepApp(
 }
 
 private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
+
+private const val ONBOARDING_DECISION_UNDECIDED = 0
+private const val ONBOARDING_DECISION_CHAT = 1
+private const val ONBOARDING_DECISION_ONBOARDING = 2

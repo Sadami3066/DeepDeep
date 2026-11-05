@@ -1,0 +1,79 @@
+<resources>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_progress_description">Step %1$d of %2$d</string>
+    <string name="onboarding_primary_start">Start</string>
+    <string name="onboarding_primary_continue">Continue</string>
+    <string name="onboarding_primary_done">Done</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_later">Later</string>
+
+    <string name="onboarding_welcome_tagline">Your personal agent</string>
+
+    <string name="onboarding_account_title">Say hello</string>
+    <string name="onboarding_account_subtitle">You can change these later in Settings.</string>
+    <string name="onboarding_avatar_pick">Choose avatar</string>
+    <string name="onboarding_avatar_failed">Couldn\'t save the avatar</string>
+    <string name="onboarding_nickname_label">Name</string>
+    <string name="onboarding_nickname_hint">What should I call you?</string>
+    <string name="onboarding_tone_label">Tone</string>
+    <string name="onboarding_tone_warm">Warm</string>
+    <string name="onboarding_tone_cute">Playful</string>
+    <string name="onboarding_tone_calm">Calm</string>
+    <string name="onboarding_language_label">Language</string>
+    <string name="onboarding_language_system">System</string>
+    <string name="onboarding_language_chinese">简体中文</string>
+    <string name="onboarding_language_english">English</string>
+
+    <string name="onboarding_provider_title">Connect a model</string>
+    <string name="onboarding_provider_subtitle">DeepSeek is recommended, or pick another provider.</string>
+    <string name="onboarding_provider_recommended">Recommended</string>
+    <string name="onboarding_provider_api_key_label">API key</string>
+    <string name="onboarding_provider_api_key_hint">Paste your API key</string>
+    <string name="onboarding_provider_key_saving">Saving…</string>
+    <string name="onboarding_provider_key_saved">Saved</string>
+    <string name="onboarding_provider_key_failed">Couldn\'t save. Try again.</string>
+    <string name="onboarding_provider_other">Other providers</string>
+    <string name="onboarding_provider_other_count">Other providers: %1$d</string>
+    <string name="onboarding_provider_models">Models: %1$d</string>
+    <string name="onboarding_provider_search">Search providers</string>
+    <string name="onboarding_search_clear">Clear</string>
+    <string name="onboarding_provider_no_result">No matching providers</string>
+    <string name="onboarding_provider_sheet_title">Choose a provider</string>
+    <string name="onboarding_provider_api_key_unsupported">This provider doesn\'t take an API key. Connect it later in Settings → Providers.</string>
+
+    <string name="onboarding_permissions_title">Notifications &amp; permissions</string>
+    <string name="onboarding_permissions_subtitle">Turn on what you need now, or set it up later in Settings.</string>
+    <string name="onboarding_permission_notification">Notifications</string>
+    <string name="onboarding_permission_overlay">Floating window</string>
+    <string name="onboarding_permission_assistant">System assistant</string>
+    <string name="onboarding_permission_granted">On</string>
+    <string name="onboarding_permission_missing">Off</string>
+
+    <string name="onboarding_linux_title">Linux environment</string>
+    <string name="onboarding_linux_subtitle">Provides bash, common commands and dev tools. About 4 MB.</string>
+    <string name="onboarding_linux_status">Status</string>
+    <string name="onboarding_linux_not_installed">Not installed</string>
+    <string name="onboarding_linux_installing">Installing…</string>
+    <string name="onboarding_linux_installed">Installed</string>
+    <string name="onboarding_linux_failed">Install failed. You can retry later.</string>
+    <string name="onboarding_linux_used">Uses %1$s</string>
+    <string name="onboarding_linux_size_hint">About 4 MB</string>
+    <string name="onboarding_linux_install">Install on device</string>
+    <string name="onboarding_linux_unsupported">This device doesn\'t support the Linux environment. You can skip this step.</string>
+
+    <string name="onboarding_privilege_title">Choose a privilege level</string>
+    <string name="onboarding_privilege_subtitle">You can change this anytime in Settings → Permissions.</string>
+    <string name="onboarding_privilege_normal">Standard</string>
+    <string name="onboarding_privilege_normal_body">No authorization needed. Uses bash and common tools inside Linux.</string>
+    <string name="onboarding_privilege_adb">Wireless debugging ADB</string>
+    <string name="onboarding_privilege_adb_body">Requires pairing; continue later in Settings → Permissions.</string>
+    <string name="onboarding_privilege_root">Root</string>
+    <string name="onboarding_privilege_root_body">Requires system authorization; continue later in Settings → Permissions.</string>
+
+    <string name="personalization_avatar_title">Avatar</string>
+    <string name="personalization_avatar_empty">Not set</string>
+    <string name="personalization_avatar_change">Change</string>
+    <string name="personalization_avatar_remove">Remove avatar</string>
+    <string name="personalization_avatar_pick">Choose avatar</string>
+    <string name="personalization_avatar_failed">Couldn\'t save the avatar</string>
+</resources>
