@@ -11,6 +11,7 @@ import dev.pi.ai.ToolResultMessage
 import dev.pi.ai.UserMessage
 import dev.pi.coding.session.BranchSummaryEntry
 import dev.pi.coding.session.CompactionEntry
+import dev.pi.coding.session.CustomMessageEntry
 import dev.pi.coding.session.SessionEntry
 import dev.pi.coding.session.SessionMessageEntry
 import kotlinx.serialization.json.JsonObject
@@ -36,6 +37,23 @@ object HistoryMapper {
 
         for (entry in entries) {
             when (entry) {
+                is CustomMessageEntry -> {
+                    if (!entry.display) continue
+                    flush()
+                    val text = when (val content = entry.content) {
+                        is PlainTextContent -> content.text
+                        is BlockContent -> content.asText()
+                    }
+                    result += AssistantMessage(
+                        id = messageId++,
+                        role = AssistantRole.ASSISTANT,
+                        text = text,
+                        status = MessageStatus.DONE,
+                        customType = entry.customType,
+                        customPayload = entry.details?.toString(),
+                    )
+                }
+
                 is SessionMessageEntry -> when (val message = entry.message) {
                     is UserMessage -> {
                         flush()

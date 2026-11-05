@@ -117,6 +117,12 @@ class FakeSessionHandle(
 
     override fun sessionName(): String? = sessionNameValue
 
+    val customMessages = CopyOnWriteArrayList<CustomMessageRecord>()
+
+    override suspend fun appendCustomMessage(customType: String, payloadJson: String, text: String, display: Boolean) {
+        customMessages += CustomMessageRecord(customType, payloadJson, text, display)
+    }
+
     override suspend fun appendTitle(title: String) {
         sessionNameValue = title
     }
@@ -129,3 +135,10 @@ class FakeSessionHandle(
 
     override fun deferredMcpToolCount(): Int = 0
 }
+
+data class CustomMessageRecord(
+    val customType: String,
+    val payloadJson: String,
+    val text: String,
+    val display: Boolean,
+)

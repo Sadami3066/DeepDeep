@@ -106,4 +106,10 @@
     <string name="plugins_page_unavailable">该插件没有提供这个页面的内容</string>
     <string name="plugins_updates_install">安装更新</string>
     <string name="plugins_updates_available">发现 %1$d 个插件更新</string>
+    <string name="plugins_source_row">插件源</string>
+    <string name="plugins_source_title">插件源</string>
+    <string name="plugins_source_hint">统一索引 URL：插件更新从这里检查；发布者信任仍在首次安装时确认。</string>
+    <string name="plugins_source_url">https://example.com/plugins/index.json</string>
+    <string name="plugins_source_auto_check">启动时自动检查更新</string>
+    <string name="plugins_source_save">保存</string>
 </resources>

@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.host
 
 import android.content.Context
 import io.github.whywood.deepdeep.plugin.api.AppInfoService
+import io.github.whywood.deepdeep.plugin.api.ChatService
 import io.github.whywood.deepdeep.plugin.api.FileService
 import io.github.whywood.deepdeep.plugin.api.GoalService
 import io.github.whywood.deepdeep.plugin.api.JobService
@@ -44,6 +45,7 @@ internal data class PluginServices(
     val app: AppInfoService? = null,
     val bus: PluginBus? = null,
     val logs: LogService? = null,
+    val chat: ChatService? = null,
 ) {
     companion object {
         val None: PluginServices = PluginServices()
@@ -101,6 +103,8 @@ internal class PluginHostImpl(
     override fun bus(): PluginBus = service("bus", services.bus)
 
     override fun logs(): LogService = service("logs", services.logs)
+
+    override fun chat(): ChatService = service("chat", services.chat)
 
     private fun <T : Any> service(name: String, value: T?): T = value ?: throw PluginServiceUnavailable(name)
 }

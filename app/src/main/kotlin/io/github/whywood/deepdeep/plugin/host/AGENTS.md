@@ -17,7 +17,7 @@
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、声明式渲染器、Compose 槽宿主、崩溃标记 |
-| `services/` | 17 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/特权/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/工坊/MCP/UI/AppInfo/总线/日志） |
+| `services/` | 18 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/特权/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/工坊/MCP/UI/AppInfo/总线/日志/聊天） |
 | `PluginScope.kt` | 插件级 `CoroutineScope`（SupervisorJob）+ 关停订阅袋，`close()` 幂等、按注册逆序执行并取消协程 |
 | `PluginFailureGuard.kt` | 槽渲染崩溃标记：`mark/clear/detect/detectAll`，JSON 存 key/detail/markedAt，key 转安全文件名 |
 

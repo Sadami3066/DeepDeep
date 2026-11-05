@@ -12,6 +12,8 @@ import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.SlotBinding
+import io.github.whywood.deepdeep.plugin.api.SlotIds
+import kotlinx.serialization.json.buildJsonObject
 import io.github.whywood.deepdeep.plugin.api.SlotContent
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -44,6 +46,32 @@ class SamplePlugin : DeepDeepPlugin {
                 val text = call.args["text"]?.jsonPrimitive?.contentOrNull.orEmpty()
                 PluginToolResult.Text("echo: $text")
             },
+            PluginTool(
+                name = "sample_card",
+                label = "Sample Card",
+                description = "Post a sample plugin card into the current chat.",
+                parameters = buildJsonObject {
+                    put("title", buildJsonObject { put("type", "string") })
+                    put("body", buildJsonObject { put("type", "string") })
+                },
+                promptSnippet = "sample_card posts a card into the chat",
+            ) { call ->
+                val payload = buildJsonObject {
+                    put("title", call.args["title"]?.jsonPrimitive?.contentOrNull.orEmpty())
+                    put("body", call.args["body"]?.jsonPrimitive?.contentOrNull.orEmpty())
+                }
+                val posted = host.chat().postCustomMessage(
+                    sessionId = call.sessionId,
+                    customType = "sample.card",
+                    payload = payload,
+                    text = payload.toString(),
+                )
+                if (posted) {
+                    PluginToolResult.Text("card posted")
+                } else {
+                    PluginToolResult.Text("no active session to post the card", isError = true)
+                }
+            },
         ),
     )
 
@@ -53,6 +81,12 @@ class SamplePlugin : DeepDeepPlugin {
                 slotId = "setup.content",
                 content = SlotContent.Compose(uiApiLevel = 1) {
                     Text("sample-compose-slot")
+                },
+            ),
+            SlotBinding(
+                slotId = SlotIds.chatMessage("sample.card"),
+                content = SlotContent.Compose(uiApiLevel = 1) {
+                    Text("sample plugin card")
                 },
             ),
         )

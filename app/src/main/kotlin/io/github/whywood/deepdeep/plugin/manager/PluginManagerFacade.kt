@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
+import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
 import io.github.whywood.deepdeep.runtime.PluginController
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
 import io.github.whywood.deepdeep.runtime.SessionBinding
@@ -61,6 +62,12 @@ interface PluginManagerFacade : PluginController {
     suspend fun checkExternalUpdates(): List<PluginUpdateUi>
 
     suspend fun stageExternalUpdate(pluginId: String): String?
+
+    suspend fun pluginSourceSettings(): PluginSourceSettings
+
+    suspend fun savePluginSourceSettings(settings: PluginSourceSettings)
+
+    suspend fun refreshAvailableUpdates(): List<PluginUpdateUi>
 
     fun slotEntries(slotId: String): List<SlotRenderEntry>
 

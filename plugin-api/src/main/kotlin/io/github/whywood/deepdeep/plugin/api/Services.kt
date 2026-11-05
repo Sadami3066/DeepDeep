@@ -243,3 +243,13 @@ interface PluginBus {
 
     fun subscribe(topic: String? = null): Flow<PluginBusEvent>
 }
+
+interface ChatService {
+    suspend fun postCustomMessage(
+        sessionId: String,
+        customType: String,
+        payload: JsonObject,
+        text: String = "",
+        display: Boolean = true,
+    ): Boolean
+}

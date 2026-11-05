@@ -83,6 +83,69 @@ class McpServerProbe(
     }
 }
 
+class McpPluginBridge(
+    private val transport: HttpTransport,
+    private val tokenStore: McpTokenStore,
+) {
+    suspend fun listTools(
+        name: String,
+        config: McpServerConfig,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    ): List<dev.pi.mcp.protocol.McpTool> = withContext(Dispatchers.IO) {
+        if (config !is McpServerConfig.Http) return@withContext emptyList()
+        withClient(name, config, timeoutMs) { client ->
+            client.listTools(McpRequestOptions(timeoutMs = timeoutMs))
+        }
+    }
+
+    suspend fun callTool(
+        name: String,
+        config: McpServerConfig,
+        tool: String,
+        arguments: kotlinx.serialization.json.JsonObject,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    ): dev.pi.mcp.protocol.McpCallResult = withContext(Dispatchers.IO) {
+        if (config !is McpServerConfig.Http) {
+            return@withContext dev.pi.mcp.protocol.McpCallResult(emptyList())
+        }
+        withClient(name, config, timeoutMs) { client ->
+            client.callTool(tool, arguments, McpRequestOptions(timeoutMs = timeoutMs))
+        }
+    }
+
+    private suspend fun <T> withClient(
+        name: String,
+        config: McpServerConfig.Http,
+        timeoutMs: Long,
+        block: suspend (McpClient) -> T,
+    ): T {
+        val httpTransport = StreamableHttpTransport(
+            http = transport,
+            options = StreamableHttpTransportOptions(
+                url = config.url,
+                headers = config.headers,
+                authProvider = config.httpAuthProvider(name, transport, tokenStore),
+                requestTimeoutMs = timeoutMs,
+            ),
+        )
+        val client = McpClient(
+            serverName = name,
+            transport = httpTransport,
+            options = McpClientOptions(requestTimeoutMs = timeoutMs),
+        )
+        return try {
+            client.initialize()
+            block(client)
+        } finally {
+            runCatching { client.close() }
+        }
+    }
+
+    private companion object {
+        const val DEFAULT_TIMEOUT_MS = 15_000L
+    }
+}
+
 class McpOAuthService(
     private val transport: HttpTransport,
     private val tokenStore: McpTokenStore,

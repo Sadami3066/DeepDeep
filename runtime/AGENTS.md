@@ -8,11 +8,11 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 
 | 文件 | 职责 |
 |---|---|
-| `AgentRuntimeHost.kt` | 会话总管：句柄池、事件流、忙闲与工作区 |
+| `AgentRuntimeHost.kt` | 会话总管：句柄池、事件流、SDK 事件流、忙闲与工作区、插件自定义消息投递 |
 | `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP 与系统提示词 |
 | `PluginRuntimeHooks.kt` | 插件钩子桥：工具执行前后决策、提示词变换与输入处理，经引擎装配 |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
-| `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量 |
+| `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量、插件自定义消息追加 |
 | `SessionBinding.kt` | 会话身份（id、文件、cwd）的绑定容器 |
 | `SessionCommandPlane.kt` | 会话运行状态机：忙闲、runId、停止、重配 |
 | `SessionIndex.kt` | 扫 JSONL 建索引，按大小与时间戳增量缓存 |
@@ -61,7 +61,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `DeepDeepOAuthCallbackServerFactory.kt` | 本地 HTTP 回调服务器，收 OAuth code |
 | `McpConfigStore.kt` | mcp.json 的读写、增删改、启停与导入 |
 | `McpJson.kt` | 宽松解析粘贴的 MCP JSON，格式化单条 |
-| `McpServices.kt` | MCP 服务器探测、OAuth 登录与鉴权 |
+| `McpServices.kt` | MCP 服务器探测、OAuth 登录与鉴权；`McpPluginBridge` 供插件 tools/call |
 
 ### 定时、目标与后台任务
 

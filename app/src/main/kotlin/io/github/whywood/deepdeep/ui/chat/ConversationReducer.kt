@@ -128,6 +128,24 @@ internal fun reduce(
         now = now,
     )
 
+    is RuntimeEvent.PluginCustomMessage -> {
+        if (!event.display) {
+            state
+        } else {
+            val nextId = (state.messages.maxOfOrNull { it.id } ?: 0L) + 1
+            state.copy(
+                messages = state.messages + AssistantMessage(
+                    id = nextId,
+                    role = AssistantRole.ASSISTANT,
+                    text = event.text,
+                    status = MessageStatus.DONE,
+                    customType = event.customType,
+                    customPayload = event.payload,
+                ),
+            )
+        }
+    }
+
     is RuntimeEvent.TurnInjected -> state.injectTurn(event, now)
 
     is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, now)

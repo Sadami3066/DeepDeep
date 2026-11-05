@@ -18,10 +18,12 @@
   "requires": [],
   "provides": {
     "tools": [
-      "sample_echo"
+      "sample_echo",
+      "sample_card"
     ],
     "uiSlots": [
-      "setup.content"
+      "setup.content",
+      "chat.message:sample.card"
     ]
   },
   "installable": true

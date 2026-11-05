@@ -181,6 +181,8 @@ data class AssistantMessage(
     val retrying: Boolean = false,
     val notice: TurnNotice? = null,
     val summary: MessageSummary? = null,
+    val customType: String? = null,
+    val customPayload: String? = null,
 )
 
 enum class RunStatus {
@@ -274,6 +276,14 @@ sealed interface RuntimeEvent {
     data class QueuedInputsDropped(
         val texts: List<String>,
         override val runId: String = "",
+    ) : RuntimeEvent
+
+    data class PluginCustomMessage(
+        override val runId: String = "",
+        val customType: String,
+        val payload: String,
+        val text: String,
+        val display: Boolean = true,
     ) : RuntimeEvent
 
     data class SessionRemoved(

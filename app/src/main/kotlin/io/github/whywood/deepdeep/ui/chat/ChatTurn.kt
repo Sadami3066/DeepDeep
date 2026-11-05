@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
 import java.io.File
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
@@ -53,6 +56,7 @@ import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.ui.plugins.PluginCustomMessageSlot
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
 import io.github.whywood.deepdeep.ui.workshop.parseRegisteredWorkshop
@@ -95,6 +99,29 @@ internal fun ChatTurn(
     val summary = message.summary
     if (summary != null) {
         MessageSummaryCard(message.id, summary)
+        return
+    }
+    val customType = message.customType
+    if (customType != null) {
+        val payload = remember(message.customPayload) {
+            message.customPayload
+                ?.let { raw -> runCatching { Json.parseToJsonElement(raw).jsonObject }.getOrNull() }
+                ?: JsonObject(emptyMap())
+        }
+        PluginCustomMessageSlot(
+            messageId = message.id.toString(),
+            customType = customType,
+            payload = payload,
+            fallback = {
+                if (message.text.isNotBlank()) {
+                    Text(
+                        text = message.text,
+                        style = DdType.body,
+                        color = deepDeepColors().ink,
+                    )
+                }
+            },
+        )
         return
     }
     if (message.role == AssistantRole.USER) {

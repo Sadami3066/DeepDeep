@@ -98,6 +98,12 @@ class AgentRuntimeHost internal constructor(
     )
     override val events: SharedFlow<SessionRuntimeEvent> = eventsBuffer.asSharedFlow()
 
+    private val sdkEventsBuffer = MutableSharedFlow<SessionSdkEvent>(
+        extraBufferCapacity = 256,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val sdkEvents: SharedFlow<SessionSdkEvent> = sdkEventsBuffer.asSharedFlow()
+
     private val busyState = MutableStateFlow<Set<String>>(emptySet())
     override val busySessionIds: StateFlow<Set<String>> = busyState.asStateFlow()
 
@@ -980,7 +986,32 @@ class AgentRuntimeHost internal constructor(
         emitUsage(handle, runId)
     }
 
+    suspend fun postPluginMessage(
+        sessionId: String,
+        customType: String,
+        payloadJson: String,
+        text: String,
+        display: Boolean = true,
+    ): Boolean {
+        val handle = mutex.withLock { handles[sessionId] } ?: return false
+        return runCatching {
+            handle.session.appendCustomMessage(customType, payloadJson, text, display)
+            emit(
+                handle,
+                RuntimeEvent.PluginCustomMessage(
+                    runId = handle.state.runId.orEmpty(),
+                    customType = customType,
+                    payload = payloadJson,
+                    text = text,
+                    display = display,
+                ),
+            )
+            true
+        }.getOrDefault(false)
+    }
+
     private suspend fun onSessionEvent(handle: Handle, event: SessionEvent) {
+        sdkEventsBuffer.tryEmit(SessionSdkEvent(handle.session.sessionId, event))
         val runId = handle.state.runId.orEmpty()
         val active = runId.isNotEmpty()
         when (event) {
@@ -1152,3 +1183,8 @@ private fun InputQueueKind.behavior(): QueueBehavior = when (this) {
     InputQueueKind.STEER -> QueueBehavior.Steer
     InputQueueKind.FOLLOW_UP -> QueueBehavior.FollowUp
 }
+
+data class SessionSdkEvent(
+    val sessionId: String,
+    val event: dev.pi.coding.session.SessionEvent,
+)

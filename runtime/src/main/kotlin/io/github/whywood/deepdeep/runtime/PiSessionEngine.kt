@@ -303,6 +303,11 @@ internal class PiSessionHandle(
         session.sessionManager.appendSessionInfo(title)
     }
 
+    override suspend fun appendCustomMessage(customType: String, payloadJson: String, text: String, display: Boolean) {
+        val details = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(payloadJson) }.getOrNull()
+        session.appendCustomMessage(customType, dev.pi.ai.PlainTextContent(text), display, details)
+    }
+
     override suspend fun reloadMcp(servers: Map<String, McpServerConfig>) {
         session.mcp.reload(servers)
     }

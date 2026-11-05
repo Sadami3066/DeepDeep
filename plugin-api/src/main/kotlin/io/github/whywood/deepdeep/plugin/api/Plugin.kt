@@ -92,6 +92,8 @@ interface PluginHost {
     fun bus(): PluginBus
 
     fun logs(): LogService
+
+    fun chat(): ChatService = throw PluginServiceUnavailable("chat")
 }
 
 data class PluginSessionInfo(

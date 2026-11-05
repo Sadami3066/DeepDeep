@@ -200,7 +200,7 @@ class PluginHostManager internal constructor(
                     managed.error = error.message
                     Contributions()
                 }
-            PluginToolAdapter.toCodingTools(contributions.tools)
+            PluginToolAdapter.toCodingTools(contributions.tools, session.sessionId)
         }.distinctBy { it.name }
     }
 
@@ -489,6 +489,16 @@ class PluginHostManager internal constructor(
         return updates
     }
 
+    override suspend fun pluginSourceSettings(): io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings =
+        externalUpdates?.loadSettings() ?: io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings()
+
+    override suspend fun savePluginSourceSettings(settings: io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings) {
+        externalUpdates?.saveSettings(settings)
+        scheduleUpdateCheck()
+    }
+
+    override suspend fun refreshAvailableUpdates(): List<PluginUpdateUi> = checkExternalUpdates()
+
     override suspend fun stageExternalUpdate(pluginId: String): String? {
         val support = externalUpdates ?: return "plugin updates are unavailable"
         return when (val result = support.stageUpdate(pluginId)) {
@@ -519,7 +529,16 @@ class PluginHostManager internal constructor(
 
     internal fun onRuntimeEvent(event: SessionRuntimeEvent) {
         val adapter = synchronized(sessionHooks) { sessionHooks[event.sessionId] } ?: return
-        scope.launch { runCatching { RuntimeEventMapper(adapter).dispatch(event.sessionId, event) } }
+        scope.launch {
+            runCatching {
+                RuntimeEventMapper(adapter, includeRuntimeFallbacks = false).dispatch(event.sessionId, event)
+            }
+        }
+    }
+
+    internal fun onSessionSdkEvent(sessionId: String, event: dev.pi.coding.session.SessionEvent) {
+        val adapter = synchronized(sessionHooks) { sessionHooks[sessionId] } ?: return
+        scope.launch { runCatching { RuntimeEventMapper(adapter).dispatchSessionEvent(sessionId, event) } }
     }
 
     override fun slotEntries(slotId: String): List<io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry> =

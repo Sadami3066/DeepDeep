@@ -70,6 +70,7 @@ data class PluginServiceDependencies(
     val share: ((ShareRequest) -> Unit)? = null,
     val toast: ((String) -> Unit)? = null,
     val openPage: ((String) -> Unit)? = null,
+    val chatSink: (suspend (sessionId: String, customType: String, payload: JsonObject, text: String, display: Boolean) -> Boolean)? = null,
     val notificationsEnabled: () -> Boolean = {
         io.github.whywood.deepdeep.service.NotificationCenter.areNotificationsEnabled(context)
     },
@@ -169,5 +170,6 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         ),
         bus = deps.bus?.let { ScopedPluginBus(it, deps.pluginId) },
         logs = LogPluginService(deps.pluginId, deps.logSink),
+        chat = deps.chatSink?.let { ChatPluginService(it) },
     )
 }

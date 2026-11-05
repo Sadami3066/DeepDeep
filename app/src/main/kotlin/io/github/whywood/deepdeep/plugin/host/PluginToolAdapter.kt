@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
 internal object PluginToolAdapter {
-    fun toCodingTool(tool: PluginTool): CodingTool = CodingTool(
+    fun toCodingTool(tool: PluginTool, sessionId: String = ""): CodingTool = CodingTool(
         name = tool.name,
         description = tool.description,
         parameters = tool.parameters,
@@ -29,11 +29,11 @@ internal object PluginToolAdapter {
         promptSnippet = tool.promptSnippet,
         promptGuidelines = tool.promptGuidelines.takeIf { it.isNotEmpty() },
         execute = { callId, args, signal, onUpdate ->
-            execute(tool, callId, args, signal, onUpdate)
+            execute(tool, callId, args, signal, onUpdate, sessionId)
         },
     )
 
-    fun toCodingTools(tools: List<PluginTool>): List<CodingTool> = tools.map(::toCodingTool)
+    fun toCodingTools(tools: List<PluginTool>, sessionId: String = ""): List<CodingTool> = tools.map { toCodingTool(it, sessionId) }
 
     private suspend fun execute(
         tool: PluginTool,
@@ -41,18 +41,19 @@ internal object PluginToolAdapter {
         args: JsonObject,
         signal: RunSignal?,
         onUpdate: AgentToolUpdateCallback?,
+        sessionId: String,
     ): AgentToolResult = coroutineScope {
         signal?.throwIfAborted()
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         if (onUpdate == null) {
-            runTool { tool.execute(PluginToolCall(callId, args, pluginSignal)) }
+            runTool { tool.execute(PluginToolCall(callId, args, pluginSignal, sessionId)) }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
                 for (partial in updates) onUpdate(partial.toAgentResult())
             }
             val result = runTool {
-                tool.execute(PluginToolCall(callId, args, pluginSignal) { partial -> updates.trySend(partial) })
+                tool.execute(PluginToolCall(callId, args, pluginSignal, sessionId) { partial -> updates.trySend(partial) })
             }
             updates.close()
             forward.join()

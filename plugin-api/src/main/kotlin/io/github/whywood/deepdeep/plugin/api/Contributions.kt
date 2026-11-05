@@ -21,6 +21,7 @@ class PluginToolCall(
     val callId: String,
     val args: JsonObject,
     val signal: PluginRunSignal? = null,
+    val sessionId: String = "",
     private val update: ((PluginToolResult) -> Unit)? = null,
 ) {
     fun partial(result: PluginToolResult) {
