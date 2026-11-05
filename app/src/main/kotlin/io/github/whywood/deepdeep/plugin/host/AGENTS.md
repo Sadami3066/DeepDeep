@@ -11,9 +11,9 @@
 | `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + 实例 + source + 内部相位 + 贡献）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/settings/actions/detailRows/ui/hooks 聚合、重复 id 拒绝、跨插件冲突记录） |
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text/log` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：`Literal` 按语言标签取、缺省回退 `default`；`Resource` 走宿主注入的 `(Int) -> String`；支持 `String.format` 参数 |
-| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本行，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
+| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，sessionId 用 provider 在 execute 时解析，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本行，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
 | `CodingToolPluginAdapter.kt` | 反向桥：内置插件沿用旧 `CodingTool` 工具工厂时，转成 `PluginTool` 接入新契约 |
-| `BuiltinPluginManifest.kt` | 内置插件 manifest 构造 |
+| `BuiltinPluginManifest.kt` | 内置插件 manifest 构造；`installable` 默认 false（内置即已安装），只有可下载的 CLI 内置能力显式传 true |
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、声明式渲染器、Compose 槽宿主、崩溃标记 |

@@ -9,7 +9,7 @@
 | `BUILTIN` 内置 | 编译进 APK，由 App 直接实例化，不经过装载器 | `LocalizedText.Resource` / `IconRef.Resource` 复用 App 资源 |
 | `EXTERNAL` 外部 | `.ddp` 包（dex + assets），宿主用 `InMemoryDexClassLoader` 装载 | `LocalizedText.Literal` / `IconRef.Asset`，不能引用 App 资源 |
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`，当前 `PLUGIN_API_LEVEL = 1`、SDK 版本 `0.2.0`）。插件工程只依赖它，宿主内部类型一律不可用。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`，当前 `PLUGIN_API_LEVEL = 1`、SDK 版本 `0.3.0`）。插件工程只依赖它，宿主内部类型一律不可用。
 
 **安全前提**：外部插件与 App 同进程、同 UID、无沙箱、同权限运行。安装即信任——插件代码等同 App 代码，能读 App 私有数据、反射宿主内部、让 App 崩溃。只安装自己信任的插件；第三方工具源请走 MCP。
 
@@ -545,12 +545,12 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 ## ABI 与版本
 
 - `PLUGIN_API_LEVEL = 1`：宿主加载时要求 `plugin.apiLevel <= 宿主等级`；`minHostVersion` 高于宿主版本直接拒绝。
-- **同一 apiLevel 内只做加法**：新增类型、新增带默认值的可选参数、接口新增带默认实现的方法、data class 新增带默认值的字段。删除/改签名/改默认语义必须升 `PLUGIN_API_LEVEL`，旧插件会被明确拒绝而不是崩溃。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号随后者发布节奏走（当前 0.3.0）。
 - 插件必须 `compileOnly` 依赖宿主库（见「工程与依赖」）；宿主 parent-first 保证 `plugin-api` 只存在一份。
 - Compose 槽：`ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL`（当前 1）不匹配时只禁用 Compose 绑定、回退声明式/默认渲染；Compose 没有跨版本二进制 ABI 承诺，插件要按宿主 Kotlin/Compose 版本重新编译。
 - `ui.kotlin` / `ui.compose` 参与 Compose 槽的兼容判定：Kotlin 比主次版本，Compose 比 runtime 精确版本（不是 BOM 版本），不匹配只禁用 Compose 绑定。不确定宿主版本时不要填这两个字段，只填 `ui.apiLevel`。
 - 版本比较（`PluginVersion`）：核心 `major.minor.patch` 参与比较，`-dev`/`+build` 等后缀保留展示但不影响比较（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的 `minHostVersion` 卡住。
-- SDK 版本（`0.2.0`）与 `PLUGIN_API_LEVEL` 独立维护：SDK 发布版本升级不等于契约 breaking，ABI 以 `apiLevel` 为准。
+- SDK 版本（`0.3.0`）与 `PLUGIN_API_LEVEL` 独立维护；发布前两者都不承诺稳定，发布后 SDK 版本升级不等于契约 breaking，ABI 以 `apiLevel` 为准。
 
 ## 安全模型
 

@@ -12,7 +12,7 @@
 | `PluginVersion.kt` | `major.minor.patch` 解析与比较，后缀保留但不参与比较 |
 | `PluginValidation.kt` | 格式/ABI/技能/UiNode 校验，返回带 `Severity` 的 `Issue` 列表 |
 | `PluginManifestCodec.kt` | `plugin.json`（`JsonObject`）→ `PluginManifest`；`parse` 宽容、`validate` 严格、`decode` 汇总为 `Result` |
-| `Plugin.kt` | `DeepDeepPlugin` 生命周期、`PluginHost` 服务入口、状态/进度/setup/动作/详情行/技能/提示词段 |
+| `Plugin.kt` | `DeepDeepPlugin` 生命周期、`PluginHost` 服务入口、live 会话句柄 `PluginSessionInfo`/`PluginSessionSnapshot`、状态/进度/setup/动作/详情行/技能/提示词段 |
 | `Contributions.kt` | `Contributions(tools, hooks)`、`PluginTool` 与工具结果 DTO |
 | `Hooks.kt` | `PluginEvent` 事件层级、4 类决策（输入/工具调用/工具结果）与变换请求、`PluginHooks` |
 | `Settings.kt` | `SettingSpec`（Toggle/Choice/Number/Text/Group）+ `normalize` |
@@ -23,11 +23,12 @@
 
 测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较、UiNode/槽位、设置 normalize、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。
 
-对外发布：`./scripts/gradlew-locked :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，artifact `plugin-api`，版本 `pluginApiVersion` 默认 `0.2.0`；改 ABI 时同时升版本与 `PLUGIN_API_LEVEL`）。
+对外发布：`./scripts/gradlew-locked :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，artifact `plugin-api`，版本 `pluginApiVersion` 默认 `0.3.0`；发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
 
 ## ABI 规则（对外承诺）
 
-- `PLUGIN_API_LEVEL` 现在是 1。同一 level 内**只允许加法**：新类型、新可选参数（必须带默认值）、接口新方法（必须带默认实现）、data class 新字段（必须带默认值）。删除/改签名/改默认语义必须升 level，宿主加载时拒绝 `apiLevel > 宿主` 的插件。
+- `PLUGIN_API_LEVEL` 现在是 1。**发布前没有兼容承诺**：当前可随时删改类型/签名且不升 level，插件必须按最新 SDK 重编译；发布后才启用「同一 level 只允许加法、删改变必须升 level、宿主拒绝 `apiLevel > 宿主`」的规则。
+- `PluginSessionInfo` 是宿主持有的 live handle：`contributionsFor` 拿到它时不要缓存/拷贝字段，需要会话时在工具/动作执行回调里调 `snapshot()`；`PluginToolCall.sessionId` 也由宿主在 execute 时解析。
 - `minHostVersion` 用 `PluginVersion` 比较，只看 major.minor.patch，后缀忽略（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的 `minHostVersion` 卡住。
 - `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL` 不匹配时只禁用该 Compose 绑定并回退声明式，不拒绝插件；声明式 `UiNode` 才是跨版本稳定面。
 - 插件依赖必须 `compileOnly`，禁止打包 `plugin-api`、Compose、coroutines、kotlinx-serialization；宿主 parent-first，两边共享同一份类。

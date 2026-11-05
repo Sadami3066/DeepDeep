@@ -13,7 +13,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `PluginRuntimeHooks.kt` | 插件钩子桥：工具执行前后决策、提示词变换与输入处理，经引擎装配 |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
 | `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量、插件自定义消息追加 |
-| `SessionBinding.kt` | 会话身份（id、文件、cwd）的绑定容器 |
+| `SessionBinding.kt` | 会话身份（id、文件、cwd）容器；支持 host 注入的 live provider，插件工具执行时动态解析当前会话 |
 | `SessionCommandPlane.kt` | 会话运行状态机：忙闲、runId、停止、重配 |
 | `SessionIndex.kt` | 扫 JSONL 建索引，按大小与时间戳增量缓存 |
 | `SessionCatalog.kt` | 会话列表：合并 JSONL 与置顶/归档/重命名 |

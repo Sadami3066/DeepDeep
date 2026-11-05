@@ -21,6 +21,7 @@
 
 ## 要点
 
+- `installable` 只对需要下载的 CLI 内置能力（feishu/wecom/jwxt）为 true；其余内置插件与 micloud（source=EXTERNAL 但无需安装）恒为已安装，不显示下载/重装/删除入口。
 - 生命周期由 `PluginHostManager` 驱动：`start()` 装载内置与外部插件 → 刷新状态/贡献 → 技能同步；启停/设置/安装/动作变化触发 `host.reconfigure()`，忙碌会话在轮次结束的安全点重建。
 - 外部插件只从 `.ddp` 安装（ddp-1 签名、TOFU 发布者、sha256、记录 v4）；安装/更新确认页展示发布者指纹、sha256 与能力清单；更新在下次进程启动生效，失败回滚上一版本。
 - 内置插件可继续用构造注入拿 App 依赖（Linux/特权/Downloader 等）；外部插件只能通过 `PluginHost` 的 17 个宿主服务访问 App 能力，且无法使用 Android 资源/组件（字符串/图标走 manifest + assets）。

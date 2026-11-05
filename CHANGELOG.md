@@ -2,6 +2,14 @@
 
 ## HEAD (since m2)
 
+- fix: 内置插件安装语义：不可下载的内置插件恒为已安装，不再因缺少 `builtin_state.json` 全部变成「下载」；只有 feishu/wecom/jwxt 需要下载 [插件]
+- fix: 插件设置缓存启动预热，冷启动不再用默认值覆盖已存设置（jwxt 凭据不再被误删，jobs/workshop 限额恢复） [插件]
+- fix: 插件工具会话绑定改为 live handle：goal/jobs/timer/workshop 工具与 `PluginToolCall.sessionId` 在执行时解析真实会话，不再报「会话未保存」 [插件] [运行时]
+- fix: 插件升级/重装失败保留旧版本与登录状态，只有首装失败才回滚清理 [插件]
+- fix: 插件安装阶段恢复 sheet 内进度与取消；回到前台完成 setup 时结束等待流程 [插件]
+- refactor: 删除插件系统重构遗留死代码（PluginScope、未接线的 UI 目录层、更新器/安装器死方法、Micloud 旧设置区）与对应死测试 [插件]
+- refactor: 插件 UI 统一消费 `PluginManagerFacade.state`，删除第二份状态镜像；不可安装内置插件不再显示下载/重装/删除入口 [插件]
+- refactor: 内置插件规则抽为纯逻辑（安装版本/相位/可用性/更新判定）并补单测；虚拟屏引擎只创建一次；启动与特权变化恢复插件技能同步 [插件]
 - fix: 插件详情页首次进入立即返回（列表状态未镜像前误判插件不存在） [插件]
 - fix: 插件 setup / 插件动作取消后仍阻塞到 CLI 超时；sheet 取消与对话停止现在会立即取消底层流程 [插件] [运行时]
 - fix: 示例外部插件补齐 `assets/icon.png`，安装后列表/详情显示插件图标 [插件]
