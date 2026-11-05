@@ -24,26 +24,9 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
-import io.github.whywood.deepdeep.plugin.arrange.ArrangePlugin
-import io.github.whywood.deepdeep.plugin.feishu.FeishuPlugin
-import io.github.whywood.deepdeep.plugin.gui.GuiPlugin
-import io.github.whywood.deepdeep.plugin.jwxt.JwxtPlugin
+import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
+import io.github.whywood.deepdeep.plugin.builtinPlugins
 import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.plugin.micloud.MiCloudPlugin
-import io.github.whywood.deepdeep.plugin.wecom.WecomPlugin
-import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
-import io.github.whywood.deepdeep.plugin.internal.GoalPlugin
-import io.github.whywood.deepdeep.plugin.internal.JobsPlugin
-import io.github.whywood.deepdeep.plugin.internal.TimerPlugin
-import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
-import io.github.whywood.deepdeep.plugin.OfficialPlugin
-import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
-import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.host.ModernPluginAdapter
-import io.github.whywood.deepdeep.plugin.host.builtinPluginHost
-import io.github.whywood.deepdeep.plugin.host.builtinPluginManifest
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.plugin.PluginDownloader
 import io.github.whywood.deepdeep.plugin.PluginManager
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
@@ -217,19 +200,6 @@ class AppGraph(context: Context) : AppDependencies {
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
     private val pluginStrings = AndroidPluginStrings(uiContext)
 
-    private fun modernBuiltin(plugin: DeepDeepPlugin, manifest: PluginManifest): OfficialPlugin =
-        ModernPluginAdapter(
-            modern = plugin,
-            manifest = manifest,
-            host = builtinPluginHost(
-                manifest = manifest,
-                context = uiContext,
-                filesDir = appContext.filesDir,
-                scope = scope,
-                language = { LanguagePreferences(appContext).read().tag },
-            ),
-        )
-
     override val goalService: GoalService by lazy { GoalService() }
     override val jobRegistry: JobRegistry by lazy {
         JobRegistry(
@@ -245,70 +215,36 @@ class AppGraph(context: Context) : AppDependencies {
     override val questionCenter = QuestionCenter(
         persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
     )
+    private val builtinWiring: BuiltinPluginWiring by lazy {
+        BuiltinPluginWiring(
+            uiContext = uiContext,
+            filesDir = appContext.filesDir,
+            cacheDir = appContext.cacheDir,
+            assets = appContext.assets,
+            scope = scope,
+            language = { LanguagePreferences(appContext).read().tag },
+            pluginStrings = pluginStrings,
+            linux = linuxEnvironment,
+            linuxSettings = linuxSettings,
+            workspaceDir = homeDir,
+            credentials = credentials,
+            providerCatalog = providerCatalog,
+            goalService = goalService,
+            jobRegistry = jobRegistry,
+            timerService = timerService,
+            workshopStore = workshopStore,
+            privilege = privilege,
+            adbBridge = adbBridge,
+            mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
+            virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
+            screenshotDir = File(appContext.filesDir, "gui/screenshots"),
+            onCapabilitiesChanged = { scope.launch { host.reconfigure() } },
+            onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
+        )
+    }
     override val pluginManager: PluginManager by lazy {
         PluginManager(
-            plugins = listOf(
-                FeishuPlugin(
-                    context = uiContext,
-                    linux = linuxEnvironment,
-                    linuxSettings = linuxSettings,
-                    downloader = PluginDownloader(),
-                    cacheDir = appContext.cacheDir,
-                ),
-                WebSearchPlugin(
-                    context = uiContext,
-                    apiKeyProvider = {
-                        credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
-                            credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
-                            credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID)
-                        }
-                    },
-                ),
-                GuiPlugin(
-                    context = uiContext,
-                    screenshotDir = File(appContext.filesDir, "gui/screenshots"),
-                    mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
-                    privilege = privilege,
-                    virtualScreen = VirtualScreenFeature.install(uiContext, privilege, adbBridge),
-                ),
-                ArrangePlugin(context = uiContext),
-                MiCloudPlugin(
-                    context = uiContext,
-                    onCapabilitiesChanged = {
-                        scope.launch { host.reconfigure() }
-                    },
-                    onSessionInvalidated = {
-                        scope.launch { pluginManager.refresh() }
-                    },
-                ),
-                WecomPlugin(
-                    context = uiContext,
-                    linux = linuxEnvironment,
-                    linuxSettings = linuxSettings,
-                    downloader = PluginDownloader(),
-                    workspaceDir = homeDir,
-                ),
-                JwxtPlugin(
-                    context = uiContext,
-                    linux = linuxEnvironment,
-                    linuxSettings = linuxSettings,
-                ),
-                modernBuiltin(
-                    GoalPlugin(goalService),
-                    builtinPluginManifest(
-                        id = "goal",
-                        version = "1.0",
-                        nameRes = R.string.plugins_internal_goal_name,
-                        summaryRes = R.string.plugins_internal_goal_summary,
-                        iconRes = DdIcons.Target.res,
-                        tools = listOf("get_goal", "create_goal", "update_goal"),
-                        settings = listOf("max_rounds"),
-                    ),
-                ),
-                JobsPlugin(jobRegistry, pluginStrings),
-                TimerPlugin(timerService, pluginStrings),
-                WorkshopPlugin(workshopStore, appContext.assets, pluginStrings),
-            ),
+            plugins = builtinPlugins(builtinWiring),
             recordStore = PluginRecordStore(File(appContext.filesDir, "plugins/plugins.json")),
             skillStore = PluginSkillStore(
                 skillsDir = File(agentDir, "skills"),
