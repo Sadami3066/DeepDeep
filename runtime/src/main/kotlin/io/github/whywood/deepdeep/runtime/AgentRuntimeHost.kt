@@ -70,27 +70,6 @@ class AgentRuntimeHost internal constructor(
         providers, backgroundScope, goalDriver, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
     )
 
-    internal class Handle(
-        val engine: SessionEngine,
-        val session: SessionHandle,
-        val cwd: String,
-        val state: SessionCommandPlane.SessionState,
-    ) {
-        val pending = PendingInputs()
-
-        var unsubscribe: (() -> Unit)? = null
-
-        @Volatile
-        var lastActiveAt: Long = System.currentTimeMillis()
-
-        @Volatile
-        var activity: RuntimeActivity? = null
-
-        fun touch() {
-            lastActiveAt = System.currentTimeMillis()
-        }
-    }
-
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
         extraBufferCapacity = 512,
         onBufferOverflow = BufferOverflow.SUSPEND,
@@ -112,9 +91,9 @@ class AgentRuntimeHost internal constructor(
     override val interruptedRuns: StateFlow<List<InterruptedRun>> = runLedger.interruptedRuns
 
     private val mutex = Mutex()
-    private val mcpMutex = Mutex()
     private val commands = SessionCommandPlane()
-    private val handles = ConcurrentHashMap<String, Handle>()
+    private val handles = ConcurrentHashMap<String, RuntimeHandle>()
+    private val mcp = RuntimeMcp(mutex, handles)
     private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private var lastOpenedSessionId: String? = null
@@ -253,43 +232,9 @@ class AgentRuntimeHost internal constructor(
         return reopenedId
     }
 
-    suspend fun reloadMcp() = mcpMutex.withLock {
-        withContext(Dispatchers.IO) {
-            val targets = mutex.withLock { handles.values.toList() }
-            for (handle in targets) {
-                val loaded = runCatching { handle.engine.loadMcpServers() }
-                if (loaded.isFailure) {
-                    logError(TAG, "mcp reload config failed session=${handle.session.sessionId}", loaded.exceptionOrNull())
-                    continue
-                }
-                runCatching { handle.session.reloadMcp(loaded.getOrThrow()) }
-                    .onFailure { logError(TAG, "mcp reload failed session=${handle.session.sessionId}", it) }
-                logMcpState(handle, "reload")
-            }
-        }
-    }
+    suspend fun reloadMcp() = mcp.reload()
 
-    private fun logMcpState(handle: Handle, phase: String) {
-        runCatching {
-            val servers = handle.session.mcpServers().joinToString { status ->
-                "${status.name}=${status.state}/${status.toolCount}/${status.lastError.orEmpty()}"
-            }
-            val deferred = handle.session.deferredMcpToolCount()
-            val loaded = handle.session.activeToolNames.count { it.startsWith("mcp__") }
-            logInfo(TAG, "mcp $phase session=${handle.session.sessionId} servers=[$servers] deferred=$deferred loaded=$loaded")
-        }.onFailure { logError(TAG, "mcp $phase state unavailable", it) }
-    }
-
-    suspend fun reconnectMcp(server: String) = mcpMutex.withLock {
-        withContext(Dispatchers.IO) {
-            val targets = mutex.withLock { handles.values.toList() }
-            for (handle in targets) {
-                runCatching { handle.session.reconnectMcp(server) }
-                    .onFailure { logError(TAG, "mcp reconnect failed session=${handle.session.sessionId} server=$server", it) }
-                logMcpState(handle, "reconnect")
-            }
-        }
-    }
+    suspend fun reconnectMcp(server: String) = mcp.reconnect(server)
 
     override suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
         val handle = handleFor(sessionId)
@@ -428,7 +373,7 @@ class AgentRuntimeHost internal constructor(
     fun activeTurnSource(sessionId: String): TurnSource? =
         if (activeRunState.value[sessionId] == null) null else commands.snapshot(sessionId)?.turnSource
 
-    private suspend fun handleFor(sessionId: String): Handle {
+    private suspend fun handleFor(sessionId: String): RuntimeHandle {
         mutex.withLock { handles[sessionId] }?.let { handle ->
             handle.touch()
             return handle
@@ -444,13 +389,13 @@ class AgentRuntimeHost internal constructor(
         return handle
     }
 
-    private suspend fun begin(handle: Handle, source: TurnSource): SessionCommandPlane.Start? {
+    private suspend fun begin(handle: RuntimeHandle, source: TurnSource): SessionCommandPlane.Start? {
         val start = commands.begin(handle.session.sessionId, source) ?: return null
         afterBegin(handle, source)
         return start
     }
 
-    private suspend fun afterBegin(handle: Handle, source: TurnSource) {
+    private suspend fun afterBegin(handle: RuntimeHandle, source: TurnSource) {
         handle.touch()
         publishBusy()
         publishActiveRun(handle)
@@ -458,7 +403,7 @@ class AgentRuntimeHost internal constructor(
         goalDriver?.noteTurn(handle.session.sessionId, source)
     }
 
-    private suspend fun recordRunStart(handle: Handle, source: TurnSource) {
+    private suspend fun recordRunStart(handle: RuntimeHandle, source: TurnSource) {
         val sessionId = handle.session.sessionId
         val snapshot = commands.snapshot(sessionId) ?: return
         val runId = snapshot.runId ?: return
@@ -483,7 +428,7 @@ class AgentRuntimeHost internal constructor(
         }
     }
 
-    private suspend fun release(handle: Handle, runId: String) {
+    private suspend fun release(handle: RuntimeHandle, runId: String) {
         val finish = commands.finish(handle.session.sessionId, runId)
         if (!finish.released) return
         val droppedInputs = dropPendingInputs(handle, runId)
@@ -513,7 +458,7 @@ class AgentRuntimeHost internal constructor(
     }
 
     private suspend fun runTurn(
-        handle: Handle,
+        handle: RuntimeHandle,
         runId: String,
         text: String,
         images: List<ImagePart> = emptyList(),
@@ -678,7 +623,7 @@ class AgentRuntimeHost internal constructor(
         return outcome
     }
 
-    internal suspend fun emitUsage(handle: Handle, runId: String = handle.state.runId.orEmpty()) {
+    internal suspend fun emitUsage(handle: RuntimeHandle, runId: String = handle.state.runId.orEmpty()) {
         val current = usage(handle.session.sessionId) ?: return
         emit(handle, UsageChanged(runId, current))
     }
@@ -721,7 +666,7 @@ class AgentRuntimeHost internal constructor(
         }
     }
 
-    private fun isPersistedSession(handle: Handle): Boolean {
+    private fun isPersistedSession(handle: RuntimeHandle): Boolean {
         val path = handle.session.sessionFile ?: return false
         val file = File(path)
         return file.isFile && file.length() > 0L
@@ -742,13 +687,13 @@ class AgentRuntimeHost internal constructor(
     private suspend fun visibleCwds(): List<String> =
         listOf(homeDir.absolutePath) + workspaces.read().map { it.cwd }
 
-    private suspend fun attach(cwd: String, file: String?): Handle {
+    private suspend fun attach(cwd: String, file: String?): RuntimeHandle {
         val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile == file }
         if (existing != null && file != null) return existing
         val engine = engineFactory(File(cwd))
         val config = modelSettings.read()
         val session = engine.create(file, config)
-        val handle = Handle(
+        val handle = RuntimeHandle(
             engine = engine,
             session = session,
             cwd = cwd,
@@ -756,7 +701,7 @@ class AgentRuntimeHost internal constructor(
         )
         handles[session.sessionId] = handle
         handle.unsubscribe = session.subscribe { event -> onSessionEvent(handle, event) }
-        logMcpState(handle, "attach")
+        mcp.logState(handle, "attach")
         return handle
     }
 
@@ -775,7 +720,7 @@ class AgentRuntimeHost internal constructor(
         sessionId: String,
         forget: Boolean = false,
         keepReconfigure: Boolean = false,
-    ): Handle? {
+    ): RuntimeHandle? {
         if (lastOpenedSessionId == sessionId) lastOpenedSessionId = null
         val handle = handles.remove(sessionId)
         commands.detach(sessionId, keepReconfigure)
@@ -783,7 +728,7 @@ class AgentRuntimeHost internal constructor(
         return handle
     }
 
-    private suspend fun closeHandle(handle: Handle) {
+    private suspend fun closeHandle(handle: RuntimeHandle) {
         handle.unsubscribe?.invoke()
         handle.unsubscribe = null
         handle.session.close()
@@ -821,13 +766,13 @@ class AgentRuntimeHost internal constructor(
         return HandleBudget.decideEvictions(entries, handles.size, now)
     }
 
-    private fun evictableLocked(sessionId: String, handle: Handle): Boolean {
+    private fun evictableLocked(sessionId: String, handle: RuntimeHandle): Boolean {
         val entry = budgetEntryLocked(sessionId, handle, System.currentTimeMillis())
         if (entry.busy || entry.reconfiguring || entry.keepAlive || entry.selected) return false
         return System.currentTimeMillis() - handle.lastActiveAt > HandleBudget.IDLE_TTL_MS
     }
 
-    private fun budgetEntryLocked(sessionId: String, handle: Handle, now: Long): HandleBudget.Entry {
+    private fun budgetEntryLocked(sessionId: String, handle: RuntimeHandle, now: Long): HandleBudget.Entry {
         val snapshot = commands.snapshot(sessionId)
         return HandleBudget.Entry(
             sessionId = sessionId,
@@ -850,13 +795,13 @@ class AgentRuntimeHost internal constructor(
         busyState.value = commands.busySessionIds()
     }
 
-    private suspend fun ensureTitle(handle: Handle, text: String) {
+    private suspend fun ensureTitle(handle: RuntimeHandle, text: String) {
         if (handle.session.sessionName() != null) return
         handle.session.appendTitle(handle.engine.titleFor(text))
         emitListChanged()
     }
 
-    private fun emit(handle: Handle, event: RuntimeEvent) {
+    private fun emit(handle: RuntimeHandle, event: RuntimeEvent) {
         val scoped = SessionRuntimeEvent(handle.session.sessionId, event)
         if (eventsBuffer.tryEmit(scoped)) return
         if (event is RuntimeEvent.TextDelta || event is RuntimeEvent.ReasoningDelta) {
@@ -867,7 +812,7 @@ class AgentRuntimeHost internal constructor(
         backgroundScope.launch { eventsBuffer.emit(scoped) }
     }
 
-    private fun emitActivity(handle: Handle, runId: String, activity: RuntimeActivity?) {
+    private fun emitActivity(handle: RuntimeHandle, runId: String, activity: RuntimeActivity?) {
         if (handle.activity == activity) return
         handle.activity = activity
         emit(handle, RuntimeEvent.ActivityChanged(runId, activity))
@@ -877,19 +822,19 @@ class AgentRuntimeHost internal constructor(
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
     }
 
-    private fun admitQueuedInput(handle: Handle, runId: String, message: AgentMessage) {
+    private fun admitQueuedInput(handle: RuntimeHandle, runId: String, message: AgentMessage) {
         val text = message.userText() ?: return
         handle.pending.admit(text) ?: return
         emit(handle, RuntimeEvent.UserInputAdmitted(runId, text))
         emitQueueChanged(handle, runId)
     }
 
-    private fun emitQueueChanged(handle: Handle, runId: String) {
+    private fun emitQueueChanged(handle: RuntimeHandle, runId: String) {
         val snapshot = handle.pending.snapshot()
         emit(handle, RuntimeEvent.QueueChanged(runId, snapshot.steering, snapshot.followUp))
     }
 
-    private fun dropPendingInputs(handle: Handle, runId: String = handle.state.runId.orEmpty()): List<String> {
+    private fun dropPendingInputs(handle: RuntimeHandle, runId: String = handle.state.runId.orEmpty()): List<String> {
         val dropped = handle.pending.drain()
         if (dropped.isEmpty()) return emptyList()
         runCatching { handle.session.clearQueues() }
@@ -897,14 +842,14 @@ class AgentRuntimeHost internal constructor(
         return dropped.map { it.text }
     }
 
-    private fun clearQueuedInputs(handle: Handle): List<String> {
+    private fun clearQueuedInputs(handle: RuntimeHandle): List<String> {
         val dropped = handle.pending.drain()
         runCatching { handle.session.clearQueues() }
         if (dropped.isNotEmpty()) emitQueueChanged(handle, handle.state.runId.orEmpty())
         return dropped.map { it.text }
     }
 
-    private fun publishActiveRun(handle: Handle) {
+    private fun publishActiveRun(handle: RuntimeHandle) {
         val sessionId = handle.session.sessionId
         val snapshot = commands.snapshot(sessionId)
         activeRunState.update { current ->
@@ -917,7 +862,7 @@ class AgentRuntimeHost internal constructor(
         }
     }
 
-    private suspend fun finishRun(handle: Handle, runId: String): RunStatus {
+    private suspend fun finishRun(handle: RuntimeHandle, runId: String): RunStatus {
         val last = handle.session.messages.asReversed().firstNotNullOfOrNull { it.asAssistantMessage() }
         val status = when (last?.stopReason) {
             StopReason.Error -> RunStatus.FAILED
@@ -934,7 +879,7 @@ class AgentRuntimeHost internal constructor(
         return status
     }
 
-    private suspend fun maybeContinueGoal(handle: Handle, status: RunStatus) {
+    private suspend fun maybeContinueGoal(handle: RuntimeHandle, status: RunStatus) {
         if (handle.state.stopRequested) return
         val driver = goalDriver ?: return
         val sessionId = handle.session.sessionId
@@ -969,7 +914,7 @@ class AgentRuntimeHost internal constructor(
     }
 
     private suspend fun emitTerminal(
-        handle: Handle,
+        handle: RuntimeHandle,
         runId: String,
         text: String,
         status: RunStatus,
@@ -1008,7 +953,7 @@ class AgentRuntimeHost internal constructor(
         }.getOrDefault(false)
     }
 
-    private suspend fun onSessionEvent(handle: Handle, event: SessionEvent) {
+    private suspend fun onSessionEvent(handle: RuntimeHandle, event: SessionEvent) {
         sdkEventsBuffer.tryEmit(SessionSdkEvent(handle.session.sessionId, event))
         val runId = handle.state.runId.orEmpty()
         val active = runId.isNotEmpty()
@@ -1065,7 +1010,7 @@ class AgentRuntimeHost internal constructor(
         }
     }
 
-    private suspend fun onAgentEvent(handle: Handle, runId: String, event: AgentEvent) {
+    private suspend fun onAgentEvent(handle: RuntimeHandle, runId: String, event: AgentEvent) {
         when (event) {
             is AgentEvent.MessageStart -> {
                 admitQueuedInput(handle, runId, event.message)
@@ -1161,11 +1106,7 @@ private class WorkspaceStoreDirectory(
     override suspend fun remove(id: String) = store.remove(id)
 }
 
-private const val TAG = "DeepDeepRuntime"
-
-private fun logInfo(tag: String, message: String) {
-    runCatching { android.util.Log.i(tag, message) }
-}
+internal const val TAG = "DeepDeepRuntime"
 
 private fun AgentMessage.userText(): String? {
     val message = asLlmMessage() as? UserMessage ?: return null
