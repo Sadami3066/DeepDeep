@@ -16,7 +16,7 @@
 | `Contributions.kt` | `Contributions(tools, hooks)`、`PluginTool` 与工具结果 DTO |
 | `Hooks.kt` | `PluginEvent` 事件层级、4 类决策（输入/工具调用/工具结果）与变换请求、`PluginHooks` |
 | `Ui.kt` | 槽位目录 `SlotIds`（tool.card/chat.message）、`SlotBinding` / `SlotContent.Compose`、`PluginPage`（页面内容内联）、`ComposerAction` |
-| `SlotStates.kt` | 槽位状态 DTO（`ToolCardSlotState`/`CustomMessageSlotState`/`PluginPageState`）与 `SlotState`/`NoSlotState` |
+| `SlotStates.kt` | 槽位状态 DTO（`ToolCardSlotState`/`CustomMessageSlotState`）与 `SlotState`/`NoSlotState` |
 | `ServiceModels.kt` | 宿主服务 DTO：Linux/特权/屏幕/通知/网络/文件/会话/job/timer/goal/小程序/MCP/App/总线 |
 | `Services.kt` | 宿主服务接口与 `PluginServiceUnavailable` |
 

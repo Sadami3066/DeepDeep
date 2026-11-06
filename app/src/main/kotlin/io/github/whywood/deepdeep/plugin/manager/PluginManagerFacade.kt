@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.plugin.manager
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
-import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.runtime.SessionBinding
@@ -60,8 +59,6 @@ interface PluginManagerFacade {
     fun pagesOf(pluginId: String): List<PluginPage>
 
     fun composerActions(): List<PluginComposerActionUi>
-
-    fun slotFailureGuard(): PluginFailureGuard
 
     fun resolveText(text: LocalizedText): String
 }

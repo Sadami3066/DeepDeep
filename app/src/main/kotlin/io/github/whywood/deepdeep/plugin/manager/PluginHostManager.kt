@@ -4,7 +4,6 @@ import android.content.Context
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
-import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginServices
@@ -103,8 +102,6 @@ class PluginHostManager internal constructor(
     override val appScope: CoroutineScope get() = scope
 
     override val slotRegistry: SlotRegistry by lazy { SlotRegistry({ registrySnapshot }, pluginsRoot) }
-
-    override val guard: PluginFailureGuard by lazy { PluginFailureGuard(File(pluginsRoot, "slots")) }
 
     override val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
 

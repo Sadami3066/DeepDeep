@@ -14,10 +14,9 @@
 | `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，sessionId 用 provider 在 execute 时解析，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
-| `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主、崩溃标记 |
+| `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |
 | `services/` | 18 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/特权/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
 | `update/` | 更新链路：分发索引拉取与缓存、候选筛选、下载校验、暂存为 pending（见目录内 AGENTS.md） |
-| `PluginFailureGuard.kt` | 槽渲染崩溃标记：`mark/clear/detect/detectAll/detectFor/clearFor`，JSON 存 key/detail/markedAt，key 转安全文件名 |
 | `HostToolNames.kt` | 宿主保留工具名表：引擎默认（read/write/edit/bash/ls/grep/find）、宿主工具（ask_user_question/present/adb_shell/root_shell、goal/job/timer/miniapp 变体、web/arrange/screen/virtual 工具）、SDK 工具（tool_search/mcp_\*）与 `mcp__` 前缀；外部插件安装期做工具名冲突校验 |
 
 ## 要点
@@ -30,6 +29,6 @@
 - `PluginTextResolver` 的语言 tag 与 resource 解析器由宿主注入（App 语言 / `LocalizedContext`），不在宿主里硬编码语言。
 - 工具结果映射：`ToolBlock.Image` 的字节按 base64 进 `ImageContent`；`ToolBlock.FileRef` 的 content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`（工具卡与历史消息据此渲染文件行），path 按插件给出的绝对路径原样输出，不读文件、不当附件投递；插件不要读写该保留键。
 - `partial` 更新经 unlimited channel 在 `execute` 内顺序转发，插件回调可在任意线程调用；`execute` 异常（取消/中断除外）转成 `isError` 结果。
-- 槽渲染进入组合时写崩溃标记、正常 dispose 时清除；残留标记表示上次渲染期间进程死亡，只禁用该绑定，详情页可手动恢复。
+- 槽渲染没有崩溃隔离：插件 Compose 内容抛异常会带崩 App（与工具/回调异常一致）；插件作者需自测，宿主不会静默禁用绑定位。
 - 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责。
 - 新增目录/文件时同步本索引。

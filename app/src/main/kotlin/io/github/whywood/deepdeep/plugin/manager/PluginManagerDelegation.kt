@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
-import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
@@ -22,8 +21,6 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
     internal abstract val sessionHooks: PluginSessionHooks
 
     internal abstract val slotRegistry: SlotRegistry
-
-    internal abstract val guard: PluginFailureGuard
 
     internal abstract val textResolver: PluginTextResolver
 
@@ -64,8 +61,6 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
             val page = pages.firstOrNull { it.id == entry.action.id } ?: pages.firstOrNull() ?: return@mapNotNull null
             PluginComposerActionUi(entry.pluginId, entry.action, page.id)
         }
-
-    override fun slotFailureGuard(): PluginFailureGuard = guard
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
 

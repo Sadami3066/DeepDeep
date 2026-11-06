@@ -107,7 +107,7 @@
 
 71. **插件记录 v4（破坏式）**：外部插件记录在 `files/plugins/plugins.json`（schemaVersion 4：version/installedAt/enabled/skillIds/installPath/activeBundleSha256/size/publisherKeyId/apiLevel/uiApiLevel/lastError/pendingVersion/pendingBundleSha256，含 previous* 回滚字段；相位已改为纯函数派生，不再落盘，见 #77），读到非 v4 时备份 `.v2.bak` 后重建。相位 `INSTALLED/ACTIVE/DEGRADED/FAILED/DISABLED`（`PENDING_RESTART` 由 UI 从 pending 记录派生）表达「用户选择 ≠ 加载成功」。
 
-72. **插件 UI 扩展（页面 + 两类槽位）**：宿主维护槽位目录 `tool.card.content:<toolName>`、`chat.message:<customType>`，插件按 slotId 注册 Compose 绑定、宿主默认渲染兜底；插件页面通过 `PluginUiContributions.pages` 的 `PluginPage(id, title, icon?, content)` 声明并内联内容，是插件唯一的整页界面入口（见 #101）；输入区动作用 `ComposerAction` 贡献，点击打开对应页面。不替换主壳/导航/聊天骨架，不注册 Activity；槽位与页面内容异常捕获 + 渲染前崩溃标记，若进程在渲染中死亡则下次启动自动回退提示（绑定槽位则禁用该绑定）。
+72. **插件 UI 扩展（页面 + 两类槽位）**：宿主维护槽位目录 `tool.card.content:<toolName>`、`chat.message:<customType>`，插件按 slotId 注册 Compose 绑定、宿主默认渲染兜底；插件页面通过 `PluginUiContributions.pages` 的 `PluginPage(id, title, icon?, content)` 声明并内联内容，是插件唯一的整页界面入口（见 #101）；输入区动作用 `ComposerAction` 贡献，点击打开对应页面。不替换主壳/导航/聊天骨架，不注册 Activity；槽位与页面内容无进程隔离（异常会带崩 App，与工具/回调一致）；崩溃标记已移除（见 #104）。
 
 73. **插件事件语义与安全点**（观察事件现为 21 个、`toolSetChanged` 已随无消费方删除，见 #79）：`PluginHooks` 覆盖 session/run/turn/message/prompt/input/tool-before/tool-after/compaction/model/retry/MCP/总线事件；语义分观察/变换/闸门，闸门 fail-closed；超时 2s（变换/闸门）/5s（观察）；派发按加载+注册顺序（每次分发读当前生效快照；run 级冻结见 #86）；能力变更走 `host.reconfigure()` 安全点提交（复用 #14）；插件抛错只记录，不吞安全闸门错误。接线：`PiSessionEngine` 在会话绑定后把 hooks delegate 交给 `PluginHostManager.bindSessionHooks`（读写 `PluginEventBus`/闸门派发），运行期事件由 `RuntimeEventMapper` 从 `host.events` 转成 `PluginEvent` 派发；SDK `SessionEvent` 通过 `AgentRuntimeHost.sdkEvents` 暴露并映射（ModelChanged/Compaction/Retry/MCP/自定义消息）；runtime 事件路线的重复 fallback 已关闭。
 
@@ -131,7 +131,7 @@
 
 83. **结构化工具载荷**：工具调用在全链路保留结构化数据——`PluginToolCall.args` 与 `ToolCardSlotState.args`/`result` 是 `JsonObject`/`PluginToolResult`，runtime-api 的 `ToolTrace`/`ToolStarted`/`ToolFinished` 携带 `rawArguments` 与 `ToolResultPayload`（文本/图片/FileRef 块），不再把参数与结果拍平成字符串。工具卡与自定义消息卡因此能读取真实参数与结果；图片块进模型时转 base64 `ImageContent`；`FileRef` 的结构化与文本回退见 #87。代价：历史消息映射与 UI 消费方都要按结构化载荷解析，不能再假设 `details` 是字符串。
 
-84. **插件错误可见**：所有失败路径都留痕且可达用户：装载/激活/启用的 `Throwable` 记入 record 的 `lastError` 并显示在插件页行内错误文本；单插件失败只影响自己（`CancellationException` 重抛，其它捕获后继续启动其它插件）；插件日志统一走 `host.logs()`（`LogService`，logcat tag `DeepDeepPlugin/<id>`）；Compose 槽进入组合时写崩溃标记、正常退出组合时清除，残留标记禁用对应绑定并回退宿主视图（插件页可恢复）；外部包安装/更新失败保留旧版本并显示原因。代价：错误不再静默，部分原本「跳过继续」的路径会显式标 `FAILED`/`DEGRADED`。
+84. **插件错误可见**：所有失败路径都留痕且可达用户：装载/激活/启用的 `Throwable` 记入 record 的 `lastError` 并显示在插件页行内错误文本；单插件失败只影响自己（`CancellationException` 重抛，其它捕获后继续启动其它插件）；插件日志统一走 `host.logs()`（`LogService`，logcat tag `DeepDeepPlugin/<id>`）；Compose 槽渲染异常不做兜底（会带崩 App）；外部包安装/更新失败保留旧版本并显示原因。代价：错误不再静默，部分原本「跳过继续」的路径会显式标 `FAILED`/`DEGRADED`。
 
 85. **插件 UI 单轨：只保留自由 Compose + `:design` 组件**：插件 UI 扩展只有 `SlotContent.Compose(render)`（工具卡/自定义消息两类槽位）与 `PluginPage.content`（整页界面），不提供声明式 UI 节点。UI 兼容按清单 `ui.apiLevel`/`ui.kotlin`/`ui.compose` 判定，不匹配只禁用该插件的 UI（`pagesOf` 空、槽位不渲染）并显示原因，工具/技能/hooks 照常；组件与 App 同源，来自按同版本发布的 `design` 模块的 Dd 组件（见 #100），不再有 `plugin-api` 自带的最小组件库，也不建议直接使用 Material3 默认控件。代价：插件与宿主 Kotlin/Compose 版本强绑，宿主升级 Compose 后插件必须重编译；跨版本稳定的声明式 UI 不提供。
 
@@ -217,7 +217,7 @@ web/目标/后台任务/定时/小程序/安排/屏幕这组能力以前是随�
 
 `PluginPage(id, title, icon?, content)` 直接携带 `@Composable () -> Unit` 页面内容，宿主 `PluginPageHost` 渲染；删除 `plugin.page:<pageId>` 槽位、`SlotIds.page` 与对应绑定。一个页面只属于一个插件、一份内容，槽位机制在这里只产生重复声明与分散的兼容判定。
 
-代价：页面不再经过 `SlotState`，需要宿主信息时在 composable 闭包里捕获 `host`；页面崩溃兜底改由 `PluginPageHost` 的 page guardKey 记录（行为不变）。
+代价：页面不再经过 `SlotState`，需要宿主信息时在 composable 闭包里捕获 `host`；页面渲染异常不做兜底（Compose 无错误边界），插件需自测。
 
 ## 102. 去掉 SlotContent.Compose.uiApiLevel
 
@@ -230,3 +230,11 @@ UI 兼容性统一由 manifest `ui` 块（`ui.apiLevel`/`ui.kotlin`/`ui.compose`
 Material3 `Card` 的默认容器色是 `surfaceContainerHighest`，而 `DeepDeepTheme.materialScheme()` 之前没有映射这个角色，导致任何 Material3 `Card`（尤其是插件页面）落回默认紫色 `#E6E0E9`，与 App 白底卡片完全脱节。明暗两套 scheme 都补 `surfaceContainerHighest = raised`。
 
 代价：App 内所有 Material3 `Card` 底色统一到 `raised`；当前没有界面依赖默认紫，属纯修复。
+
+## 104. 删除槽位崩溃标记
+
+原 `PluginFailureGuard` 想实现「插件 Compose 渲染崩溃后下次自动回退」：绑定渲染进入组合时写 `files/plugins/slots/guard_*.json`，正常 dispose 时清除。但 Compose 组合抛异常时 `DisposableEffect` 根本不会执行，标记只能在「页面打开期间进程死亡/被 force-stop」时残留——那不是渲染崩溃，却被当成崩溃禁用页面（用户看到「该插件没有提供这个页面的内容」）。Compose 也不支持错误边界：在宿主 `try/catch` 里捕获组合异常会让后续组合处于半提交状态并再次崩溃，不能作为兜底。
+
+删除 `PluginFailureGuard`、`PluginManagerFacade.slotFailureGuard()`、各处 `failureGuard` 接线与相关测试；槽位与页面渲染直接抛出，与工具/回调异常一致（带崩 App）。
+
+代价：插件 UI 代码异常不再有任何「下次禁用」保护，插件作者必须自测；宿主也不会因残留标记而误禁页面。

@@ -34,7 +34,6 @@ internal fun PluginToolCardSlot(
     PluginSlotHost(
         entries = entries,
         state = ToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
-        failureGuard = manager.slotFailureGuard(),
         fallback = fallback,
     )
 }
@@ -53,7 +52,6 @@ internal fun PluginCustomMessageSlot(
     PluginSlotHost(
         entries = entries,
         state = CustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
-        failureGuard = manager.slotFailureGuard(),
         fallback = fallback,
     )
 }

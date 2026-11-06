@@ -23,7 +23,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2223（app 1613 / runtime 507 / shell 50 / plugin-api 53）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2212（app 1602 / runtime 507 / shell 50 / plugin-api 53）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 

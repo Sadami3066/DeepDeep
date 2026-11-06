@@ -161,12 +161,4 @@ class SlotRegistryTest {
 
         assertEquals(true, registry.uiCompatible("alpha"))
     }
-
-    @Test
-    fun guardKeyIdentifiesSlotBinding() {
-        assertEquals(
-            "plugin.sample@1.2.3:tool.card.content:echo",
-            slotGuardKey("plugin.sample", "1.2.3", "tool.card.content:echo"),
-        )
-    }
 }

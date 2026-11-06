@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -27,18 +26,6 @@ internal fun PluginPageHost(
     if (page == null) {
         if (!uiState.loading && uiState.snapshot(pluginId) != null) fallback()
         return
-    }
-    val guard = manager.slotFailureGuard()
-    val version = uiState.snapshot(pluginId)?.version.orEmpty()
-    val guardKey = remember(pluginId, pageId, version) { "page:$pluginId@$version:$pageId" }
-    val crashed = remember(guardKey) { guard.detect(guardKey) != null }
-    if (crashed) {
-        fallback()
-        return
-    }
-    DisposableEffect(guardKey) {
-        guard.mark(guardKey, "page $pageId")
-        onDispose { guard.clear(guardKey) }
     }
     key(pluginId, pageId) {
         page.content()

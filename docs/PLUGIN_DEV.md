@@ -534,7 +534,7 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 ```
 
 - 槽位与页面内容都在 Compose 主线程渲染；不要在 composable 里做阻塞 IO，用 `remember` + `LaunchedEffect` 加载数据并处理取消。
-- 槽位异常由宿主兜底：进入组合时写崩溃标记，组合正常释放时清除；若进程在渲染期间死亡，下次启动只禁用该绑定并回退宿主默认视图。不兼容的绑定只记录禁用原因并回退宿主视图；崩溃标记在下次组合或升级插件版本后自动失效，没有单独的恢复入口。一个绑定崩溃不影响同插件其它槽位。
+- 槽位与页面没有进程级隔离：Compose 内容抛异常会带崩 App（与工具/回调异常一致），插件作者需自行验证。不兼容的绑定只记录禁用原因并回退宿主视图，不影响插件其它能力。
 - 外部插件不能引用 App 资源；图标用 `IconRef.Asset("asset:<包内路径>")`，页面标题也可以不带图标。
 
 ### 插件界面只使用 `:design`
@@ -686,7 +686,7 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 - **完整性**：安装记录钉死整包 sha256，每次装载前复核；canonical digest 验签防篡改；更新必须同 `keyId`；失败保留上一可用版本。
 - **宿主不暴露的东西**：Provider 凭据/OAuth、ADB 配对流程、宿主内部加密密钥、pi SDK 内部类型。插件拿到的是 `PluginHost` 契约与 `host.context`。
 - **插件作者的义务**：不读与本插件无关的用户数据；不把凭据写日志；删除/覆盖用户数据的动作要可逆或在页面里明确确认；不要用 `System.exit`/`Runtime.halt` 结束进程。
-- **崩溃**：工具/回调/槽位异常会被宿主隔离成 error/失败记录；但插件在主线程、Compose 槽或工具执行中把进程搞崩仍会带崩 App（没有进程级隔离），槽渲染有崩溃标记保护。
+- **崩溃**：工具/回调异常会被宿主隔离成 error/失败记录；但插件在主线程、Compose 槽或工具执行中把进程搞崩仍会带崩 App（没有进程级隔离，也没有槽位崩溃标记兜底）。
 
 ## 调试与常见错误
 
