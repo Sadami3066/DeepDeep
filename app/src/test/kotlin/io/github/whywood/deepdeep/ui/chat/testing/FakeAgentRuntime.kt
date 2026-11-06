@@ -108,9 +108,12 @@ class FakeAgentRuntime : AgentRuntime {
         onSend?.invoke(sessionId, text)
     }
 
+    var steerError: Exception? = null
+
     override suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
         steered += text
         sentImages += images
+        steerError?.let { throw it }
     }
 
     override suspend fun followUp(sessionId: String, text: String, images: List<ImagePart>) {
