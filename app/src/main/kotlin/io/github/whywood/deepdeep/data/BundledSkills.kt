@@ -7,6 +7,8 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val ASSET_ROOT = "skills"
@@ -21,22 +23,41 @@ class BundledSkills(
     private val read: (String) -> ByteArray?,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    suspend fun sync(): Int = withContext(ioDispatcher) {
-        val failures = mutableListOf<Throwable>()
-        val synced = readBundledSkills().entries.count { (id, files) ->
-            try {
-                syncSkill(id, files)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                failures += error
-                false
+    private val mutex = Mutex()
+
+    suspend fun sync(include: (String) -> Boolean = { true }): Int = withContext(ioDispatcher) {
+        mutex.withLock {
+            val failures = mutableListOf<Throwable>()
+            var synced = 0
+            readBundledSkills().entries.forEach { (id, files) ->
+                try {
+                    if (include(id)) {
+                        if (syncSkill(id, files)) synced++
+                    } else {
+                        removeBundledSkill(id)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    failures += error
+                }
+            }
+            if (failures.isNotEmpty()) {
+                throw IOException("bundled skill sync failed for ${failures.size} skill(s)", failures.first())
+            }
+            synced
+        }
+    }
+
+    private fun removeBundledSkill(id: String) {
+        if (!isSafeId(id)) return
+        listOf(File(repoDir, id), File(activeDir, id)).forEach { directory ->
+            when (ownership(directory)) {
+                Ownership.BUNDLED -> directory.deleteRecursively()
+                Ownership.FOREIGN -> if (File(directory, PLUGIN_MARKER).isFile) directory.deleteRecursively()
+                Ownership.MISSING -> Unit
             }
         }
-        if (failures.isNotEmpty()) {
-            throw IOException("bundled skill sync failed for ${failures.size} skill(s)", failures.first())
-        }
-        synced
     }
 
     private fun readBundledSkills(): Map<String, Map<String, ByteArray>> = buildMap {
@@ -132,6 +153,8 @@ class BundledSkills(
     }
 
     companion object {
+        const val SCREEN_OPS_SKILL = "deepdeep-gui"
+
         fun fromAssets(assets: AssetManager, repoDir: File, activeDir: File): BundledSkills = BundledSkills(
             repoDir = repoDir,
             activeDir = activeDir,

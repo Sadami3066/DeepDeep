@@ -14,6 +14,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 - `sample/`：最小插件（两个工具 + 自定义消息卡 + 插件页面），用于宿主真机回归。
 - `template/`：完整模板（工具 + partial 更新 + 会话感知工具 + 技能 + hooks + 工具卡槽位 + 插件页面），复制为新模块即起点。
+- `interop/`：接口全覆盖测试插件（全部生命周期、hooks、18 个宿主服务、两类槽位、插件页面），用于联调与回归，也是 SDK 的使用样例。
 
 前置条件：
 
@@ -23,11 +24,11 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 ```bash
 # 在 plugins/ 仓库根目录执行
 cd ../app
-./scripts/gradlew-locked :plugin-api:publishToMavenLocal
-# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.5.0/
+./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal
+# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/{plugin-api,design}/0.5.0/
 ```
 
-改了 `plugin-api` 后重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
+`plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。改了任意一个都要重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
 
 新增插件：
 
@@ -40,9 +41,9 @@ cp -R template my-plugin
 #    在仓库根 settings.gradle.kts 的 include(...) 注册 :my-plugin
 
 # 2. 打包 + 签名 + 自检
-./gradlew :my-plugin:assemblePlugin
-./gradlew :my-plugin:signPlugin
-./gradlew :my-plugin:verifyPlugin
+./scripts/gradlew-locked :my-plugin:assemblePlugin
+./scripts/gradlew-locked :my-plugin:signPlugin
+./scripts/gradlew-locked :my-plugin:verifyPlugin
 
 # 3. 产物
 #    my-plugin/build/plugin/my-plugin.unsigned.ddp   未签名（排障用）
@@ -72,7 +73,7 @@ cp -R template my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.5.0`、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.5.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.5.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
 - 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
@@ -110,8 +111,10 @@ cp -R template my-plugin
 |---|---|
 | `tools` | 工具名列表，小写 `snake_case`，如 `template_echo`；不能与宿主保留工具名冲突 |
 | `skills` | 技能 id 列表，如 `template-skill` |
-| `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`plugin.page:home` |
+| `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`chat.message:card`；插件页面不走槽位，见 `pages` |
 | `pages` | 插件页面 id 列表 |
+
+`tools`/`skills`/`pages` 的 id 统一匹配 `^[a-z][A-Za-z0-9_-]*$`，**不能包含点号**（技能 id 写 `interop-guide`，不是 `interop.guide`）；`uiSlots` 的槽位 id 规则见后文。
 
 `LocalizedText` 写法：
 
@@ -473,7 +476,7 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 
 ## UI 扩展
 
-宿主固定主壳/导航/聊天骨架，插件可以注册**插件页面**、向三个槽位挂 Compose 绑定，或者贡献输入区动作；不能替换整页、不能注册 Activity。插件页面是插件唯一的自绘界面。
+宿主固定主壳/导航/聊天骨架，插件可以注册**插件页面**、向两个槽位挂 Compose 绑定，或者贡献输入区动作；不能替换整页、不能注册 Activity。插件页面是插件唯一的自绘界面，页面内容直接写在 `PluginPage` 里。
 
 ### 槽位目录
 
@@ -481,7 +484,6 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 |---|---|
 | `tool.card.content:<toolName>` | 指定工具调用卡片的内容区 |
 | `chat.message:<customType>` | 自定义消息类型的内容区 |
-| `plugin.page:<pageId>` | 插件页面内容区；页面本身通过 `PluginUiContributions.pages` 声明 |
 
 `SlotBinding(slotId, priority, content)`：同一槽位只渲染一个绑定——按 `priority` 从大到小取第一个可渲染的（同优先级按插件注册顺序），其余绑定被覆盖；没有可渲染绑定时宿主用默认视图兜底。
 
@@ -490,84 +492,93 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 ```kotlin
 SlotIds.toolCard("template_echo")            // "tool.card.content:template_echo"
 SlotIds.chatMessage("card")                  // "chat.message:card"
-SlotIds.page("home")                         // "plugin.page:home"
 SlotIds.matches(slotId)                      // 校验完整槽位 id
 ```
 
-页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（`PluginPage(id, title, icon?)`）声明插件页面，`PluginUiContributions.composerActions`（`ComposerAction(id, label, icon?)`）声明输入区动作。插件页列表里有 `pages` 的行点整行进入第一个页面；输入区动作 chip 在聊天输入区显示，点击打开该插件页面（动作 id 与页面 id 相同时打开对应页面，否则打开第一个页面）。
+页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（`PluginPage(id, title, icon?, content)`）声明插件页面并内联页面内容，`PluginUiContributions.composerActions`（`ComposerAction(id, label, icon?)`）声明输入区动作。插件页列表里有 `pages` 的行点整行进入第一个页面；输入区动作 chip 在聊天输入区显示，点击打开该插件页面（动作 id 与页面 id 相同时打开对应页面，否则打开第一个页面）。
 
 ### Compose 渲染
 
-`SlotContent.Compose(uiApiLevel, render: @Composable (SlotState) -> Unit)` 是唯一 UI 扩展方式，`SlotState` 取决于槽位族：
+`SlotContent.Compose(render: @Composable (SlotState) -> Unit)` 用于槽位内容，`SlotState` 取决于槽位族：
 
 | 槽位族 | 状态 | 字段 |
 |---|---|---|
 | 工具卡 | `ToolCardSlotState` | callId/toolName/args/result（结构化参数与结果） |
 | 自定义消息 | `CustomMessageSlotState` | messageId/customType/payload |
-| 插件页面 | `PluginPageState` | pluginId/pageId/sessionId |
 | 无状态时 | `NoSlotState` | — |
 
-兼容判定（任一不满足只禁用该绑定并显示原因，不拒绝插件）：
+插件页面内容不经过 `SlotState`：`PluginPage.content` 是普通 Composable（`@Composable () -> Unit`），需要宿主或页面状态直接在闭包里捕获。
 
-- 绑定里的 `uiApiLevel <= HOST_UI_API_LEVEL`。
+兼容判定（任一不满足只禁用该插件的 UI，不拒绝插件本身）：
+
 - 清单 `ui.apiLevel <= HOST_UI_API_LEVEL`（未写 `ui` 块时按宿主等级放行）。
 - 清单若填了 `ui.kotlin`，需与宿主 Kotlin **主次版本**一致（如 `2.4`）。
-- 清单若填了 `ui.compose`，需与宿主 Compose runtime 版本**完全一致**（不是 Compose BOM 版本）；宿主探测不到自己的 Compose 版本时同样禁用该绑定。不确定宿主版本时不要填这两个字段，只写 `ui.apiLevel`。
+- 清单若填了 `ui.compose`，需与宿主 Compose runtime 版本**完全一致**（不是 Compose BOM 版本）；宿主探测不到自己的 Compose 版本时同样禁用 UI。不确定宿主版本时不要填这两个字段，只写 `ui.apiLevel`。
+- UI 被禁用时 `pagesOf` 返回空、槽位不渲染，插件的工具/技能/hooks 仍照常生效。
 
 ```kotlin
 override fun ui(host: PluginHost) = object : PluginUiContributions {
     override val bindings = listOf(
         SlotBinding(
             slotId = SlotIds.toolCard("template_echo"),
-            content = SlotContent.Compose(uiApiLevel = 1) { state -> MyToolCard(state) },
-        ),
-        SlotBinding(
-            slotId = SlotIds.page("home"),
-            content = SlotContent.Compose(uiApiLevel = 1) { state -> MyPage(host, state) },
+            content = SlotContent.Compose { state -> MyToolCard(state) },
         ),
     )
 
-    override val pages = listOf(PluginPage(id = "home", title = literal("Home", "首页")))
+    override val pages = listOf(
+        PluginPage(id = "home", title = literal("Home", "首页"), icon = IconRef.Asset("asset:icon.png")) {
+            MyPage(host)
+        },
+    )
 }
 ```
 
-- 槽位渲染在 Compose 主线程；`render` 里不要做阻塞 IO，用 `remember` + `LaunchedEffect` 加载数据并处理取消。
+- 槽位与页面内容都在 Compose 主线程渲染；不要在 composable 里做阻塞 IO，用 `remember` + `LaunchedEffect` 加载数据并处理取消。
 - 槽位异常由宿主兜底：进入组合时写崩溃标记，组合正常释放时清除；若进程在渲染期间死亡，下次启动只禁用该绑定并回退宿主默认视图。不兼容的绑定只记录禁用原因并回退宿主视图；崩溃标记在下次组合或升级插件版本后自动失效，没有单独的恢复入口。一个绑定崩溃不影响同插件其它槽位。
 - 外部插件不能引用 App 资源；图标用 `IconRef.Asset("asset:<包内路径>")`，页面标题也可以不带图标。
 
-### 宿主组件
+### 插件界面只使用 `:design`
 
-`plugin-api` 的 `io.github.whywood.deepdeep.plugin.api.ui` 包提供基于宿主 `MaterialTheme` 的最小组件库，复杂界面可直接用 Material3：
+插件 UI 直接使用 App 的设计系统 `io.github.whywood.deepdeep.design`（`plugin-api` 已通过 `api()` 传递，插件工程不需要再显式声明坐标）。组件与 App 完全同源，禁止自造样式：
 
-| API | 用途 |
+| 组件 | 用途 |
 |---|---|
-| `PluginTheme` | `colors` / `typography` / `spacing`，读取宿主主题 |
-| `PluginSpacing` | `xs`=4dp、`sm`=8dp、`md`=16dp、`lg`=24dp |
-| `PluginCard(content)` | 宿主风格卡片容器（整宽、内边距 16dp） |
-| `PluginSection(title, content)` | 带标题的区块，内容间距 8dp |
-| `PluginText(text, style = bodyMedium)` | 正文文本 |
-| `PluginHint(text)` | 辅助说明（小字、次要色） |
-| `PluginButton(text, onClick, enabled = true)` | 主按钮 |
-| `PluginProgress(progress: Float?)` | `null` 为不确定进度，否则 0..1 |
-| `PluginEmpty(text)` / `PluginError(message)` | 空态 / 错误文案 |
+| `DdGroupCard` | 白色圆角分组卡（20dp 圆角、内边距 16dp、行间发丝线） |
+| `DdListRow` | 卡内列表行（标题/副标题/右侧值/图标/可点/trailing） |
+| `DdSectionLabel` | 区块小标题 |
+| `DdPrimaryButton` | 主按钮（52dp 高、accent 填充，一屏最多一个） |
+| `DdTextAction` | 文字按钮（次要动作用 accent/inkSecondary） |
+| `DdTextField` / `DdTextArea` | 输入框（52dp 高、聚焦 accent 边框） |
+| `DdSwitch` | 开关（52x32、accent 轨道） |
+| `DdChip` | 标签/过滤器 |
+| `DdSheet` + `DdSheetHeader` | 底部弹层与头部 |
+| `DdDialog` | 居中确认弹窗 |
+| `DdMenu` / `DdMenuItem` | 下拉菜单 |
+| `DdEmptyState` / `DdLoadingBlock` / `DdSpinner` | 空态与加载 |
+| `DdHairline` | 分割线 |
+| `DdType` | 字号档：`pageTitle`/`heading`/`body`/`bodySmall`/`label`/`button` |
+| `deepDeepColors()` | 颜色 token：`paper`/`surface`/`raised`/`ink`/`inkSecondary`/`inkTertiary`/`accent`/`accentSoft`/`danger`/`success`/`warning`/`hairline`/`wash` |
+
+约定：
+
+- 不写死颜色与字号，只用 `DdType.*` 与 `deepDeepColors()`；不要直接用 Material3 的 `Card`/`Button`/`OutlinedButton`/`TextButton`/`Switch`/`OutlinedTextField`——它们和 App 的视觉不一致。
+- 页面自己是滚动容器：`Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp))`；不要加顶栏标题（宿主已有 64dp 顶栏），需要底部留白时加 24dp。
+- 状态变化要稳定：初始化时不要把已知值清空成 loading，刷新时保留旧值只标记局部 busy，避免页面闪。
+- 错误就近内联显示（`DdType.bodySmall` + `danger` 色），带上 CLI/接口的最后一段输出；不要只显示退出码，也不要用 Toast。
 
 ```kotlin
-import io.github.whywood.deepdeep.plugin.api.ui.PluginButton
-import io.github.whywood.deepdeep.plugin.api.ui.PluginCard
-import io.github.whywood.deepdeep.plugin.api.ui.PluginHint
-import io.github.whywood.deepdeep.plugin.api.ui.PluginProgress
-import io.github.whywood.deepdeep.plugin.api.ui.PluginSection
-import io.github.whywood.deepdeep.plugin.api.ui.PluginText
-
 @Composable
-private fun MyCard() {
-    PluginCard {
-        PluginSection(title = "连接状态") {
-            PluginText("已连接")
-            PluginHint("令牌保存在插件加密存储中")
-            PluginProgress(progress = 1f)
+private fun StatusCard(host: PluginHost, status: Status) {
+    val colors = deepDeepColors()
+    DdGroupCard {
+        DdListRow(title = "运行环境", value = status.runtime)
+        DdListRow(title = "登录状态", value = if (status.authorized) "已连接" else "未连接")
+        if (status.cliVersion != null) {
+            DdListRow(title = "CLI", value = status.cliVersion)
         }
-        PluginButton(text = "重新连接", onClick = { /* ... */ })
+    }
+    if (status.error != null) {
+        Text(status.error, color = colors.danger, style = DdType.bodySmall)
     }
 }
 ```
@@ -602,20 +613,20 @@ if (linux == null || !linux.available) {
 
 | 访问器 | 主要能力 | 不可用/失败时 |
 |---|---|---|
-| `linux()` | `available`、`exec(command, cwd, timeoutMs)`、`stream(command)` → `LinuxResult`/`LinuxChunk` | 未安装/未启用运行环境时 `available=false`；`exec` 记录超时与输出截断 |
+| `linux()` | `available`、`exec(command, cwd, timeoutMs)`、`stream(command)` → `LinuxResult`/`LinuxChunk` | 未安装/未启用运行环境时 `available=false`；`exec` 记录超时与输出截断；stderr 并入 stdout（`LinuxResult.stderr` 恒为空，失败看 `exitCode` 与输出末尾） |
 | `privilege()` | `state`（selected/effective/rootGranted/adbConnected）、`observe()`、`shell(command)` | 未选 ADB/Root 或后端未就绪时 `shell` 抛 `IllegalStateException` |
-| `screen()` | `status`、`startVirtual/stopVirtual`、`observe`、`screenshot`、`apps`、`launch`、`tap/tapNode/swipe/scroll/type/key`、`waitFor` | 未授权时能力标记为不可用，调用抛异常 |
-| `notifications()` | `enabled`、`notify(PluginNotification)`、`updateProgress`、`cancel` | 通知权限未开时 `enabled=false`，发布被忽略 |
+| `screen()` | `status`、`startVirtual/stopVirtual`、`observe`、`screenshot`、`apps`、`launch`、`tap/tapNode/swipe/scroll/type/key`、`waitFor` | 未授权时能力标记为不可用，调用抛异常；`status` 是同步快照，首次读取会启动宿主侧后台刷新（无停止接口） |
+| `notifications()` | `enabled`、`notify(PluginNotification)`、`updateProgress`、`cancel` | 通知权限未开时 `enabled=false`，发布被静默忽略；`notify` 不返回是否成功 |
 | `secrets()` | `get/put/remove/clear`，按插件 id 命名空间加密存储 | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `network()` | `request(method,url,headers,body,timeoutMs)`、`download(url,targetPath,expectedSha256,onProgress)`；扩展 `get`/`post` | 网络错误抛异常；响应体上限 2 MB、下载上限 512 MB |
 | `files()` | 插件数据/工作区文件：`list/readText/writeText/readBytes/writeBytes/delete/exists/resolve` | 相对路径相对插件 `dataDir`；绝对路径原样使用 |
 | `sessions()` | `active`、`observe()`（含 busy 变化）、`list()`、`prompt(text, sessionId?)` | 无活动会话时 `prompt` 返回 false |
-| `jobs()` | `observe()`、`start(command,label,cwd,sessionId)`、`read(jobId)`、`kill(jobId)` | 无会话/宿主未提供时 `start` 返回 null |
+| `jobs()` | `observe()`、`start(command,label,cwd,sessionId)`、`read(jobId)`、`kill(jobId)` | 无会话/宿主未提供时 `start` 返回 null；没有 `list()`，一次性读取用 `observe().first()` |
 | `timers()` | `schedule(TimerRequest)`（`Once`/`Cron`）、`list()`、`cancel(id)` | 参数非法/宿主未提供时返回 null 或抛异常 |
 | `goals()` | `observe()`、`get/create/edit/pause/resume/complete/clear` | 目标状态非法时返回 null |
 | `miniapp()` | 小程序：`scan/load/create/edit/delete/run` | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `mcp()` | `servers()`、`probe(name)`、`tools(server)`、`call(server,tool,arguments)` | 服务器不存在时返回错误结果或异常 |
-| `ui()` | `openUrl`、`share(ShareRequest)`、`toast`、`openPage(pageId)` | 单项未接线时抛 `PluginServiceUnavailable("ui.xxx")` |
+| `ui()` | `openUrl`、`share(ShareRequest)`、`toast`、`openPage(pageId)` | 单项未接线时抛 `PluginServiceUnavailable("ui.xxx")`；`openPage` 只接受本插件的页面 id，不是 `deepdeep://` 深链 |
 | `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 始终可用 |
 | `bus()` | 插件总线：`publish(PluginBusEvent)`、`subscribe(topic?)` → `Flow<PluginBusEvent>` | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `logs()` | `log(level, message, error?)` + `debug/info/warn/error` | 始终可用 |
@@ -650,10 +661,13 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 
 插件页面是插件唯一的交互界面，也是插件维护自身状态的地方：
 
-- 页面布局由 `PluginUiContributions.pages` 声明，内容由 `plugin.page:<pageId>` 的 Compose 绑定渲染；列表里点整行进入第一个页面，多页面在页面内部自行切换（如 `host.ui().openPage(...)` 只能打开本插件自己的页面）。
+- 页面由 `PluginUiContributions.pages` 声明，`PluginPage.content` 就是页面内容（宿主直接渲染，不经过槽位）；列表里点整行进入第一个页面，多页面在页面内部自行切换（如 `host.ui().openPage(...)` 只能打开本插件自己的页面）。
 - 插件数据写在 `host.dataDir`（`host.files()` 相对路径以它为根），机密凭据写 `host.secrets()`，不要在页面里缓存需要跨进程保留的状态。
 - 页面里做完安装/登录/开关等会影响工具或技能的动作后调用 `host.requestContributionsRefresh()`：宿主重跑一次物化并触发会话重建，贡献在安全点生效。例如插件在页面里装好 CLI 后再返回工具列表，下一次会话就能看到新工具。
 - 页面可以调用 18 个宿主服务；需要独立返回栈或全屏的流程仍由插件自己组织页面层级，不能注册 Activity。
+- `PluginPage.content` 不接收 `SlotState`；需要活跃会话/传递上下文时在页面里调 `host.sessions().active` 或自己保存界面状态。
+- `host.requestContributionsRefresh()` 是异步触发、不等待完成；需要在界面上确认结果时用插件自己的状态标记，不要假设返回时就已物化。
+- `network().get`/`post` 与 `PluginAvailability.isReady` 是扩展函数；显式 import 风格下要分别 import `get`/`post`/`isReady`（或整包 `io.github.whywood.deepdeep.plugin.api.*`）。
 
 ## ABI 与版本
 
@@ -662,7 +676,7 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 - **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.5.0`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
-- Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用对应 Compose 绑定。
+- Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。
 
 ## 安全模型
 
@@ -679,9 +693,9 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 构建/打包/签名（在 `plugins/` 仓库根）：
 
 ```bash
-./gradlew :sample:assemblePlugin :sample:signPlugin :sample:verifyPlugin
-./gradlew :template:verifyPlugin
-./scripts/check.sh        # 全部官方插件 + sample + template 打包签名自检
+./scripts/gradlew-locked :sample:assemblePlugin :sample:signPlugin :sample:verifyPlugin
+./scripts/gradlew-locked :template:verifyPlugin
+./scripts/check.sh        # 全部官方插件 + sample + template + interop 打包签名自检
 ```
 
 排查路径：
@@ -691,7 +705,7 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
   - `version` 是 `major.minor.patch[后缀]`；`apiLevel` ≤ 宿主 `PLUGIN_API_LEVEL`；`minHostVersion` 不高于宿主版本；
   - `entryClass` 类名合法、类在某个根 `classes*.dex` 里且有无参构造；
   - `provides` 与实际贡献一致（tools/skills/uiSlots/pages），工具名不与宿主保留名冲突；
-  - 槽位 id 过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`、`plugin.page:<pageId>`）；
+  - 槽位 id 过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`），插件页面 id 过 `pages` 校验；
   - 包内 `assets/plugin.json` 路径正确、至少一个根 `classes*.dex`。
 - **安装被拒**：确认页/提示会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、签名错误（包被改动/公钥与 keyId 不匹配/缺签名文件）、发布者不匹配（升级换了密钥）、工具名冲突（`provides.tools` 与宿主或已装插件冲突）、版本冲突（版本不比已装新）。
 - **装载失败**：`ClassNotFoundException` → `entryClass` 写错或被 minify；`NoSuchMethodException` → 缺无参构造；`NoClassDefFoundError` → 宿主版本不一致或把宿主依赖打进了包。
@@ -700,7 +714,7 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 - **文件行不显示**：`ToolBlock.FileRef` 的 path 按插件给出的绝对路径原样使用；文件行由宿主从 details 保留键 `deepdeep.fileRefs` 还原，不要自己写这个键；若在 `afterToolExecution` 里 `Replace` 结果并丢掉了 details，文件行会随之消失。
 - **hooks 没生效 / 停用后仍收到事件**：hooks 在 `contributions()` 或 `contributionsFor()` 返回都生效；只写 `contributionsFor` 且返回默认 `PluginHooks.None` 时沿用全局 hooks；会话级贡献每个会话只物化一次，插件启停/刷新在安全点重建会话（本轮结束后）才重新物化；当前 run 内按冻结集合派发，停用/卸载的插件仍会收到本轮剩余事件，属预期行为。
 - **技能没出现**：插件必须启用且 `availability()` 为 `Available`（不可用时技能不启用）；SKILL.md 必须有 frontmatter，`PluginSkill.id` 与 `name` 一致；`files` 路径必须相对且安全。
-- **槽位/页面不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 与实际绑定一致（运行期以 `ui()` 为准）；检查 `uiApiLevel` 与清单 `ui` 字段是否与宿主版本匹配；不兼容的绑定会被宿主跳过并回退默认视图。
+- **槽位/页面不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 与实际绑定一致（运行期以 `ui()` 为准）；页面必须出现在 `PluginUiContributions.pages`；检查清单 `ui` 字段（`ui.apiLevel`/`ui.kotlin`/`ui.compose`）是否与宿主版本匹配；不兼容时整块 UI 被禁用，回退宿主默认视图或显示不可用提示，`host.logs()` 会记录禁用原因。
 - **更新失败**：确认签名 `keyId` 与首装一致、整包 sha256 与记录一致；换密钥只能当新发布者重装。
 
 ## 限制（当前明确不做）
@@ -709,12 +723,13 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 - 不给插件注册 Activity/Service/权限：平台不允许运行期组件注册；需要独立 UI 只能另装独立 APK。
 - 插件不能用 `res/` 资源 id；文案/图标/技能都走清单与 assets。
 - 不提供 Provider 凭据/OAuth、ADB 配对流程、宿主内部加密密钥等服务；插件可以直接用 `host.context` 调 Android API，宿主不做拦截。
+- 已知的限制：`notifications().notify` 没有回执；`requestContributionsRefresh()` 不返回句柄；`screen().status` 的后台刷新无法由插件停止；`jobs()` 没有 `list()`。这些按当前契约使用即可，刻意不扩接口。
 - 不承诺插件崩溃的进程级隔离；进程被系统强杀时不保证调用插件的 `close()`。
 - 原生库不加载（`lib/**` 仅进入摘要与解包）。
-- 不提供声明式 UI 节点；UI 扩展只有自由 Compose（工具卡/自定义消息/插件页面三个槽位族）。
+- 不提供声明式 UI 节点；UI 扩展只有自由 Compose（工具卡/自定义消息两类槽位 + `PluginPage` 整页内容）。
 
 ## 参考
 
 - 契约源码：宿主仓库 `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`
 - 插件工程：`plugins/` 仓库的 `sample/`（最小）与 `template/`（完整模板与签名流程），README 见仓库根目录
-- 插件系统取舍：[DECISIONS.md](DECISIONS.md) 的 #94–#99；产品能力边界：[GUIDE.md](GUIDE.md)
+- 插件系统取舍：[DECISIONS.md](DECISIONS.md) 的 #94–#103；产品能力边界：[GUIDE.md](GUIDE.md)

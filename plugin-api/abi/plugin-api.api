@@ -1411,32 +1411,18 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginNotification {
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginPage {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginPage(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef);
-  public io.github.whywood.deepdeep.plugin.api.PluginPage(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public io.github.whywood.deepdeep.plugin.api.PluginPage(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
+  public io.github.whywood.deepdeep.plugin.api.PluginPage(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, kotlin.jvm.functions.Function2, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getId();
   public final io.github.whywood.deepdeep.plugin.api.LocalizedText getTitle();
   public final io.github.whywood.deepdeep.plugin.api.IconRef getIcon();
+  public final kotlin.jvm.functions.Function2<androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> getContent();
   public final java.lang.String component1();
   public final io.github.whywood.deepdeep.plugin.api.LocalizedText component2();
   public final io.github.whywood.deepdeep.plugin.api.IconRef component3();
-  public final io.github.whywood.deepdeep.plugin.api.PluginPage copy(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef);
-  public static io.github.whywood.deepdeep.plugin.api.PluginPage copy$default(io.github.whywood.deepdeep.plugin.api.PluginPage, java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.PluginPageState implements io.github.whywood.deepdeep.plugin.api.SlotState {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginPageState(java.lang.String, java.lang.String, java.lang.String);
-  public io.github.whywood.deepdeep.plugin.api.PluginPageState(java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.lang.String getPluginId();
-  public final java.lang.String getPageId();
-  public final java.lang.String getSessionId();
-  public final java.lang.String component1();
-  public final java.lang.String component2();
-  public final java.lang.String component3();
-  public final io.github.whywood.deepdeep.plugin.api.PluginPageState copy(java.lang.String, java.lang.String, java.lang.String);
-  public static io.github.whywood.deepdeep.plugin.api.PluginPageState copy$default(io.github.whywood.deepdeep.plugin.api.PluginPageState, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public final kotlin.jvm.functions.Function2<androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> component4();
+  public final io.github.whywood.deepdeep.plugin.api.PluginPage copy(java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
+  public static io.github.whywood.deepdeep.plugin.api.PluginPage copy$default(io.github.whywood.deepdeep.plugin.api.PluginPage, java.lang.String, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.IconRef, kotlin.jvm.functions.Function2, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -2036,13 +2022,11 @@ public interface io.github.whywood.deepdeep.plugin.api.SlotContent {
 }
 public final class io.github.whywood.deepdeep.plugin.api.SlotContent$Compose implements io.github.whywood.deepdeep.plugin.api.SlotContent {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.SlotContent$Compose(int, kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.plugin.api.SlotState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
-  public final int getUiApiLevel();
+  public io.github.whywood.deepdeep.plugin.api.SlotContent$Compose(kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.plugin.api.SlotState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
   public final kotlin.jvm.functions.Function3<io.github.whywood.deepdeep.plugin.api.SlotState, androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> getRender();
-  public final int component1();
-  public final kotlin.jvm.functions.Function3<io.github.whywood.deepdeep.plugin.api.SlotState, androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> component2();
-  public final io.github.whywood.deepdeep.plugin.api.SlotContent$Compose copy(int, kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.plugin.api.SlotState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
-  public static io.github.whywood.deepdeep.plugin.api.SlotContent$Compose copy$default(io.github.whywood.deepdeep.plugin.api.SlotContent$Compose, int, kotlin.jvm.functions.Function3, int, java.lang.Object);
+  public final kotlin.jvm.functions.Function3<io.github.whywood.deepdeep.plugin.api.SlotState, androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> component1();
+  public final io.github.whywood.deepdeep.plugin.api.SlotContent$Compose copy(kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.plugin.api.SlotState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
+  public static io.github.whywood.deepdeep.plugin.api.SlotContent$Compose copy$default(io.github.whywood.deepdeep.plugin.api.SlotContent$Compose, kotlin.jvm.functions.Function3, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -2051,11 +2035,9 @@ public final class io.github.whywood.deepdeep.plugin.api.SlotIds {
   public static final io.github.whywood.deepdeep.plugin.api.SlotIds INSTANCE;
   public static final java.lang.String TOOL_CARD_PREFIX;
   public static final java.lang.String CHAT_MESSAGE_PREFIX;
-  public static final java.lang.String PAGE_PREFIX;
   public static final int $stable;
   public final java.lang.String toolCard(java.lang.String);
   public final java.lang.String chatMessage(java.lang.String);
-  public final java.lang.String page(java.lang.String);
   public final boolean matches(java.lang.String);
 }
 public interface io.github.whywood.deepdeep.plugin.api.SlotState {
@@ -2294,31 +2276,6 @@ public final class io.github.whywood.deepdeep.plugin.api.UiManifest {
   public int hashCode();
   public boolean equals(java.lang.Object);
   public io.github.whywood.deepdeep.plugin.api.UiManifest();
-}
-public final class io.github.whywood.deepdeep.plugin.api.ui.PluginComponentsKt {
-  public static final void PluginCard(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginSection(java.lang.String, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginText(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.text.TextStyle, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginHint(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginButton(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, boolean, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginProgress(java.lang.Float, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginEmpty(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
-  public static final void PluginError(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
-}
-public final class io.github.whywood.deepdeep.plugin.api.ui.PluginSpacing {
-  public static final io.github.whywood.deepdeep.plugin.api.ui.PluginSpacing INSTANCE;
-  public static final int $stable;
-  public final float getXs-D9Ej5fM();
-  public final float getSm-D9Ej5fM();
-  public final float getMd-D9Ej5fM();
-  public final float getLg-D9Ej5fM();
-}
-public final class io.github.whywood.deepdeep.plugin.api.ui.PluginTheme {
-  public static final io.github.whywood.deepdeep.plugin.api.ui.PluginTheme INSTANCE;
-  public static final int $stable;
-  public final androidx.compose.material3.ColorScheme getColors(androidx.compose.runtime.Composer, int);
-  public final androidx.compose.material3.Typography getTypography(androidx.compose.runtime.Composer, int);
-  public final io.github.whywood.deepdeep.plugin.api.ui.PluginSpacing getSpacing();
 }
 public interface io.github.whywood.deepdeep.plugin.api.UiService {
   public abstract void openUrl(java.lang.String);

@@ -4,15 +4,19 @@
     <string name="plugins_refresh">Refresh</string>
     <string name="plugins_search_placeholder">Search plugins</string>
     <string name="plugins_empty">No plugins installed yet</string>
+    <string name="plugins_empty_hint">Tap + in the top right to import a .ddp package</string>
     <string name="plugins_enable">Enabled</string>
     <string name="plugins_disable">Disabled</string>
     <string name="plugins_close">Close</string>
     <string name="plugins_cancel">Cancel</string>
     <string name="plugins_menu_more">More actions</string>
     <string name="plugins_menu_uninstall">Uninstall</string>
-    <string name="plugins_menu_check_updates">Check for updates</string>
-    <string name="plugins_menu_info">Version and publisher</string>
-    <string name="plugins_info_title">Plugin info</string>
+    <string name="plugins_menu_info">Plugin info</string>
+    <string name="plugins_info_status">Status</string>
+    <string name="plugins_info_source">Source</string>
+    <string name="plugins_info_source_external">External</string>
+    <string name="plugins_info_source_builtin">Built-in</string>
+    <string name="plugins_info_update">Available version</string>
     <string name="plugins_info_version">Version</string>
     <string name="plugins_info_installed_version">Installed version</string>
     <string name="plugins_info_size">Size</string>
@@ -36,7 +40,6 @@
     <string name="plugins_error_unknown">Plugin does not exist or was removed</string>
 
     <string name="plugins_import_title">Import plugin</string>
-    <string name="plugins_import_pick">Choose a .ddp plugin package</string>
     <string name="plugins_import_version">Version</string>
     <string name="plugins_import_size">Size</string>
     <string name="plugins_import_publisher">Publisher</string>

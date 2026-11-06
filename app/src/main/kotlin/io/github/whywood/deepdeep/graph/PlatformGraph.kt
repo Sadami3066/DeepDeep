@@ -29,6 +29,7 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
             scope = deps.scope,
         ) {
             deps.scope.launch { deps.pluginManager().refreshAndSyncSkills() }
+            deps.syncBundledSkills()
             deps.host().reconfigure()
         }
     }

@@ -54,6 +54,18 @@ class BundledSkillsTest {
     }
 
     @Test
+    fun excludedSkillAlsoRemovesPluginOwnedCopy() = runTest {
+        pluginOwned(File(repoDir, "alpha"))
+        pluginOwned(File(activeDir, "alpha"))
+
+        skills().sync { it != "alpha" }
+
+        assertFalse(File(repoDir, "alpha").exists())
+        assertFalse(File(activeDir, "alpha").exists())
+        assertTrue(File(activeDir, "beta/SKILL.md").isFile)
+    }
+
+    @Test
     fun doesNotOverwriteUserOwnedContent() = runTest {
         File(repoDir, "alpha").mkdirs()
         File(repoDir, "alpha/SKILL.md").writeText("# User alpha")
@@ -85,6 +97,40 @@ class BundledSkillsTest {
         skills.sync()
 
         assertFalse(File(activeDir, "alpha").exists())
+    }
+
+    @Test
+    fun removesBundledSkillWhenExcluded() = runTest {
+        val skills = skills()
+        skills.sync()
+
+        assertEquals(1, skills.sync { it != "alpha" })
+
+        assertFalse(File(repoDir, "alpha").exists())
+        assertFalse(File(activeDir, "alpha").exists())
+        assertTrue(File(repoDir, "beta/SKILL.md").isFile)
+    }
+
+    @Test
+    fun keepsUserOwnedSkillWhenExcluded() = runTest {
+        File(repoDir, "alpha").mkdirs()
+        File(repoDir, "alpha/SKILL.md").writeText("# User alpha")
+
+        assertEquals(1, skills().sync { it != "alpha" })
+
+        assertEquals("# User alpha", File(repoDir, "alpha/SKILL.md").readText())
+    }
+
+    @Test
+    fun restoresBundledSkillWhenIncludedAgain() = runTest {
+        val skills = skills()
+        skills.sync()
+        skills.sync { it != "alpha" }
+
+        assertEquals(2, skills.sync())
+
+        assertEquals("# Alpha", File(repoDir, "alpha/SKILL.md").readText())
+        assertEquals("# Alpha", File(activeDir, "alpha/SKILL.md").readText())
     }
 
     @Test

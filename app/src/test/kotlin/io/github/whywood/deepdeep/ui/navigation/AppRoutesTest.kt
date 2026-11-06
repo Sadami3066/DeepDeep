@@ -20,7 +20,7 @@ class AppRoutesTest {
         AppDestination.ChatSettings,
         AppDestination.Privacy,
         AppDestination.Permission,
-        AppDestination.FloatingWindow,
+        AppDestination.AndroidSettings,
         AppDestination.Search,
         AppDestination.Skills,
         AppDestination.Timers,

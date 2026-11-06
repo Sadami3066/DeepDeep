@@ -42,7 +42,7 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
         ProcessRuntime(
             scope = deps.scope,
             prepare = deps.prepare,
-            installBundledSkills = { deps.bundledSkills.sync() },
+            installBundledSkills = deps.installBundledSkills,
             startPlugins = { deps.pluginManager().start() },
             refreshPluginsIfStale = { deps.pluginManager().refreshIfStale(it) },
             reconfigureHost = { deps.host().reconfigure() },

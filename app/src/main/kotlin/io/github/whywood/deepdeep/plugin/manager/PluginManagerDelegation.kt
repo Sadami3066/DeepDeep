@@ -51,10 +51,15 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
     override fun slotEntries(slotId: String): List<SlotRenderEntry> = slotRegistry.bindings(slotId)
 
     override fun pagesOf(pluginId: String): List<PluginPage> =
-        registrySnapshot.pages.filter { it.pluginId == pluginId }.map { it.page }
+        if (!slotRegistry.uiCompatible(pluginId)) {
+            emptyList()
+        } else {
+            registrySnapshot.pages.filter { it.pluginId == pluginId }.map { it.page }
+        }
 
     override fun composerActions(): List<PluginComposerActionUi> =
         registrySnapshot.composerActions.mapNotNull { entry ->
+            if (!slotRegistry.uiCompatible(entry.pluginId)) return@mapNotNull null
             val pages = registrySnapshot.pages.filter { it.pluginId == entry.pluginId }.map { it.page }
             val page = pages.firstOrNull { it.id == entry.action.id } ?: pages.firstOrNull() ?: return@mapNotNull null
             PluginComposerActionUi(entry.pluginId, entry.action, page.id)

@@ -1,33 +1,48 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.whywood.deepdeep.plugin.api.PluginPageState
-import io.github.whywood.deepdeep.plugin.api.SlotIds
-import io.github.whywood.deepdeep.plugin.host.ui.PluginSlotHost
 import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.ui.common.chat.LocalPluginManager
 
 @Composable
-internal fun PluginPageSlot(
+internal fun PluginPageHost(
     pluginId: String,
     pageId: String,
     fallback: @Composable () -> Unit,
 ) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, pluginId, pageId) {
-        manager.slotEntries(SlotIds.page(pageId)).filter { it.pluginId == pluginId }
+    val manager = LocalPluginManager.current ?: run {
+        fallback()
+        return
     }
-    PluginSlotHost(
-        entries = entries,
-        state = PluginPageState(pluginId = pluginId, pageId = pageId),
-        failureGuard = manager.slotFailureGuard(),
-        fallback = fallback,
-    )
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    val page = remember(uiState, pluginId, pageId) {
+        manager.pagesOf(pluginId).firstOrNull { it.id == pageId }
+    }
+    if (page == null) {
+        if (!uiState.loading && uiState.snapshot(pluginId) != null) fallback()
+        return
+    }
+    val guard = manager.slotFailureGuard()
+    val version = uiState.snapshot(pluginId)?.version.orEmpty()
+    val guardKey = remember(pluginId, pageId, version) { "page:$pluginId@$version:$pageId" }
+    val crashed = remember(guardKey) { guard.detect(guardKey) != null }
+    if (crashed) {
+        fallback()
+        return
+    }
+    DisposableEffect(guardKey) {
+        guard.mark(guardKey, "page $pageId")
+        onDispose { guard.clear(guardKey) }
+    }
+    key(pluginId, pageId) {
+        page.content()
+    }
 }
 
 @Composable

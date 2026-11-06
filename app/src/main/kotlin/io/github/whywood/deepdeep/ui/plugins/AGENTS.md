@@ -6,17 +6,19 @@
 
 | 文件 | 职责 |
 |---|---|
-| `PluginsScreen.kt` | 插件页：搜索、顶部入口（导入插件 / 可更新 / 插件源 / 检查更新）、单列表行（图标+名称+摘要+开关+「⋯」菜单）、卸载/信息弹窗 |
+| `PluginsScreen.kt` | 插件页：搜索、64dp 顶栏（导入「+」与「⋯」菜单：检查更新 / 插件源 / 刷新）、更新提示条、单列表行（图标+名称+摘要+开关+「⋯」动作菜单）、插件详情底部弹层、卸载确认弹窗 |
 | `PluginsStateHolder.kt` | 纯 UI 临时状态（搜索词、启停中 id）与命令分发（启停、卸载、导入/更新、插件源、恢复） |
 | `PluginImportDialogs.kt` | 外部插件导入确认/结果、更新列表、插件源设置弹窗 |
 | `PluginUiSupport.kt` | LocalizedText/IconRef 解析、图标按显示尺寸降采样解码（缺失/损坏回退占位）、phase/search/size 纯函数、列表分组卡片 |
-| `PluginHostSlots.kt` | 插件页面槽包装（`plugin.page:<id>`，经 `SlotRegistry` 解析）与 composer 动作查询 |
+| `PluginHostSlots.kt` | `PluginPageHost`：按 `manager.pagesOf(pluginId)` 找页面并直接渲染 `PluginPage.content`（UI 不兼容/页面不存在/上次崩溃时回退提示）与 composer 动作查询 |
 
 ## 要点
 
-- 插件页只有一个列表，没有内外 tab；无插件时是空列表 + 顶部导入入口。
-- 列表行 = 图标 + 名称 + 摘要 + `DdSwitch`；行尾「⋯」菜单 = 卸载 / 检查更新 / 版本与发布者，`FAILED`/`DEGRADED` 且 `lastError` 非空时追加「重试激活」与「回滚到 <version>」（调 `retryActivation`/`rollbackPlugin`，失败文本由 `lastError` 回显在行内）。
-- 有 `pages` 的插件点整行进入第一个页面（`AppDestination.PluginPage`）；没有 `pages` 的行不可点。插件页面是插件唯一的自绘界面，`PluginPageSlot` 无绑定/不兼容/上次崩溃时显示不可用提示。
+- 插件页只有一个列表，没有内外 tab；无插件时是居中空态（图标 + 提示 + 顶栏导入说明）。
+- 列表行 = 图标 + 名称 + 摘要 + `DdSwitch`；行尾「⋯」菜单只放动作：「插件信息」、`FAILED`/`DEGRADED` 且 `lastError` 非空时的「重试激活」与「回滚到 <version>」（调 `retryActivation`/`rollbackPlugin`，失败文本由 `lastError` 回显在行内）、最后是破坏性「卸载」。只读信息不下拉菜单。
+- 插件详情是 `DdSheet` 底部弹层（`plugin_detail`）：状态、版本、已安装版本（与当前版本不同时）、可更新版本、发布者、来源（外部导入/内置）、大小、技能；只读无动作。
+- 全局「检查更新」在顶栏「⋯」菜单里；`state.availableUpdates` 非空时搜索框下出现可点的更新提示条，打开更新列表弹窗。
+- 有 `pages` 的插件点整行进入第一个页面（`AppDestination.PluginPage`）；没有 `pages` 的行不可点。插件页面是插件唯一的自绘界面，内容由 `PluginPage.content` 内联提供，宿主用 `PluginPageHost` 直接渲染；UI 不兼容/页面不存在/上次崩溃时显示不可用提示。
 - 图标：asset 图标按实际显示尺寸 `inSampleSize` 降采样解码、不染色；文件缺失或损坏回退 `DdIcons.Puzzle`。
 - `LocalPluginManager` 由 `MainActivity` 的 `ProvidePluginManager` 提供；无管理器时槽位一律静默不渲染。
 - 槽位崩溃标记进入组合时写入、正常 dispose 时清除；残留标记只禁用对应绑定，同插件其他槽位不受影响。

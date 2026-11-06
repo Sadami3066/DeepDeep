@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.AgentDocStore
@@ -32,6 +33,7 @@ import io.github.whywood.deepdeep.graph.RuntimeGraph
 import io.github.whywood.deepdeep.graph.RuntimeGraphDeps
 import io.github.whywood.deepdeep.graph.ServiceGraph
 import io.github.whywood.deepdeep.graph.ServiceGraphDeps
+import io.github.whywood.deepdeep.graph.isScreenOpsActive
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -66,6 +68,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -139,6 +142,12 @@ class AppGraph(context: Context) : AppDependencies {
             }
         }
         scope.launch {
+            capabilitySettingsStore.screenOps.drop(1).collect {
+                syncBundledSkills()
+                host.reconfigure()
+            }
+        }
+        scope.launch {
             host.events.collect { event ->
                 pluginManager.onRuntimeEvent(event)
                 when (event.event) {
@@ -168,6 +177,7 @@ class AppGraph(context: Context) : AppDependencies {
         mcpTokenStore = dataGraph.mcpTokenStore,
         pluginManager = { pluginManager },
         host = { host },
+        syncBundledSkills = { syncBundledSkills() },
     )
 
     private fun runtimeGraphDeps(): RuntimeGraphDeps = RuntimeGraphDeps(
@@ -218,7 +228,7 @@ class AppGraph(context: Context) : AppDependencies {
         linuxEnvironment = platformGraph.linuxEnvironment,
         pluginManager = { pluginManager },
         skillRepository = dataGraph.skillRepository,
-        bundledSkills = dataGraph.bundledSkills,
+        installBundledSkills = { syncBundledSkills() },
         prepare = ::prepare,
         jobWake = dataGraph.jobWake,
         linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
@@ -268,6 +278,21 @@ class AppGraph(context: Context) : AppDependencies {
         credentials.preloadAll()
         dataGraph.modelSelection.ensure(credentials.authKinds.value.keys)
     }
+
+    private suspend fun syncBundledSkills() {
+        runCatching {
+            dataGraph.bundledSkills.sync { id ->
+                id != BundledSkills.SCREEN_OPS_SKILL || screenOpsActive()
+            }
+        }.onFailure {
+            Diagnostics.log(appContext, "app: bundled skill sync failed", it)
+        }
+    }
+
+    private fun screenOpsActive(): Boolean = isScreenOpsActive(
+        screenOps = capabilitySettingsStore.screenOps.value,
+        effective = privilege.state.value.effective,
+    )
 
     private suspend fun decorateInterrupted(state: ConversationState, sessionId: String): ConversationState {
         var next = state

@@ -26,7 +26,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.WorkspaceSettingsRoute
-import io.github.whywood.deepdeep.ui.settings.FloatingWindowScreen
+import io.github.whywood.deepdeep.ui.settings.AndroidSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 
@@ -79,7 +79,6 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             scope = host.scope,
             ui = host.ui,
             archivedCount = host.chat.archivedCount,
-            onOpenAssistantSettings = host.onOpenAssistantSettings,
             onBack = onBack,
         )
 
@@ -94,7 +93,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
         AppDestination.Permission -> PermissionRoute(dependencies, host.scope, onBack)
 
-        AppDestination.FloatingWindow -> FloatingWindowScreen(onBack = onBack)
+        AppDestination.AndroidSettings -> AndroidSettingsScreen(onBack = onBack)
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
 

@@ -2,6 +2,13 @@
 
 ## HEAD (since m2)
 
+- feat: 插件 UI 与 App 设计系统同源：`:design` 作为插件 SDK 与 `plugin-api` 同版本发布（`api()` 传递、compileOnly 不打包），插件页面直接使用 Dd 组件；`PluginPage.content` 内联页面内容，删除 `plugin.page` 槽位与 `SlotContent.Compose.uiApiLevel`，删除 `plugin-api` 内置 UI 组件 [插件] [界面] [架构]
+- feat: 插件页重设计：顶栏 `＋` 导入与「⋯」菜单（检查更新/插件源/刷新）、单列表行 + 行尾动作菜单、插件详情底部弹层、更新提示条与空态；去掉顶栏下三个大卡片 [界面] [插件]
+- feat: 设置重组：屏幕操作开关移入权限页，仅 ADB/Root 生效时注入屏幕工具与技能（未生效橙色提示）；悬浮窗与系统助手合并为「Android 设置」；「运行环境」更名「Linux 设置」[界面]
+- fix: 主题补 `surfaceContainerHighest` 映射，修插件页 Material3 卡片默认紫 [界面] [插件]
+- fix: 教务插件安装路径重复拼 `jwxt`、企业微信二维码写入 proot 允许范围外导致授权失败；失败信息带 CLI 输出尾部，页面刷新不再清空旧状态 [插件]
+- fix: 插件崩溃标记按小时过期，避免异常退出后页面永久不可用；关闭屏幕操作时一并清理旧插件目录残留的技能副本 [插件]
+- test: 真机插件 e2e 覆盖官方插件、示例、模板与接口全覆盖测试插件 [插件]
 - docs: 同步小程序化、App 自带工具与插件外部化后的文档：重写 `docs/PLUGIN_DEV.md`（外部插件作者文档），更新 `docs/GUIDE.md`/`docs/DECISIONS.md`/`README.md` 与各级 `AGENTS.md` [docs]
 - refactor: 四个官方插件（飞书/企业微信/教务/小米云）迁出宿主仓库到 `plugins/` 独立仓库，按外部 `.ddp` 构建分发；宿主只保留插件契约与真机回归 [插件] [架构]
 - feat: 插件可通过 `host.requestContributionsRefresh()` 在页面操作后重建贡献与会话，开关/登录状态即时生效 [插件]

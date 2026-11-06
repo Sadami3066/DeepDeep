@@ -45,6 +45,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -63,10 +64,13 @@ fun PermissionScreen(
     onConnect: () -> Unit,
     onOpenWirelessDebugging: () -> Unit,
     onProbeRoot: () -> Unit,
+    screenOps: Boolean = false,
+    onScreenOpsChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val screenOpsEffective = state.effective == PrivilegeLevel.ADB || state.effective == PrivilegeLevel.ROOT
     var showPairingDialog by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) {
         onRefresh()
@@ -155,6 +159,35 @@ fun PermissionScreen(
                     text = stringResource(R.string.permission_effective_fallback, levelLabel(state.effective)),
                     style = DdType.bodySmall,
                     color = colors.danger,
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+            SettingsGroup {
+                DdListRow(
+                    icon = DdIcons.HandClick,
+                    title = stringResource(R.string.settings_screen_ops),
+                    subtitle = stringResource(R.string.settings_screen_ops_summary),
+                    subtitleMaxLines = 2,
+                    onClick = { onScreenOpsChange(!screenOps) },
+                    modifier = Modifier.testTag("permission_screen_ops_row"),
+                    trailing = {
+                        DdSwitch(
+                            checked = screenOps,
+                            onCheckedChange = onScreenOpsChange,
+                            stateDescription = stringResource(
+                                if (screenOps) R.string.settings_switch_on else R.string.settings_switch_off,
+                            ),
+                            modifier = Modifier.testTag("permission_screen_ops"),
+                        )
+                    },
+                )
+            }
+            if (screenOps && !screenOpsEffective) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.permission_screen_ops_inactive),
+                    style = DdType.bodySmall,
+                    color = colors.warning,
                 )
             }
             Spacer(Modifier.height(40.dp))

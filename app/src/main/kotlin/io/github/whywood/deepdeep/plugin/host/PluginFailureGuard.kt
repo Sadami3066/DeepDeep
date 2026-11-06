@@ -30,15 +30,28 @@ class PluginFailureGuard(private val dir: File) {
 
     fun clear(key: String): Boolean = fileFor(key).delete()
 
-    fun detect(key: String): PluginFailureMarker? {
+    fun detect(key: String, now: Long = System.currentTimeMillis()): PluginFailureMarker? {
         val file = fileFor(key)
         if (!file.isFile) return null
-        return readMarker(file)
+        val marker = readMarker(file)
+        if (isStale(marker, now)) {
+            file.delete()
+            return null
+        }
+        return marker
     }
 
-    fun detectAll(): List<PluginFailureMarker> {
+    fun detectAll(now: Long = System.currentTimeMillis()): List<PluginFailureMarker> {
         val files = markerFiles().sortedBy { it.name }
-        return files.map(::readMarker)
+        return files.mapNotNull { file ->
+            val marker = readMarker(file)
+            if (isStale(marker, now)) {
+                file.delete()
+                null
+            } else {
+                marker
+            }
+        }
     }
 
     fun clearAll(): Int {
@@ -46,12 +59,15 @@ class PluginFailureGuard(private val dir: File) {
         return files.count { it.delete() }
     }
 
-    fun detectFor(pluginId: String): List<PluginFailureMarker> {
+    fun detectFor(pluginId: String, now: Long = System.currentTimeMillis()): List<PluginFailureMarker> {
         val prefix = "$pluginId@"
-        return detectAll().filter { marker -> marker.key.startsWith(prefix) }
+        return detectAll(now).filter { marker -> marker.key.startsWith(prefix) }
     }
 
     fun clearFor(pluginId: String): Int = detectFor(pluginId).count { marker -> clear(marker.key) }
+
+    private fun isStale(marker: PluginFailureMarker, now: Long): Boolean =
+        marker.markedAt > 0 && now - marker.markedAt > MARKER_TTL_MS
 
     private fun markerFiles(): List<File> =
         dir.listFiles { file ->
@@ -83,12 +99,14 @@ class PluginFailureGuard(private val dir: File) {
     private fun decodeFallbackName(file: File): String =
         file.name.removePrefix(FILE_PREFIX).removeSuffix(FILE_SUFFIX)
 
-    private companion object {
+    internal companion object {
         const val FILE_PREFIX = "guard_"
 
         const val FILE_SUFFIX = ".json"
 
         const val MAX_KEY_LENGTH = 80
+
+        const val MARKER_TTL_MS = 60L * 60L * 1000L
 
         val UNSAFE_KEY = Regex("[^A-Za-z0-9._-]")
     }

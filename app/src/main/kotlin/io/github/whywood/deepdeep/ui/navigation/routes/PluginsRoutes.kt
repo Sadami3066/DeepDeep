@@ -31,7 +31,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
-import io.github.whywood.deepdeep.ui.plugins.PluginPageSlot
+import io.github.whywood.deepdeep.ui.plugins.PluginPageHost
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 
 @Composable
@@ -90,7 +90,7 @@ internal fun PluginPageRoute(
                 maxLines = 1,
             )
         }
-        PluginPageSlot(
+        PluginPageHost(
             pluginId = destination.pluginId,
             pageId = destination.pageId,
             fallback = {

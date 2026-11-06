@@ -31,11 +31,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -43,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -50,11 +53,11 @@ import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
@@ -96,8 +99,7 @@ internal fun PluginsScreen(
     var updateBusy by remember { mutableStateOf(false) }
     var sourceSettings by remember { mutableStateOf<PluginRepositorySettings?>(null) }
     var uninstallTarget by remember { mutableStateOf<PluginSnapshot?>(null) }
-    var infoTarget by remember { mutableStateOf<PluginSnapshot?>(null) }
-    var menuPluginId by remember { mutableStateOf<String?>(null) }
+    var detailPluginId by remember { mutableStateOf<String?>(null) }
 
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -120,42 +122,16 @@ internal fun PluginsScreen(
         query = query,
         togglingIds = togglingIds,
         pluginsRoot = resolvedPluginsRoot,
-        menuPluginId = menuPluginId,
         updateBusy = updateBusy,
         onBack = onBack,
         onQueryChange = holder::setQuery,
         onRefresh = holder::refresh,
         onOpenPluginPage = onOpenPluginPage,
         onToggle = holder::setEnabled,
-        onToggleMenu = { pluginId -> menuPluginId = if (menuPluginId == pluginId) null else pluginId },
-        onDismissMenu = { menuPluginId = null },
-        onRetryActivation = { pluginId ->
-            menuPluginId = null
-            scope.launch { holder.retryActivation(pluginId) }
-        },
-        onRollback = { pluginId ->
-            menuPluginId = null
-            scope.launch { holder.rollback(pluginId) }
-        },
-        onOpenInfo = { snapshot ->
-            menuPluginId = null
-            infoTarget = snapshot
-        },
-        onUninstall = { snapshot ->
-            menuPluginId = null
-            uninstallTarget = snapshot
-        },
-        onCheckPluginUpdates = { pluginId ->
-            menuPluginId = null
-            scope.launch {
-                updateBusyId = pluginId
-                updateError = null
-                val all = runCatching { holder.checkExternalUpdates() }.getOrElse { emptyList() }
-                stagedUpdateIds = emptySet()
-                updates = all.filter { it.pluginId == pluginId }
-                updateBusyId = null
-            }
-        },
+        onOpenDetail = { snapshot -> detailPluginId = snapshot.id },
+        onRetryActivation = { snapshot -> scope.launch { holder.retryActivation(snapshot.id) } },
+        onRollback = { snapshot -> scope.launch { holder.rollback(snapshot.id) } },
+        onUninstall = { snapshot -> uninstallTarget = snapshot },
         onImport = { importPicker.launch(arrayOf("*/*")) },
         onShowUpdates = { updates = state.availableUpdates },
         onOpenSource = { scope.launch { sourceSettings = holder.loadRepositorySettings() } },
@@ -170,6 +146,16 @@ internal fun PluginsScreen(
         },
         modifier = modifier,
     )
+
+    val detailSnapshot = detailPluginId?.let { id -> state.plugins.firstOrNull { it.id == id } }
+    detailSnapshot?.let { snapshot ->
+        PluginDetailSheet(
+            snapshot = snapshot,
+            pluginsRoot = resolvedPluginsRoot,
+            availableUpdate = state.availableUpdates.firstOrNull { it.pluginId == snapshot.id },
+            onDismiss = { detailPluginId = null },
+        )
+    }
 
     inspection?.let { current ->
         PluginImportDialog(
@@ -265,10 +251,6 @@ internal fun PluginsScreen(
             },
         )
     }
-
-    infoTarget?.let { target ->
-        PluginInfoDialog(snapshot = target, onDismiss = { infoTarget = null })
-    }
 }
 
 @Composable
@@ -277,29 +259,26 @@ private fun PluginsContent(
     query: String,
     togglingIds: Set<String>,
     pluginsRoot: File?,
-    menuPluginId: String?,
     updateBusy: Boolean,
     onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
-    onToggleMenu: (String) -> Unit,
-    onDismissMenu: () -> Unit,
-    onRetryActivation: (String) -> Unit,
-    onRollback: (String) -> Unit,
-    onOpenInfo: (PluginSnapshot) -> Unit,
+    onOpenDetail: (PluginSnapshot) -> Unit,
+    onRetryActivation: (PluginSnapshot) -> Unit,
+    onRollback: (PluginSnapshot) -> Unit,
     onUninstall: (PluginSnapshot) -> Unit,
-    onCheckPluginUpdates: (String) -> Unit,
     onImport: () -> Unit,
-    onCheckUpdates: () -> Unit,
     onShowUpdates: () -> Unit,
     onOpenSource: () -> Unit,
+    onCheckUpdates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val visible = filterPlugins(state.plugins, query)
     val interactive = pluginListInteractive(state)
+    var topMenuOpen by remember { mutableStateOf(false) }
 
     Column(
         modifier
@@ -328,19 +307,68 @@ private fun PluginsContent(
                 color = colors.ink,
             )
             DdIconButton(
-                icon = DdIcons.Refresh,
-                onClick = onRefresh,
-                contentDescription = stringResource(R.string.plugins_refresh),
-                modifier = Modifier.testTag("plugins_refresh"),
+                icon = DdIcons.Plus,
+                onClick = onImport,
+                contentDescription = stringResource(R.string.plugins_import_title),
+                modifier = Modifier.testTag("plugins_import"),
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
+            if (updateBusy) {
+                Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
+                }
+            } else {
+                Box {
+                    DdIconButton(
+                        icon = DdIcons.DotsVertical,
+                        onClick = { topMenuOpen = true },
+                        contentDescription = stringResource(R.string.plugins_menu_more),
+                        modifier = Modifier.testTag("plugins_more"),
+                        tint = colors.ink,
+                        iconSize = 21.dp,
+                    )
+                    DdMenu(
+                        expanded = topMenuOpen,
+                        onDismissRequest = { topMenuOpen = false },
+                        menuWidth = 152.dp,
+                    ) {
+                        DdMenuItem(
+                            text = stringResource(R.string.plugins_check_updates),
+                            onClick = {
+                                topMenuOpen = false
+                                onCheckUpdates()
+                            },
+                            icon = DdIcons.Download,
+                            testTag = "plugins_check_updates",
+                        )
+                        DdMenuItem(
+                            text = stringResource(R.string.plugins_source_row),
+                            onClick = {
+                                topMenuOpen = false
+                                onOpenSource()
+                            },
+                            icon = DdIcons.Globe,
+                            testTag = "plugins_source",
+                        )
+                        DdMenuItem(
+                            text = stringResource(R.string.plugins_refresh),
+                            onClick = {
+                                topMenuOpen = false
+                                onRefresh()
+                            },
+                            icon = DdIcons.Refresh,
+                            testTag = "plugins_refresh",
+                        )
+                    }
+                }
+            }
         }
         DdSearchField(
             query = query,
             onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.plugins_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "plugins_search_field",
             clearTestTag = "plugins_search_clear",
@@ -350,93 +378,65 @@ private fun PluginsContent(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 16.dp),
         ) {
             Spacer(Modifier.height(8.dp))
-            PluginGroup {
-                DdListRow(
-                    title = stringResource(R.string.plugins_import_title),
-                    subtitle = stringResource(R.string.plugins_import_pick),
-                    onClick = onImport,
-                    showChevron = true,
-                    modifier = Modifier.testTag("plugins_import"),
+            if (state.availableUpdates.isNotEmpty()) {
+                UpdatesBanner(
+                    count = state.availableUpdates.size,
+                    onClick = onShowUpdates,
                 )
-                DdHairline()
-                if (state.availableUpdates.isNotEmpty()) {
-                    DdListRow(
-                        title = stringResource(
-                            R.string.plugins_updates_available,
-                            state.availableUpdates.size,
-                        ),
-                        onClick = onShowUpdates,
-                        showChevron = true,
-                        modifier = Modifier.testTag("plugins_updates_available"),
-                    )
-                    DdHairline()
-                }
-                DdListRow(
-                    title = stringResource(R.string.plugins_source_row),
-                    onClick = onOpenSource,
-                    showChevron = true,
-                    modifier = Modifier.testTag("plugins_source"),
-                )
-                DdHairline()
-                DdListRow(
-                    title = stringResource(R.string.plugins_check_updates),
-                    onClick = if (updateBusy) null else onCheckUpdates,
-                    showChevron = !updateBusy,
-                    enabled = !updateBusy,
-                    trailing = if (updateBusy) {
-                        {
-                            DdSpinner(size = 16.dp, strokeWidth = 2.dp)
-                        }
-                    } else {
-                        null
-                    },
-                    modifier = Modifier.testTag("plugins_check_updates"),
-                )
+                Spacer(Modifier.height(8.dp))
             }
-            Spacer(Modifier.height(14.dp))
-            if (!pluginCatalogReady(state)) {
-                Box(
+            when {
+                !pluginCatalogReady(state) -> Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 48.dp)
+                        .padding(top = 96.dp)
                         .testTag("plugins_loading"),
                     contentAlignment = Alignment.Center,
                 ) {
                     DdSpinner(size = 22.dp, strokeWidth = 2.dp)
                 }
-            } else if (visible.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.plugins_empty),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp)
-                        .testTag("plugins_empty"),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-            }
-            visible.forEach { snapshot ->
-                PluginRow(
-                    snapshot = snapshot,
-                    pluginsRoot = pluginsRoot,
-                    interactive = interactive && snapshot.id !in togglingIds,
-                    menuExpanded = menuPluginId == snapshot.id,
-                    onOpenPage = {
-                        snapshot.pages.firstOrNull()?.let { page -> onOpenPluginPage(snapshot.id, page.id) }
-                    },
-                    onToggle = { enabled -> onToggle(snapshot.id, enabled) },
-                    onToggleMenu = { onToggleMenu(snapshot.id) },
-                    onDismissMenu = onDismissMenu,
-                    onRetryActivation = { onRetryActivation(snapshot.id) },
-                    onRollback = { onRollback(snapshot.id) },
-                    onOpenInfo = { onOpenInfo(snapshot) },
-                    onUninstall = { onUninstall(snapshot) },
-                    onCheckUpdates = { onCheckPluginUpdates(snapshot.id) },
-                )
-                Spacer(Modifier.height(4.dp))
+
+                visible.isEmpty() -> {
+                    if (state.plugins.isEmpty()) {
+                        EmptyPlugins()
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp)
+                                .testTag("plugins_search_empty"),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.search_no_match),
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
+                    }
+                }
+
+                else -> visible.forEachIndexed { index, snapshot ->
+                    if (index > 0) DdHairline()
+                    PluginRow(
+                        snapshot = snapshot,
+                        pluginsRoot = pluginsRoot,
+                        interactive = interactive && snapshot.id !in togglingIds,
+                        onOpenPage = {
+                            snapshot.pages.firstOrNull()?.let { page ->
+                                onOpenPluginPage(snapshot.id, page.id)
+                            }
+                        },
+                        onToggle = { enabled -> onToggle(snapshot.id, enabled) },
+                        onOpenDetail = { onOpenDetail(snapshot) },
+                        onRetryActivation = { onRetryActivation(snapshot) },
+                        onRollback = { onRollback(snapshot) },
+                        onUninstall = { onUninstall(snapshot) },
+                    )
+                }
             }
             state.error?.let { error ->
                 Spacer(Modifier.height(14.dp))
@@ -463,20 +463,77 @@ private fun PluginsContent(
 }
 
 @Composable
+private fun UpdatesBanner(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().testTag("plugins_updates_available"),
+        shape = RoundedCornerShape(14.dp),
+        background = colors.accentSoft,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIcon(icon = DdIcons.Download, tint = colors.accent, size = 16.dp)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = stringResource(R.string.plugins_updates_available, count),
+                modifier = Modifier.weight(1f),
+                style = DdType.label,
+                color = colors.accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            DdIcon(icon = DdIcons.ChevronRight, tint = colors.accent, size = 14.dp)
+        }
+    }
+}
+
+@Composable
+private fun EmptyPlugins() {
+    val colors = deepDeepColors()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 96.dp)
+            .testTag("plugins_empty"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        DdIcon(icon = DdIcons.Puzzle, tint = colors.inkTertiary, size = 28.dp)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.plugins_empty),
+            style = DdType.label,
+            color = colors.ink,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.plugins_empty_hint),
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
 private fun PluginRow(
     snapshot: PluginSnapshot,
     pluginsRoot: File?,
     interactive: Boolean,
-    menuExpanded: Boolean,
     onOpenPage: () -> Unit,
     onToggle: (Boolean) -> Unit,
-    onToggleMenu: () -> Unit,
-    onDismissMenu: () -> Unit,
+    onOpenDetail: () -> Unit,
     onRetryActivation: () -> Unit,
     onRollback: () -> Unit,
-    onOpenInfo: () -> Unit,
     onUninstall: () -> Unit,
-    onCheckUpdates: () -> Unit,
 ) {
     val colors = deepDeepColors()
     val available = snapshot.availability is PluginAvailabilityUi.Available
@@ -489,6 +546,7 @@ private fun PluginRow(
         snapshot.phase == PluginPhaseUi.PENDING_RESTART -> stringResource(R.string.plugins_phase_pending_restart)
         else -> snapshot.summary
     }
+    var menuOpen by remember(snapshot.id) { mutableStateOf(false) }
     DdPressable(
         onClick = onOpenPage,
         modifier = Modifier.fillMaxWidth().testTag("plugin_row_${snapshot.id}"),
@@ -499,7 +557,7 @@ private fun PluginRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp)
-                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PluginIcon(
@@ -542,7 +600,7 @@ private fun PluginRow(
             Box {
                 DdIconButton(
                     icon = DdIcons.More,
-                    onClick = onToggleMenu,
+                    onClick = { menuOpen = true },
                     contentDescription = stringResource(R.string.plugins_menu_more),
                     modifier = Modifier
                         .size(36.dp)
@@ -553,34 +611,15 @@ private fun PluginRow(
                     enabled = interactive,
                 )
                 DdMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = onDismissMenu,
+                    expanded = menuOpen,
+                    onDismissRequest = { menuOpen = false },
                     menuWidth = 176.dp,
                 ) {
                     DdMenuItem(
-                        text = stringResource(R.string.plugins_menu_uninstall),
-                        onClick = {
-                            onDismissMenu()
-                            onUninstall()
-                        },
-                        destructive = true,
-                        icon = DdIcons.Trash,
-                        testTag = "plugin_menu_uninstall_${snapshot.id}",
-                    )
-                    DdMenuItem(
-                        text = stringResource(R.string.plugins_menu_check_updates),
-                        onClick = {
-                            onDismissMenu()
-                            onCheckUpdates()
-                        },
-                        icon = DdIcons.Refresh,
-                        testTag = "plugin_menu_check_updates_${snapshot.id}",
-                    )
-                    DdMenuItem(
                         text = stringResource(R.string.plugins_menu_info),
                         onClick = {
-                            onDismissMenu()
-                            onOpenInfo()
+                            menuOpen = false
+                            onOpenDetail()
                         },
                         icon = DdIcons.Info,
                         testTag = "plugin_menu_info_${snapshot.id}",
@@ -589,7 +628,7 @@ private fun PluginRow(
                         DdMenuItem(
                             text = stringResource(R.string.plugins_recovery_retry),
                             onClick = {
-                                onDismissMenu()
+                                menuOpen = false
                                 onRetryActivation()
                             },
                             icon = DdIcons.Play,
@@ -599,7 +638,7 @@ private fun PluginRow(
                             DdMenuItem(
                                 text = stringResource(R.string.plugins_recovery_rollback, previous),
                                 onClick = {
-                                    onDismissMenu()
+                                    menuOpen = false
                                     onRollback()
                                 },
                                 icon = DdIcons.Refresh,
@@ -607,6 +646,16 @@ private fun PluginRow(
                             )
                         }
                     }
+                    DdMenuItem(
+                        text = stringResource(R.string.plugins_menu_uninstall),
+                        onClick = {
+                            menuOpen = false
+                            onUninstall()
+                        },
+                        destructive = true,
+                        icon = DdIcons.Trash,
+                        testTag = "plugin_menu_uninstall_${snapshot.id}",
+                    )
                 }
             }
         }
@@ -614,66 +663,143 @@ private fun PluginRow(
 }
 
 @Composable
-private fun PluginInfoDialog(
+private fun PluginDetailSheet(
     snapshot: PluginSnapshot,
+    pluginsRoot: File?,
+    availableUpdate: PluginUpdateUi?,
     onDismiss: () -> Unit,
 ) {
+    val colors = deepDeepColors()
     val context = LocalContext.current
-    DdDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(R.string.plugins_info_title),
-        content = {
-            PluginGroup {
-                DdListRow(
-                    title = stringResource(R.string.plugins_info_version),
-                    value = snapshot.version,
+    val publisher = snapshot.publisher
+    val failure = snapshot.lastError?.takeIf {
+        snapshot.phase == PluginPhaseUi.FAILED || snapshot.phase == PluginPhaseUi.DEGRADED
+    }
+    val bodyMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.66f).dp
+    DdSheet(onDismiss = onDismiss) {
+        Column(Modifier.fillMaxWidth().testTag("plugin_detail")) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(start = 24.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PluginIcon(
+                    icon = snapshot.icon,
+                    assetsDir = pluginAssetsDir(pluginsRoot, snapshot),
+                    tint = colors.ink,
+                    size = 26.dp,
                 )
-                if (snapshot.installedVersion != null) {
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_info_installed_version),
-                        value = snapshot.installedVersion,
-                    )
-                }
-                if (snapshot.installedSizeBytes != null) {
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_info_size),
-                        value = formatPluginSize(context, snapshot.installedSizeBytes),
-                    )
-                }
-                if (snapshot.skills.isNotEmpty()) {
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_info_skills),
-                        value = snapshot.skills.joinToString("、"),
-                    )
-                }
-                snapshot.publisher?.let { publisher ->
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_info_publisher),
-                        value = publisher.name.ifBlank { publisher.keyId },
-                        subtitle = publisher.keyId.takeIf { publisher.name.isNotBlank() },
-                    )
-                }
-                if (snapshot.phase == PluginPhaseUi.PENDING_RESTART) {
-                    DdHairline()
-                    DdListRow(
-                        title = stringResource(R.string.plugins_phase_pending_restart),
-                        subtitle = stringResource(R.string.plugins_pending_restart_notice),
-                    )
-                }
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = snapshot.name,
+                    modifier = Modifier.weight(1f),
+                    style = DdType.heading,
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                DdIconButton(
+                    icon = DdIcons.Close,
+                    onClick = onDismiss,
+                    contentDescription = stringResource(R.string.plugins_close),
+                    tint = colors.inkSecondary,
+                    iconSize = 20.dp,
+                )
             }
-        },
-        actions = {
-            DdTextAction(
-                text = stringResource(R.string.plugins_close),
-                onClick = onDismiss,
-                color = deepDeepColors().inkSecondary,
-            )
-        },
-    )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .heightIn(max = bodyMaxHeight)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                if (snapshot.summary.isNotBlank()) {
+                    Text(
+                        text = snapshot.summary,
+                        style = DdType.bodySmall,
+                        color = colors.inkSecondary,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+                failure?.let { error ->
+                    Text(
+                        text = error,
+                        style = DdType.bodySmall,
+                        color = colors.danger,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+                PluginGroup {
+                    DdListRow(
+                        title = stringResource(R.string.plugins_info_status),
+                        value = stringResource(pluginPhaseLabelRes(snapshot.phase)),
+                        subtitle = if (snapshot.phase == PluginPhaseUi.PENDING_RESTART) {
+                            stringResource(R.string.plugins_pending_restart_notice)
+                        } else {
+                            null
+                        },
+                    )
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.plugins_info_version),
+                        value = snapshot.version,
+                    )
+                    if (snapshot.installedVersion != null && snapshot.installedVersion != snapshot.version) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_installed_version),
+                            value = snapshot.installedVersion,
+                        )
+                    }
+                    if (availableUpdate != null) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_update),
+                            value = availableUpdate.availableVersion,
+                        )
+                    }
+                    if (publisher != null) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_publisher),
+                            subtitle = publisher.keyId.ifBlank { null },
+                            subtitleMaxLines = 2,
+                            value = publisher.name.ifBlank { null },
+                        )
+                    }
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.plugins_info_source),
+                        value = stringResource(
+                            if (publisher != null) {
+                                R.string.plugins_info_source_external
+                            } else {
+                                R.string.plugins_info_source_builtin
+                            },
+                        ),
+                    )
+                    if (snapshot.installedSizeBytes != null) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_size),
+                            value = formatPluginSize(context, snapshot.installedSizeBytes),
+                        )
+                    }
+                    if (snapshot.skills.isNotEmpty()) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_skills),
+                            subtitle = snapshot.skills.joinToString("、"),
+                            subtitleMaxLines = 3,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
 }
 
 private fun copyToCache(context: Context, uri: Uri): File? = runCatching {

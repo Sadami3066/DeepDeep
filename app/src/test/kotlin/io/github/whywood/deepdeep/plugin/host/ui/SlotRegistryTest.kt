@@ -25,7 +25,7 @@ class SlotRegistryTest {
 
     private val hostVersions = HostUiVersions(kotlin = "2.4.21", compose = "1.10.5")
 
-    private val slot: String = SlotIds.page("home")
+    private val slot: String = SlotIds.toolCard("home")
 
     private fun manifest(id: String, ui: UiManifest? = null): PluginManifest = PluginManifest(
         id = id,
@@ -53,7 +53,7 @@ class SlotRegistryTest {
     private fun binding(slotId: String, priority: Int = 0): SlotBinding = SlotBinding(
         slotId = slotId,
         priority = priority,
-        content = SlotContent.Compose(uiApiLevel = 1) { },
+        content = SlotContent.Compose { },
     )
 
     private fun registry(vararg descriptors: PluginDescriptor): SlotRegistry {
@@ -145,28 +145,21 @@ class SlotRegistryTest {
     }
 
     @Test
-    fun uiAndComposeApiLevelMismatchDisableBinding() {
-        val uiLevel = registry(descriptor("alpha", listOf(binding(slot)), ui = UiManifest(apiLevel = 2)))
+    fun uiApiLevelMismatchDisablesBindingAndPages() {
+        val registry = registry(descriptor("alpha", listOf(binding(slot)), ui = UiManifest(apiLevel = 2)))
+
         assertEquals(
             SlotDisabledReason.UiApiLevelUnsupported(2, 1),
-            uiLevel.bindings(slot).single().disabledReason,
+            registry.bindings(slot).single().disabledReason,
         )
+        assertEquals(false, registry.uiCompatible("alpha"))
+    }
 
-        val composeLevel = registry(
-            descriptor(
-                "beta",
-                listOf(
-                    SlotBinding(
-                        slotId = slot,
-                        content = SlotContent.Compose(uiApiLevel = 2) { },
-                    ),
-                ),
-            ),
-        )
-        assertEquals(
-            SlotDisabledReason.ComposeApiLevelUnsupported(2, 1),
-            composeLevel.bindings(slot).single().disabledReason,
-        )
+    @Test
+    fun compatiblePluginExposesPages() {
+        val registry = registry(descriptor("alpha", emptyList()))
+
+        assertEquals(true, registry.uiCompatible("alpha"))
     }
 
     @Test

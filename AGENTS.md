@@ -19,10 +19,11 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/plugin-e2e.sh        # 真机插件端到端（sample 安装→启用→工具→卡片→停用→卸载）
 ./scripts/plugin-bundles-e2e.sh  # 真机回归四个官方插件包（需先构建 plugins/）
 ./scripts/plugin-api-abi.sh    # 单独校验插件 SDK ABI 基线（--update 更新）
+./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal  # 发布插件 SDK（design + plugin-api，同版本）
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2214（app 1604 / runtime 507 / shell 50 / plugin-api 53）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2223（app 1613 / runtime 507 / shell 50 / plugin-api 53）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 

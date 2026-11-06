@@ -28,7 +28,7 @@ class PluginFailureGuardTest {
         val guard = PluginFailureGuard(dir)
         guard.mark("plugin.detail.section:stats", "render crashed", 1234L)
 
-        val marker = guard.detect("plugin.detail.section:stats")
+        val marker = guard.detect("plugin.detail.section:stats", now = 1234L + 1000L)
         assertEquals("plugin.detail.section:stats", marker?.key)
         assertEquals("render crashed", marker?.detail)
         assertEquals(1234L, marker?.markedAt)
@@ -55,7 +55,7 @@ class PluginFailureGuardTest {
         guard.mark("plugin.detail.section:one", "first", 1L)
         guard.mark("tool.card.content:two", "second", 2L)
 
-        val markers = guard.detectAll()
+        val markers = guard.detectAll(now = 3L)
         assertEquals(listOf("plugin.detail.section:one", "tool.card.content:two"), markers.map { it.key })
         assertEquals(2, guard.clearAll())
         assertTrue(guard.detectAll().isEmpty())
@@ -70,9 +70,9 @@ class PluginFailureGuardTest {
 
         assertEquals(
             listOf("alpha@1.0.0:setup.content", "alpha@1.0.0:tool.card.content:card"),
-            guard.detectFor("alpha").map { it.key },
+            guard.detectFor("alpha", now = 4L).map { it.key },
         )
-        assertTrue(guard.detectFor("missing").isEmpty())
+        assertTrue(guard.detectFor("missing", now = 4L).isEmpty())
     }
 
     @Test
@@ -92,7 +92,7 @@ class PluginFailureGuardTest {
     fun keyCharactersAreSafeForFileNames() {
         val guard = PluginFailureGuard(dir)
         guard.mark("plugin.detail.section:my-section", "boom", 7L)
-        val marker = guard.detect("plugin.detail.section:my-section")
+        val marker = guard.detect("plugin.detail.section:my-section", now = 8L)
         assertEquals("plugin.detail.section:my-section", marker?.key)
         assertFalse(dir.listFiles()!!.single().name.contains(':'))
     }
@@ -103,10 +103,19 @@ class PluginFailureGuardTest {
         file.writeText("{not json")
         file.setLastModified(9000L)
 
-        val marker = PluginFailureGuard(dir).detect("corrupt")
+        val marker = PluginFailureGuard(dir).detect("corrupt", now = 9001L)
         assertEquals("corrupt", marker?.key)
         assertNull(marker?.detail)
         assertEquals(9000L, marker?.markedAt)
+    }
+
+    @Test
+    fun staleMarkerExpiresAndIsRemoved() {
+        val guard = PluginFailureGuard(dir)
+        guard.mark("tool.card.content:crash", "boom", 1L)
+
+        assertNull(guard.detect("tool.card.content:crash", now = 1L + PluginFailureGuard.MARKER_TTL_MS + 1))
+        assertTrue(dir.listFiles()!!.isEmpty())
     }
 
     @Test

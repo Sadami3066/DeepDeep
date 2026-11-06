@@ -3,16 +3,11 @@ package io.github.whywood.deepdeep.ui.settings
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.background
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -22,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -32,6 +26,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.core.AssistantEntry
+import io.github.whywood.deepdeep.core.AssistantRole
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
 import io.github.whywood.deepdeep.design.DdGroupCard
@@ -39,13 +35,14 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlinx.coroutines.launch
 
 @Composable
-fun FloatingWindowScreen(
+fun AndroidSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -53,27 +50,20 @@ fun FloatingWindowScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val preferences = remember(context) { FloatingWindowPreferences(context) }
-    val settings by preferences.settings.collectAsStateWithLifecycle(
+    val floatingSettings by preferences.settings.collectAsStateWithLifecycle(
         initialValue = FloatingWindowSettings(),
     )
     var canDrawOverlays by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+    var roleHeld by remember { mutableStateOf(AssistantRole.isHeld(context)) }
+    val powerUnavailableMessage = stringResource(R.string.assistant_settings_power_unavailable)
     LifecycleResumeEffect(Unit) {
         canDrawOverlays = Settings.canDrawOverlays(context)
+        roleHeld = AssistantRole.isHeld(context)
         onPauseOrDispose {}
     }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(colors.paper)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .testTag("floating_settings"),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    DdPageScaffold(
+        topBar = {
             DdIconButton(
                 icon = DdIcons.ArrowLeft,
                 onClick = onBack,
@@ -81,29 +71,48 @@ fun FloatingWindowScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-        }
+        },
+        modifier = modifier.testTag("android_settings"),
+    ) {
         Column(
             Modifier
-                .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
         ) {
             Text(
-                text = stringResource(R.string.floating_settings_title),
+                text = stringResource(R.string.settings_android),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
             Spacer(Modifier.height(20.dp))
+            SectionLabel(R.string.floating_settings_title)
+            Spacer(Modifier.height(8.dp))
             DdGroupCard {
-                FloatingSwitchRow(
-                    checked = settings.enabled,
-                    onCheckedChange = { enabled ->
+                DdListRow(
+                    icon = DdIcons.Monitor,
+                    title = stringResource(R.string.floating_settings_enable),
+                    onClick = {
+                        val enabled = !floatingSettings.enabled
                         scope.launch { preferences.setEnabled(enabled) }
                         if (enabled && !canDrawOverlays) openOverlayPermission(context)
                     },
+                    trailing = {
+                        DdSwitch(
+                            checked = floatingSettings.enabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch { preferences.setEnabled(enabled) }
+                                if (enabled && !canDrawOverlays) openOverlayPermission(context)
+                            },
+                            stateDescription = stringResource(
+                                if (floatingSettings.enabled) R.string.settings_switch_on
+                                else R.string.settings_switch_off,
+                            ),
+                        )
+                    },
+                    modifier = Modifier.testTag("floating_enable"),
                 )
-                if (settings.enabled) {
+                if (floatingSettings.enabled) {
                     DdHairline()
                     DdListRow(
                         icon = DdIcons.Shield,
@@ -121,31 +130,56 @@ fun FloatingWindowScreen(
                     )
                 }
             }
+            Spacer(Modifier.height(24.dp))
+            SectionLabel(R.string.assistant_settings_title)
+            Spacer(Modifier.height(8.dp))
+            DdGroupCard {
+                DdListRow(
+                    icon = DdIcons.Sparkles,
+                    title = stringResource(R.string.assistant_settings_role),
+                    value = stringResource(
+                        if (roleHeld) R.string.assistant_settings_role_held
+                        else R.string.assistant_settings_role_missing,
+                    ),
+                    onClick = {
+                        AssistantRole.defaultAppsIntent(context)?.let { intent ->
+                            runCatching {
+                                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            }
+                        }
+                    },
+                    showChevron = true,
+                    modifier = Modifier.testTag("assistant_role"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Terminal,
+                    title = stringResource(R.string.assistant_settings_power),
+                    onClick = {
+                        val intent = AssistantEntry.powerSettingsIntent(context)
+                        if (intent == null) {
+                            Toast.makeText(context, powerUnavailableMessage, Toast.LENGTH_SHORT).show()
+                        } else {
+                            runCatching { context.startActivity(intent) }
+                        }
+                    },
+                    showChevron = true,
+                    modifier = Modifier.testTag("assistant_power_settings"),
+                )
+            }
             Spacer(Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun FloatingSwitchRow(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val stateDescription = stringResource(
-        if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
-    )
-    DdListRow(
-        icon = DdIcons.Monitor,
-        title = stringResource(R.string.floating_settings_enable),
-        onClick = { onCheckedChange(!checked) },
-        trailing = {
-            DdSwitch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                stateDescription = stateDescription,
-            )
-        },
-        modifier = Modifier.testTag("floating_enable"),
+private fun SectionLabel(titleRes: Int) {
+    val colors = deepDeepColors()
+    Text(
+        text = stringResource(titleRes),
+        style = DdType.bodySmall,
+        color = colors.inkTertiary,
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 

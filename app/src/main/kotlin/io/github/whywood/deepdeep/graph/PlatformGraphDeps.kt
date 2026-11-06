@@ -21,4 +21,5 @@ internal class PlatformGraphDeps(
     val mcpTokenStore: FileMcpTokenStore,
     val pluginManager: () -> PluginHostManager,
     val host: () -> AgentRuntimeHost,
+    val syncBundledSkills: suspend () -> Unit,
 )

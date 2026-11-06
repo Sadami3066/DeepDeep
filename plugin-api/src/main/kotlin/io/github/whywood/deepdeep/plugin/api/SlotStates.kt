@@ -18,9 +18,3 @@ data class CustomMessageSlotState(
     val customType: String,
     val payload: JsonObject = JsonObject(emptyMap()),
 ) : SlotState
-
-data class PluginPageState(
-    val pluginId: String,
-    val pageId: String,
-    val sessionId: String? = null,
-) : SlotState

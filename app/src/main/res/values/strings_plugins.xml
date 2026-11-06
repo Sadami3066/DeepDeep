@@ -4,15 +4,19 @@
     <string name="plugins_refresh">刷新</string>
     <string name="plugins_search_placeholder">搜索插件</string>
     <string name="plugins_empty">还没有安装插件</string>
+    <string name="plugins_empty_hint">点右上角「＋」导入 .ddp 插件包</string>
     <string name="plugins_enable">已启用</string>
     <string name="plugins_disable">已关闭</string>
     <string name="plugins_close">关闭</string>
     <string name="plugins_cancel">取消</string>
     <string name="plugins_menu_more">更多操作</string>
     <string name="plugins_menu_uninstall">卸载</string>
-    <string name="plugins_menu_check_updates">检查更新</string>
-    <string name="plugins_menu_info">版本与发布者</string>
-    <string name="plugins_info_title">插件信息</string>
+    <string name="plugins_menu_info">插件信息</string>
+    <string name="plugins_info_status">状态</string>
+    <string name="plugins_info_source">来源</string>
+    <string name="plugins_info_source_external">外部导入</string>
+    <string name="plugins_info_source_builtin">内置</string>
+    <string name="plugins_info_update">可更新版本</string>
     <string name="plugins_info_version">版本</string>
     <string name="plugins_info_installed_version">已安装版本</string>
     <string name="plugins_info_size">大小</string>
@@ -36,7 +40,6 @@
     <string name="plugins_error_unknown">插件不存在或已被移除</string>
 
     <string name="plugins_import_title">导入插件</string>
-    <string name="plugins_import_pick">选择 .ddp 插件包文件</string>
     <string name="plugins_import_version">版本</string>
     <string name="plugins_import_size">大小</string>
     <string name="plugins_import_publisher">发布者</string>
