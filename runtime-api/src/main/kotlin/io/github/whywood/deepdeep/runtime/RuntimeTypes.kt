@@ -241,6 +241,13 @@ sealed interface RuntimeEvent {
         val rawArguments: JsonObject? = null,
     ) : RuntimeEvent
 
+    data class ToolCallStarted(
+        override val runId: String,
+        val callId: String,
+        val name: String,
+        val startedAt: Long,
+    ) : RuntimeEvent
+
     data class ToolFinished(
         override val runId: String,
         val callId: String,

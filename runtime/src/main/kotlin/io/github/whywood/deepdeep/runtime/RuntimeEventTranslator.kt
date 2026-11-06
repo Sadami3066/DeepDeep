@@ -3,6 +3,8 @@ package io.github.whywood.deepdeep.runtime
 import dev.pi.agent.AgentEvent
 import dev.pi.agent.AgentMessage
 import dev.pi.ai.TextDeltaEvent
+import dev.pi.ai.ToolCall
+import dev.pi.ai.ToolCallStartEvent
 import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.coding.session.SessionEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -88,6 +90,22 @@ internal class RuntimeEventTranslator(
                 is ThinkingDeltaEvent -> {
                     emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
                     emitActivity(handle, runId, RuntimeActivity.Thinking)
+                }
+
+                is ToolCallStartEvent -> {
+                    val call = update.partial.content.getOrNull(update.contentIndex) as? ToolCall
+                    if (call != null && call.id.isNotBlank() && call.name.isNotBlank()) {
+                        emit(
+                            handle,
+                            RuntimeEvent.ToolCallStarted(
+                                runId = runId,
+                                callId = call.id,
+                                name = call.name,
+                                startedAt = System.currentTimeMillis(),
+                            ),
+                        )
+                        emitActivity(handle, runId, RuntimeActivity.RunningTool(call.name))
+                    }
                 }
 
                 else -> Unit

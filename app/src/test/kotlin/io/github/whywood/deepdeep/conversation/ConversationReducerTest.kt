@@ -622,6 +622,46 @@ class ConversationReducerTest {
     }
 
     @Test
+    fun toolCallStartedAddsRunningTraceBeforeExecution() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        state = reduce(state, RuntimeEvent.ToolCallStarted("run-1", "call-1", "write", 100L), strings)
+        val trace = (state.messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals("write", trace.name)
+        assertEquals("call-1", trace.toolCallId)
+        assertEquals(100L, trace.startedAt)
+        assertEquals(ToolActivityStatus.RUNNING, trace.status)
+        assertTrue(trace.arguments.isEmpty())
+    }
+
+    @Test
+    fun toolStartedUpdatesEarlyTraceInsteadOfDuplicating() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        state = reduce(state, RuntimeEvent.ToolCallStarted("run-1", "call-1", "write", 100L), strings)
+        state = reduce(
+            state,
+            RuntimeEvent.ToolStarted(
+                runId = "run-1",
+                callId = "call-1",
+                name = "write",
+                arguments = mapOf("path" to "a.txt"),
+                startedAt = 200L,
+            ),
+            strings,
+        )
+        val tools = state.messages.single().steps.filterIsInstance<AssistantStep.Tool>()
+        assertEquals(1, tools.size)
+        assertEquals(mapOf("path" to "a.txt"), tools.single().trace.arguments)
+        assertEquals(100L, tools.single().trace.startedAt)
+        assertEquals(ToolActivityStatus.RUNNING, tools.single().trace.status)
+    }
+
+    @Test
     fun toolFinishedWithErrorMarksTraceFailed() {
         var state = ConversationState(
             messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),

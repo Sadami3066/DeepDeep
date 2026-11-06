@@ -34,6 +34,7 @@ internal fun reduce(
     is RuntimeEvent.ActivityChanged -> state.onActivityChanged(event, now)
     is RuntimeEvent.TextDelta -> state.onTextDelta(event, now)
     is RuntimeEvent.ReasoningDelta -> state.onReasoningDelta(event, now)
+    is RuntimeEvent.ToolCallStarted -> state.onToolCallStarted(event, now)
     is RuntimeEvent.ToolStarted -> state.onToolStarted(event, now)
     is RuntimeEvent.ToolFinished -> state.onToolFinished(event)
     is RuntimeEvent.RunFinished -> state.finishWithStatus(

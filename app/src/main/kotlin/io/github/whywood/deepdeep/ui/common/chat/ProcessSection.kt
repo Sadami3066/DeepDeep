@@ -1,7 +1,11 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -14,9 +18,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +33,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import android.graphics.ImageDecoder
+import android.graphics.drawable.AnimatedImageDrawable
+import android.widget.ImageView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -36,13 +44,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -87,7 +95,7 @@ internal fun ProcessSection(
         ProcessStatus.Failed -> stringResource(R.string.assistant_ux_process_failed)
     }
     val statusColor = when (semanticStatus) {
-        ProcessStatus.Running -> colors.accent
+        ProcessStatus.Running -> colors.ink
         ProcessStatus.Failed -> colors.danger
         else -> colors.inkTertiary
     }
@@ -120,6 +128,20 @@ internal fun ProcessSection(
         )
     }
     val activity = processActivity(message.steps, message.streaming)
+    val textAlpha = if (semanticStatus == ProcessStatus.Running) {
+        val pulse = rememberInfiniteTransition(label = "process_text_pulse")
+        pulse.animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 620, easing = DdMotion.EaseInOut),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "process_text_alpha",
+        ).value
+    } else {
+        1f
+    }
     val activityLabel = when (activity) {
         ProcessActivity.Thinking -> stringResource(R.string.assistant_process_thinking)
         ProcessActivity.CallingTool -> stringResource(R.string.assistant_process_calling_tool)
@@ -146,25 +168,24 @@ internal fun ProcessSection(
             onClick = { expansionOverride = if (expanded) 0 else 1 },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .heightIn(min = 36.dp)
+                .heightIn(min = 30.dp)
                 .semantics { stateDescription = state }
                 .testTag("process_toggle_${message.id}"),
             shape = RoundedCornerShape(8.dp),
             contentDescription = summary,
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (message.streaming) {
-                    DdSpinner(size = 13.dp, color = colors.inkTertiary)
-                    Spacer(Modifier.size(6.dp))
+                    ProcessActivityIcon()
+                    Spacer(Modifier.width(6.dp))
                 }
                 Text(
                     text = summary,
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                    color = statusColor,
+                    style = DdType.body,
+                    color = statusColor.copy(alpha = textAlpha),
                 )
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(2.dp))
@@ -329,4 +350,25 @@ internal fun formatElapsed(
         minutes > 0 -> String.format(Locale.ROOT, minutesSeconds, minutes, seconds)
         else -> String.format(Locale.ROOT, secondsOnly, seconds)
     }
+}
+
+
+@Composable
+private fun ProcessActivityIcon() {
+    AndroidView(
+        factory = { context ->
+            val animated = ImageDecoder.decodeDrawable(
+                ImageDecoder.createSource(context.resources, R.drawable.process_activity),
+            )
+            (animated as? AnimatedImageDrawable)?.apply {
+                repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+                start()
+            }
+            ImageView(context).apply {
+                setImageDrawable(animated)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }
+        },
+        modifier = Modifier.size(15.dp),
+    )
 }

@@ -86,6 +86,8 @@ class FloatingFeed(
 
             is RuntimeEvent.ActivityChanged -> trackActivity(sessionId, runtimeEvent.activity)
 
+            is RuntimeEvent.ToolCallStarted -> Unit
+
             is RuntimeEvent.ToolStarted -> {
                 trackActivity(sessionId, RuntimeActivity.RunningTool(runtimeEvent.name))
                 trackTool(sessionId, runtimeEvent.name)

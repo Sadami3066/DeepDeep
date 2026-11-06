@@ -47,21 +47,61 @@ internal fun ConversationState.onReasoningDelta(event: RuntimeEvent.ReasoningDel
         }.clearRetryActivity(now)
     }
 
-internal fun ConversationState.onToolStarted(event: RuntimeEvent.ToolStarted, now: Long): ConversationState =
-    onRun(event.runId) {
-        updateAssistant(event.runId) { message ->
+internal fun ConversationState.onToolCallStarted(
+    event: RuntimeEvent.ToolCallStarted,
+    now: Long,
+): ConversationState = onRun(event.runId) {
+    updateAssistant(event.runId) { message ->
+        if (message.steps.any { it is AssistantStep.Tool && it.trace.toolCallId == event.callId }) {
+            message
+        } else {
             message.copy(
                 steps = message.steps + AssistantStep.Tool(
                     ToolTrace(
                         id = nextStepId(message.steps),
                         name = event.name,
-                        arguments = event.arguments,
-                        rawArguments = event.rawArguments,
+                        arguments = emptyMap(),
                         toolCallId = event.callId,
                         startedAt = event.startedAt,
                     ),
                 ),
             ).clearFailureOnProgress()
+        }
+    }.clearRetryActivity(now)
+}
+
+internal fun ConversationState.onToolStarted(event: RuntimeEvent.ToolStarted, now: Long): ConversationState =
+    onRun(event.runId) {
+        updateAssistant(event.runId) { message ->
+            val steps = message.steps.toMutableList()
+            val index = steps.indexOfLast {
+                it is AssistantStep.Tool && it.trace.toolCallId == event.callId
+            }
+            if (index >= 0) {
+                val trace = (steps[index] as AssistantStep.Tool).trace
+                steps[index] = AssistantStep.Tool(
+                    trace.copy(
+                        name = event.name,
+                        arguments = event.arguments,
+                        rawArguments = event.rawArguments,
+                        startedAt = trace.startedAt.takeIf { it > 0 } ?: event.startedAt,
+                    ),
+                )
+                message.copy(steps = steps)
+            } else {
+                message.copy(
+                    steps = steps + AssistantStep.Tool(
+                        ToolTrace(
+                            id = nextStepId(steps),
+                            name = event.name,
+                            arguments = event.arguments,
+                            rawArguments = event.rawArguments,
+                            toolCallId = event.callId,
+                            startedAt = event.startedAt,
+                        ),
+                    ),
+                )
+            }.clearFailureOnProgress()
         }.clearRetryActivity(now)
     }
 
