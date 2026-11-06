@@ -36,6 +36,7 @@ internal class SessionDraftStore(
     private val updateState: ((ChatUiState) -> ChatUiState) -> Unit,
 ) {
     private val drafts = mutableMapOf<String, SessionDraft>()
+    private val importer = AttachmentImporter(attachmentStore, scope, ioDispatcher)
     fun remember(sessionId: String, current: ChatUiState) {
         drafts[sessionId] = (drafts[sessionId] ?: SessionDraft()).copy(
             input = current.input,
@@ -85,29 +86,35 @@ internal class SessionDraftStore(
     }
 
     fun importAttachment(sessionId: String, root: File, load: suspend () -> AttachmentImport) {
-        scope.launch {
-            val result = withContext(ioDispatcher) { load() }
-            if (state().conversationId != sessionId) {
-                if (result is AttachmentImport.Imported) {
-                    runCatching { attachmentStore.file(result.ref, root).delete() }
+        importer.import(
+            sessionId = sessionId,
+            root = root,
+            currentSession = { state().conversationId },
+            attachmentCount = { state().attachments.size },
+            load = load,
+            onStart = {
+                if (state().conversationId == sessionId) updateState { it.copy(importingAttachment = true) }
+            },
+            onImported = { ref ->
+                updateState { it.copy(attachments = it.attachments + ref, error = null) }
+            },
+            onFailure = { failure ->
+                updateState {
+                    it.copy(
+                        error = when (failure) {
+                            AttachmentImportFailure.LIMIT -> strings().maxAttachments
+                            AttachmentImportFailure.TOO_LARGE -> strings().attachmentTooLarge
+                            AttachmentImportFailure.INSUFFICIENT_SPACE -> strings().insufficientSpace
+                            AttachmentImportFailure.UNSUPPORTED_IMAGE -> strings().unsupportedImage
+                            AttachmentImportFailure.FAILED -> strings().attachmentFailed
+                        },
+                    )
                 }
-                return@launch
-            }
-            when (result) {
-                is AttachmentImport.Imported -> updateState {
-                    if (it.attachments.size >= MAX_ATTACHMENTS) {
-                        it.copy(error = strings().maxAttachments)
-                    } else {
-                        it.copy(attachments = it.attachments + result.ref, error = null)
-                    }
-                }
-
-                is AttachmentImport.TooLarge -> updateState { it.copy(error = strings().attachmentTooLarge) }
-                is AttachmentImport.InsufficientSpace -> updateState { it.copy(error = strings().insufficientSpace) }
-                is AttachmentImport.UnsupportedImage -> updateState { it.copy(error = strings().unsupportedImage) }
-                is AttachmentImport.Failed -> updateState { it.copy(error = strings().attachmentFailed) }
-            }
-        }
+            },
+            onFinished = {
+                if (state().conversationId == sessionId) updateState { it.copy(importingAttachment = false) }
+            },
+        )
     }
 
     fun removeAttachment(id: String) {
@@ -171,10 +178,6 @@ internal class SessionDraftStore(
             .take(3)
             .joinToString("\n")
         return if (plain.length <= 240) plain else plain.take(240).trimEnd() + "…"
-    }
-
-    companion object {
-        const val MAX_ATTACHMENTS = 20
     }
 }
 

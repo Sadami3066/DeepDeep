@@ -1,6 +1,6 @@
 # ui/chat · 聊天界面
 
-聊天首页与消息流，App 最核心的界面包：`ChatScreen` 把 `ChatUiState` 渲染成消息列表和浮在对话上的输入卡，`ChatViewModel` 订阅 runtime 事件发射状态；Markdown 流式渲染、相机扫码、文件预览等重组件也在这里。会话与运行状态的唯一真相是 runtime 事件，本包不另存一份。
+聊天首页与消息流，App 最核心的界面包：`ChatScreen` 把 `ChatUiState` 渲染成消息列表和浮在对话上的输入卡，`ChatViewModel` 观察 `ConversationStore` 投影发射状态；Markdown 流式渲染、相机扫码、文件预览等重组件也在这里。会话与运行状态的唯一真相是 `ConversationStore`，本包不另写一份。
 
 ## 文件
 
@@ -59,7 +59,7 @@
 | `ContextMeter.kt`、`JobsMeter.kt` | 输入卡上下文 token 环与顶栏后台任务计数 |
 | `ChatScrollController.kt` | 消息列表滚动锚点、会话切换恢复与「回到底部」 |
 | `SessionSearchHit.kt` | 会话搜索命中项（会话 + 工作区名） |
-| `state/` | ViewModel 内部控制器：会话打开/列表/草稿/模型/工作区/重试 |
+| `state/` | ViewModel 内部控制器：会话打开/列表/草稿/附件导入/模型/工作区/重试 |
 
 ## 要点
 

@@ -31,7 +31,7 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
+import io.github.whywood.deepdeep.ui.chat.state.MAX_ATTACHMENTS
 
 internal enum class AttachmentSource { IMAGE, FILE, CAMERA }
 
@@ -130,7 +130,7 @@ internal class AttachmentPickers(
 @Composable
 internal fun rememberAttachmentPickers(onPicked: (Uri) -> Unit): AttachmentPickers {
     val pickImages = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(SessionDraftStore.MAX_ATTACHMENTS),
+        ActivityResultContracts.PickMultipleVisualMedia(MAX_ATTACHMENTS),
     ) { uris -> uris.forEach(onPicked) }
     val pickFiles = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),

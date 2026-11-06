@@ -24,6 +24,9 @@ import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.ui.chat.state.AttachmentImportFailure
+import io.github.whywood.deepdeep.ui.chat.state.AttachmentImporter
+import io.github.whywood.deepdeep.ui.chat.state.MAX_ATTACHMENTS
 import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -88,6 +91,7 @@ class AssistantOverlayController(
         ImageNormalizer.normalize(file, mime)
     },
 ) {
+    private val importer = AttachmentImporter(attachmentStore, scope, ioDispatcher)
     private val queuedPreparations = mutableMapOf<String, MutableSet<Job>>()
     private val mutableState = MutableStateFlow(AssistantOverlayState())
     val state: StateFlow<AssistantOverlayState> = mutableState.asStateFlow()
@@ -151,45 +155,35 @@ class AssistantOverlayController(
     }
 
     internal fun importAttachment(sessionId: String, root: File, load: suspend () -> AttachmentImport) {
-        if (mutableState.value.attachments.size >= SessionDraftStore.MAX_ATTACHMENTS) {
+        if (mutableState.value.attachments.size >= MAX_ATTACHMENTS) {
             setError(AssistantOverlayError.AttachmentLimit)
             return
         }
-        scope.launch {
-            mutableState.update { if (it.sessionId == sessionId) it.copy(importingAttachment = true) else it }
-            try {
-                val imported = withContext(ioDispatcher) { load() }
-                if (mutableState.value.sessionId != sessionId) {
-                    if (imported is AttachmentImport.Imported) {
-                        runCatching { attachmentStore.file(imported.ref, root).delete() }
-                    }
-                    return@launch
-                }
-                when (imported) {
-                    is AttachmentImport.Imported -> mutableState.update { current ->
-                        if (current.attachments.size >= SessionDraftStore.MAX_ATTACHMENTS) {
-                            current.copy(error = AssistantOverlayError.AttachmentLimit)
-                        } else {
-                            current.copy(attachments = current.attachments + imported.ref, error = null)
-                        }
-                    }
-
-                    AttachmentImport.TooLarge -> setError(AssistantOverlayError.AttachmentTooLarge)
-                    AttachmentImport.InsufficientSpace,
-                    AttachmentImport.UnsupportedImage,
-                    AttachmentImport.Failed,
-                    -> setError(AssistantOverlayError.AttachmentFailed)
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                if (mutableState.value.sessionId == sessionId) {
-                    setError(AssistantOverlayError.AttachmentFailed)
-                }
-            } finally {
+        importer.import(
+            sessionId = sessionId,
+            root = root,
+            currentSession = { mutableState.value.sessionId },
+            attachmentCount = { mutableState.value.attachments.size },
+            load = load,
+            onStart = {
+                mutableState.update { if (it.sessionId == sessionId) it.copy(importingAttachment = true) else it }
+            },
+            onImported = { ref ->
+                mutableState.update { it.copy(attachments = it.attachments + ref, error = null) }
+            },
+            onFailure = { failure ->
+                setError(
+                    when (failure) {
+                        AttachmentImportFailure.LIMIT -> AssistantOverlayError.AttachmentLimit
+                        AttachmentImportFailure.TOO_LARGE -> AssistantOverlayError.AttachmentTooLarge
+                        else -> AssistantOverlayError.AttachmentFailed
+                    },
+                )
+            },
+            onFinished = {
                 mutableState.update { if (it.sessionId == sessionId) it.copy(importingAttachment = false) else it }
-            }
-        }
+            },
+        )
     }
 
     private suspend fun normalizeImages(refs: List<AttachmentRef>, root: File): List<ImagePart> =
