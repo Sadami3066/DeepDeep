@@ -28,6 +28,7 @@ import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
 
@@ -108,6 +109,8 @@ interface ServiceDependencies {
     val mcpOAuthService: McpOAuthService
 
     val workshopAgentService: WorkshopAgentService
+
+    val processRuntime: ProcessRuntime
 }
 
 internal fun resolveAttachmentRoot(cwd: String, homeDir: File): File =

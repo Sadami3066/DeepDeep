@@ -74,7 +74,7 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
             this.controller = controller
             LaunchedEffect(controller) {
-                runCatching { graph.prepare() }
+                runCatching { graph.processRuntime.start() }
                 controller.start()
             }
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(

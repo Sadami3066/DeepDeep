@@ -98,8 +98,9 @@ import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
-import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.LinuxJobRunner
+import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
 import io.github.whywood.deepdeep.shell.RootStatus
@@ -492,11 +493,21 @@ class AppGraph(context: Context) : AppDependencies {
     }
     override val devPackageManager: DevPackageManager by lazy { DevPackageManager(uiContext, linuxEnvironment, notificationCenter) }
 
+    override val processRuntime: ProcessRuntime by lazy {
+        ProcessRuntime(
+            scope = scope,
+            prepare = ::prepare,
+            startPlugins = pluginManager::start,
+            onForegroundPlugins = { pluginManager.onAppForeground() },
+            refreshPluginsIfStale = { pluginManager.refreshIfStale(it) },
+            reconfigureHost = host::reconfigure,
+            ensureHostStarted = host::ensureStarted,
+            syncSkills = { skillRepository.syncIfChanged() },
+            diagnosticsDir = File(appContext.filesDir, "diagnostics"),
+        )
+    }
+
     init {
-        scope.launch {
-            runCatching { pluginManager.start() }
-            host.reconfigure()
-        }
         scope.launch {
             host.sdkEvents.collect { event ->
                 pluginManager.onSessionSdkEvent(event.sessionId, event.event)
@@ -508,7 +519,7 @@ class AppGraph(context: Context) : AppDependencies {
                 when (event.event) {
                     is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
                         runCatching { skillRepository.syncIfChanged() }
-                        runCatching { pluginManager.refreshIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS) }
+                        runCatching { pluginManager.refreshIfStale(ProcessRuntime.PLUGIN_REFRESH_MIN_INTERVAL_MS) }
                     }
 
                     else -> Unit
@@ -589,8 +600,6 @@ class AppGraph(context: Context) : AppDependencies {
         directory.delete()
     }
 }
-
-internal const val PLUGIN_REFRESH_MIN_INTERVAL_MS = 120_000L
 
 private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
     RootStatus.Unsupported -> RootToolStatus.Unsupported

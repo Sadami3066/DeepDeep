@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.floating.FloatingWindowController
 import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,8 +45,13 @@ class AgentService : Service() {
         startFloatingWindow()
         scope.launch {
             ProcessExitLog.record(this@AgentService)
-            graph.host.ensureStarted()
-            graph.timerService.start()
+            try {
+                graph.processRuntime.start()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+            }
+            runCatching { graph.timerService.start() }
         }
         scope.launch {
             delay(ACCESSIBILITY_CHECK_DELAY_MS)

@@ -18,6 +18,7 @@ class DeepDeepApplication : Application() {
         super.onCreate()
         runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
         graph = AppGraph(this)
+        graph.processRuntime.startAsync()
         fontWarmupScope.launch { DdFonts.preload(this@DeepDeepApplication) }
     }
 }

@@ -18,7 +18,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OnboardingPreferences
@@ -54,6 +53,7 @@ class MainActivity : ComponentActivity() {
             restoreIntake(savedInstanceState)
         }
         startAgentService()
+        graph.processRuntime.startAsync()
         requestNotificationPermission()
         val fontStyle = graph.fontPreferences.read()
         setContent {
@@ -61,23 +61,23 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             DeepDeepTheme(theme, fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
-                DeepDeepApp(
-                    graph = graph,
-                    theme = theme,
-                    fontStyle = fontStyle,
-                    openSessionId = pendingSessionId.value,
-                    onOpenSessionConsumed = { pendingSessionId.value = null },
-                    pendingDeepDestination = pendingDeepDestination.value,
-                    onDeepDestinationConsumed = { pendingDeepDestination.value = null },
-                    pendingShare = pendingShare.value,
-                    onShareConsumed = { pendingShare.value = null },
-                    onActiveSessionChanged = { graph.activeSessionId.value = it },
-                    onFontStyleChange = { style ->
-                        graph.fontPreferences.save(style)
-                        recreate()
-                    },
-                    onThemeChange = { mode -> scope.launch { graph.themePreferences.setTheme(mode) } },
-                )
+                    DeepDeepApp(
+                        graph = graph,
+                        theme = theme,
+                        fontStyle = fontStyle,
+                        openSessionId = pendingSessionId.value,
+                        onOpenSessionConsumed = { pendingSessionId.value = null },
+                        pendingDeepDestination = pendingDeepDestination.value,
+                        onDeepDestinationConsumed = { pendingDeepDestination.value = null },
+                        pendingShare = pendingShare.value,
+                        onShareConsumed = { pendingShare.value = null },
+                        onActiveSessionChanged = { graph.activeSessionId.value = it },
+                        onFontStyleChange = { style ->
+                            graph.fontPreferences.save(style)
+                            recreate()
+                        },
+                        onThemeChange = { mode -> scope.launch { graph.themePreferences.setTheme(mode) } },
+                    )
                 }
             }
         }
@@ -103,9 +103,7 @@ class MainActivity : ComponentActivity() {
         AppVisibility.activityStarted()
         AppVisibility.taskId = taskId
         graph.notificationCenter.clearQuestionNotifications()
-        graph.pluginManager.onAppForeground()
-        graph.pluginManager.refreshIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
-        lifecycleScope.launch { runCatching { graph.skillRepository.syncIfChanged() } }
+        graph.processRuntime.onForeground()
     }
 
     override fun onStop() {

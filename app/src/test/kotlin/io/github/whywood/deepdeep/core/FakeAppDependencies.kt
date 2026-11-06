@@ -28,6 +28,7 @@ import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
 
@@ -94,6 +95,8 @@ internal class FakeAppDependencies(
     override val mcpOAuthService: McpOAuthService get() = unavailable("mcpOAuthService")
 
     override val workshopAgentService: WorkshopAgentService get() = unavailable("workshopAgentService")
+
+    override val processRuntime: ProcessRuntime get() = unavailable("processRuntime")
 
     override val privilege: PrivilegeController get() = unavailable("privilege")
 

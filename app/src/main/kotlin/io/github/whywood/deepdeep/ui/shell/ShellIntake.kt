@@ -228,7 +228,7 @@ internal fun rememberShellChatViewModel(dependencies: AppDependencies, uiStrings
                 ChatViewModel(
                     dependencies.host, dependencies.conversationStore,
                     dependencies.providerCatalog, dependencies.modelConfigStore,
-                    dependencies.attachmentStore, dependencies::prepare,
+                    dependencies.attachmentStore, dependencies.processRuntime::start,
                     autoRetry = dependencies.appPreferences.preferences.map { it.autoRetry },
                     uiStrings = uiStrings,
                     skillExpander = dependencies.skillCatalog,
