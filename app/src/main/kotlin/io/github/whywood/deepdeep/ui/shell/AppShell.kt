@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -20,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import java.io.File
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,7 +26,6 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentKind
-import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.ProfileAvatarStore
@@ -40,15 +37,12 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
 import io.github.whywood.deepdeep.ui.chat.AttachmentSource
-import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
-import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
-import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
@@ -69,16 +63,12 @@ import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
 import io.github.whywood.deepdeep.ui.shell.ShellChatLifecycle
 import io.github.whywood.deepdeep.ui.shell.ShellDrawerActions
 import io.github.whywood.deepdeep.ui.shell.ShellDrawerState
-import io.github.whywood.deepdeep.ui.shell.ShellOverlay
-import io.github.whywood.deepdeep.ui.shell.ShellOverlayActions
-import io.github.whywood.deepdeep.ui.shell.ShellOverlayState
 import io.github.whywood.deepdeep.ui.shell.rememberFrozenChatState
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
-import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -103,6 +93,7 @@ internal fun AppShell(
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val overlays = rememberSaveable(saver = AppOverlaysState.Saver) { AppOverlaysState() }
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
     val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
     val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
@@ -110,14 +101,9 @@ internal fun AppShell(
     val attachmentRoot = remember(state.conversationCwd) {
         resolveAttachmentRoot(state.conversationCwd, graph.homeDir)
     }
-    var previewRoot by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
     val avatarStore = remember(context) { ProfileAvatarStore(context) }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
-    val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
-    var attachmentSheetOpen by remember { mutableStateOf(false) }
-    var cameraSheetOpen by remember { mutableStateOf(false) }
-    var previewAttachment by remember { mutableStateOf<AttachmentRef?>(null) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val avatarRevision by ProfileAvatarStore.revision.collectAsStateWithLifecycle(initialValue = 0L)
@@ -160,8 +146,8 @@ internal fun AppShell(
         if (resolved == null) {
             Toast.makeText(context, attachmentMissingMessage, Toast.LENGTH_SHORT).show()
         } else {
-            previewRoot = attachmentRoot
-            previewAttachment = resolved
+            overlays.previewRoot = attachmentRoot
+            overlays.previewAttachment = resolved
         }
     }
     val navigator = rememberAppNavigator()
@@ -184,10 +170,6 @@ internal fun AppShell(
         allJobs.filter { it.sessionId == state.conversationId }
     }
     var modelsOpen by remember { mutableStateOf(false) }
-    var usageSheetOpen by remember { mutableStateOf(false) }
-    var jobsSheetOpen by remember { mutableStateOf(false) }
-    var selectedJobId by remember { mutableStateOf<String?>(null) }
-    var jobOutput by remember { mutableStateOf<String?>(null) }
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
         initialValue = PersonalizationUi(),
     )
@@ -201,13 +183,6 @@ internal fun AppShell(
     var expandedWorkspaceIds by rememberSaveable(stateSaver = expandedWorkspacesSaver) {
         mutableStateOf(emptySet<String>())
     }
-    var workspaceCreateOpen by rememberSaveable { mutableStateOf(false) }
-    var workspaceRenameId by rememberSaveable { mutableStateOf<String?>(null) }
-    val workspaceRenameTarget = workspaceRenameId?.let { id ->
-        state.workspaces.firstOrNull { it.id == id }
-    }
-    var workspaceDeleteTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
-    var workspaceDeleteCount by remember { mutableIntStateOf(0) }
     val appResources = LocalResources.current
     val intakeChat = ShellIntakeChatState(
         ready = state.ready,
@@ -435,11 +410,11 @@ internal fun AppShell(
                         onToggleStep = chatViewModel::toggleStep,
                         onQuoteMessage = chatViewModel::quote,
                         onClearQuote = chatViewModel::clearQuote,
-                        onPickAttachment = { attachmentSheetOpen = true },
+                        onPickAttachment = { overlays.attachmentSheetOpen = true },
                         onRemoveAttachment = chatViewModel::removeAttachment,
                         onOpenAttachment = {
-                                                previewRoot = attachmentRoot
-                                                previewAttachment = it
+                                                overlays.previewRoot = attachmentRoot
+                                                overlays.previewAttachment = it
                                             },
                         onOpenFile = openWorkspaceFile,
                         onOpenTimers = { navigator.push(AppDestination.Timers) },
@@ -452,12 +427,12 @@ internal fun AppShell(
                                                 state.conversationId?.let { id -> scope.launch { graph.goalService.resume(id) } }
                                             },
                         onOpenJobs = {
-                                                selectedJobId = null
-                                                jobOutput = null
-                                                jobsSheetOpen = true
+                                                overlays.selectedJobId = null
+                                                overlays.jobOutput = null
+                                                overlays.jobsSheetOpen = true
                                             },
                         onModelsOpenChange = { modelsOpen = it },
-                        onOpenUsage = { usageSheetOpen = true },
+                        onOpenUsage = { overlays.usageSheetOpen = true },
                         onAnswerQuestion = { pending, answers ->
                                                 graph.questionCenter.answer(pending.requestId, answers)
                                             },
@@ -477,8 +452,8 @@ internal fun AppShell(
                                                     resolved.kind != AttachmentKind.OTHER ||
                                                     resolved.mime.startsWith("video/")
                                                 ) {
-                                                    previewRoot = attachmentRoot
-                                                    previewAttachment = resolved
+                                                    overlays.previewRoot = attachmentRoot
+                                                    overlays.previewAttachment = resolved
                                                 } else {
                                                     val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
                                                     val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
@@ -540,134 +515,60 @@ internal fun AppShell(
             )
         }
 
-        LaunchedEffect(jobsSheetOpen, selectedJobId) {
-            val id = selectedJobId
-            if (!jobsSheetOpen || id == null) return@LaunchedEffect
-            while (true) {
-                val job = graph.jobRegistry.jobs.value.firstOrNull { it.id == id } ?: break
-                jobOutput = runCatching { graph.jobRegistry.read(id).output }.getOrNull()
-                if (job.status != JobStatus.RUNNING) break
-                delay(800)
-            }
-        }
-        OverlayHost(
-            overlays = ShellOverlayState(
-                workspaceCreate = ShellOverlay.WorkspaceCreate(state.workspaces.map { it.name })
-                    .takeIf { workspaceCreateOpen },
-                workspaceRename = workspaceRenameTarget?.let { target ->
-                    ShellOverlay.WorkspaceRename(
-                        target.id, target.name, state.workspaces.filterNot { it.id == target.id }.map { it.name },
-                    )
-                },
-                workspaceDelete = workspaceDeleteTarget?.let {
-                    ShellOverlay.WorkspaceDelete(it.id, it.name, workspaceDeleteCount)
-                },
-                attachmentPreview = previewAttachment?.let {
-                    ShellOverlay.AttachmentPreview(it, graph.attachmentStore.file(it, previewRoot ?: attachmentRoot))
-                },
-                usage = state.usage?.takeIf { usageSheetOpen }?.let(ShellOverlay::Usage),
-                jobs = ShellOverlay.Jobs(activeJobs, selectedJobId, jobOutput).takeIf { jobsSheetOpen },
-                pluginSetup = pluginsState.interaction?.let(ShellOverlay::PluginSetup),
-            ),
-            overlayActions = ShellOverlayActions(
-                onConfirmWorkspaceCreate = { name -> workspaceCreateOpen = false; chatViewModel.createWorkspace(name) },
-                onDismissWorkspaceCreate = { workspaceCreateOpen = false },
-                onConfirmWorkspaceRename = { name ->
-                    val id = workspaceRenameId
-                    workspaceRenameId = null
-                    id?.let { chatViewModel.renameWorkspace(it, name) }
-                },
-                onDismissWorkspaceRename = { workspaceRenameId = null },
-                onConfirmWorkspaceDelete = {
-                    val target = workspaceDeleteTarget
-                    workspaceDeleteTarget = null
-                    target?.let { chatViewModel.deleteWorkspace(it.id) }
-                },
-                onDismissWorkspaceDelete = { workspaceDeleteTarget = null },
-                onDismissAttachmentPreview = { previewAttachment = null; previewRoot = null },
-                onShareAttachmentPreview = {
-                    previewAttachment?.let { attachment ->
-                        graph.attachmentStore.shareIntent(attachment, previewRoot ?: attachmentRoot)
-                    }?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
-                },
-                onDismissUsage = { usageSheetOpen = false },
-                onSelectJob = { id ->
-                    val same = selectedJobId == id
-                    selectedJobId = if (same) null else id
-                    jobOutput = null
-                    if (!same) scope.launch { jobOutput = graph.jobRegistry.read(id).output }
-                },
-                onCloseJobOutput = { selectedJobId = null; jobOutput = null },
-                onKillJob = { id -> scope.launch { graph.jobRegistry.kill(id, null) } },
-                onClearSettledJobs = { graph.jobRegistry.clearSettled() },
-                onDismissJobs = { jobsSheetOpen = false },
-            ),
-            drawer = ShellDrawerState(
-                drawerOpen,
-                state.conversations,
-                state.workspaces,
-                uiPreferences.pinnedWorkspaceIds,
-                expandedWorkspaceIds,
-                state.busySessionIds,
-                timers.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
-                nickname,
-                avatarBitmap,
-            ),
-            drawerActions = ShellDrawerActions(
-                onNavigate = { destination -> drawerOpen = false; navigator.push(destination) },
-                onDismiss = { drawerOpen = false },
-                onCreateWorkspace = { drawerOpen = false; workspaceCreateOpen = true },
-                onToggleWorkspaceExpanded = { id ->
-                    expandedWorkspaceIds = if (id in expandedWorkspaceIds) expandedWorkspaceIds - id else expandedWorkspaceIds + id
-                },
-                onToggleWorkspacePinned = { id ->
-                    val pinned = id in uiPreferences.pinnedWorkspaceIds
-                    scope.launch { graph.appPreferences.setWorkspacePinned(id, !pinned) }
-                },
-                onNewSessionInWorkspace = { id -> drawerOpen = false; chatViewModel.newSession(id) },
-                onWorkspaceSettings = { id ->
-                    drawerOpen = false
-                    navigator.push(AppDestination.WorkspaceSettings(id))
-                },
-                onRenameWorkspace = { id -> drawerOpen = false; workspaceRenameId = id },
-                onDeleteWorkspace = { id ->
-                    drawerOpen = false
-                    state.workspaces.firstOrNull { it.id == id }?.let {
-                        workspaceDeleteTarget = it
-                        scope.launch { workspaceDeleteCount = chatViewModel.loadWorkspaceSessionCount(id) }
-                    }
-                },
-                onConversation = { id -> drawerOpen = false; chatViewModel.openConversation(id) },
-                onRename = chatViewModel::renameSession,
-                onSetPinned = chatViewModel::setSessionPinned,
-                onSetArchived = chatViewModel::setSessionArchived,
-                onDelete = chatViewModel::deleteSession,
-                onSettings = ::openSettings,
-            ),
-            pluginSetupContent = { interaction -> PluginSetupSheet(graph.pluginManager, interaction) },
+        val drawerState = ShellDrawerState(
+            drawerOpen,
+            state.conversations,
+            state.workspaces,
+            uiPreferences.pinnedWorkspaceIds,
+            expandedWorkspaceIds,
+            state.busySessionIds,
+            timers.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
+            nickname,
+            avatarBitmap,
         )
-        if (attachmentSheetOpen) {
-            AttachmentSourceSheet(
-                onDismiss = { attachmentSheetOpen = false },
-                onPick = { source ->
-                    attachmentSheetOpen = false
-                    when (source) {
-                        AttachmentSource.IMAGE -> attachmentPickers.pickImages()
-                        AttachmentSource.FILE -> attachmentPickers.pickFiles()
-                        AttachmentSource.CAMERA -> cameraSheetOpen = true
-                    }
-                },
-            )
-        }
-        if (cameraSheetOpen) {
-            CameraCaptureSheet(
-                onDismiss = { cameraSheetOpen = false },
-                onCaptured = { uri ->
-                    cameraSheetOpen = false
-                    chatViewModel.attach(uri)
-                },
-            )
-        }
+        val drawerActions = ShellDrawerActions(
+            onNavigate = { destination -> drawerOpen = false; navigator.push(destination) },
+            onDismiss = { drawerOpen = false },
+            onCreateWorkspace = { drawerOpen = false; overlays.workspaceCreateOpen = true },
+            onToggleWorkspaceExpanded = { id ->
+                expandedWorkspaceIds = if (id in expandedWorkspaceIds) expandedWorkspaceIds - id else expandedWorkspaceIds + id
+            },
+            onToggleWorkspacePinned = { id ->
+                val pinned = id in uiPreferences.pinnedWorkspaceIds
+                scope.launch { graph.appPreferences.setWorkspacePinned(id, !pinned) }
+            },
+            onNewSessionInWorkspace = { id -> drawerOpen = false; chatViewModel.newSession(id) },
+            onWorkspaceSettings = { id ->
+                drawerOpen = false
+                navigator.push(AppDestination.WorkspaceSettings(id))
+            },
+            onRenameWorkspace = { id -> drawerOpen = false; overlays.workspaceRenameId = id },
+            onDeleteWorkspace = { id ->
+                drawerOpen = false
+                state.workspaces.firstOrNull { it.id == id }?.let {
+                    overlays.workspaceDeleteTarget = it
+                    scope.launch { overlays.workspaceDeleteCount = chatViewModel.loadWorkspaceSessionCount(id) }
+                }
+            },
+            onConversation = { id -> drawerOpen = false; chatViewModel.openConversation(id) },
+            onRename = chatViewModel::renameSession,
+            onSetPinned = chatViewModel::setSessionPinned,
+            onSetArchived = chatViewModel::setSessionArchived,
+            onDelete = chatViewModel::deleteSession,
+            onSettings = ::openSettings,
+        )
+        AppOverlays(
+            graph = graph,
+            chatViewModel = chatViewModel,
+            state = state,
+            activeJobs = activeJobs,
+            pluginInteraction = pluginsState.interaction,
+            attachmentRoot = attachmentRoot,
+            drawer = drawerState,
+            drawerActions = drawerActions,
+            overlays = overlays,
+        )
+
     }
     }
 }
