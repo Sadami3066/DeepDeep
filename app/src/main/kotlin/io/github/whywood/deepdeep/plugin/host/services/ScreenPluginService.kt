@@ -9,12 +9,12 @@ import io.github.whywood.deepdeep.plugin.api.ScreenScreenshot
 import io.github.whywood.deepdeep.plugin.api.ScreenService
 import io.github.whywood.deepdeep.plugin.api.ScreenStatus
 import io.github.whywood.deepdeep.plugin.api.ScreenTarget
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
+import io.github.whywood.deepdeep.screen.GUI_MAX_DEPTH
+import io.github.whywood.deepdeep.screen.GUI_MAX_NODES
+import io.github.whywood.deepdeep.screen.GuiScrollDirection
+import io.github.whywood.deepdeep.screen.GuiSelector
+import io.github.whywood.deepdeep.screen.GuiSnapshot
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.screen.ScreenController
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -52,14 +52,14 @@ internal class ScreenPluginService(
 
     override suspend fun startVirtual(): ScreenStatus {
         val feature = virtualScreen ?: throw IllegalStateException("virtual screen control is not available")
-        feature.runAction(VirtualScreenFeature.ACTION_START)
+        feature.start()
         refreshStatus()
         return cachedStatus
     }
 
     override suspend fun stopVirtual() {
         val feature = virtualScreen ?: throw IllegalStateException("virtual screen control is not available")
-        feature.runAction(VirtualScreenFeature.ACTION_STOP)
+        feature.stop()
         refreshStatus()
     }
 
@@ -154,7 +154,7 @@ internal class ScreenPluginService(
         val virtualSnapshot = runCatching { virtual?.status() }.getOrNull()
         val mainSnapshot = runCatching { main?.status() }.getOrNull()
         val lifecycleOnline = runCatching {
-            virtualScreen?.status() is io.github.whywood.deepdeep.plugin.api.PluginStatus.Ready
+            virtualScreen?.online == true
         }.getOrDefault(false)
         val virtualAvailable = virtualSnapshot?.virtual != null || lifecycleOnline
         return ScreenStatus(

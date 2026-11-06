@@ -1,10 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiNode
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

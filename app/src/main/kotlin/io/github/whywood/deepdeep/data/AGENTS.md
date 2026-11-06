@@ -7,6 +7,8 @@
 | 文件 | 职责 |
 |---|---|
 | `AgentDocStore.kt` | 项目 AGENTS.md 读写（override 优先、限 64 KB、原子写） |
+| `BundledSkills.kt` | 随包技能：`assets/skills/**` 按内容同步到技能仓库与全局启用目录，跳过插件标记/用户自有目录 |
+| `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、自动重试、后台唤醒、置顶、字号 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
 | `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素，生成分享/预览 Intent |

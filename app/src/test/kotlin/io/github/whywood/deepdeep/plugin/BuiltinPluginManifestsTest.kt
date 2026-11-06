@@ -8,23 +8,6 @@ import org.junit.Test
 
 class BuiltinPluginManifestsTest {
     @Test
-    fun internalPluginsAreAlwaysInstalled() {
-        val manifests = listOf(
-            internalWebSearchManifest(),
-            internalGoalManifest(),
-            internalJobsManifest(),
-            internalTimerManifest(),
-            internalMiniappManifest(),
-            androidGuiManifest(),
-            androidArrangeManifest(),
-        )
-        manifests.forEach { manifest ->
-            assertEquals(manifest.id, PluginSource.BUILTIN, manifest.source)
-            assertFalse(manifest.id, manifest.installable)
-        }
-    }
-
-    @Test
     fun downloadablePluginsAreInstallable() {
         val manifests = listOf(cliFeishuManifest(), cliWecomManifest(), cliJwxtManifest())
         manifests.forEach { manifest ->

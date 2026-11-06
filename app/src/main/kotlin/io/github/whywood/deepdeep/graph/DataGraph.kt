@@ -6,6 +6,8 @@ import dev.pi.mcp.oauth.defaultMcpAuthFile
 import io.github.whywood.deepdeep.core.ModelSelection
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.BundledSkills
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
@@ -92,6 +94,12 @@ internal class DataGraph(private val deps: DataGraphDeps) {
         workspacesDir = workspacesDir,
     )
     val agentDocStore = AgentDocStore()
+    val capabilitySettingsStore = CapabilitySettingsStore(File(deps.appContext.filesDir, "capabilities.json"))
+    val bundledSkills = BundledSkills.fromAssets(
+        assets = deps.appContext.assets,
+        repoDir = File(deps.appContext.filesDir, "skills"),
+        activeDir = File(agentDir, "skills"),
+    )
     val timerStore = TimerStore(TimerStore.prepareDataDirectory(deps.appContext.filesDir))
     val miniappStore = MiniappStore(File(deps.appContext.filesDir, "miniapp"))
     val skillCatalog = SkillCatalog(agentDir)

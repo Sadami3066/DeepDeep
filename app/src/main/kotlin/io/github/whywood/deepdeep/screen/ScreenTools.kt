@@ -5,13 +5,6 @@ import dev.pi.ai.RequestAbortedException
 import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.textResult
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiWindowInfo
-import io.github.whywood.deepdeep.plugin.gui.windowKindName
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_screen_ops">屏幕操作</string>
+    <string name="settings_screen_ops_summary">允许 Agent 读取界面、点击、输入与截图</string>
+    <string name="screen_ops_service_label">屏幕操作</string>
+    <string name="screen_ops_service_description">允许 DeepDeep 读取当前界面、执行点击、输入、滚动操作并截取屏幕</string>
+</resources>

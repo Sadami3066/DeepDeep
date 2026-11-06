@@ -57,6 +57,7 @@ import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
@@ -94,6 +95,8 @@ fun SettingsScreen(
     onOpenPermission: () -> Unit = {},
     onOpenFloating: () -> Unit = {},
     privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
+    screenOps: Boolean = false,
+    onScreenOpsChange: (Boolean) -> Unit = {},
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
@@ -222,6 +225,24 @@ fun SettingsScreen(
                     onClick = onOpenFloating,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_floating"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.HandClick,
+                    title = stringResource(R.string.settings_screen_ops),
+                    subtitle = stringResource(R.string.settings_screen_ops_summary),
+                    onClick = { onScreenOpsChange(!screenOps) },
+                    modifier = Modifier.testTag("settings_screen_ops_row"),
+                    trailing = {
+                        DdSwitch(
+                            checked = screenOps,
+                            onCheckedChange = onScreenOpsChange,
+                            stateDescription = stringResource(
+                                if (screenOps) R.string.settings_switch_on else R.string.settings_switch_off,
+                            ),
+                            modifier = Modifier.testTag("settings_screen_ops"),
+                        )
+                    },
                 )
             }
 

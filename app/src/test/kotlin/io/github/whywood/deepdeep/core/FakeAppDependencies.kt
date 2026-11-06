@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
@@ -67,6 +68,8 @@ internal class FakeAppDependencies(
     override val mcpConfigStore: McpConfigStore get() = unavailable("mcpConfigStore")
 
     override val agentDocStore: AgentDocStore get() = unavailable("agentDocStore")
+
+    override val capabilitySettingsStore: CapabilitySettingsStore get() = unavailable("capabilitySettingsStore")
 
     override val linuxEnvironment: LinuxEnvironment get() = unavailable("linuxEnvironment")
 

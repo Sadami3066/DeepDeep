@@ -13,7 +13,7 @@ import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.DeepDeepApplication
-import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
+import io.github.whywood.deepdeep.screen.GuiAccessibilityActions
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.ProviderCatalog

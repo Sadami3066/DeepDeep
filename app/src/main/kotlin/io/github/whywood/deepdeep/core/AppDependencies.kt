@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
@@ -77,6 +78,8 @@ interface StorageDependencies {
     val mcpConfigStore: McpConfigStore
 
     val agentDocStore: AgentDocStore
+
+    val capabilitySettingsStore: CapabilitySettingsStore
 }
 
 interface FeatureDependencies {

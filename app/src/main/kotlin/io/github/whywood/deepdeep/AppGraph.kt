@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.DevPackageManager
@@ -56,7 +57,6 @@ import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.MiniappStore
-import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
 import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
@@ -107,6 +107,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val mcpOAuthService: McpOAuthService get() = dataGraph.mcpOAuthService
     override val skillRepository: SkillRepository get() = dataGraph.skillRepository
     override val agentDocStore: AgentDocStore get() = dataGraph.agentDocStore
+    override val capabilitySettingsStore: CapabilitySettingsStore get() = dataGraph.capabilitySettingsStore
     override val miniappStore: MiniappStore get() = dataGraph.miniappStore
     override val skillCatalog: SkillCatalog get() = dataGraph.skillCatalog
     override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
@@ -129,30 +130,10 @@ class AppGraph(context: Context) : AppDependencies {
     private val builtinWiring: BuiltinPluginWiring by lazy {
         BuiltinPluginWiring(
             uiContext = uiContext,
-            filesDir = appContext.filesDir,
             cacheDir = appContext.cacheDir,
-            assets = appContext.assets,
-            scope = scope,
-            language = { LanguagePreferences(appContext).read().tag },
-            pluginStrings = dataGraph.pluginStrings,
             linux = platformGraph.linuxEnvironment,
             linuxSettings = dataGraph.linuxSettings,
             workspaceDir = homeDir,
-            credentials = dataGraph.credentials,
-            providerCatalog = dataGraph.providerCatalog,
-            goalService = dataGraph.goalService,
-            jobRegistry = serviceGraph.jobRegistry,
-            timerService = serviceGraph.timerService,
-            miniappStore = dataGraph.miniappStore,
-            privilege = platformGraph.privilege,
-            adbBridge = platformGraph.adbBridge,
-            mainShell = PrivilegedMainScreenShell(
-                platformGraph.privilege,
-                platformGraph.rootShell,
-                platformGraph.adbBridge,
-            ),
-            virtualScreen = platformGraph.virtualScreenFeature,
-            screenshotDir = File(appContext.filesDir, "gui/screenshots"),
             onCapabilitiesChanged = { scope.launch { host.reconfigure() } },
             onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
         )
@@ -199,7 +180,6 @@ class AppGraph(context: Context) : AppDependencies {
         mcpTokenStore = dataGraph.mcpTokenStore,
         pluginManager = { pluginManager },
         host = { host },
-        mainShell = { builtinWiring.mainShell },
     )
 
     private fun runtimeGraphDeps(): RuntimeGraphDeps = RuntimeGraphDeps(
@@ -216,7 +196,6 @@ class AppGraph(context: Context) : AppDependencies {
         httpTransport = dataGraph.httpTransport,
         personalizationStore = dataGraph.personalizationStore,
         linuxSettings = dataGraph.linuxSettings,
-        pluginSettingsStore = dataGraph.pluginSettingsStore,
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,
@@ -229,6 +208,15 @@ class AppGraph(context: Context) : AppDependencies {
         decorateInterrupted = ::decorateInterrupted,
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },
+        capabilitySettingsStore = dataGraph.capabilitySettingsStore,
+        apiKeyProvider = {
+            dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
+                dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
+                dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID)
+            }
+        },
+        screenTools = { platformGraph.screenToolset.tools() },
+        virtualScreenTools = { platformGraph.virtualScreenFeature.tools() },
     )
 
     private fun serviceGraphDeps(): ServiceGraphDeps = ServiceGraphDeps(
@@ -242,8 +230,8 @@ class AppGraph(context: Context) : AppDependencies {
         linuxEnvironment = platformGraph.linuxEnvironment,
         pluginManager = { pluginManager },
         skillRepository = dataGraph.skillRepository,
+        bundledSkills = dataGraph.bundledSkills,
         prepare = ::prepare,
-        pluginSettingsStore = dataGraph.pluginSettingsStore,
         jobWake = dataGraph.jobWake,
         linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
     )

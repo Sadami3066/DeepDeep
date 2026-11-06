@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
+import io.github.whywood.deepdeep.screen.GuiScrollDirection
+import io.github.whywood.deepdeep.screen.GuiSelector
+import io.github.whywood.deepdeep.screen.GuiSnapshot
 import io.github.whywood.deepdeep.screen.ScreenCapture
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.screen.ScreenFindResult

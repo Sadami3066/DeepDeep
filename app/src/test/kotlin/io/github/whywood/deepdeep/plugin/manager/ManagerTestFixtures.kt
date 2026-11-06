@@ -18,7 +18,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.PromptSection
 import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
-import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob

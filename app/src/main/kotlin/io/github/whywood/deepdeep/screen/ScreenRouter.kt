@@ -1,12 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_NODES
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
 

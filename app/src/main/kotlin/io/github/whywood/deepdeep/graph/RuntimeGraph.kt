@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
+import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.arrange.AndroidArrangeCalendarGateway
+import io.github.whywood.deepdeep.arrange.arrangeTools
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
@@ -9,23 +12,35 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.GoalPhase
 import io.github.whywood.deepdeep.runtime.JobStatus
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
-import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.adbShellTool
+import io.github.whywood.deepdeep.runtime.goalTools
+import io.github.whywood.deepdeep.runtime.jobTools
+import io.github.whywood.deepdeep.runtime.miniappEditTool
+import io.github.whywood.deepdeep.runtime.miniappLookup
+import io.github.whywood.deepdeep.runtime.miniappTools
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.rootShellTool
-import io.github.whywood.deepdeep.runtime.miniappLookup
+import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.RootStatus
+import io.github.whywood.deepdeep.web.DeepSeekWebProvider
+import io.github.whywood.deepdeep.web.webTools
 import java.io.File
 import kotlinx.coroutines.launch
 
 internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
+    private val webProvider by lazy { DeepSeekWebProvider(deps.apiKeyProvider) }
+
+    private val arrangeCalendar by lazy { AndroidArrangeCalendarGateway(deps.appContext) }
+
     private fun availableShellBackends(): List<PrivilegeLevel> =
         shellBackendsFor(deps.privilege().state.value.effective)
 
@@ -45,44 +60,53 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             questionCenter = deps.questionCenter,
             pluginController = deps.pluginManager(),
             pluginTools = { binding -> deps.pluginManager().tools(binding) },
-            extraToolFactories = listOf(
-                { _, binding ->
-                    buildList {
-                        add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
-                        for (backend in availableShellBackends()) {
-                            when (backend) {
-                                PrivilegeLevel.ROOT -> add(
-                                    rootShellTool(
-                                        executor = RootCommandExecutor { command, timeoutMillis ->
-                                            val result = deps.rootShell.execute(command, timeoutMillis)
-                                            RootCommandResult(
-                                                exitCode = result.exitCode,
-                                                stdout = result.stdout,
-                                                stderr = result.stderr,
-                                                truncated = result.truncated,
-                                                timedOut = result.timedOut,
-                                            )
-                                        },
-                                        enabled = { PrivilegeLevel.ROOT in deps.privilege().state.value.availableBackends },
-                                        status = { deps.privilege().state.value.root.toRootToolStatus() },
-                                    ),
-                                )
-
-                                PrivilegeLevel.ADB -> add(
-                                    adbShellTool(
-                                        executor = deps.adbExecutor,
-                                        enabled = { PrivilegeLevel.ADB in deps.privilege().state.value.availableBackends },
-                                        status = { adbToolStatus() },
-                                    ),
-                                )
-
-                                PrivilegeLevel.NORMAL -> Unit
-                            }
-                        }
-                    }
-                },
-            ),
+            extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
         )
+    }
+
+    private fun builtInTools(binding: SessionBinding): List<CodingTool> = buildList {
+        add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
+        for (backend in availableShellBackends()) {
+            when (backend) {
+                PrivilegeLevel.ROOT -> add(
+                    rootShellTool(
+                        executor = RootCommandExecutor { command, timeoutMillis ->
+                            val result = deps.rootShell.execute(command, timeoutMillis)
+                            RootCommandResult(
+                                exitCode = result.exitCode,
+                                stdout = result.stdout,
+                                stderr = result.stderr,
+                                truncated = result.truncated,
+                                timedOut = result.timedOut,
+                            )
+                        },
+                        enabled = { PrivilegeLevel.ROOT in deps.privilege().state.value.availableBackends },
+                        status = { deps.privilege().state.value.root.toRootToolStatus() },
+                    ),
+                )
+
+                PrivilegeLevel.ADB -> add(
+                    adbShellTool(
+                        executor = deps.adbExecutor,
+                        enabled = { PrivilegeLevel.ADB in deps.privilege().state.value.availableBackends },
+                        status = { adbToolStatus() },
+                    ),
+                )
+
+                PrivilegeLevel.NORMAL -> Unit
+            }
+        }
+        addAll(webTools(webProvider))
+        addAll(arrangeTools(arrangeCalendar))
+        addAll(goalTools(binding, deps.goalService))
+        addAll(jobTools(binding, deps.jobRegistry()))
+        addAll(timerTools(deps.timerService(), binding))
+        addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
+        add(miniappEditTool(deps.miniappStore))
+        if (deps.capabilitySettingsStore.screenOps.value) {
+            addAll(deps.screenTools())
+            addAll(deps.virtualScreenTools())
+        }
     }
 
     private fun pluginRuntimeHooks(): RuntimeHooks {
@@ -125,7 +149,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
-            defaultMaxTurns = { deps.pluginSettingsStore.cachedInt("miniapp", "max_turns", 16) },
+            defaultMaxTurns = { 16 },
             workspace = deps.homeDir,
             shellExecutorFor = deps.shellExecutorFor,
             backgroundRunnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },

@@ -110,7 +110,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             goals = deps.goalService(),
             miniappStore = deps.miniappStore,
             miniappAgent = deps.miniappAgentService(),
-            miniappMaxTurns = { deps.pluginSettingsStore.cachedInt("miniapp", "max_turns", 16) },
+            miniappMaxTurns = { 16 },
             mcpConfig = deps.mcpConfigStore,
             mcpProbe = deps.mcpServerProbe,
             mcpTools = { server ->

@@ -79,6 +79,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.Settings -> SettingsRoute(
             dependencies = dependencies,
             navigator = host.navigator,
+            scope = host.scope,
             ui = host.ui,
             archivedCount = host.chat.archivedCount,
             onOpenAssistantSettings = host.onOpenAssistantSettings,

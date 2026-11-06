@@ -10,7 +10,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.SettingSpec
-import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest

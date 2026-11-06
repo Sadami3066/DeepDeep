@@ -11,7 +11,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.PluginStatus
-import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import io.github.whywood.deepdeep.plugin.cliWecomManifest
 import io.github.whywood.deepdeep.shell.LinuxResult
 import java.io.File

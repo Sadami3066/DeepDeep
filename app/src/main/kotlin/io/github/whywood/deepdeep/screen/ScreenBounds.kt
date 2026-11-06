@@ -1,12 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshotNode
 
 internal const val SCREEN_DEFAULT_MAX_DEPTH = GUI_MAX_DEPTH
 

@@ -1,27 +1,19 @@
 package io.github.whywood.deepdeep.graph
 
-import android.hardware.display.DisplayManager
-import android.util.DisplayMetrics
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.data.PrivilegePreferences
-import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
-import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.runtime.McpPluginBridge
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
-import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
-import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
-import io.github.whywood.deepdeep.screen.MainScreenController
+import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
 import io.github.whywood.deepdeep.screen.ScreenController
-import io.github.whywood.deepdeep.screen.ScreenRouter
-import io.github.whywood.deepdeep.screen.VirtualEngineBackend
+import io.github.whywood.deepdeep.screen.ScreenToolset
 import io.github.whywood.deepdeep.service.AppShellExecutor
-import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
-import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -76,36 +68,25 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
         }
     }
 
-    val virtualScreenFeature by lazy {
+    val virtualScreenFeature: VirtualScreenFeature by lazy {
         VirtualScreenFeature.install(deps.uiContext, privilege, adbBridge)
     }
 
-    private val screenActions = GuiAccessibilityActions()
+    private val mainShell: PrivilegedMainScreenShell by lazy {
+        PrivilegedMainScreenShell(privilege, rootShell, adbBridge)
+    }
 
-    val pluginScreenController: ScreenController by lazy {
-        ScreenRouter(
-            accessibility = AccessibilityScreenBackend(screenActions),
-            virtual = VirtualEngineBackend { VirtualScreenRuntime.engine() },
-            apps = AndroidScreenAppCatalog(deps.appContext),
-            accessibilityEnabled = { GuiAccessibilityState.isEnabled(deps.appContext) },
+    val screenToolset: ScreenToolset by lazy {
+        ScreenToolset(
+            context = deps.appContext,
+            screenshotDir = File(deps.appContext.filesDir, "gui/screenshots"),
+            mainShell = mainShell,
         )
     }
 
-    val pluginMainScreenController: ScreenController by lazy {
-        MainScreenController(
-            actions = screenActions,
-            apps = AndroidScreenAppCatalog(deps.appContext),
-            displaySize = {
-                val manager = deps.appContext.getSystemService(android.content.Context.DISPLAY_SERVICE) as? DisplayManager
-                val metrics = DisplayMetrics()
-                checkNotNull(manager?.getDisplay(0)) { "Main screen is unavailable" }.getRealMetrics(metrics)
-                metrics.widthPixels to metrics.heightPixels
-            },
-            virtualStatus = { pluginScreenController.status() },
-            shell = deps.mainShell(),
-            screenshotSupported = { android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R },
-        )
-    }
+    val pluginScreenController: ScreenController get() = screenToolset.virtual
+
+    val pluginMainScreenController: ScreenController get() = screenToolset.main
 
     val mcpPluginBridge: McpPluginBridge by lazy {
         McpPluginBridge(deps.httpTransport, deps.mcpTokenStore)

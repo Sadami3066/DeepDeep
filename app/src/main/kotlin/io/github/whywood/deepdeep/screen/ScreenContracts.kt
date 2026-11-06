@@ -1,11 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshotNode
-import io.github.whywood.deepdeep.plugin.gui.GuiTextResult
-import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
@@ -109,7 +103,7 @@ interface ScreenAccessibilityBackend {
 
     fun invalidateSnapshots()
 
-    fun bounds(displayId: Int, selector: GuiSelector): io.github.whywood.deepdeep.plugin.gui.GuiBounds
+    fun bounds(displayId: Int, selector: GuiSelector): GuiBounds
 
     suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult
 

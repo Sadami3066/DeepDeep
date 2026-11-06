@@ -70,7 +70,7 @@
         <service
             android:name=".service.GuiAccessibilityService"
             android:exported="true"
-            android:label="@string/plugin_screen_name"
+            android:label="@string/screen_ops_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -102,7 +102,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".plugin.arrange.ArrangePermissionActivity"
+            android:name=".arrange.ArrangePermissionActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:noHistory="true"

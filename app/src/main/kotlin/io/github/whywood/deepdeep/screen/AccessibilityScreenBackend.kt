@@ -1,11 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiActions
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.gui.GuiTextResult
-import io.github.whywood.deepdeep.plugin.gui.GuiWaitOutcome
 
 class AccessibilityScreenBackend(private val actions: GuiActions) : ScreenAccessibilityBackend {
     override val connected: Boolean get() = actions.connected

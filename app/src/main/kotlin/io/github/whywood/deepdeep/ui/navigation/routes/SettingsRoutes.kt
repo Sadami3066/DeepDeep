@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 internal fun SettingsRoute(
     dependencies: AppDependencies,
     navigator: AppNavigator,
+    scope: CoroutineScope,
     ui: ShellRouteUi,
     archivedCount: Int,
     onOpenAssistantSettings: () -> Unit,
@@ -39,6 +40,9 @@ internal fun SettingsRoute(
     val linuxState by dependencies.linuxEnvironment.state.collectAsStateWithLifecycle()
     val overlayEntryMode by dependencies.overlayEntryPreferences.mode.collectAsStateWithLifecycle(
         initialValue = OverlayEntryMode.VOICE,
+    )
+    val screenOps by dependencies.capabilitySettingsStore.screenOps.collectAsStateWithLifecycle(
+        initialValue = false,
     )
     SettingsScreen(
         nickname = ui.nickname,
@@ -62,6 +66,13 @@ internal fun SettingsRoute(
         onOpenPermission = { navigator.push(AppDestination.Permission) },
         onOpenFloating = { navigator.push(AppDestination.FloatingWindow) },
         privilegeLevel = privilegeState.effective,
+        screenOps = screenOps,
+        onScreenOpsChange = { enabled ->
+            scope.launch {
+                dependencies.capabilitySettingsStore.setScreenOps(enabled)
+                dependencies.host.reconfigure()
+            }
+        },
         onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
         onOpenFonts = { navigator.push(AppDestination.Fonts) },
         onOpenPrivacy = { navigator.push(AppDestination.Privacy) },

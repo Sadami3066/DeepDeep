@@ -7,6 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `VirtualScreenEngine.kt` | 客户端引擎：连接、命令、心跳、恢复、截图 |
+| `VirtualScreenFeature.kt` | 虚拟屏工具面：`virtual_screen` 工具（start/stop/status）、启停入口与在线状态，供 App 工具装配与插件宿主服务共用 |
 | `VirtualScreenHelperMain.kt` | 特权 helper 入口：建虚拟屏、注入输入、启动应用、推帧 |
 | `VirtualScreenContracts.kt` | 状态、结果与控制器接口契约 |
 | `VirtualScreenProtocol.kt` | helper 与 App 的帧协议编解码与大小上限 |

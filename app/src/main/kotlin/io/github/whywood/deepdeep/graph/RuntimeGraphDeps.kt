@@ -2,14 +2,16 @@ package io.github.whywood.deepdeep.graph
 
 import android.content.Context
 import dev.pi.ai.http.HttpTransport
+import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.QuestionCenter
@@ -17,7 +19,6 @@ import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.service.AppShellExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -39,7 +40,6 @@ internal class RuntimeGraphDeps(
     val httpTransport: HttpTransport,
     val personalizationStore: PersonalizationStore,
     val linuxSettings: LinuxSettingsStore,
-    val pluginSettingsStore: PluginSettingsStore,
     val questionCenter: QuestionCenter,
     val goalService: GoalService,
     val miniappStore: MiniappStore,
@@ -52,4 +52,8 @@ internal class RuntimeGraphDeps(
     val decorateInterrupted: suspend (ConversationState, String) -> ConversationState,
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,
+    val capabilitySettingsStore: CapabilitySettingsStore,
+    val apiKeyProvider: suspend () -> String?,
+    val screenTools: () -> List<CodingTool>,
+    val virtualScreenTools: () -> List<CodingTool>,
 )
