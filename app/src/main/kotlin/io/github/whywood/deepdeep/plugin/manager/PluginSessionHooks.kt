@@ -31,6 +31,7 @@ internal class PluginSessionHooks(
     private val mapper = RuntimeEventMapper(emit = { emptyList() })
     private val pump = SessionEventPump(scope, ::dispatchEvent)
     private val contributions = WeakHashMap<SessionBinding, Map<String, Contributions>>()
+    private val contributionLocks = WeakHashMap<SessionBinding, Any>()
     private val sessions = linkedMapOf<String, SessionState>()
 
     fun tools(binding: SessionBinding): List<CodingTool> {
@@ -53,12 +54,20 @@ internal class PluginSessionHooks(
     }
 
     fun close(sessionId: String) {
-        val state = synchronized(sessions) { sessions[sessionId] } ?: return
+        val state = synchronized(sessions) {
+            val current = sessions[sessionId] ?: return
+            if (current.closing) return
+            current.closing = true
+            current
+        }
         scope.launch {
             pump.submit(sessionId, PluginEvent.SessionClosed(sessionId))
             pump.closeAndDrain(sessionId)
             synchronized(sessions) { sessions.remove(sessionId) }
-            synchronized(contributions) { contributions.remove(state.binding) }
+            synchronized(contributions) {
+                contributions.remove(state.binding)
+                contributionLocks.remove(state.binding)
+            }
         }
     }
 
@@ -68,7 +77,7 @@ internal class PluginSessionHooks(
     }
 
     fun dispatchRuntimeEvent(event: SessionRuntimeEvent) {
-        val state = synchronized(sessions) { sessions[event.sessionId] } ?: return
+        val state = activeState(event.sessionId) ?: return
         mapper.map(event.sessionId, event.event).forEach { pluginEvent ->
             when (pluginEvent) {
                 is PluginEvent.RunStarted -> pump.updateSnapshot(
@@ -86,7 +95,7 @@ internal class PluginSessionHooks(
     }
 
     fun dispatchSessionEvent(sessionId: String, event: dev.pi.coding.session.SessionEvent) {
-        if (!isBound(sessionId)) return
+        if (activeState(sessionId) == null) return
         mapper.mapSessionEvent(sessionId, event).forEach { pluginEvent ->
             pump.submit(sessionId, pluginEvent)
         }
@@ -108,8 +117,18 @@ internal class PluginSessionHooks(
         return SessionHookSource(snapshots = base::snapshot, sessionHooks = hooks)
     }
 
-    private fun sessionContributions(binding: SessionBinding): Map<String, Contributions> =
-        synchronized(contributions) { contributions.getOrPut(binding) { materialize(binding) } }
+    private fun sessionContributions(binding: SessionBinding): Map<String, Contributions> {
+        synchronized(contributions) { contributions[binding] }?.let { return it }
+        val lock = synchronized(contributions) { contributionLocks.getOrPut(binding) { Any() } }
+        val materialized = synchronized(lock) {
+            synchronized(contributions) { contributions[binding] } ?: materialize(binding).also { value ->
+                synchronized(contributions) { contributions[binding] = value }
+                value
+            }
+        }
+        synchronized(contributions) { contributionLocks.remove(binding) }
+        return materialized
+    }
 
     private fun materialize(binding: SessionBinding): Map<String, Contributions> {
         val snapshot = registry.snapshot()
@@ -131,7 +150,8 @@ internal class PluginSessionHooks(
         }
     }
 
-    private fun isBound(sessionId: String): Boolean = synchronized(sessions) { sessions.containsKey(sessionId) }
+    private fun activeState(sessionId: String): SessionState? =
+        synchronized(sessions) { sessions[sessionId]?.takeUnless { it.closing } }
 
     private fun pluginSessionInfo(binding: SessionBinding): PluginSessionInfo =
         PluginSessionInfo(binding.supportsChatDelivery) {
@@ -140,10 +160,12 @@ internal class PluginSessionHooks(
             }
         }
 
-    private data class SessionState(
+    private class SessionState(
         val binding: SessionBinding,
         val sessionId: String,
         val source: SessionHookSource,
         val adapter: PluginRuntimeHooksAdapter,
-    )
+    ) {
+        var closing: Boolean = false
+    }
 }

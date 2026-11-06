@@ -21,12 +21,29 @@ import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PluginSessionHooksTest {
+    @Test
+    fun closeIsIdempotentAndIgnoresLateEvents() = runTest {
+        val recorder = EventRecordingHooks()
+        val fixture = Fixture()
+        fixture.add(SessionPlugin(baseHooks = recorder))
+        fixture.hooks.bind(binding(), PluginHooksDelegate())
+        recorder.calls.clear()
+
+        fixture.hooks.close(SESSION_ID)
+        fixture.hooks.close(SESSION_ID)
+        fixture.hooks.dispatchSessionEvent(SESSION_ID, retryScheduled(1))
+        advanceUntilIdle()
+
+        assertEquals(listOf("sessionClosed"), recorder.calls)
+    }
+
     @Test
     fun toolsMaterializeContributionsOncePerSessionBinding() = runTest {
         val plugin = CountingPlugin()

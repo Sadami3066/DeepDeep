@@ -2,6 +2,9 @@
 
 ## HEAD (since m2)
 
+- refactor: 插件装配子图依赖倒置：`PluginGraph` 通过 `PluginGraphDeps` 显式注入依赖，`graph/` 包不再 import `AppGraph`，`AppGraph` 依赖属性恢复 `private`；懒加载依赖以 provider 传入保持原初始化时机 [插件] [架构]
+- fix: 插件会话 hooks 收口：`contributionsFor` 物化按 `SessionBinding` 分锁（不同会话互不阻塞），`close()` 幂等且关闭中的会话忽略新事件，新增关闭幂等测试 [插件]
+- docs: 明确 run 级冻结的前提（单会话单活跃 run）与被停用插件仍可能收到本轮事件的作者注意事项 [docs] [插件]
 - feat: 插件会话 hooks 接入统一管线：`contributionsFor` 返回的 hooks 按 pluginId 覆盖全局 hooks（默认空实现沿用全局），同一会话一次物化；run 开始冻结 hooks 集合、结束（含失败）后按最新快照解冻，运行中启停插件不影响本轮 [插件] [运行时]
 - feat: 工具结果 FileRef 结构化：runtime-api 新增 `ToolResultPayload.Block.FileRef`，details 保留键 `deepdeep.fileRefs` 编解码；content 保留 `file: <path> (<mime>)` 文本回退，工具卡文件行可点击打开，历史 JSONL 可还原 [插件] [运行时] [聊天]
 - refactor: 装配拆出 `graph/` 子图：插件装配独立为 `PluginGraph`，AppGraph 只保留懒加载入口（656 → 523 行），行为不变 [插件]

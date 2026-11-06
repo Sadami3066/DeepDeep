@@ -3,10 +3,12 @@ package io.github.whywood.deepdeep.graph
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import io.github.whywood.deepdeep.AppGraph
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
+import io.github.whywood.deepdeep.plugin.PluginSkillStore
+import io.github.whywood.deepdeep.plugin.api.McpCallResult
+import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.plugin.builtinPlugins
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
@@ -19,48 +21,47 @@ import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginStateStore
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
-import io.github.whywood.deepdeep.plugin.api.McpCallResult
-import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.service.AppVisibility
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-internal class PluginGraph(private val graph: AppGraph) {
-    private val language: () -> String = { LanguagePreferences(graph.appContext).read().tag }
+internal class PluginGraph(private val deps: PluginGraphDeps) {
+    private val language: () -> String = { LanguagePreferences(deps.appContext).read().tag }
 
     val manager: PluginHostManager by lazy {
-        val pluginsRoot = File(graph.appContext.filesDir, "plugins")
+        val pluginsRoot = File(deps.appContext.filesDir, "plugins")
         val trustStore = PublisherTrustStore(File(pluginsRoot, "trusted_publishers.json"))
         val recordStore = ExternalPluginRecordStore(File(pluginsRoot, "plugins.json"))
+        val builtins = builtinPlugins(deps.builtinWiring())
         val installer = PluginInstaller(
             pluginsRoot = pluginsRoot,
             trustStore = trustStore,
             recordStore = recordStore,
             hostVersion = BuildConfig.VERSION_NAME,
-            reservedPluginIds = { builtinPlugins(graph.builtinWiring).map { it.manifest.id }.toSet() },
-            reservedToolNames = { builtinPlugins(graph.builtinWiring).flatMap { it.manifest.provides.tools }.toSet() },
+            reservedPluginIds = { builtins.map { it.manifest.id }.toSet() },
+            reservedToolNames = { builtins.flatMap { it.manifest.provides.tools }.toSet() },
         )
         PluginHostManager(
-            context = graph.appContext,
-            strings = graph.pluginStrings,
-            filesDir = graph.appContext.filesDir,
-            scope = graph.scope,
+            context = deps.appContext,
+            strings = deps.pluginStrings,
+            filesDir = deps.appContext.filesDir,
+            scope = deps.scope,
             language = language,
-            builtins = builtinPlugins(graph.builtinWiring),
+            builtins = builtins,
             servicesFactory = { pluginId, dataDir, pluginScope ->
                 buildPluginServices(pluginServices(pluginId, dataDir, pluginScope))
             },
             builtinStateStore = BuiltinPluginStateStore(File(pluginsRoot, "builtin_state.json")),
-            settingsStore = graph.pluginSettingsStore,
-            skillStore = io.github.whywood.deepdeep.plugin.PluginSkillStore(
-                skillsDir = File(graph.agentDir, "skills"),
-                repoDir = File(graph.appContext.filesDir, "skills"),
+            settingsStore = deps.pluginSettingsStore,
+            skillStore = PluginSkillStore(
+                skillsDir = File(deps.agentDir, "skills"),
+                repoDir = File(deps.appContext.filesDir, "skills"),
             ),
-            external = ExternalPluginRuntime(graph.appContext, installer, BuildConfig.VERSION_NAME),
+            external = ExternalPluginRuntime(deps.appContext, installer, BuildConfig.VERSION_NAME),
             externalUpdates = ExternalUpdateSupport(
-                filesDir = graph.appContext.filesDir,
+                filesDir = deps.appContext.filesDir,
                 hostVersion = BuildConfig.VERSION_NAME,
                 installer = installer,
                 trustStore = trustStore,
@@ -68,87 +69,87 @@ internal class PluginGraph(private val graph: AppGraph) {
             ),
             isForeground = { AppVisibility.foreground },
             notifyInstall = { label, stage, progress ->
-                graph.notificationCenter.notifyInstall(label, stage, progress)
+                deps.notificationCenter().notifyInstall(label, stage, progress)
             },
             notifyInstallFinished = { label, success, error ->
-                graph.notificationCenter.notifyInstallFinished(label, success, error)
+                deps.notificationCenter().notifyInstallFinished(label, success, error)
             },
             onContributionsChanged = {
-                graph.scope.launch { graph.host.reconfigure() }
+                deps.scope.launch { deps.host.reconfigure() }
             },
             onSetupReady = { _ ->
-                if (!AppVisibility.foreground) graph.scope.launch { AppVisibility.bringToFront(graph.appContext) }
+                if (!AppVisibility.foreground) deps.scope.launch { AppVisibility.bringToFront(deps.appContext) }
             },
         )
     }
 
     private fun pluginServices(pluginId: String, dataDir: File, pluginScope: CoroutineScope): PluginServiceDependencies =
         PluginServiceDependencies(
-            context = graph.uiContext,
+            context = deps.uiContext,
             scope = pluginScope,
             pluginId = pluginId,
             pluginDataDir = dataDir,
-            workspaceDir = graph.homeDir,
+            workspaceDir = deps.homeDir,
             versionName = BuildConfig.VERSION_NAME,
             versionCode = BuildConfig.VERSION_CODE.toLong(),
             language = language,
-            installationId = { graph.installationId.get() },
-            linux = graph.linuxEnvironment,
-            privilege = graph.privilege,
-            rootShell = graph.rootShell,
-            adbBridge = graph.adbBridge,
-            secrets = graph.secretStore,
-            network = graph.httpTransport,
-            sessions = graph.host,
-            sessionCommands = graph.host,
-            screen = graph.pluginScreenController,
-            mainScreen = graph.pluginMainScreenController,
-            activeSessionId = graph.activeSessionId,
-            jobs = graph.jobRegistry,
-            timers = graph.timerService,
-            goals = graph.goalService,
-            workshopStore = graph.workshopStore,
-            workshopAgent = graph.workshopAgentService,
-            workshopMaxTurns = { graph.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
-            mcpConfig = graph.mcpConfigStore,
-            mcpProbe = graph.mcpServerProbe,
+            installationId = { deps.installationId.get() },
+            linux = deps.linuxEnvironment,
+            privilege = deps.privilege(),
+            rootShell = deps.rootShell,
+            adbBridge = deps.adbBridge,
+            secrets = deps.secretStore,
+            network = deps.httpTransport,
+            sessions = deps.host,
+            sessionCommands = deps.host,
+            screen = deps.pluginScreenController(),
+            mainScreen = deps.pluginMainScreenController(),
+            activeSessionId = deps.activeSessionId,
+            jobs = deps.jobRegistry(),
+            timers = deps.timerService(),
+            goals = deps.goalService(),
+            workshopStore = deps.workshopStore,
+            workshopAgent = deps.workshopAgentService(),
+            workshopMaxTurns = { deps.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            mcpConfig = deps.mcpConfigStore,
+            mcpProbe = deps.mcpServerProbe,
             mcpTools = { server ->
-                graph.mcpConfigStore.loadServers()[server]?.let { config ->
-                    graph.mcpPluginBridge.listTools(server, config).map(McpModelMapping::tool)
+                deps.mcpConfigStore.loadServers()[server]?.let { config ->
+                    deps.mcpPluginBridge().listTools(server, config).map(McpModelMapping::tool)
                 }.orEmpty()
             },
             mcpCall = call@{ server, tool, arguments ->
-                val config = graph.mcpConfigStore.loadServers()[server]
+                val config = deps.mcpConfigStore.loadServers()[server]
                     ?: return@call McpCallResult(
                         blocks = listOf(ToolBlock.Text("unknown MCP server: $server")),
                         isError = true,
                     )
-                McpModelMapping.result(graph.mcpPluginBridge.callTool(server, config, tool, arguments))
+                McpModelMapping.result(deps.mcpPluginBridge().callTool(server, config, tool, arguments))
             },
-            virtualScreen = graph.virtualScreenFeature,
-            screenshotDir = File(graph.appContext.filesDir, "gui/screenshots"),
+            virtualScreen = deps.virtualScreenFeature(),
+            screenshotDir = File(deps.appContext.filesDir, "gui/screenshots"),
             sharedStorageDir = if (isSharedStorageGranted()) File("/storage/emulated/0") else null,
-            bus = graph.pluginBus,
+            bus = deps.pluginBus,
             chatSink = { sessionId, customType, payload, text, display ->
-                graph.host.postPluginMessage(sessionId, customType, payload.toString(), text, display)
+                deps.host.postPluginMessage(sessionId, customType, payload.toString(), text, display)
             },
-            openUrl = { url -> openUrl(url) },
-            toast = { text -> toast(text) },
-            share = { request -> PluginUiBridge.share(graph.uiContext, request) },
-            openPage = { pageId -> PluginUiBridge.openPage(graph.uiContext, pluginId, pageId) },
+            openUrl = ::openUrl,
+            toast = ::toast,
+            share = { request -> PluginUiBridge.share(deps.uiContext, request) },
+            openPage = { pageId -> PluginUiBridge.openPage(deps.uiContext, pluginId, pageId) },
         )
 
     private fun openUrl(url: String) {
         runCatching {
-            graph.appContext.startActivity(
+            deps.appContext.startActivity(
                 Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         }
     }
 
     private fun toast(text: String) {
-        graph.scope.launch(Dispatchers.Main) {
-            Toast.makeText(graph.uiContext, text, Toast.LENGTH_SHORT).show()
+        deps.scope.launch(Dispatchers.Main) {
+            Toast.makeText(deps.uiContext, text, Toast.LENGTH_SHORT).show()
         }
     }
 }

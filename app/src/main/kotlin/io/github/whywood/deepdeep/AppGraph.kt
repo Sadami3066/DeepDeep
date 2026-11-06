@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
 import io.github.whywood.deepdeep.graph.PluginGraph
+import io.github.whywood.deepdeep.graph.PluginGraphDeps
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
 import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
@@ -107,10 +108,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppGraph(context: Context) : AppDependencies {
-    internal val appContext = context.applicationContext
+    private val appContext = context.applicationContext
     val uiContext: Context = LocalizedContext(appContext)
-    internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    internal val virtualScreenFeature by lazy { VirtualScreenFeature.install(uiContext, privilege, adbBridge) }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val virtualScreenFeature by lazy { VirtualScreenFeature.install(uiContext, privilege, adbBridge) }
     val appScope: CoroutineScope get() = scope
     private val jobWake = MutableStateFlow(true)
     private val sharedStorage = MutableStateFlow(false)
@@ -126,13 +127,13 @@ class AppGraph(context: Context) : AppDependencies {
     val workspacesDir: File = File(appContext.filesDir, "workspaces").apply { mkdirs() }
     val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
 
-    internal val secretStore = EncryptedSecretStore(appContext)
+    private val secretStore = EncryptedSecretStore(appContext)
     val apiKeyStore = ApiKeyStore(secretStore)
     val oauthCredentialStore = OAuthCredentialStore(secretStore)
     override val modelConfigStore = ModelConfigStore(appContext)
     override val attachmentStore = FileAttachmentStore(appContext, homeDir)
     override val linuxSettings = LinuxSettingsStore(appContext)
-    internal val rootShell = RootShell()
+    private val rootShell = RootShell()
     val adbBridge: AdbBootstrap = AdbBridgeRuntime.install(appContext)
     private val privilegeImpl by lazy {
         PrivilegeControllerImpl(
@@ -174,7 +175,7 @@ class AppGraph(context: Context) : AppDependencies {
         sharedStorageEnabled = { sharedStorage.value },
         extraBinds = linuxBinds(),
     )
-    internal val httpTransport = okHttpTransport()
+    private val httpTransport = okHttpTransport()
     override val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
     override val providerCatalog = ProviderCatalog(httpTransport, credentials)
     val modelSelection = ModelSelection(providerCatalog, modelConfigStore)
@@ -190,7 +191,7 @@ class AppGraph(context: Context) : AppDependencies {
         transport = httpTransport,
         deviceId = { installationId.get() },
     )
-    internal val installationId = InstallationIdStore(agentDir)
+    private val installationId = InstallationIdStore(agentDir)
     override val mcpConfigStore = McpConfigStore(agentDir)
     private val mcpTokenStore = FileMcpTokenStore(defaultMcpAuthFile(agentDir.absolutePath.toPath()))
     override val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)
@@ -209,8 +210,8 @@ class AppGraph(context: Context) : AppDependencies {
     override val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
     override val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
-    internal val pluginStrings = AndroidPluginStrings(uiContext)
-    internal val pluginBus = PluginBusImpl()
+    private val pluginStrings = AndroidPluginStrings(uiContext)
+    private val pluginBus = PluginBusImpl()
 
     override val goalService: GoalService by lazy { GoalService() }
     override val jobRegistry: JobRegistry by lazy {
@@ -229,7 +230,7 @@ class AppGraph(context: Context) : AppDependencies {
     )
     private val pluginScreenActions = GuiAccessibilityActions()
 
-    internal val pluginScreenController: ScreenController by lazy {
+    private val pluginScreenController: ScreenController by lazy {
         ScreenRouter(
             accessibility = AccessibilityScreenBackend(pluginScreenActions),
             virtual = VirtualEngineBackend { VirtualScreenRuntime.engine() },
@@ -238,7 +239,7 @@ class AppGraph(context: Context) : AppDependencies {
         )
     }
 
-    internal val pluginMainScreenController: ScreenController by lazy {
+    private val pluginMainScreenController: ScreenController by lazy {
         MainScreenController(
             actions = pluginScreenActions,
             apps = AndroidScreenAppCatalog(appContext),
@@ -254,11 +255,11 @@ class AppGraph(context: Context) : AppDependencies {
         )
     }
 
-    internal val mcpPluginBridge: McpPluginBridge by lazy {
+    private val mcpPluginBridge: McpPluginBridge by lazy {
         McpPluginBridge(httpTransport, mcpTokenStore)
     }
 
-    internal val builtinWiring: BuiltinPluginWiring by lazy {
+    private val builtinWiring: BuiltinPluginWiring by lazy {
         BuiltinPluginWiring(
             uiContext = uiContext,
             filesDir = appContext.filesDir,
@@ -285,7 +286,40 @@ class AppGraph(context: Context) : AppDependencies {
             onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
         )
     }
-    private val pluginGraph: PluginGraph by lazy { PluginGraph(this) }
+    private val pluginGraph: PluginGraph by lazy { PluginGraph(pluginGraphDeps()) }
+
+    private fun pluginGraphDeps(): PluginGraphDeps = PluginGraphDeps(
+        appContext = appContext,
+        uiContext = uiContext,
+        scope = scope,
+        agentDir = agentDir,
+        homeDir = homeDir,
+        pluginSettingsStore = pluginSettingsStore,
+        pluginStrings = pluginStrings,
+        host = host,
+        installationId = installationId,
+        linuxEnvironment = linuxEnvironment,
+        privilege = { privilege },
+        rootShell = rootShell,
+        adbBridge = adbBridge,
+        secretStore = secretStore,
+        httpTransport = httpTransport,
+        activeSessionId = activeSessionId,
+        pluginBus = pluginBus,
+        mcpConfigStore = mcpConfigStore,
+        mcpServerProbe = mcpServerProbe,
+        workshopStore = workshopStore,
+        builtinWiring = { builtinWiring },
+        notificationCenter = { notificationCenter },
+        workshopAgentService = { workshopAgentService },
+        jobRegistry = { jobRegistry },
+        timerService = { timerService },
+        goalService = { goalService },
+        virtualScreenFeature = { virtualScreenFeature },
+        pluginScreenController = { pluginScreenController },
+        pluginMainScreenController = { pluginMainScreenController },
+        mcpPluginBridge = { mcpPluginBridge },
+    )
 
     override val pluginManager: PluginHostManager get() = pluginGraph.manager
     private val appToolContext: AppToolContext by lazy {

@@ -477,9 +477,11 @@ override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
 
 `PluginHooks` 全部方法有默认空实现，只覆盖需要的。hooks 在 `contributions(host)`（全局）或 `contributionsFor(host, session)`（会话级）里返回，两者汇入同一条派发管线。
 
-**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具（`contributions(host).copy(tools = ...)`）也保留全局 hooks。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一 `SessionBinding` 从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果，运行中不会随插件刷新重新调用；插件能力变化（启停/设置/安装/动作）会触发宿主在安全点重建会话（新的 `SessionBinding`），重建后才重新物化。
+**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具（`contributions(host).copy(tools = ...)`）也保留全局 hooks。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一 `SessionBinding` 从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果，运行中不会随插件刷新重新调用；插件能力变化（启停/设置/安装/动作）会触发宿主在安全点重建会话（新的 `SessionBinding`），重建后才重新物化。不同会话的物化互不阻塞、可能并发调用，插件实现不要依赖跨会话的共享可变状态。
 
 **run 级冻结**：每轮 run 开始时（`RunStarted`）宿主冻结当时生效的 hooks 集合，本轮所有观察事件与变换/闸门都走这份集合：冻结后再启停插件、刷新贡献、新增插件都不影响本轮——已冻结的插件即使被停用，本轮剩余事件仍会派发给它；新启用的插件从下一轮开始生效。run 结束（`RunFinished`；失败结束同样以 `RunFinished(error)` 到达）并派发完本轮事件后解冻，下一轮按最新插件快照重新冻结。
+
+注意：冻结期间被停用的插件仍可能收到本轮剩余事件，回调必须能容忍插件已被 `close`/状态已变，不要依赖回调时机做资源清理（清理写在 `close()`/`onDisable` 里）。前提是同一会话同一时刻只有一个活跃 run，宿主按此串行保证。
 
 工坊一次性 Agent 复用同一套 prompt/input/工具钩子与会话绑定，但它的会话事件不经过宿主会话观察事件管线，因此 21 个观察事件与 run 冻结只覆盖主会话运行路径。
 
