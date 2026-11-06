@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- refactor: 插件示例与模板迁出到 `plugins/` 独立仓库，宿主仓库只保留契约与真机 e2e 脚本 [插件] [架构]
 - refactor: 删除无入口的日历授权 Activity，日历权限改由系统应用权限页授予 [界面]
 - fix: 停用插件调用 `onDisable` 再收尾；外部插件安装期保留工具名补齐 web/arrange/screen/virtual 全部 App 工具 [插件]
 - refactor: 插件系统只服务外部 `.ddp` 插件：删除内置插件体系与安装/连接/设置/动作/详情行契约（`plugin-api` 升 0.5.0 / apiLevel 2），删除 `plugin_setup` 工具与内置插件资源；插件页重绘为单列表（行内开关 + 行尾菜单 + 插件自绘页面），composer 入口直达插件页面，asset 图标按显示尺寸降采样；sample/template 同步新形态 [插件] [界面] [架构]

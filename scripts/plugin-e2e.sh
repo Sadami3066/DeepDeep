@@ -10,14 +10,17 @@ DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
 
 ./scripts/gradlew-locked \
     :plugin-api:publishToMavenLocal \
-    :plugin-sample:assemblePlugin \
-    :plugin-sample:signPlugin \
     :app:assembleDebug \
     :app:assembleDebugAndroidTest
 
+(
+  cd ../plugins
+  ./gradlew :sample:verifyPlugin
+)
+
 adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
 adb push app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/deepdeep-test.apk >/dev/null
-adb push plugin-sample/build/plugin/plugin-sample-signed.ddp /data/local/tmp/plugin-sample-signed.ddp >/dev/null
+adb push ../plugins/sample/build/plugin/sample.ddp /data/local/tmp/plugin-sample-signed.ddp >/dev/null
 adb shell su -c "pm install -r /data/local/tmp/deepdeep.apk" >/dev/null
 adb shell su -c "pm install -r /data/local/tmp/deepdeep-test.apk" >/dev/null
 adb shell su -c "mkdir -p ${DEVICE_DIR}"
