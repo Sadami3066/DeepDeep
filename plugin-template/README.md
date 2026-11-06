@@ -1,18 +1,18 @@
 # plugin-template · 外部插件模板
 
-一个**独立**的 Gradle Android 工程，用来开发 DeepDeep 外部插件并产出带签名的 `.ddp` 包。它不参与主仓库构建（根 `settings.gradle.kts` 没有 include 它），模板代码覆盖工具（含 partial 更新与结构化结果）、会话感知工具、技能、设置、setup 连接流程、详情页动作与只读信息行、hooks 与 Compose UI 槽位，可直接改名后当自己的插件起点。
+一个**独立**的 Gradle Android 工程，用来开发 DeepDeep 外部插件并产出带签名的 `.ddp` 包。它不参与主仓库构建（根 `settings.gradle.kts` 没有 include 它），模板代码覆盖工具（含 partial 更新与结构化结果）、会话感知工具、技能、hooks、工具卡槽位与插件自绘页面，可直接改名后当自己的插件起点。
 
 开发文档见仓库 `docs/PLUGIN_DEV.md`；契约源码见 `plugin-api/`。
 
 ## 前置：发布插件 SDK 到 mavenLocal
 
-模板通过 `compileOnly("io.github.whywood.deepdeep:plugin-api:0.4.0")` 取契约，第一次构建前先在主仓库根目录执行：
+模板通过 `compileOnly("io.github.whywood.deepdeep:plugin-api:0.5.0")` 取契约，第一次构建前先在主仓库根目录执行：
 
 ```bash
 ./scripts/gradlew-locked :plugin-api:publishToMavenLocal
 ```
 
-产物落在 `~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.4.0/`（AAR + sources + POM）。改了 `plugin-api` 后重新执行一次即可；升级 SDK 版本时同步改本工程 `build.gradle.kts` 的 `pluginApiVersion`、`plugin.json` 的 `apiLevel` / `minHostVersion`。
+产物落在 `~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.5.0/`（AAR + sources + POM）。改了 `plugin-api` 后重新执行一次即可；升级 SDK 版本时同步改本工程 `build.gradle.kts` 的 `pluginApiVersion`、`plugin.json` 的 `apiLevel` / `minHostVersion`。
 
 ## 构建、打包、签名
 
@@ -55,7 +55,7 @@ cd plugin-template
 
 1. 把 `build/plugin/plugin-template.ddp` 传到手机（插件页「导入插件」选择文件）。
 2. 宿主会校验 `plugin.json`、`apiLevel`/`minHostVersion`、Ed25519 签名与 `keyId`；首次安装需确认「插件代码拥有 App 全部权限」。
-3. 启用插件后，`template_echo` / `template_session` 工具、`template-skill` 技能、设置页、详情页动作与 `setup.content` / `tool.card.content:template_echo` 槽位才会出现。
+3. 启用插件后，`template_echo` / `template_session` 工具、`template-skill` 技能、`tool.card.content:template_echo` 工具卡与 `plugin.page:home` 插件页面才会出现。
 
 ## 工程结构
 
@@ -89,11 +89,11 @@ plugin-template/
 
 `verifyPlugin` 的 `Signature OK` 只说明签名与 canonical digest 一致，**不代表安装器会接受**。导入前再确认：
 
-- `id` 满足 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（至少两段，如 `com.example.myplugin`），内置插件才是 `^[a-z][a-z0-9_-]*$`；
-- `version` 是 `major.minor.patch[后缀]`；`apiLevel` ≤ 宿主 `PLUGIN_API_LEVEL`；`minHostVersion` 不高于宿主版本（当前宿主 `0.2.0-dev`，`compareCore` 只比 `major.minor.patch`，所以 `0.2.0` 的门槛可以通过）；
+- `id` 满足 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（至少两段，如 `com.example.myplugin`）；
+- `version` 是 `major.minor.patch[后缀]`；`apiLevel` ≤ 宿主 `PLUGIN_API_LEVEL`（当前 2）；`minHostVersion` 不高于宿主版本（当前宿主 `0.2.0-dev`，`compareCore` 只比 `major.minor.patch`，所以 `0.2.0` 的门槛可以通过）；
 - `entryClass` 类名合法、类在某个根 `classes*.dex` 中且有无参构造；
-- `provides` 与实际贡献一致（tools/skills/settings/actions/uiSlots/pages），工具名不与宿主保留名冲突；
-- 槽位 id 通过 `SlotIds.matches`（`setup.content`、`plugin.detail.section:<id>`、`tool.card.content:<tool>`、`chat.message:<customType>`、`plugin.page:<pageId>`）；
+- `provides` 与实际贡献一致（tools/skills/uiSlots/pages），工具名不与宿主保留名冲突；
+- 槽位 id 通过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`、`plugin.page:<pageId>`）；
 - 包内 `assets/plugin.json` 路径正确、至少一个根 `classes*.dex`。
 
 ## 常见失败

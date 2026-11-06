@@ -12,7 +12,7 @@
 | `PluginFetcher.kt` | `PluginFetcher` 抽象（`readText` / `download`）与默认 `HttpPluginFetcher`：`http(s)` 走 `HttpURLConnection`、支持 `file:`；连接/读超时、体积上限、进度回调 |
 | `PluginIndexCache.kt` | `sources_cache.json` 读写（原子写）：索引 + 来源 URL + fetchedAt，损坏按不可用处理（缓存可丢弃，不备份） |
 | `PluginIndexClient.kt` | `fetch(indexUrl)`：网络拉取 → 解析 → 原子写缓存；失败（网络/损坏/超大）回退上次缓存并标记 `fromCache`；`cached(indexUrl)` 读缓存 |
-| `PluginSourceSettings.kt` | `sources.json` 读写：`indexUrl/autoCheck/intervalHours`，schemaVersion 1，损坏备份 `.corrupt` 后重建默认值，写入前归一化（URL scheme、interval 1..720） |
+| `PluginRepositorySettings.kt` | `sources.json` 读写：`indexUrl/autoCheck/intervalHours`，schemaVersion 1，损坏备份 `.corrupt` 后重建默认值，写入前归一化（URL scheme、interval 1..720） |
 | `PluginPackageDownloader.kt` | 下载到 `downloads/*.part` → 体积比对 → sha256 比对 → 改名 `*.ddp`；失败清理残片 |
 | `PluginUpdateManager.kt` | 编排：`downloadAndStage()` = TOCTOU 复核（同钥/更新/未 pending/已信任）→ 下载 → 验签与清单一致性 → `installer.install()` 暂存，返回 typed 结果，不自动生效 |
 | `ExternalUpdateSupport.kt` | AppGraph/manager 用的集成门面：构造时按 `filesDir` 组装 settings/client/downloader/manager；对外只有 `loadSettings/saveSettings/checkUpdates/stageUpdate` 与 UI 形状的结果类型（`ExternalUpdateCandidate`/`UpdateCheckResultUi`/`UpdateStageResultUi`），不暴露内部 typed 类 |

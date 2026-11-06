@@ -12,7 +12,7 @@
 | `FloatingPlacement.kt` | 气泡落位、卡片/面板/预览排布与尺寸计算 |
 | `FloatingStyle.kt` | 悬浮窗尺寸、颜色与动效常量 |
 | `FloatingBubble.kt` | 小鲸鱼气泡外观、情绪与环形进度 |
-| `FloatingCard.kt` | 事件卡：提问、插件连接、完成与订阅跟踪 |
+| `FloatingCard.kt` | 事件卡：提问、完成与订阅跟踪 |
 | `FloatingPanel.kt` | 运行面板：运行中、待处理提问、已完成 |
 | `FloatingVirtualPreview.kt` | 虚拟屏缩略预览（在线/离线/失败态） |
 | `FloatingPreview.kt` | 预览帧节流、缩放与宽高比计算 |

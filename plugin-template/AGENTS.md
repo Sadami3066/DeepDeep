@@ -1,6 +1,6 @@
 # plugin-template · 外部插件模板工程
 
-独立 Gradle Android 工程，作为外部插件起点与 `.ddp` 打包/签名参考；不参与主仓库构建（不在根 `settings.gradle.kts` 里）。只通过 mavenLocal 依赖 `io.github.whywood.deepdeep:plugin-api:0.4.0`，其余宿主库全部 `compileOnly`。
+独立 Gradle Android 工程，作为外部插件起点与 `.ddp` 打包/签名参考；不参与主仓库构建（不在根 `settings.gradle.kts` 里）。只通过 mavenLocal 依赖 `io.github.whywood.deepdeep:plugin-api:0.5.0`，其余宿主库全部 `compileOnly`。
 
 ## 文件
 
@@ -8,9 +8,9 @@
 |---|---|
 | `build.gradle.kts` | Android 配置；`assemblePlugin` 重打包 APK 为 `.ddp`，`signPlugin` 生成 Ed25519 密钥并写入 `META-INF/plugin-signature.json`（`.pem`/`.pub` 声明为任务输入，换钥/改路径会触发重签），`verifyPlugin` 自检签名 |
 | `settings.gradle.kts` | 独立工程设置；`mavenLocal` 仅为 `io.github.whywood.deepdeep` 开启 |
-| `src/main/assets/plugin.json` | 插件清单：id/version/apiLevel/minHostVersion/entryClass/name/summary/description/icon/ui/provides |
+| `src/main/assets/plugin.json` | 插件清单：id/version/apiLevel=2/minHostVersion/entryClass/name/summary/description/icon/ui/provides（tools/skills/uiSlots/pages） |
 | `src/main/assets/skills/template-skill/` | 技能 markdown（SKILL.md）与附加文件（references/format.md） |
-| `src/main/kotlin/.../TemplatePlugin.kt` | 参考实现：工具 + partial 更新、会话感知工具、技能、设置、setup、actions/detailRows、hooks、Compose 槽位 |
+| `src/main/kotlin/.../TemplatePlugin.kt` | 参考实现：工具 + partial 更新、会话感知工具、技能、hooks、工具卡槽位与插件自绘页面 |
 | `README.md` | 构建/打包/签名/安装流程与改名清单 |
 
 ## 要点

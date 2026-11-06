@@ -11,8 +11,8 @@
 | `AppRoutes.kt` | `RouteSpec`、父路由与深链栈推导；`AppRouteContent(destination, AppRouteHost)` 分发 |
 | `AppRouteHost.kt` | 装配上下文：`AppRouteHost`（导航/依赖/聊天回调/壳层 UI）、`ChatRouteData`（会话切片）、`ShellRouteUi`（主题/字体/昵称/头像/模型） |
 | `AppScreenTransition.kt` | 推入/返回转场与冻结 base 的 `AnimatedScreenHost` |
-| `PluginComposerActions.kt` | 聊天输入区的插件动作行（组合层组件） |
-| `routes/` | 各页面的装配 composable，按功能分文件：Files、Settings、Provider、Plugins、Session、Miniapp |
+| `PluginComposerActions.kt` | 聊天输入区的插件入口行：每个 composer action 打开对应插件页面 |
+| `routes/` | 各页面的装配 composable，按功能分文件：Files、Settings、Provider、Plugins（列表与插件自绘页面）、Session、Miniapp |
 
 ## 规则
 

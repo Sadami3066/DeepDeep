@@ -16,6 +16,6 @@ AppGraph 拆出的装配子图：把一组相关的全局依赖的构造与接�
 
 - 子图之间只通过构造依赖传值；会形成循环或需要保持懒加载时机的对象用 `() -> T` 传入，子图内部再用 `by lazy` 展开，绝不调用 `AppGraph`。
 - 构造顺序：`DataGraph` → `PlatformGraph` → `RuntimeGraph` → `ServiceGraph`；`host` 需要 `timerService` / `jobRegistry`，`ServiceGraph` 需要 `host` / `conversationStore`，两边都用 lambda 打破循环，首次访问时才落定。
-- `AppGraph` 只保留 `AppDependencies` 委托、`builtinWiring`、`pluginGraph`、`prepare`、中断提示装饰与运行时事件转发；新增子图时沿用 `internal class XxxGraph(private val deps: XxxGraphDeps)` + `val` 产出。
+- `AppGraph` 只保留 `AppDependencies` 委托、`pluginGraph`、`prepare`、中断提示装饰与运行时事件转发；新增子图时沿用 `internal class XxxGraph(private val deps: XxxGraphDeps)` + `val` 产出。
 - 新增依赖时只加 `XxxGraphDeps` 字段并在 `AppGraph` 侧赋值；`AppGraph` 的属性保持 `private`，不为子图放宽可见性。
 - `graph/` 包不得 import `AppGraph`；插件生命周期、状态、服务实现仍在 `app/.../plugin/**`。
