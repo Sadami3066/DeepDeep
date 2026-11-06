@@ -76,6 +76,8 @@ interface PluginHost {
     fun logs(): LogService
 
     fun chat(): ChatService = throw PluginServiceUnavailable("chat")
+
+    fun requestContributionsRefresh()
 }
 
 data class PluginSessionSnapshot(

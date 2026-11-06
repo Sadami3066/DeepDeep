@@ -49,7 +49,18 @@ class PluginHostManager internal constructor(
         resourceString = { id -> strings.get(id) },
         language = language,
     )
-    private val hostFactory = PluginHostFactory(context, pluginsRoot, textResolver, servicesFactory)
+    private val hostFactory = PluginHostFactory(
+        context = context,
+        pluginsRoot = pluginsRoot,
+        textResolver = textResolver,
+        servicesFactory = servicesFactory,
+        onRefreshRequest = {
+            scope.launch {
+                refreshNow()
+                onContributionsChanged()
+            }
+        },
+    )
     private val lifecycle = PluginLifecycle(
         parentScope = scope,
         hostFactory = hostFactory::create,

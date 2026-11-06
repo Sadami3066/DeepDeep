@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- feat: 插件可通过 `host.requestContributionsRefresh()` 在页面操作后重建贡献与会话，开关/登录状态即时生效 [插件]
 - refactor: 插件示例与模板迁出到 `plugins/` 独立仓库，宿主仓库只保留契约与真机 e2e 脚本 [插件] [架构]
 - refactor: 删除无入口的日历授权 Activity，日历权限改由系统应用权限页授予 [界面]
 - fix: 停用插件调用 `onDisable` 再收尾；外部插件安装期保留工具名补齐 web/arrange/screen/virtual 全部 App 工具 [插件]

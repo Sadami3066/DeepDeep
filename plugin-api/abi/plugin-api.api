@@ -1288,6 +1288,7 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHost {
   public abstract io.github.whywood.deepdeep.plugin.api.PluginBus bus();
   public abstract io.github.whywood.deepdeep.plugin.api.LogService logs();
   public default io.github.whywood.deepdeep.plugin.api.ChatService chat();
+  public abstract void requestContributionsRefresh();
   public static io.github.whywood.deepdeep.plugin.api.ChatService access$chat$jd(io.github.whywood.deepdeep.plugin.api.PluginHost);
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginHost$DefaultImpls {

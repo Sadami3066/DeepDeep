@@ -58,6 +58,7 @@ internal class PluginHostImpl(
     private val services: PluginServices,
     private val textResolver: PluginTextResolver,
     pluginsRoot: File,
+    private val onRefreshRequest: () -> Unit = {},
 ) : PluginHost {
     override val dataDir: File = PluginPaths.dataDir(pluginsRoot, manifest.id)
 
@@ -100,6 +101,8 @@ internal class PluginHostImpl(
     override fun logs(): LogService = service("logs", services.logs)
 
     override fun chat(): ChatService = service("chat", services.chat)
+
+    override fun requestContributionsRefresh() = onRefreshRequest()
 
     private fun <T : Any> service(name: String, value: T?): T = value ?: throw PluginServiceUnavailable(name)
 }
