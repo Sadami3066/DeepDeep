@@ -1,0 +1,14 @@
+<resources>
+    <string name="settings_agent">Agent settings</string>
+    <string name="settings_session_backup">Session backup</string>
+    <string name="agent_settings_title">Agent settings</string>
+    <string name="agent_settings_section_capability">Capabilities</string>
+    <string name="agent_settings_screen_ops_active">Active</string>
+    <string name="agent_settings_screen_ops_inactive">Not active</string>
+    <string name="agent_settings_screen_ops_hint_privilege">Not active: grant ADB or Root permission on the Permissions page.</string>
+    <string name="agent_settings_screen_ops_hint_switch">Not active: turn on screen control on the Permissions page.</string>
+    <string name="agent_settings_section_tools">Tools</string>
+    <string name="agent_settings_mcp">MCP servers</string>
+    <string name="agent_settings_mcp_summary">Whether tools are exposed to the model is determined by exposure in mcp.json</string>
+    <string name="agent_settings_footer">Built-in plugin settings, runtime settings and permission approvals will be available here later.</string>
+</resources>

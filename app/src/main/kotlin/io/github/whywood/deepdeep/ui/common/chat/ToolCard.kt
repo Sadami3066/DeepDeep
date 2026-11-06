@@ -74,17 +74,31 @@ internal fun ToolCard(
         if (tool.expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
     val rawArguments = tool.rawArguments
-    val preview = remember(rawArguments, tool.arguments, titleOverride) {
-        if (titleOverride == null) toolArgsPreview(rawArguments, tool.arguments) else ""
-    }
     val output = tool.resultText()
+    val preview = remember(rawArguments, tool.arguments, titleOverride, output, tool.status) {
+        when {
+            tool.status == ToolActivityStatus.FAILED -> output
+                ?.lineSequence()
+                ?.firstOrNull { it.isNotBlank() }
+                ?.trim()
+                ?.replace('\n', ' ')
+                .orEmpty()
+
+            titleOverride == null -> toolArgsPreview(rawArguments, tool.arguments)
+            else -> ""
+        }
+    }
     val duration = tool.durationMs?.takeIf { it > 0L }
     val statusText = when (tool.status) {
         ToolActivityStatus.RUNNING -> stringResource(R.string.assistant_tool_running)
         ToolActivityStatus.DONE -> stringResource(R.string.assistant_tool_done)
         ToolActivityStatus.FAILED -> stringResource(R.string.assistant_tool_failed)
     }
-    val muted = if (tool.status == ToolActivityStatus.FAILED) colors.inkSecondary else colors.inkTertiary
+    val statusColor = when (tool.status) {
+        ToolActivityStatus.RUNNING -> colors.accent
+        ToolActivityStatus.DONE -> colors.inkSecondary
+        ToolActivityStatus.FAILED -> colors.danger
+    }
     Column(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -128,7 +142,7 @@ internal fun ToolCard(
             Text(
                 text = statusText,
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
-                color = muted,
+                color = statusColor,
             )
             if (duration != null) {
                 Text(
@@ -166,7 +180,7 @@ internal fun ToolCard(
                 toolName = tool.name,
                 callId = tool.toolCallId,
                 args = remember(rawArguments, tool.arguments) { toolArgumentsJson(rawArguments, tool.arguments) },
-                result = toolSlotResult(tool),
+                result = tool.pluginSlotResult(),
             ) {
                 ToolCardDefaultBody(
                     tool = tool,
@@ -301,7 +315,7 @@ private fun ToolFileRefRow(
     }
 }
 
-private fun toolArgumentsJson(raw: JsonObject?, legacy: Map<String, String>): JsonObject =
+internal fun toolArgumentsJson(raw: JsonObject?, legacy: Map<String, String>): JsonObject =
     raw ?: JsonObject(legacy.mapValues { (_, value) -> JsonPrimitive(value) })
 
 private fun formatToolArguments(raw: JsonObject?, legacy: Map<String, String>): String =
@@ -318,9 +332,9 @@ private fun ToolTrace.resultText(): String? =
         ?: error?.takeIf { it.isNotBlank() }
         ?: output?.takeIf { it.isNotBlank() }
 
-private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
-    val isError = tool.status == ToolActivityStatus.FAILED
-    val payload = tool.resultPayload
+internal fun ToolTrace.pluginSlotResult(): PluginToolResult? {
+    val isError = status == ToolActivityStatus.FAILED
+    val payload = resultPayload
     if (payload != null) {
         val blocks = payload.toPluginToolBlocks()
         if (blocks.isEmpty()) return null
@@ -331,7 +345,7 @@ private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
             PluginToolResult.Rich(blocks = blocks, isError = isError)
         }
     }
-    val text = tool.error?.takeIf { it.isNotBlank() } ?: tool.output?.takeIf { it.isNotBlank() } ?: return null
+    val text = error?.takeIf { it.isNotBlank() } ?: output?.takeIf { it.isNotBlank() } ?: return null
     return PluginToolResult.Text(text = text, isError = isError)
 }
 

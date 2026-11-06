@@ -11,6 +11,32 @@ data class UiManifest(
     val compose: String? = null,
 )
 
+enum class PluginCapability(val wire: String) {
+    LINUX("linux"),
+    PRIVILEGE("privilege"),
+    SCREEN("screen"),
+    NOTIFICATIONS("notifications"),
+    SECRETS("secrets"),
+    NETWORK("network"),
+    FILES("files"),
+    SESSIONS("sessions"),
+    JOBS("jobs"),
+    TIMERS("timers"),
+    GOALS("goals"),
+    MINIAPP("miniapp"),
+    MCP("mcp"),
+    UI("ui"),
+    APP("app"),
+    BUS("bus"),
+    LOGS("logs"),
+    CHAT("chat"),
+    ;
+
+    companion object {
+        fun fromWire(value: String): PluginCapability? = entries.firstOrNull { it.wire == value }
+    }
+}
+
 data class Provides(
     val tools: List<String> = emptyList(),
     val skills: List<String> = emptyList(),
@@ -39,6 +65,7 @@ data class PluginManifest(
     val entryClass: String? = null,
     val publisher: PublisherInfo? = null,
     val provides: Provides = Provides(),
+    val capabilities: Set<String>? = null,
     val requiresPrivilege: Boolean = false,
     val defaultEnabled: Boolean = true,
 )

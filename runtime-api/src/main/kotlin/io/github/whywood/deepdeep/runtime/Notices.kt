@@ -6,6 +6,7 @@ enum class TurnSource {
     REMINDER,
     GOAL,
     JOB,
+    PLUGIN,
 }
 
 sealed interface TurnNotice {

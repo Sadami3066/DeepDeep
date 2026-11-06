@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.host.events
 
 import io.github.whywood.deepdeep.plugin.api.InputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest
+import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
@@ -26,6 +27,22 @@ internal class PluginHookDispatchers(
             }) { prompt }
         }
         return prompt
+    }
+
+    suspend fun collectContext(request: PluginContextRequest): List<Pair<String, String>> {
+        val contributions = mutableListOf<Pair<String, String>>()
+        var total = 0
+        for (entry in source.entries()) {
+            if (total >= MAX_CONTEXT_TOTAL) break
+            val text = dispatch(entry, PluginHookStage.CONTEXT, block = {
+                context(request)
+            }) { null }?.takeIf { it.isNotBlank() } ?: continue
+            val remaining = MAX_CONTEXT_TOTAL - total
+            val value = text.take(minOf(MAX_CONTEXT_PER_PLUGIN, remaining))
+            contributions += entry.pluginId to value
+            total += value.length
+        }
+        return contributions
     }
 
     suspend fun transformInput(request: InputRequest): InputDecision {
@@ -78,6 +95,12 @@ internal class PluginHookDispatchers(
             }
         }
         return if (replaced) ToolResultDecision.Replace(current.result) else ToolResultDecision.Keep
+    }
+
+    private companion object {
+        const val MAX_CONTEXT_PER_PLUGIN: Int = 8 * 1024
+
+        const val MAX_CONTEXT_TOTAL: Int = 32 * 1024
     }
 
     private suspend fun <T> dispatch(

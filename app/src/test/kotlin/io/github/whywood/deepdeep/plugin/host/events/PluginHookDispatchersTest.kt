@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.host.events
 
 import io.github.whywood.deepdeep.plugin.api.InputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest
+import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
@@ -16,6 +17,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -68,6 +70,56 @@ class PluginHookDispatchersTest {
         val source = TestHookSource(listOf(hookEntry("slow", slow)))
         assertEquals("hi", dispatchers(source, timeoutMs = 100).transformPrompt(promptRequest()))
         assertTrue(reporter.failures.single().message.startsWith("timed out"))
+    }
+
+    @Test
+    fun contextCollectsInOrderAndTruncatesPerPlugin() = runTest {
+        val seen = mutableListOf<String>()
+        val first = probeHooks(onContext = { request ->
+            seen += request.cwd
+            "a".repeat(9_000)
+        })
+        val second = probeHooks(onContext = { "b".repeat(9_000) })
+        val source = TestHookSource(listOf(hookEntry("a", first), hookEntry("b", second)))
+        val contributions = dispatchers(source).collectContext(PluginContextRequest("session-1", "/workspace"))
+        assertEquals(2, contributions.size)
+        assertEquals("a", contributions[0].first)
+        assertEquals(8_192, contributions[0].second.length)
+        assertEquals(8_192, contributions[1].second.length)
+        assertEquals(listOf("/workspace"), seen)
+    }
+
+    @Test
+    fun contextStopsAtTotalLimit() = runTest {
+        val entries = (1..5).map { index ->
+            hookEntry("p$index", probeHooks(onContext = { "x".repeat(8_192) }))
+        }
+        val contributions = dispatchers(TestHookSource(entries))
+            .collectContext(PluginContextRequest("session-1", "/workspace"))
+        assertEquals(4, contributions.size)
+    }
+
+    @Test
+    fun contextSkipsFailuresAndTimeouts() = runTest {
+        val failing = probeHooks(onContext = { error("boom") })
+        val slow = probeHooks(onContext = {
+            delay(60_000)
+            "late"
+        })
+        val healthy = probeHooks(onContext = { "ok" })
+        val source = TestHookSource(listOf(hookEntry("failing", failing), hookEntry("slow", slow), hookEntry("healthy", healthy)))
+        val contributions = dispatchers(source, timeoutMs = 100)
+            .collectContext(PluginContextRequest("session-1", "/workspace"))
+        assertEquals(listOf("healthy" to "ok"), contributions)
+        assertEquals(2, reporter.failures.size)
+        assertTrue(reporter.failures.all { it.stage == PluginHookStage.CONTEXT })
+    }
+
+    @Test
+    fun blankContextIsIgnored() = runTest {
+        val hooks = probeHooks(onContext = { "   " })
+        assertNull(dispatchers(TestHookSource(listOf(hookEntry("blank", hooks))))
+            .collectContext(PluginContextRequest("session-1", "/workspace")).firstOrNull())
     }
 
     @Test

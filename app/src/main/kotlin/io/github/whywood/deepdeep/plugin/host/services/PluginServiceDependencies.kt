@@ -175,6 +175,8 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         ),
         bus = deps.bus?.let { ScopedPluginBus(it, deps.pluginId) },
         logs = logs,
-        chat = deps.chatSink?.let { ChatPluginService(it) },
+        chat = deps.chatSink?.let { sink ->
+            deps.sessionCommands?.let { commands -> ChatPluginService(sink, commands) }
+        },
     )
 }

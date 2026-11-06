@@ -3,7 +3,12 @@ package io.github.whywood.deepdeep.plugin.api
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonObject
 
-class PluginServiceUnavailable(val service: String) : IllegalStateException("plugin service is not available: $service")
+class PluginServiceUnavailable(
+    val service: String,
+    val reason: String? = null,
+) : IllegalStateException(
+    if (reason == null) "plugin service is not available: $service" else "plugin service is not available: $service ($reason)",
+)
 
 interface LinuxService {
     val available: Boolean
@@ -244,6 +249,39 @@ interface PluginBus {
     fun subscribe(topic: String? = null): Flow<PluginBusEvent>
 }
 
+enum class ChatDelivery {
+    STEER,
+    FOLLOW_UP,
+}
+
+data class ChatDisplay(
+    val customType: String,
+    val payload: JsonObject,
+    val text: String = "",
+)
+
+data class ChatMessageOptions(
+    val triggerTurn: Boolean = true,
+    val deliverAs: ChatDelivery = ChatDelivery.STEER,
+    val display: ChatDisplay? = null,
+)
+
+sealed interface ChatSendResult {
+    data class Started(
+        val sessionId: String,
+        val runId: String? = null,
+    ) : ChatSendResult
+
+    data class Queued(
+        val sessionId: String,
+        val delivery: ChatDelivery,
+    ) : ChatSendResult
+
+    data class Displayed(
+        val sessionId: String,
+    ) : ChatSendResult
+}
+
 interface ChatService {
     suspend fun postCustomMessage(
         sessionId: String,
@@ -252,4 +290,10 @@ interface ChatService {
         text: String = "",
         display: Boolean = true,
     ): Boolean
+
+    suspend fun sendMessage(
+        sessionId: String,
+        text: String,
+        options: ChatMessageOptions = ChatMessageOptions(),
+    ): ChatSendResult
 }

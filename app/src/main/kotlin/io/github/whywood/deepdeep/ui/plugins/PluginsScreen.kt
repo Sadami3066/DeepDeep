@@ -795,6 +795,14 @@ private fun PluginDetailSheet(
                             subtitleMaxLines = 3,
                         )
                     }
+                    if (snapshot.capabilities.isNotEmpty()) {
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.plugins_info_capabilities),
+                            subtitle = capabilitySummary(snapshot.capabilities),
+                            subtitleMaxLines = 3,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(24.dp))
             }

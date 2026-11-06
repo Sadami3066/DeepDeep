@@ -1,14 +1,14 @@
 # plugin-api · 插件契约 SDK
 
-外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放类型与校验，不含宿主实现；`apiLevel = 2`。
+外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放类型与校验，不含宿主实现；`apiLevel = 3`。
 
 ## 文件
 
 | 文件 | 职责 |
 |---|---|
-| `PluginApi.kt` | API/UI 等级常量（`PLUGIN_API_LEVEL=2`、`BASELINE_API_LEVEL=2`、`HOST_UI_API_LEVEL=1`）与默认语言 |
+| `PluginApi.kt` | API/UI 等级常量（`PLUGIN_API_LEVEL=3`、`BASELINE_API_LEVEL=3`、`MIN_SUPPORTED_API_LEVEL=3`、`HOST_UI_API_LEVEL=1`）与默认语言 |
 | `Text.kt` | `LocalizedText`（`Literal` 为唯一可用形态，`Resource` 分支保留给宿主内部）、`IconRef`（`Asset` 为唯一可用形态，`Resource` 分支保留） |
-| `Manifest.kt` | `PluginManifest` / `Provides`（tools/skills/uiSlots/pages）/ `PublisherInfo` / `UiManifest` |
+| `Manifest.kt` | `PluginManifest` / `Provides`（tools/skills/uiSlots/pages）/ `PluginCapability`（18 个宿主服务）/ `PublisherInfo` / `UiManifest` |
 | `PluginVersion.kt` | `major.minor.patch` 解析；完整 semver 比较（release > prerelease、build 忽略）与只比内核的 `compareCore` |
 | `PluginValidation.kt` | 格式/ABI/技能校验，返回带 `Severity` 的 `Issue` 列表；id 只接受反向域名，文本只接受 `Literal`、图标只接受 asset 路径 |
 | `PluginManifestCodec.kt` | `plugin.json`（`JsonObject`）→ `PluginManifest`；`parse` 宽容、`validate` 严格、`decode` 汇总为 `Result` |
@@ -18,22 +18,22 @@
 | `Ui.kt` | 槽位目录 `SlotIds`（tool.card/chat.message）、`SlotBinding` / `SlotContent.Compose`、`PluginPage`（页面内容内联）、`ComposerAction` |
 | `SlotStates.kt` | 槽位状态 DTO（`ToolCardSlotState`/`CustomMessageSlotState`）与 `SlotState`/`NoSlotState` |
 | `ServiceModels.kt` | 宿主服务 DTO：Linux/特权/屏幕/通知/网络/文件/会话/job/timer/goal/小程序/MCP/App/总线 |
-| `Services.kt` | 宿主服务接口与 `PluginServiceUnavailable` |
+| `Services.kt` | 宿主服务接口、`ChatService.sendMessage` 投递 DTO 与 `PluginServiceUnavailable` |
 
-测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较（semver 与 `compareCore`）、槽位 ID 规则、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。公开 ABI 由 `scripts/plugin-api-abi.sh` + `plugin-api/abi/` 的 golden 清单固定，删改公开类型/签名必须显式更新清单并升版本。
+测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较（semver 与 `compareCore`）、槽位 ID 规则、capabilities 校验、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。公开 ABI 由 `scripts/plugin-api-abi.sh` + `plugin-api/abi/` 的 golden 清单固定，删改公开类型/签名必须显式更新清单并升版本。
 
-对外发布：`./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，版本 `pluginApiVersion` 默认 `0.5.0`；`design` 是 App 的设计系统，通过 `api(project(":design"))` 成为插件 UI 的编译期依赖，两个 artifact 必须同版本发布。发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
+对外发布：`./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，版本 `pluginApiVersion` 默认 `0.6.0`；`design` 是 App 的设计系统，通过 `api(project(":design"))` 成为插件 UI 的编译期依赖，两个 artifact 必须同版本发布。发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
 
 ## ABI 规则（对外承诺）
 
-- `PLUGIN_API_LEVEL` 现在是 2。**发布前没有兼容承诺**：当前可随时删改类型/签名且不升 level，插件必须按最新 SDK 重编译；发布后才启用「同一 level 只允许加法、删改变必须升 level、宿主拒绝 `apiLevel > 宿主`」的规则。
-- `BASELINE_API_LEVEL = 2`：manifest 未写 `apiLevel` 时按此值处理，`PluginManifestCodec.parse` 用它兜底；`PluginManifest` 程序化构造的默认值仍是 `PLUGIN_API_LEVEL`。
+- `PLUGIN_API_LEVEL` 现在是 3，`MIN_SUPPORTED_API_LEVEL = 3`；宿主只接受 `3..3` 的插件。**发布前没有兼容承诺**：当前可随时删改类型/签名且不升 level，插件必须按最新 SDK 重编译；发布后才启用「同一 level 只允许加法、删改变必须升 level、宿主拒绝 `apiLevel > 宿主`」的规则。
+- `BASELINE_API_LEVEL = 3`：manifest 未写 `apiLevel` 时按此值处理，`PluginManifestCodec.parse` 用它兜底；`PluginManifest` 程序化构造的默认值仍是 `PLUGIN_API_LEVEL`。
 - `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 major.minor.patch、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的 `minHostVersion` 卡住；完整 `compareTo` 按 semver 处理预发布与 build 元数据。
 - `PluginSessionInfo` 是宿主持有的 live handle：`contributionsFor` 拿到它时不要缓存/拷贝字段，需要会话时在工具回调里调 `snapshot()`；`PluginToolCall.sessionId` 也由宿主在 execute 时解析。
 - `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL` 不匹配、或 `ui.kotlin`/`ui.compose` 与宿主不一致时，只禁用该插件的 UI（`pagesOf` 返回空、槽位不渲染），不拒绝插件本身。
 - 插件依赖必须 `compileOnly`，禁止打包 `plugin-api`、Compose、coroutines、kotlinx-serialization；宿主 parent-first，两边共享同一份类。
 - 字符串/图标不走资源 id：外部插件只能用 `LocalizedText.Literal` 与 `icon: asset:<path>`；校验器拒绝 `LocalizedText.Resource` / `IconRef.Resource`。
-- 宿主服务不可用抛 `PluginServiceUnavailable`，不返回 null。
+- 宿主服务未在 manifest `capabilities` 声明、或已声明但当前不可用，均抛 `PluginServiceUnavailable`（`reason` 区分 `not declared in manifest` / `unavailable`），不返回 null。
 - 工具 DTO（`PluginTool`/`PluginToolResult`）是本模块自有类型，宿主在边界转成 pi SDK 的 `CodingTool`；`:runtime` 不依赖本模块，避免把 SDK ABI 绑进运行时。
 
 ## 要点

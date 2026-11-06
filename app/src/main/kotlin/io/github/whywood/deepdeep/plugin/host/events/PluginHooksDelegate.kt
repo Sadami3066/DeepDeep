@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.runtime.InputDecision
 import io.github.whywood.deepdeep.runtime.InputHandler
 import io.github.whywood.deepdeep.runtime.PromptTransform
+import io.github.whywood.deepdeep.runtime.SystemContext
 import io.github.whywood.deepdeep.runtime.ToolCallContext
 import io.github.whywood.deepdeep.runtime.ToolCallDecision
 import io.github.whywood.deepdeep.runtime.ToolExecutionHooks
@@ -25,6 +26,8 @@ internal class PluginHooksDelegate {
     val promptTransform: PromptTransform = { prompt ->
         target?.promptTransform?.invoke(prompt) ?: prompt
     }
+
+    val systemContext: SystemContext = { target?.systemContext() }
 
     val inputHandler: InputHandler = { request ->
         target?.inputHandler?.invoke(request) ?: InputDecision.Continue(request.text, request.images)

@@ -3,7 +3,11 @@ package io.github.whywood.deepdeep.ui.common.chat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -13,7 +17,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +50,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -69,6 +74,8 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -146,10 +153,14 @@ internal fun ChatComposer(
         else -> stringResource(R.string.assistant_hint)
     }
     val canSend = state.ready && state.configured && value.isNotBlank() && !state.importingAttachment
-    val sendDescription = stringResource(
-        if (state.sending) R.string.assistant_send_steer else R.string.assistant_send,
-    )
+    val stops = state.sending && value.isBlank()
+    val sendDescription = when {
+        stops -> stringResource(R.string.assistant_stop)
+        state.sending -> stringResource(R.string.assistant_send_steer)
+        else -> stringResource(R.string.assistant_send)
+    }
     var focused by remember { mutableStateOf(false) }
+    val focusScale = remember { Animatable(1f) }
     var pendingExpand by remember { mutableStateOf(false) }
     var committedVoice by remember { mutableStateOf("") }
 
@@ -213,6 +224,21 @@ internal fun ChatComposer(
         }
     }
 
+    LaunchedEffect(focused) {
+        if (!focused || !chatAnimationsEnabled()) {
+            focusScale.snapTo(1f)
+            return@LaunchedEffect
+        }
+        focusScale.animateTo(1.03f, tween(durationMillis = 120, easing = DdMotion.EaseOut))
+        focusScale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        )
+    }
+
     val collapsedInset =
         ComposerMetrics.CollapsedHorizontalPadding - ComposerMetrics.ExpandedHorizontalPadding
     val horizontalInset by animateDpAsState(
@@ -274,7 +300,11 @@ internal fun ChatComposer(
                         onSend = voice.send,
                     )
 
-                    ComposerSurface.Expanded -> ComposerCard(shape) {
+                    ComposerSurface.Expanded -> ComposerCard(
+                        shape = shape,
+                        focused = focused,
+                        scale = focusScale.value,
+                    ) {
                         ChatComposerExpandedContent(
                             state = state,
                             actions = actions,
@@ -282,6 +312,7 @@ internal fun ChatComposer(
                             label = label,
                             placeholder = placeholder,
                             canSend = canSend,
+                            stops = stops,
                             sendDescription = sendDescription,
                             focusRequester = focusRequester,
                             onStartVoice = startVoice,
@@ -355,19 +386,36 @@ internal fun ChatComposer(
 @Composable
 private fun ComposerCard(
     shape: RoundedCornerShape,
+    focused: Boolean = false,
+    scale: Float = 1f,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
+    val elevation by animateDpAsState(
+        targetValue = if (focused) 15.dp else 10.dp,
+        animationSpec = tween(durationMillis = DdMotion.BASE, easing = DdMotion.EaseOut),
+        label = "composer-elevation",
+    )
+    val spotAlpha by animateFloatAsState(
+        targetValue = if (focused) 0.34f else 0.24f,
+        animationSpec = tween(durationMillis = DdMotion.BASE, easing = DdMotion.EaseOut),
+        label = "composer-spot",
+    )
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = TransformOrigin(0.5f, 1f)
+            }
             .shadow(
-                elevation = 12.dp,
+                elevation = elevation,
                 shape = shape,
                 clip = false,
                 ambientColor = Color(0xFF0B1220),
-                spotColor = Color(0x3D0B1220),
+                spotColor = Color(0xFF0B1220).copy(alpha = spotAlpha),
             )
             .clip(shape)
             .background(colors.composer)
@@ -444,6 +492,7 @@ private fun ChatComposerExpandedContent(
     label: String,
     placeholder: String,
     canSend: Boolean,
+    stops: Boolean,
     sendDescription: String,
     focusRequester: FocusRequester,
     onStartVoice: () -> Unit,
@@ -582,6 +631,21 @@ private fun ChatComposerExpandedContent(
         onOpenPluginPage = actions.onOpenPluginPage,
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
     )
+    AnimatedVisibility(
+        visible = state.sending,
+        enter = fadeIn(tween(DdMotion.FAST)),
+        exit = fadeOut(tween(DdMotion.FAST)),
+    ) {
+        Text(
+            text = stringResource(R.string.assistant_ux_running_hint),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
+                .testTag("assistant_running_hint"),
+            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+            color = colors.inkTertiary,
+        )
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -613,14 +677,19 @@ private fun ChatComposerExpandedContent(
         ComposerMicButton(onClick = onStartVoice)
         if (state.sending) {
             Spacer(Modifier.width(6.dp))
-            ComposerStopButton(onClick = actions.onStop)
+            ComposerMoreButton(
+                showQueue = !stops && !state.importingAttachment,
+                onFollowUp = actions.onFollowUp,
+                onStop = actions.onStop,
+            )
         }
         Spacer(Modifier.width(6.dp))
         ComposerSendButton(
             canSend = canSend,
             contentDescription = sendDescription,
             onClick = actions.onSend,
-            onLongClick = if (state.sending) actions.onFollowUp else null,
+            stops = stops,
+            onStop = actions.onStop,
         )
     }
 }
@@ -645,21 +714,48 @@ private fun ComposerMicButton(
 }
 
 @Composable
-private fun ComposerStopButton(onClick: () -> Unit) {
+private fun ComposerMoreButton(
+    showQueue: Boolean,
+    onFollowUp: () -> Unit,
+    onStop: () -> Unit,
+) {
     val colors = deepDeepColors()
-    DdPressable(
-        onClick = onClick,
-        modifier = Modifier.size(34.dp).testTag("assistant_stop"),
-        shape = CircleShape,
-        background = colors.wash,
-        contentDescription = stringResource(R.string.assistant_stop),
-    ) {
-        Box(
-            Modifier
-                .size(12.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(colors.danger),
+    var open by remember { mutableStateOf(false) }
+    Box {
+        DdIconButton(
+            icon = DdIcons.DotsVertical,
+            onClick = { open = true },
+            contentDescription = stringResource(R.string.assistant_ux_more),
+            modifier = Modifier.testTag("assistant_more"),
+            size = 34.dp,
+            iconSize = 17.dp,
+            tint = colors.inkTertiary,
         )
+        DdMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            menuWidth = 180.dp,
+        ) {
+            if (showQueue) {
+                DdMenuItem(
+                    text = stringResource(R.string.assistant_ux_queue_send),
+                    onClick = {
+                        open = false
+                        onFollowUp()
+                    },
+                    testTag = "assistant_menu_queue",
+                )
+            }
+            DdMenuItem(
+                text = stringResource(R.string.assistant_stop),
+                onClick = {
+                    open = false
+                    onStop()
+                },
+                testTag = "assistant_menu_stop",
+                destructive = true,
+            )
+        }
     }
 }
 
@@ -669,29 +765,48 @@ private fun ComposerSendButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
+    stops: Boolean = false,
+    onStop: () -> Unit = {},
 ) {
     val colors = deepDeepColors()
+    val enabled = canSend || stops
     Box(
         modifier = modifier
             .size(ComposerMetrics.ActionButtonSize)
             .clip(CircleShape)
-            .background(if (canSend) colors.accent else colors.wash)
-            .combinedClickable(
-                enabled = canSend,
+            .background(
+                when {
+                    stops -> colors.danger.copy(alpha = 0.14f)
+                    canSend -> colors.accent
+                    else -> colors.wash
+                },
+            )
+            .clickable(
+                enabled = enabled,
                 role = Role.Button,
-                onLongClick = onLongClick,
-                onClick = onClick,
+                onClick = { if (stops) onStop() else onClick() },
             )
             .semantics { this.contentDescription = contentDescription }
             .testTag("assistant_send"),
         contentAlignment = Alignment.Center,
     ) {
-        DdIcon(
-            icon = DdIcons.ArrowUp,
-            tint = if (canSend) colors.onAccent else colors.inkTertiary,
-            size = ComposerMetrics.ActionIconSize,
-        )
+        AnimatedContent(
+            targetState = stops,
+            transitionSpec = {
+                fadeIn(tween(DdMotion.FAST)) togetherWith fadeOut(tween(DdMotion.FAST))
+            },
+            label = "composer-primary-icon",
+        ) { stopping ->
+            DdIcon(
+                icon = if (stopping) DdIcons.Stop else DdIcons.ArrowUp,
+                tint = when {
+                    stopping -> colors.danger
+                    canSend -> colors.onAccent
+                    else -> colors.inkTertiary
+                },
+                size = ComposerMetrics.ActionIconSize,
+            )
+        }
     }
 }
 

@@ -16,6 +16,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -56,6 +57,7 @@ class PluginBundleE2ETest {
         val expectedTools = provides?.get("tools").stringList()
         val expectedSkills = provides?.get("skills").stringList()
         val expectedPages = provides?.get("pages").stringList()
+        val expectedCapabilities = manifest["capabilities"].stringList().toSet()
 
         uninstallIfPresent(pluginId)
         val inspection = manager.inspectExternal(bundle)
@@ -67,6 +69,7 @@ class PluginBundleE2ETest {
         val snapshot = awaitSnapshot(pluginId) { it.installed && it.enabled }
         assertEquals("${bundle.name} pages", expectedPages, snapshot.pages.map { it.id })
         assertEquals("${bundle.name} skills", expectedSkills, snapshot.skills)
+        assertEquals("${bundle.name} capabilities", expectedCapabilities, snapshot.capabilities)
         assertTrue("${bundle.name} is not active: ${snapshot.phase}", snapshot.phase == PluginPhaseUi.ACTIVE)
         manager.refreshNow()
         val toolNames = allToolNames()
@@ -88,6 +91,25 @@ class PluginBundleE2ETest {
             snapshot.installedVersion.orEmpty() + "/assets/icon.png",
         )
         assertTrue("${bundle.name} icon was not extracted: ${icon.absolutePath}", icon.isFile)
+    }
+
+    @Test
+    fun updatesPluginWhileIdleWithoutRestart() = runBlocking {
+        val base = bundleDirectory.listFiles().orEmpty().firstOrNull { it.name == "interop.ddp" }
+        assertNotNull("push interop.ddp to ${bundleDirectory.absolutePath}", base)
+        val updateDirectory = requireNotNull(context.getExternalFilesDir("plugin-e2e-update"))
+        val update = File(updateDirectory, "interop.ddp")
+        assertTrue("push the newer interop bundle to ${update.absolutePath}", update.isFile)
+        withTimeout(90_000) { manager.start() }
+        installVerified(base!!)
+        val updateManifest = readManifest(update)
+        val pluginId = updateManifest.getValue("id").jsonPrimitive.content
+        val updateVersion = updateManifest.getValue("version").jsonPrimitive.content
+        val result = manager.installExternal(update, acceptPublisher = true)
+        assertTrue("hot update failed: ${result.error}", result.success)
+        assertFalse("hot update should not require a restart", result.restartRequired)
+        val snapshot = awaitSnapshot(pluginId) { it.installed && it.enabled && it.installedVersion == updateVersion }
+        assertEquals(PluginPhaseUi.ACTIVE, snapshot.phase)
     }
 
     private fun allToolNames(): Set<String> =

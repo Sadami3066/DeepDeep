@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.plugin.api.NetworkService
 import io.github.whywood.deepdeep.plugin.api.NotificationService
 import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import io.github.whywood.deepdeep.plugin.api.PrivilegeService
@@ -50,6 +51,27 @@ internal data class PluginServices(
         val None: PluginServices = PluginServices()
     }
 }
+
+internal fun PluginServices.declaredOnly(capabilities: Set<String>): PluginServices = copy(
+    linux = linux.takeIf { PluginCapability.LINUX.wire in capabilities },
+    privilege = privilege.takeIf { PluginCapability.PRIVILEGE.wire in capabilities },
+    screen = screen.takeIf { PluginCapability.SCREEN.wire in capabilities },
+    notifications = notifications.takeIf { PluginCapability.NOTIFICATIONS.wire in capabilities },
+    secrets = secrets.takeIf { PluginCapability.SECRETS.wire in capabilities },
+    network = network.takeIf { PluginCapability.NETWORK.wire in capabilities },
+    files = files.takeIf { PluginCapability.FILES.wire in capabilities },
+    sessions = sessions.takeIf { PluginCapability.SESSIONS.wire in capabilities },
+    jobs = jobs.takeIf { PluginCapability.JOBS.wire in capabilities },
+    timers = timers.takeIf { PluginCapability.TIMERS.wire in capabilities },
+    goals = goals.takeIf { PluginCapability.GOALS.wire in capabilities },
+    miniapp = miniapp.takeIf { PluginCapability.MINIAPP.wire in capabilities },
+    mcp = mcp.takeIf { PluginCapability.MCP.wire in capabilities },
+    ui = ui.takeIf { PluginCapability.UI.wire in capabilities },
+    app = app.takeIf { PluginCapability.APP.wire in capabilities },
+    bus = bus.takeIf { PluginCapability.BUS.wire in capabilities },
+    logs = logs.takeIf { PluginCapability.LOGS.wire in capabilities },
+    chat = chat.takeIf { PluginCapability.CHAT.wire in capabilities },
+)
 
 internal class PluginHostImpl(
     override val manifest: PluginManifest,
@@ -104,6 +126,14 @@ internal class PluginHostImpl(
 
     override fun requestContributionsRefresh() = onRefreshRequest()
 
-    private fun <T : Any> service(name: String, value: T?): T = value ?: throw PluginServiceUnavailable(name)
+    private val declaredCapabilities: Set<String> = manifest.capabilities.orEmpty()
+
+    private fun <T : Any> service(name: String, value: T?): T =
+        declaredService(name, declaredCapabilities, value)
+}
+
+internal fun <T : Any> declaredService(name: String, declared: Set<String>, value: T?): T {
+    if (name !in declared) throw PluginServiceUnavailable(name, "not declared in manifest")
+    return value ?: throw PluginServiceUnavailable(name, "unavailable")
 }
 

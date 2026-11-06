@@ -14,6 +14,7 @@ data class ExternalInspectionUi(
     val trusted: Boolean,
     val requiresPrivilege: Boolean,
     val provides: io.github.whywood.deepdeep.plugin.api.Provides,
+    val capabilities: Set<String>,
     val error: String?,
 )
 

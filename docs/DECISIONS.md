@@ -2,7 +2,7 @@
 
 这些是**有意为之**的决定，不是缺陷。改代码前按这里判断；要推翻先改本文件并写清迁移代价。
 
-1. **签名**：release 也用 debug 证书。换正式 keystore 会让现装设备无法覆盖安装，`allowBackup=false` 下卸载即丢全部会话与凭据；只在「愿意让所有人重装」的发版点换。
+1. **签名**：release 用正式 `release.keystore`（口令在 `keystore.properties`，两者都已加入 `.gitignore`、不进版本库）。2026-11 起首次切换正式证书，旧 debug 证书安装的设备必须卸载重装一次，`allowBackup=false` 下会丢本机会话与凭据；此后沿用同一 keystore，不再更换。
 2. **不做二次审批，只分权限档**：个人设备、单人使用，风险自担；系统级能力只有「权限」页三档（普通/无线调试 ADB/Root），ADB 授权走系统无线调试配对，Root 授权交给系统 root 管理器，App 不另做审批流。
 3. **单 Activity + 自研 `AnimatedScreenHost` 导航**，不引入 Navigation-Compose；跨层级转场与页面状态保存已按此实现。
 4. **`:app` 不拆 `:feature:*`/`:core:*`**：`:runtime-api` 是唯一纯 JVM 契约层；`:app` 只依赖 `:runtime/:shell/:design`，模块边界由 Gradle 任务强制。

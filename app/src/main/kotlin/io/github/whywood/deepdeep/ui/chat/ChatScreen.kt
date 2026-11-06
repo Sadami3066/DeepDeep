@@ -69,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -112,6 +113,7 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatComposerActions
 import io.github.whywood.deepdeep.ui.common.chat.ChatComposerState
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
+import io.github.whywood.deepdeep.ui.common.chat.followContentSignal
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
@@ -213,6 +215,7 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val controller = rememberChatScrollController(listState)
+    val nestedScrollConnection = remember(controller) { controller.nestedScrollConnection() }
     val density = LocalDensity.current
     val chatDensity = remember(density, chatFontScale) {
         Density(density = density.density, fontScale = density.fontScale * chatFontScale)
@@ -306,6 +309,12 @@ fun ChatScreen(
     }
 
     val latestChatState by rememberUpdatedState(state)
+
+    LaunchedEffect(controller) {
+        snapshotFlow { followContentSignal(latestChatState.messages) }
+            .distinctUntilChanged()
+            .collect { controller.followContent() }
+    }
 
     LaunchedEffect(state.sending) {
         if (!state.sending) pendingLocalSend = false
@@ -418,7 +427,10 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         items(messages, key = { it.id }) { message ->
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                            Box(
+                                Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection),
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
                                 Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
                                     ChatTurn(
                                         message = message,
@@ -454,7 +466,10 @@ fun ChatScreen(
                             }
                             ?.let { pending ->
                                 item(key = "pending-question-${pending.requestId}") {
-                                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                                    Box(
+                                        Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection),
+                                        contentAlignment = Alignment.TopCenter,
+                                    ) {
                                         Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
                                             AskQuestionCard(
                                                 questions = pending.questions,

@@ -22,7 +22,8 @@ class PluginManifestCodecTest {
         {
           "id": "io.github.whywood.deepdeep.pluginsample",
           "version": "1.0.0",
-          "apiLevel": 2,
+          "apiLevel": 3,
+          "capabilities": ["app", "files", "notifications"],
           "minHostVersion": "0.2.0",
           "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
           "name": { "default": "Sample Plugin", "zh": "示例插件", "en": "Sample Plugin" },
@@ -49,6 +50,7 @@ class PluginManifestCodecTest {
         assertEquals(listOf("sample_echo"), manifest.provides.tools)
         assertEquals(listOf("tool.card.content:sample_echo"), manifest.provides.uiSlots)
         assertEquals(listOf("home"), manifest.provides.pages)
+        assertEquals(setOf("app", "files", "notifications"), manifest.capabilities)
         assertEquals(true, manifest.defaultEnabled)
         assertEquals(false, manifest.requiresPrivilege)
         assertNull(manifest.ui)
@@ -93,7 +95,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.demo",
                   "version": "1.2.3",
-                  "apiLevel": 2,
+                  "apiLevel": 3,
                   "minHostVersion": "0.2.0",
                   "ui": { "apiLevel": 1, "kotlin": "2.1.0", "compose": "1.8.0" },
                   "name": { "default": "Demo" },
@@ -251,7 +253,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.future",
                   "version": "1.0.0",
-                  "apiLevel": 3,
+                  "apiLevel": 4,
                   "entryClass": "com.example.future.FuturePlugin",
                   "name": { "default": "Future" },
                   "summary": { "default": "Future" }
@@ -271,6 +273,7 @@ class PluginManifestCodecTest {
               "id": "com.example.newer",
               "version": "1.0.0",
               "minHostVersion": "0.3.0",
+              "capabilities": ["app"],
               "entryClass": "com.example.newer.NewerPlugin",
               "name": { "default": "Newer" },
               "summary": { "default": "Newer" }
@@ -322,6 +325,64 @@ class PluginManifestCodecTest {
     }
 
     @Test
+    fun rejectsManifestWithoutCapabilities() {
+        val result = PluginManifestCodec.decode(
+            json(
+                """
+                {
+                  "id": "com.example.nocaps",
+                  "version": "1.0.0",
+                  "entryClass": "com.example.nocaps.NoCapsPlugin",
+                  "name": { "default": "No Caps" },
+                  "summary": { "default": "No Caps" }
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertTrue(result is PluginManifestCodec.Result.Invalid)
+        assertTrue(codes(result).contains(PluginValidation.Code.MISSING_CAPABILITIES))
+    }
+
+    @Test
+    fun rejectsUnknownCapability() {
+        val result = PluginManifestCodec.decode(
+            json(
+                """
+                {
+                  "id": "com.example.badcap",
+                  "version": "1.0.0",
+                  "capabilities": ["app", "teleport"],
+                  "entryClass": "com.example.badcap.BadCapPlugin",
+                  "name": { "default": "Bad Cap" },
+                  "summary": { "default": "Bad Cap" }
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertTrue(result is PluginManifestCodec.Result.Invalid)
+        assertEquals(1, codes(result).count { it == PluginValidation.Code.INVALID_CAPABILITY })
+    }
+
+    @Test
+    fun acceptsEmptyCapabilities() {
+        val result = PluginManifestCodec.decode(
+            json(
+                """
+                {
+                  "id": "com.example.emptycaps",
+                  "version": "1.0.0",
+                  "capabilities": [],
+                  "entryClass": "com.example.emptycaps.EmptyPlugin",
+                  "name": { "default": "Empty" },
+                  "summary": { "default": "Empty" }
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertTrue(result is PluginManifestCodec.Result.Valid)
+    }
+
+    @Test
     fun rejectsInvalidProvidedSlot() {
         val result = PluginManifestCodec.decode(
             json(
@@ -350,6 +411,7 @@ class PluginManifestCodecTest {
                   "id": "com.example.ui",
                   "version": "1.0.0",
                   "ui": { "apiLevel": 2 },
+                  "capabilities": ["app"],
                   "entryClass": "com.example.ui.UiPlugin",
                   "name": { "default": "Ui" },
                   "summary": { "default": "Ui" }

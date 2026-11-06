@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_agent">Agent 设置</string>
+    <string name="settings_session_backup">会话备份</string>
+    <string name="agent_settings_title">Agent 设置</string>
+    <string name="agent_settings_section_capability">能力</string>
+    <string name="agent_settings_screen_ops_active">已生效</string>
+    <string name="agent_settings_screen_ops_inactive">未生效</string>
+    <string name="agent_settings_screen_ops_hint_privilege">未生效：需在权限页授予 ADB 或 Root 权限。</string>
+    <string name="agent_settings_screen_ops_hint_switch">未生效：需在权限页打开屏幕操作开关。</string>
+    <string name="agent_settings_section_tools">工具</string>
+    <string name="agent_settings_mcp">MCP 服务</string>
+    <string name="agent_settings_mcp_summary">是否向模型暴露工具由 mcp.json 的 exposure 决定</string>
+    <string name="agent_settings_footer">后续将在此提供内置插件设置、Runtime 设置与权限审批。</string>
+</resources>

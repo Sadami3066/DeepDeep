@@ -37,6 +37,7 @@ internal class PluginUiProjection(
             installedSizeBytes = view.externalRecord?.size,
             lastError = view.record.lastError,
             publisher = view.externalRecord?.let { record -> PublisherInfo("", record.publisherKeyId) },
+            capabilities = descriptor.manifest.capabilities.orEmpty(),
         )
     }
 

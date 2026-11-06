@@ -100,19 +100,55 @@ internal class RuntimeRuns(
             is SessionCommandPlane.Delivery.Started -> {
                 val start = delivery.start
                 afterBegin(handle, TurnSource.REMINDER)
-                emit(handle, RuntimeEvent.TurnInjected(start.runId, text, reminder))
+                emit(
+                    handle,
+                    RuntimeEvent.TurnInjected(start.runId, text, reminder, TurnSource.REMINDER),
+                )
                 emitListChanged()
                 backgroundScope.launch { runTurn(handle, start.runId, text) }
             }
 
             is SessionCommandPlane.Delivery.Injected -> {
                 handle.touch()
-                emit(handle, RuntimeEvent.TurnInjected(delivery.runId, text, reminder))
+                emit(
+                    handle,
+                    RuntimeEvent.TurnInjected(delivery.runId, text, reminder, TurnSource.REMINDER),
+                )
                 handle.session.prompt(text, behavior = QueueBehavior.FollowUp)
                 emitListChanged()
             }
 
             null -> error("Agent session is busy")
+        }
+    }
+
+    suspend fun deliverPluginTurn(sessionId: String, text: String, followUp: Boolean = false): PluginTurnResult {
+        val handle = handleFor(sessionId)
+        val delivery = commands.deliver(sessionId, TurnSource.PLUGIN) { handle.session.isBusy }
+            ?: error("Agent session is busy")
+        return when (delivery) {
+            is SessionCommandPlane.Delivery.Started -> {
+                val start = delivery.start
+                afterBegin(handle, TurnSource.PLUGIN)
+                emit(
+                    handle,
+                    RuntimeEvent.TurnInjected(start.runId, text, null, TurnSource.PLUGIN),
+                )
+                emitListChanged()
+                backgroundScope.launch { runTurn(handle, start.runId, text) }
+                PluginTurnResult.Started(start.runId)
+            }
+
+            is SessionCommandPlane.Delivery.Injected -> {
+                handle.touch()
+                emit(
+                    handle,
+                    RuntimeEvent.TurnInjected(delivery.runId, text, null, TurnSource.PLUGIN),
+                )
+                handle.session.prompt(text, behavior = if (followUp) QueueBehavior.FollowUp else QueueBehavior.Steer)
+                emitListChanged()
+                PluginTurnResult.Queued(delivery.runId)
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.plugin.host.events
 import io.github.whywood.deepdeep.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest as PluginInputRequest
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
+import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision as PluginToolCallDecision
@@ -36,6 +37,19 @@ internal class PluginRuntimeHooksAdapter(
 
     val promptTransform: PromptTransform = { prompt ->
         dispatchers.transformPrompt(PromptRequest(session.sessionId, prompt))
+    }
+
+    suspend fun systemContext(): String? {
+        val contributions = dispatchers.collectContext(
+            PluginContextRequest(
+                sessionId = session.sessionId,
+                cwd = session.cwd,
+            ),
+        )
+        if (contributions.isEmpty()) return null
+        return contributions.joinToString("\n") { (pluginId, text) ->
+            "<plugin_context plugin=\"${escapeXml(pluginId)}\">\n${escapeXml(text)}\n</plugin_context>"
+        }
     }
 
     val inputHandler: InputHandler = { request ->
@@ -103,6 +117,19 @@ internal class PluginRuntimeHooksAdapter(
         val mime = imageMimeOf(file.extension) ?: return@runCatching null
         ImagePart(Base64.getEncoder().encodeToString(file.readBytes()), mime, path)
     }.getOrNull()
+
+    private fun escapeXml(value: String): String = buildString(value.length) {
+        value.forEach { character ->
+            when (character) {
+                '&' -> append("&amp;")
+                '<' -> append("&lt;")
+                '>' -> append("&gt;")
+                '\"' -> append("&quot;")
+                '\'' -> append("&apos;")
+                else -> append(character)
+            }
+        }
+    }
 
     private fun imageMimeOf(extension: String): String? = when (extension.lowercase()) {
         "png" -> "image/png"

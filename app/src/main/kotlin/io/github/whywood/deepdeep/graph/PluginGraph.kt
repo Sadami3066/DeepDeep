@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
 import io.github.whywood.deepdeep.plugin.host.services.McpModelMapping
 import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
+import io.github.whywood.deepdeep.plugin.host.declaredOnly
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
 import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
@@ -22,6 +23,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 internal class PluginGraph(private val deps: PluginGraphDeps) {
@@ -43,8 +45,9 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             filesDir = deps.appContext.filesDir,
             scope = deps.scope,
             language = language,
-            servicesFactory = { pluginId, dataDir, pluginScope ->
+            servicesFactory = { pluginId, dataDir, manifest, pluginScope ->
                 buildPluginServices(pluginServices(pluginId, dataDir, pluginScope))
+                    .declaredOnly(manifest.capabilities.orEmpty())
             },
             skillStore = PluginSkillStore(
                 skillsDir = File(deps.agentDir, "skills"),
@@ -61,7 +64,22 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             onContributionsChanged = {
                 deps.scope.launch { deps.host.reconfigure() }
             },
+            busySessions = { deps.host.busySessionIds.value },
         )
+    }
+
+    init {
+        deps.scope.launch {
+            var wasBusy = false
+            deps.host.busySessionIds.collect { busy ->
+                if (busy.isNotEmpty()) {
+                    wasBusy = true
+                } else if (wasBusy) {
+                    wasBusy = false
+                    manager.applyPendingUpdates()
+                }
+            }
+        }
     }
 
     private fun pluginServices(pluginId: String, dataDir: File, pluginScope: CoroutineScope): PluginServiceDependencies =

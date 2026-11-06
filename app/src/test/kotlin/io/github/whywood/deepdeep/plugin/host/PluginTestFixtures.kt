@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -22,6 +23,7 @@ internal fun testDescriptorManifest(
     version = version,
     name = LocalizedText.Literal(mapOf("default" to id, "en" to "name of $id")),
     summary = LocalizedText.Literal("summary of $id"),
+    capabilities = PluginCapability.entries.map { it.wire }.toSet(),
 )
 
 internal fun testTool(

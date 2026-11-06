@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import io.github.whywood.deepdeep.ui.assistant.AssistantSettingsScreen
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
 import io.github.whywood.deepdeep.ui.navigation.routes.ArchivedRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.AgentSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ChatSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FilesRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
@@ -20,6 +21,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.RuntimeSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SearchRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.SessionBackupRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
@@ -94,6 +96,18 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.Permission -> PermissionRoute(dependencies, host.scope, onBack)
 
         AppDestination.AndroidSettings -> AndroidSettingsScreen(onBack = onBack)
+
+        AppDestination.AgentSettings -> AgentSettingsRoute(
+            dependencies = dependencies,
+            navigator = host.navigator,
+            onBack = onBack,
+        )
+
+        AppDestination.SessionBackup -> SessionBackupRoute(
+            dependencies = dependencies,
+            scope = host.scope,
+            onBack = onBack,
+        )
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
 

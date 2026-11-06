@@ -37,6 +37,12 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override suspend fun stageExternalUpdate(pluginId: String): String? = externalFlow.stageExternalUpdate(pluginId)
 
+    override suspend fun applyPendingUpdates() {
+        if (!externalFlow.hasPendingUpdates()) return
+        externalFlow.activatePendingVersions()
+        refreshNow()
+    }
+
     override suspend fun pluginRepositorySettings(): PluginRepositorySettings = externalFlow.pluginRepositorySettings()
 
     override suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings) {

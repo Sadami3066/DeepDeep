@@ -8,7 +8,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.5.0`、`PLUGIN_API_LEVEL = 2`、`BASELINE_API_LEVEL = 2`、`HOST_UI_API_LEVEL = 1`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.6.0`、`PLUGIN_API_LEVEL = 3`、`BASELINE_API_LEVEL = 3`、`HOST_UI_API_LEVEL = 1`。
 
 `plugins/` 仓库自带两份参考：
 
@@ -25,7 +25,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 # 在 plugins/ 仓库根目录执行
 cd ../app
 ./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal
-# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/{plugin-api,design}/0.5.0/
+# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/{plugin-api,design}/0.6.0/
 ```
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。改了任意一个都要重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
@@ -73,7 +73,7 @@ cp -R template my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.5.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.5.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.6.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
 - 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
@@ -88,7 +88,7 @@ cp -R template my-plugin
 |---|---|---|---|
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
-| `apiLevel` | int | 否（默认 2） | 插件要求的契约等级；必须 ≤ 宿主 `PLUGIN_API_LEVEL`（当前 2），否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（2）处理 |
+| `apiLevel` | int | 否（默认 3） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 3..3）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（3）处理 |
 | `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
@@ -100,6 +100,7 @@ cp -R template my-plugin
 | `ui` | object | 否 | `{ "apiLevel": 1, "kotlin"?: "2.4", "compose"?: "1.10.5" }`；参与 Compose 槽兼容判定，见「UI 扩展」 |
 | `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`；只做展示，信任以签名里的 `keyId` 为准 |
 | `provides` | object | 否 | 贡献预检，见下；必须与实际贡献一致 |
+| `capabilities` | string[] | 是 | 插件需要的宿主服务清单，见下；缺失或含未知项拒绝装载 |
 | `requiresPrivilege` | bool | 否（默认 false） | 需要 ADB/Root 能力，确认页与信息弹窗标黄提示 |
 | `defaultEnabled` | bool | 否（默认 true） | 首次安装后是否默认启用 |
 
@@ -113,6 +114,31 @@ cp -R template my-plugin
 | `skills` | 技能 id 列表，如 `template-skill` |
 | `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`chat.message:card`；插件页面不走槽位，见 `pages` |
 | `pages` | 插件页面 id 列表 |
+
+`capabilities` 声明插件实际使用的宿主服务；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。取值：
+
+| wire 名 | 服务访问器 |
+|---|---|
+| `linux` | `host.linux()` |
+| `privilege` | `host.privilege()` |
+| `screen` | `host.screen()` |
+| `notifications` | `host.notifications()` |
+| `secrets` | `host.secrets()` |
+| `network` | `host.network()` |
+| `files` | `host.files()` |
+| `sessions` | `host.sessions()` |
+| `jobs` | `host.jobs()` |
+| `timers` | `host.timers()` |
+| `goals` | `host.goals()` |
+| `miniapp` | `host.miniapp()` |
+| `mcp` | `host.mcp()` |
+| `ui` | `host.ui()` |
+| `app` | `host.app()` |
+| `bus` | `host.bus()` |
+| `logs` | `host.logs()` |
+| `chat` | `host.chat()` |
+
+`capabilities` 是**可用性边界，不是安全沙箱**：插件仍与宿主同进程、同 UID，可以通过 `host.context` 或反射绕过；它用于让插件声明意图、让用户在安装前看清会用到哪些能力，不能阻止恶意代码。至少声明一项；空数组合法但插件几乎无法工作。
 
 `tools`/`skills`/`pages` 的 id 统一匹配 `^[a-z][A-Za-z0-9_-]*$`，**不能包含点号**（技能 id 写 `interop-guide`，不是 `interop.guide`）；`uiSlots` 的槽位 id 规则见后文。
 
@@ -135,12 +161,14 @@ cp -R template my-plugin
 | `INVALID_VERSION` | version 不是 `major.minor.patch[后缀]` |
 | `INVALID_MIN_HOST_VERSION` | minHostVersion 解析失败 |
 | `HOST_VERSION_UNSUPPORTED` | 宿主版本低于 minHostVersion |
-| `API_LEVEL_UNSUPPORTED` | apiLevel 不在 `1..宿主等级` |
+| `API_LEVEL_UNSUPPORTED` | apiLevel 不在 `MIN_SUPPORTED_API_LEVEL..宿主等级` |
 | `UI_API_LEVEL_UNSUPPORTED` | `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL` 不匹配（**警告**：只禁用 Compose 绑定，插件仍可加载） |
 | `ENTRY_CLASS_MISSING` / `INVALID_ENTRY_CLASS` | 缺入口类或类名非法 |
 | `MISSING_TEXT` / `INVALID_TEXT` | name/summary 缺 `default`，或用了资源文本 |
 | `INVALID_ICON` / `INVALID_URL` | 图标路径/主页不合法 |
 | `INVALID_PROVIDES` | provides 条目非法或重复 |
+| `MISSING_CAPABILITIES` | 清单没有 `capabilities` 字段 |
+| `INVALID_CAPABILITY` | capabilities 含未知服务名 |
 | `INVALID_UI_SLOT` | uiSlots 中的槽位 id 未知或缺实例后缀 |
 | `INVALID_SKILL` | 插件返回的技能文件不合法 |
 
@@ -225,7 +253,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 - 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、体积、将提供的能力与是否要求特权，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
 - 每次装载前用安装记录里的 `bundleSha256` 复核包体，并重算 canonical digest 验签；不匹配则拒绝并记入插件行的错误文本。
 - **更新必须同钥**：`id` 相同的新版本必须用同一 `keyId` 签名，否则按「发布者不匹配」拒绝。
-- 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录，相位变 `PENDING_RESTART`，**下次进程启动时激活**；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
+- 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录；当前没有忙碌会话时立即激活，有忙碌会话时相位保持 `PENDING_RESTART`，等会话全部结束后自动激活（进程重启后也会继续激活）；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
 - 安装记录保留 `previousVersion` 作为回滚点。恢复规则：上次激活中断 → 下次启动跳过自动激活并提示「上次激活中断」；同一版本连续 2 次启动失败 → 自动停用（`enabled=false`），用户手动启用即重新授权。
 
 ### 分发索引
@@ -239,7 +267,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
     {
       "id": "com.example.myplugin",
       "version": "1.0.1",
-      "apiLevel": 2,
+      "apiLevel": 3,
       "minHostVersion": "0.2.0",
       "url": "https://example.com/plugins/my-plugin-1.0.1.ddp",
       "sha256": "<.ddp 整包 sha256>",
@@ -464,6 +492,7 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 | `promptTransform(request: PromptRequest): String` | 会话 id + prompt → 新 prompt，链式传递 | fail-open：保留上一个值 |
 | `inputTransform(request: InputRequest): InputDecision` | 输入文本 + 图片路径 → `Continue(text, imagePaths)` 继续（链式），`Handled` 短路并丢弃本轮输入 | fail-open：保留当前输入 |
 | `beforeToolCall(request: ToolCallRequest): ToolCallDecision` | 工具调用（含 MCP/动态工具）→ `Continue` / `Block(reason)` / `Rewrite(args)`（后续插件基于改写后的 args 继续） | **fail-closed**：超时/异常按 `Block` 阻止调用并给出原因 |
+| `context(request: PluginContextRequest): String?` | 返回要注入系统提示的检索/记忆文本；多个插件按注册顺序拼接 | fail-open：超时/异常跳过；单插件 8 KiB、总量 32 KiB 截断 |
 | `afterToolExecution(request: ToolExecutionResult): ToolResultDecision` | 工具结果 → `Keep` / `Replace(result)`（链式替换） | keep：保留上一个结果 |
 
 注意：
@@ -585,20 +614,28 @@ private fun StatusCard(host: PluginHost, status: Status) {
 
 ### 自定义消息卡
 
-在工具执行里用 `host.chat().postCustomMessage(...)` 把卡片写进当前会话：
+在工具执行里用 `host.chat().sendMessage(...)` 把消息写进当前会话，可选择只显示卡片、插话或起新轮：
 
 ```kotlin
-val posted = host.chat().postCustomMessage(
+val result = host.chat().sendMessage(
     sessionId = call.sessionId,
-    customType = "my.card",
-    payload = buildJsonObject { put("title", "Hello") },
-    text = "卡片摘要",
+    text = "同步完成，共 12 个文件",
+    options = ChatMessageOptions(
+        triggerTurn = false,
+        display = ChatDisplay(
+            customType = "my.card",
+            payload = buildJsonObject { put("title", "同步完成") },
+            text = "卡片摘要",
+        ),
+    ),
 )
 ```
 
 - `sessionId` 用 `PluginToolCall.sessionId`（宿主在 execute 时解析）或 `session.snapshot()?.sessionId`。
-- `display = false` 写入会话历史但不显示在聊天里；返回 `false` 表示没有可用会话/投递失败。
-- 消息写入 pi JSONL 的 `custom_message` 条目，重开会话后仍可还原，由 `chat.message:<customType>` 槽位渲染。
+- `options.triggerTurn = true`（默认）：会话空闲时起新轮并把 `text` 作为用户消息；忙碌时按 `options.deliverAs` 插话（`STEER`，默认）或排队（`FOLLOW_UP`），返回 `Queued`。
+- `options.display` 非空时先写卡片消息（等价于 `postCustomMessage`），再触发轮次；`triggerTurn = false` 只落卡片。
+- 返回 `ChatSendResult.Started`/`Queued`/`Displayed`；未知会话抛 `IllegalArgumentException`。
+- 卡片写入 pi JSONL 的 `custom_message` 条目，重开会话后仍可还原，由 `chat.message:<customType>` 槽位渲染；`postCustomMessage` 仍保留，适合只落卡片。
 
 ## 宿主服务
 
@@ -630,7 +667,7 @@ if (linux == null || !linux.available) {
 | `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 始终可用 |
 | `bus()` | 插件总线：`publish(PluginBusEvent)`、`subscribe(topic?)` → `Flow<PluginBusEvent>` | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `logs()` | `log(level, message, error?)` + `debug/info/warn/error` | 始终可用 |
-| `chat()` | `postCustomMessage(sessionId, customType, payload, text, display)`：写入会话 JSONL 并实时投递到聊天界面 | 无活动会话/投递失败返回 false |
+| `chat()` | `sendMessage(sessionId, text, options)`：落卡片、起新轮、插话/排队；另有 `postCustomMessage(...)` 只写卡片 | 未知会话抛异常；投递失败返回 false |
 
 各服务最小用法：
 
@@ -652,7 +689,7 @@ host.ui().toast("已复制")
 host.app().info.versionName
 host.bus().publish(PluginBusEvent(topic = "demo.sync", publisher = "", payload = buildJsonObject { }))
 host.logs().info("plugin ready")
-host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, text = "卡片摘要")
+host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(triggerTurn = false, display = ChatDisplay("my.card", buildJsonObject { }, "卡片摘要")))
 ```
 
 **总线**：`host.bus().publish(PluginBusEvent(topic, publisher, payload))` 广播给所有插件；`subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。`publisher` 由宿主按插件 id 覆盖。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
@@ -671,9 +708,9 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 
 ## ABI 与版本
 
-- `PLUGIN_API_LEVEL = 2`：宿主加载时要求 `plugin.apiLevel <= 宿主等级`；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 2`。
+- `PLUGIN_API_LEVEL = 3`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..3` 内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 3`。
 - `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`），所以 `minHostVersion: "0.2.0"` 在当前开发版宿主上通过。
-- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.5.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.6.0`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
 - Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。
@@ -681,7 +718,7 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 ## 安全模型
 
 - **同进程、同 UID、无沙箱**：插件代码与 App 代码同等权限，能读写 App 私有数据、访问已授权的系统能力（日历、无障碍、ADB/Root 桥）、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制，`requiresPrivilege` 只是提示，不是边界。
-- **安装即信任**：首装确认页必须让用户明确「插件拥有 App 全部权限」；签名只解决「包有没有被篡改、是不是同一个发布者」，不解决「作者是否可信」。
+- **安装即信任**：首装确认页必须让用户明确「插件拥有 App 全部权限」；签名只解决「包有没有被篡改、是不是同一个发布者」，不解决「作者是否可信」。`capabilities` 只声明插件会用到的服务并限制访问器注入，不是沙箱。
 - **适用来源**：可信的第一方/个人插件包；第三方工具源用 MCP，不走 `.ddp`。
 - **完整性**：安装记录钉死整包 sha256，每次装载前复核；canonical digest 验签防篡改；更新必须同 `keyId`；失败保留上一可用版本。
 - **宿主不暴露的东西**：Provider 凭据/OAuth、ADB 配对流程、宿主内部加密密钥、pi SDK 内部类型。插件拿到的是 `PluginHost` 契约与 `host.context`。

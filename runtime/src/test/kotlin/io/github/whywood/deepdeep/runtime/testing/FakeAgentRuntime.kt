@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.OpenedSession
+import io.github.whywood.deepdeep.runtime.PluginTurnResult
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
@@ -89,6 +90,16 @@ class FakeAgentRuntime : AgentRuntime {
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
         deliveryFailure?.let { throw it }
         deliveries += DeliveryRecord(sessionId, text, reminder)
+    }
+
+    override suspend fun deliverPluginTurn(
+        sessionId: String,
+        text: String,
+        followUp: Boolean,
+    ): PluginTurnResult {
+        deliveryFailure?.let { throw it }
+        deliveries += DeliveryRecord(sessionId, text, null)
+        return PluginTurnResult.Started("run")
     }
 
     override suspend fun activeRunId(sessionId: String): String? = activeRuns.value[sessionId]?.runId

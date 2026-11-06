@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +18,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -47,6 +51,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
@@ -89,6 +94,18 @@ internal fun ProcessSection(
     val state = stringResource(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
+    val semanticStatus = processStatus(message.streaming, message.status)
+    val statusLabel = when (semanticStatus) {
+        ProcessStatus.Running -> stringResource(R.string.assistant_ux_process_running)
+        ProcessStatus.Done -> stringResource(R.string.assistant_ux_process_done)
+        ProcessStatus.Stopped -> stringResource(R.string.assistant_stopped)
+        ProcessStatus.Failed -> stringResource(R.string.assistant_ux_process_failed)
+    }
+    val statusColor = when (semanticStatus) {
+        ProcessStatus.Running -> colors.accent
+        ProcessStatus.Failed -> colors.danger
+        else -> colors.inkTertiary
+    }
     val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
     val toolCount = message.steps.count { it is AssistantStep.Tool }
     val finishedAt = message.finishedAt
@@ -98,7 +115,6 @@ internal fun ProcessSection(
             finishedAt > message.startedAt -> finishedAt - message.startedAt
         else -> null
     }
-    val progressLabel = stringResource(R.string.assistant_process)
     val reasoningLabel = if (reasoningCount > 0) {
         stringResource(R.string.assistant_process_reasoning, reasoningCount)
     } else {
@@ -117,11 +133,16 @@ internal fun ProcessSection(
             stringResource(R.string.assistant_elapsed_seconds),
         )
     }
-    val summary = listOfNotNull(progressLabel, reasoningLabel, toolLabel, durationText).joinToString(" · ")
+    val summary = (listOf(statusLabel) + listOfNotNull(reasoningLabel, toolLabel, durationText))
+        .joinToString(" · ")
     val activeReasoningId = if (message.streaming) {
         message.steps.lastOrNull()?.takeIf { it is AssistantStep.Reasoning }?.id
     } else {
         null
+    }
+    val lastReasoningId = message.steps.lastOrNull { it is AssistantStep.Reasoning }?.id
+    val terminatedStatus = semanticStatus.takeIf {
+        !message.streaming && (it == ProcessStatus.Stopped || it == ProcessStatus.Failed)
     }
     Column(Modifier.fillMaxWidth()) {
         DdPressable(
@@ -146,7 +167,7 @@ internal fun ProcessSection(
                 Text(
                     text = summary,
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                    color = colors.inkTertiary,
+                    color = statusColor,
                 )
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(2.dp))
@@ -174,54 +195,226 @@ internal fun ProcessSection(
                 Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                message.steps
-                    .filter { step -> step.id != excludedStepId }
-                    .forEach { step ->
-                        when (step) {
-                            is AssistantStep.Reasoning -> ReasoningCard(
-                                step = step,
-                                active = step.id == activeReasoningId,
-                                onToggle = { onToggleStep(step.id) },
-                            )
-
-                            is AssistantStep.Tool -> {
-                                val trace = step.trace
-                                val deliveredCount = if (trace.name == "present") {
-                                    remember(trace) { parsePresentedItems(trace)?.size }
-                                } else {
-                                    null
-                                }
-                                ToolCard(
-                                    tool = trace,
-                                    onToggle = { onToggleStep(trace.id) },
-                                    onCopyOutput = onCopyOutput,
-                                    titleOverride = deliveredCount?.let { count ->
-                                        stringResource(R.string.present_tool_delivered, count)
+                groupToolSteps(message.steps.filter { step -> step.id != excludedStepId })
+                    .forEach { entry ->
+                        when (entry) {
+                            is ProcessEntry.Single -> when (val step = entry.step) {
+                                is AssistantStep.Reasoning -> ReasoningCard(
+                                    step = step,
+                                    active = step.id == activeReasoningId,
+                                    onToggle = { onToggleStep(step.id) },
+                                    terminatedStatus = terminatedStatus.takeIf {
+                                        step.id == lastReasoningId
                                     },
+                                )
+
+                                is AssistantStep.Tool -> ProcessToolStep(
+                                    step = step,
+                                    onToggleStep = onToggleStep,
+                                    onCopyOutput = onCopyOutput,
                                     onFileClick = onFileClick,
                                 )
-                                val record = if (trace.status == ToolActivityStatus.DONE) {
-                                    remember(trace) { parseQuestionRecord(trace) }
-                                } else {
-                                    null
-                                }
-                                if (record != null) {
-                                    key(trace.toolCallId) {
-                                        AnsweredAskCard(
-                                            record = record,
-                                            toolCallId = trace.toolCallId,
-                                        )
-                                    }
-                                }
+
+                                is AssistantStep.Text -> ChatMarkdown(
+                                    text = step.text.trim(),
+                                    modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                                    onFileClick = onFileClick,
+                                )
                             }
 
-                            is AssistantStep.Text -> ChatMarkdown(
-                                text = step.text.trim(),
-                                modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                            is ProcessEntry.ToolGroup -> ToolGroupRow(
+                                tools = entry.tools,
+                                messageId = message.id,
+                                onToggleStep = onToggleStep,
+                                onCopyOutput = onCopyOutput,
                                 onFileClick = onFileClick,
                             )
                         }
                     }
+            }
+        }
+        if (!expanded) {
+            CollapsedPluginResults(
+                steps = message.steps,
+                excludedStepId = excludedStepId,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProcessToolStep(
+    step: AssistantStep.Tool,
+    onToggleStep: (Long) -> Unit,
+    onCopyOutput: (String) -> Unit,
+    onFileClick: (String) -> Unit,
+) {
+    val trace = step.trace
+    val deliveredCount = if (trace.name == "present") {
+        remember(trace) { parsePresentedItems(trace)?.size }
+    } else {
+        null
+    }
+    ToolCard(
+        tool = trace,
+        onToggle = { onToggleStep(trace.id) },
+        onCopyOutput = onCopyOutput,
+        titleOverride = deliveredCount?.let { count ->
+            stringResource(R.string.present_tool_delivered, count)
+        },
+        onFileClick = onFileClick,
+    )
+    val record = if (trace.status == ToolActivityStatus.DONE) {
+        remember(trace) { parseQuestionRecord(trace) }
+    } else {
+        null
+    }
+    if (record != null) {
+        key(trace.toolCallId) {
+            AnsweredAskCard(
+                record = record,
+                toolCallId = trace.toolCallId,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToolGroupRow(
+    tools: List<AssistantStep.Tool>,
+    messageId: Long,
+    onToggleStep: (Long) -> Unit,
+    onCopyOutput: (String) -> Unit,
+    onFileClick: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    val firstId = tools.first().id
+    var expanded by rememberSaveable(messageId, firstId) { mutableIntStateOf(0) }
+    val rotation = animateFloatAsState(
+        targetValue = if (expanded == 1) 180f else 0f,
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "tool-group-chevron",
+    )
+    val running = tools.any { it.trace.status == ToolActivityStatus.RUNNING }
+    val failed = tools.any { it.trace.status == ToolActivityStatus.FAILED }
+    val statusText = when {
+        running -> stringResource(R.string.assistant_tool_running)
+        failed -> stringResource(R.string.assistant_tool_failed)
+        else -> stringResource(R.string.assistant_tool_done)
+    }
+    val statusColor = when {
+        running -> colors.accent
+        failed -> colors.danger
+        else -> colors.inkSecondary
+    }
+    val totalDuration = tools.mapNotNull { it.trace.durationMs }.takeIf { it.isNotEmpty() }?.sum()
+    val title = stringResource(R.string.assistant_process_tools, tools.size)
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .heightIn(min = 32.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(role = Role.Button) { expanded = if (expanded == 1) 0 else 1 }
+                .padding(horizontal = 8.dp)
+                .testTag("tool_group_$firstId"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = DdType.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                ),
+                color = colors.inkSecondary,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = statusText,
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                color = statusColor,
+            )
+            if (totalDuration != null) {
+                Text(
+                    text = " · ",
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+                Text(
+                    text = durationLabel(totalDuration),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            DdIcon(
+                icon = DdIcons.ChevronDown,
+                modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
+                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                size = 12.dp,
+            )
+            Spacer(Modifier.width(2.dp))
+        }
+        AnimatedVisibility(
+            visible = expanded == 1,
+            enter = expandVertically(
+                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(tween(DdMotion.FAST)),
+            exit = shrinkVertically(
+                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(tween(DdMotion.FAST)),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(start = 6.dp, top = 2.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                tools.forEach { tool ->
+                    key(tool.id) {
+                        ProcessToolStep(
+                            step = tool,
+                            onToggleStep = onToggleStep,
+                            onCopyOutput = onCopyOutput,
+                            onFileClick = onFileClick,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollapsedPluginResults(steps: List<AssistantStep>, excludedStepId: Long?) {
+    val results = steps
+        .filterIsInstance<AssistantStep.Tool>()
+        .map { it.trace }
+        .filter { trace -> trace.id != excludedStepId && trace.pluginSlotResult() is PluginToolResult.Rich }
+    if (results.isEmpty()) return
+    Column(
+        Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        results.forEach { trace ->
+            key(trace.id) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 240.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    PluginToolCardSlot(
+                        toolName = trace.name,
+                        callId = trace.toolCallId,
+                        args = remember(trace.rawArguments, trace.arguments) {
+                            toolArgumentsJson(trace.rawArguments, trace.arguments)
+                        },
+                        result = trace.pluginSlotResult(),
+                    ) {}
+                }
             }
         }
     }

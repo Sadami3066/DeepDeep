@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginServices
@@ -27,11 +28,12 @@ class PluginHostManager internal constructor(
     private val filesDir: File,
     private val scope: CoroutineScope,
     private val language: () -> String,
-    private val servicesFactory: (pluginId: String, dataDir: File, scope: CoroutineScope) -> PluginServices,
+    private val servicesFactory: (pluginId: String, dataDir: File, manifest: PluginManifest, scope: CoroutineScope) -> PluginServices,
     private val skillStore: PluginSkillStore,
     private val external: ExternalPluginRuntime?,
     private val externalUpdates: ExternalUpdateSupport? = null,
     private val onContributionsChanged: () -> Unit,
+    private val busySessions: () -> Set<String> = { emptySet() },
 ) : PluginManagerDelegation() {
     private val _state = MutableStateFlow(PluginsUiState())
     override val state: StateFlow<PluginsUiState> = _state.asStateFlow()
@@ -82,6 +84,7 @@ class PluginHostManager internal constructor(
         lifecycle = lifecycle,
         refresh = { refreshNow() },
         onContributionsChanged = onContributionsChanged,
+        busySessions = busySessions,
     )
     private val commands: PluginManagerCommands = PluginManagerCommands(
         scope = scope,

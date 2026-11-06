@@ -52,7 +52,7 @@ internal object SyntheticDdp {
     fun manifestJson(
         id: String = PLUGIN_ID,
         version: String = PLUGIN_VERSION,
-        apiLevel: Int = 1,
+        apiLevel: Int = 3,
         tools: List<String> = listOf("sample_tool"),
         entryClass: String? = ENTRY_CLASS,
         publisherKeyId: String? = null,
@@ -62,6 +62,7 @@ internal object SyntheticDdp {
         append("  \"id\": \"").append(id).append("\",\n")
         append("  \"version\": \"").append(version).append("\",\n")
         append("  \"apiLevel\": ").append(apiLevel).append(",\n")
+        append("  \"capabilities\": [\"app\", \"files\", \"chat\"],\n")
         if (entryClass != null) append("  \"entryClass\": \"").append(entryClass).append("\",\n")
         append("  \"name\": { \"default\": \"Plugin Test\" },\n")
         append("  \"summary\": { \"default\": \"Plugin Test Summary\" },\n")

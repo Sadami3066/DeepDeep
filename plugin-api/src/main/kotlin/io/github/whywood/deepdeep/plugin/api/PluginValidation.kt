@@ -20,6 +20,8 @@ object PluginValidation {
         INVALID_ICON,
         INVALID_URL,
         INVALID_PROVIDES,
+        INVALID_CAPABILITY,
+        MISSING_CAPABILITIES,
         INVALID_UI_SLOT,
         INVALID_SKILL,
     }
@@ -62,8 +64,14 @@ object PluginValidation {
         if (PluginVersion.parse(manifest.version) == null) {
             add(error(Code.INVALID_VERSION, "version", "version must be major.minor.patch with optional suffix: ${manifest.version}"))
         }
-        if (manifest.apiLevel !in 1..hostApiLevel) {
-            add(error(Code.API_LEVEL_UNSUPPORTED, "apiLevel", "apiLevel ${manifest.apiLevel} is outside the supported range 1..$hostApiLevel"))
+        if (manifest.apiLevel !in MIN_SUPPORTED_API_LEVEL..hostApiLevel) {
+            add(
+                error(
+                    Code.API_LEVEL_UNSUPPORTED,
+                    "apiLevel",
+                    "apiLevel ${manifest.apiLevel} is outside the supported range $MIN_SUPPORTED_API_LEVEL..$hostApiLevel",
+                ),
+            )
         }
         manifest.minHostVersion?.let { raw ->
             val minimum = PluginVersion.parse(raw)
@@ -101,6 +109,7 @@ object PluginValidation {
             !isValidEntryClass(entry) -> add(error(Code.INVALID_ENTRY_CLASS, "entryClass", "entryClass is not a valid class name: $entry"))
         }
         validateProvides(manifest.provides)
+        validateCapabilities(manifest.capabilities)
     }
 
     fun validateSkill(skill: PluginSkill): List<Issue> = buildList {
@@ -174,6 +183,18 @@ object PluginValidation {
         provides.uiSlots.forEachIndexed { index, slot ->
             if (!SlotIds.matches(slot)) {
                 add(error(Code.INVALID_UI_SLOT, "provides.uiSlots[$index]", "unknown or incomplete slot id: $slot"))
+            }
+        }
+    }
+
+    private fun MutableList<Issue>.validateCapabilities(capabilities: Set<String>?) {
+        if (capabilities == null) {
+            add(error(Code.MISSING_CAPABILITIES, "capabilities", "manifest must declare capabilities"))
+            return
+        }
+        capabilities.forEach { value ->
+            if (PluginCapability.fromWire(value) == null) {
+                add(error(Code.INVALID_CAPABILITY, "capabilities", "unknown capability: $value"))
             }
         }
     }

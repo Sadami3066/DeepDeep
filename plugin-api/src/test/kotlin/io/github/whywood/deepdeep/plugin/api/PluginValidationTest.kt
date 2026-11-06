@@ -21,6 +21,7 @@ class PluginValidationTest {
         provides: Provides = Provides(),
         homepage: String? = null,
         icon: IconRef? = null,
+        capabilities: Set<String>? = PluginCapability.entries.map { it.wire }.toSet(),
     ) = PluginManifest(
         id = id,
         version = version,
@@ -33,6 +34,7 @@ class PluginValidationTest {
         icon = icon,
         entryClass = entryClass,
         provides = provides,
+        capabilities = capabilities,
     )
 
     private fun issues(
@@ -41,7 +43,10 @@ class PluginValidationTest {
         hostVersion: String? = null,
     ) = PluginValidation.validate(manifest, hostApiLevel, hostVersion)
 
-    private fun codes(manifest: PluginManifest): List<PluginValidation.Code> = issues(manifest).map { it.code }
+    private fun codes(
+        manifest: PluginManifest,
+        hostApiLevel: Int = PLUGIN_API_LEVEL,
+    ): List<PluginValidation.Code> = issues(manifest, hostApiLevel).map { it.code }
 
     @Test
     fun validManifestHasNoIssues() {
@@ -70,9 +75,14 @@ class PluginValidationTest {
 
     @Test
     fun validatesApiLevel() {
-        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 3)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 4)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 2)))
         assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 0)))
-        assertTrue(issues(manifest(apiLevel = 1), hostApiLevel = 2).isEmpty())
+        assertTrue(issues(manifest(apiLevel = MIN_SUPPORTED_API_LEVEL)).isEmpty())
+        assertEquals(
+            listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED),
+            codes(manifest(apiLevel = MIN_SUPPORTED_API_LEVEL), hostApiLevel = MIN_SUPPORTED_API_LEVEL - 1),
+        )
     }
 
     @Test
@@ -120,6 +130,19 @@ class PluginValidationTest {
         assertEquals(listOf(PluginValidation.Code.INVALID_ICON), codes(manifest(icon = IconRef.Asset("../icon.png"))))
         assertEquals(listOf(PluginValidation.Code.INVALID_ICON), codes(manifest(icon = IconRef.Resource(1))))
         assertTrue(issues(manifest(icon = IconRef.Asset("icon.png"))).isEmpty())
+    }
+
+    @Test
+    fun validatesCapabilities() {
+        assertEquals(
+            listOf(PluginValidation.Code.MISSING_CAPABILITIES),
+            codes(manifest(capabilities = null)),
+        )
+        assertEquals(
+            listOf(PluginValidation.Code.INVALID_CAPABILITY),
+            codes(manifest(capabilities = setOf("app", "teleport"))),
+        )
+        assertTrue(issues(manifest(capabilities = emptySet())).isEmpty())
     }
 
     @Test

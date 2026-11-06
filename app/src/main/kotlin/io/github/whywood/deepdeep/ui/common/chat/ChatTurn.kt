@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
@@ -356,6 +357,13 @@ private fun UserBubble(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            if (message.injectedSource == TurnSource.PLUGIN) {
+                Text(
+                    text = stringResource(R.string.assistant_plugin_message),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                    color = colors.inkTertiary,
+                )
+            }
             val reminder = message.reminder
             if (reminder != null) {
                 Row(
@@ -529,10 +537,12 @@ private fun AssistantTurn(
             }
         }
         when (message.status) {
-            MessageStatus.STOPPED -> StatusMark(
-                text = stringResource(R.string.assistant_stopped),
-                color = colors.inkTertiary,
-            )
+            MessageStatus.STOPPED -> if (!hasVisibleProcess) {
+                StatusMark(
+                    text = stringResource(R.string.assistant_stopped),
+                    color = colors.inkTertiary,
+                )
+            }
 
             MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry, retryAttempt = retryAttempt)
 

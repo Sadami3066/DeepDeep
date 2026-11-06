@@ -98,6 +98,7 @@
     <string name="assistant_image_preview">Preview</string>
     <string name="assistant_error_details_hide">Hide raw error</string>
     <string name="assistant_error_details_show">Show raw error</string>
+    <string name="assistant_plugin_message">From plugin</string>
     <string name="assistant_reminder_label">Timer reminder · %1$s</string>
     <string name="assistant_reminders">Timer reminders</string>
     <string name="assistant_retry">Retry</string>

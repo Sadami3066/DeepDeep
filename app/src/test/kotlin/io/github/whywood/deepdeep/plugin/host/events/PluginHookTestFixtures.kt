@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.plugin.api.InputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus
 import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
+import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
@@ -39,6 +40,7 @@ internal fun probeHooks(
     onInput: (suspend (InputRequest) -> InputDecision)? = null,
     onBefore: (suspend (ToolCallRequest) -> ToolCallDecision)? = null,
     onAfter: (suspend (ToolExecutionResult) -> ToolResultDecision)? = null,
+    onContext: (suspend (PluginContextRequest) -> String?)? = null,
 ): PluginHooks = object : PluginHooks {
     override suspend fun promptTransform(request: PromptRequest): String =
         onPrompt?.invoke(request) ?: request.prompt
@@ -51,6 +53,8 @@ internal fun probeHooks(
 
     override suspend fun afterToolExecution(request: ToolExecutionResult): ToolResultDecision =
         onAfter?.invoke(request) ?: ToolResultDecision.Keep
+
+    override suspend fun context(request: PluginContextRequest): String? = onContext?.invoke(request)
 }
 
 internal fun agentTextResult(text: String, isError: Boolean = false): AgentToolResult =

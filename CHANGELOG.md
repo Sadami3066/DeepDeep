@@ -2,6 +2,14 @@
 
 ## HEAD (since m2)
 
+- feat: 插件主动消息：`ChatService.sendMessage` 支持显示卡片、起新轮、运行中插话/排队（`triggerTurn`/`deliverAs`），运行时新增 `TurnSource.PLUGIN` 与 `deliverPluginTurn`，聊天显示「来自插件」[插件] [运行时] [聊天]
+- feat: 插件能力清单：manifest 新增 `capabilities` 声明（18 项），安装确认与详情展示，宿主只注入声明过的服务，未声明调用抛 `PluginServiceUnavailable`；`plugin-api` 升 0.6.0 / apiLevel 3 [插件] [架构]
+- feat: 插件上下文钩子：`PluginHooks.context(request)` 可返回检索内容注入系统提示，按插件 8 KiB、总量 32 KiB、2s 超时限制 [插件] [运行时]
+- feat: 插件热升级：暂存版本在无忙碌会话时立即切换，忙碌会话结束后自动生效，无需重启 App [插件]
+- feat: Agent 设置页与会话备份入口；会话导出/导入支持 JSONL/Markdown zip，跨设备按工作区推导会话目录，同 id 不覆盖 [界面] [数据]
+- feat: 聊天体验升级：运行中发送=插话/菜单=排队、跟随阈值与回缩去抖、流式增长揭示、过程与工具卡状态语义、输入区聚焦与阴影动效 [聊天]
+- build: release 启用正式 keystore 签名与 R8/资源压缩，新增 `docs/RELEASE.md` 与 keep 规则；首次换签需卸载重装 [构建]
+- test: plugin-api/runtime/app 单测覆盖主动消息、能力门控、上下文注入与热升级；ABI 基线更新 [插件] [测试]
 - feat: 插件 UI 与 App 设计系统同源：`:design` 作为插件 SDK 与 `plugin-api` 同版本发布（`api()` 传递、compileOnly 不打包），插件页面直接使用 Dd 组件；`PluginPage.content` 内联页面内容，删除 `plugin.page` 槽位与 `SlotContent.Compose.uiApiLevel`，删除 `plugin-api` 内置 UI 组件 [插件] [界面] [架构]
 - feat: 插件页重设计：顶栏 `＋` 导入与「⋯」菜单（检查更新/插件源/刷新）、单列表行 + 行尾动作菜单、插件详情底部弹层、更新提示条与空态；去掉顶栏下三个大卡片 [界面] [插件]
 - feat: 设置重组：屏幕操作开关移入权限页，仅 ADB/Root 生效时注入屏幕工具与技能（未生效橙色提示）；悬浮窗与系统助手合并为「Android 设置」；「运行环境」更名「Linux 设置」[界面]

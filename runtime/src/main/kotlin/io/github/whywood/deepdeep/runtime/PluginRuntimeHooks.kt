@@ -16,6 +16,8 @@ import kotlinx.serialization.json.JsonObject
 
 typealias PromptTransform = suspend (String) -> String
 
+typealias SystemContext = suspend () -> String?
+
 data class InputRequest(
     val text: String,
     val images: List<ImagePart> = emptyList(),
@@ -37,6 +39,7 @@ internal fun List<ImagePart>.toImageContents(): List<ImageContent>? =
 
 data class RuntimeHooks(
     val promptTransform: PromptTransform? = null,
+    val systemContext: SystemContext? = null,
     val inputHandler: InputHandler? = null,
     val toolHooks: ToolExecutionHooks? = null,
     val onSessionBound: ((SessionBinding) -> Unit)? = null,

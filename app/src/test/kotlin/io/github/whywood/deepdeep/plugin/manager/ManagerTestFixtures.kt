@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
@@ -28,6 +29,7 @@ internal fun managerManifest(
     version = version,
     name = LocalizedText.Literal(id),
     summary = LocalizedText.Literal("summary"),
+    capabilities = PluginCapability.entries.map { it.wire }.toSet(),
 )
 
 internal fun managerRecord(

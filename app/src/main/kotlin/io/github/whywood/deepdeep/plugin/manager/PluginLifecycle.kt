@@ -173,7 +173,7 @@ internal class PluginHostFactory(
     private val context: Context,
     private val pluginsRoot: File,
     private val textResolver: PluginTextResolver,
-    private val servicesFactory: (pluginId: String, dataDir: File, scope: CoroutineScope) -> PluginServices,
+    private val servicesFactory: (pluginId: String, dataDir: File, manifest: PluginManifest, scope: CoroutineScope) -> PluginServices,
     private val onRefreshRequest: () -> Unit,
 ) {
     fun create(pluginId: String, manifest: PluginManifest, scope: CoroutineScope): PluginHost =
@@ -181,7 +181,7 @@ internal class PluginHostFactory(
             manifest = manifest,
             context = context,
             scope = scope,
-            services = servicesFactory(pluginId, File(pluginsRoot, "$pluginId/data"), scope),
+            services = servicesFactory(pluginId, File(pluginsRoot, "$pluginId/data"), manifest, scope),
             textResolver = textResolver,
             pluginsRoot = pluginsRoot,
             onRefreshRequest = onRefreshRequest,

@@ -6,8 +6,9 @@
 
 | 文件 | 职责 |
 |---|---|
-| `SettingsScreen.kt` | 设置首页：账户卡、功能入口（Provider/权限/Linux 设置/Android 设置）、主题/字体/语言、通知、版本与许可 |
+| `SettingsScreen.kt` | 设置首页：账户卡、功能入口（Provider/权限/Agent 设置/Linux 设置/Android 设置）、主题/字体/语言、通知、会话备份、版本与许可 |
 | `ChatSettingsScreen.kt` | 聊天设置：正文字号、过程折叠、自动重试、后台唤醒、自动朗读 |
+| `AgentSettingsScreen.kt` | Agent 设置：屏幕操作状态行（进权限页）、MCP 服务行（进 MCP 页）、后续能力说明 |
 | `AndroidSettingsScreen.kt` | Android 设置：悬浮窗开关与悬浮权限申请/状态、系统助手角色与电源设置 |
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |
 | `PermissionScreen.kt` | 权限三档选择、ADB 配对、Root 探测、生效档提示与屏幕操作开关 |

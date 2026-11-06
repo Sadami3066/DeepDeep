@@ -1,0 +1,5 @@
+-keep class io.github.whywood.deepdeep.plugin.api.** { *; }
+-keep class io.github.whywood.deepdeep.design.** { *; }
+-keep class org.lsposed.hiddenapibypass.** { *; }
+-keep class com.github.muntashirakon.adb.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod

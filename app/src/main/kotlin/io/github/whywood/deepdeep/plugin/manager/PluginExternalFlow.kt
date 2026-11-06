@@ -36,6 +36,7 @@ internal class PluginExternalFlow(
     private val lifecycle: PluginLifecycle,
     private val refresh: suspend () -> Unit,
     private val onContributionsChanged: () -> Unit,
+    private val busySessions: () -> Set<String> = { emptySet() },
 ) {
     private val activation = PluginExternalActivation(
         gate = gate,
@@ -166,6 +167,7 @@ internal class PluginExternalFlow(
                 trusted = result.trusted != null,
                 requiresPrivilege = result.manifest.requiresPrivilege,
                 provides = result.manifest.provides,
+                capabilities = result.manifest.capabilities.orEmpty(),
                 error = null,
             )
 
@@ -181,6 +183,7 @@ internal class PluginExternalFlow(
                 trusted = false,
                 requiresPrivilege = false,
                 provides = Provides(),
+                capabilities = emptySet(),
                 error = result.reason,
             )
         }
@@ -209,7 +212,8 @@ internal class PluginExternalFlow(
                         }
                         refresh()
                         onContributionsChanged()
-                        ExternalInstallUi(true, null, restartRequired = true)
+                        val activated = activateStagedNow(result.record.id)
+                        ExternalInstallUi(true, null, restartRequired = !activated)
                     }
 
                     is InstallResult.AlreadyInstalled -> ExternalInstallUi(true, null)
@@ -270,11 +274,23 @@ internal class PluginExternalFlow(
                     gate.attachExternalRecord(pluginId, record)
                 }
                 refresh()
+                activateStagedNow(pluginId)
                 null
             }
 
             is UpdateStageResultUi.Rejected -> result.reason
         }
+    }
+
+    suspend fun hasPendingUpdates(): Boolean =
+        gate.views().any { view -> view.enabled && view.record.pendingVersion != null }
+
+    private suspend fun activateStagedNow(pluginId: String): Boolean {
+        if (busySessions().isNotEmpty()) return false
+        activation.activate(pluginId)
+        refresh()
+        onContributionsChanged()
+        return gate.view(pluginId)?.record?.pendingVersion == null
     }
 
     private suspend fun installFresh(record: ExternalPluginRecord, runtime: ExternalPluginRuntime): String? {

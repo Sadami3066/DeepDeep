@@ -96,6 +96,13 @@ internal fun PluginImportDialog(
                             title = stringResource(R.string.plugins_import_provides),
                             value = providedSummary(inspection),
                         )
+                        if (inspection.capabilities.isNotEmpty()) {
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.plugins_import_capabilities),
+                                value = capabilitySummary(inspection.capabilities),
+                            )
+                        }
                     }
                     if (!inspection.trusted) {
                         Spacer(Modifier.height(10.dp))

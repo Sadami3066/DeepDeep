@@ -27,12 +27,95 @@ public final class io.github.whywood.deepdeep.plugin.api.AppInfo {
 public interface io.github.whywood.deepdeep.plugin.api.AppInfoService {
   public abstract io.github.whywood.deepdeep.plugin.api.AppInfo getInfo();
 }
+public final class io.github.whywood.deepdeep.plugin.api.ChatDelivery extends java.lang.Enum<io.github.whywood.deepdeep.plugin.api.ChatDelivery> {
+  public static final io.github.whywood.deepdeep.plugin.api.ChatDelivery STEER;
+  public static final io.github.whywood.deepdeep.plugin.api.ChatDelivery FOLLOW_UP;
+  public static io.github.whywood.deepdeep.plugin.api.ChatDelivery[] values();
+  public static io.github.whywood.deepdeep.plugin.api.ChatDelivery valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.plugin.api.ChatDelivery> getEntries();
+}
+public final class io.github.whywood.deepdeep.plugin.api.ChatDisplay {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.ChatDisplay(java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.ChatDisplay(java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getCustomType();
+  public final kotlinx.serialization.json.JsonObject getPayload();
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final kotlinx.serialization.json.JsonObject component2();
+  public final java.lang.String component3();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDisplay copy(java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.ChatDisplay copy$default(io.github.whywood.deepdeep.plugin.api.ChatDisplay, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ChatMessageOptions {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.ChatMessageOptions(boolean, io.github.whywood.deepdeep.plugin.api.ChatDelivery, io.github.whywood.deepdeep.plugin.api.ChatDisplay);
+  public io.github.whywood.deepdeep.plugin.api.ChatMessageOptions(boolean, io.github.whywood.deepdeep.plugin.api.ChatDelivery, io.github.whywood.deepdeep.plugin.api.ChatDisplay, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final boolean getTriggerTurn();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDelivery getDeliverAs();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDisplay getDisplay();
+  public final boolean component1();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDelivery component2();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDisplay component3();
+  public final io.github.whywood.deepdeep.plugin.api.ChatMessageOptions copy(boolean, io.github.whywood.deepdeep.plugin.api.ChatDelivery, io.github.whywood.deepdeep.plugin.api.ChatDisplay);
+  public static io.github.whywood.deepdeep.plugin.api.ChatMessageOptions copy$default(io.github.whywood.deepdeep.plugin.api.ChatMessageOptions, boolean, io.github.whywood.deepdeep.plugin.api.ChatDelivery, io.github.whywood.deepdeep.plugin.api.ChatDisplay, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+  public io.github.whywood.deepdeep.plugin.api.ChatMessageOptions();
+}
+public interface io.github.whywood.deepdeep.plugin.api.ChatSendResult {
+}
+public final class io.github.whywood.deepdeep.plugin.api.ChatSendResult$Displayed implements io.github.whywood.deepdeep.plugin.api.ChatSendResult {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.ChatSendResult$Displayed(java.lang.String);
+  public final java.lang.String getSessionId();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.plugin.api.ChatSendResult$Displayed copy(java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.ChatSendResult$Displayed copy$default(io.github.whywood.deepdeep.plugin.api.ChatSendResult$Displayed, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ChatSendResult$Queued implements io.github.whywood.deepdeep.plugin.api.ChatSendResult {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.ChatSendResult$Queued(java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatDelivery);
+  public final java.lang.String getSessionId();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDelivery getDelivery();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.plugin.api.ChatDelivery component2();
+  public final io.github.whywood.deepdeep.plugin.api.ChatSendResult$Queued copy(java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatDelivery);
+  public static io.github.whywood.deepdeep.plugin.api.ChatSendResult$Queued copy$default(io.github.whywood.deepdeep.plugin.api.ChatSendResult$Queued, java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatDelivery, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started implements io.github.whywood.deepdeep.plugin.api.ChatSendResult {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started(java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started(java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getSessionId();
+  public final java.lang.String getRunId();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started copy$default(io.github.whywood.deepdeep.plugin.api.ChatSendResult$Started, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
 public interface io.github.whywood.deepdeep.plugin.api.ChatService {
   public abstract java.lang.Object postCustomMessage(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, boolean, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
   public static java.lang.Object postCustomMessage$default(io.github.whywood.deepdeep.plugin.api.ChatService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public abstract java.lang.Object sendMessage(java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatMessageOptions, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ChatSendResult>);
+  public static java.lang.Object sendMessage$default(io.github.whywood.deepdeep.plugin.api.ChatService, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatMessageOptions, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.plugin.api.ChatService$DefaultImpls {
   public static java.lang.Object postCustomMessage$default(io.github.whywood.deepdeep.plugin.api.ChatService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object sendMessage$default(io.github.whywood.deepdeep.plugin.api.ChatService, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.ChatMessageOptions, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.plugin.api.ComposerAction {
   public static final int $stable;
@@ -755,6 +838,7 @@ public final class io.github.whywood.deepdeep.plugin.api.NotificationService$Def
 public final class io.github.whywood.deepdeep.plugin.api.PluginApiKt {
   public static final int PLUGIN_API_LEVEL;
   public static final int BASELINE_API_LEVEL;
+  public static final int MIN_SUPPORTED_API_LEVEL;
   public static final int HOST_UI_API_LEVEL;
   public static final java.lang.String DEFAULT_LANGUAGE;
 }
@@ -800,6 +884,53 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginBusEvent {
   public final long component4();
   public final io.github.whywood.deepdeep.plugin.api.PluginBusEvent copy(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, long);
   public static io.github.whywood.deepdeep.plugin.api.PluginBusEvent copy$default(io.github.whywood.deepdeep.plugin.api.PluginBusEvent, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, long, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginCapability extends java.lang.Enum<io.github.whywood.deepdeep.plugin.api.PluginCapability> {
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion Companion;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability LINUX;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability PRIVILEGE;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability SCREEN;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability NOTIFICATIONS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability SECRETS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability NETWORK;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability FILES;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability SESSIONS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability JOBS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability TIMERS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability GOALS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability MINIAPP;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability MCP;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability UI;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability APP;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability BUS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability LOGS;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability CHAT;
+  public final java.lang.String getWire();
+  public static io.github.whywood.deepdeep.plugin.api.PluginCapability[] values();
+  public static io.github.whywood.deepdeep.plugin.api.PluginCapability valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.plugin.api.PluginCapability> getEntries();
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion {
+  public final io.github.whywood.deepdeep.plugin.api.PluginCapability fromWire(java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginContextRequest {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.PluginContextRequest(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.PluginContextRequest(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getSessionId();
+  public final java.lang.String getCwd();
+  public final java.lang.String getProviderId();
+  public final java.lang.String getModelId();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final java.lang.String component4();
+  public final io.github.whywood.deepdeep.plugin.api.PluginContextRequest copy(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.PluginContextRequest copy$default(io.github.whywood.deepdeep.plugin.api.PluginContextRequest, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1172,6 +1303,8 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHooks {
   public static java.lang.Object busEvent$suspendImpl(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginEvent$BusEvent, kotlin.coroutines.Continuation<? super kotlin.Unit>);
   public default java.lang.Object promptTransform(io.github.whywood.deepdeep.plugin.api.PromptRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
   public static java.lang.Object promptTransform$suspendImpl(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PromptRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
+  public default java.lang.Object context(io.github.whywood.deepdeep.plugin.api.PluginContextRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
+  public static java.lang.Object context$suspendImpl(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginContextRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
   public default java.lang.Object inputTransform(io.github.whywood.deepdeep.plugin.api.InputRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.InputDecision>);
   public static java.lang.Object inputTransform$suspendImpl(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.InputRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.InputDecision>);
   public default java.lang.Object beforeToolCall(io.github.whywood.deepdeep.plugin.api.ToolCallRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ToolCallDecision>);
@@ -1200,6 +1333,7 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHooks {
   public static java.lang.Object access$mcpToolsChanged$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginEvent$McpToolsChanged, kotlin.coroutines.Continuation);
   public static java.lang.Object access$busEvent$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginEvent$BusEvent, kotlin.coroutines.Continuation);
   public static java.lang.Object access$promptTransform$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PromptRequest, kotlin.coroutines.Continuation);
+  public static java.lang.Object access$context$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginContextRequest, kotlin.coroutines.Continuation);
   public static java.lang.Object access$inputTransform$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.InputRequest, kotlin.coroutines.Continuation);
   public static java.lang.Object access$beforeToolCall$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.ToolCallRequest, kotlin.coroutines.Continuation);
   public static java.lang.Object access$afterToolExecution$jd(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.ToolExecutionResult, kotlin.coroutines.Continuation);
@@ -1232,6 +1366,7 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginHooks$Companion$N
   public java.lang.Object mcpToolsChanged(io.github.whywood.deepdeep.plugin.api.PluginEvent$McpToolsChanged, kotlin.coroutines.Continuation<? super kotlin.Unit>);
   public java.lang.Object busEvent(io.github.whywood.deepdeep.plugin.api.PluginEvent$BusEvent, kotlin.coroutines.Continuation<? super kotlin.Unit>);
   public java.lang.Object promptTransform(io.github.whywood.deepdeep.plugin.api.PromptRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
+  public java.lang.Object context(io.github.whywood.deepdeep.plugin.api.PluginContextRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
   public java.lang.Object inputTransform(io.github.whywood.deepdeep.plugin.api.InputRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.InputDecision>);
   public java.lang.Object beforeToolCall(io.github.whywood.deepdeep.plugin.api.ToolCallRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ToolCallDecision>);
   public java.lang.Object afterToolExecution(io.github.whywood.deepdeep.plugin.api.ToolExecutionResult, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ToolResultDecision>);
@@ -1259,6 +1394,7 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginHooks$DefaultImpl
   public static java.lang.Object mcpToolsChanged(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginEvent$McpToolsChanged, kotlin.coroutines.Continuation<? super kotlin.Unit>);
   public static java.lang.Object busEvent(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginEvent$BusEvent, kotlin.coroutines.Continuation<? super kotlin.Unit>);
   public static java.lang.Object promptTransform(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PromptRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
+  public static java.lang.Object context(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.PluginContextRequest, kotlin.coroutines.Continuation<? super java.lang.String>);
   public static java.lang.Object inputTransform(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.InputRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.InputDecision>);
   public static java.lang.Object beforeToolCall(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.ToolCallRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ToolCallDecision>);
   public static java.lang.Object afterToolExecution(io.github.whywood.deepdeep.plugin.api.PluginHooks, io.github.whywood.deepdeep.plugin.api.ToolExecutionResult, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.ToolResultDecision>);
@@ -1308,8 +1444,8 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginLogLevel extends 
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, boolean, boolean);
-  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean, boolean);
+  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getId();
   public final java.lang.String getVersion();
   public final int getApiLevel();
@@ -1324,6 +1460,7 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public final java.lang.String getEntryClass();
   public final io.github.whywood.deepdeep.plugin.api.PublisherInfo getPublisher();
   public final io.github.whywood.deepdeep.plugin.api.Provides getProvides();
+  public final java.util.Set<java.lang.String> getCapabilities();
   public final boolean getRequiresPrivilege();
   public final boolean getDefaultEnabled();
   public final java.lang.String component1();
@@ -1340,10 +1477,11 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public final java.lang.String component12();
   public final io.github.whywood.deepdeep.plugin.api.PublisherInfo component13();
   public final io.github.whywood.deepdeep.plugin.api.Provides component14();
-  public final boolean component15();
+  public final java.util.Set<java.lang.String> component15();
   public final boolean component16();
-  public final io.github.whywood.deepdeep.plugin.api.PluginManifest copy(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, boolean, boolean);
-  public static io.github.whywood.deepdeep.plugin.api.PluginManifest copy$default(io.github.whywood.deepdeep.plugin.api.PluginManifest, java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, boolean, boolean, int, java.lang.Object);
+  public final boolean component17();
+  public final io.github.whywood.deepdeep.plugin.api.PluginManifest copy(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean, boolean);
+  public static io.github.whywood.deepdeep.plugin.api.PluginManifest copy$default(io.github.whywood.deepdeep.plugin.api.PluginManifest, java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, boolean, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1443,8 +1581,10 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginRunSignal$Compani
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable extends java.lang.IllegalStateException {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable(java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable(java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable(java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getService();
+  public final java.lang.String getReason();
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginSessionInfo {
   public static final int $stable;
@@ -1609,6 +1749,8 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginValidation$Code e
   public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_ICON;
   public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_URL;
   public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_PROVIDES;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_CAPABILITY;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code MISSING_CAPABILITIES;
   public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_UI_SLOT;
   public static final io.github.whywood.deepdeep.plugin.api.PluginValidation$Code INVALID_SKILL;
   public static io.github.whywood.deepdeep.plugin.api.PluginValidation$Code[] values();

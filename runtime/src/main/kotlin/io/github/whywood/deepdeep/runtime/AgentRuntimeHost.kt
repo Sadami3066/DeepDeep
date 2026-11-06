@@ -179,6 +179,11 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun allSessions(): List<ConversationSummary> = sessionsAdmin.all()
 
+    suspend fun refreshSessions() {
+        allSessions()
+        runs.emitListChanged()
+    }
+
     override suspend fun workspaceSessionCount(workspaceId: String): Int =
         sessionsAdmin.workspaceCount(workspaceId)
 
@@ -213,6 +218,9 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) =
         runs.deliverReminder(sessionId, text, reminder)
+
+    override suspend fun deliverPluginTurn(sessionId: String, text: String, followUp: Boolean): PluginTurnResult =
+        runs.deliverPluginTurn(sessionId, text, followUp)
 
     suspend fun deliverBackgroundTurn(
         sessionId: String,

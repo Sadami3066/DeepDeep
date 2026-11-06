@@ -44,6 +44,8 @@ interface PluginManagerFacade {
 
     suspend fun stageExternalUpdate(pluginId: String): String?
 
+    suspend fun applyPendingUpdates()
+
     suspend fun pluginRepositorySettings(): PluginRepositorySettings
 
     suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="assistant_ux_process_running">执行中</string>
+    <string name="assistant_ux_process_done">已完成</string>
+    <string name="assistant_ux_process_failed">失败</string>
+    <string name="assistant_ux_queue_send">排队发送</string>
+    <string name="assistant_ux_more">更多操作</string>
+    <string name="assistant_ux_running_hint">运行中：发送=插话，菜单=排队</string>
+</resources>

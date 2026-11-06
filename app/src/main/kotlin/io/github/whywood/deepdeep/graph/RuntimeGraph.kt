@@ -112,6 +112,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         val delegate = PluginHooksDelegate()
         return RuntimeHooks(
             promptTransform = delegate.promptTransform,
+            systemContext = delegate.systemContext,
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding -> deps.pluginManager().bindSessionHooks(binding, delegate) },

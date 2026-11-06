@@ -98,6 +98,7 @@
     <string name="assistant_image_preview">预览</string>
     <string name="assistant_error_details_hide">收起原始错误</string>
     <string name="assistant_error_details_show">查看原始错误</string>
+    <string name="assistant_plugin_message">来自插件</string>
     <string name="assistant_reminder_label">定时提醒 · %1$s</string>
     <string name="assistant_reminders">定时提醒</string>
     <string name="assistant_retry">重试</string>

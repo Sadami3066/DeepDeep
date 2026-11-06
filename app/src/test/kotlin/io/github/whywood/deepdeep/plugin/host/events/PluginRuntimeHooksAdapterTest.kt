@@ -25,6 +25,7 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -52,6 +53,19 @@ class PluginRuntimeHooksAdapterTest {
         val result = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).promptTransform("hi")
         assertEquals("plugin:hi", result)
         assertEquals(PromptRequest("session-1", "hi"), seen.single())
+    }
+
+    @Test
+    fun systemContextWrapsAndEscapesContributions() = runTest {
+        val hooks = probeHooks(onContext = { "a & <b>" })
+        val context = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).systemContext()
+        assertEquals("<plugin_context plugin=\"p\">\na &amp; &lt;b&gt;\n</plugin_context>", context)
+    }
+
+    @Test
+    fun systemContextIsNullWhenNoPluginContributes() = runTest {
+        val hooks = probeHooks(onContext = { null })
+        assertNull(adapter(TestHookSource(listOf(hookEntry("p", hooks)))).systemContext())
     }
 
     @Test

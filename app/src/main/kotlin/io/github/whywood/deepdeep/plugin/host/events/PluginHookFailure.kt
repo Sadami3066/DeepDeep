@@ -8,6 +8,7 @@ internal enum class PluginHookStage {
     INPUT_TRANSFORM,
     BEFORE_TOOL_CALL,
     AFTER_TOOL_EXECUTION,
+    CONTEXT,
 }
 
 internal data class PluginHookFailure(

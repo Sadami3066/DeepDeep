@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.host.ui
 
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.SlotBinding
@@ -33,6 +34,7 @@ class SlotRegistryTest {
         ui = ui,
         name = LocalizedText.Literal("name of $id"),
         summary = LocalizedText.Literal("summary of $id"),
+        capabilities = PluginCapability.entries.map { it.wire }.toSet(),
     )
 
     private fun descriptor(

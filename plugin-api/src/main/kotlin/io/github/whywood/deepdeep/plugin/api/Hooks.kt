@@ -134,6 +134,13 @@ data class PromptRequest(
     val prompt: String,
 )
 
+data class PluginContextRequest(
+    val sessionId: String,
+    val cwd: String,
+    val providerId: String? = null,
+    val modelId: String? = null,
+)
+
 data class InputRequest(
     val sessionId: String,
     val text: String,
@@ -225,6 +232,8 @@ interface PluginHooks {
     suspend fun busEvent(event: PluginEvent.BusEvent) = Unit
 
     suspend fun promptTransform(request: PromptRequest): String = request.prompt
+
+    suspend fun context(request: PluginContextRequest): String? = null
 
     suspend fun inputTransform(request: InputRequest): InputDecision = InputDecision.continueWith(request)
 

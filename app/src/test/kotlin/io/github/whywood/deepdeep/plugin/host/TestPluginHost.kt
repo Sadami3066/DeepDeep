@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.plugin.host
 import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import java.io.File
 import java.lang.reflect.Proxy
@@ -16,6 +17,7 @@ internal fun testManifest(id: String, version: String = "1.0.0"): PluginManifest
     name = LocalizedText.Literal("name"),
     summary = LocalizedText.Literal("summary"),
     icon = IconRef.Asset("icon.png"),
+    capabilities = PluginCapability.entries.map { it.wire }.toSet(),
 )
 
 internal fun testPluginHost(

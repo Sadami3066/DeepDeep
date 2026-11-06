@@ -70,6 +70,7 @@ internal fun ConversationState.injectTurn(
         role = AssistantRole.USER,
         text = display,
         reminder = event.reminder,
+        injectedSource = event.source,
     )
     val streaming = messages.lastOrNull { it.role == AssistantRole.ASSISTANT && it.streaming }
     if (streaming != null) {

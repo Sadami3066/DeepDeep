@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -44,6 +45,7 @@ internal fun ReasoningCard(
     step: AssistantStep.Reasoning,
     active: Boolean,
     onToggle: () -> Unit,
+    terminatedStatus: ProcessStatus? = null,
 ) {
     val colors = deepDeepColors()
     val expanded = step.expanded
@@ -55,7 +57,22 @@ internal fun ReasoningCard(
     val state = stringResource(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val preview = step.text.lineSequence().firstOrNull().orEmpty().trim()
+    val shimmer = rememberShimmerBrush(
+        active = active,
+        base = colors.inkTertiary,
+        highlight = colors.inkSecondary,
+    )
+    val titleStyle = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp, brush = shimmer)
+    val terminatedLabel = when (terminatedStatus) {
+        ProcessStatus.Stopped -> stringResource(R.string.assistant_stopped)
+        ProcessStatus.Failed -> stringResource(R.string.assistant_ux_process_failed)
+        else -> null
+    }
+    val terminatedColor = when (terminatedStatus) {
+        ProcessStatus.Failed -> colors.danger
+        else -> colors.inkTertiary
+    }
+    val preview = reasoningPreview(step.text)
     Column(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -71,9 +88,23 @@ internal fun ReasoningCard(
         ) {
             Text(
                 text = stringResource(R.string.assistant_reasoning),
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                color = if (active) colors.inkSecondary else colors.inkTertiary,
+                style = titleStyle,
+                color = if (shimmer != null) {
+                    Color.Unspecified
+                } else if (active) {
+                    colors.inkSecondary
+                } else {
+                    colors.inkTertiary
+                },
             )
+            if (terminatedLabel != null) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = terminatedLabel,
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = terminatedColor,
+                )
+            }
             if (!expanded && preview.isNotEmpty()) {
                 Spacer(Modifier.width(8.dp))
                 Text(

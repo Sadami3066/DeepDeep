@@ -187,6 +187,7 @@ data class AssistantMessage(
     val summary: MessageSummary? = null,
     val customType: String? = null,
     val customPayload: String? = null,
+    val injectedSource: TurnSource? = null,
 )
 
 enum class RunStatus {
@@ -266,6 +267,7 @@ sealed interface RuntimeEvent {
         override val runId: String,
         val text: String,
         val reminder: String?,
+        val source: TurnSource = TurnSource.USER,
     ) : RuntimeEvent
 
     data class UserInputAdmitted(
@@ -306,6 +308,12 @@ sealed interface RuntimeEvent {
     ) : RuntimeEvent
 }
 
+sealed interface PluginTurnResult {
+    data class Started(val runId: String) : PluginTurnResult
+
+    data class Queued(val runId: String) : PluginTurnResult
+}
+
 interface ModelSettings {
     val config: kotlinx.coroutines.flow.Flow<ModelConfig>
 
@@ -336,6 +344,8 @@ interface SessionCommands {
     suspend fun retryLastTurn(sessionId: String)
 
     suspend fun deliverReminder(sessionId: String, text: String, reminder: String?)
+
+    suspend fun deliverPluginTurn(sessionId: String, text: String, followUp: Boolean = false): PluginTurnResult
 
     suspend fun activeRunId(sessionId: String): String?
 

@@ -93,6 +93,44 @@ class AgentRuntimeHostTest {
     }
 
     @Test
+    fun deliverPluginTurnStartsIdleTurnAndQueuesWhenBusy() = runTest {
+        val fixture = Fixture(backgroundScope)
+        val received = mutableListOf<RuntimeEvent>()
+        val subscription = backgroundScope.launch {
+            fixture.host.events.collect { received += it.event }
+        }
+        try {
+            runCurrent()
+            val handle = fixture.open("session-1")
+            val started = fixture.host.deliverPluginTurn("session-1", "plugin hello")
+            assertTrue(started is PluginTurnResult.Started)
+            settle()
+            assertEquals(listOf("plugin hello"), handle.prompts.map { it.text })
+            val injected = received.filterIsInstance<RuntimeEvent.TurnInjected>().single()
+            assertEquals(TurnSource.PLUGIN, injected.source)
+            assertEquals("plugin hello", injected.text)
+
+            received.clear()
+            handle.busy = true
+            val steered = fixture.host.deliverPluginTurn("session-1", "steer me")
+            assertTrue(steered is PluginTurnResult.Queued)
+            assertEquals(QueueBehavior.Steer, handle.prompts.last().behavior)
+            val followUp = fixture.host.deliverPluginTurn("session-1", "after this", followUp = true)
+            assertTrue(followUp is PluginTurnResult.Queued)
+            assertEquals(QueueBehavior.FollowUp, handle.prompts.last().behavior)
+            settle()
+            assertEquals(
+                listOf("steer me", "after this"),
+                received.filterIsInstance<RuntimeEvent.TurnInjected>().map { it.text },
+            )
+            assertTrue(received.filterIsInstance<RuntimeEvent.TurnInjected>().all { it.source == TurnSource.PLUGIN })
+        } finally {
+            subscription.cancel()
+            fixture.close()
+        }
+    }
+
+    @Test
     fun stopInvalidatesPendingGoalContinuation() = runTest {
         val fixture = Fixture(backgroundScope)
         try {

@@ -77,6 +77,10 @@ class PiSessionEngine(
         val allTools = buildTools(activeShell, binding)
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         var created: AgentSession? = null
+        suspend fun pluginContextSection(): Map<String, String> {
+            val context = hooks.systemContext?.invoke()?.takeIf { it.isNotBlank() } ?: return emptyMap()
+            return mapOf("plugin_context" to wrapPromptSection("plugin_context", context))
+        }
         val currentSections: suspend () -> Map<String, String> = {
             val session = created
             buildSessionSystemPromptSections(
@@ -92,7 +96,7 @@ class PiSessionEngine(
                         "paths",
                         "技能目录：${agentDirectory / "skills"}。App 私有数据目录：${agentDirectory.parent?.parent ?: agentDirectory}（/data/data 等价），bash 与文件工具按同一真实路径读写。",
                     ),
-                ) + extraSystemPromptSections + buildToolRuleSection(tools),
+                ) + pluginContextSection() + extraSystemPromptSections + buildToolRuleSection(tools),
             )
         }
         val session = createAgentSession(

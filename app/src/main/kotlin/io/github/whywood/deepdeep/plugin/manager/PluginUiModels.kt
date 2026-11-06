@@ -42,6 +42,7 @@ data class PluginSnapshot(
     val installedSizeBytes: Long?,
     val lastError: String?,
     val publisher: PublisherInfo?,
+    val capabilities: Set<String> = emptySet(),
 ) {
     val installed: Boolean get() = installedVersion != null
 
