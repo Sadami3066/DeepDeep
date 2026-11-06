@@ -137,4 +137,26 @@ class PluginContributionMaterializerTest {
         assertEquals(PluginPhase.INSTALLED, gate.descriptor("alpha")?.phase)
         assertNotNull(gate.view("alpha"))
     }
+
+    @Test
+    fun unloadedPluginWithoutErrorIsAvailable() = runTest {
+        val gate = PluginRuntimeRegistry()
+        gate.register(managerRecord("alpha"), managerRuntime(managerManifest("alpha"), plugin = null))
+        PluginContributionMaterializer(gate).refreshAll()
+
+        assertEquals(PluginAvailabilityUi.Available, gate.view("alpha")?.availability)
+        assertEquals(PluginPhase.INSTALLED, gate.descriptor("alpha")?.phase)
+    }
+
+    @Test
+    fun unloadedPluginWithErrorKeepsUnavailableReason() = runTest {
+        val gate = PluginRuntimeRegistry()
+        gate.register(
+            managerRecord("alpha", lastError = "boom"),
+            managerRuntime(managerManifest("alpha"), plugin = null),
+        )
+        PluginContributionMaterializer(gate).refreshAll()
+
+        assertEquals(PluginAvailabilityUi.Unavailable("boom"), gate.view("alpha")?.availability)
+    }
 }

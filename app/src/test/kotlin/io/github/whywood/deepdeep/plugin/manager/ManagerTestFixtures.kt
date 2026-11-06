@@ -44,11 +44,13 @@ internal fun managerRecord(
     enabled: Boolean = true,
     installedVersion: String? = "1.0.0",
     pendingVersion: String? = null,
+    lastError: String? = null,
 ): PluginRecord = PluginRecord(
     id = id,
     enabled = enabled,
     installedVersion = installedVersion,
     pendingVersion = pendingVersion,
+    lastError = lastError,
 )
 
 internal fun managerTool(name: String): PluginTool = PluginTool(

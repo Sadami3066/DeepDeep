@@ -77,7 +77,7 @@ internal data class PluginRuntimeView(
             loaded = plugin != null,
             installable = manifest.installable,
             failed = failure ?: materializationFailure ?: (status as? PluginStatusUi.Failed)?.label,
-            degraded = (availability as? PluginAvailabilityUi.Unavailable)?.reason,
+            degraded = (availability as? PluginAvailabilityUi.Unavailable)?.reason?.takeIf { it.isNotBlank() },
         )
 
     val phase: PluginPhase get() = PluginPhase.derive(record, facts)

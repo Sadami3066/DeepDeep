@@ -27,7 +27,10 @@ internal class PluginContributionMaterializer(
         val plugin = view.plugin
             ?: return MaterializedPlugin(
                 contributions = PluginContributions(),
-                availability = PluginAvailabilityUi.Unavailable(view.record.lastError.orEmpty()),
+                availability = view.record.lastError
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { PluginAvailabilityUi.Unavailable(it) }
+                    ?: PluginAvailabilityUi.Available,
                 status = null,
                 skills = emptyList(),
                 failure = null,
