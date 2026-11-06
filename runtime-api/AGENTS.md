@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `RuntimeTypes.kt` | 核心模型、事件流与 AgentRuntime 五个接口 |
-| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime） |
+| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime/FileRef）；`ToolResultDetails` 定义 details 保留键 `deepdeep.fileRefs` 的编解码，`fileRefDisplayText` 给文本回退 |
 | `GoalContracts.kt` | 目标阶段、轮次模型与两个驱动接口 |
 | `JobContracts.kt` | 后台任务快照、状态与 JobController |
 | `Notices.kt` | 回合来源、回合提示与三类带外事件 |

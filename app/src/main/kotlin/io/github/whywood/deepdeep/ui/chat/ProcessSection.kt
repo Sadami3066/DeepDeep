@@ -198,6 +198,7 @@ internal fun ProcessSection(
                                     titleOverride = deliveredCount?.let { count ->
                                         stringResource(R.string.present_tool_delivered, count)
                                     },
+                                    onFileClick = onFileClick,
                                 )
                                 val record = if (trace.status == ToolActivityStatus.DONE) {
                                     remember(trace) { parseQuestionRecord(trace) }

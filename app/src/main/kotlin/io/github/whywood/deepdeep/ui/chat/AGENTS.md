@@ -18,7 +18,11 @@
 | 文件 | 职责 |
 |---|---|
 | `ChatTurn.kt` | 单个回合渲染：用户气泡、assistant 正文、过程、交付、重试 |
-| `ConversationReducer.kt`、`ConversationEdits.kt` | 会话状态模型、runtime 事件 reducer 与纯编辑操作 |
+| `ConversationReducer.kt` | 会话状态模型 `ConversationState`、runtime 事件 `reduce()` 入口与消息/步骤共享小工具 |
+| `ConversationRunReducer.kt` | 运行生命周期归约：RunStarted/Finished/Failed、外部 run 接管、后台轮次、失败/重试收敛 |
+| `ConversationMessageReducer.kt` | assistant 消息归约：文本/思考增量、工具步骤与结果回填、插件消息卡 |
+| `ConversationInputReducer.kt` | 用户输入归约：admission、插话/定时提醒注入、排队输入与通知消息 |
+| `ConversationEdits.kt` | 会话纯编辑操作：开回合、步骤折叠、重试调度/恢复/取消 |
 | `ProcessSection.kt`、`ReasoningCard.kt` | 过程区与思考卡：步骤列表、运行计时、折叠 |
 | `RunErrorDetails.kt` | 运行失败文案本地化与原始错误详情 |
 | `SelectionActions.kt`、`SelectionCoordinator.kt`、`ChatActions.kt` | 文本选择菜单、跨消息选择协调与剪贴板复制 |
@@ -46,7 +50,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PresentCard.kt` | present 交付卡：文件/图片/视频/HTML/创意解析与预览 |
-| `ToolCard.kt`、`ToolNames.kt` | 工具调用步骤卡（结构化参数 `rawArguments`/结构化 `resultPayload` 渲染、复制、插件 `tool.card.content:<tool>` 自绘内容体与默认兜底）与 MCP 工具名显示 |
+| `ToolCard.kt`、`ToolNames.kt` | 工具调用步骤卡（结构化参数 `rawArguments`/结构化 `resultPayload` 渲染、FileRef 文件行与 `onFileClick` 打开、复制、插件 `tool.card.content:<tool>` 自绘内容体与默认兜底）与 MCP 工具名显示 |
 | `MediaSave.kt` | 媒体保存到下载与分享 |
 | `FileViewer.kt`、`HtmlFileView.kt` | 本地文件预览对话框（文本/图片/源码）与 HTML WebView 预览 |
 | `CameraCaptureSheet.kt`、`CameraBarcodeAnalyzer.kt` | 内嵌相机 sheet（拍照+扫码）与 ML Kit 条码分析 |

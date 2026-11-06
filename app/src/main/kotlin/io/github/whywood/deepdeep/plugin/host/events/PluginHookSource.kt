@@ -25,6 +25,50 @@ internal class RuntimeHookSource(private val registry: PluginRegistry) : PluginH
     fun snapshot(): HookSnapshot = registry.snapshot().let { HookSnapshot(it.version, it.hooks) }
 }
 
+internal class SessionHookSource(
+    private val snapshots: () -> HookSnapshot,
+    private val sessionHooks: Map<String, PluginHooks>,
+) : PluginHookSource {
+    private val lock = Any()
+
+    private var frozen: Frozen? = null
+
+    override fun entries(): List<PluginHooksEntry> = synchronized(lock) { currentLocked() }.entries
+
+    fun snapshot(): HookSnapshot = synchronized(lock) { currentLocked() }
+
+    fun freeze(runId: String): HookSnapshot = synchronized(lock) {
+        compose(snapshots()).also { frozen = Frozen(runId, it) }
+    }
+
+    fun release(runId: String): HookSnapshot? = synchronized(lock) {
+        if (frozen?.runId != runId) return@synchronized null
+        frozen = null
+        compose(snapshots())
+    }
+
+    fun frozenIsEmpty(runId: String): Boolean = synchronized(lock) {
+        val current = frozen ?: return@synchronized false
+        current.runId == runId && current.snapshot.entries.isEmpty()
+    }
+
+    private fun currentLocked(): HookSnapshot = frozen?.snapshot ?: compose(snapshots())
+
+    private fun compose(snapshot: HookSnapshot): HookSnapshot {
+        if (sessionHooks.isEmpty()) return snapshot
+        val entries = snapshot.entries.map { entry ->
+            val override = sessionHooks[entry.pluginId]?.takeIf { it !== PluginHooks.None }
+            override?.let { hooks -> entry.copy(hooks = hooks) } ?: entry
+        }
+        return HookSnapshot(snapshot.version, entries)
+    }
+
+    private class Frozen(
+        val runId: String,
+        val snapshot: HookSnapshot,
+    )
+}
+
 internal class PluginRuntimeHooksFactory(
     private val source: PluginHookSource,
     private val reporter: PluginHookReporter = PluginHookReporter.Logging,

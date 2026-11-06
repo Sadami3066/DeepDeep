@@ -4,17 +4,27 @@ import dev.pi.agent.AgentToolResult
 import dev.pi.ai.Content
 import dev.pi.ai.ImageContent
 import dev.pi.ai.TextContent
+import dev.pi.ai.ToolResultMessage
 import kotlinx.serialization.json.JsonObject
 
-internal fun AgentToolResult.toToolResultPayload(): ToolResultPayload = content.toToolResultPayload()
+internal fun AgentToolResult.toToolResultPayload(): ToolResultPayload =
+    content.toToolResultPayload(ToolResultDetails.decodeFileRefs(details))
 
-internal fun List<Content>.toToolResultPayload(): ToolResultPayload {
-    val blocks = mapNotNull { content ->
-        when (content) {
-            is TextContent -> ToolResultPayload.Block.Text(content.text)
-            is ImageContent -> ToolResultPayload.Block.Image(content.data, content.mimeType)
-            else -> null
+internal fun ToolResultMessage.toToolResultPayload(): ToolResultPayload =
+    content.toToolResultPayload(ToolResultDetails.decodeFileRefs(details))
+
+private fun List<Content>.toToolResultPayload(
+    fileRefs: List<ToolResultPayload.Block.FileRef>,
+): ToolResultPayload {
+    val blocks = buildList {
+        this@toToolResultPayload.forEach { content ->
+            when (content) {
+                is TextContent -> add(ToolResultPayload.Block.Text(content.text))
+                is ImageContent -> add(ToolResultPayload.Block.Image(content.data, content.mimeType))
+                else -> Unit
+            }
         }
+        fileRefs.forEach { add(it) }
     }
     if (blocks.isEmpty()) return ToolResultPayload.Empty
     if (blocks.all { it is ToolResultPayload.Block.Text }) {

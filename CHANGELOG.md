@@ -2,6 +2,10 @@
 
 ## HEAD (since m2)
 
+- feat: 插件会话 hooks 接入统一管线：`contributionsFor` 返回的 hooks 按 pluginId 覆盖全局 hooks（默认空实现沿用全局），同一会话一次物化；run 开始冻结 hooks 集合、结束（含失败）后按最新快照解冻，运行中启停插件不影响本轮 [插件] [运行时]
+- feat: 工具结果 FileRef 结构化：runtime-api 新增 `ToolResultPayload.Block.FileRef`，details 保留键 `deepdeep.fileRefs` 编解码；content 保留 `file: <path> (<mime>)` 文本回退，工具卡文件行可点击打开，历史 JSONL 可还原 [插件] [运行时] [聊天]
+- refactor: 装配拆出 `graph/` 子图：插件装配独立为 `PluginGraph`，AppGraph 只保留懒加载入口（656 → 523 行），行为不变 [插件]
+- refactor: 聊天事件归约拆分：`ConversationReducer`（574 行）拆为入口/运行/消息/输入四个 reducer 文件，公开入口与行为不变 [聊天]
 - docs: 按 AI 插件作者演练补全 `docs/PLUGIN_DEV.md` 与 `plugin-template/README.md`（构建前置与 SDK/JDK、产物命名、hooks 字段对照表、安装前自查清单、SettingSpec/PluginStatus 细节）[docs] [插件]
 - docs: 重写插件作者文档 `docs/PLUGIN_DEV.md`（代码插件模型、21 观察 + 4 变换 hooks、Compose 槽位、18 个宿主服务、`.ddp` 签名/TOFU/激活/回滚、作者工作流），同步 `plugin-template`/`plugin-sample` 与各级 `AGENTS.md` [docs] [插件]
 - feat: 插件失败可恢复：激活中断/同版本连续 2 次启动失败后跳过或自动停用，详情页「插件故障」区提供重试激活与回滚上一版本（外部插件）[插件]

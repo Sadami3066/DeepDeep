@@ -6,6 +6,9 @@ import dev.pi.ai.ImageContent
 import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.runtime.ToolResultDetails
+import io.github.whywood.deepdeep.runtime.ToolResultPayload
+import io.github.whywood.deepdeep.runtime.fileRefDisplayText
 import java.util.Base64
 import kotlinx.serialization.json.JsonObject
 
@@ -33,9 +36,18 @@ internal fun PluginToolResult.toAgentToolResult(): AgentToolResult = when (this)
 
     is PluginToolResult.Rich -> AgentToolResult(
         content = blocks.map { block -> block.toContent() },
-        details = details,
+        details = details.withFileRefs(blocks.filterIsInstance<ToolBlock.FileRef>()),
         isError = isError.takeIf { it },
     )
+}
+
+private fun JsonObject?.withFileRefs(fileRefs: List<ToolBlock.FileRef>): JsonObject? {
+    if (fileRefs.isEmpty()) return this
+    val base = this ?: JsonObject(emptyMap())
+    val encoded = ToolResultDetails.encodeFileRefs(
+        fileRefs.map { fileRef -> ToolResultPayload.Block.FileRef(fileRef.path, fileRef.mimeType) },
+    )
+    return JsonObject(base + (ToolResultDetails.FILE_REFS_KEY to encoded))
 }
 
 private fun Content.toToolBlock(): ToolBlock = when (this) {
@@ -55,8 +67,5 @@ private fun ToolBlock.toContent(): Content = when (this) {
         mimeType = mimeType,
     )
 
-    is ToolBlock.FileRef -> TextContent(fileRefText(path, mimeType))
+    is ToolBlock.FileRef -> TextContent(fileRefDisplayText(path, mimeType))
 }
-
-private fun fileRefText(path: String, mimeType: String?): String =
-    if (mimeType.isNullOrBlank()) "file: $path" else "file: $path ($mimeType)"

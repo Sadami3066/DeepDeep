@@ -7,11 +7,14 @@ import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.runtime.ToolResultDetails
+import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import java.util.Base64
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -101,6 +104,7 @@ class PluginToolAdapterTest {
                     ToolBlock.Image(imageBytes, "image/png"),
                     ToolBlock.FileRef("/tmp/plugin-output.txt", "text/plain"),
                 ),
+                details = buildJsonObject { put("kind", "rich") },
             )
         }.let(PluginToolAdapter::toCodingTool)
 
@@ -111,6 +115,11 @@ class PluginToolAdapterTest {
         assertEquals(Base64.getEncoder().encodeToString(imageBytes), image.data)
         assertEquals("image/png", image.mimeType)
         assertEquals("file: /tmp/plugin-output.txt (text/plain)", (result.content[2] as TextContent).text)
+        assertEquals(
+            listOf(ToolResultPayload.Block.FileRef("/tmp/plugin-output.txt", "text/plain")),
+            ToolResultDetails.decodeFileRefs(result.details),
+        )
+        assertEquals("rich", (result.details as JsonObject)["kind"]?.jsonPrimitive?.content)
         assertNull(result.isError)
     }
 
@@ -122,6 +131,10 @@ class PluginToolAdapterTest {
 
         val result = tool.execute("call-1", emptyArgs, null, null)
         assertEquals("file: /tmp/output.bin", (result.content.single() as TextContent).text)
+        assertEquals(
+            listOf(ToolResultPayload.Block.FileRef("/tmp/output.bin")),
+            ToolResultDetails.decodeFileRefs(result.details),
+        )
     }
 
     @Test

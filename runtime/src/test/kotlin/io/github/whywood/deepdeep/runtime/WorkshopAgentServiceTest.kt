@@ -39,6 +39,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -496,7 +497,7 @@ class WorkshopAgentServiceTest {
             }
         }
         val catalog = ProviderCatalog(hookTransport, credentials)
-        val bound = mutableListOf<BoundSession>()
+        val bound = mutableListOf<SessionBinding>()
         val closed = mutableListOf<String>()
         var factoryCalls = 0
         val service = WorkshopAgentService(
@@ -527,8 +528,12 @@ class WorkshopAgentServiceTest {
 
             assertEquals(1, factoryCalls)
             assertEquals(1, bound.size)
-            assertEquals(workspace.absolutePath, bound.single().cwd)
-            assertEquals(listOf(bound.single().sessionId), closed)
+            val binding = bound.single()
+            assertFalse(binding.supportsChatDelivery)
+            val snapshot = binding.current()
+            assertNotNull(snapshot)
+            assertEquals(workspace.absolutePath, snapshot!!.cwd)
+            assertEquals(listOf(snapshot.sessionId), closed)
             assertTrue(modelRequests.last().toString().contains("hello-input/plugin"))
         } finally {
             root.deleteRecursively()

@@ -124,7 +124,7 @@ class PiSessionEngine(
         created = session
         session.agent.installToolExecutionHooks(hooks.toolHooks)
         binding.attach(session)
-        binding.current()?.let { bound -> hooks.onSessionBound?.invoke(bound) }
+        hooks.onSessionBound?.invoke(binding)
         return session
     }
 

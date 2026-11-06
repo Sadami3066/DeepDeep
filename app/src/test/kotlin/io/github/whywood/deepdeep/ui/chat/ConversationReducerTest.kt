@@ -9,9 +9,11 @@ import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
+import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.runtime.UsageChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
@@ -572,5 +574,154 @@ class ConversationReducerTest {
         assertEquals("second", steps[1].output)
         assertEquals(ToolActivityStatus.RUNNING, steps[0].status)
         assertEquals(ToolActivityStatus.DONE, steps[1].status)
+    }
+
+    @Test
+    fun reasoningDeltaStreamsReasoningStepAndClearsFailure() {
+        var state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    status = MessageStatus.FAILED,
+                    runId = "run-1",
+                    error = "boom",
+                    rawError = "boom",
+                ),
+            ),
+            sending = true,
+        )
+        state = reduce(state, RuntimeEvent.ReasoningDelta("run-1", "think"), strings)
+        state = reduce(state, RuntimeEvent.ReasoningDelta("run-1", "ing"), strings)
+        val message = state.messages.single()
+        assertEquals("thinking", (message.steps.single() as AssistantStep.Reasoning).text)
+        assertEquals(MessageStatus.RUNNING, message.status)
+        assertNull(message.error)
+        assertNull(message.rawError)
+    }
+
+    @Test
+    fun toolFinishedWithoutStartedCreatesCompletedTrace() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        val reduced = reduce(
+            state,
+            RuntimeEvent.ToolFinished("run-1", "call-9", "read", "done", false, 12L),
+            strings,
+        )
+        val trace = (reduced.messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals("read", trace.name)
+        assertEquals("call-9", trace.toolCallId)
+        assertEquals(ToolActivityStatus.DONE, trace.status)
+        assertEquals("done", trace.output)
+        assertEquals(12L, trace.durationMs)
+        assertTrue(trace.arguments.isEmpty())
+    }
+
+    @Test
+    fun toolFinishedWithErrorMarksTraceFailed() {
+        var state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        state = reduce(state, RuntimeEvent.ToolStarted("run-1", "call-1", "bash", emptyMap(), 100L), strings)
+        state = reduce(state, RuntimeEvent.ToolFinished("run-1", "call-1", "bash", "exit 1", true, 20L), strings)
+        val trace = (state.messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals(ToolActivityStatus.FAILED, trace.status)
+        assertNull(trace.output)
+        assertEquals("exit 1", trace.error)
+    }
+
+    @Test
+    fun stoppedFinishMarksMessageStopped() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+            activity = RuntimeActivity.RunningTool("bash"),
+            activityStartedAt = 500L,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-1", "", RunStatus.STOPPED, 2000L), strings)
+        val message = reduced.messages.single()
+        assertEquals(MessageStatus.STOPPED, message.status)
+        assertFalse(message.streaming)
+        assertEquals(2000L, message.finishedAt)
+        assertFalse(reduced.sending)
+        assertNull(reduced.activity)
+        assertNull(reduced.activityStartedAt)
+    }
+
+    @Test
+    fun terminalWithoutMatchingTargetOnlySettlesRunState() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "keep", status = MessageStatus.DONE)),
+            activity = RuntimeActivity.Thinking,
+            activityStartedAt = 1000L,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-unknown", "ignored", RunStatus.DONE, 2000L), strings)
+        assertEquals(state.messages, reduced.messages)
+        assertFalse(reduced.sending)
+        assertNull(reduced.activity)
+        assertNull(reduced.activityStartedAt)
+    }
+
+    @Test
+    fun usageChangedUpdatesSessionUsage() {
+        val usage = SessionUsage(10L, 100L, 5L, 3L, 1L, 2L, 0.5)
+        val reduced = reduce(ConversationState(), UsageChanged("run-1", usage), strings)
+        assertEquals(usage, reduced.usage)
+    }
+
+    @Test
+    fun activityClearedResetsStartTimestamp() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            activity = RuntimeActivity.Thinking,
+            activityStartedAt = 1000L,
+        )
+        val reduced = reduce(state, RuntimeEvent.ActivityChanged("run-1", null), strings, now = 2000L)
+        assertNull(reduced.activity)
+        assertNull(reduced.activityStartedAt)
+    }
+
+    @Test
+    fun externalRunReusesTrailingUserPrompt() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(1, AssistantRole.ASSISTANT, "previous", status = MessageStatus.DONE),
+                AssistantMessage(2, AssistantRole.USER, "hello"),
+            ),
+        )
+        val reduced = reduce(state, RuntimeEvent.RunStarted("run-ext", 1000L, prompt = "hello"), strings)
+        assertEquals(3, reduced.messages.size)
+        assertEquals(1, reduced.messages.count { it.role == AssistantRole.USER })
+        assertEquals("run-ext", reduced.messages.last().runId)
+        assertEquals(1000L, reduced.activityStartedAt)
+    }
+
+    @Test
+    fun userInputAdmittedForUnknownRunIsIgnored() {
+        val state = ConversationState(
+            messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.UserInputAdmitted("run-x", "drop"), strings, now = 1000L)
+        assertEquals(state, reduced)
+    }
+
+    @Test
+    fun consumeFinalTextDropsSuffixAndIgnoresBlankFinal() {
+        val steps = listOf(AssistantStep.Text(id = 0, text = "answer"))
+        assertTrue(consumeFinalText(steps, "prefix answer").isEmpty())
+        assertEquals(steps, consumeFinalText(steps, "   "))
+        assertTrue(consumeFinalText(emptyList(), "answer").isEmpty())
+    }
+
+    @Test
+    fun reminderDisplayTextHandlesHeaderWithoutBlankLine() {
+        assertEquals("正文", reminderDisplayText("[定时提醒] 喝水\n正文"))
+        assertEquals("plain", reminderDisplayText("plain"))
     }
 }

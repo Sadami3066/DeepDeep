@@ -58,7 +58,6 @@
     <string name="plugins_phase_failed">Failed to load</string>
     <string name="plugins_phase_disabled">Disabled</string>
     <string name="plugins_phase_pending_restart">Waiting for restart</string>
-    <string name="plugins_phase_unloaded">Not loaded</string>
     <string name="plugins_detail_phase">Stage</string>
     <string name="plugins_detail_installed_version">Installed version</string>
     <string name="plugins_detail_source">Source</string>

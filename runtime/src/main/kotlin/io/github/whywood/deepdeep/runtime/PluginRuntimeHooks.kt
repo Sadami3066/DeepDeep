@@ -39,7 +39,7 @@ data class RuntimeHooks(
     val promptTransform: PromptTransform? = null,
     val inputHandler: InputHandler? = null,
     val toolHooks: ToolExecutionHooks? = null,
-    val onSessionBound: ((BoundSession) -> Unit)? = null,
+    val onSessionBound: ((SessionBinding) -> Unit)? = null,
     val onSessionClosed: ((String) -> Unit)? = null,
 ) {
     companion object {

@@ -41,6 +41,60 @@ class ToolPayloadMappingTest {
     }
 
     @Test
+    fun fileRefDetailsBecomeStructuredBlocks() {
+        val details = buildJsonObject {
+            put("kind", "report")
+            put(
+                ToolResultDetails.FILE_REFS_KEY,
+                ToolResultDetails.encodeFileRefs(
+                    listOf(
+                        ToolResultPayload.Block.FileRef("/tmp/report.pdf", "application/pdf"),
+                        ToolResultPayload.Block.FileRef("/tmp/raw.bin"),
+                    ),
+                ),
+            )
+        }
+        val result = AgentToolResult(
+            content = listOf(
+                TextContent("before"),
+                TextContent(fileRefDisplayText("/tmp/report.pdf", "application/pdf")),
+                TextContent(fileRefDisplayText("/tmp/raw.bin", null)),
+            ),
+            details = details,
+        )
+
+        assertEquals(
+            ToolResultPayload.Blocks(
+                listOf(
+                    ToolResultPayload.Block.Text("before"),
+                    ToolResultPayload.Block.Text("file: /tmp/report.pdf (application/pdf)"),
+                    ToolResultPayload.Block.Text("file: /tmp/raw.bin"),
+                    ToolResultPayload.Block.FileRef("/tmp/report.pdf", "application/pdf"),
+                    ToolResultPayload.Block.FileRef("/tmp/raw.bin"),
+                ),
+            ),
+            result.toToolResultPayload(),
+        )
+    }
+
+    @Test
+    fun malformedFileRefDetailsAreIgnored() {
+        val malformed = AgentToolResult(
+            content = listOf(TextContent("ok")),
+            details = buildJsonObject { put(ToolResultDetails.FILE_REFS_KEY, "not-an-array") },
+        )
+        val incomplete = AgentToolResult(
+            content = listOf(TextContent("ok")),
+            details = buildJsonObject {
+                put(ToolResultDetails.FILE_REFS_KEY, ToolResultDetails.encodeFileRefs(listOf(ToolResultPayload.Block.FileRef(""))))
+            },
+        )
+
+        assertEquals(ToolResultPayload.Text("ok"), malformed.toToolResultPayload())
+        assertEquals(ToolResultPayload.Text("ok"), incomplete.toToolResultPayload())
+    }
+
+    @Test
     fun displayArgumentsKeepScalarsReadable() {
         val arguments = buildJsonObject {
             put("command", "ls -la")

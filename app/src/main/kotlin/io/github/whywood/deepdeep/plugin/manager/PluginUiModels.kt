@@ -17,7 +17,6 @@ enum class PluginPhaseUi {
     FAILED,
     DISABLED,
     PENDING_RESTART,
-    UNLOADED,
 }
 
 sealed interface PluginAvailabilityUi {

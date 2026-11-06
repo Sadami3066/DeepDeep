@@ -2,18 +2,14 @@ package io.github.whywood.deepdeep.plugin.host
 
 import dev.pi.agent.AgentToolResult
 import dev.pi.agent.AgentToolUpdateCallback
-import dev.pi.ai.Content
-import dev.pi.ai.ImageContent
 import dev.pi.ai.RequestAbortedException
 import dev.pi.ai.RunSignal
-import dev.pi.ai.TextContent
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
-import io.github.whywood.deepdeep.plugin.api.ToolBlock
-import java.util.Base64
+import io.github.whywood.deepdeep.plugin.host.events.toAgentToolResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -52,7 +48,7 @@ internal object PluginToolAdapter {
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
-                for (partial in updates) onUpdate(partial.toAgentResult())
+                for (partial in updates) onUpdate(partial.toAgentToolResult())
             }
             val result = runTool {
                 tool.execute(
@@ -76,7 +72,7 @@ internal object PluginToolAdapter {
     }
 
     private suspend fun runTool(block: suspend () -> PluginToolResult): AgentToolResult = try {
-        block().toAgentResult()
+        block().toAgentToolResult()
     } catch (error: RequestAbortedException) {
         throw error
     } catch (error: CancellationException) {
@@ -85,33 +81,6 @@ internal object PluginToolAdapter {
         toolError(error.message ?: error.javaClass.simpleName)
     }
 
-    private fun PluginToolResult.toAgentResult(): AgentToolResult = when (this) {
-        is PluginToolResult.Text -> AgentToolResult(
-            content = listOf(TextContent(text)),
-            details = details,
-            isError = isError.takeIf { it },
-        )
-
-        is PluginToolResult.Rich -> AgentToolResult(
-            content = blocks.map { it.toContent() },
-            details = details,
-            isError = isError.takeIf { it },
-        )
-    }
-
-    private fun ToolBlock.toContent(): Content = when (this) {
-        is ToolBlock.Text -> TextContent(text)
-        is ToolBlock.Image -> ImageContent(
-            data = Base64.getEncoder().encodeToString(data),
-            mimeType = mimeType,
-        )
-
-        is ToolBlock.FileRef -> TextContent(fileRefText(path, mimeType))
-    }
-
-    private fun fileRefText(path: String, mimeType: String?): String =
-        if (mimeType.isNullOrBlank()) "file: $path" else "file: $path ($mimeType)"
-
     private fun toolError(message: String): AgentToolResult =
-        AgentToolResult(content = listOf(TextContent(message)), isError = true)
+        AgentToolResult(content = listOf(dev.pi.ai.TextContent(message)), isError = true)
 }

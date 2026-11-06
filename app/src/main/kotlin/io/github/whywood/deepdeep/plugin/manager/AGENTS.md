@@ -14,7 +14,7 @@
 | `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门 |
 | `PluginLifecycle.kt` | 每插件 `SupervisorJob` scope、`PluginHostFactory`、enable/disable/uninstall 收尾、技能同步 |
 | `PluginActivationProtocol.kt` | 激活协议 prepare→probe→commit→swap 与失败矩阵 |
-| `PluginSessionHooks.kt` | 会话 hooks 绑定、运行期/SDK 事件派发、每 `SessionBinding` 一次 `contributionsFor` |
+| `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
 | `PluginUiProjection.kt` | UI 状态投影：只读 record+runtime+descriptor，不调用插件 |
 | `PluginRules.kt` | 纯规则：安装版本、可安装/可卸载、更新可用、设置叶子展开 |
 | `PluginRecoveryPolicy.kt` | 崩溃恢复纯策略：激活中断（marker attempts）与同版本连续启动次数 → 继续/需手动重试/自动禁用 |
@@ -33,8 +33,8 @@
 - 单一事实源：用户意图（enabled/installedVersion/pending\*/previous\*/lastError）在 `PluginRecord`；运行期事实（实例/host/scope/会话绑定/物化贡献/failed/degraded）在 `ManagedPlugin`；相位由 `PluginPhase.derive(record, facts)` 纯函数派生，只在写 `PluginRegistry` descriptor 时算一次；UI 的 `PENDING_RESTART` 由 `record.pendingVersion` 派生，不另存。
 - 状态变更只经 `PluginRuntimeRegistry`（写串行、读返回不可变视图）；写盘（`builtin_state.json`/外部记录 v4）由流程负责：先写盘，再过闸门。
 - 一次物化：每次 refresh 每插件调用 `settings()`/`skills()`/`availability()` 各 1 次，enabled 且已安装时 `contributions()`/`ui()`/`promptSections()`/`status()`/`actions()`/`detailRows()` 各 1 次；工具装配、`promptBody`、技能同步、槽位、冲突诊断、UI 快照只读物化结果，消费路径不再调用插件。
-- 生命周期：每插件独立 `SupervisorJob` scope；disable/uninstall/close 统一 cancel scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册或清贡献 → 同步技能（会话钩子随刷新快照失效）；单插件 `Throwable` 隔离（`CancellationException` 重抛）。内置插件卸载保留 descriptor 与实例可重装；禁用但未装载的插件为 `DISABLED` 而非 `FAILED`。
-- 会话：`bindSessionHooks` 每会话一个 `PluginRuntimeHooksAdapter`；`tools(binding)` 对同一 `SessionBinding` 实例只调用一次 `contributionsFor` 并缓存（身份相等、弱引用+锁）。
+- 生命周期：每插件独立 `SupervisorJob` scope；disable/uninstall/close 统一 cancel scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册或清贡献 → 同步技能（会话钩子在当前 run 内按冻结集合继续派发，run 结束后的刷新快照生效）；单插件 `Throwable` 隔离（`CancellationException` 重抛）。内置插件卸载保留 descriptor 与实例可重装；禁用但未装载的插件为 `DISABLED` 而非 `FAILED`。
+- 会话：`bindSessionHooks` 接 `SessionBinding`，每会话一个 `PluginRuntimeHooksAdapter`；同一 `SessionBinding` 实例只调用一次 `contributionsFor` 并缓存（身份相等、弱引用+锁），工具与会话 hooks 共用这次物化；会话贡献返回非空 hooks 时按 pluginId 覆盖该插件的全局 hooks，默认空实现（`PluginHooks.None`）沿用全局 hooks；run 开始冻结会话钩子集合、`RunFinished`/`RunFailed` 派发完成后解冻并刷成最新快照（冻结期间启停插件不影响本轮，解冻后按最新快照生效）。
 - 外部安装/更新只做「校验 + 暂存」，`PENDING_RESTART` 由 `record.pendingVersion` 表达，下次启动由 `PluginActivationProtocol` 走 prepare/probe/commit/swap；失败按矩阵回滚（旧版本保持可用）。
 - 设置：`setSetting` 支持 `SettingSpec.Group` 内叶子 key；值经 `normalize` 归一化后落 `settings.json`。
 - setup 与插件动作由 `PluginSetupFlow` 在独立 Job 上执行，`PluginHostManager` 只做接口委托。

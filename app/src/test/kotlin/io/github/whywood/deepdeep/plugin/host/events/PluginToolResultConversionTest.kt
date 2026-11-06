@@ -5,9 +5,13 @@ import dev.pi.ai.ImageContent
 import dev.pi.ai.TextContent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.runtime.ToolResultDetails
+import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import java.util.Base64
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -54,6 +58,7 @@ class PluginToolResultConversionTest {
                 ToolBlock.FileRef("/tmp/a.pdf", "application/pdf"),
                 ToolBlock.FileRef("/tmp/b.txt"),
             ),
+            details = buildJsonObject { put("kind", "rich") },
             isError = true,
         )
         val converted = plugin.toAgentToolResult()
@@ -62,7 +67,35 @@ class PluginToolResultConversionTest {
         assertEquals(Base64.getEncoder().encodeToString(bytes), (converted.content[1] as ImageContent).data)
         assertEquals("file: /tmp/a.pdf (application/pdf)", (converted.content[2] as TextContent).text)
         assertEquals("file: /tmp/b.txt", (converted.content[3] as TextContent).text)
+        assertEquals(
+            listOf(
+                ToolResultPayload.Block.FileRef("/tmp/a.pdf", "application/pdf"),
+                ToolResultPayload.Block.FileRef("/tmp/b.txt"),
+            ),
+            ToolResultDetails.decodeFileRefs(converted.details),
+        )
+        assertEquals("rich", (converted.details as JsonObject)["kind"]?.jsonPrimitive?.content)
         assertEquals(true, converted.isError)
+    }
+
+    @Test
+    fun pluginReplacementKeepsFileRefDetails() {
+        val details = buildJsonObject {
+            put(
+                ToolResultDetails.FILE_REFS_KEY,
+                ToolResultDetails.encodeFileRefs(listOf(ToolResultPayload.Block.FileRef("/tmp/a.pdf", "application/pdf"))),
+            )
+        }
+        val converted = PluginToolResult.Rich(
+            blocks = listOf(ToolBlock.Text("rewritten")),
+            details = details,
+        ).toAgentToolResult()
+
+        assertEquals(details, converted.details)
+        assertEquals(
+            listOf(ToolResultPayload.Block.FileRef("/tmp/a.pdf", "application/pdf")),
+            ToolResultDetails.decodeFileRefs(converted.details),
+        )
     }
 
     @Test

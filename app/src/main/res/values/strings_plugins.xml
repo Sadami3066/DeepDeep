@@ -58,7 +58,6 @@
     <string name="plugins_phase_failed">加载失败</string>
     <string name="plugins_phase_disabled">已关闭</string>
     <string name="plugins_phase_pending_restart">等待重启</string>
-    <string name="plugins_phase_unloaded">未加载</string>
     <string name="plugins_detail_phase">阶段</string>
     <string name="plugins_detail_installed_version">已安装版本</string>
     <string name="plugins_detail_source">来源</string>

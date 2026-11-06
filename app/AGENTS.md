@@ -7,7 +7,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | 文件 | 职责 |
 |---|---|
 | `DeepDeepApplication.kt` | Application 启动：hidden API 豁免、创建 AppGraph、后台预热字体 |
-| `AppGraph.kt` | 全局依赖装配：偏好/凭据/runtime host/插件/权限/工具/Linux 环境，实现 AppDependencies |
+| `AppGraph.kt` | 全局依赖装配：偏好/凭据/runtime host/插件/权限/工具/Linux 环境，实现 AppDependencies；插件装配拆到 `graph/` |
 | `MainActivity.kt` | 唯一 Activity：edge-to-edge、语言包装、深链接与分享入口、通知权限、拉起前台服务 |
 | `DeepDeepApp.kt` | Compose 根：引导门控 → 主壳（抽屉/导航/聊天）、全局浮层与对话框 |
 | `core/AppDependencies.kt` | 按用途切片的依赖接口（Runtime/Storage/Feature/Service/Advanced），Screen 只取所需，便于测试替身 |
@@ -18,6 +18,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 
 | 包 | 职责 |
 |---|---|
+| [graph/](src/main/kotlin/io/github/whywood/deepdeep/graph/AGENTS.md) | 装配子图：相关全局依赖的构造与接线从 AppGraph 拆出（当前为插件装配 `PluginGraph`） |
 | [ui/](src/main/kotlin/io/github/whywood/deepdeep/ui/AGENTS.md) | 全部 Compose 页面与组件、导航、抽屉 |
 | [data/](src/main/kotlin/io/github/whywood/deepdeep/data/AGENTS.md) | 偏好、附件、技能、迁移等本地存储 |
 | [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 插件契约与生命周期、外部/内置插件 |

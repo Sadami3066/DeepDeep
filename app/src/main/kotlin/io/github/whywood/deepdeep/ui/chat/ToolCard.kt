@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +62,7 @@ internal fun ToolCard(
     onToggle: () -> Unit,
     onCopyOutput: (String) -> Unit,
     titleOverride: String? = null,
+    onFileClick: ((String) -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
     val rotation = animateFloatAsState(
@@ -166,7 +168,12 @@ internal fun ToolCard(
                 args = remember(rawArguments, tool.arguments) { toolArgumentsJson(rawArguments, tool.arguments) },
                 result = toolSlotResult(tool),
             ) {
-                ToolCardDefaultBody(tool = tool, output = output, onCopyOutput = onCopyOutput)
+                ToolCardDefaultBody(
+                    tool = tool,
+                    output = output,
+                    onCopyOutput = onCopyOutput,
+                    onFileClick = onFileClick,
+                )
             }
         }
     }
@@ -177,10 +184,12 @@ private fun ToolCardDefaultBody(
     tool: ToolTrace,
     output: String?,
     onCopyOutput: (String) -> Unit,
+    onFileClick: ((String) -> Unit)?,
 ) {
     val colors = deepDeepColors()
     val rawArguments = tool.rawArguments
     val argumentsText = remember(rawArguments, tool.arguments) { formatToolArguments(rawArguments, tool.arguments) }
+    val fileRefs = remember(tool.resultPayload) { tool.resultPayload.fileRefs() }
     Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
         if (argumentsText.isNotEmpty()) {
             Text(
@@ -235,6 +244,60 @@ private fun ToolCardDefaultBody(
                 color = colors.inkSecondary,
             )
         }
+        if (fileRefs.isNotEmpty()) {
+            if (argumentsText.isNotEmpty() || output != null) Spacer(Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                fileRefs.forEachIndexed { index, fileRef ->
+                    ToolFileRefRow(
+                        fileRef = fileRef,
+                        onClick = onFileClick?.let { open -> { open(fileRef.path) } },
+                        testTag = "tool_file_ref_${tool.id}_$index",
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolFileRefRow(
+    fileRef: ToolResultPayload.Block.FileRef,
+    onClick: (() -> Unit)?,
+    testTag: String,
+) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .then(if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClick = onClick))
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DdIcon(icon = DdIcons.File, tint = colors.inkTertiary, size = 14.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = fileRef.path,
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall.copy(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+            ),
+            color = colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        fileRef.mimeType?.takeIf { it.isNotBlank() }?.let { mimeType ->
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = mimeType,
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                color = colors.inkTertiary,
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -259,7 +322,7 @@ private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
     val isError = tool.status == ToolActivityStatus.FAILED
     val payload = tool.resultPayload
     if (payload != null) {
-        val blocks = payload.toToolBlocks()
+        val blocks = payload.toPluginToolBlocks()
         if (blocks.isEmpty()) return null
         val first = blocks.firstOrNull()
         return if (blocks.size == 1 && first is ToolBlock.Text) {
@@ -272,7 +335,7 @@ private fun toolSlotResult(tool: ToolTrace): PluginToolResult? {
     return PluginToolResult.Text(text = text, isError = isError)
 }
 
-private fun ToolResultPayload.toToolBlocks(): List<ToolBlock> = when (this) {
+internal fun ToolResultPayload.toPluginToolBlocks(): List<ToolBlock> = when (this) {
     is ToolResultPayload.Text -> listOf(ToolBlock.Text(text))
     is ToolResultPayload.Empty -> emptyList()
     is ToolResultPayload.Blocks -> blocks.map { block ->
@@ -282,9 +345,16 @@ private fun ToolResultPayload.toToolBlocks(): List<ToolBlock> = when (this) {
                 data = runCatching { Base64.getDecoder().decode(block.data) }.getOrDefault(ByteArray(0)),
                 mimeType = block.mimeType,
             )
+
+            is ToolResultPayload.Block.FileRef -> ToolBlock.FileRef(block.path, block.mimeType)
         }
     }
 }
+
+private fun ToolResultPayload?.fileRefs(): List<ToolResultPayload.Block.FileRef> =
+    (this as? ToolResultPayload.Blocks)?.blocks
+        ?.filterIsInstance<ToolResultPayload.Block.FileRef>()
+        .orEmpty()
 
 private fun toolArgsPreview(raw: JsonObject?, legacy: Map<String, String>): String {
     val preferred = listOf(

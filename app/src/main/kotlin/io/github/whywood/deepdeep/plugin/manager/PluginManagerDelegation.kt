@@ -9,7 +9,6 @@ import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
-import io.github.whywood.deepdeep.runtime.BoundSession
 import io.github.whywood.deepdeep.runtime.PluginSetupResult
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
@@ -102,8 +101,8 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
 
-    internal fun bindSessionHooks(session: BoundSession, delegate: PluginHooksDelegate) =
-        sessionHooks.bind(session, delegate)
+    internal fun bindSessionHooks(binding: SessionBinding, delegate: PluginHooksDelegate) =
+        sessionHooks.bind(binding, delegate)
 
     internal fun onSessionClosed(sessionId: String) = sessionHooks.close(sessionId)
 

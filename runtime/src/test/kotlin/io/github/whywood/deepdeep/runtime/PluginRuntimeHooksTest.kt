@@ -26,6 +26,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PluginRuntimeHooksTest {
@@ -259,6 +260,44 @@ class PluginRuntimeHooksTest {
                 assertEquals("hello/plugin", prepared.text)
                 assertEquals(listOf(image), seenImages.single())
                 assertEquals(listOf(image), prepared.images)
+            } finally {
+                session.close()
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun engineBindsCreatedSessionAsSessionBinding() = runTest {
+        val root = Files.createTempDirectory("deepdeep-plugin-binding").toFile()
+        val workspace = File(root, "workspace").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        val bound = mutableListOf<SessionBinding>()
+        try {
+            val engine = PiSessionEngine(
+                workspace = workspace,
+                agentDir = agentDir,
+                credentials = credentials,
+                transport = transport,
+                shellExecutor = null,
+                providers = ProviderCatalog(transport, credentials),
+                fs = FileSystem.SYSTEM,
+                hooks = RuntimeHooks(onSessionBound = { binding -> bound += binding }),
+            )
+            val session = engine.createSession(
+                file = null,
+                config = null,
+                shellEnabled = false,
+                mcpEnabled = false,
+            )
+            try {
+                val binding = bound.single()
+                assertTrue(binding.supportsChatDelivery)
+                val snapshot = binding.current()
+                assertNotNull(snapshot)
+                assertEquals(session.sessionId, snapshot!!.sessionId)
+                assertEquals(workspace.absolutePath, snapshot.cwd)
             } finally {
                 session.close()
             }

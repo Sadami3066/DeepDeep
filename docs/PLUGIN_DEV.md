@@ -278,8 +278,8 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 | `skills(host)` | 提供技能；每次刷新调用 |
 | `promptSections(host)` | 追加系统提示词段 |
 | `settings()` / `onSettingsChanged(host, values)` | 声明设置 schema（`SettingSpec`）；保存后回调归一化后的整组值 |
-| `contributions(host)` | 提供工具 + hooks；hooks 只需在这里返回 |
-| `contributionsFor(host, session)` | 每会话构建工具时调用一次（`session` 为 live handle 或 `null`，只用于工具）；默认委托 `contributions`，其 hooks 不参与派发 |
+| `contributions(host)` | 提供全局工具 + hooks |
+| `contributionsFor(host, session)` | 每会话物化一次：返回该会话生效的工具 + hooks（hooks 按 `pluginId` 覆盖该插件的全局 hooks）；`session` 是 live handle（可空），只用来读会话快照；默认委托 `contributions`，只写 `contributions` 时行为不变 |
 | `ui(host)` | 槽位/页面/输入区动作贡献 |
 | `close()` | 插件停用/卸载/更新/进程退出时调用（宿主先取消插件 scope，最多等 5s）；`close` 之后不要再异步回调 |
 
@@ -288,7 +288,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 ### 每插件作用域
 
 - 每个插件有独立的 `SupervisorJob` 与 `CoroutineScope`，即 `host.scope`。插件里启动的后台协程应挂在这个 scope 上（`host.scope.launch { ... }`）。
-- 停用、卸载、更新、进程退出统一走：取消 scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册/清贡献 → 同步技能；任何一步异常都会记 `lastError` 并继续完成剩余收尾。进行中的一轮继续使用已装配的工具；hooks 派发始终读宿主当前快照，停用后可能仍有已入队事件送达一次。
+- 停用、卸载、更新、进程退出统一走：取消 scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册/清贡献 → 同步技能；任何一步异常都会记 `lastError` 并继续完成剩余收尾。进行中的一轮继续使用已装配的工具；会话 hooks 按本轮 run 开始时的冻结集合派发（见「事件与 hooks」），本轮结束后按最新快照生效。
 - 正常退出时宿主会 best-effort 调用 `shutdown()` 收尾（Activity 结束、进程被系统回收前不保证）；**进程被强杀时不保证 `close()` 被调用**，需要跨进程存续的状态请及时写进 `host.dataDir`。
 - 重新启用会创建新的 scope 与新的 `PluginHost`；插件对象可能被复用（内置），外部插件会重新装载（可能换版本）。**不要缓存 host 或 scope 到插件实例字段**，每次回调都以参数为准。
 - 协程里必须处理取消（`CancellationException` 直接向上抛，不要吞）；长循环里用 `isActive` 或在阶段边界检查。
@@ -298,7 +298,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 宿主每次刷新对每个插件最多调用一次贡献方法，结果聚合成不可变快照；工具装配、提示词、技能同步、UI 槽位、冲突诊断、详情页都消费同一份快照，不会在消费路径重复调用插件。
 
 - 每次刷新都会调用：`settings()`、`skills()`、`availability()`；启用且已安装时再调用 `contributions()`、`ui()`、`promptSections()`、`detailRows()`，可用时调用 `status()`，`status` 有结果时调用 `actions()`。
-- `contributionsFor()` 在会话创建时每个会话调用一次，该会话的工具从这次结果取用；工具不会在运行中因刷新而中途替换。hooks 始终以 `contributions(host).hooks` 为准（宿主每轮按物化快照派发），`contributionsFor` 里返回的 hooks 不参与派发。
+- `contributionsFor()` 每个会话只调用一次（同一 `SessionBinding` 从建立到关闭），该会话的工具与会话 hooks 都从这次结果取用，运行中不会因刷新重新调用；会话重建（见下条）后才重新物化。会话 hooks 按 pluginId 覆盖该插件的全局 hooks，会话贡献返回默认 `PluginHooks.None` 时沿用全局；宿主每轮 run 开始时冻结生效集合，run 结束后按最新快照解冻（见「事件与 hooks」）。
 - 不要在 `contributions()`/`ui()`/`settings()` 里做重 IO 或依赖会变化的外部状态：这些方法会被频繁调用，耗时工作放 `host.scope` 异步做（如 `onEnable` 里启动轮询、`onDisable`/`close` 时靠 scope 取消停止）。
 - 启停、设置变更、安装/动作完成都会触发宿主重建会话投影；忙碌会话在本轮结束的安全点生效。
 
@@ -364,9 +364,11 @@ override fun contributions(host: PluginHost) = Contributions(
 
 | 形式 | 用途 |
 |---|---|
-| `Text(text, details?, isError)` | 普通文本结果；`details` 是宿主侧结构化元数据（给工具卡/日志用，不进模型上下文） |
-| `Rich(blocks, details?, isError)` | 多块结果：`ToolBlock.Text`、`ToolBlock.Image(data, mimeType)`（base64 进模型图片内容）、`ToolBlock.FileRef(path, mimeType?)`（转成一行 `file: <path> (<mime>)` 文本，不读文件、不当附件） |
+| `Text(text, details?, isError)` | 普通文本结果；`details` 是宿主侧结构化元数据（给工具卡/日志用，不进模型上下文），其中 `deepdeep.fileRefs` 是宿主保留键，插件不要读写 |
+| `Rich(blocks, details?, isError)` | 多块结果：`ToolBlock.Text`、`ToolBlock.Image(data, mimeType)`（base64 进模型图片内容）、`ToolBlock.FileRef(path, mimeType?)`（content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`，工具卡与历史消息渲染为可点击的文件行，重开会话仍可还原；不读文件、不当附件） |
 | `PluginToolResult.text(...)` / `.rich(...)` | 便捷构造 |
+
+`details` 里除 `deepdeep.fileRefs` 外由你写入的字段原样透传给工具卡与自定义消息卡；`deepdeep.fileRefs` 由宿主按 `Rich` 里的 `ToolBlock.FileRef` 生成，插件不要覆盖它。
 
 `isError = true` 表示一次失败的工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。
 
@@ -451,7 +453,7 @@ SettingSpec.Text(
 
 ## 连接流程（setup）
 
-需要用户登录/授权的插件通过 setup 流程与宿主交互。触发方式：用户在插件详情页点「连接」，或 Agent 调用 `plugin_setup` 工具（参数 `plugin` 取插件 id，内置可安装能力与外部 `.ddp` 都可以）；宿主打开 setup sheet 并等待用户操作。所有 `source = EXTERNAL` 的插件（内置可安装能力与外部 `.ddp`）都有连接入口；插件停用时宿主会先自动启用再进入 setup。宿主进入 setup 前会先查询 `status()`，已经是 `Ready` 时直接返回成功，不会调用 `setup()`。
+需要用户登录/授权的插件通过 setup 流程与宿主交互。触发方式：用户在插件详情页点「连接」，或 Agent 调用 `plugin_setup` 工具（参数 `plugin` 取插件 id，内置可安装能力与外部 `.ddp` 都可以）；宿主打开 setup sheet 并等待用户操作。所有 `source = EXTERNAL` 的插件（内置可安装能力与外部 `.ddp`）都有连接入口；详情页「连接」会先自动启用已停用的插件再进入 setup，`plugin_setup` 工具要求插件已启用（停用时返回错误）。宿主进入 setup 前会先查询 `status()`，已经是 `Ready` 时直接返回成功，不会调用 `setup()`。
 
 ```kotlin
 override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
@@ -473,7 +475,13 @@ override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
 
 ## 事件与 hooks
 
-hooks 只在 `contributions(host)` 里返回（`contributionsFor` 的 hooks 不参与派发）。`PluginHooks` 全部方法有默认空实现，只覆盖需要的。
+`PluginHooks` 全部方法有默认空实现，只覆盖需要的。hooks 在 `contributions(host)`（全局）或 `contributionsFor(host, session)`（会话级）里返回，两者汇入同一条派发管线。
+
+**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具（`contributions(host).copy(tools = ...)`）也保留全局 hooks。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一 `SessionBinding` 从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果，运行中不会随插件刷新重新调用；插件能力变化（启停/设置/安装/动作）会触发宿主在安全点重建会话（新的 `SessionBinding`），重建后才重新物化。
+
+**run 级冻结**：每轮 run 开始时（`RunStarted`）宿主冻结当时生效的 hooks 集合，本轮所有观察事件与变换/闸门都走这份集合：冻结后再启停插件、刷新贡献、新增插件都不影响本轮——已冻结的插件即使被停用，本轮剩余事件仍会派发给它；新启用的插件从下一轮开始生效。run 结束（`RunFinished`；失败结束同样以 `RunFinished(error)` 到达）并派发完本轮事件后解冻，下一轮按最新插件快照重新冻结。
+
+工坊一次性 Agent 复用同一套 prompt/input/工具钩子与会话绑定，但它的会话事件不经过宿主会话观察事件管线，因此 21 个观察事件与 run 冻结只覆盖主会话运行路径。
 
 ### 观察事件（只通知，不能改变流程）
 
@@ -521,9 +529,9 @@ hooks 只在 `contributions(host)` 里返回（`contributionsFor` 的 hooks 不�
 - 这些回调在会话关键路径上，必须快速返回；耗时工作丢到 `host.scope` 异步做，不要在里面做网络/重 IO。
 - 不要在 transform 里阻塞等待用户；需要用户确认的闸门只做同步判定。
 - `inputTransform` 返回的 `imagePaths` 会真正生效：路径对应的图片会被读取并替换/加入本轮输入（无法读取的路径被忽略），无图片时返回空列表。
-- `PluginHooks.None` 可用于占位；事件顺序 = 快照里的加载/注册顺序（内置插件按注册顺序，外部插件按安装顺序）。
+- `PluginHooks.None` 可用于占位；事件顺序 = 当前生效集合里的加载/注册顺序（内置插件按注册顺序，外部插件按安装顺序）。
 - 用户取消导致的 `CancellationException` 会向上传播，不要吞。
-- 插件停用/卸载后，宿主刷新快照并重建会话投影：工具/提示词/技能/槽位在安全点后失效；已入队的 hooks 事件可能仍送达一次，回调里请自行判断插件状态。
+- 插件停用/卸载后：工具/提示词/技能/槽位在安全点后失效；当前 run 内会话 hooks 仍按冻结集合派发（本轮结束前停用的插件会收到本轮剩余事件），下一轮按最新快照生效。
 
 ## UI 扩展
 
@@ -745,6 +753,8 @@ cd plugin-template && ../gradlew assemblePlugin signPlugin verifyPlugin
 - **安装被拒**：确认页或插件页会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、`SIGNATURE_INVALID`（包被改动/公钥与 keyId 不匹配/缺签名文件）、`PUBLISHER_CONFLICT`（升级换了密钥）、`TOOL_CONFLICT`（manifest `provides.tools` 与宿主或已装插件冲突）、`VERSION_CONFLICT`（版本不比已装新）。
 - **装载失败**：`ClassNotFoundException` → `entryClass` 写错或被 minify；`NoSuchMethodException` → 缺无参构造；`NoClassDefFoundError` → 宿主版本不一致或把宿主依赖打进了包。
 - **行为不符**：`host.logs()` 会进宿主日志（logcat tag `DeepDeepPlugin/<pluginId>`）；插件抛出的异常宿主会隔离并记录到 `lastError`，详情页可见。
+- **文件行不显示**：`ToolBlock.FileRef` 的 path 按插件给出的绝对路径原样使用；文件行由宿主从 details 保留键 `deepdeep.fileRefs` 还原，不要自己写这个键；若在 `afterToolExecution` 里 `Replace` 结果并丢掉了 details，文件行会随之消失。
+- **hooks 没生效 / 停用后仍收到事件**：hooks 在 `contributions()` 或 `contributionsFor()` 返回都生效；只写 `contributionsFor` 且返回默认 `PluginHooks.None` 时沿用全局 hooks；会话级贡献每个会话只物化一次，插件启停/设置在安全点重建会话（本轮结束后）才重新物化；当前 run 内按冻结集合派发，停用/卸载的插件仍会收到本轮剩余事件，属预期行为。
 - **技能没出现**：插件必须启用且 `availability()` 为 `Available`（不可用时技能不启用）；SKILL.md 必须有 frontmatter，`PluginSkill.id` 与 `name` 一致；`files` 路径必须相对且安全。
 - **槽位不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 建议与 `ui()` 返回的绑定一致（用于安装预检与详情展示，运行期以 `ui()` 为准）；检查 `uiApiLevel` 与清单 `ui` 字段是否与宿主版本匹配；看插件详情页「插件槽位」里的禁用原因。
 - **设置不生效**：`onSettingsChanged` 只在保存后收到归一化值；`requiresRestart` 的项在重启后生效；非法值会被丢弃回默认。

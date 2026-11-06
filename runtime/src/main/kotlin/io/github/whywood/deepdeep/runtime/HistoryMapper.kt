@@ -137,7 +137,7 @@ object HistoryMapper {
                     }
 
                     is ToolResultMessage -> {
-                        val payload = message.content.toToolResultPayload()
+                        val payload = message.toToolResultPayload()
                         val status = if (message.isError) ToolActivityStatus.FAILED else ToolActivityStatus.DONE
                         val existing = traces[message.toolCallId]
                         if (existing != null) {

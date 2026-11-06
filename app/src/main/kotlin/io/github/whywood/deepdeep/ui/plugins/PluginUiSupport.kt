@@ -112,7 +112,6 @@ internal fun pluginPhaseLabelRes(phase: PluginPhaseUi): Int = when (phase) {
     PluginPhaseUi.FAILED -> R.string.plugins_phase_failed
     PluginPhaseUi.DISABLED -> R.string.plugins_phase_disabled
     PluginPhaseUi.PENDING_RESTART -> R.string.plugins_phase_pending_restart
-    PluginPhaseUi.UNLOADED -> R.string.plugins_phase_unloaded
 }
 
 internal fun pluginTabSource(index: Int): PluginSource =

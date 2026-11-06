@@ -10,6 +10,7 @@ import dev.pi.ai.ToolCall
 import dev.pi.ai.ToolResultMessage
 import dev.pi.ai.Usage
 import dev.pi.ai.UserMessage
+import dev.pi.coding.paths.AgentPaths
 import dev.pi.coding.session.BranchSummaryEntry
 import dev.pi.coding.session.CompactionEntry
 import dev.pi.coding.session.ContextEditEntry
@@ -18,9 +19,13 @@ import dev.pi.coding.session.ModelChangeEntry
 import dev.pi.coding.session.SessionEntry
 import dev.pi.coding.session.SessionManager
 import dev.pi.coding.session.SessionMessageEntry
+import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -274,6 +279,84 @@ class HistoryMapperTest {
             ),
             payload,
         )
+    }
+
+    @Test
+    fun toolResultFileRefsRestoreFromDetails() {
+        val fileRef = ToolResultPayload.Block.FileRef("/tmp/report.pdf", "application/pdf")
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                assistant(
+                    content = listOf(toolCall("call-1", "export_report")),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 1L,
+                ),
+                messageEntry(
+                    ToolResultMessage(
+                        toolCallId = "call-1",
+                        toolName = "export_report",
+                        content = listOf(TextContent(fileRefDisplayText(fileRef.path, fileRef.mimeType))),
+                        details = buildJsonObject {
+                            put(ToolResultDetails.FILE_REFS_KEY, ToolResultDetails.encodeFileRefs(listOf(fileRef)))
+                        },
+                        isError = false,
+                        timestamp = 2L,
+                    ),
+                ),
+            ),
+        )
+
+        val trace = (messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals(
+            ToolResultPayload.Blocks(
+                listOf(
+                    ToolResultPayload.Block.Text("file: /tmp/report.pdf (application/pdf)"),
+                    fileRef,
+                ),
+            ),
+            trace.resultPayload,
+        )
+        assertEquals("file: /tmp/report.pdf (application/pdf)", trace.output)
+    }
+
+    @Test
+    fun toolResultFileRefsSurviveSessionFileReopen() = runTest {
+        val root = Files.createTempDirectory("deepdeep-file-refs").toFile()
+        val dir = root.absolutePath.toPath()
+        try {
+            val paths = AgentPaths(dir.resolve("workspace"), dir.resolve("agent"))
+            val fileRef = ToolResultPayload.Block.FileRef("/tmp/report.pdf", "application/pdf")
+            val manager = SessionManager.create(paths, FileSystem.SYSTEM)
+            manager.appendMessage(UserMessage(PlainTextContent("export it"), 1L))
+            manager.appendMessage(
+                ToolResultMessage(
+                    toolCallId = "call-1",
+                    toolName = "export_report",
+                    content = listOf(TextContent(fileRefDisplayText(fileRef.path, fileRef.mimeType))),
+                    details = buildJsonObject {
+                        put(ToolResultDetails.FILE_REFS_KEY, ToolResultDetails.encodeFileRefs(listOf(fileRef)))
+                    },
+                    isError = false,
+                    timestamp = 2L,
+                ),
+            )
+            val reopened = SessionManager.open(manager.sessionFile!!, FileSystem.SYSTEM)
+
+            val payload = (HistoryMapper.mapEntries(reopened.getBranch()).last().steps.single() as AssistantStep.Tool)
+                .trace.resultPayload
+
+            assertEquals(
+                ToolResultPayload.Blocks(
+                    listOf(
+                        ToolResultPayload.Block.Text("file: /tmp/report.pdf (application/pdf)"),
+                        fileRef,
+                    ),
+                ),
+                payload,
+            )
+        } finally {
+            root.deleteRecursively()
+        }
     }
 
     @Test

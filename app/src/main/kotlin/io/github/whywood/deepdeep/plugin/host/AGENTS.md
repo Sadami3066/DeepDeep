@@ -11,7 +11,7 @@
 | `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + source + 派生相位 + error + 物化贡献）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/settings/actions/detailRows/ui/hooks 聚合、重复 id 拒绝、跨插件冲突记录） |
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：`Literal` 按语言标签取、缺省回退 `default`；`Resource` 走宿主注入的 `(Int) -> String`；支持 `String.format` 参数 |
-| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，sessionId 用 provider 在 execute 时解析，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本行，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
+| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` → pi SDK `CodingTool`：元数据直传，sessionId 用 provider 在 execute 时解析，Text/Rich 结果映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
 | `CodingToolPluginAdapter.kt` | 反向桥：内置插件沿用旧 `CodingTool` 工具工厂时，转成 `PluginTool` 接入新契约 |
 | `BuiltinPluginManifest.kt` | 内置插件 manifest 构造；`installable` 默认 false（内置即已安装），只有可下载的 CLI 内置能力显式传 true |
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
@@ -29,7 +29,7 @@
 - 快照 version 从 0 起、每次成功 `register/unregister/update` 递增；旧快照发布后不再变化。插件 id 重复注册返回 `Rejected` 且不加版本；跨插件工具名/技能 id/提示词段 id 重复时保留先注册者并记录到 `conflicts`。
 - `PluginPaths` 的运行数据目录固定在 `<id>/data` 而不是版本目录，升级不丢插件数据；版本目录只放 `bundle/assets/lib`。
 - `PluginTextResolver` 的语言 tag 与 resource 解析器由宿主注入（App 语言 / `LocalizedContext`），不在宿主里硬编码语言。
-- 工具结果映射：`ToolBlock.Image` 的字节按 base64 进 `ImageContent`；`ToolBlock.FileRef` 转成一行文本 `file: <path> (<mime>)`，path 按插件给出的绝对路径原样输出，不读文件、不当附件投递。
+- 工具结果映射：`ToolBlock.Image` 的字节按 base64 进 `ImageContent`；`ToolBlock.FileRef` 的 content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`（工具卡与历史消息据此渲染文件行），path 按插件给出的绝对路径原样输出，不读文件、不当附件投递；插件不要读写该保留键。
 - `partial` 更新经 unlimited channel 在 `execute` 内顺序转发，插件回调可在任意线程调用；`execute` 异常（取消/中断除外）转成 `isError` 结果。
 - 槽渲染进入组合时写崩溃标记、正常 dispose 时清除；残留标记表示上次渲染期间进程死亡，只禁用该绑定，详情页可手动恢复。
 - 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责。
