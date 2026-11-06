@@ -114,17 +114,6 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-    override fun onDestroy() {
-        if (isFinishing) {
-            (application as? DeepDeepApplication)?.graph?.let { appGraph ->
-                appGraph.appScope.launch {
-                    runCatching { appGraph.pluginManager.shutdown() }
-                }
-            }
-        }
-        super.onDestroy()
-    }
-
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         if (intent.action == Intent.ACTION_VIEW) {

@@ -172,12 +172,6 @@ internal class PluginManagerCommands(
         gate.view(pluginId)?.plugin != null
     }
 
-    suspend fun shutdown(): Unit = mutex.withLock {
-        gate.ids().forEach { pluginId -> lifecycle.deactivate(pluginId) }
-        external?.close()
-        Unit
-    }
-
     suspend fun prepareConnect(pluginId: String) {
         val view = gate.view(pluginId) ?: return
         if (view.enabled) return

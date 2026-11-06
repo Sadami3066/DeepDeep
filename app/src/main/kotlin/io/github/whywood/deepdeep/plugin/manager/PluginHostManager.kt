@@ -52,6 +52,7 @@ class PluginHostManager internal constructor(
     private val pluginsRoot = File(filesDir, "plugins")
     private val mutex = Mutex()
     private val busy = AtomicBoolean(false)
+    private var started = false
     private var lastRefreshAt = 0L
 
     override val textResolver: PluginTextResolver = PluginTextResolver(
@@ -136,6 +137,7 @@ class PluginHostManager internal constructor(
     override val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
 
     override suspend fun start() = mutex.withLock {
+        if (started) return
         _state.update { it.copy(loading = true) }
         try {
             val states = builtinStateStore.load()
@@ -158,6 +160,7 @@ class PluginHostManager internal constructor(
                 lifecycle.syncSkills(view.id)
             }
             externalFlow.scheduleUpdateCheck()
+            started = true
         } finally {
             _state.update { it.copy(loading = false) }
         }
@@ -193,8 +196,6 @@ class PluginHostManager internal constructor(
         commands.setSetting(pluginId, key, value)
 
     override fun uninstall(pluginId: String) = commands.uninstall(pluginId)
-
-    override suspend fun shutdown() = commands.shutdown()
 
     override suspend fun retryActivation(pluginId: String) = commands.retryActivation(pluginId)
 

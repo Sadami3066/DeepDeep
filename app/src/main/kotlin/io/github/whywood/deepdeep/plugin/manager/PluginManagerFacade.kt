@@ -24,8 +24,6 @@ interface PluginManagerFacade : PluginController {
 
     suspend fun start()
 
-    suspend fun shutdown()
-
     suspend fun refreshNow()
 
     fun refresh()
