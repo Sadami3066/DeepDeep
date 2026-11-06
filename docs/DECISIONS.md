@@ -159,3 +159,11 @@
 现在共享渲染组件集中在 `ui/common/chat/`（`state/` 放草稿与附件导入），调用方只观察 `ConversationStore` 并把投影传进来。`ui.common.chat` 不 import 任何 `ui.<feature>`：feature 会用到的小卡片（提问卡、已答卡、创意工坊卡、插件槽位）也随之下沉到 `common/chat`，被 feature 页面反过来引用（target 是 `common`，边界检查允许）。`AssistantRole`/`AssistantEntry` 移到 `core/`。
 
 `verifyPackageBoundaries` 增加两条规则：`ui.*` 不得 import `assistant`；`assistant`/`floating` 不得 import `ui.chat`。`gradle/package-boundaries.allow` 从 14 条降到 4 条（仅剩 ChatScreen→GoalBar、搜索命中、SettingsGroup 等历史耦合）。
+
+## 93. 运行时内核拆分
+
+`AgentRuntimeHost` 原来 1186 行，把句柄池、SDK 事件翻译、工作区、模型、会话查询、运行编排与事件投影全塞在一个类里，改一处要读整段。
+
+现在按职责拆成：`RuntimeHandle`（单会话句柄）、`RuntimeMcp`、`RuntimeEventTranslator`（SDK 事件 → 运行时事件）、`RuntimeWorkspaces`、`RuntimeModels`、`RuntimeSessions`、`RuntimePool`（句柄池、打开/关闭/重载/淘汰/重配）、`RuntimeRuns`（发送、排队、重试、提醒、后台回合、停止、终态与事件投影）；`AgentRuntimeHost` 只保留装配、事件流入口与接口委托，297 行。`RuntimeRuns` 通过函数参数拿 `handleFor`/`sweepIdleHandles`/`reconfigureSession`，避免与 `RuntimePool` 构造循环。
+
+事件可靠性不变：`emit` 先 `tryEmit`；缓冲满时 delta 丢弃并记日志，其它事件（含 RunFinished/RunFailed/SessionListChanged）改由后台协程 `emit` 等待投递，终态不会被静默吞掉。`runStartedPrecedesDeltasAndStructureSurvivesFlood` 扩展为断言终态恰好一次、状态 DONE 且在全部 delta 之后。

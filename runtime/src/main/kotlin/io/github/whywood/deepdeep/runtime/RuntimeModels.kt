@@ -10,7 +10,7 @@ internal class RuntimeModels(
     private val handles: ConcurrentHashMap<String, RuntimeHandle>,
     private val modelSettings: ModelSettings,
     private val providers: ProviderDirectory,
-    private val emitUsage: suspend (RuntimeHandle, String) -> Unit,
+    private val emit: suspend (RuntimeHandle, RuntimeEvent) -> Unit,
 ) {
     suspend fun history(sessionId: String): List<AssistantMessage> {
         val loaded = mutex.withLock {
@@ -79,5 +79,8 @@ internal class RuntimeModels(
         return outcome
     }
 
-    suspend fun emitUsage(handle: RuntimeHandle, runId: String) = emitUsage.invoke(handle, runId)
+    private suspend fun emitUsage(handle: RuntimeHandle, runId: String) {
+        val current = handle.session.usage() ?: return
+        emit(handle, UsageChanged(runId, current))
+    }
 }

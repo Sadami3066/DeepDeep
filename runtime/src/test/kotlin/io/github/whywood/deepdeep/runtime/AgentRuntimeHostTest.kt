@@ -145,9 +145,14 @@ class AgentRuntimeHostTest {
             val startedIndex = received.indexOfFirst { it is RuntimeEvent.RunStarted }
             val finishedIndex = received.indexOfFirst { it is RuntimeEvent.RunFinished }
             val firstDeltaIndex = received.indexOfFirst { it is RuntimeEvent.TextDelta }
+            val lastDeltaIndex = received.indexOfLast { it is RuntimeEvent.TextDelta }
+            val terminals = received.filterIsInstance<RuntimeEvent.RunFinished>()
             assertTrue(startedIndex >= 0)
             assertTrue(firstDeltaIndex > startedIndex)
             assertTrue(finishedIndex > startedIndex)
+            assertTrue(lastDeltaIndex < finishedIndex)
+            assertEquals(1, terminals.size)
+            assertEquals(RunStatus.DONE, terminals.single().status)
         } finally {
             subscription.cancel()
             fixture.close()
