@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MAX
 import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MIN
+import io.github.whywood.deepdeep.data.SendWhileRunning
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.data.normalizeChatFontScale
@@ -38,6 +41,8 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
@@ -47,11 +52,13 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 @Composable
 fun ChatSettingsScreen(
     preferences: UiPreferences,
+    sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER,
     onBack: () -> Unit,
     onToggle: (UiToggle, Boolean) -> Unit,
     voiceAutoSpeak: Boolean = false,
     onVoiceAutoSpeakChange: (Boolean) -> Unit = {},
     onChatFontScaleChange: (Float) -> Unit = {},
+    onSendWhileRunningChange: (SendWhileRunning) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -99,6 +106,11 @@ fun ChatSettingsScreen(
                     onCheckedChange = { onToggle(UiToggle.AUTO_COLLAPSE_PROCESS, it) },
                 )
                 DdHairline()
+                SendWhileRunningRow(
+                    value = sendWhileRunning,
+                    onChange = onSendWhileRunningChange,
+                )
+                DdHairline()
                 SwitchRow(
                     icon = DdIcons.Refresh,
                     title = R.string.settings_auto_retry,
@@ -124,6 +136,86 @@ fun ChatSettingsScreen(
         }
     }
 }
+
+@Composable
+private fun SendWhileRunningRow(
+    value: SendWhileRunning,
+    onChange: (SendWhileRunning) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val colors = deepDeepColors()
+    Box {
+        DdListRow(
+            icon = DdIcons.ArrowUp,
+            title = stringResource(R.string.settings_send_while_running),
+            value = sendWhileRunningLabel(value),
+            onClick = { expanded = true },
+            showChevron = true,
+            modifier = Modifier.testTag("settings_send_while_running"),
+        )
+        DdMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            menuWidth = 356.dp,
+        ) {
+            SendWhileRunningMenuItem(
+                selected = value == SendWhileRunning.STEER,
+                label = stringResource(R.string.settings_send_while_running_steer),
+                accent = colors.accent,
+                onClick = {
+                    expanded = false
+                    onChange(SendWhileRunning.STEER)
+                },
+                testTag = "settings_send_while_running_option_steer",
+            )
+            SendWhileRunningMenuItem(
+                selected = value == SendWhileRunning.QUEUE,
+                label = stringResource(R.string.settings_send_while_running_queue),
+                accent = colors.accent,
+                onClick = {
+                    expanded = false
+                    onChange(SendWhileRunning.QUEUE)
+                },
+                testTag = "settings_send_while_running_option_queue",
+            )
+        }
+    }
+}
+
+@Composable
+private fun SendWhileRunningMenuItem(
+    selected: Boolean,
+    label: String,
+    accent: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+    testTag: String,
+) {
+    DdMenuItem(
+        text = label,
+        onClick = onClick,
+        selected = selected,
+        trailing = if (selected) {
+            {
+                DdIcon(
+                    icon = DdIcons.Check,
+                    tint = accent,
+                    size = 18.dp,
+                )
+            }
+        } else {
+            null
+        },
+        testTag = testTag,
+    )
+}
+
+@Composable
+private fun sendWhileRunningLabel(value: SendWhileRunning): String = stringResource(
+    when (value) {
+        SendWhileRunning.STEER -> R.string.settings_send_while_running_steer
+        SendWhileRunning.QUEUE -> R.string.settings_send_while_running_queue
+    },
+)
 
 @Composable
 private fun SwitchRow(

@@ -214,6 +214,9 @@ class AgentRuntimeHost internal constructor(
 
     override fun clearQueuedInputs(sessionId: String): List<String> = runs.clearQueuedInputs(sessionId)
 
+    override fun removeQueuedInput(sessionId: String, kind: InputQueueKind, text: String): Boolean =
+        runs.removeQueuedInput(sessionId, kind, text)
+
     override suspend fun retryLastTurn(sessionId: String) = runs.retryLastTurn(sessionId)
 
     override suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) =

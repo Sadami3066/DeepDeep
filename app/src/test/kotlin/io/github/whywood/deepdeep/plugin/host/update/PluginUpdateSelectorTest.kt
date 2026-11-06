@@ -29,14 +29,14 @@ class PluginUpdateSelectorTest {
             "io.github.whywood.deepdeep.f" to UpdateFixtures.record(id = "io.github.whywood.deepdeep.f"),
             "io.github.whywood.deepdeep.g" to UpdateFixtures.record(id = "io.github.whywood.deepdeep.g"),
         )
-        val policy = UpdatePolicy(hostApiLevel = 3, hostVersion = "0.2.0")
+        val policy = UpdatePolicy(hostApiLevel = 4, hostVersion = "0.2.0")
         val fullIndex = PluginIndex(
             schemaVersion = 1,
             plugins = index.plugins + listOf(
                 UpdateFixtures.entry(
                     id = "io.github.whywood.deepdeep.f",
                     version = "1.1.0",
-                    apiLevel = 4,
+                    apiLevel = 5,
                 ),
                 UpdateFixtures.entry(
                     id = "io.github.whywood.deepdeep.g",

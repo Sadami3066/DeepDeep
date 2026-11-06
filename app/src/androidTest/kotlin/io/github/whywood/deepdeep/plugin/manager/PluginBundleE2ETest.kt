@@ -113,7 +113,8 @@ class PluginBundleE2ETest {
     }
 
     private fun allToolNames(): Set<String> =
-        manager.tools(SessionBinding()).mapTo(linkedSetOf()) { it.name }
+        (manager.tools(SessionBinding()).map { it.name } + manager.deferredTools(SessionBinding()).map { it.name })
+            .toSet()
 
     private fun readManifest(bundle: File): JsonObject = ZipFile(bundle).use { zip ->
         val entry = requireNotNull(zip.getEntry("assets/plugin.json")) { "missing assets/plugin.json in ${bundle.name}" }

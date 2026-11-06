@@ -22,7 +22,6 @@ class AppRoutesTest {
         AppDestination.Permission,
         AppDestination.AndroidSettings,
         AppDestination.AgentSettings,
-        AppDestination.SessionBackup,
         AppDestination.Search,
         AppDestination.Skills,
         AppDestination.Timers,
@@ -39,7 +38,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(23, allDestinations.size)
+        assertEquals(22, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 
@@ -48,13 +47,6 @@ class AppRoutesTest {
         assertEquals("settings/agent", AppDestination.AgentSettings.routeKey)
         assertEquals(AppDestination.AgentSettings, AppDestination.fromRouteKey("settings/agent"))
         assertEquals(listOf(AppDestination.AgentSettings), deepLinkStack(AppDestination.AgentSettings))
-    }
-
-    @Test
-    fun sessionBackupRouteUsesSettingsBackupKey() {
-        assertEquals("settings/backup", AppDestination.SessionBackup.routeKey)
-        assertEquals(AppDestination.SessionBackup, AppDestination.fromRouteKey("settings/backup"))
-        assertEquals(listOf(AppDestination.SessionBackup), deepLinkStack(AppDestination.SessionBackup))
     }
 
     @Test

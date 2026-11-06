@@ -59,6 +59,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         AppToolContext(
             questionCenter = deps.questionCenter,
             pluginTools = { binding -> deps.pluginManager().tools(binding) },
+            pluginDeferredTools = { binding -> deps.pluginManager().deferredTools(binding) },
             extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
         )
     }

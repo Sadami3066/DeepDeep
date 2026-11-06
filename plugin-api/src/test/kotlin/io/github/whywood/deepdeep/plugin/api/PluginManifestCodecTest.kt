@@ -22,7 +22,7 @@ class PluginManifestCodecTest {
         {
           "id": "io.github.whywood.deepdeep.pluginsample",
           "version": "1.0.0",
-          "apiLevel": 3,
+          "apiLevel": 4,
           "capabilities": ["app", "files", "notifications"],
           "minHostVersion": "0.2.0",
           "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
@@ -95,7 +95,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.demo",
                   "version": "1.2.3",
-                  "apiLevel": 3,
+                  "apiLevel": 4,
                   "minHostVersion": "0.2.0",
                   "ui": { "apiLevel": 1, "kotlin": "2.1.0", "compose": "1.8.0" },
                   "name": { "default": "Demo" },
@@ -253,7 +253,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.future",
                   "version": "1.0.0",
-                  "apiLevel": 4,
+                  "apiLevel": 5,
                   "entryClass": "com.example.future.FuturePlugin",
                   "name": { "default": "Future" },
                   "summary": { "default": "Future" }

@@ -21,6 +21,7 @@ import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
@@ -342,6 +343,17 @@ class AssistantOverlayController(
     fun clearQueue(): List<String> {
         val sessionId = mutableState.value.sessionId ?: return emptyList()
         return runCatching { runtime.clearQueuedInputs(sessionId) }.getOrDefault(emptyList())
+    }
+
+    fun removeQueued(input: QueuedInput) {
+        val sessionId = mutableState.value.sessionId ?: return
+        runCatching { runtime.removeQueuedInput(sessionId, input.kind, input.text) }
+    }
+
+    fun sendQueued(input: QueuedInput) {
+        val sessionId = mutableState.value.sessionId ?: return
+        if (!runCatching { runtime.removeQueuedInput(sessionId, input.kind, input.text) }.getOrDefault(false)) return
+        store.steer(sessionId, input.text)
     }
 
     fun reset() {

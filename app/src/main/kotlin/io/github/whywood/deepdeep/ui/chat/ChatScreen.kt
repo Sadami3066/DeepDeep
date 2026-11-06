@@ -63,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,7 +114,6 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatComposerActions
 import io.github.whywood.deepdeep.ui.common.chat.ChatComposerState
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
-import io.github.whywood.deepdeep.ui.common.chat.followContentSignal
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
@@ -121,6 +121,7 @@ import java.io.File
 import java.time.LocalTime
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -162,8 +163,9 @@ data class ChatScreenActions(
     val onOpenMiniapp: (String) -> Unit,
     val onOpenPluginPage: (String, String) -> Unit,
     val onOpenFiles: () -> Unit,
-    val onFollowUp: () -> Unit,
-    val onClearQueue: () -> Unit,
+    val onExportSession: () -> Unit,
+    val onRemoveQueued: (QueuedInput) -> Unit,
+    val onSendQueued: (QueuedInput) -> Unit,
     val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
 )
 
@@ -202,7 +204,7 @@ fun ChatScreen(
         onOpenAttachment, onOpenFile, onOpenTimers, onRetry, onPickCommand,
         onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
         onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
-        onOpenMiniapp, onOpenPluginPage, onOpenFiles, onFollowUp, onClearQueue, onScrollAnchorChange,
+        onOpenMiniapp, onOpenPluginPage, onOpenFiles, onExportSession, onRemoveQueued, onSendQueued, onScrollAnchorChange,
     ) = actions
     val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
     val attachments = state.attachments
@@ -215,7 +217,6 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val controller = rememberChatScrollController(listState)
-    val nestedScrollConnection = remember(controller) { controller.nestedScrollConnection() }
     val density = LocalDensity.current
     val chatDensity = remember(density, chatFontScale) {
         Density(density = density.density, fontScale = density.fontScale * chatFontScale)
@@ -310,10 +311,13 @@ fun ChatScreen(
 
     val latestChatState by rememberUpdatedState(state)
 
-    LaunchedEffect(controller) {
-        snapshotFlow { followContentSignal(latestChatState.messages) }
-            .distinctUntilChanged()
-            .collect { controller.followContent() }
+    LaunchedEffect(controller, latestChatState.sending) {
+        if (latestChatState.sending) {
+            while (isActive) {
+                withFrameNanos { }
+                controller.followContent()
+            }
+        }
     }
 
     LaunchedEffect(state.sending) {
@@ -389,6 +393,10 @@ fun ChatScreen(
                     keyboard?.hide()
                     onOpenFiles()
                 },
+                onExportSession = {
+                    keyboard?.hide()
+                    onExportSession()
+                },
             ),
             modifier = Modifier.padding(top = with(density) { stableStatusTopPx.toDp() }),
         )
@@ -428,7 +436,7 @@ fun ChatScreen(
                     ) {
                         items(messages, key = { it.id }) { message ->
                             Box(
-                                Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection),
+                                Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.TopCenter,
                             ) {
                                 Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
@@ -467,7 +475,7 @@ fun ChatScreen(
                             ?.let { pending ->
                                 item(key = "pending-question-${pending.requestId}") {
                                     Box(
-                                        Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection),
+                                        Modifier.fillMaxWidth(),
                                         contentAlignment = Alignment.TopCenter,
                                     ) {
                                         Box(Modifier.widthIn(max = 780.dp).fillMaxWidth()) {
@@ -606,8 +614,8 @@ fun ChatScreen(
                         onRemoveAttachment = onRemoveAttachment,
                         onOpenAttachment = onOpenAttachment,
                         onManageProviders = onManageProviders,
-                        onFollowUp = onFollowUp,
-                        onClearQueue = onClearQueue,
+                        onRemoveQueued = onRemoveQueued,
+                        onSendQueued = onSendQueued,
                         onModelsOpenChange = onModelsOpenChange,
                         onOpenPluginPage = onOpenPluginPage,
                     ),

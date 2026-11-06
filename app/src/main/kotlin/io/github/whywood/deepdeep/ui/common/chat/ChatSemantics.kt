@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
-import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 
@@ -57,21 +56,4 @@ internal fun processStatus(streaming: Boolean, status: MessageStatus): ProcessSt
     status == MessageStatus.STOPPED -> ProcessStatus.Stopped
     status == MessageStatus.FAILED -> ProcessStatus.Failed
     else -> ProcessStatus.Done
-}
-
-internal fun followContentSignal(messages: List<AssistantMessage>): Long {
-    val last = messages.lastOrNull() ?: return 0L
-    var signal = last.id.hashCode().toLong()
-    signal = signal * 31 + last.text.length
-    signal = signal * 31 + last.steps.size
-    signal = signal * 31 + (last.steps.lastOrNull()?.contentLength() ?: 0)
-    signal = signal * 31 + if (last.streaming) 1 else 0
-    signal = signal * 31 + last.status.ordinal
-    return signal
-}
-
-private fun AssistantStep.contentLength(): Int = when (this) {
-    is AssistantStep.Reasoning -> text.length
-    is AssistantStep.Tool -> (trace.output?.length ?: 0) * 31 + (trace.error?.length ?: 0)
-    is AssistantStep.Text -> text.length
 }

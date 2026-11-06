@@ -20,9 +20,11 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.ImageNormalizer
 import io.github.whywood.deepdeep.data.NormalizedImage
+import io.github.whywood.deepdeep.data.SendWhileRunning
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.InputQueueKind
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.ModelSettings
@@ -278,7 +280,7 @@ class ChatViewModel(
 
     fun removeAttachment(id: String) = sessionDrafts.removeAttachment(id)
 
-    fun send() {
+    fun send(sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER) {
         val current = mutableState.value
         if (expanding) return
         if (!current.ready || !current.historyLoaded) {
@@ -295,6 +297,8 @@ class ChatViewModel(
         if (current.sending) {
             if (text.startsWith("/")) {
                 mutableState.update { it.copy(error = uiStrings.stopBeforeCommand) }
+            } else if (sendWhileRunning == SendWhileRunning.QUEUE) {
+                submitQueued(InputQueueKind.FOLLOW_UP)
             } else {
                 steerNow()
             }
@@ -325,6 +329,18 @@ class ChatViewModel(
 
     fun followUpNow() {
         submitQueued(InputQueueKind.FOLLOW_UP)
+    }
+
+    fun removeQueuedInput(input: QueuedInput) {
+        val sessionId = mutableState.value.conversationId ?: return
+        runCatching { store.removeQueuedInput(sessionId, input.kind, input.text) }
+    }
+
+    fun sendQueuedNow(input: QueuedInput) {
+        val current = mutableState.value
+        val sessionId = current.conversationId ?: return
+        if (!runCatching { store.removeQueuedInput(sessionId, input.kind, input.text) }.getOrDefault(false)) return
+        store.steer(sessionId, input.text)
     }
 
     fun clearQueuedInputs() {

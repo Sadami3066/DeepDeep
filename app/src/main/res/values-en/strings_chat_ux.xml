@@ -3,7 +3,6 @@
     <string name="assistant_ux_process_running">Working</string>
     <string name="assistant_ux_process_done">Done</string>
     <string name="assistant_ux_process_failed">Failed</string>
-    <string name="assistant_ux_queue_send">Queue message</string>
-    <string name="assistant_ux_more">More actions</string>
-    <string name="assistant_ux_running_hint">Running: send to steer, menu to queue</string>
+    <string name="assistant_ux_queue_remove">Remove</string>
+    <string name="assistant_ux_queue_send">Send now</string>
 </resources>

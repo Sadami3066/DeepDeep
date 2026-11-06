@@ -2,6 +2,11 @@ package io.github.whywood.deepdeep.plugin.api
 
 import kotlinx.serialization.json.JsonObject
 
+enum class PluginToolExposure {
+    DIRECT,
+    DEFERRED,
+}
+
 data class Contributions(
     val tools: List<PluginTool> = emptyList(),
     val hooks: PluginHooks = PluginHooks.None,
@@ -14,6 +19,7 @@ class PluginTool(
     val parameters: JsonObject,
     val promptSnippet: String? = null,
     val promptGuidelines: List<String> = emptyList(),
+    val exposure: PluginToolExposure = PluginToolExposure.DIRECT,
     val execute: suspend (PluginToolCall) -> PluginToolResult,
 )
 

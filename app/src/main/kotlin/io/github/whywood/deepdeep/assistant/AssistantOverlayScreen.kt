@@ -66,6 +66,7 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
+import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.common.rememberComposerVoice
@@ -108,6 +109,8 @@ internal data class AssistantOverlayActions(
     val onSelectModel: (String) -> Unit,
     val onSelectThinking: (ThinkingLevel) -> Unit,
     val onClearQueue: () -> List<String>,
+    val onRemoveQueued: (QueuedInput) -> Unit,
+    val onSendQueued: (QueuedInput) -> Unit,
     val onRetryStart: () -> Unit,
     val onDismissPreview: () -> Unit,
     val onSharePreview: () -> Unit,

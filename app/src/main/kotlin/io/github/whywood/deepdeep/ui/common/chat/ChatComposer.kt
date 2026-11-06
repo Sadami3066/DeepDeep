@@ -17,7 +17,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -66,6 +64,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -74,14 +73,11 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdMenu
-import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
@@ -130,8 +126,8 @@ data class ChatComposerActions(
     val onRemoveAttachment: (String) -> Unit,
     val onOpenAttachment: (AttachmentRef) -> Unit,
     val onManageProviders: () -> Unit,
-    val onFollowUp: () -> Unit,
-    val onClearQueue: () -> Unit,
+    val onRemoveQueued: (QueuedInput) -> Unit,
+    val onSendQueued: (QueuedInput) -> Unit,
     val onModelsOpenChange: (Boolean) -> Unit,
     val onOpenPluginPage: (String, String) -> Unit,
 )
@@ -513,9 +509,10 @@ private fun ChatComposerExpandedContent(
     ) {
         Column {
             if (state.queuedInputs.isNotEmpty()) {
-                QueueStrip(
+                QueuedInputBuffer(
                     queuedInputs = state.queuedInputs,
-                    onClear = actions.onClearQueue,
+                    onRemove = actions.onRemoveQueued,
+                    onSend = actions.onSendQueued,
                     modifier = Modifier.padding(bottom = 10.dp),
                 )
             }
@@ -631,21 +628,6 @@ private fun ChatComposerExpandedContent(
         onOpenPluginPage = actions.onOpenPluginPage,
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
     )
-    AnimatedVisibility(
-        visible = state.sending,
-        enter = fadeIn(tween(DdMotion.FAST)),
-        exit = fadeOut(tween(DdMotion.FAST)),
-    ) {
-        Text(
-            text = stringResource(R.string.assistant_ux_running_hint),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
-                .testTag("assistant_running_hint"),
-            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-            color = colors.inkTertiary,
-        )
-    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -675,13 +657,9 @@ private fun ChatComposerExpandedContent(
         )
         Spacer(Modifier.weight(1f))
         ComposerMicButton(onClick = onStartVoice)
-        if (state.sending) {
+        if (state.sending && !stops) {
             Spacer(Modifier.width(6.dp))
-            ComposerMoreButton(
-                showQueue = !stops && !state.importingAttachment,
-                onFollowUp = actions.onFollowUp,
-                onStop = actions.onStop,
-            )
+            ComposerStopButton(onClick = actions.onStop)
         }
         Spacer(Modifier.width(6.dp))
         ComposerSendButton(
@@ -714,49 +692,32 @@ private fun ComposerMicButton(
 }
 
 @Composable
-private fun ComposerMoreButton(
-    showQueue: Boolean,
-    onFollowUp: () -> Unit,
-    onStop: () -> Unit,
+private fun ComposerStopButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var open by remember { mutableStateOf(false) }
-    Box {
-        DdIconButton(
-            icon = DdIcons.DotsVertical,
-            onClick = { open = true },
-            contentDescription = stringResource(R.string.assistant_ux_more),
-            modifier = Modifier.testTag("assistant_more"),
-            size = 34.dp,
-            iconSize = 17.dp,
-            tint = colors.inkTertiary,
-        )
-        DdMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            menuWidth = 180.dp,
-        ) {
-            if (showQueue) {
-                DdMenuItem(
-                    text = stringResource(R.string.assistant_ux_queue_send),
-                    onClick = {
-                        open = false
-                        onFollowUp()
-                    },
-                    testTag = "assistant_menu_queue",
-                )
-            }
-            DdMenuItem(
-                text = stringResource(R.string.assistant_stop),
-                onClick = {
-                    open = false
-                    onStop()
-                },
-                testTag = "assistant_menu_stop",
-                destructive = true,
-            )
-        }
+    DdPressable(
+        onClick = onClick,
+        modifier = modifier.size(34.dp).testTag("assistant_stop"),
+        background = colors.wash,
+        contentDescription = stringResource(R.string.assistant_stop),
+    ) {
+        StopSquare(size = 10.dp)
     }
+}
+
+@Composable
+private fun StopSquare(
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(2.dp))
+            .background(deepDeepColors().danger),
+    )
 }
 
 @Composable
@@ -797,65 +758,69 @@ private fun ComposerSendButton(
             },
             label = "composer-primary-icon",
         ) { stopping ->
-            DdIcon(
-                icon = if (stopping) DdIcons.Stop else DdIcons.ArrowUp,
-                tint = when {
-                    stopping -> colors.danger
-                    canSend -> colors.onAccent
-                    else -> colors.inkTertiary
-                },
-                size = ComposerMetrics.ActionIconSize,
-            )
+            if (stopping) {
+                StopSquare(size = 12.dp)
+            } else {
+                DdIcon(
+                    icon = DdIcons.ArrowUp,
+                    tint = if (canSend) colors.onAccent else colors.inkTertiary,
+                    size = ComposerMetrics.ActionIconSize,
+                )
+            }
         }
     }
 }
 
 @Composable
-internal fun QueueStrip(
+internal fun QueuedInputBuffer(
     queuedInputs: List<QueuedInput>,
-    onClear: () -> Unit,
+    onRemove: (QueuedInput) -> Unit,
+    onSend: (QueuedInput) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            queuedInputs.forEach { input ->
-                val label = stringResource(
-                    if (input.kind == InputQueueKind.STEER) R.string.assistant_queue_steer
-                    else R.string.assistant_queue_follow_up,
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        queuedInputs.forEach { input ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("assistant_queue_item")
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.wash)
+                    .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = input.text.trim(),
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
+                    color = colors.inkSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Box(
-                    modifier = Modifier
-                        .testTag("assistant_queue_chip")
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(colors.wash)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        text = label + " · " + input.text.replace(Regex("\\s+"), " ").trim().let { text ->
-                            if (text.length <= 40) text else text.take(40).trimEnd() + "…"
-                        },
-                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                        color = colors.inkSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                DdIconButton(
+                    icon = DdIcons.Close,
+                    onClick = { onRemove(input) },
+                    contentDescription = stringResource(R.string.assistant_ux_queue_remove),
+                    modifier = Modifier.testTag("assistant_queue_remove"),
+                    size = 28.dp,
+                    iconSize = 13.dp,
+                    tint = colors.inkTertiary,
+                )
+                DdIconButton(
+                    icon = DdIcons.ArrowUp,
+                    onClick = { onSend(input) },
+                    contentDescription = stringResource(R.string.assistant_ux_queue_send),
+                    modifier = Modifier.testTag("assistant_queue_send"),
+                    size = 28.dp,
+                    iconSize = 13.dp,
+                    tint = colors.accent,
+                )
             }
         }
-        DdIconButton(
-            icon = DdIcons.Close,
-            onClick = onClear,
-            contentDescription = stringResource(R.string.assistant_queue_clear),
-            modifier = Modifier.testTag("assistant_queue_clear"),
-            size = 28.dp,
-            iconSize = 13.dp,
-            tint = colors.inkTertiary,
-        )
     }
 }
 
@@ -866,7 +831,7 @@ internal fun ComposerChip(
     enabled: Boolean,
     contentDescription: String,
     testTag: String,
-    maxWidth: androidx.compose.ui.unit.Dp,
+    maxWidth: Dp,
 ) {
     val colors = deepDeepColors()
     DdPressable(

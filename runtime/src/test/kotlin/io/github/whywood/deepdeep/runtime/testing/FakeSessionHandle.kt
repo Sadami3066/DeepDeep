@@ -94,6 +94,8 @@ class FakeSessionHandle(
 
     override fun clearQueues() = Unit
 
+    override fun removeQueuedInput(text: String, behavior: QueueBehavior): Boolean = false
+
     override fun canRetryLastAssistant(): Boolean = false
 
     override suspend fun retryLastAssistant() = Unit

@@ -1,12 +1,9 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
-import io.github.whywood.deepdeep.runtime.AssistantMessage
-import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class ChatSemanticsTest {
@@ -78,18 +75,5 @@ class ChatSemanticsTest {
         assertEquals(ProcessStatus.Stopped, processStatus(streaming = false, status = MessageStatus.STOPPED))
         assertEquals(ProcessStatus.Failed, processStatus(streaming = false, status = MessageStatus.FAILED))
         assertEquals(ProcessStatus.Done, processStatus(streaming = false, status = MessageStatus.DONE))
-    }
-
-    @Test
-    fun followContentSignalIgnoresIrrelevantMessages() {
-        val first = AssistantMessage(
-            id = 7,
-            role = AssistantRole.ASSISTANT,
-            text = "hi",
-            streaming = true,
-        )
-        assertNotEquals(followContentSignal(listOf(first)), followContentSignal(listOf(first.copy(text = "hi there"))))
-        assertNotEquals(followContentSignal(listOf(first)), followContentSignal(listOf(first.copy(streaming = false))))
-        assertEquals(0L, followContentSignal(emptyList()))
     }
 }

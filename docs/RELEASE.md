@@ -28,6 +28,6 @@ keyPassword=...
 
 ## 换签迁移
 
-首次从 debug 证书切到 `release.keystore`（或以后更换证书）时，Android 不允许覆盖安装，必须先卸载旧 App。`android:allowBackup="false"`，卸载会删除本机会话、设置与凭据；需要保留时先在 App 内导出会话备份，装好新版本后再导入。
+首次从 debug 证书切到 `release.keystore`（或以后更换证书）时，Android 不允许覆盖安装，必须先卸载旧 App。`android:allowBackup="false"`，卸载会删除本机会话、设置与凭据；需要保留时先在聊天顶栏「导出会话」把要留的会话逐个导出为 JSONL 文件。
 
 安装前确认设备上已安装的包名与 `applicationId` 一致；升级同一证书签名的后续版本可直接覆盖安装。

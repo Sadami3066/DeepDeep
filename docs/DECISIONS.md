@@ -209,7 +209,7 @@ web/目标/后台任务/定时/小程序/安排/屏幕这组能力以前是随�
 
 ## 100. design 作为插件 UI 的 SDK
 
-`:design` 与 `plugin-api` 以同一 `pluginApiVersion` 发布到 mavenLocal（`io.github.whywood.deepdeep:design`），`plugin-api` 用 `api(project(":design"))` 把设计系统传递给插件；插件仍然 `compileOnly` 不打包，运行期由宿主 parent classloader 解析同一份类。插件页面直接用 `DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()`，与 App 完全同源。原 `plugin-api` 自带的 `ui/PluginComponents.kt` 最小工具盒（`PluginCard`/`PluginButton`/`PluginTheme` 等）删除。
+`:design` 与 `plugin-api` 最初以同一 `pluginApiVersion` 发布到 mavenLocal（`io.github.whywood.deepdeep:design`）；自 `plugin-api` 0.7.0 起两者版本号独立（`plugin-api` 0.7.0 / `design` 0.6.0）。`plugin-api` 用 `api(project(":design"))` 把设计系统传递给插件；插件仍然 `compileOnly` 不打包，运行期由宿主 parent classloader 解析同一份类。插件页面直接用 `DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()`，与 App 完全同源。原 `plugin-api` 自带的 `ui/PluginComponents.kt` 最小工具盒（`PluginCard`/`PluginButton`/`PluginTheme` 等）删除。
 
 代价：公共 Dd 组件的签名与视觉成为跨仓库 API，改组件要同步 `plugin-api` ABI、`docs/PLUGIN_DEV.md` 并重编 `plugins/`；插件作者不能再只靠 `plugin-api` 拿到 UI 组件，需要能解析 `design` 制品（由 `api()` 传递，通常无感）。
 
@@ -238,3 +238,40 @@ Material3 `Card` 的默认容器色是 `surfaceContainerHighest`，而 `DeepDeep
 删除 `PluginFailureGuard`、`PluginManagerFacade.slotFailureGuard()`、各处 `failureGuard` 接线与相关测试；槽位与页面渲染直接抛出，与工具/回调异常一致（带崩 App）。
 
 代价：插件 UI 代码异常不再有任何「下次禁用」保护，插件作者必须自测；宿主也不会因残留标记而误禁页面。
+
+
+## 105. 单会话导出替代会话备份
+
+全量 zip 备份需要用户先想清楚「备份到哪、什么时候恢复」，而实际需求多是「把这段会话带走/存一份」。改为聊天顶栏「导出会话」：按当前会话直接写 JSONL（pi 的 session-export 同思路），不再提供导入、Markdown 与全量备份页。
+
+代价：没有「一次备份全部会话」的入口；换机需要逐个导出。`android:allowBackup="false"` 下方可依赖系统备份。
+
+## 106. 按需工具：统一 tool_search + tool_execute
+
+MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全量加载进会话；插件工具则全量常驻。现在统一为：所有 `DEFERRED` 工具（MCP + 插件）只进入宿主 catalog，模型先 `tool_search` 找名字/参数，再 `tool_execute(name, arguments)` 按名执行，不把工具加载进会话。MCP 侧通过 pi2kotlin 新增的 `McpManager.callDeferredTool` 按名执行；插件侧由 `PluginTool.exposure = DEFERRED` 声明。
+
+代价：工具调用多一轮；`tool_search` 的返回 schema 也占 token；`autoEnableToolSearch` 关闭后旧 MCP 行为改变。插件作者必须自行决定哪些工具折叠，折叠工具不能依赖常驻提示里的 `promptSnippet`。
+
+## 107. pi2kotlin 随宿主发版
+
+`tool_execute` 需要 MCP 连接层的按名执行与队列按条撤回，这些 API 不在 pi SDK 0.4.0 的公开面里；在 `pi2kotlin` 仓库补 `McpManager.callDeferredTool`、`McpToolAdapter.execute`、`AgentSession.removeQueuedInput` 后发 0.5.0（m2 zip + GitHub release + sha256），app 升级依赖。
+
+代价：宿主与 SDK 强绑定，升级 SDK 要先发测试版；release 网络失败时需用 `-PpiSdkLocalZip` 本地兜底。
+
+## 108. Agent 设置页承接屏幕操作
+
+屏幕操作开关从权限页移到 Agent 设置页，与「权限级别」入口并列；权限页只保留权限档位与 ADB/Root 操作，不再重复放开关。
+
+代价：权限页不再能一眼看到屏幕操作状态；Agent 页需要在开关未生效时给出「缺 ADB/Root」提示。
+
+## 109. 运行中发送模式与排队缓冲
+
+聊天设置新增「运行中发送：插话/排队」。排队时输入区展示缓冲区行（文本 + 撤回 + 直接发送），不再有长按/菜单与「运行中：发送=插话，菜单=排队」提示；停止按钮改为实心方块。
+
+代价：长按快捷入口删除，切换模式需要进设置；直接发送会跳过队列顺序。
+
+## 110. 自动跟底改为按帧驱动
+
+原来的 `snapshotFlow(followContentSignal)` 只观察最后一条消息的少量字段，过程/工具高度增长与流式输出不在信号里；改为发送期间每帧调用 `followContent()`，只要用户仍在底部且最后一项可见就直接 `scrollBy` 贴底。
+
+代价：发送期间每帧一次轻量计算；用户上滑后仍按 80dp 阈值重新吸附。

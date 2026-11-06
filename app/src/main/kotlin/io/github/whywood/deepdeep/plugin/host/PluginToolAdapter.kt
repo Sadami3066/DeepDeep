@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.runtime.DeferredTool
 import io.github.whywood.deepdeep.plugin.host.events.toAgentToolResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +32,16 @@ internal object PluginToolAdapter {
 
     fun toCodingTools(tools: List<PluginTool>, sessionId: () -> String = { "" }): List<CodingTool> =
         tools.map { toCodingTool(it, sessionId) }
+
+    fun toDeferredTool(tool: PluginTool, source: String, sessionId: () -> String = { "" }): DeferredTool =
+        DeferredTool(
+            name = tool.name,
+            description = tool.description,
+            parameters = tool.parameters,
+            source = source,
+        ) { callId, args, signal, onUpdate ->
+            execute(tool, callId, args, signal, onUpdate, sessionId)
+        }
 
     private suspend fun execute(
         tool: PluginTool,

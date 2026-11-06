@@ -96,11 +96,6 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
-    data object SessionBackup : AppDestination {
-        override val routeKey: String = "settings/backup"
-        override val depth: Int = 2
-    }
-
     data object Search : AppDestination {
         override val routeKey: String = "search"
         override val depth: Int = 1
@@ -184,7 +179,6 @@ sealed interface AppDestination {
             routeKey == Permission.routeKey -> Permission
             routeKey == AndroidSettings.routeKey -> AndroidSettings
             routeKey == AgentSettings.routeKey -> AgentSettings
-            routeKey == SessionBackup.routeKey -> SessionBackup
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp

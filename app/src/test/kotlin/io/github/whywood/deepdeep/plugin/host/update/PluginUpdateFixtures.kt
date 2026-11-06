@@ -47,7 +47,7 @@ internal object UpdateFixtures {
         sha256: String = "a".repeat(64),
         size: Long = 1024L,
         publisherKeyId: String = PUBLISHER_KEY_ID,
-        apiLevel: Int = 3,
+        apiLevel: Int = 4,
         minHostVersion: String? = null,
     ): String = buildJsonObject {
         put("id", id)
@@ -68,7 +68,7 @@ internal object UpdateFixtures {
     fun entry(
         id: String = PLUGIN_ID,
         version: String = "1.1.0",
-        apiLevel: Int = 3,
+        apiLevel: Int = 4,
         minHostVersion: String? = null,
         sha256: String = "a".repeat(64),
         size: Long = 1024L,
@@ -99,7 +99,7 @@ internal object UpdateFixtures {
         activeBundleSha256 = "0".repeat(64),
         size = 100L,
         publisherKeyId = publisherKeyId,
-        apiLevel = 3,
+        apiLevel = 4,
         uiApiLevel = 1,
         pendingVersion = pendingVersion,
         pendingBundleSha256 = pendingVersion?.let { "1".repeat(64) },

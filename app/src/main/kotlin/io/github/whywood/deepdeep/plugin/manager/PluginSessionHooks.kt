@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
 import io.github.whywood.deepdeep.plugin.api.PluginSessionSnapshot
+import io.github.whywood.deepdeep.plugin.api.PluginToolExposure
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginToolAdapter
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
@@ -15,6 +16,7 @@ import io.github.whywood.deepdeep.plugin.host.events.RuntimeEventMapper
 import io.github.whywood.deepdeep.plugin.host.events.RuntimeHookSource
 import io.github.whywood.deepdeep.plugin.host.events.SessionEventPump
 import io.github.whywood.deepdeep.plugin.host.events.SessionHookSource
+import io.github.whywood.deepdeep.runtime.DeferredTool
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.util.WeakHashMap
@@ -37,7 +39,20 @@ internal class PluginSessionHooks(
     fun tools(binding: SessionBinding): List<CodingTool> {
         val sessionId = { binding.current()?.sessionId.orEmpty() }
         return sessionContributions(binding).values
-            .flatMap { contribution -> PluginToolAdapter.toCodingTools(contribution.tools, sessionId) }
+            .flatMap { contribution ->
+                PluginToolAdapter.toCodingTools(contribution.tools.filter { it.exposure == PluginToolExposure.DIRECT }, sessionId)
+            }
+            .distinctBy { it.name }
+    }
+
+    fun deferredTools(binding: SessionBinding): List<DeferredTool> {
+        val sessionId = { binding.current()?.sessionId.orEmpty() }
+        return sessionContributions(binding).entries
+            .flatMap { (pluginId, contribution) ->
+                contribution.tools
+                    .filter { it.exposure == PluginToolExposure.DEFERRED }
+                    .map { tool -> PluginToolAdapter.toDeferredTool(tool, "plugin:$pluginId", sessionId) }
+            }
             .distinctBy { it.name }
     }
 

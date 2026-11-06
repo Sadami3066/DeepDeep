@@ -22,6 +22,9 @@
     <string name="settings_language_english">English</string>
     <string name="settings_auto_collapse_process">过程自动折叠</string>
     <string name="settings_auto_retry">自动重试</string>
+    <string name="settings_send_while_running">运行中发送</string>
+    <string name="settings_send_while_running_steer">插话</string>
+    <string name="settings_send_while_running_queue">排队</string>
     <string name="settings_switch_on">开</string>
     <string name="settings_switch_off">关</string>
     <string name="settings_notifications">通知</string>

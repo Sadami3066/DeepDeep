@@ -61,7 +61,6 @@ internal fun SettingsRoute(
         onOpenPermission = { navigator.push(AppDestination.Permission) },
         onOpenAgentSettings = { navigator.push(AppDestination.AgentSettings) },
         onOpenAndroidSettings = { navigator.push(AppDestination.AndroidSettings) },
-        onOpenSessionBackup = { navigator.push(AppDestination.SessionBackup) },
         privilegeLevel = privilegeState.effective,
         onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
         onOpenFonts = { navigator.push(AppDestination.Fonts) },
@@ -82,11 +81,15 @@ internal fun ChatSettingsRoute(dependencies: AppDependencies, scope: CoroutineSc
     )
     ChatSettingsScreen(
         preferences = preferences,
+        sendWhileRunning = preferences.sendWhileRunning,
         onBack = onBack,
         onToggle = { toggle, enabled -> scope.launch { dependencies.appPreferences.set(toggle, enabled) } },
         voiceAutoSpeak = voiceAutoSpeak,
         onVoiceAutoSpeakChange = { enabled -> scope.launch { dependencies.voicePreferences.setAutoSpeak(enabled) } },
         onChatFontScaleChange = { value -> scope.launch { dependencies.appPreferences.setChatFontScale(value) } },
+        onSendWhileRunningChange = { value ->
+            scope.launch { dependencies.appPreferences.setSendWhileRunning(value) }
+        },
     )
 }
 
@@ -170,9 +173,6 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
 internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScope, onBack: () -> Unit) {
     val context = LocalContext.current
     val state by dependencies.privilege.state.collectAsStateWithLifecycle()
-    val screenOps by dependencies.capabilitySettingsStore.screenOps.collectAsStateWithLifecycle(
-        initialValue = false,
-    )
     PermissionScreen(
         state = state,
         onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
@@ -182,8 +182,6 @@ internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScop
         onConnect = { scope.launch { dependencies.privilege.connect() } },
         onOpenWirelessDebugging = { dependencies.privilege.openWirelessDebugging(context) },
         onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
-        screenOps = screenOps,
-        onScreenOpsChange = { enabled -> scope.launch { dependencies.capabilitySettingsStore.setScreenOps(enabled) } },
         onBack = onBack,
     )
 }

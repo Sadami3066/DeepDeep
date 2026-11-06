@@ -40,5 +40,4 @@
 
     <string name="permission_effective">Effective now</string>
     <string name="permission_effective_fallback">The selected tier is not available; running at %1$s instead.</string>
-    <string name="permission_screen_ops_inactive">Not active: screen operations require ADB or Root permission.</string>
 </resources>

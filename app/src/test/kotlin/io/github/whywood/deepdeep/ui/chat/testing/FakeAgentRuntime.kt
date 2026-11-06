@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.OpenedSession
@@ -45,6 +46,7 @@ class FakeAgentRuntime : AgentRuntime {
     val steered = mutableListOf<String>()
     val followUps = mutableListOf<String>()
     var queued: List<QueuedInput> = emptyList()
+    val removedQueued = mutableListOf<QueuedInput>()
     var stopDropped: List<String> = emptyList()
     val delivered = mutableListOf<Triple<String, String, String?>>()
     val stopped = mutableListOf<String>()
@@ -128,6 +130,14 @@ class FakeAgentRuntime : AgentRuntime {
         val dropped = queued.map { it.text }
         queued = emptyList()
         return dropped
+    }
+
+    override fun removeQueuedInput(sessionId: String, kind: InputQueueKind, text: String): Boolean {
+        val input = QueuedInput(kind, text)
+        val removed = queued.contains(input)
+        if (removed) queued = queued - input
+        removedQueued += input
+        return removed
     }
 
     var retried = 0

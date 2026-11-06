@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.CompactionOutcome
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.InterruptedRun
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.OpenedSession
@@ -84,6 +85,12 @@ class FakeAgentRuntime : AgentRuntime {
     override fun queuedInputs(sessionId: String): List<QueuedInput> = emptyList()
 
     override fun clearQueuedInputs(sessionId: String): List<String> = emptyList()
+
+    override fun removeQueuedInput(
+        sessionId: String,
+        kind: InputQueueKind,
+        text: String,
+    ): Boolean = kind in InputQueueKind.entries && text.isNotEmpty()
 
     override suspend fun retryLastTurn(sessionId: String) = Unit
 

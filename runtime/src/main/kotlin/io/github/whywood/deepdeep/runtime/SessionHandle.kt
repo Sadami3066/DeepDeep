@@ -30,6 +30,8 @@ interface SessionHandle {
     suspend fun close()
     fun subscribe(listener: suspend (SessionEvent) -> Unit): () -> Unit
     fun clearQueues()
+
+    fun removeQueuedInput(text: String, behavior: QueueBehavior): Boolean
     fun canRetryLastAssistant(): Boolean
     suspend fun retryLastAssistant()
     fun lastAssistantText(): String?

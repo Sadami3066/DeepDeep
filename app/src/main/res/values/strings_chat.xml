@@ -48,6 +48,9 @@
     <string name="assistant_quote_remove">取消引用</string>
     <string name="assistant_reasoning">思考</string>
     <string name="assistant_send">发送</string>
+    <string name="assistant_export_session">导出会话</string>
+    <string name="assistant_export_done">已导出会话</string>
+    <string name="assistant_export_failed">导出失败</string>
     <string name="assistant_reload">重新加载</string>
     <string name="chat_reload_done">已重新加载当前会话</string>
     <string name="chat_reload_failed">重新加载失败</string>
@@ -127,9 +130,6 @@
     <string name="chat_question_other_action">前往回答</string>
     <string name="chat_cmd_goal_invalid">目标内容不能为空</string>
     <string name="chat_notice_goal_round_unbounded">目标 · 第 %1$d 轮</string>
-    <string name="assistant_queue_steer">插话</string>
-    <string name="assistant_queue_follow_up">排队</string>
-    <string name="assistant_queue_clear">清空队列</string>
     <string name="assistant_send_steer">插话发送</string>
     <string name="assistant_importing_image">正在处理图片…</string>
     <string name="assistant_summary_compacted">上下文已压缩</string>

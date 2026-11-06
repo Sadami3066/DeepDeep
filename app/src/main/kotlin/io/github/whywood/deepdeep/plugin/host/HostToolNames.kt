@@ -43,6 +43,7 @@ internal object HostToolNames {
 
     private val sdkTools = setOf(
         "tool_search",
+        "tool_execute",
         "mcp_loaded_tools",
         "mcp_resource",
         "mcp_resources",

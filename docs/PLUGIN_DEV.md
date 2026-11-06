@@ -8,7 +8,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.6.0`、`PLUGIN_API_LEVEL = 3`、`BASELINE_API_LEVEL = 3`、`HOST_UI_API_LEVEL = 1`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.7.0`、`PLUGIN_API_LEVEL = 4`、`BASELINE_API_LEVEL = 4`、`HOST_UI_API_LEVEL = 1`。
 
 `plugins/` 仓库自带两份参考：
 
@@ -25,7 +25,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 # 在 plugins/ 仓库根目录执行
 cd ../app
 ./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal
-# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/{plugin-api,design}/0.6.0/
+# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.7.0/ 与 design/0.6.0/
 ```
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。改了任意一个都要重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
@@ -73,7 +73,7 @@ cp -R template my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.6.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.7.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
 - 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
@@ -88,7 +88,7 @@ cp -R template my-plugin
 |---|---|---|---|
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
-| `apiLevel` | int | 否（默认 3） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 3..3）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（3）处理 |
+| `apiLevel` | int | 否（默认 4） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 4..4）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（4）处理 |
 | `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
@@ -267,7 +267,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
     {
       "id": "com.example.myplugin",
       "version": "1.0.1",
-      "apiLevel": 3,
+      "apiLevel": 4,
       "minHostVersion": "0.2.0",
       "url": "https://example.com/plugins/my-plugin-1.0.1.ddp",
       "sha256": "<.ddp 整包 sha256>",
@@ -380,9 +380,26 @@ override fun contributions(host: PluginHost) = Contributions(
 | `parameters` | JSON Schema（`{"type":"object","properties":{...},"required":[...]}`），宿主原样交给 SDK |
 | `promptSnippet` | 系统提示里的一句话摘要（可选） |
 | `promptGuidelines` | 追加给模型的工具使用规则（可选） |
+| `exposure` | `PluginToolExposure.DIRECT`（默认，工具常驻并直接可调）或 `DEFERRED`（不进入常驻工具列表，模型先 `tool_search` 找到、再 `tool_execute` 执行） |
 | `execute` | `suspend (PluginToolCall) -> PluginToolResult` |
 
-宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`/`ls`/`grep`/`find`；App 自带工具 `ask_user_question`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`arrange_calendar`/`screen_*`/`virtual_screen`；SDK 工具 `tool_search`/`mcp_*`；以及所有 `mcp__` 前缀。
+#### 工具暴露方式
+
+工具默认 `DIRECT`：名称、描述、参数会出现在模型的常驻工具列表里。工具数量多、或只偶尔使用的工具可以声明 `PluginToolExposure.DEFERRED`：
+
+```kotlin
+PluginTool(
+    name = "calendar_sync",
+    label = "同步日历",
+    description = "同步指定时间范围的日历事件",
+    parameters = syncSchema,
+    exposure = PluginToolExposure.DEFERRED,
+) { call -> ... }
+```
+
+`DEFERRED` 工具不会常驻系统提示，只出现在宿主 `tool_search` 的目录里。模型调用 `tool_search(query)` 拿到工具名与参数说明后，再用 `tool_execute(name, arguments)` 执行，宿主不会把工具加载进会话。是否折叠由插件自己决定；插件也可以在页面里提供开关，通过 `requestContributionsRefresh()` 在新会话生效（当前 run 的贡献集合在 run 开始时冻结）。
+
+宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`/`ls`/`grep`/`find`；App 自带工具 `ask_user_question`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`arrange_calendar`/`screen_*`/`virtual_screen`；宿主按需工具 `tool_search`/`tool_execute` 与 SDK 的 `mcp_*`；以及所有 `mcp__` 前缀。
 
 `PluginToolCall`：
 
@@ -708,9 +725,9 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 
 ## ABI 与版本
 
-- `PLUGIN_API_LEVEL = 3`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..3` 内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 3`。
+- `PLUGIN_API_LEVEL = 4`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..4` 内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 4`。
 - `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`），所以 `minHostVersion: "0.2.0"` 在当前开发版宿主上通过。
-- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.6.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.7.0`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
 - Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。

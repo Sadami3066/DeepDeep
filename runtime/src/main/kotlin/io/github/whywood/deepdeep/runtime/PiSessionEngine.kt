@@ -74,9 +74,9 @@ class PiSessionEngine(
         val modelId = if (restoredModel) restoredModelId!! else fallback.modelId
         val activeShell = if (shellEnabled) shellExecutor else null
         val binding = SessionBinding(supportsChatDelivery)
-        val allTools = buildTools(activeShell, binding)
-        val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         var created: AgentSession? = null
+        val allTools = buildTools(activeShell, binding) { created }
+        val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         suspend fun pluginContextSection(): Map<String, String> {
             val context = hooks.systemContext?.invoke()?.takeIf { it.isNotBlank() } ?: return emptyMap()
             return mapOf("plugin_context" to wrapPromptSection("plugin_context", context))
@@ -121,7 +121,7 @@ class PiSessionEngine(
                     loadConfig = true,
                     samplingEnabled = false,
                     rootsEnabled = true,
-                    autoEnableToolSearch = true,
+                    autoEnableToolSearch = false,
                 ),
             ),
         )
@@ -143,9 +143,13 @@ class PiSessionEngine(
     override suspend fun create(file: String?, config: ModelConfig): SessionHandle =
         PiSessionHandle(this, createSession(file?.toPath(), config))
 
-    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding(supportsChatDelivery))
+    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding(supportsChatDelivery)) { null }
 
-    private fun buildTools(activeShell: ShellExecutor?, binding: SessionBinding): List<CodingTool> = buildList {
+    private fun buildTools(
+        activeShell: ShellExecutor?,
+        binding: SessionBinding,
+        session: () -> AgentSession?,
+    ): List<CodingTool> = buildList {
         val defaults = defaultCodingTools(
             cwd = cwd,
             fs = toolFs,
@@ -160,7 +164,7 @@ class PiSessionEngine(
             }
         }
         toolContext?.let { context ->
-            addAll(appTools(cwd, context, binding))
+            addAll(appTools(cwd, context, binding, session))
         }
     }
 
@@ -283,6 +287,9 @@ internal class PiSessionHandle(
     override fun clearQueues() {
         session.agent.clearAllQueues()
     }
+
+    override fun removeQueuedInput(text: String, behavior: QueueBehavior): Boolean =
+        session.removeQueuedInput(text, behavior)
 
     override fun canRetryLastAssistant(): Boolean = session.canRetryLastAssistant()
 

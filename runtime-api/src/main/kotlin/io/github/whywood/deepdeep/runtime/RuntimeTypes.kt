@@ -341,6 +341,8 @@ interface SessionCommands {
 
     fun clearQueuedInputs(sessionId: String): List<String>
 
+    fun removeQueuedInput(sessionId: String, kind: InputQueueKind, text: String): Boolean
+
     suspend fun retryLastTurn(sessionId: String)
 
     suspend fun deliverReminder(sessionId: String, text: String, reminder: String?)

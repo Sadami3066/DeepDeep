@@ -60,6 +60,18 @@ internal class RuntimeRuns(
         return clearQueuedInputs(handle)
     }
 
+    fun removeQueuedInput(sessionId: String, kind: InputQueueKind, text: String): Boolean {
+        val handle = handles[sessionId] ?: return false
+        val behavior = when (kind) {
+            InputQueueKind.STEER -> QueueBehavior.Steer
+            InputQueueKind.FOLLOW_UP -> QueueBehavior.FollowUp
+        }
+        val removed = runCatching { handle.session.removeQueuedInput(text, behavior) }.getOrDefault(false)
+        val discarded = handle.pending.discard(kind, text)
+        if (removed || discarded) emitQueueChanged(handle, handle.state.runId.orEmpty())
+        return removed || discarded
+    }
+
     suspend fun retryLastTurn(sessionId: String) {
         val handle = handleFor(sessionId)
         val start = begin(handle, TurnSource.RETRY) ?: error("Agent session is busy")

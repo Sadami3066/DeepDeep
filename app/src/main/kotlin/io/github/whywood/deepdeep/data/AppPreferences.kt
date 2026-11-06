@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
@@ -15,12 +16,18 @@ import kotlin.math.roundToInt
 
 private val Context.appPreferencesDataStore by preferencesDataStore(name = "app_preferences")
 
+enum class SendWhileRunning {
+    STEER,
+    QUEUE,
+}
+
 data class UiPreferences(
     val autoCollapseProcess: Boolean = true,
     val autoRetry: Boolean = true,
     val backgroundJobWake: Boolean = true,
     val pinnedWorkspaceIds: Set<String> = emptySet(),
     val chatFontScale: Float = CHAT_FONT_SCALE_DEFAULT,
+    val sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER,
 )
 
 const val CHAT_FONT_SCALE_MIN = 0.85f
@@ -51,6 +58,7 @@ class AppPreferences(context: Context) {
     private val backgroundJobWakeKey = booleanPreferencesKey("background_job_wake")
     private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
     private val chatFontScaleKey = floatPreferencesKey("chat_font_scale")
+    private val sendWhileRunningKey = stringPreferencesKey("send_while_running")
 
     val preferences: Flow<UiPreferences> = store.data
         .map { values ->
@@ -60,6 +68,9 @@ class AppPreferences(context: Context) {
                 backgroundJobWake = values[backgroundJobWakeKey] ?: true,
                 pinnedWorkspaceIds = values[pinnedWorkspacesKey] ?: emptySet(),
                 chatFontScale = normalizeChatFontScale(values[chatFontScaleKey] ?: CHAT_FONT_SCALE_DEFAULT),
+                sendWhileRunning = values[sendWhileRunningKey]
+                    ?.let { stored -> SendWhileRunning.entries.firstOrNull { it.name == stored } }
+                    ?: SendWhileRunning.STEER,
             )
         }
         .catch { error ->
@@ -80,6 +91,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setChatFontScale(value: Float) {
         store.edit { it[chatFontScaleKey] = normalizeChatFontScale(value) }
+    }
+
+    suspend fun setSendWhileRunning(value: SendWhileRunning) {
+        store.edit { it[sendWhileRunningKey] = value.name }
     }
 
     suspend fun setWorkspacePinned(workspaceId: String, pinned: Boolean) {

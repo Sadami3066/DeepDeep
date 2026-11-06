@@ -70,7 +70,7 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatInputField
 import io.github.whywood.deepdeep.ui.common.chat.ComposerChip
 import io.github.whywood.deepdeep.ui.common.chat.ComposerMetrics
 import io.github.whywood.deepdeep.ui.common.chat.ModelPickerSheet
-import io.github.whywood.deepdeep.ui.common.chat.QueueStrip
+import io.github.whywood.deepdeep.ui.common.chat.QueuedInputBuffer
 import io.github.whywood.deepdeep.ui.common.chat.state.mergeDroppedInputText
 
 
@@ -296,14 +296,10 @@ private fun AssistantOverlayExpandedContent(
             Column {
                 val queued = state.conversation.queuedInputs
                 if (queued.isNotEmpty()) {
-                    QueueStrip(
+                    QueuedInputBuffer(
                         queuedInputs = queued,
-                        onClear = {
-                            val dropped = actions.onClearQueue()
-                            if (dropped.isNotEmpty()) {
-                                onValueChange(mergeDroppedInputText(value, dropped))
-                            }
-                        },
+                        onRemove = actions.onRemoveQueued,
+                        onSend = actions.onSendQueued,
                         modifier = Modifier.padding(bottom = 10.dp),
                     )
                 }

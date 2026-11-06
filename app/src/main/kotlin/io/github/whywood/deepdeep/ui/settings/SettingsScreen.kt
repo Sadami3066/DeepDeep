@@ -93,7 +93,6 @@ fun SettingsScreen(
     onOpenPermission: () -> Unit = {},
     onOpenAgentSettings: () -> Unit = {},
     onOpenAndroidSettings: () -> Unit = {},
-    onOpenSessionBackup: () -> Unit = {},
     privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
@@ -279,14 +278,6 @@ fun SettingsScreen(
                     onClick = onOpenScan,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_scan"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Download,
-                    title = stringResource(R.string.settings_session_backup),
-                    onClick = onOpenSessionBackup,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_session_backup"),
                 )
             }
 

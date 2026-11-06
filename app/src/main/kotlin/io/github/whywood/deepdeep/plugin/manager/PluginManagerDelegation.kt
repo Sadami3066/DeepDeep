@@ -28,6 +28,9 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool> = sessionHooks.tools(binding)
 
+    override fun deferredTools(binding: SessionBinding): List<io.github.whywood.deepdeep.runtime.DeferredTool> =
+        sessionHooks.deferredTools(binding)
+
     override suspend fun inspectExternal(file: File): ExternalInspectionUi? = externalFlow.inspectExternal(file)
 
     override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =

@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.ui.shell
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,12 +32,14 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.SharePayload
+import io.github.whywood.deepdeep.data.session.SessionExporter
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
@@ -168,6 +172,25 @@ internal fun AppShell(
         allJobs.filter { it.sessionId == state.conversationId }
     }
     var modelsOpen by remember { mutableStateOf(false) }
+    var exportSummary by remember { mutableStateOf<ConversationSummary?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        val summary = exportSummary
+        exportSummary = null
+        if (uri != null && summary != null) {
+            scope.launch {
+                val ok = runCatching {
+                    SessionExporter.write(context.contentResolver, uri, summary.filePath)
+                }.isSuccess
+                Toast.makeText(
+                    context,
+                    if (ok) R.string.assistant_export_done else R.string.assistant_export_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
         initialValue = PersonalizationUi(),
     )
@@ -310,7 +333,7 @@ internal fun AppShell(
 
     fun submitChatInput() {
         when (val plan = planSubmission(state.input, state.sending)) {
-            ShellSubmitPlan.Send -> chatViewModel.send()
+            ShellSubmitPlan.Send -> chatViewModel.send(uiPreferences.sendWhileRunning)
             ShellSubmitPlan.RejectWhileSending ->
                 chatViewModel.showCommandError(appResources.getString(R.string.chat_error_stop_before_command))
             is ShellSubmitPlan.RunCommand -> {
@@ -480,8 +503,19 @@ internal fun AppShell(
                         onOpenMiniapp = { id -> navigator.push(AppDestination.MiniappDetail(id)) },
                         onOpenPluginPage = { pluginId, pageId -> navigator.push(AppDestination.PluginPage(pluginId, pageId)) },
                         onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
-                        onFollowUp = chatViewModel::followUpNow,
-                        onClearQueue = chatViewModel::clearQueuedInputs,
+                        onExportSession = {
+                            val summary = state.conversations.firstOrNull { it.id == state.conversationId }
+                            if (summary == null) {
+                                Toast.makeText(context, R.string.assistant_export_failed, Toast.LENGTH_SHORT).show()
+                            } else {
+                                exportSummary = summary
+                                exportLauncher.launch(
+                                    SessionExporter.suggestedFileName(summary.title, summary.id),
+                                )
+                            }
+                        },
+                        onRemoveQueued = chatViewModel::removeQueuedInput,
+                        onSendQueued = chatViewModel::sendQueuedNow,
                         onScrollAnchorChange = chatViewModel::updateScrollAnchor,
                     ),
                     overlay = ChatScreenOverlay(

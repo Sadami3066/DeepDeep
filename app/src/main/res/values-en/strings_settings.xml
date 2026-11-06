@@ -20,6 +20,9 @@
     <string name="settings_language_english">English</string>
     <string name="settings_auto_collapse_process">Auto-collapse process</string>
     <string name="settings_auto_retry">Auto-retry</string>
+    <string name="settings_send_while_running">Send while running</string>
+    <string name="settings_send_while_running_steer">Steer</string>
+    <string name="settings_send_while_running_queue">Queue</string>
     <string name="settings_switch_on">On</string>
     <string name="settings_switch_off">Off</string>
     <string name="settings_notifications">Notifications</string>

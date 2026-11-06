@@ -1641,14 +1641,15 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginSkillFile {
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginTool {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginTool(java.lang.String, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, java.util.List<java.lang.String>, kotlin.jvm.functions.Function2<? super io.github.whywood.deepdeep.plugin.api.PluginToolCall, ? super kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.PluginToolResult>, ? extends java.lang.Object>);
-  public io.github.whywood.deepdeep.plugin.api.PluginTool(java.lang.String, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, java.util.List, kotlin.jvm.functions.Function2, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public io.github.whywood.deepdeep.plugin.api.PluginTool(java.lang.String, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, java.util.List<java.lang.String>, io.github.whywood.deepdeep.plugin.api.PluginToolExposure, kotlin.jvm.functions.Function2<? super io.github.whywood.deepdeep.plugin.api.PluginToolCall, ? super kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.PluginToolResult>, ? extends java.lang.Object>);
+  public io.github.whywood.deepdeep.plugin.api.PluginTool(java.lang.String, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, java.lang.String, java.util.List, io.github.whywood.deepdeep.plugin.api.PluginToolExposure, kotlin.jvm.functions.Function2, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getName();
   public final java.lang.String getLabel();
   public final java.lang.String getDescription();
   public final kotlinx.serialization.json.JsonObject getParameters();
   public final java.lang.String getPromptSnippet();
   public final java.util.List<java.lang.String> getPromptGuidelines();
+  public final io.github.whywood.deepdeep.plugin.api.PluginToolExposure getExposure();
   public final kotlin.jvm.functions.Function2<io.github.whywood.deepdeep.plugin.api.PluginToolCall, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.PluginToolResult>, java.lang.Object> getExecute();
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginToolCall {
@@ -1660,6 +1661,13 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginToolCall {
   public final io.github.whywood.deepdeep.plugin.api.PluginRunSignal getSignal();
   public final java.lang.String getSessionId();
   public final void partial(io.github.whywood.deepdeep.plugin.api.PluginToolResult);
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginToolExposure extends java.lang.Enum<io.github.whywood.deepdeep.plugin.api.PluginToolExposure> {
+  public static final io.github.whywood.deepdeep.plugin.api.PluginToolExposure DIRECT;
+  public static final io.github.whywood.deepdeep.plugin.api.PluginToolExposure DEFERRED;
+  public static io.github.whywood.deepdeep.plugin.api.PluginToolExposure[] values();
+  public static io.github.whywood.deepdeep.plugin.api.PluginToolExposure valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.plugin.api.PluginToolExposure> getEntries();
 }
 public interface io.github.whywood.deepdeep.plugin.api.PluginToolResult {
   public static final io.github.whywood.deepdeep.plugin.api.PluginToolResult$Companion Companion;

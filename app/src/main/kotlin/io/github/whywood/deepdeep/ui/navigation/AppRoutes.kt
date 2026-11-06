@@ -21,7 +21,6 @@ import io.github.whywood.deepdeep.ui.navigation.routes.RuntimeSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SearchRoute
-import io.github.whywood.deepdeep.ui.navigation.routes.SessionBackupRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
@@ -100,12 +99,6 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.AgentSettings -> AgentSettingsRoute(
             dependencies = dependencies,
             navigator = host.navigator,
-            onBack = onBack,
-        )
-
-        AppDestination.SessionBackup -> SessionBackupRoute(
-            dependencies = dependencies,
-            scope = host.scope,
             onBack = onBack,
         )
 

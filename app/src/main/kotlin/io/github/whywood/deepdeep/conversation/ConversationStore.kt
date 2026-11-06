@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ImagePart
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
@@ -394,6 +395,9 @@ class ConversationStore(
     }
 
     fun clearQueuedInputs(sessionId: String): List<String> = runtime.clearQueuedInputs(sessionId)
+
+    fun removeQueuedInput(sessionId: String, kind: InputQueueKind, text: String): Boolean =
+        runtime.removeQueuedInput(sessionId, kind, text)
 
     fun toggleStep(sessionId: String, messageId: Long, stepId: Long) {
         mutate(sessionId) { state -> state.toggleStep(messageId, stepId) }

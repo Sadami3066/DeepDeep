@@ -180,6 +180,8 @@ class AssistantOverlayActivity : ComponentActivity() {
                         onSelectModel = controller::selectModel,
                         onSelectThinking = controller::selectThinking,
                         onClearQueue = controller::clearQueue,
+                        onRemoveQueued = controller::removeQueued,
+                        onSendQueued = controller::sendQueued,
                         onRetryStart = controller::start,
                         onDismissPreview = { preview = null },
                         onSharePreview = {

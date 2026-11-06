@@ -49,6 +49,7 @@ data class ChatTopBarActions(
     val onOpenUsage: () -> Unit,
     val onOpenJobs: () -> Unit,
     val onOpenFiles: () -> Unit = {},
+    val onExportSession: () -> Unit = {},
 )
 
 private val TopBarEdge = 6.dp
@@ -168,6 +169,15 @@ internal fun ChatTopBar(
                                     actions.onOpenFiles()
                                 },
                                 testTag = "assistant_files",
+                            )
+                            DdMenuItem(
+                                text = stringResource(R.string.assistant_export_session),
+                                icon = DdIcons.Download,
+                                onClick = {
+                                    menuOpen = false
+                                    actions.onExportSession()
+                                },
+                                testTag = "chat_export",
                             )
                             DdMenuItem(
                                 text = stringResource(R.string.assistant_reload),

@@ -30,6 +30,8 @@ interface PluginManagerFacade {
 
     fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool>
 
+    fun deferredTools(binding: SessionBinding): List<io.github.whywood.deepdeep.runtime.DeferredTool>
+
     fun promptBody(): String?
 
     fun setEnabled(pluginId: String, enabled: Boolean)

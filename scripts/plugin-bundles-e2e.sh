@@ -13,6 +13,13 @@ DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
 (
   cd ../plugins
   ./scripts/gradlew-locked \
+    :feishu:signPlugin \
+    :wecom:signPlugin \
+    :jwxt:signPlugin \
+    :micloud:signPlugin \
+    :sample:signPlugin \
+    :template:signPlugin \
+    :interop:signPlugin \
     :feishu:verifyPlugin \
     :wecom:verifyPlugin \
     :jwxt:verifyPlugin \

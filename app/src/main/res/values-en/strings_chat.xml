@@ -48,6 +48,9 @@
     <string name="assistant_quote_remove">Remove quote</string>
     <string name="assistant_reasoning">Thinking</string>
     <string name="assistant_send">Send</string>
+    <string name="assistant_export_session">Export chat</string>
+    <string name="assistant_export_done">Chat exported</string>
+    <string name="assistant_export_failed">Export failed</string>
     <string name="assistant_reload">Reload</string>
     <string name="chat_reload_done">Session reloaded</string>
     <string name="chat_reload_failed">Reload failed</string>
@@ -127,9 +130,6 @@
     <string name="chat_question_other_action">Go answer</string>
     <string name="chat_cmd_goal_invalid">Goal objective cannot be empty</string>
     <string name="chat_notice_goal_round_unbounded">Goal · round %1$d</string>
-    <string name="assistant_queue_steer">Steer</string>
-    <string name="assistant_queue_follow_up">Queue</string>
-    <string name="assistant_queue_clear">Clear queue</string>
     <string name="assistant_send_steer">Send steering message</string>
     <string name="assistant_importing_image">Processing image…</string>
     <string name="assistant_summary_compacted">Context compacted</string>
