@@ -143,3 +143,11 @@
 89. **进程启动唯一入口（ProcessRuntime）**：插件启动、`prepare()`、`host.reconfigure()`、`host.ensureStarted()` 从前分散在 `AppGraph.init`、`MainActivity`、`AgentService`、浮层 Activity，顺序与幂等靠调用点自觉。现收敛到 `service/ProcessRuntime`：Application/Activity/浮层/前台服务都调 `start()`，内部用闸门保证并发只跑一次、失败置 `FAILED` 并从诊断日志留痕（`files/diagnostics/process-runtime.log`）、下次调用可重试；插件启动失败只记日志不阻断主进程其余初始化。前台切换统一走 `onForeground()`（插件前台通知 + 刷新 + 技能同步）。`ProcessRuntime` 以 lambda 接收各步骤，单测可直接验证顺序/并发/失败重试，不依赖真实插件与 runtime host。代价：新增一层编排，调用点不能再自行决定初始化步骤；`PluginHostManager.start()` 重复调用不再重复注册/启用插件，但仍会激活待生效版本（更新只在启动安全点生效）。
 
 90. **Compose 根拆分（AppShell / AppOnboardingGate）**：`DeepDeepApp` 只保留 ChatViewModel/会话状态采集、引导门控与参数转发（约 65 行）；引导判定收进 `ui/shell/AppOnboardingGate`（`rememberSaveable` 决策 + 首启 `resolveOnboardingGate`，未进聊天前渲染引导/启动屏），主壳（导航、`AnimatedScreenHost`、聊天 base）收进 `ui/shell/AppShell`，全局叠层/抽屉与叠层状态收进 `ui/shell/AppOverlays`（`AppOverlaysState` + `rememberSaveable` Saver），通过 `content` 槽由门控决定何时组合。代价：聊天相关局部状态（抽屉、sheet、导航）从首帧延迟到引导完成后创建；根不再直接持有 UI 状态，后续改壳层改 `AppShell`。
+
+## 91. 页面路由拆分
+
+`AppRouteContent` 原来有 28+ 个参数，所有页面都收整个 `ChatUiState`，新增页面要改巨型签名，非聊天页也被迫依赖聊天状态。
+
+现在 `AppRouteContent(destination, AppRouteHost)` 只做分发：`AppRouteHost` 携带导航、`AppDependencies`、聊天回调与 `ChatRouteData`（会话 id/工作区/归档）以及 `ShellRouteUi`（主题/字体/昵称/头像/模型）；具体装配下沉到 `ui/navigation/routes/` 的按功能 composable，每个 route 只取自己需要的字段与依赖。新增页面只改 `AppDestination`、新的 route 文件与 `AppRouteContent` 的一行。
+
+代价是多了一层 route 文件与装配上下文类型；换来的收益是页面参数收窄、非聊天页不再依赖 `ChatUiState`、新增页面不再改动共享壳层签名。
