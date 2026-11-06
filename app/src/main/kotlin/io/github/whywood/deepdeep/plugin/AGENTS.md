@@ -1,6 +1,6 @@
 # plugin · 插件
 
-外部 `.ddp` 插件系统：插件实现 `:plugin-api` 的 `DeepDeepPlugin`，由 `manager/PluginHostManager` 统一装载、启停、贡献与状态；`.ddp` 的签名/记录/装载在 `host/external/`，事件在 `host/events/`，UI 槽位在 `host/ui/`，宿主服务适配器在 `host/services/`，更新在 `host/update/`。App 自带工具（web/目标/后台任务/定时/小程序/安排/屏幕）不走插件系统，装配在 `graph/RuntimeGraph` 的 `AppToolContext`；不再有随包编译的内置插件。
+外部 `.ddp` 插件系统：插件实现 `:plugin-api` 的 `DeepDeepPlugin`，由 `manager/PluginHostManager` 统一装载、启停、贡献与状态；`.ddp` 的签名/记录/装载在 `host/external/`，事件在 `host/events/`，UI 槽位在 `host/ui/`，宿主服务适配器在 `host/services/`，更新在 `host/update/`。App 自带工具（web/目标/后台任务/定时/小程序/安排/屏幕）不走插件系统，装配在 `graph/RuntimeGraph` 的 `AppToolContext`；插件仓库里没有随包编译的插件实现。
 
 ## 文件
 

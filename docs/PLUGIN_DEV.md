@@ -1,66 +1,63 @@
 # DeepDeep 插件开发
 
-面向插件作者的开发文档：工程搭建、契约、打包签名、生命周期与全部扩展面。产品能力边界见 [GUIDE.md](GUIDE.md)，设计取舍见 [DECISIONS.md](DECISIONS.md)。
+面向外部插件作者的开发文档：工程搭建、契约、打包签名、安装更新与全部扩展面。插件工程在宿主仓库同级的 `plugins/` 仓库（官方插件、示例、模板与共享打包脚本），宿主仓库只保留契约与真机回归脚本。产品能力边界见 [GUIDE.md](GUIDE.md)，设计取舍见 [DECISIONS.md](DECISIONS.md)。
 
-DeepDeep 的插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPlugin`，由宿主在 App 进程内加载。插件分两种来源，实现同一套契约：
+DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPlugin`，打包成 `.ddp`，由宿主在 App 进程内加载。插件只从 `.ddp` 安装，不存在随包编译的插件。
 
-| 来源 | 说明 | 文本/图标 |
-|---|---|---|
-| `BUILTIN` 内置 | 编译进 APK，由 App 直接实例化 | 可用 `LocalizedText.Resource` / `IconRef.Resource` 复用 App 资源 |
-| `EXTERNAL` 外部 | `.ddp` 包（dex + assets）经签名校验后由宿主在 App 进程内装载 | 只能用 `LocalizedText.Literal` 与 `asset:` 路径 |
-
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：`PLUGIN_API_LEVEL = 1`、`BASELINE_API_LEVEL = 1`、`HOST_UI_API_LEVEL = 1`，SDK 版本 `0.4.0`。插件工程只依赖它，宿主内部类型一律不可用。
-
-**安全前提**：外部插件与 App 同进程、同 UID、没有沙箱，安装即信任——插件代码等同 App 代码，能读 App 私有数据、反射宿主内部、让 App 崩溃。只安装自己信任的插件；第三方工具源请走 MCP。
+**安全前提**：插件与 App 同进程、同 UID、没有沙箱，安装即信任——插件代码等同 App 代码，能读 App 私有数据、反射宿主内部、让 App 崩溃。只安装自己信任的插件；第三方工具源请走 MCP。
 
 ## 快速开始
 
-仓库内自带两份参考：
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.5.0`、`PLUGIN_API_LEVEL = 2`、`BASELINE_API_LEVEL = 2`、`HOST_UI_API_LEVEL = 1`。
 
-- `plugin-sample/`：最小外部插件（两个工具 + 自定义消息卡槽位），用于真机端到端回归。
-- `plugin-template/`：完整模板工程（工具 + partial 更新 + 技能 + 设置 + setup + Compose 槽位 + hooks + 签名），复制后改名即用。
+`plugins/` 仓库自带两份参考：
+
+- `sample/`：最小插件（两个工具 + 自定义消息卡 + 插件页面），用于宿主真机回归。
+- `template/`：完整模板（工具 + partial 更新 + 会话感知工具 + 技能 + hooks + 工具卡槽位 + 插件页面），复制为新模块即起点。
 
 前置条件：
 
-- JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定（模板工程不带 `local.properties`，复制后要自备 SDK 配置）。
-- 模板用 `../gradlew` 调用主仓库的 Gradle wrapper，因此**工程目录要直接位于主仓库根目录下**（模板位于 `<repo>/plugin-template` 时天然成立；`cp -R plugin-template my-plugin` 复制到仓库根下也可以）。复制到主仓库外时改用主仓库 wrapper 的绝对路径（如 `/path/to/DeepDeep/gradlew`）或系统 Gradle ≥ 9.8。
-
-从零开发一个新插件：
+- JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
+- 宿主契约先发布到 mavenLocal（`plugins/` 仓库按 `io.github.whywood.deepdeep` group 从 `mavenLocal()` 解析）：
 
 ```bash
-# 1. 发布插件 SDK 到 mavenLocal（在主仓库根目录执行）
+# 在 plugins/ 仓库根目录执行
+cd ../app
 ./scripts/gradlew-locked :plugin-api:publishToMavenLocal
+# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.5.0/
+```
 
-# 2. 复制模板并改名
-cp -R plugin-template my-plugin && cd my-plugin
+改了 `plugin-api` 后重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
+
+新增插件：
+
+```bash
+# 1. 复制模板并改名（在 plugins/ 仓库根目录执行）
+cp -R template my-plugin
 #    改 build.gradle.kts 的 namespace/applicationId/versionName
-#    改 settings.gradle.kts 的 rootProject.name（决定产物文件名 <rootProject.name>.ddp）
 #    改 src/main/assets/plugin.json 的 id/version/entryClass/name/summary/provides
 #    改 src/main/kotlin 下包名与入口类
+#    在仓库根 settings.gradle.kts 的 include(...) 注册 :my-plugin
 
-# 3. 打包 + 签名 + 自检（复用主仓库 wrapper，或系统 gradle >= 9.8）
-../gradlew assemblePlugin
-../gradlew signPlugin
-../gradlew verifyPlugin
+# 2. 打包 + 签名 + 自检
+./gradlew :my-plugin:assemblePlugin
+./gradlew :my-plugin:signPlugin
+./gradlew :my-plugin:verifyPlugin
 
-# 4. 产物
-#    build/plugin/my-plugin.unsigned.ddp   未签名（排障用）
-#    build/plugin/my-plugin.ddp            可安装的签名包
+# 3. 产物
+#    my-plugin/build/plugin/my-plugin.unsigned.ddp   未签名（排障用）
+#    my-plugin/build/plugin/my-plugin.ddp            可安装的签名包
 ```
 
-产物文件名由 `settings.gradle.kts` 的 `rootProject.name` 决定：只改 `build.gradle.kts` 的 `applicationId` 不会改产物名，不改 `rootProject.name` 时产物仍叫 `plugin-template.ddp`。
+产物文件名由模块名决定：`<module>/build/plugin/<module>.ddp`。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。
 
-签名任务默认在工程内 `keys/plugin-signing.pem`/`.pub` 读写密钥（模板会把私钥权限收敛为仅所有者可读写，即 `600`），也可以用 Gradle 属性指定别的位置（不带扩展名）：
+安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、是否要求特权、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
-```bash
-../gradlew -PpluginSigningKey=/secure/keys/my-plugin signPlugin
-```
-
-安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。首次导入会展示发布者名称/`keyId`、整包 sha256、体积、将新增的工具/技能/设置/页面与是否要求特权，并提示「插件拥有 App 全部权限」；确认信任发布者后才写入 TOFU 信任库、解包安装并加载。之后升级必须用同一发布者密钥签名。
+真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用 `plugins/sample` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
 
 ## 工程与依赖
 
-外部插件就是一个普通 Android application 工程，产物只需要 `classes*.dex` 与 `assets/**`（见「`.ddp` 包格式」），APK 的 manifest、资源和签名不参与。
+插件就是一个普通 Android application 工程，产物只需要 `classes*.dex` 与 `assets/**`（见「`.ddp` 包格式」），APK 的 manifest、资源与签名不参与。
 
 | 项 | 值 |
 |---|---|
@@ -73,54 +70,47 @@ cp -R plugin-template my-plugin && cd my-plugin
 | minSdk | 29（插件 dex 的 minApi 不能高于宿主） |
 | JVM target | 17 |
 
-构建环境：JDK 17+；Android SDK 由 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 或 `local.properties` 的 `sdk.dir` 提供（模板不带 `local.properties`，需要自备）。
-
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api`、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.5.0`、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
-- 插件内部可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
-- 不提供 `plugin-api` 之外的宿主内部类；不要反射 App 内部实现（升级会坏）。
-- 原生库：`.ddp` 里的 `lib/<abi>/**` 进入签名摘要，但当前宿主不把它加入 classloader 的库搜索路径，`System.loadLibrary` 不可用。
+- 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
+- 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
+- 原生库：`.ddp` 里的 `lib/<abi>/**` 进入签名摘要，但宿主不把它加入 classloader 的库搜索路径，`System.loadLibrary` 不可用。
 - 没有 `res/`、没有 `R`：文案、图标、技能文件都走清单 + assets。
 
 ## plugin.json 清单
 
-外部插件的清单固定放在包内 `assets/plugin.json`，由宿主解析与校验。字段：
+清单固定放在包内 `assets/plugin.json`，由宿主解析与校验。字段：
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识。内置插件的 id 正则为 `^[a-z][a-z0-9_-]*$` |
+| `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
-| `apiLevel` | int | 否（默认 1） | 插件要求的契约等级；必须 ≤ 宿主 `PLUGIN_API_LEVEL`，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（1）处理 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较用 `compareCore` 只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
+| `apiLevel` | int | 否（默认 2） | 插件要求的契约等级；必须 ≤ 宿主 `PLUGIN_API_LEVEL`（当前 2），否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（2）处理 |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
-| `description` | LocalizedText | 否 | 详情页说明 |
-| `sizeLabel` | LocalizedText | 否 | 详情页体积文案（外部插件一般由宿主按包装体积展示） |
+| `description` | LocalizedText | 否 | 详情说明 |
 | `homepage` | string | 否 | 必须是 `http(s)://` 链接 |
 | `changelog` | string | 否 | 更新说明 |
-| `icon` | string | 否 | 外部插件只支持 `asset:<包内相对路径>`，如 `asset:icon.png` |
-| `ui` | object | 否 | `{ "apiLevel": 1, "kotlin"?: "2.4", "compose"?: "1.9.0" }`；参与 Compose 槽兼容判定，见「UI 扩展」 |
+| `icon` | string | 否 | 只支持 `asset:<包内相对路径>`，如 `asset:icon.png`；列表按显示尺寸降采样、不染色，缺失或损坏回退占位图标 |
+| `ui` | object | 否 | `{ "apiLevel": 1, "kotlin"?: "2.4", "compose"?: "1.10.5" }`；参与 Compose 槽兼容判定，见「UI 扩展」 |
 | `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`；只做展示，信任以签名里的 `keyId` 为准 |
 | `provides` | object | 否 | 贡献预检，见下；必须与实际贡献一致 |
-| `installable` | bool | 否（默认 true） | 为 false 表示启用前需要额外安装步骤；外部插件一般保持 true |
-| `requiresPrivilege` | bool | 否（默认 false） | 需要 ADB/Root 能力，详情页标黄提示 |
+| `requiresPrivilege` | bool | 否（默认 false） | 需要 ADB/Root 能力，确认页与信息弹窗标黄提示 |
 | `defaultEnabled` | bool | 否（默认 true） | 首次安装后是否默认启用 |
-| `tintIcon` | bool | 否（默认 true） | 内置插件矢量图标是否按主题着色；外部插件用包内图片，一般保持默认 |
 
-`source` 由宿主设置：JSON 清单一律按 `EXTERNAL` 解析，不能声明。
+清单不支持 `source`/`installable`/`sizeLabel`/`tintIcon` 等字段：来源固定按外部 `.ddp` 处理，体积由宿主按包体展示，图标统一用 asset 图片。未知字段忽略，错误的标量类型退化为默认值后交给校验报错。
 
-`provides` 用于安装/启用前的冲突预检与详情展示：
+`provides` 用于安装前的能力预检与确认页展示：
 
 | 键 | 内容 |
 |---|---|
 | `tools` | 工具名列表，小写 `snake_case`，如 `template_echo`；不能与宿主保留工具名冲突 |
 | `skills` | 技能 id 列表，如 `template-skill` |
-| `settings` | 设置项叶子 key 列表（`Group` 本身不占 key） |
-| `actions` | 详情页动作 id 列表 |
-| `uiSlots` | 注册的槽位 id，如 `setup.content`、`tool.card.content:template_echo`、`plugin.page:home` |
+| `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`plugin.page:home` |
 | `pages` | 插件页面 id 列表 |
 
 `LocalizedText` 写法：
@@ -130,22 +120,22 @@ cp -R plugin-template my-plugin && cd my-plugin
 ```
 
 - `default` 为必填回退；`zh`/`en` 是语言标签，宿主按 App 语言取，缺失回退 `default`。
-- `host.text(source, *args)` 支持 `String.format` 占位符（`%s`/`%d`），参数只传字符串/数字。
 - 也可以给字符串简写（`"name": "Plugin Template"`），等价于只有 `default`。
+- `host.text(source, *args)` 支持 `String.format` 占位符（`%s`/`%d`），参数只传字符串/数字。
 - 外部插件不能用 `LocalizedText.Resource`（没有 App 资源）；`host.text()` 负责解析。
 
 校验错误码（宿主在安装时执行，`PluginValidation`）：
 
 | 错误码 | 含义 |
 |---|---|
-| `INVALID_ID` | 外部 id 不是反向域名小写格式 |
+| `INVALID_ID` | id 不是反向域名小写格式 |
 | `INVALID_VERSION` | version 不是 `major.minor.patch[后缀]` |
 | `INVALID_MIN_HOST_VERSION` | minHostVersion 解析失败 |
 | `HOST_VERSION_UNSUPPORTED` | 宿主版本低于 minHostVersion |
 | `API_LEVEL_UNSUPPORTED` | apiLevel 不在 `1..宿主等级` |
 | `UI_API_LEVEL_UNSUPPORTED` | `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL` 不匹配（**警告**：只禁用 Compose 绑定，插件仍可加载） |
-| `ENTRY_CLASS_MISSING` / `INVALID_ENTRY_CLASS` | 外部插件缺入口类或类名非法 |
-| `MISSING_TEXT` / `INVALID_TEXT` | name/summary 缺 `default`，或外部插件用了资源文本 |
+| `ENTRY_CLASS_MISSING` / `INVALID_ENTRY_CLASS` | 缺入口类或类名非法 |
+| `MISSING_TEXT` / `INVALID_TEXT` | name/summary 缺 `default`，或用了资源文本 |
 | `INVALID_ICON` / `INVALID_URL` | 图标路径/主页不合法 |
 | `INVALID_PROVIDES` | provides 条目非法或重复 |
 | `INVALID_UI_SLOT` | uiSlots 中的槽位 id 未知或缺实例后缀 |
@@ -174,15 +164,35 @@ plugin.ddp
 - `assets/plugin.json` 只能是这一个路径。
 - 整包 ≤ 100 MB、解压后总量 ≤ 256 MB；`classes*.dex` 序号不能重复。
 - dex 由 D8/R8 产出（AGP 的 `assembleDebug` 已处理），`minSdk = 29` 保证 dex minApi 不高于宿主。
-- 宿主用内存 ClassLoader 装载 `classes*.dex`（不依赖可写的 dex 文件）；安装时把整包复制到 `files/plugins/<id>/<version>/bundle/`，`assets`、`lib` 解包到同版本目录。
+- 宿主用内存 ClassLoader 装载 `classes*.dex`；安装时把整包复制到 `files/plugins/<id>/<version>/bundle/`，`assets` 解包到同版本目录。
 - 插件运行数据固定放 `files/plugins/<id>/data`（对应 `host.dataDir`），升级不丢；`host.assetsDir` 是当前版本解包后的只读 assets。
 - 版本目录按版本保留：升级后的上一版本目录作为回滚点，直到下一次成功升级或卸载。
 
-## 签名、信任与更新
+## 构建、签名与更新
+
+### 打包与签名任务
+
+`plugins/` 仓库根 `gradle/plugin-bundle.gradle.kts` 是所有模块共用的构建脚本，提供三个任务：
+
+| 任务 | 作用 |
+|---|---|
+| `assemblePlugin` | 把 `build/outputs/apk/debug/<module>-debug.apk` 重打成 `build/plugin/<module>.unsigned.ddp`，只保留 `classes*.dex`、`assets/**`、`lib/**`，条目时间固定以便复现 |
+| `signPlugin` | 生成/读取 Ed25519 密钥，对 unsigned 包签名并写入 `META-INF/plugin-signature.json`；打印 `publisher keyId`、整包 sha256、entry digest |
+| `verifyPlugin` | 重新按宿主规则验签，输出 `Signature OK` |
+
+密钥默认在仓库根 `keys/plugin-signing.pem`/`.pub`：首次 `signPlugin` 自动生成，私钥权限收敛为 `600`，`.gitignore` 忽略。也可以用 Gradle 属性指定别的前缀（不带扩展名）：
+
+```bash
+./gradlew -PpluginSigningKey=/secure/keys/my-plugin :my-plugin:signPlugin
+```
+
+- 私钥**不入版本库、不外发**；丢了就无法再发同名更新。
+- 换钥等于换发布者身份，已装用户无法用新钥升级。
+- `keys/` 下的仓库密钥只用于本机开发与官方插件签名。
 
 ### 签名算法（ddp-1）
 
-外部插件安装必须带 `META-INF/plugin-signature.json`，算法 Ed25519（宿主优先平台 Provider，旧平台回退 BouncyCastle）。
+安装必须带 `META-INF/plugin-signature.json`，算法 Ed25519（宿主优先平台 Provider，旧平台回退 BouncyCastle）。
 
 **canonical entry digest**：把 zip 内所有非目录条目按**条目名的 UTF-8 字节序**升序排列，排除所有以 `META-INF/` 开头的条目；每个条目一行：
 
@@ -203,21 +213,17 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 }
 ```
 
-**keyId 必须由公钥派生**：`keyId = "ed25519:" + 小写十六进制(SHA-256(SPKI DER))`。宿主要求签名里的 `keyId` 与公钥重算结果一致（防止签名自称成别人的 keyId）；该值同时作为发布者指纹与 TOFU 信任库的键。
+**keyId 必须由公钥派生**：`keyId = "ed25519:" + 小写十六进制(SHA-256(SPKI DER))`。宿主要求签名里的 `keyId` 与公钥重算结果一致；该值同时作为发布者指纹与 TOFU 信任库的键。
 
-### 密钥管理
+### 安装、信任与更新
 
-- 插件作者本地生成密钥（`KeyPairGenerator.getInstance("Ed25519")`），私钥保存为 PKCS#8 PEM，**不入版本库、不外发**；公钥可随签名一起分发。
-- `plugin-template` 首次 `signPlugin` 自动生成 `keys/plugin-signing.pem`/`.pub`，模板 `.gitignore` 已忽略 `keys/`。私钥丢了就无法再发同名更新。
-- 仓库内 `plugin-sample/signing/dev-ed25519.pem` 是提交的**测试**密钥，只用于 sample 回归，任何人不该用它签分发插件。
+安装入口只有一个：插件页「导入插件」选择本地 `.ddp`。宿主先做包读取与验签（失败直接拒绝），确认页展示清单与发布者信息；用户确认后写入 TOFU 信任库、解包到版本目录、记录安装并立即装载启用。
 
-### 信任（TOFU）与更新
-
-- 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、将新增的能力，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
-- 每次装载前用安装记录里的 `bundleSha256` 复核包体，并重算 canonical digest 验签；不匹配则拒绝并记 `lastError`。
+- 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、体积、将提供的能力与是否要求特权，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
+- 每次装载前用安装记录里的 `bundleSha256` 复核包体，并重算 canonical digest 验签；不匹配则拒绝并记入插件行的错误文本。
 - **更新必须同钥**：`id` 相同的新版本必须用同一 `keyId` 签名，否则按「发布者不匹配」拒绝。
-- 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录，相位变 `PENDING_RESTART`，**下次进程启动时激活**；激活走 prepare → probe → commit → swap，probe 阶段会注入归一化设置、调用 `onUpgrade(fromVersion)` 并预生成贡献；probe/装载失败会丢弃 pending 并删除坏版本目录，旧版本继续可用；commit 写盘失败保留 pending 到下次启动重试；错误都写进 `lastError`，详情页可见。
-- 安装记录保留 `previousVersion`/`previousInstallPath`/`previousBundleSha256` 作为回滚点。恢复规则：上次激活中断 → 下次启动跳过自动激活，相位 `FAILED` 并提示「上次激活中断」；同一版本连续 2 次启动失败 → 自动停用（`enabled=false`），用户手动启用即重新授权。恢复入口见「失败恢复」一节。
+- 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录，相位变 `PENDING_RESTART`，**下次进程启动时激活**；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
+- 安装记录保留 `previousVersion` 作为回滚点。恢复规则：上次激活中断 → 下次启动跳过自动激活并提示「上次激活中断」；同一版本连续 2 次启动失败 → 自动停用（`enabled=false`），用户手动启用即重新授权。
 
 ### 分发索引
 
@@ -228,92 +234,87 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
   "schemaVersion": 1,
   "plugins": [
     {
-      "id": "io.github.whywood.deepdeep.plugintemplate",
+      "id": "com.example.myplugin",
       "version": "1.0.1",
-      "apiLevel": 1,
+      "apiLevel": 2,
       "minHostVersion": "0.2.0",
-      "url": "https://example.com/plugins/plugin-template-1.0.1.ddp",
+      "url": "https://example.com/plugins/my-plugin-1.0.1.ddp",
       "sha256": "<.ddp 整包 sha256>",
       "size": 123456,
-      "publisherKeyId": "ed25519:8bfc1ba034dbf5bc113d469ce1f1a6350bc4c104105aa92b104eda3896fad213"
+      "publisherKeyId": "ed25519:8bfc...fad213"
     }
   ]
 }
 ```
 
-- `schemaVersion` 必须为 1；`url` 支持 `http`/`https`/`file`；`sha256`/`publisherKeyId` 是候选筛选与下载校验依据，发布者信任仍来自首装 TOFU。
-- 索引地址与 `autoCheck`、`intervalHours`（1–720）存 `sources.json`，schema 1；索引本身最大 2 MB、最多 512 条。
+- `schemaVersion` 必须为 1；`url` 支持 `http`/`https`/`file`；索引里最大 2 MB、最多 512 条。
+- `sha256`/`publisherKeyId` 是候选筛选与下载校验依据，发布者信任仍来自首装 TOFU；未信任的发布者不会被索引自动信任。
+- 索引地址与 `autoCheck`、`intervalHours`（1–720）存 `sources.json`，schema 1；网络失败时回退上次缓存，来源 URL 不匹配不采用缓存。
 - 下载后校验 `size` + `sha256` + 签名同钥，再暂存；更新同样要经过用户确认。
-- 不引入第三方仓库/二进制分发依赖。
 
 ## 生命周期与相位
 
-宿主为每个插件维护相位（`PluginsUiState` 里可见）：
+宿主为每个插件维护相位（插件页与信息弹窗里可见）：
 
 | 相位 | 含义 |
 |---|---|
-| `IMPORTED` | 已导入、尚未装载 |
-| `INSTALLED` | 已安装但未装载 / 需要先安装 |
+| `INSTALLED` | 已安装但未装载（例如等待下次启动） |
 | `ACTIVE` | 已启用且运行正常，贡献全部生效 |
-| `DEGRADED` | 已启用但 `availability()` 返回不可用：技能不启用、动作不显示，详情页显示原因；工具/提示词/UI/hooks 由插件自己决定是否继续提供 |
-| `FAILED` | 装载/启用/激活失败，原因见 `lastError` |
+| `DEGRADED` | 已启用但 `availability()` 返回不可用：技能不启用、错误原因可见；工具/提示词/UI/hooks 由插件自己决定是否继续提供 |
+| `FAILED` | 装载/启用/激活失败，原因见错误文本 |
 | `DISABLED` | 用户关闭了插件（「用户选择 ≠ 加载成功」） |
 | `PENDING_RESTART` | 有暂存的新版本，重启后激活 |
 
-只有已装载运行的插件（`ACTIVE`；`DEGRADED` 同样会装载，`PENDING_RESTART` 时运行的仍是旧版本）会聚合贡献。`availability()` 不可用时宿主会隐藏状态/动作并停用技能，**但不会自动清空插件的工具/提示词/UI/hooks**——不可用的能力请在 `contributions()`/`ui()` 里按 availability 自行返回空。
+只有已装载运行的插件（`ACTIVE`/`DEGRADED`）会聚合贡献；`availability()` 不可用时会停用技能并显示原因，**但不会自动清空插件的工具/提示词/UI/hooks**——不可用的能力请在 `contributions()`/`ui()` 里按 availability 自行返回空。
 
-`DeepDeepPlugin` 生命周期方法（`availability()`/`status()` 必须实现，其余方法都有默认空实现；回调异常由宿主隔离，不会拖垮 App）：
+`DeepDeepPlugin` 生命周期方法（`availability()` 必须实现，其余方法都有默认空实现；回调异常由宿主隔离，不会拖垮 App）：
 
 | 方法 | 调用时机与责任 |
 |---|---|
-| `availability(host)` | 每次刷新调用；返回 `Unavailable(reason)` 时相位 `DEGRADED`、详情页显示原因，技能停用、动作不显示；不可用的工具/提示词/UI 需插件自己按 availability 移除 |
-| `status(host)` | 启用、已安装且可用时刷新调用；生成详情页状态（`Ready(label: String, account: String? = null)` / `NotReady(label: String)` / `Failed(label: String)`）。label/account 都是字符串，通常用 `host.text(LocalizedText)` 取本地化文案后传入 |
-| `install(host, progress)` | 用户确认安装后（内置可下载能力与外部插件首装，更新不重复调用）；`progress.report(percent, label)` 更新进度；失败会记 `lastError`，内置插件首装失败由宿主回滚清理 |
-| `uninstall(host)` | 用户删除插件前，清理插件自己的外部副作用（宿主随后删安装目录、技能覆盖） |
-| `onEnable(host)` / `onDisable(host)` | 用户启/停插件；启动时对已启用插件也会调用 `onEnable` |
-| `onUpgrade(host, fromVersion)` | 外部插件新版本激活的 probe 阶段调用（内置插件随 APK 升级不触发） |
-| `setup(host, ui)` | 用户从插件详情「连接/配置」或 Agent 的 `plugin_setup` 拉起流程时 |
-| `actions(host, status)` / `runAction(host, id, ui)` | 详情页动作按钮 / 输入区动作 chip；`DESTRUCTIVE` 是语义标记，破坏性操作请自己在 `runAction` 里确认或保证可逆 |
-| `detailRows(host, status)` | 详情页只读信息行 |
+| `availability(host)` | 每次刷新调用；返回 `Unavailable(reason)` 时相位 `DEGRADED`、原因可见，技能停用 |
+| `onEnable(host)` / `onDisable(host)` | 用户启/停插件；启动时对已启用插件也会调用 `onEnable`，停用时先 `onDisable` 再取消插件 scope |
+| `onUpgrade(host, fromVersion)` | 新版本激活的校验阶段调用，`fromVersion` 是当前在用版本 |
 | `skills(host)` | 提供技能；每次刷新调用 |
 | `promptSections(host)` | 追加系统提示词段 |
-| `settings()` / `onSettingsChanged(host, values)` | 声明设置 schema（`SettingSpec`）；保存后回调归一化后的整组值 |
 | `contributions(host)` | 提供全局工具 + hooks |
-| `contributionsFor(host, session)` | 每会话物化一次：返回该会话生效的工具 + hooks（hooks 按 `pluginId` 覆盖该插件的全局 hooks）；`session` 是 live handle（可空），只用来读会话快照；默认委托 `contributions`，只写 `contributions` 时行为不变 |
+| `contributionsFor(host, session)` | 每会话物化一次：返回该会话生效的工具 + hooks（hooks 按 `pluginId` 覆盖该插件的全局 hooks）；`session` 是 live handle（可空），只用来读会话快照；默认委托 `contributions` |
 | `ui(host)` | 槽位/页面/输入区动作贡献 |
-| `close()` | 插件停用/卸载/更新/进程退出时调用（宿主先取消插件 scope，最多等 5s）；`close` 之后不要再异步回调 |
+| `uninstall(host)` | 用户删除插件前，清理插件自己的外部副作用（宿主随后删安装目录、技能覆盖） |
+| `close()` | 停用/卸载/更新/进程退出时调用（宿主先取消插件 scope，最多等 5s）；`close` 之后不要再异步回调 |
 
-`host` 是插件唯一入口（`PluginHost`）：`manifest`、`context`（宿主注入的 App 上下文，用于取资源和系统服务）、`dataDir`、`assetsDir`、`scope`、`text` 与 18 个宿主服务访问器（见「宿主服务」）。
+插件的登录、CLI 安装、连接状态等全部由插件自己管理：状态写在 `host.dataDir`/`host.secrets()`，界面画在插件页面里；宿主不再提供安装/连接/设置/状态/动作/详情行回调，也没有面向模型的插件连接工具。页面里的操作改变能力后调用 `host.requestContributionsRefresh()`，宿主会重新物化贡献并在安全点重建会话（忙碌会话在本轮结束后生效），工具/技能/提示词/页面随即更新。
+
+`host` 是插件唯一入口（`PluginHost`）：`manifest`、`context`（宿主注入的 App 上下文）、`dataDir`、`assetsDir`、`scope`、`text`、18 个宿主服务访问器（见「宿主服务」）与 `requestContributionsRefresh()`。
 
 ### 每插件作用域
 
-- 每个插件有独立的 `SupervisorJob` 与 `CoroutineScope`，即 `host.scope`。插件里启动的后台协程应挂在这个 scope 上（`host.scope.launch { ... }`）。
-- 停用、卸载、更新、进程退出统一走：取消 scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册/清贡献 → 同步技能；任何一步异常都会记 `lastError` 并继续完成剩余收尾。进行中的一轮继续使用已装配的工具；会话 hooks 按本轮 run 开始时的冻结集合派发（见「事件与 hooks」），本轮结束后按最新快照生效。
-- 正常退出时宿主会 best-effort 调用 `shutdown()` 收尾（Activity 结束、进程被系统回收前不保证）；**进程被强杀时不保证 `close()` 被调用**，需要跨进程存续的状态请及时写进 `host.dataDir`。
-- 重新启用会创建新的 scope 与新的 `PluginHost`；插件对象可能被复用（内置），外部插件会重新装载（可能换版本）。**不要缓存 host 或 scope 到插件实例字段**，每次回调都以参数为准。
+- 每个插件有独立的 `SupervisorJob` 与 `CoroutineScope`，即 `host.scope`。插件里的后台协程应挂在这个 scope 上（`host.scope.launch { ... }`）。
+- 停用、卸载、更新、进程退出统一走：取消 scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册/清贡献 → 同步技能；任一步异常都会记录并继续完成剩余收尾。
+- 进程被强杀时不保证 `close()` 被调用，需要跨进程存续的状态请及时写进 `host.dataDir`。
+- 重新启用会创建新的 scope 与新的 `PluginHost`，插件对象会重新装载。**不要缓存 host 或 scope 到插件实例字段**，每次回调都以参数为准。
 - 协程里必须处理取消（`CancellationException` 直接向上抛，不要吞）；长循环里用 `isActive` 或在阶段边界检查。
+- 同一会话 run 开始后宿主冻结当时的 hooks 集合（见「事件与 hooks」），本轮内停用插件仍可能收到剩余事件，回调要能容忍状态已变；资源清理写在 `close()`/`onDisable` 里。
 
 ### 一次物化
 
-宿主每次刷新对每个插件最多调用一次贡献方法，结果聚合成不可变快照；工具装配、提示词、技能同步、UI 槽位、冲突诊断、详情页都消费同一份快照，不会在消费路径重复调用插件。
+宿主每次刷新对每个插件最多调用一次贡献方法，结果聚合成不可变快照；工具装配、提示词、技能同步、UI 槽位、冲突诊断、插件页都消费同一份快照，不会在消费路径重复调用插件。
 
-- 每次刷新都会调用：`settings()`、`skills()`、`availability()`；启用且已安装时再调用 `contributions()`、`ui()`、`promptSections()`、`detailRows()`，可用时调用 `status()`，`status` 有结果时调用 `actions()`。
-- `contributionsFor()` 每个会话只调用一次（同一 `SessionBinding` 从建立到关闭），该会话的工具与会话 hooks 都从这次结果取用，运行中不会因刷新重新调用；会话重建（见下条）后才重新物化。会话 hooks 按 pluginId 覆盖该插件的全局 hooks，会话贡献返回默认 `PluginHooks.None` 时沿用全局；宿主每轮 run 开始时冻结生效集合，run 结束后按最新快照解冻（见「事件与 hooks」）。
-- 不要在 `contributions()`/`ui()`/`settings()` 里做重 IO 或依赖会变化的外部状态：这些方法会被频繁调用，耗时工作放 `host.scope` 异步做（如 `onEnable` 里启动轮询、`onDisable`/`close` 时靠 scope 取消停止）。
-- 启停、设置变更、安装/动作完成都会触发宿主重建会话投影；忙碌会话在本轮结束的安全点生效。
+- 每次刷新都会调用 `availability()`、`skills()`；启用且已安装时再调用 `contributions()`、`ui()`、`promptSections()`。
+- `contributionsFor()` 每个会话只调用一次（同一会话绑定从建立到关闭），该会话的工具与会话 hooks 都从这次结果取用；会话重建后才重新物化。
+- 不要在这些方法里做重 IO 或依赖会变化的外部状态：耗时工作放 `host.scope` 异步做（如 `onEnable` 里启动轮询、`onDisable`/`close` 时靠 scope 取消停止）。
 
 ### 失败恢复
 
-插件装载/激活/启用失败时相位为 `FAILED`，`availability()` 不可用时为 `DEGRADED`。当相位是 `FAILED`/`DEGRADED` 且 `lastError` 非空时，插件详情页显示「插件故障」区，展示错误原文；恢复入口按插件来源区分：
+装载/激活/启用失败时相位为 `FAILED`，`availability()` 不可用时为 `DEGRADED`。插件页的行内错误文本会展示原因；行尾「⋯」菜单按状态提供恢复入口：
 
 | 入口 | 行为 |
 |---|---|
-| 「重试激活」（仅外部插件） | 清掉激活中断标记与启动计数后重新执行激活：已装载的插件重新注入设置并调用 `onEnable`，未装载/被自动禁用的插件重新装载并启用；若有待生效版本会完整重跑激活协议（prepare → probe → commit → swap）。成功后刷新详情页并清除错误；失败保留当前状态并显示新的错误文本 |
-| 「回滚到 <previousVersion>」（仅外部插件且记录里有 `previousVersion`） | 把安装版本切回上一版本、清空 pending/previous 记录并清理失败版本目录。成功后刷新详情页，失败显示「回滚失败」 |
-| 内置插件 | 没有外部激活记录，不提供上面两个按钮；「插件故障」区只显示错误文本，恢复走插件列表里的启用开关：关闭再启用即重新执行 `onEnable` |
+| 「重试激活」 | 清掉激活中断标记与启动计数后重新执行激活：已装载的插件重新注入服务并调用 `onEnable`，未装载/被自动禁用的插件重新装载并启用；有暂存版本会完整重跑激活序列。成功后刷新并清除错误，失败保留状态并显示新的错误文本 |
+| 「回滚到 <previousVersion>」 | 记录里有上一版本时出现：把安装版本切回上一版本、清空暂存记录并清理失败版本目录 |
+| 启用开关 | 关闭再启用即重新执行 `onEnable`，用于手动恢复被自动停用的插件 |
 
-- 同一版本连续 2 次启动失败会被自动禁用（相位 `DISABLED`，不显示「插件故障」区），手动重新启用即重新授权并清空启动计数。
-- 「插件故障」区与「插件槽位」区是两回事：后者只处理 Compose 槽渲染崩溃标记与版本不兼容绑定（点「恢复」只清标记并重试渲染），前者处理装载/激活/启用失败（走激活/回滚或重新启用）。
+- 同一版本连续 2 次启动失败会被自动禁用（相位 `DISABLED`），手动重新启用即重新授权并清空启动计数。
+- 槽位渲染崩溃只禁用对应 Compose 绑定并回退宿主视图，不改变插件相位；升级插件版本后自动重试渲染。装载失败才走上面的重试/回滚/重新启用。
 
 ## 工具
 
@@ -350,7 +351,7 @@ override fun contributions(host: PluginHost) = Contributions(
 | `promptGuidelines` | 追加给模型的工具使用规则（可选） |
 | `execute` | `suspend (PluginToolCall) -> PluginToolResult` |
 
-宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`/`ls`/`grep`/`find`，宿主工具 `ask_user_question`/`plugin_setup`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`workshop_*`，SDK 工具 `tool_search`/`mcp_*`，以及所有 `mcp__` 前缀。
+宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`/`ls`/`grep`/`find`；App 自带工具 `ask_user_question`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`arrange_calendar`/`screen_*`/`virtual_screen`；SDK 工具 `tool_search`/`mcp_*`；以及所有 `mcp__` 前缀。
 
 `PluginToolCall`：
 
@@ -365,7 +366,7 @@ override fun contributions(host: PluginHost) = Contributions(
 | 形式 | 用途 |
 |---|---|
 | `Text(text, details?, isError)` | 普通文本结果；`details` 是宿主侧结构化元数据（给工具卡/日志用，不进模型上下文），其中 `deepdeep.fileRefs` 是宿主保留键，插件不要读写 |
-| `Rich(blocks, details?, isError)` | 多块结果：`ToolBlock.Text`、`ToolBlock.Image(data, mimeType)`（base64 进模型图片内容）、`ToolBlock.FileRef(path, mimeType?)`（content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`，工具卡与历史消息渲染为可点击的文件行，重开会话仍可还原；不读文件、不当附件） |
+| `Rich(blocks, details?, isError)` | 多块结果：`ToolBlock.Text`、`ToolBlock.Image(data, mimeType)`（base64 进模型图片内容）、`ToolBlock.FileRef(path, mimeType?)`（content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`，工具卡与历史消息渲染为可点击的文件行，重开会话仍可还原） |
 | `PluginToolResult.text(...)` / `.rich(...)` | 便捷构造 |
 
 `details` 里除 `deepdeep.fileRefs` 外由你写入的字段原样透传给工具卡与自定义消息卡；`deepdeep.fileRefs` 由宿主按 `Rich` 里的 `ToolBlock.FileRef` 生成，插件不要覆盖它。
@@ -382,7 +383,7 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
             label = "Session Info",
             description = "Return the active session id and working directory.",
             parameters = buildJsonObject { put("type", "object") },
-        ) { call ->
+        ) { _ ->
             val snapshot = session?.snapshot()
             if (snapshot == null) {
                 PluginToolResult.Text("No session is bound.", isError = true)
@@ -396,7 +397,7 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 
 - `contributionsFor` 的 `session` 是**会话 live handle**：不要缓存/拷贝字段，也不要假设调用时已有活动会话。
 - 在工具 `execute` 里调用 `session?.snapshot()` 取最新的 `PluginSessionSnapshot(sessionId, file, cwd)`；没有活动会话时返回 `null`。
-- `session.supportsChatDelivery` 表示该会话是否支持投递自定义卡片（工作区一次性 Agent 等场景可能不支持）。
+- `session.supportsChatDelivery` 表示该会话是否支持投递自定义卡片（小程序一次性 Agent 等场景不支持）。
 
 ## 技能与提示词段
 
@@ -409,81 +410,17 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = C
 
 `promptSections(host)` 返回 `PromptSection(id, body, priority)`，追加到系统提示词；按 `priority` 升序拼接（小的在前），**同一插件内 id 需唯一**。
 
-## 设置
-
-```kotlin
-override fun settings(): List<SettingSpec> = listOf(
-    SettingSpec.Toggle("streaming", literal("Stream partial results", "流式返回中间结果"), defaultValue = true),
-    SettingSpec.Choice(
-        "mode", literal("Echo mode", "回显模式"),
-        options = listOf(SettingOption("fast", literal("Fast", "快速"))),
-        default = "fast",
-    ),
-    SettingSpec.Number("max_results", literal("Max results", "最大结果数"), min = 1, max = 20, defaultValue = 5),
-    SettingSpec.Text("api_key", literal("API key", "API Key"), secret = true, requiresRestart = true),
-    SettingSpec.Group("connection", literal("Connection", "连接"), items = listOf(/* 叶子项 */)),
-)
-```
-
-示例里的 `literal(...)` 是 `plugin-template` 的本地 helper（`LocalizedText.Literal(mapOf("default" to ..., "zh" to ...))` 的简写），**不是 SDK API**；SDK 只提供 `LocalizedText.Literal` 与 `LocalizedText.Resource`。`SettingSpec.Text` 的完整参数写法：
-
-```kotlin
-SettingSpec.Text(
-    key = "api_key",
-    title = LocalizedText.Literal(mapOf("default" to "API key", "zh" to "API Key")),
-    default = "",
-    secret = true,
-    requiresRestart = true,
-    summary = LocalizedText.Literal("Stored in plaintext; use host.secrets() for real tokens."),
-)
-```
-
-| 类型 | 值 | 归一化 |
-|---|---|---|
-| `Toggle` | `"true"`/`"false"` | 非法值丢弃、回默认 |
-| `Choice` | `options` 里的 value | 不在选项内丢弃、回默认 |
-| `Number` | 整数 | 超界钳到 `[min, max]`，非数字丢弃 |
-| `Text` | 字符串 | 非 secret 去首尾空白；`secret = true` 原样保留 |
-| `Group` | 仅 UI 分组容器 | 不落值；组内叶子 key 正常保存 |
-
-- 所有类型都支持 `requiresRestart`（保存后需重启进程生效）与 `summary`（设置页辅助说明）。
-- 宿主用 `List<SettingSpec>.normalize(map)` 补默认值、丢弃非法存值；`onSettingsChanged` 收到的是归一化后的整组叶子值。
-- **设置值明文存本机**（`files/plugins/settings.json`，App `allowBackup=false`）。真正的密钥/令牌用 `host.secrets()`（按插件 id 命名空间加密存储），不要塞进设置项展示。
-- 设置结构尽量稳定：删 key 会丢用户值；语义变化请换 key。卸载插件不会自动清理设置值（重装后沿用），敏感数据请在 `uninstall()` 里自行清理 `host.secrets()`。
-
-## 连接流程（setup）
-
-需要用户登录/授权的插件通过 setup 流程与宿主交互。触发方式：用户在插件详情页点「连接」，或 Agent 调用 `plugin_setup` 工具（参数 `plugin` 取插件 id，内置可安装能力与外部 `.ddp` 都可以）；宿主打开 setup sheet 并等待用户操作。所有 `source = EXTERNAL` 的插件（内置可安装能力与外部 `.ddp`）都有连接入口；详情页「连接」会先自动启用已停用的插件再进入 setup，`plugin_setup` 工具要求插件已启用（停用时返回错误）。宿主进入 setup 前会先查询 `status()`，已经是 `Ready` 时直接返回成功，不会调用 `setup()`。
-
-```kotlin
-override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
-    ui.stage(title, message, url = null, imagePath = null, progress = 0)
-    if (ui.cancelled()) return
-    ui.progress(50, label)
-    // 长流程：轮询登录状态/读 CLI 输出，定期检查 ui.cancelled()
-    ui.progress(100, done)
-}
-```
-
-- `stage(...)`：展示阶段（标题/说明/`url` 显示为「打开浏览器」链接、`imagePath` 显示为二维码图片、`progress` 显示百分比）；未提供任何自定义 UI 时宿主用通用视图渲染这些字段。
-- `progress(percent, label)`：更新 setup sheet 里的阶段文案与进度（安装进度会同时进系统通知）。
-- `cancelled()`：用户关闭/取消了流程；长循环里要主动轮询并及时返回（抛取消异常也可，宿主按取消处理）。
-- 从 `plugin_setup` 工具发起时宿主最多等 15 分钟，超时取消本次连接（已安装部分保留）；从详情页发起的连接由用户取消或切后台处理。
-- App 不在前台、插件已停用、已有安装/连接在忙时宿主返回明确错误（不静默排队）；连接必须在前台完成，App 不在前台时只通过悬浮窗事件卡提示回到 App。
-- 独立页面用 Compose 槽位在 setup sheet 内容区自绘；外部插件不能注册 Activity。
-- 安装确认、取消、进度、系统通知、失败回退由宿主统一处理，插件不要重复弹系统 UI。
-
 ## 事件与 hooks
 
 `PluginHooks` 全部方法有默认空实现，只覆盖需要的。hooks 在 `contributions(host)`（全局）或 `contributionsFor(host, session)`（会话级）里返回，两者汇入同一条派发管线。
 
-**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具（`contributions(host).copy(tools = ...)`）也保留全局 hooks。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一 `SessionBinding` 从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果，运行中不会随插件刷新重新调用；插件能力变化（启停/设置/安装/动作）会触发宿主在安全点重建会话（新的 `SessionBinding`），重建后才重新物化。不同会话的物化互不阻塞、可能并发调用，插件实现不要依赖跨会话的共享可变状态。
+**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具（`contributions(host).copy(tools = ...)`）也保留全局 hooks。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一会话绑定从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果；插件能力变化（启停/页面动作后刷新）会触发宿主在安全点重建会话，重建后才重新物化。不同会话的物化互不阻塞、可能并发调用，插件实现不要依赖跨会话的共享可变状态。
 
 **run 级冻结**：每轮 run 开始时（`RunStarted`）宿主冻结当时生效的 hooks 集合，本轮所有观察事件与变换/闸门都走这份集合：冻结后再启停插件、刷新贡献、新增插件都不影响本轮——已冻结的插件即使被停用，本轮剩余事件仍会派发给它；新启用的插件从下一轮开始生效。run 结束（`RunFinished`；失败结束同样以 `RunFinished(error)` 到达）并派发完本轮事件后解冻，下一轮按最新插件快照重新冻结。
 
-注意：冻结期间被停用的插件仍可能收到本轮剩余事件，回调必须能容忍插件已被 `close`/状态已变，不要依赖回调时机做资源清理（清理写在 `close()`/`onDisable` 里）。前提是同一会话同一时刻只有一个活跃 run，宿主按此串行保证。
+注意：冻结期间被停用的插件仍可能收到本轮剩余事件，回调必须能容忍插件已被 `close`/状态已变，不要依赖回调时机做资源清理（清理写在 `close()`/`onDisable` 里）。前提是同一会话同一时刻只有一个活跃 run。
 
-工坊一次性 Agent 复用同一套 prompt/input/工具钩子与会话绑定，但它的会话事件不经过宿主会话观察事件管线，因此 21 个观察事件与 run 冻结只覆盖主会话运行路径。
+小程序的一次性 Agent 复用同一套 prompt/input/工具钩子与会话绑定，但它的会话事件不经过宿主会话观察事件管线，因此 21 个观察事件与 run 冻结只覆盖主会话运行路径。
 
 ### 观察事件（只通知，不能改变流程）
 
@@ -531,38 +468,33 @@ override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
 - 这些回调在会话关键路径上，必须快速返回；耗时工作丢到 `host.scope` 异步做，不要在里面做网络/重 IO。
 - 不要在 transform 里阻塞等待用户；需要用户确认的闸门只做同步判定。
 - `inputTransform` 返回的 `imagePaths` 会真正生效：路径对应的图片会被读取并替换/加入本轮输入（无法读取的路径被忽略），无图片时返回空列表。
-- `PluginHooks.None` 可用于占位；事件顺序 = 当前生效集合里的加载/注册顺序（内置插件按注册顺序，外部插件按安装顺序）。
+- `PluginHooks.None` 可用于占位；事件顺序 = 当前生效集合里的加载/注册顺序（按插件安装注册顺序）。
 - 用户取消导致的 `CancellationException` 会向上传播，不要吞。
-- 插件停用/卸载后：工具/提示词/技能/槽位在安全点后失效；当前 run 内会话 hooks 仍按冻结集合派发（本轮结束前停用的插件会收到本轮剩余事件），下一轮按最新快照生效。
 
 ## UI 扩展
 
-宿主固定主壳/导航/聊天骨架，插件只能向**槽位**挂 Compose 绑定或注册页面/输入区动作，不能替换整页、不能注册 Activity。
+宿主固定主壳/导航/聊天骨架，插件可以注册**插件页面**、向三个槽位挂 Compose 绑定，或者贡献输入区动作；不能替换整页、不能注册 Activity。插件页面是插件唯一的自绘界面。
 
 ### 槽位目录
 
 | slotId | 场景 |
 |---|---|
-| `setup.content` | setup sheet 内容区；可替换宿主通用阶段视图 |
-| `plugin.detail.section:<sectionId>` | 插件详情页自定义区块；`sectionId` 为小写 `[a-z][a-z0-9_-]*`，同一插件可注册多个区块，按注册的 sectionId 查询 |
 | `tool.card.content:<toolName>` | 指定工具调用卡片的内容区 |
 | `chat.message:<customType>` | 自定义消息类型的内容区 |
 | `plugin.page:<pageId>` | 插件页面内容区；页面本身通过 `PluginUiContributions.pages` 声明 |
-
-页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（`PluginPage(id, title, icon?)`）与 `.composerActions`（`ComposerAction(id, label, icon?)`）。输入区动作点击后调用插件的 `runAction(host, actionId, ui)`；插件页面可通过 `host.ui().openPage(pageId)` 打开（详情页入口只列出第一个页面，多页面请在插件自己的 UI 里跳转）。
 
 `SlotBinding(slotId, priority, content)`：同一槽位只渲染一个绑定——按 `priority` 从大到小取第一个可渲染的（同优先级按插件注册顺序），其余绑定被覆盖；没有可渲染绑定时宿主用默认视图兜底。
 
 `SlotIds` 提供 helper：
 
 ```kotlin
-SlotIds.setupContent()                       // "setup.content"
-SlotIds.detailSection("account")             // "plugin.detail.section:account"
 SlotIds.toolCard("template_echo")            // "tool.card.content:template_echo"
 SlotIds.chatMessage("card")                  // "chat.message:card"
 SlotIds.page("home")                         // "plugin.page:home"
 SlotIds.matches(slotId)                      // 校验完整槽位 id
 ```
+
+页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（`PluginPage(id, title, icon?)`）声明插件页面，`PluginUiContributions.composerActions`（`ComposerAction(id, label, icon?)`）声明输入区动作。插件页列表里有 `pages` 的行点整行进入第一个页面；输入区动作 chip 在聊天输入区显示，点击打开该插件页面（动作 id 与页面 id 相同时打开对应页面，否则打开第一个页面）。
 
 ### Compose 渲染
 
@@ -570,8 +502,6 @@ SlotIds.matches(slotId)                      // 校验完整槽位 id
 
 | 槽位族 | 状态 | 字段 |
 |---|---|---|
-| setup | `SetupSlotState` | title/message/url/imagePath/progress/cancelled |
-| 详情区块 | `DetailSlotState` | pluginId/status/rows |
 | 工具卡 | `ToolCardSlotState` | callId/toolName/args/result（结构化参数与结果） |
 | 自定义消息 | `CustomMessageSlotState` | messageId/customType/payload |
 | 插件页面 | `PluginPageState` | pluginId/pageId/sessionId |
@@ -588,22 +518,22 @@ SlotIds.matches(slotId)                      // 校验完整槽位 id
 override fun ui(host: PluginHost) = object : PluginUiContributions {
     override val bindings = listOf(
         SlotBinding(
-            slotId = SlotIds.setupContent(),
-            priority = 10,
-            content = SlotContent.Compose(uiApiLevel = 1) { state -> MySetupContent(host, state) },
-        ),
-        SlotBinding(
             slotId = SlotIds.toolCard("template_echo"),
             content = SlotContent.Compose(uiApiLevel = 1) { state -> MyToolCard(state) },
         ),
+        SlotBinding(
+            slotId = SlotIds.page("home"),
+            content = SlotContent.Compose(uiApiLevel = 1) { state -> MyPage(host, state) },
+        ),
     )
+
+    override val pages = listOf(PluginPage(id = "home", title = literal("Home", "首页")))
 }
 ```
 
 - 槽位渲染在 Compose 主线程；`render` 里不要做阻塞 IO，用 `remember` + `LaunchedEffect` 加载数据并处理取消。
-- 槽位异常由宿主兜底：进入组合时写崩溃标记，组合正常释放时清除；若进程在渲染期间死亡，下次启动只禁用该绑定并回退宿主默认视图。插件详情页的「插件槽位」区块会列出崩溃绑定（可点「恢复」重试）与不兼容绑定（带具体原因）；升级插件版本后崩溃标记自动失效。一个绑定崩溃不影响同插件其它槽位。
-- 插件详情页可注册多个区块：宿主按绑定顺序逐个渲染每个 `plugin.detail.section:<sectionId>`，各自拿到 `DetailSlotState`。
-- 外部插件不能引用 App 资源；图标用 `IconRef.Asset("asset:<包内路径>")`。
+- 槽位异常由宿主兜底：进入组合时写崩溃标记，组合正常释放时清除；若进程在渲染期间死亡，下次启动只禁用该绑定并回退宿主默认视图。不兼容的绑定只记录禁用原因并回退宿主视图；崩溃标记在下次组合或升级插件版本后自动失效，没有单独的恢复入口。一个绑定崩溃不影响同插件其它槽位。
+- 外部插件不能引用 App 资源；图标用 `IconRef.Asset("asset:<包内路径>")`，页面标题也可以不带图标。
 
 ### 宿主组件
 
@@ -683,7 +613,7 @@ if (linux == null || !linux.available) {
 | `jobs()` | `observe()`、`start(command,label,cwd,sessionId)`、`read(jobId)`、`kill(jobId)` | 无会话/宿主未提供时 `start` 返回 null |
 | `timers()` | `schedule(TimerRequest)`（`Once`/`Cron`）、`list()`、`cancel(id)` | 参数非法/宿主未提供时返回 null 或抛异常 |
 | `goals()` | `observe()`、`get/create/edit/pause/resume/complete/clear` | 目标状态非法时返回 null |
-| `workshop()` | 创意工坊：`scan/load/create/edit/delete/run` | 宿主未提供时抛 `PluginServiceUnavailable` |
+| `miniapp()` | 小程序：`scan/load/create/edit/delete/run` | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `mcp()` | `servers()`、`probe(name)`、`tools(server)`、`call(server,tool,arguments)` | 服务器不存在时返回错误结果或异常 |
 | `ui()` | `openUrl`、`share(ShareRequest)`、`toast`、`openPage(pageId)` | 单项未接线时抛 `PluginServiceUnavailable("ui.xxx")` |
 | `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 始终可用 |
@@ -705,7 +635,7 @@ host.sessions().prompt("继续", sessionId)
 host.jobs().start("sleep 5", "demo", cwd = null)
 host.timers().schedule(TimerRequest("提醒", "喝水", TimerTrigger.Once(System.currentTimeMillis() + 60_000)))
 host.goals().get(sessionId)
-host.workshop().scan()
+host.miniapp().scan()
 host.mcp().servers()
 host.ui().toast("已复制")
 host.app().info.versionName
@@ -716,64 +646,75 @@ host.chat().postCustomMessage(call.sessionId, "my.card", buildJsonObject { }, te
 
 **总线**：`host.bus().publish(PluginBusEvent(topic, publisher, payload))` 广播给所有插件；`subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。`publisher` 由宿主按插件 id 覆盖。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
 
+## 页面与状态
+
+插件页面是插件唯一的交互界面，也是插件维护自身状态的地方：
+
+- 页面布局由 `PluginUiContributions.pages` 声明，内容由 `plugin.page:<pageId>` 的 Compose 绑定渲染；列表里点整行进入第一个页面，多页面在页面内部自行切换（如 `host.ui().openPage(...)` 只能打开本插件自己的页面）。
+- 插件数据写在 `host.dataDir`（`host.files()` 相对路径以它为根），机密凭据写 `host.secrets()`，不要在页面里缓存需要跨进程保留的状态。
+- 页面里做完安装/登录/开关等会影响工具或技能的动作后调用 `host.requestContributionsRefresh()`：宿主重跑一次物化并触发会话重建，贡献在安全点生效。例如插件在页面里装好 CLI 后再返回工具列表，下一次会话就能看到新工具。
+- 页面可以调用 18 个宿主服务；需要独立返回栈或全屏的流程仍由插件自己组织页面层级，不能注册 Activity。
+
 ## ABI 与版本
 
-- `PLUGIN_API_LEVEL = 1`：宿主加载时要求 `plugin.apiLevel <= 宿主等级`；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 1`。
+- `PLUGIN_API_LEVEL = 2`：宿主加载时要求 `plugin.apiLevel <= 宿主等级`；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 2`。
 - `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`），所以 `minHostVersion: "0.2.0"` 在当前开发版宿主上通过。
-- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.4.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.5.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
 - Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用对应 Compose 绑定。
 
 ## 安全模型
 
-- **同进程、同 UID、无沙箱**：外部插件代码与 App 代码同等权限，能读写 App 私有数据、访问已授权的系统能力（日历、无障碍、ADB/Root 桥）、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制，`requiresPrivilege` 只是提示，不是边界。
+- **同进程、同 UID、无沙箱**：插件代码与 App 代码同等权限，能读写 App 私有数据、访问已授权的系统能力（日历、无障碍、ADB/Root 桥）、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制，`requiresPrivilege` 只是提示，不是边界。
 - **安装即信任**：首装确认页必须让用户明确「插件拥有 App 全部权限」；签名只解决「包有没有被篡改、是不是同一个发布者」，不解决「作者是否可信」。
 - **适用来源**：可信的第一方/个人插件包；第三方工具源用 MCP，不走 `.ddp`。
 - **完整性**：安装记录钉死整包 sha256，每次装载前复核；canonical digest 验签防篡改；更新必须同 `keyId`；失败保留上一可用版本。
 - **宿主不暴露的东西**：Provider 凭据/OAuth、ADB 配对流程、宿主内部加密密钥、pi SDK 内部类型。插件拿到的是 `PluginHost` 契约与 `host.context`。
-- **插件作者的义务**：不读与本插件无关的用户数据；不把凭据写日志；删除/覆盖用户数据的动作要可逆或在 UI 里明确确认；不要用 `System.exit`/`Runtime.halt` 结束进程。
+- **插件作者的义务**：不读与本插件无关的用户数据；不把凭据写日志；删除/覆盖用户数据的动作要可逆或在页面里明确确认；不要用 `System.exit`/`Runtime.halt` 结束进程。
 - **崩溃**：工具/回调/槽位异常会被宿主隔离成 error/失败记录；但插件在主线程、Compose 槽或工具执行中把进程搞崩仍会带崩 App（没有进程级隔离），槽渲染有崩溃标记保护。
 
 ## 调试与常见错误
 
-构建/打包/签名（主仓库内或模板目录）：
+构建/打包/签名（在 `plugins/` 仓库根）：
 
 ```bash
-./scripts/gradlew-locked :plugin-sample:assemblePlugin :plugin-sample:signPlugin
-cd plugin-template && ../gradlew assemblePlugin signPlugin verifyPlugin
+./gradlew :sample:assemblePlugin :sample:signPlugin :sample:verifyPlugin
+./gradlew :template:verifyPlugin
+./scripts/check.sh        # 全部官方插件 + sample + template 打包签名自检
 ```
 
 排查路径：
 
 - **安装前自查**（`verifyPlugin` 的 `Signature OK` 只验证签名与 digest 一致，**不代表能被安装**；导入前逐项确认）：
-  - `id` 满足外部插件正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（至少两段，如 `com.example.myplugin`）；
+  - `id` 满足反向域名正则（至少两段，如 `com.example.myplugin`）；
   - `version` 是 `major.minor.patch[后缀]`；`apiLevel` ≤ 宿主 `PLUGIN_API_LEVEL`；`minHostVersion` 不高于宿主版本；
   - `entryClass` 类名合法、类在某个根 `classes*.dex` 里且有无参构造；
-  - `provides` 与实际贡献一致（tools/skills/settings/actions/uiSlots/pages），工具名不与宿主保留名冲突；
-  - 槽位 id 过 `SlotIds.matches`（`setup.content`、`plugin.detail.section:<id>`、`tool.card.content:<tool>`、`chat.message:<customType>`、`plugin.page:<pageId>`）；
+  - `provides` 与实际贡献一致（tools/skills/uiSlots/pages），工具名不与宿主保留名冲突；
+  - 槽位 id 过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`、`plugin.page:<pageId>`）；
   - 包内 `assets/plugin.json` 路径正确、至少一个根 `classes*.dex`。
-- **安装被拒**：确认页或插件页会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、`SIGNATURE_INVALID`（包被改动/公钥与 keyId 不匹配/缺签名文件）、`PUBLISHER_CONFLICT`（升级换了密钥）、`TOOL_CONFLICT`（manifest `provides.tools` 与宿主或已装插件冲突）、`VERSION_CONFLICT`（版本不比已装新）。
+- **安装被拒**：确认页/提示会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、签名错误（包被改动/公钥与 keyId 不匹配/缺签名文件）、发布者不匹配（升级换了密钥）、工具名冲突（`provides.tools` 与宿主或已装插件冲突）、版本冲突（版本不比已装新）。
 - **装载失败**：`ClassNotFoundException` → `entryClass` 写错或被 minify；`NoSuchMethodException` → 缺无参构造；`NoClassDefFoundError` → 宿主版本不一致或把宿主依赖打进了包。
-- **行为不符**：`host.logs()` 会进宿主日志（logcat tag `DeepDeepPlugin/<pluginId>`）；插件抛出的异常宿主会隔离并记录到 `lastError`，详情页可见。
+- **行为不符**：`host.logs()` 会进宿主日志（logcat tag `DeepDeepPlugin/<pluginId>`）；插件抛出的异常宿主会隔离并显示在插件行错误里。
+- **刷新后工具/技能没变**：页面里改完状态要调用 `host.requestContributionsRefresh()`；忙碌会话在本轮结束后才重建，当前轮不会中途变化。
 - **文件行不显示**：`ToolBlock.FileRef` 的 path 按插件给出的绝对路径原样使用；文件行由宿主从 details 保留键 `deepdeep.fileRefs` 还原，不要自己写这个键；若在 `afterToolExecution` 里 `Replace` 结果并丢掉了 details，文件行会随之消失。
-- **hooks 没生效 / 停用后仍收到事件**：hooks 在 `contributions()` 或 `contributionsFor()` 返回都生效；只写 `contributionsFor` 且返回默认 `PluginHooks.None` 时沿用全局 hooks；会话级贡献每个会话只物化一次，插件启停/设置在安全点重建会话（本轮结束后）才重新物化；当前 run 内按冻结集合派发，停用/卸载的插件仍会收到本轮剩余事件，属预期行为。
+- **hooks 没生效 / 停用后仍收到事件**：hooks 在 `contributions()` 或 `contributionsFor()` 返回都生效；只写 `contributionsFor` 且返回默认 `PluginHooks.None` 时沿用全局 hooks；会话级贡献每个会话只物化一次，插件启停/刷新在安全点重建会话（本轮结束后）才重新物化；当前 run 内按冻结集合派发，停用/卸载的插件仍会收到本轮剩余事件，属预期行为。
 - **技能没出现**：插件必须启用且 `availability()` 为 `Available`（不可用时技能不启用）；SKILL.md 必须有 frontmatter，`PluginSkill.id` 与 `name` 一致；`files` 路径必须相对且安全。
-- **槽位不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 建议与 `ui()` 返回的绑定一致（用于安装预检与详情展示，运行期以 `ui()` 为准）；检查 `uiApiLevel` 与清单 `ui` 字段是否与宿主版本匹配；看插件详情页「插件槽位」里的禁用原因。
-- **设置不生效**：`onSettingsChanged` 只在保存后收到归一化值；`requiresRestart` 的项在重启后生效；非法值会被丢弃回默认。
+- **槽位/页面不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 与实际绑定一致（运行期以 `ui()` 为准）；检查 `uiApiLevel` 与清单 `ui` 字段是否与宿主版本匹配；不兼容的绑定会被宿主跳过并回退默认视图。
 - **更新失败**：确认签名 `keyId` 与首装一致、整包 sha256 与记录一致；换密钥只能当新发布者重装。
 
 ## 限制（当前明确不做）
 
 - 不做第三方插件商店/审核/沙箱：同进程插件无隔离，只能靠来源可信 + 安装确认 + 签名/TOFU。
 - 不给插件注册 Activity/Service/权限：平台不允许运行期组件注册；需要独立 UI 只能另装独立 APK。
-- 外部插件不能用 `res/` 资源 id；文案/图标/技能都走清单与 assets。
+- 插件不能用 `res/` 资源 id；文案/图标/技能都走清单与 assets。
 - 不提供 Provider 凭据/OAuth、ADB 配对流程、宿主内部加密密钥等服务；插件可以直接用 `host.context` 调 Android API，宿主不做拦截。
 - 不承诺插件崩溃的进程级隔离；进程被系统强杀时不保证调用插件的 `close()`。
 - 原生库不加载（`lib/**` 仅进入摘要与解包）。
-- 不提供声明式 UI 节点（`UiNode` 已删除）；UI 扩展只有 Compose。
+- 不提供声明式 UI 节点；UI 扩展只有自由 Compose（工具卡/自定义消息/插件页面三个槽位族）。
 
 ## 参考
 
-- 契约源码：`plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`
-- 示例：`plugin-sample/`（最小）、`plugin-template/`（完整模板与签名流程）
-- 插件系统取舍：[DECISIONS.md](DECISIONS.md) 的 #68–#85；产品能力边界：[GUIDE.md](GUIDE.md)
+- 契约源码：宿主仓库 `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`
+- 插件工程：`plugins/` 仓库的 `sample/`（最小）与 `template/`（完整模板与签名流程），README 见仓库根目录
+- 插件系统取舍：[DECISIONS.md](DECISIONS.md) 的 #94–#99；产品能力边界：[GUIDE.md](GUIDE.md)

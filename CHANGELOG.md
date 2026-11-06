@@ -2,6 +2,8 @@
 
 ## HEAD (since m2)
 
+- docs: 同步小程序化、App 自带工具与插件外部化后的文档：重写 `docs/PLUGIN_DEV.md`（外部插件作者文档），更新 `docs/GUIDE.md`/`docs/DECISIONS.md`/`README.md` 与各级 `AGENTS.md` [docs]
+- refactor: 四个官方插件（飞书/企业微信/教务/小米云）迁出宿主仓库到 `plugins/` 独立仓库，按外部 `.ddp` 构建分发；宿主只保留插件契约与真机回归 [插件] [架构]
 - feat: 插件可通过 `host.requestContributionsRefresh()` 在页面操作后重建贡献与会话，开关/登录状态即时生效 [插件]
 - refactor: 插件示例与模板迁出到 `plugins/` 独立仓库，宿主仓库只保留契约与真机 e2e 脚本 [插件] [架构]
 - refactor: 删除无入口的日历授权 Activity，日历权限改由系统应用权限页授予 [界面]

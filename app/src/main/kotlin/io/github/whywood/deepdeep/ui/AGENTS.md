@@ -15,8 +15,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | `mcp/` | MCP 服务器管理：增删改、导入、连接测试与 OAuth |
 | [navigation/](navigation/AGENTS.md) | 自研导航：路由表、返回栈、页面装配与推入转场；页面装配在 `routes/` |
 | `onboarding/` | 首次安装 6 屏引导：首启判定、数据落盘与动画 |
-| `plugins/` | 插件列表/详情：启停、安装更新、专用设置与 setup sheet |
-| `questions/` | ask_user_question 提问卡/已答题卡与工具轨迹解析 |
+| [plugins/](plugins/AGENTS.md) | 插件列表：导入/启停/更新，行尾菜单与插件自绘页面 |
 | `sessions/` | 会话搜索、归档、操作菜单与重命名/删除对话框 |
 | [settings/](settings/AGENTS.md) | 设置各页：个性化、权限、Provider、运行环境等 |
 | `shell/` | 外壳层：`AppShell`（导航/聊天 base）、`AppOverlays`（全局叠层与抽屉）、`AppOnboardingGate` 引导门控、`/` 命令解析、分享与深链进入意图 |

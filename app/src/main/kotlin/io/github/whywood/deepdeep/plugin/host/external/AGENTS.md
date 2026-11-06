@@ -19,7 +19,7 @@
 | `LoadedPluginHandle.kt` | 外部插件装载句柄：校验 bundle sha256，`InMemoryDexClassLoader` 优先、只读 jar + `PathClassLoader` 兜底，实例化 `entryClass`；装载期任何 `Throwable` 归一为 `PluginLoadException`（`CancellationException` 重抛），单插件链接错误不中断宿主启动；`close()` 调 `plugin.close()` 并释放引用/删除兜底 jar |
 | `JsonFiles.kt` | JSON 原子写（tmp + ATOMIC_MOVE，失败退 REPLACE_EXISTING）与备份工具 |
 
-## 签名规范 ddp-1（与 plugin-template / docs 对齐）
+## 签名规范 ddp-1（与 plugins 仓库模板 / docs 对齐）
 
 - `.ddp` 是普通 zip；`plugin.json` 必须在 `assets/plugin.json`；`classes*.dex` 在根；目录条目忽略。
 - 规范化 digest bytes：所有非目录、路径不以 `META-INF/` 开头的 entry，按路径 UTF-8 字节序升序，每行 UTF-8 `"<sha256-hex> <uncompressed-size> <entry-name>\n"`（sha256 对解压后内容，行尾 LF，无额外前后缀）。
@@ -35,5 +35,5 @@
 - 激活 marker `<id>/activation.json`：激活开始前写、任意终态清除；进程死在激活中会残留，宿主下次启动据此跳过自动激活并给出「上次激活中断」，`attempts` 用于连续启动崩溃自动禁用。
 - `PluginInstaller` 的冲突检查叠加 `HostToolNames`（引擎/宿主/SDK 保留工具名）；工具名冲突只看 manifest `provides.tools`。
 - `plugins.json` 只由 v4 `ExternalPluginRecordStore` 读写；读到非 v4 或损坏文件时先备份 `.v2.bak` 再破坏式重建，不做数据迁移。
-- 签名规范变更会同时影响 plugin-template 的 `signPlugin` 与 `docs/PLUGIN_DEV.md`；改格式前先同步 contract-owner，并升 `.ddp` 格式版本。
+- 签名规范变更会同时影响 plugins 仓库模板的 `signPlugin` 与 `docs/PLUGIN_DEV.md`；改格式前先同步 contract-owner，并升 `.ddp` 格式版本。
 - 新增文件时同步本索引，并在 `../AGENTS.md` 的文件/子包表中补一行。

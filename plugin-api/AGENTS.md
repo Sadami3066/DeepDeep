@@ -43,6 +43,6 @@
 - 槽位目录：`tool.card.content:<toolName>`、`chat.message:<customType>`、`plugin.page:<pageId>`；页面与输入区动作分别用 `PluginPage` / `ComposerAction`，不是 `SlotBinding`。实例后缀必填且要过 `SlotIds.matches`；页面 id 允许点号（`plugin.page` 后缀规则 `[a-z][a-z0-9_.-]*`）。
 - 插件 UI 只有自由 Compose 一条轨道：`SlotContent.Compose(uiApiLevel, render: @Composable (SlotState) -> Unit)`；宿主不再有声明式节点渲染。插件页面（`PluginUiContributions.pages` + `plugin.page:<pageId>` 绑定）是插件唯一的自绘界面入口。`ui/PluginComponents.kt` 是基于宿主 `MaterialTheme` 的最小组件库，复杂界面插件直接用 Material3。
 - `PluginHooks` 21 个通知回调按 `OBSERVE_TIMEOUT_MS`（5s）派发，4 个变换/闸门按 `TRANSFORM_TIMEOUT_MS`（2s）；默认实现全部 no-op，`PluginHooks.None` 是一个空实现。闸门失败按 fail-closed 由宿主决定。
-- 插件不再有 install/setup/状态/设置/动作/详情行的声明式面；外部包由宿主安装，插件自己的 CLI 下载与登录由插件页面或工具自行完成。
+- 插件不再有安装/连接/状态/设置/动作/详情行的声明式面；外部包由宿主安装，插件自己的 CLI 下载、登录与状态管理由插件页面自行完成。
 - `PluginHost` 暴露 18 个宿主服务访问器（linux/privilege/screen/notifications/secrets/network/files/sessions/jobs/timers/goals/miniapp/mcp/ui/app/bus/logs/chat）与 `requestContributionsRefresh()`（插件页面改完状态后请求宿主重物化贡献并重建会话），另保留 `manifest/context/dataDir/assetsDir/scope/text` 旧签名；`text` 的 `vararg args: Any` 是 P0 兼容保留，格式化参数只接受字符串与数字，新 API 不再引入 `Any`。
 - 本模块没有 res 与用户可见文案；诊断信息是开发侧英文，用户可见字符串由宿主用 `host.text` 解析 `LocalizedText`。

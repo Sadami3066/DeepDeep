@@ -24,13 +24,13 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | [ui/](src/main/kotlin/io/github/whywood/deepdeep/ui/AGENTS.md) | 全部 Compose 页面与组件、导航、抽屉 |
 | [conversation/](src/main/kotlin/io/github/whywood/deepdeep/conversation/AGENTS.md) | 会话状态投影：runtime 事件 → ConversationState 的纯函数与文案 |
 | [data/](src/main/kotlin/io/github/whywood/deepdeep/data/AGENTS.md) | 偏好、附件、技能、迁移等本地存储 |
-| [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 外部 `.ddp` 插件系统与随包内置能力（feishu/wecom/jwxt/micloud） |
+| [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 外部 `.ddp` 插件系统（装载、启停、贡献、更新）；插件工程在上级 `plugins/` 仓库 |
 | [service/](src/main/kotlin/io/github/whywood/deepdeep/service/AGENTS.md) | 前台服务、通知中心、无障碍服务 |
 | [floating/](src/main/kotlin/io/github/whywood/deepdeep/floating/AGENTS.md) | 跨应用悬浮窗（气泡、卡片、运行面板） |
 | [assistant/](src/main/kotlin/io/github/whywood/deepdeep/assistant/AGENTS.md) | 系统助手浮层（默认助手唤起） |
 | [screen/](src/main/kotlin/io/github/whywood/deepdeep/screen/AGENTS.md) | 主屏/虚拟屏统一屏幕后端、节点树与屏幕工具装配 |
-| [web/](src/main/kotlin/io/github/whywood/deepdeep/web/) | 网络搜索/抓取工具与 DeepSeek web provider |
-| [arrange/](src/main/kotlin/io/github/whywood/deepdeep/arrange/) | 系统日历读写工具与授权 Activity |
+| [web/](src/main/kotlin/io/github/whywood/deepdeep/web/AGENTS.md) | 网络搜索/抓取工具与 DeepSeek web provider |
+| [arrange/](src/main/kotlin/io/github/whywood/deepdeep/arrange/AGENTS.md) | 系统日历读写工具；日历权限走系统应用权限页 |
 | [vscreen/](src/main/kotlin/io/github/whywood/deepdeep/vscreen/AGENTS.md) | 虚拟屏特权 helper（协议、传输、引擎） |
 | [adb/](src/main/kotlin/io/github/whywood/deepdeep/adb/AGENTS.md) | 内嵌无线调试 ADB 守护、配对与桥接 |
 | [privilege/](src/main/kotlin/io/github/whywood/deepdeep/privilege/AGENTS.md) | 权限三档（普通/ADB/Root）解析与控制器 |
