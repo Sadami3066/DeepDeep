@@ -57,7 +57,6 @@ import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
@@ -89,14 +88,11 @@ fun SettingsScreen(
     overlayEntryMode: OverlayEntryMode = OverlayEntryMode.VOICE,
     onOpenUsageHabits: () -> Unit = {},
     onOpenScan: () -> Unit = {},
-    onOpenAssistant: () -> Unit = {},
     onOpenProviders: () -> Unit,
     onOpenRuntime: () -> Unit,
     onOpenPermission: () -> Unit = {},
-    onOpenFloating: () -> Unit = {},
+    onOpenAndroidSettings: () -> Unit = {},
     privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
-    screenOps: Boolean = false,
-    onScreenOpsChange: (Boolean) -> Unit = {},
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
@@ -158,10 +154,7 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_personalization"),
                 )
-            }
-
-            Spacer(Modifier.height(16.dp))
-            DdGroupCard {
+                DdHairline()
                 DdListRow(
                     icon = DdIcons.Folder,
                     title = stringResource(R.string.settings_archived),
@@ -188,23 +181,6 @@ fun SettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Terminal,
-                    title = stringResource(R.string.settings_environment),
-                    value = linuxStatusLabel(linuxState),
-                    onClick = onOpenRuntime,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_environment"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Mic,
-                    title = stringResource(R.string.settings_assistant),
-                    onClick = onOpenAssistant,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_assistant"),
-                )
-                DdHairline()
-                DdListRow(
                     icon = DdIcons.Shield,
                     title = stringResource(R.string.settings_privilege),
                     value = stringResource(
@@ -220,29 +196,20 @@ fun SettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Monitor,
-                    title = stringResource(R.string.floating_settings_title),
-                    onClick = onOpenFloating,
+                    icon = DdIcons.Terminal,
+                    title = stringResource(R.string.settings_environment),
+                    value = linuxStatusLabel(linuxState),
+                    onClick = onOpenRuntime,
                     showChevron = true,
-                    modifier = Modifier.testTag("settings_floating"),
+                    modifier = Modifier.testTag("settings_environment"),
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.HandClick,
-                    title = stringResource(R.string.settings_screen_ops),
-                    subtitle = stringResource(R.string.settings_screen_ops_summary),
-                    onClick = { onScreenOpsChange(!screenOps) },
-                    modifier = Modifier.testTag("settings_screen_ops_row"),
-                    trailing = {
-                        DdSwitch(
-                            checked = screenOps,
-                            onCheckedChange = onScreenOpsChange,
-                            stateDescription = stringResource(
-                                if (screenOps) R.string.settings_switch_on else R.string.settings_switch_off,
-                            ),
-                            modifier = Modifier.testTag("settings_screen_ops"),
-                        )
-                    },
+                    icon = DdIcons.Monitor,
+                    title = stringResource(R.string.settings_android),
+                    onClick = onOpenAndroidSettings,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_android"),
                 )
             }
 

@@ -40,4 +40,5 @@
 
     <string name="permission_effective">当前生效</string>
     <string name="permission_effective_fallback">所选档位尚未授权，当前按「%1$s」运行。</string>
+    <string name="permission_screen_ops_inactive">未生效：屏幕操作需要 ADB 或 Root 权限。</string>
 </resources>

@@ -86,8 +86,8 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
-    data object FloatingWindow : AppDestination {
-        override val routeKey: String = "settings/floating"
+    data object AndroidSettings : AppDestination {
+        override val routeKey: String = "settings/android"
         override val depth: Int = 2
     }
 
@@ -172,7 +172,7 @@ sealed interface AppDestination {
             routeKey == AssistantSettings.routeKey -> AssistantSettings
             routeKey == Privacy.routeKey -> Privacy
             routeKey == Permission.routeKey -> Permission
-            routeKey == FloatingWindow.routeKey -> FloatingWindow
+            routeKey == AndroidSettings.routeKey -> AndroidSettings
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp

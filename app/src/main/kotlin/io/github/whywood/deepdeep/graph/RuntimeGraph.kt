@@ -102,7 +102,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         addAll(timerTools(deps.timerService(), binding))
         addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
         add(miniappEditTool(deps.miniappStore))
-        if (deps.capabilitySettingsStore.screenOps.value) {
+        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.privilege().state.value.effective)) {
             addAll(deps.screenTools())
             addAll(deps.virtualScreenTools())
         }
@@ -194,6 +194,9 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         ).also { it.start() }
     }
 }
+
+internal fun isScreenOpsActive(screenOps: Boolean, effective: PrivilegeLevel): Boolean =
+    screenOps && (effective == PrivilegeLevel.ADB || effective == PrivilegeLevel.ROOT)
 
 private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
     RootStatus.Unsupported -> RootToolStatus.Unsupported
