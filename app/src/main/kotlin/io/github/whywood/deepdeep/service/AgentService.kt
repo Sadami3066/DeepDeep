@@ -108,7 +108,8 @@ class AgentService : Service() {
         val controller = FloatingWindowController(
             context = this,
             runtime = graph.host,
-            activeRuns = graph.notificationCenter.runActivity.activeRuns,
+            activeRuns = graph.conversationStore.activeRuns,
+            events = graph.conversationStore.events,
             questionCenter = graph.questionCenter,
             preferences = FloatingWindowPreferences(this),
             theme = graph.themePreferences.theme,

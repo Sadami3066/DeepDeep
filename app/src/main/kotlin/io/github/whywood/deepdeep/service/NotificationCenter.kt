@@ -15,6 +15,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.MainActivity
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.RunCompletion
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.InterruptedQuestion
@@ -34,11 +36,11 @@ import kotlinx.coroutines.launch
 class NotificationCenter(
     private val context: Context,
     private val runtime: ConversationQueries,
+    private val store: ConversationStore,
     private val pendingQuestions: StateFlow<List<PendingQuestion>>,
 ) {
     private val manager = NotificationManagerCompat.from(context)
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val runActivity = RunActivityTracker(runtime) { context.getString(R.string.chat_title_new) }
     private val postedQuestionSessions = ConcurrentHashMap.newKeySet<String>()
     private var collector: Job? = null
     private var questionCollector: Job? = null
@@ -48,9 +50,8 @@ class NotificationCenter(
     fun start() {
         if (collector != null) return
         createChannels()
-        runActivity.start()
         collector = scope.launch {
-            runActivity.changes.collect(::onRunChange)
+            store.runCompletions.collect(::onRunCompletion)
         }
         questionCollector = scope.launch {
             pendingQuestions.collect(::onPendingQuestions)
@@ -62,7 +63,6 @@ class NotificationCenter(
         collector = null
         questionCollector?.cancel()
         questionCollector = null
-        runActivity.stop()
         clearQuestionNotifications()
         scope.cancel()
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -131,7 +131,7 @@ class NotificationCenter(
     }
 
     fun foregroundNotification(): android.app.Notification {
-        val active = runActivity.activeRuns.value
+        val active = store.activeRuns.value
         val latest = active.values.maxByOrNull { it.startedAt }
         val title = when {
             active.isEmpty() -> context.getString(R.string.app_name)
@@ -238,9 +238,8 @@ class NotificationCenter(
         )
     }
 
-    private suspend fun onRunChange(change: RunActivityChange) {
+    private suspend fun onRunCompletion(change: RunCompletion) {
         updateForeground()
-        if (change !is RunActivityChange.Finished) return
         postResult(
             sessionId = change.sessionId,
             title = change.title,

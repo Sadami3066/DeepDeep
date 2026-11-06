@@ -21,10 +21,10 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
-import io.github.whywood.deepdeep.ui.chat.state.SessionProjection
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -72,6 +72,7 @@ data class AssistantOverlayState(
 
 class AssistantOverlayController(
     private val runtime: AgentRuntime,
+    private val store: ConversationStore,
     private val activeSessionId: () -> String?,
     private val homeWorkspaceId: String,
     private val scope: CoroutineScope,
@@ -83,7 +84,6 @@ class AssistantOverlayController(
     private val onSessionSelected: (String) -> Unit = {},
     private val initialSessionId: () -> String? = { null },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    strings: () -> ConversationStrings = { ConversationStrings.fallback() },
     private val normalizeImage: suspend (File, String) -> NormalizedImage? = { file, mime ->
         ImageNormalizer.normalize(file, mime)
     },
@@ -91,7 +91,6 @@ class AssistantOverlayController(
     private val queuedPreparations = mutableMapOf<String, MutableSet<Job>>()
     private val mutableState = MutableStateFlow(AssistantOverlayState())
     val state: StateFlow<AssistantOverlayState> = mutableState.asStateFlow()
-    private val projection = SessionProjection(runtime, scope, ioDispatcher, strings)
 
     private var startJob: Job? = null
     private var stateJob: Job? = null
@@ -103,18 +102,19 @@ class AssistantOverlayController(
             runCatching { runtime.ensureStarted() }
             val sessionId = openMutex.withLock {
                 val target = openInitialSession()
-                if (target != null && runCatching { projection.open(target) }.isFailure) null else target
+                if (target != null && runCatching { store.open(target) }.isFailure) null else target
             }
             if (sessionId == null) {
                 mutableState.value = AssistantOverlayState(error = AssistantOverlayError.StartFailed)
                 startJob = null
                 return@launch
             }
+            store.pin(sessionId)
             mutableState.value = AssistantOverlayState(
-                conversation = projection.state.value,
+                conversation = store.peek(sessionId) ?: ConversationState(),
                 sessionId = sessionId,
             )
-            observeProjection()
+            observeConversation(sessionId)
             loadMeta(sessionId)
         }
     }
@@ -132,7 +132,7 @@ class AssistantOverlayController(
         if (isBusy(sessionId, current)) {
             enqueue(sessionId, prompt, followUp, imageRefs, root)
         } else {
-            projection.sendPreparedTurn(prompt) { normalizeImages(imageRefs, root) }
+            store.send(sessionId, prompt, title = null, prepareImages = { normalizeImages(imageRefs, root) })
         }
         return true
     }
@@ -216,18 +216,18 @@ class AssistantOverlayController(
         mutableState.value.sessionId?.let { sessionId ->
             queuedPreparations.remove(sessionId)?.forEach { it.cancel() }
         }
-        projection.stop()
+        mutableState.value.sessionId?.let { store.stop(it) }
     }
 
     fun retry(messageId: Long) {
         val tail = mutableState.value.conversation.messages.lastOrNull() ?: return
         if (tail.id != messageId) return
         if (tail.role != AssistantRole.ASSISTANT || tail.status != MessageStatus.FAILED) return
-        projection.retryLast()
+        mutableState.value.sessionId?.let { store.retryLast(it) }
     }
 
     fun toggleStep(messageId: Long, stepId: Long) {
-        projection.toggleStep(messageId, stepId)
+        mutableState.value.sessionId?.let { store.toggleStep(it, messageId, stepId) }
     }
 
     fun openSession(sessionId: String) {
@@ -239,14 +239,18 @@ class AssistantOverlayController(
                         ?.let { runtime.openSession(it.filePath, it.cwd) }
                 }.getOrNull()
                 val target = opened?.sessionId ?: sessionId
-                if (runCatching { projection.open(target) }.isFailure) {
+                if (runCatching { store.open(target) }.isFailure) {
                     setError(AssistantOverlayError.StartFailed)
                     return@withLock
                 }
+                val previous = mutableState.value.sessionId
+                store.pin(target)
+                previous?.takeIf { it != target }?.let(store::unpin)
                 onSessionSelected(target)
+                observeConversation(target)
                 mutableState.update {
                     it.copy(
-                        conversation = projection.state.value,
+                        conversation = store.peek(target) ?: ConversationState(),
                         sessionId = target,
                         sessionTitle = "",
                         attachments = emptyList(),
@@ -267,14 +271,18 @@ class AssistantOverlayController(
                     setError(AssistantOverlayError.StartFailed)
                     return@withLock
                 }
-                if (runCatching { projection.open(opened.sessionId) }.isFailure) {
+                if (runCatching { store.open(opened.sessionId) }.isFailure) {
                     setError(AssistantOverlayError.StartFailed)
                     return@withLock
                 }
+                val previous = mutableState.value.sessionId
+                store.pin(opened.sessionId)
+                previous?.takeIf { it != opened.sessionId }?.let(store::unpin)
                 onSessionSelected(opened.sessionId)
+                observeConversation(opened.sessionId)
                 mutableState.update {
                     it.copy(
-                        conversation = projection.state.value,
+                        conversation = store.peek(opened.sessionId) ?: ConversationState(),
                         sessionId = opened.sessionId,
                         sessionTitle = "",
                         attachments = emptyList(),
@@ -345,19 +353,18 @@ class AssistantOverlayController(
         startJob = null
         stateJob?.cancel()
         stateJob = null
-        projection.close()
+        mutableState.value.sessionId?.let(store::unpin)
         mutableState.value = AssistantOverlayState()
     }
 
-    private fun observeProjection() {
+    private fun observeConversation(sessionId: String) {
         stateJob?.cancel()
         stateJob = scope.launch {
-            var wasSending = projection.state.value.sending
-            projection.state.collect { conversation ->
+            var wasSending = store.peek(sessionId)?.sending ?: false
+            store.observe(sessionId).collect { conversation ->
+                if (mutableState.value.sessionId != sessionId) return@collect
                 mutableState.update { it.copy(conversation = conversation) }
-                if (wasSending && !conversation.sending) {
-                    mutableState.value.sessionId?.let(::loadMeta)
-                }
+                if (wasSending && !conversation.sending) loadMeta(sessionId)
                 wasSending = conversation.sending
             }
         }
@@ -480,7 +487,9 @@ class AssistantOverlayController(
     }
 
     private fun isBusy(sessionId: String, current: AssistantOverlayState): Boolean =
-        current.conversation.sending || projection.state.value.sending || runtime.activeRuns.value.containsKey(sessionId)
+        current.conversation.sending ||
+            store.peek(sessionId)?.sending == true ||
+            runtime.activeRuns.value.containsKey(sessionId)
 
     private fun setError(error: AssistantOverlayError) {
         mutableState.update { it.copy(error = error) }

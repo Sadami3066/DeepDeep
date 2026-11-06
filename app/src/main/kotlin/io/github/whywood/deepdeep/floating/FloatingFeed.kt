@@ -7,7 +7,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
-import io.github.whywood.deepdeep.service.ActiveRunView
+import io.github.whywood.deepdeep.conversation.ActiveRunView
 import io.github.whywood.deepdeep.ui.chat.parsePresentedItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -28,6 +28,7 @@ class FloatingFeed(
     private val scope: CoroutineScope,
     private val pluginSetup: StateFlow<PluginSetupNotice?> = MutableStateFlow(null),
     private val isForeground: () -> Boolean = { false },
+    private val events: kotlinx.coroutines.flow.SharedFlow<SessionRuntimeEvent> = runtime.events,
 ) {
     private val mutableState = MutableStateFlow(
         FloatingFeedState(lastEventAt = System.currentTimeMillis()),
@@ -55,7 +56,7 @@ class FloatingFeed(
             }
         }
         jobs += scope.launch {
-            runtime.events.collect(::onRuntimeEvent)
+            events.collect(::onRuntimeEvent)
         }
         jobs += scope.launch {
             pluginSetup.collect { notice ->

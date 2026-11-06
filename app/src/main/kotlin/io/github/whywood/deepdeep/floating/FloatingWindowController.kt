@@ -47,7 +47,7 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.QuestionOption
-import io.github.whywood.deepdeep.service.ActiveRunView
+import io.github.whywood.deepdeep.conversation.ActiveRunView
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.vscreen.VirtualScreenController
@@ -72,6 +72,7 @@ class FloatingWindowController(
     private val context: Context,
     private val runtime: ConversationQueries,
     private val activeRuns: StateFlow<Map<String, ActiveRunView>>,
+    private val events: kotlinx.coroutines.flow.SharedFlow<io.github.whywood.deepdeep.runtime.SessionRuntimeEvent> = runtime.events,
     private val questionCenter: QuestionCenter,
     private val preferences: FloatingWindowPreferences,
     private val theme: Flow<ThemeMode>,
@@ -82,7 +83,15 @@ class FloatingWindowController(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val feedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val feed = FloatingFeed(runtime, activeRuns, questionCenter.pending, feedScope, pluginSetup) { AppVisibility.foreground }
+    private val feed = FloatingFeed(
+        runtime,
+        activeRuns,
+        questionCenter.pending,
+        feedScope,
+        pluginSetup,
+        { AppVisibility.foreground },
+        events,
+    )
     private val windowContext = LocalizedContext(context.applicationContext)
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val panelOpen = MutableStateFlow(false)

@@ -59,6 +59,7 @@ class AssistantOverlayActivity : ComponentActivity() {
             val controller = remember {
                 AssistantOverlayController(
                     runtime = graph.host,
+                    store = graph.conversationStore,
                     activeSessionId = { graph.activeSessionId.value },
                     homeWorkspaceId = AgentRuntimeHost.HOME_ID,
                     scope = graph.appScope,
@@ -69,7 +70,6 @@ class AssistantOverlayActivity : ComponentActivity() {
                     defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
                     initialSessionId = { requestedSessionId },
-                    strings = { chatUiStrings },
                 )
             }
             this.controller = controller

@@ -4,7 +4,7 @@ import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.service.ActiveRunView
+import io.github.whywood.deepdeep.conversation.ActiveRunView
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import kotlinx.coroutines.ExperimentalCoroutinesApi

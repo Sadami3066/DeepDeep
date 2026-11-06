@@ -25,6 +25,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
@@ -33,6 +34,7 @@ import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -64,8 +66,17 @@ class AssistantOverlayControllerTest {
         attachmentStore: AttachmentStore = FakeAttachmentStore(),
         normalizeImage: suspend (File, String) -> NormalizedImage? = { _, _ -> null },
         onSelected: (String) -> Unit = {},
-    ) = AssistantOverlayController(
+    ): AssistantOverlayController {
+        val store = ConversationStore(
+            runtime = runtime,
+            scope = CoroutineScope(SupervisorJob() + dispatcher),
+            ioDispatcher = dispatcher,
+            strings = { strings },
+        )
+        store.start()
+        return AssistantOverlayController(
         runtime = runtime,
+        store = store,
         activeSessionId = { active },
         homeWorkspaceId = HOME_ID,
         scope = scope,
@@ -77,9 +88,9 @@ class AssistantOverlayControllerTest {
         onSessionSelected = onSelected,
         initialSessionId = { requested },
         ioDispatcher = dispatcher,
-        strings = { strings },
         normalizeImage = normalizeImage,
     )
+    }
 
     private fun ref(
         id: String = "a1",

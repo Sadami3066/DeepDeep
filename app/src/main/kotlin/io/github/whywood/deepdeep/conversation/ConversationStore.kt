@@ -114,6 +114,11 @@ class ConversationStore(
     )
     val lifecycle: SharedFlow<SessionRuntimeEvent> = mutableLifecycle.asSharedFlow()
 
+    private val mutableEvents = MutableSharedFlow<SessionRuntimeEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val events = mutableEvents.asSharedFlow()
     private val mutableSessionChanges = MutableSharedFlow<Unit>(
         extraBufferCapacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
@@ -364,9 +369,13 @@ class ConversationStore(
 
     fun stop(sessionId: String): List<String> {
         synchronized(lock) { pendingSends.remove(sessionId)?.cancel() }
+        val now = System.currentTimeMillis()
+        mutate(sessionId) { state ->
+            if (state.sending) state.finishWithStatus("", "", RunStatus.STOPPED, now) else state
+        }
         val dropped = runtime.stop(sessionId)
         if (runtime.activeRuns.value[sessionId] == null) {
-            scheduleReconcile(sessionId, RECONCILE_DELAY_MS)
+            scheduleReconcile(sessionId, RECONCILE_DELAY_MS, force = true)
         }
         return dropped
     }
@@ -397,7 +406,7 @@ class ConversationStore(
         sending.forEach { sessionId -> scheduleReconcile(sessionId, 0L) }
     }
 
-    suspend fun reconcile(sessionId: String) {
+    suspend fun reconcile(sessionId: String, force: Boolean = false) {
         val activeRun = runtime.activeRuns.value[sessionId]
         val current = peek(sessionId)
         if (activeRun != null) {
@@ -408,7 +417,7 @@ class ConversationStore(
             }
             return
         }
-        if (current == null || !current.sending) return
+        if (current == null || (!force && !current.sending)) return
         if (retryGate(sessionId)) return
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
         val model = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
@@ -443,6 +452,7 @@ class ConversationStore(
     private suspend fun onEvent(scoped: SessionRuntimeEvent) {
         val sessionId = scoped.sessionId
         val event = scoped.event
+        mutableEvents.tryEmit(scoped)
         if (event is RuntimeEvent.SessionListChanged) {
             flushDeltas()
             refreshTitles()
@@ -655,13 +665,13 @@ class ConversationStore(
         }
     }
 
-    private fun scheduleReconcile(sessionId: String, delayMs: Long) {
+    private fun scheduleReconcile(sessionId: String, delayMs: Long, force: Boolean = false) {
         synchronized(lock) {
             if (reconcileJobs[sessionId]?.isActive == true) return
             val job = scope.launch {
                 try {
                     if (delayMs > 0) delay(delayMs)
-                    reconcile(sessionId)
+                    reconcile(sessionId, force)
                 } finally {
                     synchronized(lock) { reconcileJobs.remove(sessionId) }
                 }

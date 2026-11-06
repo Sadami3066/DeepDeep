@@ -480,7 +480,7 @@ class AppGraph(context: Context) : AppDependencies {
     }
 
     val notificationCenter: NotificationCenter by lazy {
-        NotificationCenter(uiContext, host, questionCenter.pending)
+        NotificationCenter(uiContext, host, conversationStore, questionCenter.pending)
     }
     override val timerService: TimerService by lazy {
         TimerService(
