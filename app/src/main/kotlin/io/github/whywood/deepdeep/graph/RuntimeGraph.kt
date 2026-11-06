@@ -1,0 +1,182 @@
+package io.github.whywood.deepdeep.graph
+
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.data.isSharedStorageGranted
+import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
+import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.privilege.shellBackendsFor
+import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.AppToolContext
+import io.github.whywood.deepdeep.runtime.GoalPhase
+import io.github.whywood.deepdeep.runtime.JobStatus
+import io.github.whywood.deepdeep.runtime.PiSessionEngine
+import io.github.whywood.deepdeep.runtime.RootCommandExecutor
+import io.github.whywood.deepdeep.runtime.RootCommandResult
+import io.github.whywood.deepdeep.runtime.RootToolStatus
+import io.github.whywood.deepdeep.runtime.RunLedger
+import io.github.whywood.deepdeep.runtime.RuntimeHooks
+import io.github.whywood.deepdeep.runtime.WorkshopAgentService
+import io.github.whywood.deepdeep.runtime.adbShellTool
+import io.github.whywood.deepdeep.runtime.presentTool
+import io.github.whywood.deepdeep.runtime.rootShellTool
+import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
+import io.github.whywood.deepdeep.service.LinuxJobRunner
+import io.github.whywood.deepdeep.shell.RootStatus
+import java.io.File
+import kotlinx.coroutines.launch
+
+internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
+    private fun availableShellBackends(): List<PrivilegeLevel> =
+        shellBackendsFor(deps.privilege().state.value.effective)
+
+    private fun adbToolStatus(): RootToolStatus {
+        val adb = deps.privilege().state.value.adb
+        return when {
+            adb.daemon -> RootToolStatus.Granted
+            adb.busy -> RootToolStatus.NotRequested
+            adb.error != null -> RootToolStatus.Error
+            adb.paired -> RootToolStatus.NotRequested
+            else -> RootToolStatus.Unsupported
+        }
+    }
+
+    val appToolContext: AppToolContext by lazy {
+        AppToolContext(
+            questionCenter = deps.questionCenter,
+            pluginController = deps.pluginManager(),
+            pluginTools = { binding -> deps.pluginManager().tools(binding) },
+            extraToolFactories = listOf(
+                { _, binding ->
+                    buildList {
+                        add(presentTool(workshopCreativeLookup(deps.workshopStore)) { binding.current() })
+                        for (backend in availableShellBackends()) {
+                            when (backend) {
+                                PrivilegeLevel.ROOT -> add(
+                                    rootShellTool(
+                                        executor = RootCommandExecutor { command, timeoutMillis ->
+                                            val result = deps.rootShell.execute(command, timeoutMillis)
+                                            RootCommandResult(
+                                                exitCode = result.exitCode,
+                                                stdout = result.stdout,
+                                                stderr = result.stderr,
+                                                truncated = result.truncated,
+                                                timedOut = result.timedOut,
+                                            )
+                                        },
+                                        enabled = { PrivilegeLevel.ROOT in deps.privilege().state.value.availableBackends },
+                                        status = { deps.privilege().state.value.root.toRootToolStatus() },
+                                    ),
+                                )
+
+                                PrivilegeLevel.ADB -> add(
+                                    adbShellTool(
+                                        executor = deps.adbExecutor,
+                                        enabled = { PrivilegeLevel.ADB in deps.privilege().state.value.availableBackends },
+                                        status = { adbToolStatus() },
+                                    ),
+                                )
+
+                                PrivilegeLevel.NORMAL -> Unit
+                            }
+                        }
+                    }
+                },
+            ),
+        )
+    }
+
+    private fun pluginRuntimeHooks(): RuntimeHooks {
+        val delegate = PluginHooksDelegate()
+        return RuntimeHooks(
+            promptTransform = delegate.promptTransform,
+            inputHandler = delegate.inputHandler,
+            toolHooks = delegate.toolHooks,
+            onSessionBound = { binding -> deps.pluginManager().bindSessionHooks(binding, delegate) },
+            onSessionClosed = { sessionId -> deps.pluginManager().onSessionClosed(sessionId) },
+        )
+    }
+
+    private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+        PiSessionEngine(
+            workspace = cwd,
+            agentDir = deps.agentDir,
+            credentials = deps.credentials,
+            transport = deps.httpTransport,
+            shellExecutor = deps.shellExecutorFor(cwd),
+            providers = deps.providerCatalog,
+            personalization = { deps.personalizationStore.read().toRuntime() },
+            sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            pluginPromptBody = { deps.pluginManager().promptBody() },
+            toolContext = appToolContext,
+            hooks = pluginRuntimeHooks(),
+        )
+    }
+
+    val workshopAgentService: WorkshopAgentService by lazy {
+        WorkshopAgentService(
+            providers = deps.providerCatalog,
+            credentials = deps.credentials,
+            transport = deps.httpTransport,
+            agentDir = deps.agentDir,
+            runRoot = File(deps.appContext.filesDir, "agent-runs"),
+            appToolContext = appToolContext,
+            defaultConfig = { deps.modelConfigStore.read() },
+            configuredProviders = { deps.credentials.authKinds.value.keys },
+            personalization = { deps.personalizationStore.read().toRuntime() },
+            pluginPromptBody = { deps.pluginManager().promptBody() },
+            sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            defaultMaxTurns = { deps.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            workspace = deps.homeDir,
+            shellExecutorFor = deps.shellExecutorFor,
+            backgroundRunnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },
+            hooksFactory = { pluginRuntimeHooks() },
+        )
+    }
+
+    val host: AgentRuntimeHost by lazy {
+        AgentRuntimeHost(
+            homeDir = deps.homeDir,
+            workspacesDir = deps.workspacesDir,
+            engineFactory = engineFactory,
+            modelConfigStore = deps.modelConfigStore,
+            catalog = deps.sessionCatalog,
+            workspaceStore = deps.workspaceStore,
+            providers = deps.providerCatalog,
+            backgroundScope = deps.scope,
+            goalDriver = deps.goalService,
+            sessionCleaner = { sessionId: String ->
+                deps.jobRegistry().clearSession(sessionId)
+                deps.scope.launch { deps.goalService.clearSession(sessionId) }
+            },
+            sessionArchived = { sessionId -> deps.jobRegistry().clearSession(sessionId) },
+            runLedger = RunLedger(File(deps.appContext.filesDir, "tasks")),
+            keepHandleAlive = { sessionId ->
+                deps.timerService().timers.value.any { timer ->
+                    timer.sessionId == sessionId && timer.enabled && timer.nextRunAt != null
+                } ||
+                    deps.goalService.goals.value[sessionId]?.goal?.phase == GoalPhase.ACTIVE ||
+                    deps.jobRegistry().jobs.value.any { job ->
+                        job.sessionId == sessionId && job.status == JobStatus.RUNNING
+                    } ||
+                    deps.questionCenter.pending.value.any { question -> question.sessionId == sessionId }
+            },
+        )
+    }
+
+    val conversationStore: ConversationStore by lazy {
+        ConversationStore(
+            runtime = host,
+            scope = deps.scope,
+            decorate = deps.decorateInterrupted,
+        ).also { it.start() }
+    }
+}
+
+private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
+    RootStatus.Unsupported -> RootToolStatus.Unsupported
+    RootStatus.NotRequested -> RootToolStatus.NotRequested
+    RootStatus.Granted -> RootToolStatus.Granted
+    RootStatus.Denied -> RootToolStatus.Denied
+    RootStatus.Timeout -> RootToolStatus.Timeout
+    RootStatus.Error -> RootToolStatus.Error
+}

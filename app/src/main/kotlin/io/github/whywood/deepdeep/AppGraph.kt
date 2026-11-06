@@ -2,115 +2,69 @@ package io.github.whywood.deepdeep
 
 import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
-import dev.pi.ai.http.okHttpTransport
-import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.nextMessageId
-import io.github.whywood.deepdeep.core.ModelSelection
-import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.DevPackageManager
-import io.github.whywood.deepdeep.data.FileAttachmentStore
-import io.github.whywood.deepdeep.data.FontPreferences
+import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.LocalizedContext
-import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
-import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
-import io.github.whywood.deepdeep.data.isSharedStorageGranted
-import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
-import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
-import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
+import io.github.whywood.deepdeep.graph.DataGraph
+import io.github.whywood.deepdeep.graph.DataGraphDeps
+import io.github.whywood.deepdeep.graph.PlatformGraph
+import io.github.whywood.deepdeep.graph.PlatformGraphDeps
 import io.github.whywood.deepdeep.graph.PluginGraph
 import io.github.whywood.deepdeep.graph.PluginGraphDeps
-import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
+import io.github.whywood.deepdeep.graph.RuntimeGraph
+import io.github.whywood.deepdeep.graph.RuntimeGraphDeps
+import io.github.whywood.deepdeep.graph.ServiceGraph
+import io.github.whywood.deepdeep.graph.ServiceGraphDeps
 import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
-import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
-import io.github.whywood.deepdeep.runtime.McpPluginBridge
-import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
-import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
-import io.github.whywood.deepdeep.screen.MainScreenController
-import io.github.whywood.deepdeep.screen.ScreenController
-import io.github.whywood.deepdeep.screen.ScreenRouter
-import io.github.whywood.deepdeep.screen.VirtualEngineBackend
-import io.github.whywood.deepdeep.service.GuiAccessibilityState
-import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
-import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.adb.AdbBootstrap
-import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
+import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
-import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
-import io.github.whywood.deepdeep.privilege.shellBackendsFor
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
-import io.github.whywood.deepdeep.runtime.MessageStatus
-import io.github.whywood.deepdeep.runtime.TurnNotice
-import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
-import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
-import io.github.whywood.deepdeep.runtime.InstallationIdStore
-import io.github.whywood.deepdeep.runtime.OAuthCredentialStore
+import io.github.whywood.deepdeep.runtime.GoalService
+import io.github.whywood.deepdeep.runtime.JobRegistry
+import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.ModelSettings
+import io.github.whywood.deepdeep.runtime.ProviderCatalog
+import io.github.whywood.deepdeep.runtime.ProviderDirectory
+import io.github.whywood.deepdeep.runtime.ProviderOAuthService
+import io.github.whywood.deepdeep.runtime.QuestionCenter
+import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpOAuthService
 import io.github.whywood.deepdeep.runtime.McpServerProbe
-import dev.pi.mcp.oauth.FileMcpTokenStore
-import dev.pi.mcp.oauth.defaultMcpAuthFile
-import okio.Path.Companion.toPath
-import io.github.whywood.deepdeep.runtime.ProviderOAuthService
-import io.github.whywood.deepdeep.runtime.GoalPhase
-import io.github.whywood.deepdeep.runtime.GoalService
-import io.github.whywood.deepdeep.runtime.JobRegistry
-import io.github.whywood.deepdeep.runtime.JobStatus
-import io.github.whywood.deepdeep.runtime.RootCommandExecutor
-import io.github.whywood.deepdeep.runtime.RootCommandResult
-import io.github.whywood.deepdeep.runtime.RootToolStatus
-import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RuntimeHooks
-import io.github.whywood.deepdeep.runtime.rootShellTool
-import io.github.whywood.deepdeep.runtime.adbShellTool
-import io.github.whywood.deepdeep.runtime.TurnSource
-import io.github.whywood.deepdeep.runtime.presentTool
-import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
-import io.github.whywood.deepdeep.runtime.AppToolContext
-import io.github.whywood.deepdeep.runtime.ModelConfigStore
-import io.github.whywood.deepdeep.runtime.PiSessionEngine
-import io.github.whywood.deepdeep.runtime.QuestionCenter
-import io.github.whywood.deepdeep.runtime.QuestionPersistence
-import io.github.whywood.deepdeep.runtime.RunLedger
-import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.TimerStore
+import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
+import io.github.whywood.deepdeep.runtime.TimerService
+import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
-import io.github.whywood.deepdeep.runtime.WorkspaceStore
-import io.github.whywood.deepdeep.runtime.ProviderCatalog
-import io.github.whywood.deepdeep.runtime.SdkCredentialStore
-import io.github.whywood.deepdeep.runtime.SessionCatalog
-import io.github.whywood.deepdeep.runtime.SessionMetaStore
-import io.github.whywood.deepdeep.service.LinuxJobRunner
+import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
-import io.github.whywood.deepdeep.shell.RootShell
-import io.github.whywood.deepdeep.shell.RootStatus
-import io.github.whywood.deepdeep.service.AppShellExecutor
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -119,153 +73,57 @@ class AppGraph(context: Context) : AppDependencies {
     private val appContext = context.applicationContext
     val uiContext: Context = LocalizedContext(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val virtualScreenFeature by lazy { VirtualScreenFeature.install(uiContext, privilege, adbBridge) }
     val appScope: CoroutineScope get() = scope
-    private val jobWake = MutableStateFlow(true)
-    private val sharedStorage = MutableStateFlow(false)
     val activeSessionId = MutableStateFlow<String?>(null)
     private var questionRecoveryLoaded = false
 
-    init {
-        scope.launch { StorageMigration.migrate(appContext.filesDir) }
-        OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
-    }
+    private val dataGraph by lazy { DataGraph(DataGraphDeps(appContext, uiContext, scope)) }
+    private val platformGraph by lazy { PlatformGraph(platformGraphDeps()) }
+    private val runtimeGraph by lazy { RuntimeGraph(runtimeGraphDeps()) }
+    private val serviceGraph by lazy { ServiceGraph(serviceGraphDeps()) }
 
-    override val homeDir: File = File(appContext.filesDir, "home").apply { mkdirs() }
-    val workspacesDir: File = File(appContext.filesDir, "workspaces").apply { mkdirs() }
-    val agentDir: File = File(appContext.filesDir, "agent").apply { mkdirs() }
+    override val homeDir: File get() = dataGraph.homeDir
+    val workspacesDir: File get() = dataGraph.workspacesDir
+    val agentDir: File get() = dataGraph.agentDir
 
-    private val secretStore = EncryptedSecretStore(appContext)
-    val apiKeyStore = ApiKeyStore(secretStore)
-    val oauthCredentialStore = OAuthCredentialStore(secretStore)
-    override val modelConfigStore = ModelConfigStore(appContext)
-    override val attachmentStore = FileAttachmentStore(appContext, homeDir)
-    override val linuxSettings = LinuxSettingsStore(appContext)
-    private val rootShell = RootShell()
-    val adbBridge: AdbBootstrap = AdbBridgeRuntime.install(appContext)
-    private val privilegeImpl by lazy {
-        PrivilegeControllerImpl(
-            preferences = PrivilegePreferences(appContext) { linuxSettings.isRootEnabled() },
-            rootShell = rootShell,
-            adbBridge = adbBridge,
-            scope = scope,
-        ) {
-            scope.launch { pluginManager.refreshAndSyncSkills() }
-            host.reconfigure()
-        }
-    }
-    override val privilege: PrivilegeController get() = privilegeImpl
-    val themePreferences = ThemePreferences(appContext)
-    override val appPreferences = AppPreferences(appContext)
-    override val voicePreferences = VoicePreferences(appContext)
-    override val overlayEntryPreferences = OverlayEntryPreferences(appContext)
-    override val shareStaging = ShareStaging(uiContext)
+    fun linuxBinds(): List<Pair<File, String>> = platformGraph.linuxBinds()
 
-    fun linuxBinds(): List<Pair<File, String>> = listOf(File("/data") to "/data")
+    override val attachmentStore: AttachmentStore get() = dataGraph.attachmentStore
+    val themePreferences: ThemePreferences get() = dataGraph.themePreferences
+    override val appPreferences: AppPreferences get() = dataGraph.appPreferences
+    override val voicePreferences: VoicePreferences get() = dataGraph.voicePreferences
+    override val overlayEntryPreferences: OverlayEntryPreferences get() = dataGraph.overlayEntryPreferences
+    override val shareStaging: ShareStaging get() = dataGraph.shareStaging
+    override val personalizationStore: PersonalizationStore get() = dataGraph.personalizationStore
+    val fontPreferences get() = dataGraph.fontPreferences
+    override val modelConfigStore: ModelSettings get() = dataGraph.modelConfigStore
+    override val linuxSettings: LinuxSettingsStore get() = dataGraph.linuxSettings
+    override val credentials: SdkCredentialStore get() = dataGraph.credentials
+    override val providerCatalog: ProviderDirectory get() = dataGraph.providerCatalog
+    override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService
+    override val mcpConfigStore: McpConfigStore get() = dataGraph.mcpConfigStore
+    override val mcpServerProbe: McpServerProbe get() = dataGraph.mcpServerProbe
+    override val mcpOAuthService: McpOAuthService get() = dataGraph.mcpOAuthService
+    override val skillRepository: SkillRepository get() = dataGraph.skillRepository
+    override val agentDocStore: AgentDocStore get() = dataGraph.agentDocStore
+    override val workshopStore: WorkshopStore get() = dataGraph.workshopStore
+    override val skillCatalog: SkillCatalog get() = dataGraph.skillCatalog
+    override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
+    override val goalService: GoalService get() = dataGraph.goalService
 
-    init {
-        scope.launch {
-            appPreferences.preferences.collect { preferences -> jobWake.value = preferences.backgroundJobWake }
-        }
-    }
-    init {
-        scope.launch {
-            linuxSettings.sharedStorageEnabled.collect { enabled ->
-                sharedStorage.value = enabled && isSharedStorageGranted()
-            }
-        }
-    }
-    override val personalizationStore = PersonalizationStore(appContext)
-    val fontPreferences = FontPreferences(appContext)
-    override val linuxEnvironment = LinuxEnvironment(
-        appContext,
-        homeDir,
-        sharedStorageEnabled = { sharedStorage.value },
-        extraBinds = linuxBinds(),
-    )
-    private val httpTransport = okHttpTransport()
-    override val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, scope)
-    override val providerCatalog = ProviderCatalog(httpTransport, credentials)
-    val modelSelection = ModelSelection(providerCatalog, modelConfigStore)
-    init {
-        scope.launch {
-            credentials.authKinds.collect { kinds ->
-                if (kinds.isNotEmpty()) modelSelection.ensure(kinds.keys)
-            }
-        }
-    }
-    override val providerOAuthService = ProviderOAuthService(
-        credentials = credentials,
-        transport = httpTransport,
-        deviceId = { installationId.get() },
-    )
-    private val installationId = InstallationIdStore(agentDir)
-    override val mcpConfigStore = McpConfigStore(agentDir)
-    private val mcpTokenStore = FileMcpTokenStore(defaultMcpAuthFile(agentDir.absolutePath.toPath()))
-    override val mcpServerProbe = McpServerProbe(httpTransport, mcpTokenStore)
-    override val mcpOAuthService = McpOAuthService(httpTransport, mcpTokenStore)
-    val sessionMetaStore = SessionMetaStore(appContext)
-    val sessionCatalog = SessionCatalog(agentDir, sessionMetaStore)
-    val workspaceStore = WorkspaceStore(appContext)
-    override val skillRepository = SkillRepository(
-        repoDir = File(appContext.filesDir, "skills"),
-        agentDir = agentDir,
-        homeDir = homeDir,
-        workspacesDir = workspacesDir,
-    )
-    override val agentDocStore = AgentDocStore()
-    val timerStore = TimerStore(TimerStore.prepareDataDirectory(appContext.filesDir))
-    override val workshopStore = WorkshopStore(File(appContext.filesDir, "workshop"))
-    override val skillCatalog = SkillCatalog(agentDir)
-    val pluginSettingsStore = PluginSettingsStore(File(appContext.filesDir, "plugins/settings.json"))
-    private val pluginStrings = AndroidPluginStrings(uiContext)
-    private val pluginBus = PluginBusImpl()
+    override val privilege: PrivilegeController get() = platformGraph.privilege
+    val adbBridge get() = platformGraph.adbBridge
+    override val linuxEnvironment: LinuxEnvironment get() = platformGraph.linuxEnvironment
 
-    override val goalService: GoalService by lazy { GoalService() }
-    override val jobRegistry: JobRegistry by lazy {
-        JobRegistry(
-            scope = scope,
-            notifier = { sessionId, notice, prompt ->
-                host.deliverBackgroundTurn(sessionId, notice, prompt, TurnSource.JOB)
-            },
-            wakeEnabled = { jobWake.value },
-            runnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
-            maxRunningPerSession = { pluginSettingsStore.cachedInt("jobs", "max_running", 10) },
-        )
-    }
-    override val questionCenter = QuestionCenter(
-        persistence = QuestionPersistence(File(appContext.filesDir, "questions")),
-    )
-    private val pluginScreenActions = GuiAccessibilityActions()
+    override val host: AgentRuntimeHost get() = runtimeGraph.host
+    override val conversationStore: ConversationStore get() = runtimeGraph.conversationStore
+    override val workshopAgentService: WorkshopAgentService get() = runtimeGraph.workshopAgentService
 
-    private val pluginScreenController: ScreenController by lazy {
-        ScreenRouter(
-            accessibility = AccessibilityScreenBackend(pluginScreenActions),
-            virtual = VirtualEngineBackend { VirtualScreenRuntime.engine() },
-            apps = AndroidScreenAppCatalog(appContext),
-            accessibilityEnabled = { GuiAccessibilityState.isEnabled(appContext) },
-        )
-    }
-
-    private val pluginMainScreenController: ScreenController by lazy {
-        MainScreenController(
-            actions = pluginScreenActions,
-            apps = AndroidScreenAppCatalog(appContext),
-            displaySize = {
-                val manager = appContext.getSystemService(Context.DISPLAY_SERVICE) as? android.hardware.display.DisplayManager
-                val metrics = android.util.DisplayMetrics()
-                checkNotNull(manager?.getDisplay(0)) { "Main screen is unavailable" }.getRealMetrics(metrics)
-                metrics.widthPixels to metrics.heightPixels
-            },
-            virtualStatus = { pluginScreenController.status() },
-            shell = builtinWiring.mainShell,
-            screenshotSupported = { android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R },
-        )
-    }
-
-    private val mcpPluginBridge: McpPluginBridge by lazy {
-        McpPluginBridge(httpTransport, mcpTokenStore)
-    }
+    val notificationCenter: NotificationCenter get() = serviceGraph.notificationCenter
+    override val timerService: TimerService get() = serviceGraph.timerService
+    override val jobRegistry: JobRegistry get() = serviceGraph.jobRegistry
+    override val devPackageManager: DevPackageManager get() = serviceGraph.devPackageManager
+    override val processRuntime: ProcessRuntime get() = serviceGraph.processRuntime
 
     private val builtinWiring: BuiltinPluginWiring by lazy {
         BuiltinPluginWiring(
@@ -275,20 +133,24 @@ class AppGraph(context: Context) : AppDependencies {
             assets = appContext.assets,
             scope = scope,
             language = { LanguagePreferences(appContext).read().tag },
-            pluginStrings = pluginStrings,
-            linux = linuxEnvironment,
-            linuxSettings = linuxSettings,
+            pluginStrings = dataGraph.pluginStrings,
+            linux = platformGraph.linuxEnvironment,
+            linuxSettings = dataGraph.linuxSettings,
             workspaceDir = homeDir,
-            credentials = credentials,
-            providerCatalog = providerCatalog,
-            goalService = goalService,
-            jobRegistry = jobRegistry,
-            timerService = timerService,
-            workshopStore = workshopStore,
-            privilege = privilege,
-            adbBridge = adbBridge,
-            mainShell = io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(privilege, rootShell, adbBridge),
-            virtualScreen = virtualScreenFeature,
+            credentials = dataGraph.credentials,
+            providerCatalog = dataGraph.providerCatalog,
+            goalService = dataGraph.goalService,
+            jobRegistry = serviceGraph.jobRegistry,
+            timerService = serviceGraph.timerService,
+            workshopStore = dataGraph.workshopStore,
+            privilege = platformGraph.privilege,
+            adbBridge = platformGraph.adbBridge,
+            mainShell = PrivilegedMainScreenShell(
+                platformGraph.privilege,
+                platformGraph.rootShell,
+                platformGraph.adbBridge,
+            ),
+            virtualScreen = platformGraph.virtualScreenFeature,
             screenshotDir = File(appContext.filesDir, "gui/screenshots"),
             onCapabilitiesChanged = { scope.launch { host.reconfigure() } },
             onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
@@ -296,218 +158,11 @@ class AppGraph(context: Context) : AppDependencies {
     }
     private val pluginGraph: PluginGraph by lazy { PluginGraph(pluginGraphDeps()) }
 
-    private fun pluginGraphDeps(): PluginGraphDeps = PluginGraphDeps(
-        appContext = appContext,
-        uiContext = uiContext,
-        scope = scope,
-        agentDir = agentDir,
-        homeDir = homeDir,
-        pluginSettingsStore = pluginSettingsStore,
-        pluginStrings = pluginStrings,
-        host = host,
-        installationId = installationId,
-        linuxEnvironment = linuxEnvironment,
-        privilege = { privilege },
-        rootShell = rootShell,
-        adbBridge = adbBridge,
-        secretStore = secretStore,
-        httpTransport = httpTransport,
-        activeSessionId = activeSessionId,
-        pluginBus = pluginBus,
-        mcpConfigStore = mcpConfigStore,
-        mcpServerProbe = mcpServerProbe,
-        workshopStore = workshopStore,
-        builtinWiring = { builtinWiring },
-        notificationCenter = { notificationCenter },
-        workshopAgentService = { workshopAgentService },
-        jobRegistry = { jobRegistry },
-        timerService = { timerService },
-        goalService = { goalService },
-        virtualScreenFeature = { virtualScreenFeature },
-        pluginScreenController = { pluginScreenController },
-        pluginMainScreenController = { pluginMainScreenController },
-        mcpPluginBridge = { mcpPluginBridge },
-    )
-
     override val pluginManager: PluginHostManager get() = pluginGraph.manager
-    private val appToolContext: AppToolContext by lazy {
-        AppToolContext(
-            questionCenter = questionCenter,
-            pluginController = pluginManager,
-            pluginTools = { binding -> pluginManager.tools(binding) },
-            extraToolFactories = listOf(
-                { _, binding ->
-                    buildList {
-                        add(presentTool(workshopCreativeLookup(workshopStore)) { binding.current() })
-                        for (backend in availableShellBackends()) {
-                            when (backend) {
-                                PrivilegeLevel.ROOT -> add(
-                                    rootShellTool(
-                                        executor = RootCommandExecutor { command, timeoutMillis ->
-                                            val result = rootShell.execute(command, timeoutMillis)
-                                            RootCommandResult(
-                                                exitCode = result.exitCode,
-                                                stdout = result.stdout,
-                                                stderr = result.stderr,
-                                                truncated = result.truncated,
-                                                timedOut = result.timedOut,
-                                            )
-                                        },
-                                        enabled = { PrivilegeLevel.ROOT in privilege.state.value.availableBackends },
-                                        status = { privilege.state.value.root.toRootToolStatus() },
-                                    ),
-                                )
-
-                                PrivilegeLevel.ADB -> add(
-                                    adbShellTool(
-                                        executor = privilegeImpl.adbExecutor,
-                                        enabled = { PrivilegeLevel.ADB in privilege.state.value.availableBackends },
-                                        status = { adbToolStatus() },
-                                    ),
-                                )
-
-                                PrivilegeLevel.NORMAL -> Unit
-                            }
-                        }
-                    }
-                },
-            ),
-        )
-    }
-    private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
-
-    private fun linuxEnvironmentFor(cwd: String?): LinuxEnvironment {
-        val directory = cwd?.takeIf { it.isNotBlank() }?.let(::File) ?: homeDir
-        return synchronized(shellEnvironments) {
-            shellEnvironments.getOrPut(directory.absolutePath) {
-                LinuxEnvironment(
-                    appContext,
-                    directory,
-                    sharedStorageEnabled = { sharedStorage.value },
-                    extraBinds = linuxBinds(),
-                )
-            }
-        }
-    }
-
-    private val shellExecutorFor: suspend (File) -> AppShellExecutor? = { cwd ->
-        if (!linuxSettings.isEnabled()) {
-            null
-        } else {
-            AppShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
-        }
-    }
-
-    override val workshopAgentService by lazy {
-        WorkshopAgentService(
-            providers = providerCatalog,
-            credentials = credentials,
-            transport = httpTransport,
-            agentDir = agentDir,
-            runRoot = File(appContext.filesDir, "agent-runs"),
-            appToolContext = appToolContext,
-            defaultConfig = { modelConfigStore.read() },
-            configuredProviders = { credentials.authKinds.value.keys },
-            personalization = { personalizationStore.read().toRuntime() },
-            pluginPromptBody = { pluginManager.promptBody() },
-            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
-            defaultMaxTurns = { pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
-            workspace = homeDir,
-            shellExecutorFor = shellExecutorFor,
-            backgroundRunnerFactory = { cwd -> LinuxJobRunner(linuxEnvironmentFor(cwd)) },
-            hooksFactory = { pluginRuntimeHooks() },
-        )
-    }
-
-    private fun pluginRuntimeHooks(): RuntimeHooks {
-        val delegate = PluginHooksDelegate()
-        return RuntimeHooks(
-            promptTransform = delegate.promptTransform,
-            inputHandler = delegate.inputHandler,
-            toolHooks = delegate.toolHooks,
-            onSessionBound = { binding -> pluginManager.bindSessionHooks(binding, delegate) },
-            onSessionClosed = { sessionId -> pluginManager.onSessionClosed(sessionId) },
-        )
-    }
-
-    private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        PiSessionEngine(
-            workspace = cwd,
-            agentDir = agentDir,
-            credentials = credentials,
-            transport = httpTransport,
-            shellExecutor = shellExecutorFor(cwd),
-            providers = providerCatalog,
-            personalization = { personalizationStore.read().toRuntime() },
-            sharedStorage = { linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
-            pluginPromptBody = { pluginManager.promptBody() },
-            toolContext = appToolContext,
-            hooks = pluginRuntimeHooks(),
-        )
-    }
-
-    override val host = AgentRuntimeHost(
-        homeDir = homeDir,
-        workspacesDir = workspacesDir,
-        engineFactory = engineFactory,
-        modelConfigStore = modelConfigStore,
-        catalog = sessionCatalog,
-        workspaceStore = workspaceStore,
-        providers = providerCatalog,
-        backgroundScope = scope,
-        goalDriver = goalService,
-        sessionCleaner = { sessionId: String ->
-            jobRegistry.clearSession(sessionId)
-            scope.launch { goalService.clearSession(sessionId) }
-        },
-        sessionArchived = { sessionId -> jobRegistry.clearSession(sessionId) },
-        runLedger = RunLedger(File(appContext.filesDir, "tasks")),
-        keepHandleAlive = { sessionId ->
-            timerService.timers.value.any { timer ->
-                timer.sessionId == sessionId && timer.enabled && timer.nextRunAt != null
-            } ||
-                goalService.goals.value[sessionId]?.goal?.phase == GoalPhase.ACTIVE ||
-                jobRegistry.jobs.value.any { job -> job.sessionId == sessionId && job.status == JobStatus.RUNNING } ||
-                questionCenter.pending.value.any { question -> question.sessionId == sessionId }
-        },
-    )
-
-    override val conversationStore: ConversationStore by lazy {
-        ConversationStore(
-            runtime = host,
-            scope = scope,
-            decorate = ::decorateInterrupted,
-        ).also { it.start() }
-    }
-
-    val notificationCenter: NotificationCenter by lazy {
-        NotificationCenter(uiContext, host, conversationStore, questionCenter.pending)
-    }
-    override val timerService: TimerService by lazy {
-        TimerService(
-            host,
-            timerStore,
-            scope,
-            intentsFile = File(appContext.filesDir, "timers/delivery-intents.json"),
-        )
-    }
-    override val devPackageManager: DevPackageManager by lazy { DevPackageManager(uiContext, linuxEnvironment, notificationCenter) }
-
-    override val processRuntime: ProcessRuntime by lazy {
-        ProcessRuntime(
-            scope = scope,
-            prepare = ::prepare,
-            startPlugins = pluginManager::start,
-            onForegroundPlugins = { pluginManager.onAppForeground() },
-            refreshPluginsIfStale = { pluginManager.refreshIfStale(it) },
-            reconfigureHost = host::reconfigure,
-            ensureHostStarted = host::ensureStarted,
-            syncSkills = { skillRepository.syncIfChanged() },
-            diagnosticsDir = File(appContext.filesDir, "diagnostics"),
-        )
-    }
 
     init {
+        scope.launch { StorageMigration.migrate(appContext.filesDir) }
+        OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
         scope.launch {
             host.sdkEvents.collect { event ->
                 pluginManager.onSessionSdkEvent(event.sessionId, event.event)
@@ -528,19 +183,98 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
-    private fun availableShellBackends(): List<PrivilegeLevel> =
-        shellBackendsFor(privilege.state.value.effective)
+    private fun platformGraphDeps(): PlatformGraphDeps = PlatformGraphDeps(
+        appContext = appContext,
+        uiContext = uiContext,
+        scope = scope,
+        homeDir = homeDir,
+        sharedStorage = dataGraph.sharedStorage,
+        linuxSettings = dataGraph.linuxSettings,
+        httpTransport = dataGraph.httpTransport,
+        mcpTokenStore = dataGraph.mcpTokenStore,
+        pluginManager = { pluginManager },
+        host = { host },
+        mainShell = { builtinWiring.mainShell },
+    )
 
-    private fun adbToolStatus(): RootToolStatus {
-        val adb = privilege.state.value.adb
-        return when {
-            adb.daemon -> RootToolStatus.Granted
-            adb.busy -> RootToolStatus.NotRequested
-            adb.error != null -> RootToolStatus.Error
-            adb.paired -> RootToolStatus.NotRequested
-            else -> RootToolStatus.Unsupported
-        }
-    }
+    private fun runtimeGraphDeps(): RuntimeGraphDeps = RuntimeGraphDeps(
+        appContext = appContext,
+        scope = scope,
+        homeDir = homeDir,
+        workspacesDir = workspacesDir,
+        agentDir = agentDir,
+        modelConfigStore = dataGraph.modelConfigStore,
+        sessionCatalog = dataGraph.sessionCatalog,
+        workspaceStore = dataGraph.workspaceStore,
+        providerCatalog = dataGraph.providerCatalog,
+        credentials = dataGraph.credentials,
+        httpTransport = dataGraph.httpTransport,
+        personalizationStore = dataGraph.personalizationStore,
+        linuxSettings = dataGraph.linuxSettings,
+        pluginSettingsStore = dataGraph.pluginSettingsStore,
+        questionCenter = dataGraph.questionCenter,
+        goalService = dataGraph.goalService,
+        workshopStore = dataGraph.workshopStore,
+        rootShell = platformGraph.rootShell,
+        adbExecutor = platformGraph.adbExecutor,
+        privilege = { platformGraph.privilege },
+        pluginManager = { pluginManager },
+        shellExecutorFor = platformGraph.shellExecutorFor,
+        linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
+        decorateInterrupted = ::decorateInterrupted,
+        timerService = { serviceGraph.timerService },
+        jobRegistry = { serviceGraph.jobRegistry },
+    )
+
+    private fun serviceGraphDeps(): ServiceGraphDeps = ServiceGraphDeps(
+        appContext = appContext,
+        uiContext = uiContext,
+        scope = scope,
+        host = { host },
+        conversationStore = { conversationStore },
+        questionCenter = dataGraph.questionCenter,
+        timerStore = dataGraph.timerStore,
+        linuxEnvironment = platformGraph.linuxEnvironment,
+        pluginManager = { pluginManager },
+        skillRepository = dataGraph.skillRepository,
+        prepare = ::prepare,
+        pluginSettingsStore = dataGraph.pluginSettingsStore,
+        jobWake = dataGraph.jobWake,
+        linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
+    )
+
+    private fun pluginGraphDeps(): PluginGraphDeps = PluginGraphDeps(
+        appContext = appContext,
+        uiContext = uiContext,
+        scope = scope,
+        agentDir = agentDir,
+        homeDir = homeDir,
+        pluginSettingsStore = dataGraph.pluginSettingsStore,
+        pluginStrings = dataGraph.pluginStrings,
+        host = host,
+        installationId = dataGraph.installationId,
+        linuxEnvironment = platformGraph.linuxEnvironment,
+        privilege = { platformGraph.privilege },
+        rootShell = platformGraph.rootShell,
+        adbBridge = platformGraph.adbBridge,
+        secretStore = dataGraph.secretStore,
+        httpTransport = dataGraph.httpTransport,
+        activeSessionId = activeSessionId,
+        pluginBus = dataGraph.pluginBus,
+        mcpConfigStore = dataGraph.mcpConfigStore,
+        mcpServerProbe = dataGraph.mcpServerProbe,
+        workshopStore = dataGraph.workshopStore,
+        builtinWiring = { builtinWiring },
+        notificationCenter = { serviceGraph.notificationCenter },
+        workshopAgentService = { runtimeGraph.workshopAgentService },
+        jobRegistry = { serviceGraph.jobRegistry },
+        timerService = { serviceGraph.timerService },
+        goalService = { dataGraph.goalService },
+        virtualScreenFeature = { platformGraph.virtualScreenFeature },
+        pluginScreenController = { platformGraph.pluginScreenController },
+        pluginMainScreenController = { platformGraph.pluginMainScreenController },
+        mcpPluginBridge = { platformGraph.mcpPluginBridge },
+    )
 
     override suspend fun prepare() {
         if (!questionRecoveryLoaded) {
@@ -550,11 +284,11 @@ class AppGraph(context: Context) : AppDependencies {
             notificationCenter.notifyInterruptedWork(questionCenter.interrupted.value, host.interruptedRuns.value)
         }
         withContext(Dispatchers.IO) {
-            LegacyWorkspaceMigration.migrate(appContext, workspaceStore)
+            LegacyWorkspaceMigration.migrate(appContext, dataGraph.workspaceStore)
             importDebugKey()
         }
         credentials.preloadAll()
-        modelSelection.ensure(credentials.authKinds.value.keys)
+        dataGraph.modelSelection.ensure(credentials.authKinds.value.keys)
     }
 
     private suspend fun decorateInterrupted(state: ConversationState, sessionId: String): ConversationState {
@@ -599,13 +333,4 @@ class AppGraph(context: Context) : AppDependencies {
         keyFile.delete()
         directory.delete()
     }
-}
-
-private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
-    RootStatus.Unsupported -> RootToolStatus.Unsupported
-    RootStatus.NotRequested -> RootToolStatus.NotRequested
-    RootStatus.Granted -> RootToolStatus.Granted
-    RootStatus.Denied -> RootToolStatus.Denied
-    RootStatus.Timeout -> RootToolStatus.Timeout
-    RootStatus.Error -> RootToolStatus.Error
 }
