@@ -28,8 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.assistant.AssistantEntry
-import io.github.whywood.deepdeep.assistant.AssistantRole
+import io.github.whywood.deepdeep.core.AssistantEntry
+import io.github.whywood.deepdeep.core.AssistantRole
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton

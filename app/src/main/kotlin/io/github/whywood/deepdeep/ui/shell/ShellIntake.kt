@@ -25,7 +25,7 @@ import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
-import io.github.whywood.deepdeep.ui.chat.displayToolName
+import io.github.whywood.deepdeep.ui.common.chat.displayToolName
 import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator

@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.assistant
 
+import io.github.whywood.deepdeep.core.AssistantEntry
+
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -33,7 +35,7 @@ import io.github.whywood.deepdeep.ui.common.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.common.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.common.shareChooser
-import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
+import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
 
 

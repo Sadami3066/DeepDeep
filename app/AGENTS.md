@@ -12,6 +12,8 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | `DeepDeepApp.kt` | Compose 根：创建 ChatViewModel、引导门控 → `ui/shell/AppShell`；只做会话/引导与参数转发 |
 | `core/AppDependencies.kt` | 按用途切片的依赖接口（Runtime/Storage/Feature/Service/Advanced），Screen 只取所需，便于测试替身 |
 | `core/ModelSelection.kt` | 默认模型校正：当前默认厂商没有凭据时自动切到首个已配置厂商 |
+| `core/AssistantRole.kt` | 默认助手角色查询与系统默认应用设置入口 |
+| `core/AssistantEntry.kt` | 唤起系统助手浮层与跳转系统助手设置 |
 | `deeplink/DeepLink.kt` | `deepdeep://` 深链接解析（会话、设置、插件、工坊、定时等） |
 
 ## 包

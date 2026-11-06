@@ -66,7 +66,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.assistant.AssistantRole
+import io.github.whywood.deepdeep.core.AssistantRole
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.TonePreset

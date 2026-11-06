@@ -3,12 +3,12 @@ package io.github.whywood.deepdeep.ui.shell
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import io.github.whywood.deepdeep.runtime.SkillSummary
-import io.github.whywood.deepdeep.ui.chat.ChatCommand
+import io.github.whywood.deepdeep.ui.common.chat.ChatCommand
 import io.github.whywood.deepdeep.ui.chat.CommandItem
-import io.github.whywood.deepdeep.ui.chat.ParsedCommand
-import io.github.whywood.deepdeep.ui.chat.commandQuery
-import io.github.whywood.deepdeep.ui.chat.findCommandTrigger
-import io.github.whywood.deepdeep.ui.chat.parseChatCommand
+import io.github.whywood.deepdeep.ui.common.chat.ParsedCommand
+import io.github.whywood.deepdeep.ui.common.chat.commandQuery
+import io.github.whywood.deepdeep.ui.common.chat.findCommandTrigger
+import io.github.whywood.deepdeep.ui.common.chat.parseChatCommand
 
 sealed interface ShellCommandAction {
     data object Compact : ShellCommandAction

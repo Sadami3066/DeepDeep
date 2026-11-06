@@ -2,16 +2,6 @@
 # 格式：<模块或 ui>/<源文件相对路径>|<被 import 的类>
 # 新增条目必须在任务卡里说明理由；M3 的 state holder / design 组件化会逐条删掉这些。
 ui/io/github/whywood/deepdeep/ui/chat/ChatScreen.kt|io.github.whywood.deepdeep.ui.goal.GoalBar
-ui/io/github/whywood/deepdeep/ui/chat/ChatScreen.kt|io.github.whywood.deepdeep.ui.questions.AskQuestionCard
-ui/io/github/whywood/deepdeep/ui/chat/ChatTurn.kt|io.github.whywood.deepdeep.ui.questions.AskQuestionCard
-ui/io/github/whywood/deepdeep/ui/chat/ChatTurn.kt|io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
-ui/io/github/whywood/deepdeep/ui/chat/ChatTurn.kt|io.github.whywood.deepdeep.ui.workshop.parseRegisteredWorkshop
-ui/io/github/whywood/deepdeep/ui/chat/PresentCard.kt|io.github.whywood.deepdeep.ui.workshop.WorkshopCardApp
-ui/io/github/whywood/deepdeep/ui/chat/PresentCard.kt|io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
-ui/io/github/whywood/deepdeep/ui/chat/ProcessSection.kt|io.github.whywood.deepdeep.ui.questions.AnsweredAskCard
-ui/io/github/whywood/deepdeep/ui/chat/ProcessSection.kt|io.github.whywood.deepdeep.ui.questions.parseQuestionRecord
 ui/io/github/whywood/deepdeep/ui/sessions/FilterSessionSearch.kt|io.github.whywood.deepdeep.ui.chat.SessionSearchHit
 ui/io/github/whywood/deepdeep/ui/sessions/SessionSearchScreen.kt|io.github.whywood.deepdeep.ui.chat.SessionSearchHit
 ui/io/github/whywood/deepdeep/ui/workspaces/WorkspaceSettingsScreen.kt|io.github.whywood.deepdeep.ui.settings.SettingsGroup
-ui/io/github/whywood/deepdeep/ui/chat/ToolCard.kt|io.github.whywood.deepdeep.ui.plugins.PluginToolCardSlot
-ui/io/github/whywood/deepdeep/ui/chat/ChatTurn.kt|io.github.whywood.deepdeep.ui.plugins.PluginCustomMessageSlot

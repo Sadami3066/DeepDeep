@@ -45,7 +45,7 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import io.github.whywood.deepdeep.ui.chat.PresentedItemType
+import io.github.whywood.deepdeep.ui.common.chat.PresentedItemType
 
 @Composable
 internal fun FloatingEventCard(

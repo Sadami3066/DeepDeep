@@ -160,11 +160,19 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
                                 check("ui/$relative|$imported", "cross-feature import")
                             }
                         }
+                        if (imported.startsWith("$base.assistant.")) {
+                            check("ui/$relative|$imported", "ui shell access to assistant")
+                        }
+                        if ((packageName.startsWith("$base.assistant") || packageName.startsWith("$base.floating")) &&
+                            imported.startsWith("$base.ui.chat.")
+                        ) {
+                            check("app/$relative|$imported", "chat access from assistant surface")
+                        }
                     }
                 }
             }
         }
-        logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/DeepDeepApplication")
+        logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/DeepDeepApplication or assistant; assistant/floating may not import ui.chat")
         val stale = allowlist - observed
         if (stale.isNotEmpty()) {
             val message = "Package boundary allowlist has ${stale.size} stale entries (remove them):\n" +

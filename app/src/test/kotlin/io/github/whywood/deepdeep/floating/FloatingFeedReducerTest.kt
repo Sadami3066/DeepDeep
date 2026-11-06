@@ -6,8 +6,8 @@ import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.UserQuestion
-import io.github.whywood.deepdeep.ui.chat.PresentedItem
-import io.github.whywood.deepdeep.ui.chat.PresentedItemType
+import io.github.whywood.deepdeep.ui.common.chat.PresentedItem
+import io.github.whywood.deepdeep.ui.common.chat.PresentedItemType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

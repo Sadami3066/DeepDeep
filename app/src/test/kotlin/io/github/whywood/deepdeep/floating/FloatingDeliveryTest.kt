@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.floating
 
-import io.github.whywood.deepdeep.ui.chat.PresentedItemType
-import io.github.whywood.deepdeep.ui.chat.parsePresentedItems
+import io.github.whywood.deepdeep.ui.common.chat.PresentedItemType
+import io.github.whywood.deepdeep.ui.common.chat.parsePresentedItems
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

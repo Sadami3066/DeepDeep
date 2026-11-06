@@ -18,7 +18,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
-import io.github.whywood.deepdeep.ui.plugins.LocalPluginManager
+import io.github.whywood.deepdeep.ui.common.chat.LocalPluginManager
 import io.github.whywood.deepdeep.ui.plugins.PluginIcon
 import io.github.whywood.deepdeep.ui.plugins.pluginComposerActions
 import io.github.whywood.deepdeep.ui.plugins.rememberPluginTextResolver

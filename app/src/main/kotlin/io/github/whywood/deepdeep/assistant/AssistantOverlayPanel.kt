@@ -64,9 +64,9 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import io.github.whywood.deepdeep.ui.chat.ChatTurn
+import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
-import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
+import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import kotlinx.coroutines.delay
 
 

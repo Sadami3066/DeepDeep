@@ -30,7 +30,7 @@ import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
-import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
+import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.launch
 

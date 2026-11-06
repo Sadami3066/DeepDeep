@@ -5,7 +5,7 @@ import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import io.github.whywood.deepdeep.ui.chat.PresentedItem
+import io.github.whywood.deepdeep.ui.common.chat.PresentedItem
 
 const val FLOATING_SLEEPY_AFTER_MS = 10 * 60_000L
 const val FLOATING_COMPLETED_LIMIT = 20

@@ -1,5 +1,13 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.ui.common.chat.SkillMentions
+
+import io.github.whywood.deepdeep.ui.common.chat.extractSkillMentions
+
+import io.github.whywood.deepdeep.ui.common.chat.ParsedCommand
+
+import io.github.whywood.deepdeep.ui.common.chat.parseChatCommand
+
 import android.content.ComponentCallbacks2
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -49,8 +57,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-
 
 class ChatViewModel(
     private val runtime: AgentRuntime,

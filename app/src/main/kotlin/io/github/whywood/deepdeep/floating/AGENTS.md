@@ -23,5 +23,6 @@
 ## 要点
 
 - 气泡与卡片/面板/预览是两扇 WindowManager 窗口；卡片、面板、预览共用一个 surface 窗口，同一时刻只显示一个 body，避让顺序由 `FloatingPlacement` 计算。
+- 交付项解析与展示类型来自 `ui.common.chat`（`PresentedItem`/`parsePresentedItems`），不 import `ui.chat`。
 - 状态来自 `ConversationStore`（`activeRuns`/`events`）、`QuestionCenter.pending` 与 `ConversationQueries`（会话标题兜底）；唯一直接写操作是单选题在气泡/卡片内提交答案，其余交互都经回调转到 App 或系统助手浮层。
 - 所有尺寸与配色在 `FloatingStyle.kt`：卡片/面板/预览整体 0.75 倍，预览默认 0.6 倍缩略；改布局先改 token。

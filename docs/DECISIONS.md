@@ -151,3 +151,11 @@
 现在 `AppRouteContent(destination, AppRouteHost)` 只做分发：`AppRouteHost` 携带导航、`AppDependencies`、聊天回调与 `ChatRouteData`（会话 id/工作区/归档）以及 `ShellRouteUi`（主题/字体/昵称/头像/模型）；具体装配下沉到 `ui/navigation/routes/` 的按功能 composable，每个 route 只取自己需要的字段与依赖。新增页面只改 `AppDestination`、新的 route 文件与 `AppRouteContent` 的一行。
 
 代价是多了一层 route 文件与装配上下文类型；换来的收益是页面参数收窄、非聊天页不再依赖 `ChatUiState`、新增页面不再改动共享壳层签名。
+
+## 92. 共享聊天 UI 归入 ui.common.chat
+
+浮层与悬浮窗需要复用聊天回合、Markdown、工具卡、交付卡、提问卡、插件槽位、输入卡、附件与相机扫码等组件，这些以前都在 `ui/chat`，导致 `assistant`、`floating` 反向依赖聊天 feature，`ui` 又依赖 `assistant`（助手模型类），依赖方向混乱。
+
+现在共享渲染组件集中在 `ui/common/chat/`（`state/` 放草稿与附件导入），调用方只观察 `ConversationStore` 并把投影传进来。`ui.common.chat` 不 import 任何 `ui.<feature>`：feature 会用到的小卡片（提问卡、已答卡、创意工坊卡、插件槽位）也随之下沉到 `common/chat`，被 feature 页面反过来引用（target 是 `common`，边界检查允许）。`AssistantRole`/`AssistantEntry` 移到 `core/`。
+
+`verifyPackageBoundaries` 增加两条规则：`ui.*` 不得 import `assistant`；`assistant`/`floating` 不得 import `ui.chat`。`gradle/package-boundaries.allow` 从 14 条降到 4 条（仅剩 ChatScreen→GoalBar、搜索命中、SettingsGroup 等历史耦合）。

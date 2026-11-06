@@ -8,7 +8,7 @@ import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.conversation.ActiveRunView
-import io.github.whywood.deepdeep.ui.chat.parsePresentedItems
+import io.github.whywood.deepdeep.ui.common.chat.parsePresentedItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

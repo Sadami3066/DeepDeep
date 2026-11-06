@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.core.view.WindowInsetsCompat
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.assistant.AssistantEntry
+import io.github.whywood.deepdeep.core.AssistantEntry
 import io.github.whywood.deepdeep.data.FloatingWindowPreferences
 import io.github.whywood.deepdeep.data.FloatingWindowSettings
 import io.github.whywood.deepdeep.data.LocalizedContext

@@ -16,33 +16,8 @@ import io.github.whywood.deepdeep.plugin.api.ToolCardSlotState
 import io.github.whywood.deepdeep.plugin.host.ui.PluginSlotHost
 import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.ui.common.chat.LocalPluginManager
 import kotlinx.serialization.json.JsonObject
-
-internal val LocalPluginManager = staticCompositionLocalOf<PluginManagerFacade?> { null }
-
-@Composable
-internal fun ProvidePluginManager(manager: PluginManagerFacade, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalPluginManager provides manager, content = content)
-}
-
-@Composable
-internal fun PluginToolCardSlot(
-    toolName: String,
-    callId: String,
-    args: JsonObject,
-    result: io.github.whywood.deepdeep.plugin.api.PluginToolResult? = null,
-    fallback: @Composable () -> Unit,
-) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, toolName) { manager.slotEntries(SlotIds.toolCard(toolName)) }
-    PluginSlotHost(
-        entries = entries,
-        state = ToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
-        failureGuard = manager.slotFailureGuard(),
-        fallback = fallback,
-    )
-}
 
 @Composable
 internal fun PluginSetupContentSlot(
@@ -91,24 +66,6 @@ internal fun PluginDetailSectionSlot(
         entries = entries,
         state = DetailSlotState(pluginId = pluginId, status = apiStatus, rows = rows),
         failureGuard = failureGuard,
-        fallback = fallback,
-    )
-}
-
-@Composable
-internal fun PluginCustomMessageSlot(
-    messageId: String,
-    customType: String,
-    payload: JsonObject,
-    fallback: @Composable () -> Unit,
-) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, customType) { manager.slotEntries(SlotIds.chatMessage(customType)) }
-    PluginSlotHost(
-        entries = entries,
-        state = CustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
-        failureGuard = manager.slotFailureGuard(),
         fallback = fallback,
     )
 }

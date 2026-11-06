@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.ui.shell
 
 import io.github.whywood.deepdeep.runtime.SkillSummary
-import io.github.whywood.deepdeep.ui.chat.ChatCommand
+import io.github.whywood.deepdeep.ui.common.chat.ChatCommand
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

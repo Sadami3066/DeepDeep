@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.ui.common.chat.formatElapsed
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

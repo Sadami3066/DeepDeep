@@ -1,5 +1,15 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.ui.common.chat.commandQuery
+
+import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
+
+import io.github.whywood.deepdeep.ui.common.chat.LocalSelectionCoordinator
+
+import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
+
+import io.github.whywood.deepdeep.ui.common.chat.SelectionCoordinator
+
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -104,7 +114,7 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.goal.GoalBar
-import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
+import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import java.io.File
 import java.time.LocalTime
 import kotlin.math.roundToInt

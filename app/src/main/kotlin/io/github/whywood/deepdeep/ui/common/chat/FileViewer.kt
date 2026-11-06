@@ -69,11 +69,11 @@ import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.chat.AnimatedImage
-import io.github.whywood.deepdeep.ui.chat.ChatMarkdown
-import io.github.whywood.deepdeep.ui.chat.animatedImageFile
-import io.github.whywood.deepdeep.ui.chat.copyToClipboard
-import io.github.whywood.deepdeep.ui.chat.highlightedCode
+import io.github.whywood.deepdeep.ui.common.chat.AnimatedImage
+import io.github.whywood.deepdeep.ui.common.chat.ChatMarkdown
+import io.github.whywood.deepdeep.ui.common.chat.animatedImageFile
+import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
+import io.github.whywood.deepdeep.ui.common.chat.highlightedCode
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
