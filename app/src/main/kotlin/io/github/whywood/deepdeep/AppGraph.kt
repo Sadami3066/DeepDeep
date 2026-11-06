@@ -4,6 +4,9 @@ import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import dev.pi.ai.http.okHttpTransport
 import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.core.ModelSelection
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -49,6 +52,10 @@ import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.privilege.shellBackendsFor
 import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantRole
+import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -464,6 +471,14 @@ class AppGraph(context: Context) : AppDependencies {
         },
     )
 
+    override val conversationStore: ConversationStore by lazy {
+        ConversationStore(
+            runtime = host,
+            scope = scope,
+            decorate = ::decorateInterrupted,
+        ).also { it.start() }
+    }
+
     val notificationCenter: NotificationCenter by lazy {
         NotificationCenter(uiContext, host, questionCenter.pending)
     }
@@ -529,6 +544,36 @@ class AppGraph(context: Context) : AppDependencies {
         }
         credentials.preloadAll()
         modelSelection.ensure(credentials.authKinds.value.keys)
+    }
+
+    private suspend fun decorateInterrupted(state: ConversationState, sessionId: String): ConversationState {
+        var next = state
+        val questions = questionCenter.interrupted.value.count { it.sessionId == sessionId }
+        if (questions > 0 && next.messages.none { it.notice is TurnNotice.InterruptedQuestions }) {
+            next = next.copy(
+                messages = next.messages + noticeMessage(next.messages, TurnNotice.InterruptedQuestions(questions)),
+            )
+        }
+        val runs = host.interruptedRuns.value.count { it.sessionId == sessionId }
+        if (runs > 0 && next.messages.none { it.notice is TurnNotice.InterruptedRun }) {
+            next = next.copy(
+                messages = next.messages + noticeMessage(next.messages, TurnNotice.InterruptedRun(runs)),
+            )
+        }
+        return next
+    }
+
+    private fun noticeMessage(messages: List<AssistantMessage>, notice: TurnNotice): AssistantMessage {
+        val now = System.currentTimeMillis()
+        return AssistantMessage(
+            id = nextMessageId(messages),
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            status = MessageStatus.DONE,
+            startedAt = now,
+            finishedAt = now,
+            notice = notice,
+        )
     }
 
     private suspend fun importDebugKey() {

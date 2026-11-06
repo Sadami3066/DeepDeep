@@ -110,7 +110,7 @@ data class ConversationStrings(
         val showCode = code != null && kind != RunErrorKind.TIMEOUT &&
             kind != RunErrorKind.NETWORK && kind != RunErrorKind.TOOL_ARGS &&
             kind != RunErrorKind.REQUEST_TOO_LARGE
-        return if (showCode) withCode(base, code!!) else base
+        return if (showCode && code != null) withCode(base, code) else base
     }
 
     companion object {

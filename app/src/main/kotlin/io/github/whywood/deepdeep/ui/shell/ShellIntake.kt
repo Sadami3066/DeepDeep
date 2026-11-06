@@ -226,18 +226,13 @@ internal fun rememberShellChatViewModel(dependencies: AppDependencies, uiStrings
         factory = viewModelFactory {
             initializer {
                 ChatViewModel(
-                    dependencies.host, dependencies.providerCatalog, dependencies.modelConfigStore,
+                    dependencies.host, dependencies.conversationStore,
+                    dependencies.providerCatalog, dependencies.modelConfigStore,
                     dependencies.attachmentStore, dependencies::prepare,
                     autoRetry = dependencies.appPreferences.preferences.map { it.autoRetry },
                     uiStrings = uiStrings,
                     skillExpander = dependencies.skillCatalog,
-                    interruptedQuestions = { id ->
-                        dependencies.questionCenter.interrupted.value.filter { it.sessionId == id }
-                    },
                     dismissInterruptedQuestions = dependencies.questionCenter::dismissInterrupted,
-                    interruptedRuns = { id ->
-                        dependencies.host.interruptedRuns.value.filter { it.sessionId == id }
-                    },
                     dismissInterruptedRun = dependencies.host::dismissInterruptedRun,
                 )
             }

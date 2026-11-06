@@ -9,11 +9,10 @@ import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
-import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
-import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -48,20 +47,15 @@ class ChatControllersTest {
         val runtime = FakeAgentRuntime().apply {
             sessions = listOf(summary("session-1"), summary("session-2"))
         }
-        var retained: Set<String>? = null
-        var cached = false
         val controller = SessionListController(
             runtime = runtime, admin = runtime, ioDispatcher = dispatcher,
             state = { state }, update = ::update, strings = { strings },
-            cacheCurrentSession = { cached = true }, retainCache = { retained = it },
-            target = target(), applySessionModel = {}, isRetrying = { false }, localizeError = { it ?: "" },
+            store = ConversationStore(runtime, this),
         )
 
         controller.refresh()
 
         assertEquals(2, state.conversations.size)
-        assertEquals(setOf("session-1", "session-2"), retained)
-        assertTrue(cached)
         assertTrue(state.ready)
     }
 
@@ -72,8 +66,7 @@ class ChatControllersTest {
         val controller = SessionListController(
             runtime = runtime, admin = runtime, ioDispatcher = dispatcher,
             state = { state }, update = ::update, strings = { strings },
-            cacheCurrentSession = {}, retainCache = {},
-            target = target(), applySessionModel = {}, isRetrying = { false }, localizeError = { it ?: "" },
+            store = ConversationStore(runtime, this),
         )
 
         controller.refresh()
@@ -136,7 +129,7 @@ class ChatControllersTest {
         val controller = ModelController(
             runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
             ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
-            cacheCurrentSession = {}, userFacingError = { it },
+            onModelChanged = { _, _ -> }, userFacingError = { it },
             switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
         )
 
@@ -162,7 +155,7 @@ class ChatControllersTest {
         val controller = ModelController(
             runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
             ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
-            cacheCurrentSession = {}, userFacingError = { it },
+            onModelChanged = { _, _ -> }, userFacingError = { it },
             switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
         )
 
@@ -195,7 +188,7 @@ class ChatControllersTest {
         val controller = ModelController(
             runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
             ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
-            cacheCurrentSession = {}, userFacingError = { it },
+            onModelChanged = { _, _ -> }, userFacingError = { it },
             switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
         )
 
@@ -221,7 +214,7 @@ class ChatControllersTest {
         val controller = ModelController(
             runtime = runtime, queries = runtime, providers = FakeProviders, settings = FakeSettings(),
             ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
-            cacheCurrentSession = {}, userFacingError = { it },
+            onModelChanged = { _, _ -> }, userFacingError = { it },
             switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
         )
 
@@ -230,58 +223,6 @@ class ChatControllersTest {
 
         assertEquals(ThinkingLevel.HIGH, state.thinkingLevel)
         assertEquals("m1", state.modelId)
-    }
-
-    @Test
-    fun usageRefreshWritesActiveState() = runTest {
-        val dispatcher = StandardTestDispatcher(testScheduler)
-        val usage = SessionUsage(1L, 2L, 3L, 4L, 5L, 6L, 0.5)
-        val runtime = UsageRuntime(usage)
-        val target = target("session-1")
-        state = state.copy(conversationId = "session-1")
-        val controller = UsageController(
-            runtime = runtime, ioDispatcher = dispatcher, target = target,
-            state = { state }, update = ::update, cacheCurrentSession = {},
-            titleFrom = { "title" }, localizeError = { it ?: "" },
-        )
-
-        controller.refresh("session-1")
-
-        assertEquals(usage, target.read("session-1").usage)
-    }
-
-    @Test
-    fun compactionReloadKeepsNoticesAndSettlesMessages() = runTest {
-        val dispatcher = StandardTestDispatcher(testScheduler)
-        val runtime = FakeAgentRuntime().apply {
-            histories = mapOf(
-                "session-1" to listOf(
-                    AssistantMessage(0, AssistantRole.ASSISTANT, "streamed", streaming = true, status = MessageStatus.RUNNING),
-                ),
-            )
-        }
-        state = state.copy(conversationId = "session-1", conversation = state.conversation.copy(sending = false))
-        val controller = UsageController(
-            runtime = runtime, ioDispatcher = dispatcher, target = target(),
-            state = { state }, update = ::update, cacheCurrentSession = {},
-            titleFrom = { "title" }, localizeError = { it ?: "" },
-        )
-
-        controller.reloadHistoryAfterCompaction("session-1")
-
-        assertEquals(1, state.messages.size)
-        assertTrue(state.historyLoaded)
-        assertEquals("title", state.conversationTitle)
-    }
-
-    private var activeState = ConversationState()
-
-    private fun target(active: String? = "session-1"): ConversationWriteTarget =
-        ConversationWriteTarget(activeReader = { activeState }, activeWriter = { activeState = it })
-            .apply { setActive(active) }
-
-    private class UsageRuntime(private val usage: SessionUsage) : AgentRuntime by FakeAgentRuntime() {
-        override suspend fun usage(sessionId: String): SessionUsage? = usage
     }
 
     private object FakeProviders : ProviderDirectory {

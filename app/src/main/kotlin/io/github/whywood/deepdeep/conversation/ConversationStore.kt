@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +46,11 @@ data class RunCompletion(
 data class ConversationFailure(
     val sessionId: String,
     val message: String,
+)
+
+data class DroppedInputs(
+    val sessionId: String,
+    val texts: List<String>,
 )
 
 class ConversationStore(
@@ -90,6 +96,38 @@ class ConversationStore(
     )
     val failures: SharedFlow<ConversationFailure> = mutableFailures.asSharedFlow()
 
+    private val mutableDroppedInputs = MutableSharedFlow<DroppedInputs>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val droppedInputs: SharedFlow<DroppedInputs> = mutableDroppedInputs.asSharedFlow()
+
+    private val mutableRunFailures = MutableSharedFlow<ConversationFailure>(
+        extraBufferCapacity = 32,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val runFailures: SharedFlow<ConversationFailure> = mutableRunFailures.asSharedFlow()
+
+    private val mutableLifecycle = MutableSharedFlow<SessionRuntimeEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val lifecycle: SharedFlow<SessionRuntimeEvent> = mutableLifecycle.asSharedFlow()
+
+    private val mutableSessionChanges = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val sessionChanges: SharedFlow<Unit> = mutableSessionChanges.asSharedFlow()
+
+    private var retryGate: (String) -> Boolean = isRetrying
+
+    fun setRetryGate(gate: (String) -> Boolean) {
+        retryGate = gate
+    }
+
+    var onEvict: ((String) -> Unit)? = null
+
     private val active = LinkedHashMap<String, ActiveRunView>()
     private val seeded = mutableSetOf<String>()
     private val finished = mutableSetOf<String>()
@@ -98,13 +136,11 @@ class ConversationStore(
     private var busyJob: Job? = null
     private var seedJob: Job? = null
 
-    init {
-        start()
-    }
-
     fun start() {
         if (eventJob != null) return
-        eventJob = scope.launch { runtime.events.collect(::onEvent) }
+        eventJob = scope.launch {
+            runtime.events.collect(::onEvent)
+        }
         busyJob = scope.launch { watchBusy() }
         seedJob = scope.launch { runtime.activeRuns.collect(::seed) }
     }
@@ -142,8 +178,17 @@ class ConversationStore(
         synchronized(lock) { pinned -= sessionId }
     }
 
-    suspend fun open(sessionId: String): ConversationState {
-        peek(sessionId)?.takeIf { it.loaded }?.let { return it }
+    suspend fun open(sessionId: String, title: String? = null): ConversationState {
+        peek(sessionId)?.takeIf { it.loaded }?.let { loaded ->
+            if (!title.isNullOrBlank() && loaded.title.isBlank()) {
+                mutate(sessionId) { it.copy(title = title) }
+            }
+            if (loaded.messages.isNotEmpty() || loaded.sending) {
+                val queued = runCatching { runtime.queuedInputs(sessionId) }.getOrDefault(loaded.queuedInputs)
+                if (queued != loaded.queuedInputs) mutate(sessionId) { it.copy(queuedInputs = queued) }
+                return peek(sessionId) ?: loaded
+            }
+        }
         val waiter: CompletableDeferred<ConversationState>?
         val owner: Boolean
         synchronized(lock) {
@@ -165,6 +210,7 @@ class ConversationStore(
             val localized = history.map { message -> message.withLocalizedError() }
             var seededState = ConversationState(
                 messages = localized,
+                title = title.orEmpty(),
                 loaded = true,
                 usage = usage,
                 sessionModel = model,
@@ -201,32 +247,65 @@ class ConversationStore(
         }
     }
 
-    suspend fun reopen(sessionId: String): ConversationState {
+    suspend fun reopen(sessionId: String, title: String? = null): ConversationState {
         synchronized(lock) { states[sessionId]?.value = ConversationState() }
-        return open(sessionId)
+        return open(sessionId, title)
+    }
+
+    fun update(sessionId: String, transform: (ConversationState) -> ConversationState) {
+        mutate(sessionId, transform)
+    }
+
+    fun updateIfPresent(sessionId: String, transform: (ConversationState) -> ConversationState): Boolean =
+        synchronized(lock) {
+            val flow = states[sessionId] ?: return@synchronized false
+            flow.value = transform(flow.value)
+            true
+        }
+
+    fun put(sessionId: String, state: ConversationState) {
+        synchronized(lock) {
+            stateFor(sessionId).value = state
+            trimLocked(sessionId)
+        }
+    }
+
+    fun move(from: String, to: String) {
+        synchronized(lock) {
+            if (from == to) return
+            val state = states.remove(from)?.value ?: return
+            deferred.remove(from)
+            pendingDeltas.remove(from)
+            if (to !in states) states[to] = MutableStateFlow(state)
+            trimLocked(to)
+        }
     }
 
     fun close(sessionId: String) {
         synchronized(lock) {
+            reconcileJobs.remove(sessionId)?.cancel()
             pinned -= sessionId
             states.remove(sessionId)
             deferred.remove(sessionId)
             pendingDeltas.remove(sessionId)
         }
+        onEvict?.invoke(sessionId)
     }
 
     fun evict(sessionId: String) = close(sessionId)
 
     fun evictUnpinned(keep: Set<String> = emptySet()) {
-        synchronized(lock) {
+        val victims = synchronized(lock) {
             val protectedNow = pinned + keep + loading
-            val victims = states.keys.filterNot { it in protectedNow }
-            victims.forEach { sessionId ->
+            val removed = states.keys.filterNot { it in protectedNow }
+            removed.forEach { sessionId ->
                 states.remove(sessionId)
                 deferred.remove(sessionId)
                 pendingDeltas.remove(sessionId)
             }
+            removed
         }
+        victims.forEach { onEvict?.invoke(it) }
     }
 
     fun send(
@@ -238,10 +317,19 @@ class ConversationStore(
         val text = prompt.trim()
         if (text.isEmpty()) return false
         val current = peek(sessionId) ?: return false
-        if (current.sending) return false
+        if (!current.loaded || current.sending) return false
         mutate(sessionId) { state ->
             val begun = state.beginTurn(text, System.currentTimeMillis())
-            if (begun.title.isBlank() && title != null) begun.copy(title = title) else begun
+            if (title != null && (
+                    begun.title.isBlank() ||
+                        begun.title == stringsProvider().newChatTitle ||
+                        begun.title == ConversationStrings.fallback().newChatTitle
+                    )
+            ) {
+                begun.copy(title = title)
+            } else {
+                begun
+            }
         }
         lateinit var job: Job
         job = scope.launch(start = CoroutineStart.LAZY) {
@@ -321,7 +409,7 @@ class ConversationStore(
             return
         }
         if (current == null || !current.sending) return
-        if (isRetrying(sessionId)) return
+        if (retryGate(sessionId)) return
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
         val model = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
         val settled = history.map { message ->
@@ -358,7 +446,11 @@ class ConversationStore(
         if (event is RuntimeEvent.SessionListChanged) {
             flushDeltas()
             refreshTitles()
+            mutableSessionChanges.tryEmit(Unit)
             return
+        }
+        if (event is RuntimeEvent.SessionArchived) {
+            mutableSessionChanges.tryEmit(Unit)
         }
         if (sessionId.isBlank()) return
         val buffered = synchronized(lock) {
@@ -377,9 +469,25 @@ class ConversationStore(
         flushDeltas()
         if (event is RuntimeEvent.SessionRemoved) {
             removeSession(sessionId)
+            mutableSessionChanges.tryEmit(Unit)
             return
         }
+        if (event is RuntimeEvent.QueuedInputsDropped) {
+            mutableDroppedInputs.tryEmit(DroppedInputs(sessionId, event.texts))
+        }
         updateActiveRun(sessionId, event)
+        if (event is RuntimeEvent.RunFailed) {
+            mutableRunFailures.tryEmit(ConversationFailure(sessionId, event.message))
+        }
+        if (
+            event is RuntimeEvent.RunStarted ||
+            event is RuntimeEvent.ActivityChanged ||
+            event is RuntimeEvent.RunFinished ||
+            event is RuntimeEvent.RunFailed
+        ) {
+            mutableLifecycle.tryEmit(scoped)
+        }
+        if (event is RuntimeEvent.ActivityChanged && retryGate(sessionId)) return
         applyEvent(sessionId, event)
     }
 
@@ -540,7 +648,7 @@ class ConversationStore(
             previous = ids
             left.forEach { sessionId ->
                 val sending = peek(sessionId)?.sending == true
-                if (sending && !isRetrying(sessionId)) {
+                if (sending && !retryGate(sessionId)) {
                     scheduleReconcile(sessionId, reconcileDelayMs)
                 }
             }
@@ -624,6 +732,7 @@ class ConversationStore(
             states.remove(victim)
             deferred.remove(victim)
             pendingDeltas.remove(victim)
+            onEvict?.invoke(victim)
         }
     }
 

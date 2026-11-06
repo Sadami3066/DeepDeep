@@ -1,19 +1,13 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationQueries
-import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.runtime.MessageStatus
-import io.github.whywood.deepdeep.runtime.RunStatus
-import io.github.whywood.deepdeep.runtime.RuntimeActivity
-import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.WorkspaceAdmin
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.SessionSearchHit
-import io.github.whywood.deepdeep.conversation.adoptActiveRun
-import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -23,13 +17,8 @@ internal class SessionListController(
     private val ioDispatcher: CoroutineDispatcher,
     private val state: () -> ChatUiState,
     private val update: ((ChatUiState) -> ChatUiState) -> Unit,
+    private val store: ConversationStore,
     private val strings: () -> ConversationStrings,
-    private val cacheCurrentSession: () -> Unit,
-    private val retainCache: (Set<String>) -> Unit,
-    private val target: ConversationWriteTarget,
-    private val applySessionModel: (SessionModelSnapshot?) -> Unit,
-    private val isRetrying: (String) -> Boolean,
-    private val localizeError: (String?) -> String,
 ) {
     suspend fun refresh() {
         val current = state()
@@ -39,9 +28,7 @@ internal class SessionListController(
             ?: workspaces.firstOrNull()
         val sessions = withContext(ioDispatcher) { runtime.allSessions() }
         val archived = withContext(ioDispatcher) { runtime.archivedSessions() }
-        retainCache((sessions + archived).map { it.id }.toSet())
         update {
-            val title = it.conversationId?.let { id -> sessions.firstOrNull { item -> item.id == id }?.title }
             it.copy(
                 ready = true,
                 workspaces = workspaces,
@@ -49,10 +36,11 @@ internal class SessionListController(
                 conversations = sessions.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedConversations = archived.map { session -> session.copy(title = localizedTitle(session.title)) },
                 archivedCount = archived.size,
-                conversation = it.conversation.copy(title = title?.let(::localizedTitle) ?: it.conversationTitle),
             )
         }
-        cacheCurrentSession()
+        val sessionId = current.conversationId ?: return
+        val title = sessions.firstOrNull { it.id == sessionId }?.title?.let(::localizedTitle) ?: return
+        store.updateIfPresent(sessionId) { it.copy(title = title) }
     }
 
     suspend fun sessionCount(workspaceId: String): Int =
@@ -69,65 +57,6 @@ internal class SessionListController(
                 )
             }
             .sortedByDescending { it.conversation.updatedAt }
-    }
-
-    suspend fun reconcile(sessionId: String) {
-        runtime.activeRuns.value[sessionId]?.let { active ->
-            val current = state()
-            if (current.conversationId != sessionId || !current.sending) return
-            val conversation = current.conversation
-            if (conversation.messages.any { it.runId == active.runId }) return
-            val adopted = conversation.adoptActiveRun(active.runId, RuntimeActivity.Thinking, active.startedAt)
-            update { it.copy(conversation = adopted) }
-            cacheCurrentSession()
-            return
-        }
-        val current = state()
-        val isCurrent = current.conversationId == sessionId
-        if (isCurrent && !current.sending) return
-        if (isRetrying(sessionId)) return
-        val history = withContext(ioDispatcher) { runtime.history(sessionId) }
-        val sessionModel = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
-        val settled = history
-            .map { message -> message.localizedRunError(localizeError) }
-            .map { message ->
-                if (!message.streaming && !message.retrying) {
-                    message
-                } else {
-                    message.copy(
-                        streaming = false,
-                        retrying = false,
-                        status = if (message.status == MessageStatus.RUNNING) MessageStatus.DONE else message.status,
-                    )
-                }
-            }
-        if (isCurrent) {
-            update {
-                it.copy(
-                    conversation = it.conversation.copy(
-                        messages = settled,
-                        sending = false,
-                        activity = null,
-                        activityStartedAt = null,
-                        loaded = true,
-                        title = it.conversationTitle.ifBlank { titleFrom(settled) },
-                    ),
-                )
-            }
-            applySessionModel(sessionModel)
-            cacheCurrentSession()
-        } else {
-            target.updateIfPresent(sessionId) { cached ->
-                cached.copy(
-                    messages = settled,
-                    sending = false,
-                    activity = null,
-                    activityStartedAt = null,
-                    loaded = true,
-                    sessionModel = sessionModel ?: cached.sessionModel,
-                )
-            }
-        }
     }
 
     fun titleFrom(messages: List<AssistantMessage>): String {

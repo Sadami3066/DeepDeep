@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -28,8 +29,7 @@ import org.junit.Test
 
 class SessionOpenerTest {
     private var state = ChatUiState(ready = true)
-    private val stored = mutableMapOf<String, ConversationState>()
-    private var active: String? = null
+    private var store: ConversationStore? = null
     private val decorated = mutableListOf<String>()
     private val drafts = mutableMapOf<String, SessionDraft>()
 
@@ -44,37 +44,40 @@ class SessionOpenerTest {
         dispatcher: CoroutineDispatcher,
         runtime: AgentRuntime = FakeAgentRuntime(),
         localizeError: (String?) -> String = { it ?: "" },
-    ): SessionOpener = SessionOpener(
-        runtime = runtime,
-        ioDispatcher = dispatcher,
-        scope = scope,
-        state = { state },
-        update = { transform -> state = transform(state) },
-        cachedState = { stored[it] },
-        rememberState = { id, conversation -> stored[id] = conversation },
-        isActive = { it == active },
-        setActive = { active = it },
-        draftFor = { drafts[it] },
-        moveDraft = { from, to -> drafts.remove(from)?.let { drafts[to] = it } },
-        takeCached = { stored.remove(it) },
-        applySessionModel = {},
-        titleFrom = { messages -> messages.firstOrNull()?.text ?: "new" },
-        localizeError = localizeError,
-        localizeTitle = { it },
-        decorateNotices = { conversation, id ->
-            decorated += id
-            conversation
-        },
-        cacheCurrentSession = {},
-        refreshSessions = {},
-        userFacingError = { it },
-        openFailedText = { "open failed" },
-        newChatFailedText = { "new failed" },
-        startupFailedText = { "startup failed" },
-        reloadBusyText = { "busy" },
-        sessionNotReadyText = { "not ready" },
-        reloadFailedText = { "reload failed" },
-    )
+    ): SessionOpener {
+        val conversationStore = ConversationStore(
+            runtime = runtime,
+            scope = scope,
+            ioDispatcher = dispatcher,
+            strings = { ConversationStrings.fallback() },
+            localizeError = localizeError,
+            decorate = { conversation, id ->
+                decorated += id
+                conversation
+            },
+        )
+        store = conversationStore
+        return SessionOpener(
+            runtime = runtime,
+            ioDispatcher = dispatcher,
+            scope = scope,
+            state = { state },
+            update = { transform -> state = transform(state) },
+            store = conversationStore,
+            draftFor = { drafts[it] },
+            moveDraft = { from, to -> drafts.remove(from)?.let { drafts[to] = it } },
+            applySessionModel = {},
+            localizeTitle = { it },
+            refreshSessions = {},
+            userFacingError = { it },
+            openFailedText = { "open failed" },
+            newChatFailedText = { "new failed" },
+            startupFailedText = { "startup failed" },
+            reloadBusyText = { "busy" },
+            sessionNotReadyText = { "not ready" },
+            reloadFailedText = { "reload failed" },
+        )
+    }
 
     @Test
     fun switchingToSameSessionWhileLoadingStillCompletes() = runTest {
@@ -100,7 +103,7 @@ class SessionOpenerTest {
     fun cachedSessionRendersBeforeHistoryLands() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val opener = opener(this, dispatcher)
-        stored["session-1"] = ConversationState(messages = listOf(message("cached")), title = "cached", loaded = true)
+        store!!.put("session-1", ConversationState(messages = listOf(message("cached")), title = "cached", loaded = true))
 
         opener.switchToSummary(summary("session-1"))
 
@@ -128,7 +131,7 @@ class SessionOpenerTest {
         assertTrue(state.historyLoaded)
         assertFalse(state.switchingConversation)
         assertEquals(1, state.queuedInputs.size)
-        assertTrue(stored.getValue("session-1").loaded)
+        assertTrue(store!!.peek("session-1")!!.loaded)
         assertEquals(listOf("session-1"), decorated.distinct())
     }
 
@@ -146,8 +149,8 @@ class SessionOpenerTest {
 
         assertEquals("session-2", state.conversationId)
         assertEquals("second", state.messages.single().text)
-        assertNull(stored["session-1"])
-        assertNotNull(stored["session-2"])
+        assertNull(store!!.peek("session-1"))
+        assertNotNull(store!!.peek("session-2"))
     }
 
     @Test
@@ -225,7 +228,7 @@ class SessionOpenerTest {
         advanceUntilIdle()
 
         assertEquals("reloaded", state.messages.single().text)
-        assertNotNull(stored["session-1"])
+        assertNotNull(store!!.peek("session-1"))
         assertEquals("session-1", decorated.last())
     }
 

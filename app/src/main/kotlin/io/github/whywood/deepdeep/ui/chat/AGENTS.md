@@ -9,7 +9,7 @@
 | 文件 | 职责 |
 |---|---|
 | `ChatScreen.kt` | 聊天主页面：消息列表、输入卡叠层、空状态与回到底部 |
-| `ChatViewModel.kt` | 订阅 runtime 事件产出 ChatUiState，驱动发送/停止/切换/重试 |
+| `ChatViewModel.kt` | 观察 ConversationStore 产出 ChatUiState，驱动发送/停止/切换/重试 |
 | `ChatUiState.kt` | 聊天页面状态模型；会话投影来自 `conversation/` |
 | `ChatTopBar.kt` | 顶栏：菜单、定时/任务/用量/文件入口 |
 
@@ -59,11 +59,11 @@
 | `ContextMeter.kt`、`JobsMeter.kt` | 输入卡上下文 token 环与顶栏后台任务计数 |
 | `ChatScrollController.kt` | 消息列表滚动锚点、会话切换恢复与「回到底部」 |
 | `SessionSearchHit.kt` | 会话搜索命中项（会话 + 工作区名） |
-| `state/` | ViewModel 内部控制器：会话打开/列表/草稿/缓存/模型/用量/工作区/重试/事件投影 |
+| `state/` | ViewModel 内部控制器：会话打开/列表/草稿/模型/工作区/重试 |
 
 ## 要点
 
-- 状态单向：ChatViewModel 从 `runtime.events` 归约出 ChatUiState，ChatScreen 只读状态并回传 `ChatScreenActions`；不要在这里加第二份会话真相（消息、busy、运行态都以 runtime 为准）。
+- 状态单向：ChatViewModel 只把 `ConversationStore.observe()` 的投影、输入草稿、滚动锚点和界面元数据合成 ChatUiState；消息与运行态不在本包归约，也不另存。
 - 流式渲染：Markdown 经 `MarkdownStreamPlanner` 按稳定前缀分块缓存，只有新增内容才重新解析；改解析/分块要保住流式性能与代码块未闭合时的容错。
 - 与浮层共用：`ComposerChip`/`QueueStrip`（在 `ChatComposer.kt`）、`ChatInputField`、`ComposerMetrics`、`ChatTurn`、`rememberChatScrollController`、`conversation.ConversationState` 等同时被系统助手浮层复用，改签名要同步。
 - 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ConversationStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。

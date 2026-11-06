@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.core
 
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
@@ -43,6 +44,8 @@ interface AdvancedDependencies {
 
 interface RuntimeDependencies {
     val host: AgentRuntimeHost
+
+    val conversationStore: ConversationStore
 
     suspend fun prepare()
 }

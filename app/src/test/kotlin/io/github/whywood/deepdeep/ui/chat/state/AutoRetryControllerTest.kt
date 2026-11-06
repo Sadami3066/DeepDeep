@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
@@ -21,7 +22,7 @@ import org.junit.Test
 
 class AutoRetryControllerTest {
     private val strings = ConversationStrings.fallback()
-    private var activeState = ConversationState(
+    private val initialActiveState = ConversationState(
         messages = listOf(
             AssistantMessage(
                 id = 0,
@@ -33,36 +34,37 @@ class AutoRetryControllerTest {
             ),
         ),
     )
-    private val activeWrites = mutableListOf<ConversationState>()
+    private lateinit var store: ConversationStore
     private val begins = mutableListOf<String>()
     private val failures = mutableListOf<Pair<String, String?>>()
-    private val activeErrors = mutableListOf<Pair<ConversationState, String?>>()
+    private val activeErrors = mutableListOf<Triple<String, ConversationState, String?>>()
 
-    private fun target(): ConversationWriteTarget = ConversationWriteTarget(
-        activeReader = { activeState },
-        activeWriter = {
-            activeState = it
-            activeWrites += it
-        },
-    ).apply { setActive("session-1") }
+    private val activeState: ConversationState
+        get() = store.peek("session-1") ?: ConversationState()
 
     private fun controller(
         scope: CoroutineScope,
         enabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
-        writeTarget: ConversationWriteTarget = target(),
         runtime: FakeAgentRuntime = FakeAgentRuntime(),
         awaitSession: suspend (String) -> Unit = {},
-    ): AutoRetryController = AutoRetryController(
-        scope = scope,
-        writeTarget = writeTarget,
-        runtime = runtime,
-        enabledFlow = enabled,
-        canRetry = { message -> strings.canAutoRetry(strings.runErrorKind(message)) },
-        awaitSession = awaitSession,
-        onBegin = { begins += it },
-        onActiveError = { state, error -> activeErrors += state to error },
-        onFailure = { sessionId, message -> failures += sessionId to message },
-    )
+        isActive: (String) -> Boolean = { it == "session-1" },
+    ): AutoRetryController {
+        val created = ConversationStore(runtime = runtime, scope = scope)
+        created.put("session-1", initialActiveState)
+        store = created
+        return AutoRetryController(
+            scope = scope,
+            store = created,
+            isActive = isActive,
+            runtime = runtime,
+            enabledFlow = enabled,
+            canRetry = { message -> strings.canAutoRetry(strings.runErrorKind(message)) },
+            awaitSession = awaitSession,
+            onBegin = { begins += it },
+            onActiveError = { sessionId, state, error -> activeErrors += Triple(sessionId, state, error) },
+            onFailure = { sessionId, message -> failures += sessionId to message },
+        )
+    }
 
     @Test
     fun transientErrorSchedulesRetry() = runTest {
@@ -79,7 +81,7 @@ class AutoRetryControllerTest {
         assertEquals(listOf("session-1"), begins)
         assertEquals(1, controller.attempts("session-1"))
         assertFalse(controller.isRetrying("session-1"))
-        assertTrue(activeWrites.isNotEmpty())
+        assertTrue(activeState.sending)
     }
 
 
@@ -199,9 +201,8 @@ class AutoRetryControllerTest {
 
     @Test
     fun switchingSessionKeepsRetryCountdown() = runTest {
-        val writeTarget = target()
-        writeTarget.store("session-2", ConversationState())
-        val controller = controller(backgroundScope, writeTarget = writeTarget)
+        val controller = controller(backgroundScope)
+        store.put("session-2", ConversationState())
         runCurrent()
         assertTrue(controller.onRunFailed("session-1", "run-1", "Network unreachable"))
         assertTrue(controller.onRunFailed("session-2", "run-2", "Network unreachable"))
@@ -246,15 +247,28 @@ class AutoRetryControllerTest {
     fun finishRunErrorWritesErrorForInactiveSession() = runTest {
         val controller = controller(backgroundScope)
         runCurrent()
-        val writeTarget = ConversationWriteTarget(
-            activeReader = { ConversationState() },
-            activeWriter = {},
+        val writerStore = ConversationStore(runtime = FakeAgentRuntime(), scope = backgroundScope)
+        writerStore.put(
+            "session-2",
+            ConversationState(
+                title = "cached",
+                messages = listOf(
+                    AssistantMessage(
+                        id = 0,
+                        role = AssistantRole.ASSISTANT,
+                        text = "",
+                        status = MessageStatus.RUNNING,
+                        startedAt = 1L,
+                        runId = "run-2",
+                        streaming = true,
+                    ),
+                ),
+            ),
         )
-        writeTarget.setActive("active")
-        writeTarget.store("session-2", ConversationState(title = "cached"))
         val writer = AutoRetryController(
             scope = backgroundScope,
-            writeTarget = writeTarget,
+            store = writerStore,
+            isActive = { false },
             runtime = FakeAgentRuntime(),
             enabledFlow = MutableStateFlow(false),
             canRetry = { false },
@@ -263,7 +277,10 @@ class AutoRetryControllerTest {
 
         writer.finishRunError("session-2", "Network unreachable", strings)
 
-        assertEquals("Network unreachable", writeTarget.readCached("session-2")?.messages?.firstOrNull()?.error ?: "Network unreachable")
+        assertEquals(
+            strings.runError("Network unreachable"),
+            writerStore.peek("session-2")?.messages?.lastOrNull()?.error,
+        )
         assertEquals(0, controller.attempts("session-1"))
     }
 }

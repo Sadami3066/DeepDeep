@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.conversation.ConversationState
@@ -22,13 +23,14 @@ import kotlinx.coroutines.launch
 
 internal class AutoRetryController(
     private val scope: CoroutineScope,
-    private val writeTarget: ConversationWriteTarget,
+    private val store: ConversationStore,
+    private val isActive: (String) -> Boolean,
     private val runtime: AgentRuntime,
     enabledFlow: Flow<Boolean>,
     private val canRetry: (String) -> Boolean,
     private val awaitSession: suspend (String) -> Unit,
     private val onBegin: (String) -> Unit = {},
-    private val onActiveError: (ConversationState, String?) -> Unit = { _, _ -> },
+    private val onActiveError: (String, ConversationState, String?) -> Unit = { _, _, _ -> },
     private val onFailure: (String, String?) -> Unit = { _, _ -> },
     private val now: () -> Long = System::currentTimeMillis,
     private val delayMillis: Long = 2_000L,
@@ -65,12 +67,12 @@ internal class AutoRetryController(
         previous?.job?.cancel()
         val token = Any()
         val job = scope.launch {
-            writeTarget.updateIfPresent(sessionId) { it.markRetryScheduled(attempt, now()) }
+            store.updateIfPresent(sessionId) { it.markRetryScheduled(attempt, now()) }
             delay(delayMillis)
             if (states[sessionId]?.token !== token) return@launch
             if (!awaitIdle(sessionId, token)) {
                 if (states[sessionId]?.token !== token) return@launch
-                writeTarget.updateIfPresent(sessionId) { it.cancelRetry(now()) }
+                store.updateIfPresent(sessionId) { it.cancelRetry(now()) }
                 states[sessionId] = RetryState(attempts = attempt, token = null, retiredRunId = null, job = null)
                 onFailure(sessionId, null)
                 return@launch
@@ -109,13 +111,11 @@ internal class AutoRetryController(
     }
 
     fun finishRunError(sessionId: String, message: String?, strings: ConversationStrings) {
-        val reduced = writeTarget.read(sessionId).finishWithError("", message, strings)
-        if (!writeTarget.isActive(sessionId)) {
-            writeTarget.updateIfPresent(sessionId) { reduced }
-            return
-        }
+        store.update(sessionId) { it.finishWithError("", message, strings) }
+        val reduced = store.peek(sessionId) ?: return
+        if (!isActive(sessionId)) return
         val hasFailure = reduced.messages.any { it.status == MessageStatus.FAILED && it.error != null }
-        onActiveError(reduced, if (hasFailure) null else strings.runError(message))
+        onActiveError(sessionId, reduced, if (hasFailure) null else strings.runError(message))
     }
 
     fun clear(sessionId: String) {
@@ -135,7 +135,7 @@ internal class AutoRetryController(
 
     private fun begin(sessionId: String) {
         val at = now()
-        val applied = writeTarget.updateIfPresent(sessionId) { state -> state.markRetryingTail(at) }
+        val applied = store.updateIfPresent(sessionId) { state -> state.markRetryingTail(at) }
         if (!applied) return
         onBegin(sessionId)
         scope.launch {
@@ -146,7 +146,7 @@ internal class AutoRetryController(
                 throw cancelled
             } catch (error: Exception) {
                 onFailure(sessionId, error.message)
-                writeTarget.updateIfPresent(sessionId) { state ->
+                store.updateIfPresent(sessionId) { state ->
                     if (state.sending || state.messages.any { it.retrying }) {
                         state.cancelRetry(now())
                     } else {

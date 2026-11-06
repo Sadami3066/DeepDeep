@@ -236,6 +236,7 @@ class ConversationStoreTest {
             ioDispatcher = StandardTestDispatcher(testScheduler),
             maxSessions = maxSessions,
         )
+        store.start()
         runCurrent()
         return store
     }

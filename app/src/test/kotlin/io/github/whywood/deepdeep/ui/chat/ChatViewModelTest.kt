@@ -2,7 +2,10 @@ package io.github.whywood.deepdeep.ui.chat
 
 import android.content.Intent
 import android.net.Uri
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
@@ -43,11 +46,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.TestScope
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,7 +74,14 @@ class ChatViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(
+    private fun TestScope.settle() {
+        runCurrent()
+        advanceTimeBy(20)
+        runCurrent()
+        advanceUntilIdle()
+    }
+
+    private fun TestScope.viewModel(
         runtime: AgentRuntime,
         autoRetry: Boolean = false,
         skillExpander: SkillExpander? = null,
@@ -79,20 +91,63 @@ class ChatViewModelTest {
         dismissInterruptedQuestions: suspend (String) -> Unit = {},
         interruptedRuns: suspend (String) -> List<InterruptedRun> = { emptyList() },
         dismissInterruptedRun: suspend (String) -> Unit = {},
-    ) = ChatViewModel(
-        runtime,
-        FakeProviders(),
-        settings,
-        attachmentStore,
-        prepareRuntime = {},
-        autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
-        skillExpander = skillExpander,
-        ioDispatcher = dispatcher,
-        interruptedQuestions = interruptedQuestions,
-        dismissInterruptedQuestions = dismissInterruptedQuestions,
-        interruptedRuns = interruptedRuns,
-        dismissInterruptedRun = dismissInterruptedRun,
-    )
+    ): ChatViewModel {
+        val store = ConversationStore(
+            runtime = runtime,
+            scope = backgroundScope,
+            ioDispatcher = dispatcher,
+            strings = { ConversationStrings.fallback() },
+            decorate = { state, sessionId ->
+                var next = state
+                val questions = interruptedQuestions(sessionId)
+                if (questions.isNotEmpty() && next.messages.none { it.notice is TurnNotice.InterruptedQuestions }) {
+                    next = next.copy(
+                        messages = next.messages + interruptedNotice(
+                            next.messages,
+                            TurnNotice.InterruptedQuestions(questions.size),
+                        ),
+                    )
+                }
+                val runs = interruptedRuns(sessionId)
+                if (runs.isNotEmpty() && next.messages.none { it.notice is TurnNotice.InterruptedRun }) {
+                    next = next.copy(
+                        messages = next.messages + interruptedNotice(
+                            next.messages,
+                            TurnNotice.InterruptedRun(runs.size),
+                        ),
+                    )
+                }
+                next
+            },
+        )
+        store.start()
+        return ChatViewModel(
+            runtime = runtime,
+            store = store,
+            providers = FakeProviders(),
+            modelConfigStore = settings,
+            attachmentStore = attachmentStore,
+            prepareRuntime = {},
+            autoRetry = kotlinx.coroutines.flow.flowOf(autoRetry),
+            skillExpander = skillExpander,
+            ioDispatcher = dispatcher,
+            dismissInterruptedQuestions = dismissInterruptedQuestions,
+            dismissInterruptedRun = dismissInterruptedRun,
+        )
+    }
+
+    private fun interruptedNotice(messages: List<AssistantMessage>, notice: TurnNotice): AssistantMessage {
+        val now = System.currentTimeMillis()
+        return AssistantMessage(
+            id = nextMessageId(messages),
+            role = AssistantRole.ASSISTANT,
+            text = "",
+            status = MessageStatus.DONE,
+            startedAt = now,
+            finishedAt = now,
+            notice = notice,
+        )
+    }
 
     private fun TurnNotice?.isInterruptedNoticeForTest(): Boolean =
         this is TurnNotice.InterruptedQuestions || this is TurnNotice.InterruptedRun
@@ -116,7 +171,7 @@ class ChatViewModelTest {
     fun defaultTitleIsReplacedAfterLanguageSwitch() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.updateUiStrings(ConversationStrings.fallback().copy(newChatTitle = "新对话"))
         viewModel.onInputChange("hello")
@@ -129,7 +184,7 @@ class ChatViewModelTest {
     fun sendShowsWorkingStateImmediatelyAndFinishes() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("hello")
         viewModel.send()
@@ -144,7 +199,7 @@ class ChatViewModelTest {
         runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.TextDelta(runtime.runId, "hi"))
         runtime.emitFor(viewModel.state.value.conversationId!!, RuntimeEvent.RunFinished(runtime.runId, "hi", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        settle()
 
         val finished = viewModel.state.value
         assertFalse(finished.sending)
@@ -156,13 +211,16 @@ class ChatViewModelTest {
     fun externalRunWithPromptAppearsInActiveConversation() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L, prompt = "from overlay"))
+        runCurrent()
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "answer"))
+        runCurrent()
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "answer", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        advanceTimeBy(20)
+        runCurrent()
 
         val messages = viewModel.state.value.messages
         assertEquals(listOf("from overlay", "answer"), messages.map { it.text })
@@ -176,7 +234,7 @@ class ChatViewModelTest {
     fun updateUiStringsLocalizesSubsequentEvents() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.updateUiStrings(ConversationStrings.fallback().copy(requestFailed = "localized failure"))
 
         viewModel.onInputChange("hello")
@@ -184,7 +242,7 @@ class ChatViewModelTest {
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "unexpected"))
-        advanceUntilIdle()
+        settle()
 
         assertEquals("localized failure", viewModel.state.value.messages.last().error)
     }
@@ -193,7 +251,7 @@ class ChatViewModelTest {
     fun ignoresStaleRunEvents() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
@@ -201,7 +259,7 @@ class ChatViewModelTest {
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-2", "stale"))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-1", "fresh"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-1", "fresh", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        settle()
         assertEquals("fresh", viewModel.state.value.messages.last().text)
     }
 
@@ -209,7 +267,7 @@ class ChatViewModelTest {
     fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("do it")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
@@ -238,7 +296,7 @@ class ChatViewModelTest {
         )
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "done"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "done", RunStatus.DONE, 3000L))
-        advanceUntilIdle()
+        settle()
 
         val message = viewModel.state.value.messages.last()
         assertEquals("done", message.text)
@@ -260,19 +318,19 @@ class ChatViewModelTest {
             )
         }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         assertEquals("from a", viewModel.state.value.messages.single().text)
 
         viewModel.openConversation("session-b")
         assertTrue(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
         assertEquals("from b", viewModel.state.value.messages.single().text)
 
         viewModel.openConversation("session-a")
         assertFalse(viewModel.state.value.switchingConversation)
         assertEquals("session-a", viewModel.state.value.conversationId)
         assertEquals("from a", viewModel.state.value.messages.single().text)
-        advanceUntilIdle()
+        settle()
         assertEquals("session-a", viewModel.state.value.conversationId)
         assertEquals("a.jsonl", runtime.openCalls.last())
     }
@@ -292,7 +350,7 @@ class ChatViewModelTest {
                 if (sessionId == "session-a") listOf(interruptedQuestion(sessionId)) else emptyList()
             },
         )
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("session-a"), queries)
         val message = viewModel.state.value.messages.last()
@@ -319,12 +377,12 @@ class ChatViewModelTest {
                 if (sessionId == "session-a") listOf(interruptedQuestion(sessionId)) else emptyList()
             },
         )
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, queries.count { it == "session-a" })
         assertEquals(1, viewModel.state.value.messages.count { message ->
@@ -345,11 +403,11 @@ class ChatViewModelTest {
             interruptedQuestions = { sessionId -> listOf(interruptedQuestion(sessionId)) },
             dismissInterruptedQuestions = { sessionId -> dismissed += sessionId },
         )
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("continue please")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("session-a"), dismissed)
         assertEquals("continue please", runtime.sent.single())
@@ -373,7 +431,7 @@ class ChatViewModelTest {
                 if (sessionId == "session-a") listOf(interruptedRun(sessionId)) else emptyList()
             },
         )
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("session-a"), queries)
         val message = viewModel.state.value.messages.last()
@@ -400,12 +458,12 @@ class ChatViewModelTest {
                 if (sessionId == "session-a") listOf(interruptedRun(sessionId)) else emptyList()
             },
         )
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, queries.count { it == "session-a" })
         assertEquals(1, viewModel.state.value.messages.count { message ->
@@ -426,11 +484,11 @@ class ChatViewModelTest {
             interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
             dismissInterruptedRun = { sessionId -> dismissed += sessionId },
         )
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("continue please")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("session-a"), dismissed)
         assertEquals("continue please", runtime.sent.single())
@@ -455,12 +513,12 @@ class ChatViewModelTest {
             interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
             dismissInterruptedRun = { sessionId -> dismissedRuns += sessionId },
         )
-        advanceUntilIdle()
+        settle()
         assertEquals(2, viewModel.state.value.messages.count { message -> message.notice.isInterruptedNoticeForTest() })
 
         viewModel.onInputChange("continue please")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertTrue(viewModel.state.value.messages.none { message -> message.notice.isInterruptedNoticeForTest() })
         assertEquals(listOf("session-a"), dismissedQuestions)
@@ -484,20 +542,20 @@ class ChatViewModelTest {
             interruptedRuns = { sessionId -> interrupted.filter { run -> run.sessionId == sessionId } },
             dismissInterruptedRun = { sessionId -> interrupted.removeAll { run -> run.sessionId == sessionId } },
         )
-        advanceUntilIdle()
+        settle()
         assertEquals(2, viewModel.state.value.messages.size)
 
         viewModel.onInputChange("continue please")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         assertTrue(viewModel.state.value.messages.none { message ->
             message.notice is TurnNotice.InterruptedRun
         })
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
 
         assertTrue(viewModel.state.value.messages.none { message ->
             message.notice is TurnNotice.InterruptedRun
@@ -516,7 +574,7 @@ class ChatViewModelTest {
             interruptedQuestions = { sessionId -> listOf(interruptedQuestion(sessionId)) },
             interruptedRuns = { sessionId -> listOf(interruptedRun(sessionId)) },
         )
-        advanceUntilIdle()
+        settle()
 
         val messages = viewModel.state.value.messages
         assertEquals(3, messages.size)
@@ -536,7 +594,7 @@ class ChatViewModelTest {
             )
         }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
@@ -544,19 +602,19 @@ class ChatViewModelTest {
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         assertEquals("from b", viewModel.state.value.messages.single().text)
 
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, " more"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "partial more", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        settle()
         runtime.histories = runtime.histories + (sessionId to listOf(
             AssistantMessage(1, AssistantRole.USER, "hello"),
             AssistantMessage(2, AssistantRole.ASSISTANT, "partial more"),
         ))
 
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
         val finished = viewModel.state.value
         assertEquals("partial more", finished.messages.last().text)
         assertEquals(MessageStatus.DONE, finished.messages.last().status)
@@ -573,7 +631,7 @@ class ChatViewModelTest {
         }
         val store = FakeAttachmentStore()
         val viewModel = viewModel(runtime, attachmentStore = store)
-        advanceUntilIdle()
+        settle()
         val sessionA = viewModel.state.value.conversationId!!
         val root = java.nio.file.Files.createTempDirectory("deepdeep-attachment").toFile()
         val ref = AttachmentRef(
@@ -593,9 +651,9 @@ class ChatViewModelTest {
         viewModel.launchAttachmentImport(sessionA, root) { ready.await() }
         advanceTimeBy(1L)
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         ready.complete(AttachmentImport.Imported(ref))
-        advanceUntilIdle()
+        settle()
 
         assertEquals("session-b", viewModel.state.value.conversationId)
         assertTrue(viewModel.state.value.attachments.isEmpty())
@@ -607,7 +665,7 @@ class ChatViewModelTest {
     fun newSessionCanStartWhilePreviousSessionIsRunning() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
         val firstSession = viewModel.state.value.conversationId!!
@@ -615,7 +673,7 @@ class ChatViewModelTest {
         assertTrue(viewModel.state.value.sending)
 
         viewModel.newSession(HOME_ID)
-        advanceUntilIdle()
+        settle()
         val secondSession = viewModel.state.value.conversationId!!
         assertTrue(secondSession != firstSession)
         assertFalse(viewModel.state.value.sending)
@@ -628,7 +686,7 @@ class ChatViewModelTest {
         ))
 
         viewModel.openConversation(firstSession)
-        advanceUntilIdle()
+        settle()
         assertEquals("background", viewModel.state.value.messages.last().text)
         assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
     }
@@ -637,7 +695,7 @@ class ChatViewModelTest {
     fun batchesRapidDeltasWithoutLosingText() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("stream")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
@@ -645,12 +703,12 @@ class ChatViewModelTest {
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "a"))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "b"))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "c"))
-        advanceUntilIdle()
+        settle()
         val streamed = viewModel.state.value.messages.last()
         assertEquals("abc", streamed.steps.filterIsInstance<AssistantStep.Text>().last().text)
 
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "abc", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        settle()
         assertEquals("abc", viewModel.state.value.messages.last().text)
         assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
     }
@@ -659,14 +717,14 @@ class ChatViewModelTest {
     fun quotedReplyPrefixesPromptAndShowsInUserMessage() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.quote(9, "**重点**内容")
         assertEquals("重点内容", viewModel.state.value.quote?.text)
 
         viewModel.onInputChange("展开说说")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals("> 重点内容\n\n展开说说", runtime.sent.single())
         assertEquals("> 重点内容\n\n展开说说", viewModel.state.value.messages.first().text)
@@ -682,9 +740,9 @@ class ChatViewModelTest {
             histories = mapOf("session-a" to emptyList())
         }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.newSession(HOME_ID)
-        advanceUntilIdle()
+        settle()
         val newSessionId = viewModel.state.value.conversationId!!
         assertTrue(viewModel.state.value.messages.isEmpty())
 
@@ -692,9 +750,9 @@ class ChatViewModelTest {
             AssistantMessage(1, AssistantRole.USER, "reminder body"),
         ))
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation(newSessionId)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, viewModel.state.value.messages.size)
         assertEquals("reminder body", viewModel.state.value.messages.single().text)
@@ -707,12 +765,12 @@ class ChatViewModelTest {
         val session = ConversationSummary("session-a", "A", 2L, "a.jsonl", HOME_CWD)
         val runtime = FakeAgentRuntime().apply { sessions = listOf(session) }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
         val raw = "[定时提醒] 喝水\n这是你设置的定时提醒，现在到时间了。\n\n喝水提醒"
 
         runtime.emitFor(sessionId, RuntimeEvent.TurnInjected("run-t", raw, "喝水"))
-        advanceUntilIdle()
+        settle()
 
         val injected = viewModel.state.value
         assertTrue(injected.sending)
@@ -728,7 +786,7 @@ class ChatViewModelTest {
 
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-t", "收到"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-t", "收到", RunStatus.DONE, 2000L))
-        advanceUntilIdle()
+        settle()
         assertEquals("收到", viewModel.state.value.messages.last().text)
         assertFalse(viewModel.state.value.sending)
     }
@@ -737,20 +795,20 @@ class ChatViewModelTest {
     fun retryRegeneratesReplyWithoutResendingUserText() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "402 Insufficient Balance"))
-        advanceUntilIdle()
+        settle()
 
         val failed = viewModel.state.value.messages.last()
         assertEquals(MessageStatus.FAILED, failed.status)
         assertEquals(ConversationStrings.fallback().withCode(ConversationStrings.fallback().insufficientBalance, "402"), failed.error)
 
         viewModel.retry(failed.id)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("hello"), runtime.sent)
         assertEquals(1, runtime.retried)
@@ -763,7 +821,7 @@ class ChatViewModelTest {
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted("run-2", 5000L))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta("run-2", "world"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished("run-2", "world", RunStatus.DONE, 6000L))
-        advanceUntilIdle()
+        settle()
         val finished = viewModel.state.value.messages.last()
         assertEquals(MessageStatus.DONE, finished.status)
         assertEquals("world", finished.text)
@@ -775,13 +833,13 @@ class ChatViewModelTest {
     fun autoRetryRegeneratesAfterTransientFailure() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, runtime.retried)
         val messages = viewModel.state.value.messages
@@ -795,15 +853,17 @@ class ChatViewModelTest {
     fun autoRetryLabelSurvivesHostTerminalActivityClear() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "Network unreachable"))
+        runCurrent()
         advanceTimeBy(1L)
 
         runtime.emitFor(sessionId, RuntimeEvent.ActivityChanged(runtime.runId, null))
+        runCurrent()
         advanceTimeBy(1L)
 
         val retrying = viewModel.state.value
@@ -812,7 +872,7 @@ class ChatViewModelTest {
         assertEquals(0, runtime.retried)
 
         advanceTimeBy(2_500L)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, runtime.retried)
         assertEquals(RuntimeActivity.Thinking, viewModel.state.value.activity)
@@ -822,7 +882,7 @@ class ChatViewModelTest {
     fun stopCancelsPendingAutoRetry() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
@@ -835,7 +895,7 @@ class ChatViewModelTest {
 
         viewModel.stop()
         advanceTimeBy(2_500L)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(0, runtime.retried)
         assertFalse(viewModel.state.value.sending)
@@ -846,13 +906,13 @@ class ChatViewModelTest {
     fun autoRetrySkipsTimeouts() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime, autoRetry = true)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.RunFailed(runtime.runId, "request timed out"))
-        advanceUntilIdle()
+        settle()
 
         assertEquals(0, runtime.retried)
         assertEquals(MessageStatus.FAILED, viewModel.state.value.messages.last().status)
@@ -873,23 +933,23 @@ class ChatViewModelTest {
         }
         val settings = FakeSettings()
         val viewModel = viewModel(runtime, settings = settings)
-        advanceUntilIdle()
+        settle()
         assertEquals("session-a", viewModel.state.value.conversationId)
         assertEquals("model", viewModel.state.value.modelId)
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         assertEquals("model", viewModel.state.value.modelId)
 
         viewModel.setModel("model-2")
-        advanceUntilIdle()
+        settle()
         assertEquals("model-2", viewModel.state.value.modelId)
         assertEquals("model-2", runtime.sessionModels["session-b"]?.modelId)
         assertEquals("model", runtime.sessionModels["session-a"]?.modelId)
         assertEquals(ModelConfig("deepseek", "model-2", ThinkingLevel.OFF), settings.saved.last())
 
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
         assertEquals("session-a", viewModel.state.value.conversationId)
         assertEquals("model", viewModel.state.value.modelId)
     }
@@ -898,18 +958,18 @@ class ChatViewModelTest {
     fun lostTerminalReconcilesAfterBusyDisappears() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
-        advanceUntilIdle()
+        settle()
         assertTrue(viewModel.state.value.sending)
 
         runtime.setBusy(setOf(sessionId))
-        advanceUntilIdle()
+        settle()
         runtime.histories = mapOf(
             sessionId to listOf(
                 AssistantMessage(1, AssistantRole.USER, "hello"),
@@ -918,7 +978,7 @@ class ChatViewModelTest {
         )
         runtime.setBusy(emptySet())
         advanceTimeBy(600L)
-        advanceUntilIdle()
+        settle()
 
         assertFalse(viewModel.state.value.sending)
         assertEquals("final from history", viewModel.state.value.messages.last().text)
@@ -929,14 +989,14 @@ class ChatViewModelTest {
     fun foregroundReconcilesStuckSending() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "partial"))
-        advanceUntilIdle()
+        settle()
         assertTrue(viewModel.state.value.sending)
 
         runtime.histories = mapOf(
@@ -946,7 +1006,7 @@ class ChatViewModelTest {
             ),
         )
         viewModel.onAppForeground()
-        advanceUntilIdle()
+        settle()
 
         assertFalse(viewModel.state.value.sending)
         assertEquals("finished elsewhere", viewModel.state.value.messages.last().text)
@@ -956,17 +1016,17 @@ class ChatViewModelTest {
     fun stopWithoutActiveRunReconcilesInsteadOfHanging() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("hello")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
         runtime.histories = mapOf(
             sessionId to listOf(AssistantMessage(1, AssistantRole.USER, "hello")),
         )
         viewModel.stop()
         advanceTimeBy(600L)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf(sessionId), runtime.stopped)
         assertFalse(viewModel.state.value.sending)
@@ -991,12 +1051,12 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/skill:workshop build a todo app")
         viewModel.send()
         assertTrue(viewModel.state.value.sending)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf(Triple(HOME_CWD, "workshop", "build a todo app")), expander.calls)
         assertEquals(SKILL_PROMPT, runtime.sent.single())
@@ -1010,11 +1070,11 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/skill:workshop")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
         assertEquals(SKILL_PROMPT, runtime.sent.single())
@@ -1026,11 +1086,11 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("pdf-tools", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/skill:pdf-tools extract tables")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(Triple(HOME_CWD, "pdf-tools", "extract tables"), expander.calls.single())
         assertEquals(SKILL_PROMPT, runtime.sent.single())
@@ -1041,12 +1101,12 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("使用一下这个skill /skill:workshop")
         viewModel.send()
         assertTrue(viewModel.state.value.sending)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf(Triple(HOME_CWD, "workshop", "")), expander.calls)
         assertEquals("$SKILL_PROMPT\n\n使用一下这个skill", runtime.sent.single())
@@ -1058,11 +1118,11 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(null)
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("使用一下这个skill /skill:workshop")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
@@ -1078,10 +1138,10 @@ class ChatViewModelTest {
             available = listOf(SkillSummary("foo", "Foo helper")),
         )
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.refreshAvailableSkills()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("foo"), viewModel.availableSkills.value.map { it.name })
         assertEquals(listOf(HOME_CWD), expander.listCalls)
@@ -1091,11 +1151,11 @@ class ChatViewModelTest {
     fun missingSkillExpanderShowsError() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/skill:nope do it")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
@@ -1108,11 +1168,11 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val expander = FakeSkillExpander(null)
         val viewModel = viewModel(runtime, skillExpander = expander)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/skill:workshop build something")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(Triple(HOME_CWD, "workshop", "build something"), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
@@ -1124,10 +1184,10 @@ class ChatViewModelTest {
     fun newSessionPrefillsInput() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.newSession(HOME_ID, initialInput = "/skill:workshop build a todo app")
-        advanceUntilIdle()
+        settle()
 
         assertEquals("/skill:workshop build a todo app", viewModel.state.value.input)
         assertTrue(viewModel.state.value.messages.isEmpty())
@@ -1137,15 +1197,15 @@ class ChatViewModelTest {
     fun sendWhileBusySteersCurrentInput() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         assertTrue(viewModel.state.value.sending)
 
         viewModel.onInputChange("change direction")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("change direction"), runtime.steered)
         assertEquals("", viewModel.state.value.input)
@@ -1155,14 +1215,14 @@ class ChatViewModelTest {
     fun sendWhileBusyRejectsCommands() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("/compact")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(ConversationStrings.fallback().stopBeforeCommand, viewModel.state.value.error)
         assertTrue(runtime.steered.isEmpty())
@@ -1172,14 +1232,14 @@ class ChatViewModelTest {
     fun followUpNowQueuesWhileBusy() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
 
         viewModel.onInputChange("after this")
         viewModel.followUpNow()
-        advanceUntilIdle()
+        settle()
 
         assertEquals(listOf("after this"), runtime.followUps)
         assertEquals("", viewModel.state.value.input)
@@ -1189,14 +1249,14 @@ class ChatViewModelTest {
     fun stopRestoresDroppedQueueText() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         runtime.stopDropped = listOf("queued one", "queued two")
 
         viewModel.stop()
-        advanceUntilIdle()
+        settle()
 
         assertEquals("queued one\n\nqueued two", viewModel.state.value.input)
         assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
@@ -1206,7 +1266,7 @@ class ChatViewModelTest {
     fun queuedInputEventsUpdateQueueAndDroppedTextsRestoreInput() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
 
         runtime.emitFor(
@@ -1217,7 +1277,7 @@ class ChatViewModelTest {
                 followUp = listOf("follow text"),
             ),
         )
-        advanceUntilIdle()
+        settle()
         assertEquals(
             listOf(
                 QueuedInput(InputQueueKind.STEER, "steer text"),
@@ -1227,7 +1287,7 @@ class ChatViewModelTest {
         )
 
         runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("lost text"), runtime.runId))
-        advanceUntilIdle()
+        settle()
         assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
         assertEquals("lost text", viewModel.state.value.input)
     }
@@ -1236,16 +1296,16 @@ class ChatViewModelTest {
     fun userInputAdmittedSplitsAssistantMessage() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("first")
         viewModel.send()
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
 
         runtime.emitFor(sessionId, RuntimeEvent.RunStarted(runtime.runId, 1000L))
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "before steering"))
         runtime.emitFor(sessionId, RuntimeEvent.UserInputAdmitted(runtime.runId, "steer text"))
-        advanceUntilIdle()
+        settle()
 
         val messages = viewModel.state.value.messages
         assertEquals(4, messages.size)
@@ -1260,7 +1320,7 @@ class ChatViewModelTest {
 
         runtime.emitFor(sessionId, RuntimeEvent.TextDelta(runtime.runId, "after steering"))
         runtime.emitFor(sessionId, RuntimeEvent.RunFinished(runtime.runId, "after steering", RunStatus.DONE, 4000L))
-        advanceUntilIdle()
+        settle()
         assertEquals("after steering", viewModel.state.value.messages.last().text)
         assertEquals(MessageStatus.DONE, viewModel.state.value.messages.last().status)
     }
@@ -1303,16 +1363,16 @@ class ChatViewModelTest {
             kind = AttachmentKind.IMAGE,
         )
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         viewModel.onInputChange("draft b")
         viewModel.quote(2L, "from b")
         viewModel.launchAttachmentImport("session-b", java.io.File(HOME_CWD)) {
             AttachmentImport.Imported(attachment)
         }
-        advanceUntilIdle()
+        settle()
         val quote = QuotedMessage(2L, "from b")
         assertEquals(quote, viewModel.state.value.quote)
         assertEquals(listOf(attachment), viewModel.state.value.attachments)
@@ -1321,13 +1381,13 @@ class ChatViewModelTest {
         assertEquals("", viewModel.state.value.input)
         assertNull(viewModel.state.value.quote)
         assertTrue(viewModel.state.value.attachments.isEmpty())
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-b")
         assertEquals("draft b", viewModel.state.value.input)
         assertEquals(quote, viewModel.state.value.quote)
         assertEquals(listOf(attachment), viewModel.state.value.attachments)
-        advanceUntilIdle()
+        settle()
     }
 
     @Test
@@ -1339,15 +1399,15 @@ class ChatViewModelTest {
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
         }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         val sessionB = viewModel.state.value.conversationId!!
         runtime.emitFor(
             sessionB,
             RuntimeEvent.QueueChanged(runtime.runId, steering = listOf("steer b"), followUp = listOf("follow b")),
         )
-        advanceUntilIdle()
+        settle()
         val queued = listOf(
             QueuedInput(InputQueueKind.STEER, "steer b"),
             QueuedInput(InputQueueKind.FOLLOW_UP, "follow b"),
@@ -1355,10 +1415,10 @@ class ChatViewModelTest {
         assertEquals(queued, viewModel.state.value.queuedInputs)
 
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
         viewModel.openConversation("session-b")
         assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
-        advanceUntilIdle()
+        settle()
     }
 
     @Test
@@ -1370,7 +1430,7 @@ class ChatViewModelTest {
             histories = mapOf("session-a" to emptyList(), "session-b" to emptyList())
         }
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
 
         viewModel.updateScrollAnchor("session-a", 6, 24)
         viewModel.updateScrollAnchor("session-a", 7, 8, atBottom = true)
@@ -1378,12 +1438,12 @@ class ChatViewModelTest {
         assertNull(viewModel.scrollAnchorFor("session-b"))
 
         viewModel.openConversation("session-b")
-        advanceUntilIdle()
+        settle()
         assertEquals(ScrollAnchor(7, 8, atBottom = true), viewModel.scrollAnchorFor("session-a"))
         viewModel.updateScrollAnchor("session-b", 1, 0)
 
         viewModel.openConversation("session-a")
-        advanceUntilIdle()
+        settle()
         assertEquals(ScrollAnchor(7, 8, atBottom = true), viewModel.scrollAnchorFor("session-a"))
         assertEquals(ScrollAnchor(1, 0), viewModel.scrollAnchorFor("session-b"))
     }
@@ -1392,61 +1452,61 @@ class ChatViewModelTest {
     fun evictsLeastRecentlyUsedSessionBeyondLimit() = runTest(dispatcher) {
         val runtime = multiSessionRuntime(9)
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         assertEquals("session-1", viewModel.state.value.conversationId)
         viewModel.updateScrollAnchor("session-1", 4, 12)
 
         for (index in 2..8) {
             viewModel.openConversation("session-$index")
-            advanceUntilIdle()
+            settle()
         }
 
         viewModel.openConversation("session-9")
         assertTrue(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
         assertNull(viewModel.scrollAnchorFor("session-1"))
 
         viewModel.openConversation("session-8")
         assertFalse(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-1")
         assertTrue(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
     }
 
     @Test
     fun keepsBusySessionWhenEvicting() = runTest(dispatcher) {
         val runtime = multiSessionRuntime(9)
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         runtime.setBusy(setOf("session-1"))
-        advanceUntilIdle()
+        settle()
 
         for (index in 2..9) {
             viewModel.openConversation("session-$index")
-            advanceUntilIdle()
+            settle()
         }
 
         viewModel.openConversation("session-1")
         assertFalse(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-2")
         assertTrue(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
     }
 
     @Test
     fun onTrimMemoryClearsIdleSessionsAndKeepsCurrentAndBusy() = runTest(dispatcher) {
         val runtime = multiSessionRuntime(9)
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         runtime.setBusy(setOf("session-1"))
-        advanceUntilIdle()
+        settle()
         for (index in 2..8) {
             viewModel.openConversation("session-$index")
-            advanceUntilIdle()
+            settle()
         }
         viewModel.updateScrollAnchor("session-2", 3, 5)
         viewModel.updateScrollAnchor("session-3", 4, 6)
@@ -1454,7 +1514,7 @@ class ChatViewModelTest {
         viewModel.onTrimMemory(5)
         viewModel.openConversation("session-2")
         assertFalse(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
 
         viewModel.onTrimMemory(10)
         assertEquals(ScrollAnchor(3, 5), viewModel.scrollAnchorFor("session-2"))
@@ -1466,11 +1526,11 @@ class ChatViewModelTest {
 
         viewModel.openConversation("session-3")
         assertTrue(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
 
         viewModel.openConversation("session-1")
         assertFalse(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
     }
 
     private class FakeSkillExpander(
@@ -1510,7 +1570,7 @@ class ChatViewModelTest {
         }
         val delayed = DelayedOpenRuntime(runtime)
         val viewModel = viewModel(delayed)
-        advanceUntilIdle()
+        settle()
         assertEquals("session-a", viewModel.state.value.conversationId)
 
         delayed.gate = CompletableDeferred()
@@ -1526,7 +1586,7 @@ class ChatViewModelTest {
         delayed.gate?.complete(Unit)
         runCurrent()
         assertFalse(viewModel.state.value.switchingConversation)
-        advanceUntilIdle()
+        settle()
 
         val streamed = viewModel.state.value.messages.single()
         assertEquals(
@@ -1543,7 +1603,7 @@ class ChatViewModelTest {
             sessions = listOf(sessionA, sessionB)
         }
         val viewModel = viewModel(runtime, autoRetry = true)
-        advanceUntilIdle()
+        settle()
         assertEquals("session-a", viewModel.state.value.conversationId)
 
         viewModel.onInputChange("hello")
@@ -1563,7 +1623,7 @@ class ChatViewModelTest {
         assertEquals(0, runtime.retried)
 
         advanceTimeBy(2_500L)
-        advanceUntilIdle()
+        settle()
 
         assertEquals(1, runtime.retried)
         assertTrue(viewModel.state.value.sending)
@@ -1573,7 +1633,7 @@ class ChatViewModelTest {
     fun droppedQueuedInputsMergeInOrderWithExistingDraft() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
-        advanceUntilIdle()
+        settle()
         val sessionId = viewModel.state.value.conversationId!!
 
         viewModel.onInputChange("draft text")
@@ -1581,12 +1641,12 @@ class ChatViewModelTest {
             sessionId,
             RuntimeEvent.QueueChanged(runtime.runId, steering = listOf("s1", "s2"), followUp = listOf("f1")),
         )
-        advanceUntilIdle()
+        settle()
         assertEquals(3, viewModel.state.value.queuedInputs.size)
 
         runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("first", "second"), runtime.runId))
         runtime.emitFor(sessionId, RuntimeEvent.QueuedInputsDropped(listOf("third"), runtime.runId))
-        advanceUntilIdle()
+        settle()
 
         assertEquals(emptyList<QueuedInput>(), viewModel.state.value.queuedInputs)
         assertEquals("draft text\n\nfirst\n\nsecond\n\nthird", viewModel.state.value.input)

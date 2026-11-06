@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.core
 
+import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
@@ -34,6 +35,8 @@ internal class FakeAppDependencies(
     override val homeDir: File = File("fake-home"),
 ) : AppDependencies {
     override val host: AgentRuntimeHost get() = unavailable("host")
+
+    override val conversationStore: ConversationStore get() = unavailable("conversationStore")
 
     override suspend fun prepare() {
         unavailable("prepare")

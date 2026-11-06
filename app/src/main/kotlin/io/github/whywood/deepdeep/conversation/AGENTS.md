@@ -17,7 +17,9 @@ runtime 事件经纯函数 `reduce` 变成 `ConversationState`，由 `Conversati
 ## 要点
 
 - 纯函数：除 `ConversationStore` 外不 import Android/Compose/DataStore，不启动协程；时间由调用方传入。
-- 单一投影：所有 surface 只观察 `ConversationStore.observe(sessionId)`，不在 UI 层再归约事件或另存消息/运行态。
-- 事件只由 store 订阅一次；新增消费方使用 `activeRuns` 与 `runCompletions`，不要再自建 `runtime.events.collect`。
+- 单一投影：所有 surface 只观察 `ConversationStore.observe(sessionId)`，输入草稿/附件/滚动留在各 surface，不在 UI 层再归约事件或另存消息/运行态。
+- 事件只由 store 订阅一次；新增消费方按用途使用 `activeRuns`、`runCompletions`、`droppedInputs`、`runFailures`、`lifecycle`、`sessionChanges`，不要再自建 `runtime.events.collect`。
+- Store 负责 LRU（默认 8，pin 的会话不淘汰）、delta 16ms 合并、忙→闲 500ms 对账和运行完成通知；`onEvict` 用于清理表面层按会话持有的资源。
+- 标题：首次发送只在标题为空或仍是默认标题时写入；默认标题按当前语言和英文 fallback 识别。
 - 文案：默认英文 `fallback()`；App 侧从 `res/values*/strings_*.xml` 构造后传入。
 - 测试镜像本包：`app/src/test/kotlin/.../conversation/`。

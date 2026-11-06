@@ -23,7 +23,7 @@ internal class ModelController(
     private val scope: CoroutineScope,
     private val state: () -> ChatUiState,
     private val update: ((ChatUiState) -> ChatUiState) -> Unit,
-    private val cacheCurrentSession: () -> Unit,
+    private val onModelChanged: (String, SessionModelSnapshot) -> Unit,
     private val userFacingError: (String) -> String,
     private val switchModelFailedText: () -> String,
     private val switchThinkingFailedText: () -> String,
@@ -89,7 +89,7 @@ internal class ModelController(
     private fun changeSessionModel(model: SessionModelSnapshot, thinkingOnly: Boolean) {
         val sessionId = state().conversationId ?: return
         applySessionModel(model)
-        cacheCurrentSession()
+        onModelChanged(sessionId, model)
         scope.launch {
             try {
                 if (thinkingOnly) {
@@ -107,7 +107,7 @@ internal class ModelController(
             val truth = withContext(ioDispatcher) { queries.sessionModel(sessionId) }
             if (truth != null && state().conversationId == sessionId) {
                 applySessionModel(truth)
-                cacheCurrentSession()
+                onModelChanged(sessionId, truth)
             }
         }
     }

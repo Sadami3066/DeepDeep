@@ -192,6 +192,7 @@ class FakeAgentRuntime : AgentRuntime {
 
     override suspend fun currentConfig(): ModelConfig = ModelConfig()
 
-    suspend fun emitFor(sessionId: String, event: RuntimeEvent) =
+    suspend fun emitFor(sessionId: String, event: RuntimeEvent) {
         flow.emit(SessionRuntimeEvent(sessionId, event))
+    }
 }
