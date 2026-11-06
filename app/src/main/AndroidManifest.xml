@@ -95,13 +95,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".arrange.ArrangePermissionActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
-        <activity
             android:name=".assistant.AssistantOverlayActivity"
             android:exported="true"
             android:theme="@style/Theme.DeepDeep.AssistantOverlay"
