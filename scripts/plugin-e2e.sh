@@ -9,13 +9,14 @@ TEST_CLASS="io.github.whywood.deepdeep.plugin.manager.ExternalPluginE2ETest"
 DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
 
 ./scripts/gradlew-locked \
+    :design:publishToMavenLocal \
     :plugin-api:publishToMavenLocal \
     :app:assembleDebug \
     :app:assembleDebugAndroidTest
 
 (
   cd ../plugins
-  ./gradlew :sample:verifyPlugin
+  ./scripts/gradlew-locked :sample:verifyPlugin
 )
 
 adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
