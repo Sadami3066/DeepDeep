@@ -119,6 +119,18 @@ class AgentRuntimeHost internal constructor(
         providers = providers,
         emitUsage = ::emitUsageEvent,
     )
+    private val sessionsAdmin = RuntimeSessions(
+        mutex = mutex,
+        handles = handles,
+        catalog = catalog,
+        visibleCwds = ::visibleCwds,
+        workspaceFor = ::workspaceFor,
+        emitListChanged = ::emitListChanged,
+        emitSessionRemoved = ::emitSessionRemoved,
+        detachForget = { id -> mutex.withLock { detach(id, forget = true) } },
+        sessionCleaner = sessionCleaner,
+        sessionArchived = sessionArchived,
+    )
     private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private var lastOpenedSessionId: String? = null
@@ -156,10 +168,10 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun deleteWorkspace(id: String) = workspaceAdmin.delete(id)
 
-    override suspend fun allSessions(): List<ConversationSummary> =
-        catalog.listAll(visibleCwds()).filterNot { it.archived }
+    override suspend fun allSessions(): List<ConversationSummary> = sessionsAdmin.all()
 
-    override suspend fun workspaceSessionCount(workspaceId: String): Int = workspaceAdmin.sessionCount(workspaceId)
+    override suspend fun workspaceSessionCount(workspaceId: String): Int =
+        sessionsAdmin.workspaceCount(workspaceId)
 
     override suspend fun newSession(workspaceId: String): OpenedSession {
         val opened = mutex.withLock {
@@ -499,47 +511,21 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun history(sessionId: String): List<AssistantMessage> = models.history(sessionId)
 
-    override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
-        handles[sessionId]?.session?.sessionName()
-            ?: catalog.find(visibleCwds(), sessionId)?.title
-    }
+    override suspend fun sessionTitle(sessionId: String): String? = sessionsAdmin.title(sessionId)
 
-    override suspend fun sessions(workspaceId: String): List<ConversationSummary> {
-        val workspace = workspaceFor(workspaceId)
-        return catalog.list(workspace.cwd).filterNot { it.archived }
-    }
+    override suspend fun sessions(workspaceId: String): List<ConversationSummary> =
+        sessionsAdmin.list(workspaceId)
 
-    override suspend fun archivedSessions(): List<ConversationSummary> =
-        catalog.listAll(visibleCwds()).filter { it.archived }
+    override suspend fun archivedSessions(): List<ConversationSummary> = sessionsAdmin.archived()
 
-    override suspend fun renameSession(id: String, title: String) {
-        catalog.rename(id, title)
-        emitListChanged()
-    }
+    override suspend fun renameSession(id: String, title: String) = sessionsAdmin.rename(id, title)
 
-    override suspend fun setSessionPinned(id: String, pinned: Boolean) {
-        catalog.setPinned(id, pinned)
-        emitListChanged()
-    }
+    override suspend fun setSessionPinned(id: String, pinned: Boolean) = sessionsAdmin.setPinned(id, pinned)
 
-    override suspend fun setSessionArchived(id: String, archived: Boolean) {
-        catalog.setArchived(id, archived)
-        if (archived) sessionArchived?.invoke(id)
-        eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionArchived(archived = archived)))
-        emitListChanged()
-    }
+    override suspend fun setSessionArchived(id: String, archived: Boolean) =
+        sessionsAdmin.setArchived(id, archived)
 
-    override suspend fun deleteSession(id: String) {
-        val summary = catalog.find(visibleCwds(), id)
-        mutex.withLock { detach(id, forget = true) }
-        sessionCleaner?.invoke(id)
-        if (summary != null) {
-            catalog.delete(summary.filePath)
-            catalog.removeMeta(id)
-        }
-        eventsBuffer.emit(SessionRuntimeEvent(id, RuntimeEvent.SessionRemoved()))
-        emitListChanged()
-    }
+    override suspend fun deleteSession(id: String) = sessionsAdmin.delete(id)
 
     override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = models.session(sessionId)
 

@@ -14,6 +14,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `RuntimeEventTranslator.kt` | 把 SDK 会话/Agent 事件翻译为运行时事件与活动状态 |
 | `RuntimeWorkspaces.kt` | 工作区列表、增删改、Home 解析与可见 cwd |
 | `RuntimeModels.kt` | 会话模型/思考档、历史、用量与压缩 |
+| `RuntimeSessions.kt` | 会话查询、列表、重命名/置顶/归档与删除 |
 | `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成 |
 | `PluginRuntimeHooks.kt` | `RuntimeHooks` 聚合（prompt/input/tool/会话绑定，`onSessionBound` 传 `SessionBinding`）与 Agent 级工具钩子桥（Block/Rewrite/Replace，保留 SDK 结果归一化） |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
