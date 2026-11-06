@@ -64,30 +64,25 @@ class ProcessRuntime(
     fun onForeground() {
         onForegroundPlugins()
         refreshPluginsIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
-        scope.launch { runCatching { syncSkills() } }
+        scope.launch {
+            runCatching { syncSkills() }.onFailure {
+                Diagnostics.log(diagnosticsDir, "process: foreground skill sync failed", it)
+            }
+        }
     }
 
     private suspend fun runStart() {
         _state.value = ProcessState.STARTING
         try {
-            runCatching { startPlugins() }.onFailure { log("plugin start failed", it) }
+            runCatching { startPlugins() }.onFailure { Diagnostics.log(diagnosticsDir, "process: plugin start failed", it) }
             prepare()
             reconfigureHost()
             ensureHostStarted()
             _state.value = ProcessState.STARTED
         } catch (error: Throwable) {
-            log("process start failed", error)
+            Diagnostics.log(diagnosticsDir, "process: start failed", error)
             _state.value = ProcessState.FAILED
             throw error
-        }
-    }
-
-    private fun log(message: String, error: Throwable) {
-        runCatching {
-            val file = File(diagnosticsDir, "process-runtime.log")
-            file.parentFile?.mkdirs()
-            val detail = error.message?.replace('\n', ' ')
-            file.appendText("${System.currentTimeMillis()} $message ${error::class.java.simpleName}: $detail\n")
         }
     }
 

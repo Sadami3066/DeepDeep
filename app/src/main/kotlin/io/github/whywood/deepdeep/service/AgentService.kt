@@ -49,7 +49,8 @@ class AgentService : Service() {
                 graph.processRuntime.start()
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                Diagnostics.log(this@AgentService, "service: process start failed", error)
             }
             runCatching { graph.timerService.start() }
         }

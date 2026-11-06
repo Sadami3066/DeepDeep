@@ -55,7 +55,7 @@ class ProcessRuntimeTest {
 
         assertEquals(listOf("plugin", "prepare", "reconfigure", "ensure"), steps)
         assertEquals(ProcessState.STARTED, runtime.state.value)
-        assertTrue(java.io.File(diagnosticsDir, "process-runtime.log").readText().contains("plugin start failed"))
+        assertTrue(java.io.File(diagnosticsDir, "errors.log").readText().contains("plugin start failed"))
     }
 
     @Test

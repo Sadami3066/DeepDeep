@@ -57,6 +57,7 @@ import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.WorkshopAgentService
 import io.github.whywood.deepdeep.runtime.WorkshopStore
 import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
+import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -173,8 +174,12 @@ class AppGraph(context: Context) : AppDependencies {
                 pluginManager.onRuntimeEvent(event)
                 when (event.event) {
                     is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
-                        runCatching { skillRepository.syncIfChanged() }
-                        runCatching { pluginManager.refreshIfStale(ProcessRuntime.PLUGIN_REFRESH_MIN_INTERVAL_MS) }
+                        runCatching { skillRepository.syncIfChanged() }.onFailure {
+                            Diagnostics.log(appContext, "app: skill sync failed", it)
+                        }
+                        runCatching { pluginManager.refreshIfStale(ProcessRuntime.PLUGIN_REFRESH_MIN_INTERVAL_MS) }.onFailure {
+                            Diagnostics.log(appContext, "app: plugin refresh failed", it)
+                        }
                     }
 
                     else -> Unit

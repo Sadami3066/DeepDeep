@@ -8,6 +8,7 @@ App 常驻后台的系统接线：前台服务是唯一常驻入口，通知中�
 |---|---|
 | `AgentService.kt` | 前台服务：常驻通知、定时器、悬浮窗、配对码动作；启动时确保进程已初始化 |
 | `ProcessRuntime.kt` | 进程初始化唯一入口：插件启动 → prepare → host reconfigure/ensureStarted，幂等、失败可重试；前台刷新插件与技能 |
+| `Diagnostics.kt` | 静默失败诊断日志：`files/diagnostics/errors.log`，按行数/字节截断；启动、前台刷新、技能同步等后台路径失败时调用 |
 | `NotificationCenter.kt` | 通知中心：订阅 ConversationStore 的运行状态与完成事件，发出前台、提问、结果、安装、无障碍通知 |
 | `AppVisibility.kt` | App 前后台计数与把任务拉到前台 |
 | `KeepAlive.kt` | 保活入口：电池优化与 MIUI 自启动设置 |

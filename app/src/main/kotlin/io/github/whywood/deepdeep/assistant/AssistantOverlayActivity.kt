@@ -1,7 +1,5 @@
 package io.github.whywood.deepdeep.assistant
 
-import io.github.whywood.deepdeep.core.AssistantEntry
-
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -20,6 +18,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.core.AssistantEntry
+import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryMode
@@ -78,7 +78,9 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
             this.controller = controller
             LaunchedEffect(controller) {
-                runCatching { graph.processRuntime.start() }
+                runCatching { graph.processRuntime.start() }.onFailure {
+                    Diagnostics.log(this@AssistantOverlayActivity, "overlay: process start failed", it)
+                }
                 controller.start()
             }
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(
