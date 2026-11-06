@@ -7,12 +7,14 @@ import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 internal class ModelController(
     private val runtime: ModelControl,

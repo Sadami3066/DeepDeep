@@ -7,7 +7,8 @@ import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.state.SessionDraft
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +17,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+
+
 
 internal class SessionOpener(
     private val runtime: AgentRuntime,

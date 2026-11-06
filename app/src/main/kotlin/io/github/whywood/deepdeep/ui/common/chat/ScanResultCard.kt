@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
@@ -36,6 +36,8 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.scan.ScanDecision
 import io.github.whywood.deepdeep.ui.common.scan.ScanPrimary
 import io.github.whywood.deepdeep.ui.common.scan.scanAppInfo
+
+
 
 @Composable
 internal fun ScanResultCard(

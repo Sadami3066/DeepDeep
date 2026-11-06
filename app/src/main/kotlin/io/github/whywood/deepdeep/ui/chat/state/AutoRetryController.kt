@@ -1,18 +1,18 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.cancelRetry
+import io.github.whywood.deepdeep.conversation.finishWithError
+import io.github.whywood.deepdeep.conversation.markRetryScheduled
+import io.github.whywood.deepdeep.conversation.markRetryingTail
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
-import io.github.whywood.deepdeep.conversation.ConversationStore
-import io.github.whywood.deepdeep.conversation.ConversationStrings
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.conversation.ConversationState
-import io.github.whywood.deepdeep.conversation.cancelRetry
-import io.github.whywood.deepdeep.conversation.finishWithError
-import io.github.whywood.deepdeep.conversation.markRetryScheduled
-import io.github.whywood.deepdeep.conversation.markRetryingTail
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -20,6 +20,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+
+
 
 internal class AutoRetryController(
     private val scope: CoroutineScope,

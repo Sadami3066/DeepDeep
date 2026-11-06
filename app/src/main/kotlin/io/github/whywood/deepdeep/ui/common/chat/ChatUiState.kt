@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.data.AttachmentRef
@@ -10,6 +10,8 @@ import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+
+
 
 data class QuotedMessage(
     val messageId: Long,

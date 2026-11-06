@@ -28,13 +28,15 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
-import io.github.whywood.deepdeep.ui.chat.AttachmentSource
-import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
-import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
-import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.common.chat.CameraCaptureSheet
+import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
+import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
-import io.github.whywood.deepdeep.ui.common.shareChooser
+
+
 
 class AssistantOverlayActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }

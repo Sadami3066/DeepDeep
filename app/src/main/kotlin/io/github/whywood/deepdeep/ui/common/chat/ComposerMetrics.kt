@@ -1,6 +1,8 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.ui.unit.dp
+
+
 
 internal object ComposerMetrics {
     val ExpandedHorizontalPadding = 12.dp

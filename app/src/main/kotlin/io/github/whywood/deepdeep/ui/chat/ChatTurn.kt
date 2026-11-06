@@ -36,30 +36,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
-import java.io.File
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
-import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.MessageSummary
 import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.TurnNotice
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentCards
 import io.github.whywood.deepdeep.ui.plugins.PluginCustomMessageSlot
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
 import io.github.whywood.deepdeep.ui.workshop.parseRegisteredWorkshop
+import java.io.File
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+
+
+
 
 private val UserBubbleShape = RoundedCornerShape(
     topStart = 20.dp,

@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,6 +35,8 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.ui.common.scan.ScanStrategy
 import io.github.whywood.deepdeep.ui.common.scan.scanAppInfo
+
+
 
 @Composable
 internal fun ScanAppPickerOverlay(

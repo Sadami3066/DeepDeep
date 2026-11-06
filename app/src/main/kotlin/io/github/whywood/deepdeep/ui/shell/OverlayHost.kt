@@ -20,9 +20,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -35,15 +35,17 @@ import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.ui.DeepDeepDrawer
-import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.UsageSheet
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentPreviewDialog
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
 import java.io.File
+
+
 
 sealed interface ShellOverlay {
     data class WorkspaceCreate(val existingNames: List<String>) : ShellOverlay

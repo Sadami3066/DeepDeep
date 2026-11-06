@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
+
+import io.github.whywood.deepdeep.ui.common.chat.QuotedMessage
+
 import android.content.Intent
 import android.net.Uri
 import io.github.whywood.deepdeep.conversation.ConversationState

@@ -8,9 +8,9 @@ import android.util.LruCache
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +52,11 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
+import io.github.whywood.deepdeep.ui.common.chat.FileViewerDialog
+import io.github.whywood.deepdeep.ui.common.chat.SaveToDownloadsSheet
+import io.github.whywood.deepdeep.ui.common.chat.saveMediaToDownloads
+import io.github.whywood.deepdeep.ui.common.chat.shareMediaFile
+import io.github.whywood.deepdeep.ui.common.chat.shareMediaUrl
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -60,6 +65,13 @@ import java.net.URL
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+
+
+
+
+
+
 
 internal sealed interface MarkdownImageState {
     data object Loading : MarkdownImageState

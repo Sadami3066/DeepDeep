@@ -2,12 +2,14 @@ package io.github.whywood.deepdeep.ui.chat.state
 
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.WorkspaceAdmin
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 internal class WorkspaceController(
     private val runtime: WorkspaceAdmin,

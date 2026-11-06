@@ -1,6 +1,7 @@
-package io.github.whywood.deepdeep.ui.chat.state
+package io.github.whywood.deepdeep.ui.common.chat.state
 
 import android.net.Uri
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
@@ -8,16 +9,17 @@ import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.ImagePart
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.conversation.ConversationStrings
-import io.github.whywood.deepdeep.ui.chat.QuotedMessage
-import io.github.whywood.deepdeep.ui.chat.ScrollAnchor
 import io.github.whywood.deepdeep.ui.chat.markdownToPlainText
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.QuotedMessage
+import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
 import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 internal data class SessionDraft(
     val input: String = "",

@@ -1,20 +1,20 @@
 package io.github.whywood.deepdeep.ui.shell
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -35,12 +35,17 @@ import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
+import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.JobStatus
+import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.ui.chat.ChatScreen
 import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
+import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
@@ -48,30 +53,27 @@ import io.github.whywood.deepdeep.ui.navigation.AppRouteHost
 import io.github.whywood.deepdeep.ui.navigation.ChatRouteData
 import io.github.whywood.deepdeep.ui.navigation.ShellRouteUi
 import io.github.whywood.deepdeep.ui.navigation.deepLinkStack
+import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
 import io.github.whywood.deepdeep.ui.shell.ShellCommandAction
 import io.github.whywood.deepdeep.ui.shell.ShellCommandExecutor
+import io.github.whywood.deepdeep.ui.shell.ShellCommandPalette
+import io.github.whywood.deepdeep.ui.shell.ShellDrawerActions
+import io.github.whywood.deepdeep.ui.shell.ShellDrawerState
 import io.github.whywood.deepdeep.ui.shell.ShellIntakeActions
 import io.github.whywood.deepdeep.ui.shell.ShellIntakeChatState
 import io.github.whywood.deepdeep.ui.shell.ShellIntakeHost
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationBackHandler
+import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
 import io.github.whywood.deepdeep.ui.shell.ShellSubmitPlan
 import io.github.whywood.deepdeep.ui.shell.buildCommandItems
 import io.github.whywood.deepdeep.ui.shell.commandInsertion
 import io.github.whywood.deepdeep.ui.shell.planSubmission
-import io.github.whywood.deepdeep.ui.shell.ShellCommandPalette
-import io.github.whywood.deepdeep.ui.shell.ShellNavigationBackHandler
-import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
-import io.github.whywood.deepdeep.ui.shell.ShellDrawerActions
-import io.github.whywood.deepdeep.ui.shell.ShellDrawerState
 import io.github.whywood.deepdeep.ui.shell.rememberFrozenChatState
-import io.github.whywood.deepdeep.ui.common.shareChooser
-import io.github.whywood.deepdeep.ui.navigation.rememberAppNavigator
-import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
-import io.github.whywood.deepdeep.runtime.JobStatus
-import io.github.whywood.deepdeep.runtime.ModelConfig
-import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 @Composable
 internal fun AppShell(

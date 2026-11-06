@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+
 
 data class ScrollAnchor(val index: Int, val offset: Int, val atBottom: Boolean = false)
 

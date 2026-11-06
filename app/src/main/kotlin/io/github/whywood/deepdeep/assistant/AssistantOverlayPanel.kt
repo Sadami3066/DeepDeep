@@ -65,9 +65,11 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.chat.ChatTurn
-import io.github.whywood.deepdeep.ui.chat.rememberChatScrollController
+import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.questions.AskQuestionCard
 import kotlinx.coroutines.delay
+
+
 
 @Composable
 internal fun AssistantOverlayPanel(

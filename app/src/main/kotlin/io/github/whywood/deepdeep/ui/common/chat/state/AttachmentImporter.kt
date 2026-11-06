@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat.state
+package io.github.whywood.deepdeep.ui.common.chat.state
 
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentRef
@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 internal const val MAX_ATTACHMENTS = 20
 

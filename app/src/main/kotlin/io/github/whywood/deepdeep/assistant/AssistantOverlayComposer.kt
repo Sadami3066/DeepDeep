@@ -63,15 +63,17 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.chat.ChatInputField
-import io.github.whywood.deepdeep.ui.chat.ComposerChip
-import io.github.whywood.deepdeep.ui.chat.ComposerMetrics
-import io.github.whywood.deepdeep.ui.chat.ModelPickerSheet
-import io.github.whywood.deepdeep.ui.chat.QueueStrip
-import io.github.whywood.deepdeep.ui.chat.state.mergeDroppedInputText
 import io.github.whywood.deepdeep.ui.common.ComposerVoice
 import io.github.whywood.deepdeep.ui.common.VoiceRecordingBar
 import io.github.whywood.deepdeep.ui.common.VoiceTranscriptPreview
+import io.github.whywood.deepdeep.ui.common.chat.ChatInputField
+import io.github.whywood.deepdeep.ui.common.chat.ComposerChip
+import io.github.whywood.deepdeep.ui.common.chat.ComposerMetrics
+import io.github.whywood.deepdeep.ui.common.chat.ModelPickerSheet
+import io.github.whywood.deepdeep.ui.common.chat.QueueStrip
+import io.github.whywood.deepdeep.ui.common.chat.state.mergeDroppedInputText
+
+
 
 private enum class OverlayComposerSurface { Collapsed, Expanded, Recording }
 

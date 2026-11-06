@@ -67,13 +67,15 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.ui.chat.AttachmentPreviewDialog
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentPreviewDialog
 import io.github.whywood.deepdeep.ui.common.rememberComposerVoice
 import io.github.whywood.deepdeep.voice.SpeechError
 import io.github.whywood.deepdeep.voice.TextSpeaker
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+
+
 
 internal data class AssistantOverlayConfig(
     val autoSpeak: Boolean = false,

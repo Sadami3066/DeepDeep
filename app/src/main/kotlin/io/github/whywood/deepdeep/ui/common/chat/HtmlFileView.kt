@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -36,6 +36,8 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.io.File
+
+
 
 internal class HtmlWebViewHolder {
     private var container: View? = null

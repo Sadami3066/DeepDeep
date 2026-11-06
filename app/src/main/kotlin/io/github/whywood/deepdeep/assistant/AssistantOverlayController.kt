@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.assistant
 
 import android.net.Uri
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
@@ -21,13 +24,10 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.conversation.ConversationStore
-import io.github.whywood.deepdeep.conversation.ConversationStrings
-import io.github.whywood.deepdeep.conversation.ConversationState
-import io.github.whywood.deepdeep.ui.chat.state.AttachmentImportFailure
-import io.github.whywood.deepdeep.ui.chat.state.AttachmentImporter
-import io.github.whywood.deepdeep.ui.chat.state.MAX_ATTACHMENTS
-import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
+import io.github.whywood.deepdeep.ui.common.chat.state.AttachmentImportFailure
+import io.github.whywood.deepdeep.ui.common.chat.state.AttachmentImporter
+import io.github.whywood.deepdeep.ui.common.chat.state.MAX_ATTACHMENTS
+import io.github.whywood.deepdeep.ui.common.chat.state.SessionDraftStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -43,6 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+
 
 enum class AssistantOverlayError {
     StartFailed,

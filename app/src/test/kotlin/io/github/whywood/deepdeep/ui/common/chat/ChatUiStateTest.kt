@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.runtime.AssistantMessage

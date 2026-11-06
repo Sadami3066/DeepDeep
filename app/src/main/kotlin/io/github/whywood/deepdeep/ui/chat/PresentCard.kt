@@ -48,6 +48,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.ui.common.chat.HtmlFileView
 import io.github.whywood.deepdeep.ui.workshop.WorkshopCardApp
 import io.github.whywood.deepdeep.ui.workshop.WorkshopChatCard
 import java.io.File
@@ -62,6 +63,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+
+
+
 
 enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, CREATIVE }
 

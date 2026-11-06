@@ -1,19 +1,21 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
+import io.github.whywood.deepdeep.ui.common.chat.state.SessionDraft
+
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationSummary
+import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.QueuedInput
-import io.github.whywood.deepdeep.runtime.InputQueueKind
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.conversation.ConversationStore
-import io.github.whywood.deepdeep.conversation.ConversationStrings
-import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,6 +28,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+
 
 class SessionOpenerTest {
     private var state = ChatUiState(ready = true)

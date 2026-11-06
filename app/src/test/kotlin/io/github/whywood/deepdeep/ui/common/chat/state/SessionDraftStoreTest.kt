@@ -1,13 +1,13 @@
-package io.github.whywood.deepdeep.ui.chat.state
+package io.github.whywood.deepdeep.ui.common.chat.state
 
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.conversation.ConversationStrings
-import io.github.whywood.deepdeep.ui.chat.QuotedMessage
-import io.github.whywood.deepdeep.ui.chat.ScrollAnchor
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.QuotedMessage
+import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
 import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -15,6 +15,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+
+
 
 class SessionDraftStoreTest {
     private var state = ChatUiState(conversationId = "session-1", conversationCwd = "/home")

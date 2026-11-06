@@ -6,10 +6,12 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.WorkspaceAdmin
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.chat.SessionSearchHit
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+
+
 
 internal class SessionListController(
     private val runtime: ConversationQueries,

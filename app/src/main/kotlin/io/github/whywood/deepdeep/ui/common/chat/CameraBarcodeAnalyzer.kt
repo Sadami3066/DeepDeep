@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.os.SystemClock
 import androidx.camera.core.ExperimentalGetImage
@@ -10,6 +10,8 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.atomic.AtomicBoolean
+
+
 
 internal data class DetectedCode(val raw: String, val area: Long)
 

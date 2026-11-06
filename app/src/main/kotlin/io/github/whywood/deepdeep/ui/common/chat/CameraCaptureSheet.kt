@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.Manifest
 import android.content.Context
@@ -87,8 +87,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+
+
 
 private const val CAMERA_CACHE_TTL_MS = 60 * 60 * 1000L
 private const val SCAN_CARD_HIDE_MS = 1200L

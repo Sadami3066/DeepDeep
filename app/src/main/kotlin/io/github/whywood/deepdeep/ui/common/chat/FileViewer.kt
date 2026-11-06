@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -69,9 +69,21 @@ import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.ui.chat.AnimatedImage
+import io.github.whywood.deepdeep.ui.chat.ChatMarkdown
+import io.github.whywood.deepdeep.ui.chat.animatedImageFile
+import io.github.whywood.deepdeep.ui.chat.copyToClipboard
+import io.github.whywood.deepdeep.ui.chat.highlightedCode
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+
+
+
+
+
+
 
 private const val IMAGE_PREVIEW_LIMIT = 2048
 

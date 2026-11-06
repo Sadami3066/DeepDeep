@@ -20,17 +20,19 @@ import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
-import io.github.whywood.deepdeep.ui.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.chat.ChatViewModel
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentSource
+import io.github.whywood.deepdeep.ui.common.chat.AttachmentSourceSheet
+import io.github.whywood.deepdeep.ui.common.chat.CameraCaptureSheet
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
-import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
-import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
-import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatViewModel
-import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
+
+
 
 internal class AppOverlaysState {
     var attachmentSheetOpen by mutableStateOf(false)

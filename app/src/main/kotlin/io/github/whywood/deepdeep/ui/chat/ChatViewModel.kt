@@ -27,11 +27,13 @@ import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.chat.state.AutoRetryController
 import io.github.whywood.deepdeep.ui.chat.state.ModelController
-import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
 import io.github.whywood.deepdeep.ui.chat.state.SessionListController
 import io.github.whywood.deepdeep.ui.chat.state.SessionOpener
 import io.github.whywood.deepdeep.ui.chat.state.WorkspaceController
 import io.github.whywood.deepdeep.ui.chat.state.chatError
+import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
+import io.github.whywood.deepdeep.ui.common.chat.state.SessionDraftStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -47,6 +49,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+
 
 class ChatViewModel(
     private val runtime: AgentRuntime,

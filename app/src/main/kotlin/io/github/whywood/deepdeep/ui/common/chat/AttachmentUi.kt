@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -51,6 +51,8 @@ import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+
 
 private const val ThumbnailBitmapLimit = 720
 

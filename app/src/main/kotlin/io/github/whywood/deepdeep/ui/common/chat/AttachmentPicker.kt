@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.ui.common.chat
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,7 +31,9 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.ui.chat.state.MAX_ATTACHMENTS
+import io.github.whywood.deepdeep.ui.common.chat.state.MAX_ATTACHMENTS
+
+
 
 internal enum class AttachmentSource { IMAGE, FILE, CAMERA }
 
