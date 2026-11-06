@@ -36,6 +36,7 @@
 - 生命周期：每插件独立 `SupervisorJob` scope；disable/uninstall/close 统一 cancel scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册或清贡献 → 同步技能（会话钩子在当前 run 内按冻结集合继续派发，run 结束后的刷新快照生效）；单插件 `Throwable` 隔离（`CancellationException` 重抛）。内置插件卸载保留 descriptor 与实例可重装；禁用但未装载的插件为 `DISABLED` 而非 `FAILED`。
 - 会话：`bindSessionHooks` 接 `SessionBinding`，每会话一个 `PluginRuntimeHooksAdapter`；同一 `SessionBinding` 实例只调用一次 `contributionsFor` 并缓存（身份相等、弱引用、按 binding 分锁），工具与会话 hooks 共用这次物化，不同会话的物化互不阻塞；会话贡献返回非空 hooks 时按 pluginId 覆盖该插件的全局 hooks，默认空实现（`PluginHooks.None`）沿用全局 hooks；run 开始冻结会话钩子集合、`RunFinished`/`RunFailed` 派发完成后解冻并刷成最新快照（冻结期间启停插件不影响本轮，解冻后按最新快照生效）。`close()` 幂等：关闭中的会话不再接收新事件，排空后移除 adapter 与贡献缓存。
 - 外部安装/更新只做「校验 + 暂存」，`PENDING_RESTART` 由 `record.pendingVersion` 表达，下次启动由 `PluginActivationProtocol` 走 prepare/probe/commit/swap；失败按矩阵回滚（旧版本保持可用）。
+- `start()` 重复调用不会重复注册/启用插件，但仍会激活待生效的 pending 版本：更新只经启动安全点生效，进程内重试与真实重启走同一条路径。
 - 设置：`setSetting` 支持 `SettingSpec.Group` 内叶子 key；值经 `normalize` 归一化后落 `settings.json`。
 - setup 与插件动作由 `PluginSetupFlow` 在独立 Job 上执行，`PluginHostManager` 只做接口委托。
 - 崩溃恢复：启动时对启用中的外部插件读 activation marker；中断→跳过自动激活并记 `lastError`（`attempts>=2` 自动禁用）；未中断且非 pending → `noteStartup`，同版本连续 2 次启动崩溃自动 `enabled=false`；激活/启用成功后清计数。facade 提供 `retryActivation(pluginId)` 与 `rollbackPlugin(pluginId)`（回滚 previous 版本）；用户手动启用（`PluginManagerCommands.enablePlugin`）先清 startup 计数/marker 再装载，保证自动禁用后可手动恢复。

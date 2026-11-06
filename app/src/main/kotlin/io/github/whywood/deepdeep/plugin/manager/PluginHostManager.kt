@@ -137,7 +137,12 @@ class PluginHostManager internal constructor(
     override val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
 
     override suspend fun start() = mutex.withLock {
-        if (started) return
+        if (started) {
+            externalFlow.activatePendingVersions()
+            refreshLocked()
+            gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
+            return
+        }
         _state.update { it.copy(loading = true) }
         try {
             val states = builtinStateStore.load()
