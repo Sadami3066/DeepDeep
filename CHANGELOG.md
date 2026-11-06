@@ -2,6 +2,13 @@
 
 ## HEAD (since m2)
 
+- refactor: 会话状态收敛到 `ConversationStore`：唯一订阅 runtime 事件，聊天/浮层/通知/悬浮窗共用同一投影，删除会话缓存、增量合批、浮层投影与运行态追踪器 [聊天] [架构]
+- refactor: 进程启动收敛到 `ProcessRuntime`：Application/Activity/浮层/服务统一入口；插件启动幂等，重复启动仍激活待生效版本；删除无调用点的插件 `shutdown` [插件] [架构]
+- fix: 未加载插件不再显示空错误，也不再误派生为 DEGRADED [插件]
+- refactor: 装配入口瘦身：`AppGraph` 拆 Data/Platform/Runtime/Service 子图，`DeepDeepApp` 拆 `AppShell`/`AppOverlays`/`AppOnboardingGate`，`AppRouteContent` 收敛为 `AppRouteHost` + `routes/` [架构] [界面]
+- refactor: 共享聊天 UI 归入 `ui.common.chat`：`assistant`/`floating` 不再 import `ui.chat`，`ui` 不再 import `assistant`；包边界规则收紧，允许清单 14 → 4 [架构] [界面]
+- refactor: 静默失败路径接入统一诊断日志（`files/diagnostics/errors.log`）[架构]
+- docs: 各级 `AGENTS.md` 同步，`DECISIONS` 增补 #89–#92 [docs]
 - refactor: 插件装配子图依赖倒置：`PluginGraph` 通过 `PluginGraphDeps` 显式注入依赖，`graph/` 包不再 import `AppGraph`，`AppGraph` 依赖属性恢复 `private`；懒加载依赖以 provider 传入保持原初始化时机 [插件] [架构]
 - fix: 插件会话 hooks 收口：`contributionsFor` 物化按 `SessionBinding` 分锁（不同会话互不阻塞），`close()` 幂等且关闭中的会话忽略新事件，新增关闭幂等测试 [插件]
 - docs: 明确 run 级冻结的前提（单会话单活跃 run）与被停用插件仍可能收到本轮事件的作者注意事项 [docs] [插件]
