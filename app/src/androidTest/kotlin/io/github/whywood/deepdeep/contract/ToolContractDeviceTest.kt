@@ -16,6 +16,7 @@ import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
+import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.screen.AccessibilityScreenBackend
 import io.github.whywood.deepdeep.screen.AndroidScreenAppCatalog
@@ -56,7 +57,7 @@ class ToolContractDeviceTest {
     }
     private fun linux() = LinuxEnvironment(context, graph.homeDir, extraBinds = graph.linuxBinds())
     private fun tools(environment: LinuxEnvironment): Map<String, CodingTool> = PiSessionEngine(
-        graph.homeDir, graph.agentDir, graph.credentials, transport, AppShellExecutor(environment), graph.providerCatalog,
+        graph.homeDir, graph.agentDir, graph.credentials, transport, AppShellExecutor(environment), graph.providerCatalog as ProviderCatalog,
     ).availableTools().associateBy { it.name }
     private fun dev.pi.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
     private suspend fun run(tool: CodingTool, args: JsonObject = buildJsonObject {}) = tool.execute("device", args, null, null)
