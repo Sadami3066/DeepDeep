@@ -9,7 +9,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | `DeepDeepApplication.kt` | Application 启动：hidden API 豁免、创建 AppGraph、启动 ProcessRuntime、后台预热字体 |
 | `AppGraph.kt` | 全局依赖装配：偏好/凭据/runtime host/插件/权限/工具/Linux 环境，实现 AppDependencies；插件装配拆到 `graph/` |
 | `MainActivity.kt` | 唯一 Activity：edge-to-edge、语言包装、深链接与分享入口、通知权限、拉起前台服务与 ProcessRuntime 前台动作 |
-| `DeepDeepApp.kt` | Compose 根：引导门控 → 主壳（抽屉/导航/聊天）、全局浮层与对话框 |
+| `DeepDeepApp.kt` | Compose 根：创建 ChatViewModel、引导门控 → `ui/shell/AppShell`；只做会话/引导与参数转发 |
 | `core/AppDependencies.kt` | 按用途切片的依赖接口（Runtime/Storage/Feature/Service/Advanced），Screen 只取所需，便于测试替身 |
 | `core/ModelSelection.kt` | 默认模型校正：当前默认厂商没有凭据时自动切到首个已配置厂商 |
 | `deeplink/DeepLink.kt` | `deepdeep://` 深链接解析（会话、设置、插件、工坊、定时等） |

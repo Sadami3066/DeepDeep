@@ -19,7 +19,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | `questions/` | ask_user_question 提问卡/已答题卡与工具轨迹解析 |
 | `sessions/` | 会话搜索、归档、操作菜单与重命名/删除对话框 |
 | [settings/](settings/AGENTS.md) | 设置各页：个性化、权限、Provider、运行环境等 |
-| `shell/` | 外壳层：抽屉/浮层宿主、`/` 命令解析、分享与深链进入意图 |
+| `shell/` | 外壳层：`AppShell`（导航/聊天 base/全局浮层）、`AppOnboardingGate` 引导门控、抽屉/浮层宿主、`/` 命令解析、分享与深链进入意图 |
 | `skills/` | 已安装技能管理：搜索、启停、zip 安装与删除 |
 | `timers/` | 定时任务页：列表、编辑器、日期/时间选择与 cron 草稿 |
 | [workshop/](workshop/AGENTS.md) | 创意工坊：列表/查看器、WebView 与 bridge |
