@@ -14,7 +14,7 @@ class BuiltinPluginManifestsTest {
             internalGoalManifest(),
             internalJobsManifest(),
             internalTimerManifest(),
-            internalWorkshopManifest(),
+            internalMiniappManifest(),
             androidGuiManifest(),
             androidArrangeManifest(),
         )

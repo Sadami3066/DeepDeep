@@ -108,9 +108,9 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             jobs = deps.jobRegistry(),
             timers = deps.timerService(),
             goals = deps.goalService(),
-            workshopStore = deps.workshopStore,
-            workshopAgent = deps.workshopAgentService(),
-            workshopMaxTurns = { deps.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            miniappStore = deps.miniappStore,
+            miniappAgent = deps.miniappAgentService(),
+            miniappMaxTurns = { deps.pluginSettingsStore.cachedInt("miniapp", "max_turns", 16) },
             mcpConfig = deps.mcpConfigStore,
             mcpProbe = deps.mcpServerProbe,
             mcpTools = { server ->

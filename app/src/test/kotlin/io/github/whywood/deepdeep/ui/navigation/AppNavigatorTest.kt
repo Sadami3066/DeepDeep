@@ -54,8 +54,8 @@ class AppNavigatorTest {
             AppDestination.RuntimeSettings,
             AppDestination.Skills,
             AppDestination.Timers,
-            AppDestination.Workshop,
-            AppDestination.WorkshopDetail("study-board"),
+            AppDestination.Miniapp,
+            AppDestination.MiniappDetail("study-board"),
             AppDestination.WorkspaceSettings("workspace-1"),
             AppDestination.Files("/data/user/0/io.github.whywood.deepdeep/files/home"),
             AppDestination.AssistantSettings,
@@ -64,9 +64,9 @@ class AppNavigatorTest {
             assertEquals(destination, AppDestination.fromRouteKey(destination.routeKey))
         }
         assertEquals(null, AppDestination.fromRouteKey("workspaces//settings"))
-        assertEquals(null, AppDestination.fromRouteKey("workshop/"))
-        assertEquals(null, AppDestination.fromRouteKey("workshop/UPPER"))
-        assertEquals(null, AppDestination.fromRouteKey("workshop/a/b"))
+        assertEquals(null, AppDestination.fromRouteKey("miniapp/"))
+        assertEquals(null, AppDestination.fromRouteKey("miniapp/UPPER"))
+        assertEquals(null, AppDestination.fromRouteKey("miniapp/a/b"))
         assertEquals(null, AppDestination.fromRouteKey("files/"))
         assertEquals(null, AppDestination.fromRouteKey("files/!!!"))
     }

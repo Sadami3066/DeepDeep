@@ -13,7 +13,7 @@ import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.screen.MainScreenShell
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -35,7 +35,7 @@ internal class BuiltinPluginWiring(
     val goalService: GoalService,
     val jobRegistry: JobRegistry,
     val timerService: TimerService,
-    val workshopStore: WorkshopStore,
+    val miniappStore: MiniappStore,
     val privilege: PrivilegeController,
     val adbBridge: AdbBootstrap,
     val mainShell: MainScreenShell,
@@ -56,5 +56,5 @@ internal fun builtinPlugins(wiring: BuiltinPluginWiring): List<BuiltinPluginEntr
     internalGoal(wiring),
     internalJobs(wiring),
     internalTimer(wiring),
-    internalWorkshop(wiring),
+    internalMiniapp(wiring),
 )

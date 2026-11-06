@@ -23,7 +23,7 @@ class DeepLinkTest {
             "deepdeep://mcp" to AppDestination.Mcp,
             "deepdeep://skills" to AppDestination.Skills,
             "deepdeep://timers" to AppDestination.Timers,
-            "deepdeep://workshop" to AppDestination.Workshop,
+            "deepdeep://miniapp" to AppDestination.Miniapp,
         )
         pages.forEach { (raw, destination) ->
             assertEquals(raw, DeepLink.Page(destination), DeepLink.parse(raw))
@@ -41,15 +41,15 @@ class DeepLinkTest {
             DeepLink.parse("deepdeep://plugins/dev.pi.foo"),
         )
         assertEquals(
-            DeepLink.Page(AppDestination.WorkshopDetail("abc_def-123")),
-            DeepLink.parse("deepdeep://workshop/abc_def-123"),
+            DeepLink.Page(AppDestination.MiniappDetail("abc_def-123")),
+            DeepLink.parse("deepdeep://miniapp/abc_def-123"),
         )
     }
 
     @Test
-    fun parsesWorkshopIdAtLengthLimit() {
+    fun parsesMiniappIdAtLengthLimit() {
         val id = "a".repeat(48)
-        assertEquals(DeepLink.Page(AppDestination.WorkshopDetail(id)), DeepLink.parse("deepdeep://workshop/$id"))
+        assertEquals(DeepLink.Page(AppDestination.MiniappDetail(id)), DeepLink.parse("deepdeep://miniapp/$id"))
     }
 
     @Test
@@ -138,13 +138,13 @@ class DeepLinkTest {
     }
 
     @Test
-    fun rejectsInvalidWorkshopIds() {
+    fun rejectsInvalidMiniappIds() {
         listOf(
-            "deepdeep://workshop/ABC",
-            "deepdeep://workshop/-abc",
-            "deepdeep://workshop/a.b",
-            "deepdeep://workshop/a%20b",
-            "deepdeep://workshop/" + "a".repeat(49),
+            "deepdeep://miniapp/ABC",
+            "deepdeep://miniapp/-abc",
+            "deepdeep://miniapp/a.b",
+            "deepdeep://miniapp/a%20b",
+            "deepdeep://miniapp/" + "a".repeat(49),
         ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }
     }
 
@@ -155,7 +155,7 @@ class DeepLinkTest {
             "deepdeep://mcp/extra",
             "deepdeep://skills/a/b",
             "deepdeep://timers/a",
-            "deepdeep://workshop/a/b",
+            "deepdeep://miniapp/a/b",
         ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }
     }
 }

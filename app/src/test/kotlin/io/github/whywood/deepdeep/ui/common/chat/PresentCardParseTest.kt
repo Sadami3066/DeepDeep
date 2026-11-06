@@ -36,7 +36,7 @@ class PresentCardParseTest {
         assertEquals("index.html", items[2].name)
         assertEquals(
             PresentedItem(
-                type = PresentedItemType.CREATIVE,
+                type = PresentedItemType.MINIAPP,
                 name = "周报看板",
                 title = "本周",
                 id = "weekly-board",
@@ -93,8 +93,8 @@ class PresentCardParseTest {
                           {"type":"image","path":"a.png"},
                           {"type":"video","path":"b.mp4"},
                           {"type":"file"},
-                          {"type":"creative"},
-                          {"type":"creative","id":"flow","name":"Flow"},
+                          {"type":"miniapp"},
+                          {"type":"miniapp","id":"flow","name":"Flow"},
                           {"path":"no-type.md"}
                         ]}
                     """.trimIndent(),
@@ -106,7 +106,7 @@ class PresentCardParseTest {
         assertEquals("a.png", items[0].name)
         assertEquals(PresentedItemType.VIDEO, items[1].type)
         assertEquals("b.mp4", items[1].name)
-        assertEquals(PresentedItemType.CREATIVE, items[2].type)
+        assertEquals(PresentedItemType.MINIAPP, items[2].type)
         assertEquals("flow", items[2].id)
     }
 
@@ -133,7 +133,7 @@ class PresentCardParseTest {
     @Test
     fun ignoresOtherToolsAndMissingOutput() {
         assertNull(parsePresentedItems(trace(name = "bash")))
-        assertNull(parsePresentedItems(trace(name = "workshop_load")))
+        assertNull(parsePresentedItems(trace(name = "miniapp_load")))
         assertNull(
             parsePresentedItems(
                 ToolTrace(id = 1L, name = "present", arguments = emptyMap(), output = null),
@@ -193,7 +193,7 @@ class PresentCardParseTest {
               {"type":"image","path":"/tmp/chart.png","name":"chart.png","mime":"image/png"},
               {"type":"file","path":"reports/q3.md","name":"q3.md","mime":"text/markdown","title":"Q3 报告"},
               {"type":"html","path":"site/index.html","name":"index.html","mime":"text/html"},
-              {"type":"creative","id":"weekly-board","name":"周报看板","icon":"📊","version":"1.2.0","title":"本周"}
+              {"type":"miniapp","id":"weekly-board","name":"周报看板","icon":"📊","version":"1.2.0","title":"本周"}
             ]}
         """.trimIndent(),
         name: String = "present",

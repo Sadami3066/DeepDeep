@@ -79,7 +79,7 @@ interface PluginHost {
 
     fun goals(): GoalService
 
-    fun workshop(): WorkshopService
+    fun miniapp(): MiniappService
 
     fun mcp(): McpService
 

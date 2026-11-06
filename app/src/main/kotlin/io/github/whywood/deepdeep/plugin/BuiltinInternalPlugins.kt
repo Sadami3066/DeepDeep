@@ -7,7 +7,7 @@ import io.github.whywood.deepdeep.plugin.host.builtinPluginManifest
 import io.github.whywood.deepdeep.plugin.internal.GoalPlugin
 import io.github.whywood.deepdeep.plugin.internal.JobsPlugin
 import io.github.whywood.deepdeep.plugin.internal.TimerPlugin
-import io.github.whywood.deepdeep.plugin.internal.WorkshopPlugin
+import io.github.whywood.deepdeep.plugin.internal.MiniappPlugin
 import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginEntry
 import io.github.whywood.deepdeep.plugin.websearch.WebSearchPlugin
 
@@ -85,22 +85,22 @@ internal fun internalTimerManifest(): PluginManifest = builtinPluginManifest(
     tools = listOf("timer_create", "timer_list", "timer_update", "timer_delete"),
 )
 
-internal fun internalWorkshop(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
-    manifest = internalWorkshopManifest(),
-    plugin = WorkshopPlugin(
-        wiring.workshopStore,
+internal fun internalMiniapp(wiring: BuiltinPluginWiring): BuiltinPluginEntry = BuiltinPluginEntry(
+    manifest = internalMiniappManifest(),
+    plugin = MiniappPlugin(
+        wiring.miniappStore,
         wiring.assets,
         wiring.pluginStrings,
     ),
 )
 
-internal fun internalWorkshopManifest(): PluginManifest = builtinPluginManifest(
-    id = "workshop",
+internal fun internalMiniappManifest(): PluginManifest = builtinPluginManifest(
+    id = "miniapp",
     version = "1.0",
-    nameRes = R.string.plugins_internal_workshop_name,
-    summaryRes = R.string.plugins_internal_workshop_summary,
+    nameRes = R.string.plugins_internal_miniapp_name,
+    summaryRes = R.string.plugins_internal_miniapp_summary,
     iconRes = DdIcons.Apps.res,
-    tools = listOf("workshop_create", "workshop_load", "workshop_list", "workshop_delete", "workshop_edit"),
-    skills = listOf("workshop"),
+    tools = listOf("miniapp_create", "miniapp_load", "miniapp_list", "miniapp_delete", "miniapp_edit"),
+    skills = listOf("miniapp"),
     settings = listOf("skill_enabled", "max_turns"),
 )

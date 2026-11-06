@@ -172,7 +172,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                         onRemoveAttachment = controller::removeAttachment,
                         onOpenFile = openFile,
                         onShareFile = shareFile,
-                        onOpenWorkshop = { state.sessionId?.let(::openInApp) },
+                        onOpenMiniapp = { state.sessionId?.let(::openInApp) },
                         onOpenSession = controller::openSession,
                         onNewSessionInWorkspace = { workspaceId -> controller.newSession(workspaceId) },
                         onRefreshLists = controller::refreshLists,

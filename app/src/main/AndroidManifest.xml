@@ -149,7 +149,7 @@
                 <data android:host="mcp" />
                 <data android:host="skills" />
                 <data android:host="timers" />
-                <data android:host="workshop" />
+                <data android:host="miniapp" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

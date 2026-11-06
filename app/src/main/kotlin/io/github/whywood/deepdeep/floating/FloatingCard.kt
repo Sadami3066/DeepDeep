@@ -434,7 +434,7 @@ private fun PresentedItemType.icon(): DdIcon = when (this) {
     PresentedItemType.IMAGE -> DdIcons.Image
     PresentedItemType.VIDEO -> DdIcons.Play
     PresentedItemType.HTML -> DdIcons.Globe
-    PresentedItemType.FILE, PresentedItemType.CREATIVE -> DdIcons.File
+    PresentedItemType.FILE, PresentedItemType.MINIAPP -> DdIcons.File
 }
 
 internal fun FloatingEventCard.sessionId(): String = when (this) {

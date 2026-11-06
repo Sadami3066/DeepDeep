@@ -37,7 +37,7 @@ import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.SessionMetaStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.TimerStore
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,7 +93,7 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     )
     val agentDocStore = AgentDocStore()
     val timerStore = TimerStore(TimerStore.prepareDataDirectory(deps.appContext.filesDir))
-    val workshopStore = WorkshopStore(File(deps.appContext.filesDir, "workshop"))
+    val miniappStore = MiniappStore(File(deps.appContext.filesDir, "miniapp"))
     val skillCatalog = SkillCatalog(agentDir)
     val pluginSettingsStore = PluginSettingsStore(File(deps.appContext.filesDir, "plugins/settings.json"))
     val pluginStrings = AndroidPluginStrings(deps.uiContext)

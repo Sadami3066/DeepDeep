@@ -26,8 +26,8 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -62,7 +62,7 @@ internal class FakeAppDependencies(
 
     override val shareStaging: ShareStaging get() = unavailable("shareStaging")
 
-    override val workshopStore: WorkshopStore get() = unavailable("workshopStore")
+    override val miniappStore: MiniappStore get() = unavailable("miniappStore")
 
     override val mcpConfigStore: McpConfigStore get() = unavailable("mcpConfigStore")
 
@@ -94,7 +94,7 @@ internal class FakeAppDependencies(
 
     override val mcpOAuthService: McpOAuthService get() = unavailable("mcpOAuthService")
 
-    override val workshopAgentService: WorkshopAgentService get() = unavailable("workshopAgentService")
+    override val miniappAgentService: MiniappAgentService get() = unavailable("miniappAgentService")
 
     override val processRuntime: ProcessRuntime get() = unavailable("processRuntime")
 

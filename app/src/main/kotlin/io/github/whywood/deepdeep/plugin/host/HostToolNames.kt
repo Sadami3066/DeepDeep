@@ -20,11 +20,11 @@ internal object HostToolNames {
         "timer_list",
         "timer_update",
         "timer_delete",
-        "workshop_create",
-        "workshop_load",
-        "workshop_list",
-        "workshop_delete",
-        "workshop_edit",
+        "miniapp_create",
+        "miniapp_load",
+        "miniapp_list",
+        "miniapp_delete",
+        "miniapp_edit",
     )
 
     private val sdkTools = setOf(

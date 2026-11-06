@@ -1,5 +1,5 @@
 <resources>
-    <string name="drawer_nav_workshop">创意工坊</string>
+    <string name="drawer_nav_miniapp">小程序</string>
     <string name="drawer_nav_skills">技能</string>
     <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_plugins">插件</string>

@@ -612,6 +612,128 @@ public final class io.github.whywood.deepdeep.plugin.api.McpTool {
   public int hashCode();
   public boolean equals(java.lang.Object);
 }
+public final class io.github.whywood.deepdeep.plugin.api.MiniappApp {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappApp(java.lang.String, java.lang.String, java.lang.String, long);
+  public io.github.whywood.deepdeep.plugin.api.MiniappApp(java.lang.String, java.lang.String, java.lang.String, long, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getId();
+  public final java.lang.String getName();
+  public final java.lang.String getDescription();
+  public final long getUpdatedAt();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final long component4();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappApp copy(java.lang.String, java.lang.String, java.lang.String, long);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappApp copy$default(io.github.whywood.deepdeep.plugin.api.MiniappApp, java.lang.String, java.lang.String, java.lang.String, long, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest(java.lang.String, java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest(java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getName();
+  public final java.lang.String getDescription();
+  public final java.lang.String getPrompt();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest copy(java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest copy$default(io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public interface io.github.whywood.deepdeep.plugin.api.MiniappEntry {
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappEntry$Invalid implements io.github.whywood.deepdeep.plugin.api.MiniappEntry {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappEntry$Invalid(java.lang.String, java.lang.String);
+  public final java.lang.String getId();
+  public final java.lang.String getReason();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappEntry$Invalid copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappEntry$Invalid copy$default(io.github.whywood.deepdeep.plugin.api.MiniappEntry$Invalid, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappEntry$Missing implements io.github.whywood.deepdeep.plugin.api.MiniappEntry {
+  public static final io.github.whywood.deepdeep.plugin.api.MiniappEntry$Missing INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid implements io.github.whywood.deepdeep.plugin.api.MiniappEntry {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid(io.github.whywood.deepdeep.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject);
+  public io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid(io.github.whywood.deepdeep.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final io.github.whywood.deepdeep.plugin.api.MiniappApp getApp();
+  public final kotlinx.serialization.json.JsonObject getManifest();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappApp component1();
+  public final kotlinx.serialization.json.JsonObject component2();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid copy(io.github.whywood.deepdeep.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid copy$default(io.github.whywood.deepdeep.plugin.api.MiniappEntry$Valid, io.github.whywood.deepdeep.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappInvalid {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappInvalid(java.lang.String, java.lang.String);
+  public final java.lang.String getId();
+  public final java.lang.String getReason();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappInvalid copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappInvalid copy$default(io.github.whywood.deepdeep.plugin.api.MiniappInvalid, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappRun {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappRun(java.lang.String, boolean, java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.MiniappRun(java.lang.String, boolean, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getAppId();
+  public final boolean getAccepted();
+  public final java.lang.String getError();
+  public final java.lang.String component1();
+  public final boolean component2();
+  public final java.lang.String component3();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappRun copy(java.lang.String, boolean, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappRun copy$default(io.github.whywood.deepdeep.plugin.api.MiniappRun, java.lang.String, boolean, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.MiniappScan {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.MiniappScan(java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappApp>, java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappInvalid>);
+  public io.github.whywood.deepdeep.plugin.api.MiniappScan(java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappApp> getApps();
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappInvalid> getInvalid();
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappApp> component1();
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappInvalid> component2();
+  public final io.github.whywood.deepdeep.plugin.api.MiniappScan copy(java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappApp>, java.util.List<io.github.whywood.deepdeep.plugin.api.MiniappInvalid>);
+  public static io.github.whywood.deepdeep.plugin.api.MiniappScan copy$default(io.github.whywood.deepdeep.plugin.api.MiniappScan, java.util.List, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+  public io.github.whywood.deepdeep.plugin.api.MiniappScan();
+}
+public interface io.github.whywood.deepdeep.plugin.api.MiniappService {
+  public abstract java.lang.Object scan(kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.MiniappScan>);
+  public abstract java.lang.Object load(java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.MiniappEntry>);
+  public abstract java.lang.Object create(io.github.whywood.deepdeep.plugin.api.MiniappCreateRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.MiniappApp>);
+  public abstract java.lang.Object edit(java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.MiniappRun>);
+  public abstract java.lang.Object delete(java.lang.String, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
+  public abstract java.lang.Object run(java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.MiniappRun>);
+}
 public final class io.github.whywood.deepdeep.plugin.api.NetworkResponse {
   public static final int $stable;
   public io.github.whywood.deepdeep.plugin.api.NetworkResponse(int, java.lang.String, java.util.Map<java.lang.String, java.lang.String>, java.lang.String, java.lang.String);
@@ -1239,7 +1361,7 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHost {
   public abstract io.github.whywood.deepdeep.plugin.api.JobService jobs();
   public abstract io.github.whywood.deepdeep.plugin.api.TimerService timers();
   public abstract io.github.whywood.deepdeep.plugin.api.GoalService goals();
-  public abstract io.github.whywood.deepdeep.plugin.api.WorkshopService workshop();
+  public abstract io.github.whywood.deepdeep.plugin.api.MiniappService miniapp();
   public abstract io.github.whywood.deepdeep.plugin.api.McpService mcp();
   public abstract io.github.whywood.deepdeep.plugin.api.UiService ui();
   public abstract io.github.whywood.deepdeep.plugin.api.AppInfoService app();
@@ -2521,126 +2643,4 @@ public interface io.github.whywood.deepdeep.plugin.api.UiService {
   public abstract void share(io.github.whywood.deepdeep.plugin.api.ShareRequest);
   public abstract void toast(java.lang.String);
   public abstract void openPage(java.lang.String);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopApp {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopApp(java.lang.String, java.lang.String, java.lang.String, long);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopApp(java.lang.String, java.lang.String, java.lang.String, long, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.lang.String getId();
-  public final java.lang.String getName();
-  public final java.lang.String getDescription();
-  public final long getUpdatedAt();
-  public final java.lang.String component1();
-  public final java.lang.String component2();
-  public final java.lang.String component3();
-  public final long component4();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopApp copy(java.lang.String, java.lang.String, java.lang.String, long);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopApp copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopApp, java.lang.String, java.lang.String, java.lang.String, long, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest(java.lang.String, java.lang.String, java.lang.String);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest(java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.lang.String getName();
-  public final java.lang.String getDescription();
-  public final java.lang.String getPrompt();
-  public final java.lang.String component1();
-  public final java.lang.String component2();
-  public final java.lang.String component3();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest copy(java.lang.String, java.lang.String, java.lang.String);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public interface io.github.whywood.deepdeep.plugin.api.WorkshopEntry {
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Invalid implements io.github.whywood.deepdeep.plugin.api.WorkshopEntry {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Invalid(java.lang.String, java.lang.String);
-  public final java.lang.String getId();
-  public final java.lang.String getReason();
-  public final java.lang.String component1();
-  public final java.lang.String component2();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Invalid copy(java.lang.String, java.lang.String);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Invalid copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Invalid, java.lang.String, java.lang.String, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Missing implements io.github.whywood.deepdeep.plugin.api.WorkshopEntry {
-  public static final io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Missing INSTANCE;
-  public static final int $stable;
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid implements io.github.whywood.deepdeep.plugin.api.WorkshopEntry {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid(io.github.whywood.deepdeep.plugin.api.WorkshopApp, kotlinx.serialization.json.JsonObject);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid(io.github.whywood.deepdeep.plugin.api.WorkshopApp, kotlinx.serialization.json.JsonObject, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopApp getApp();
-  public final kotlinx.serialization.json.JsonObject getManifest();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopApp component1();
-  public final kotlinx.serialization.json.JsonObject component2();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid copy(io.github.whywood.deepdeep.plugin.api.WorkshopApp, kotlinx.serialization.json.JsonObject);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopEntry$Valid, io.github.whywood.deepdeep.plugin.api.WorkshopApp, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopInvalid {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopInvalid(java.lang.String, java.lang.String);
-  public final java.lang.String getId();
-  public final java.lang.String getReason();
-  public final java.lang.String component1();
-  public final java.lang.String component2();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopInvalid copy(java.lang.String, java.lang.String);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopInvalid copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopInvalid, java.lang.String, java.lang.String, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopRun {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopRun(java.lang.String, boolean, java.lang.String);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopRun(java.lang.String, boolean, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.lang.String getAppId();
-  public final boolean getAccepted();
-  public final java.lang.String getError();
-  public final java.lang.String component1();
-  public final boolean component2();
-  public final java.lang.String component3();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopRun copy(java.lang.String, boolean, java.lang.String);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopRun copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopRun, java.lang.String, boolean, java.lang.String, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.WorkshopScan {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.WorkshopScan(java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopApp>, java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopInvalid>);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopScan(java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopApp> getApps();
-  public final java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopInvalid> getInvalid();
-  public final java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopApp> component1();
-  public final java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopInvalid> component2();
-  public final io.github.whywood.deepdeep.plugin.api.WorkshopScan copy(java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopApp>, java.util.List<io.github.whywood.deepdeep.plugin.api.WorkshopInvalid>);
-  public static io.github.whywood.deepdeep.plugin.api.WorkshopScan copy$default(io.github.whywood.deepdeep.plugin.api.WorkshopScan, java.util.List, java.util.List, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-  public io.github.whywood.deepdeep.plugin.api.WorkshopScan();
-}
-public interface io.github.whywood.deepdeep.plugin.api.WorkshopService {
-  public abstract java.lang.Object scan(kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.WorkshopScan>);
-  public abstract java.lang.Object load(java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.WorkshopEntry>);
-  public abstract java.lang.Object create(io.github.whywood.deepdeep.plugin.api.WorkshopCreateRequest, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.WorkshopApp>);
-  public abstract java.lang.Object edit(java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.WorkshopRun>);
-  public abstract java.lang.Object delete(java.lang.String, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
-  public abstract java.lang.Object run(java.lang.String, java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.WorkshopRun>);
 }

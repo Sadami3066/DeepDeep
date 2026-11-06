@@ -22,7 +22,7 @@ import io.github.whywood.deepdeep.plugin.api.SecretService
 import io.github.whywood.deepdeep.plugin.api.SessionService
 import io.github.whywood.deepdeep.plugin.api.TimerService
 import io.github.whywood.deepdeep.plugin.api.UiService
-import io.github.whywood.deepdeep.plugin.api.WorkshopService
+import io.github.whywood.deepdeep.plugin.api.MiniappService
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 
@@ -38,7 +38,7 @@ internal data class PluginServices(
     val jobs: JobService? = null,
     val timers: TimerService? = null,
     val goals: GoalService? = null,
-    val workshop: WorkshopService? = null,
+    val miniapp: MiniappService? = null,
     val mcp: McpService? = null,
     val ui: UiService? = null,
     val app: AppInfoService? = null,
@@ -87,7 +87,7 @@ internal class PluginHostImpl(
 
     override fun goals(): GoalService = service("goals", services.goals)
 
-    override fun workshop(): WorkshopService = service("workshop", services.workshop)
+    override fun miniapp(): MiniappService = service("miniapp", services.miniapp)
 
     override fun mcp(): McpService = service("mcp", services.mcp)
 

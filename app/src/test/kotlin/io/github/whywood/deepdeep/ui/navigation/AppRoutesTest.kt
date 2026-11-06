@@ -25,13 +25,13 @@ class AppRoutesTest {
         AppDestination.Skills,
         AppDestination.Timers,
         AppDestination.Plugins,
-        AppDestination.Workshop,
-        AppDestination.WorkshopDetail("demo-workshop"),
+        AppDestination.Miniapp,
+        AppDestination.MiniappDetail("demo-miniapp"),
         AppDestination.PluginDetail("demo-plugin"),
         AppDestination.WorkspaceSettings("workspace-1"),
     )
     private val detailDestinations = allDestinations.filter {
-        it is AppDestination.PluginDetail || it is AppDestination.WorkshopDetail
+        it is AppDestination.PluginDetail || it is AppDestination.MiniappDetail
     }
     private val rootDestinations = allDestinations - detailDestinations.toSet()
 
@@ -52,9 +52,9 @@ class AppRoutesTest {
     }
 
     @Test
-    fun onlyPluginAndWorkshopDetailDeclareParentRouteKey() {
+    fun onlyPluginAndMiniappDetailDeclareParentRouteKey() {
         assertEquals("plugins", routeSpec(AppDestination.PluginDetail("demo-plugin")).parentRouteKey)
-        assertEquals("workshop", routeSpec(AppDestination.WorkshopDetail("demo-workshop")).parentRouteKey)
+        assertEquals("miniapp", routeSpec(AppDestination.MiniappDetail("demo-miniapp")).parentRouteKey)
     }
 
     @Test
@@ -71,10 +71,10 @@ class AppRoutesTest {
     }
 
     @Test
-    fun workshopDetailDeepLinkAddsWorkshopParent() {
+    fun miniappDetailDeepLinkAddsMiniappParent() {
         assertEquals(
-            listOf(AppDestination.Workshop, AppDestination.WorkshopDetail("demo-workshop")),
-            deepLinkStack(AppDestination.WorkshopDetail("demo-workshop")),
+            listOf(AppDestination.Miniapp, AppDestination.MiniappDetail("demo-miniapp")),
+            deepLinkStack(AppDestination.MiniappDetail("demo-miniapp")),
         )
     }
 

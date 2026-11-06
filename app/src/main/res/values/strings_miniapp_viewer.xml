@@ -1,0 +1,22 @@
+<resources>
+    <string name="miniapp_back">返回</string>
+    <string name="miniapp_reload">重新加载</string>
+    <string name="miniapp_more">更多</string>
+    <string name="miniapp_rename">重命名</string>
+    <string name="miniapp_rename_title">重命名</string>
+    <string name="miniapp_rename_hint">名称</string>
+    <string name="miniapp_rename_save">保存</string>
+    <string name="miniapp_delete">删除</string>
+    <string name="miniapp_delete_title">删除小程序</string>
+    <string name="miniapp_delete_message">删除「%1$s」会移除它的页面和全部数据，无法恢复。</string>
+    <string name="miniapp_delete_confirm">删除</string>
+    <string name="miniapp_cancel">取消</string>
+    <string name="miniapp_loading">加载中</string>
+    <string name="miniapp_page_failed">页面出错了</string>
+    <string name="miniapp_page_retry">重试</string>
+    <string name="miniapp_webview_unsupported">当前系统的 WebView 不支持小程序</string>
+    <string name="miniapp_link_failed">无法打开链接</string>
+    <string name="miniapp_action_failed">操作失败</string>
+    <string name="miniapp_renderer_crashed">页面渲染进程崩溃</string>
+    <string name="miniapp_http_error">HTTP %1$d</string>
+</resources>

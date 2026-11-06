@@ -432,4 +432,4 @@ fun deliveryItemLabel(item: PresentedItem): String =
     item.title?.takeIf { it.isNotBlank() } ?: item.name
 
 private fun PresentedItem.deliveryKey(): String =
-    id?.let { "creative:$it" } ?: "${type.name}:${path ?: name}"
+    id?.let { "miniapp:$it" } ?: "${type.name}:${path ?: name}"

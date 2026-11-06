@@ -19,7 +19,7 @@
 | `ui/PluginComponents.kt` | 宿主 Compose 组件：`PluginTheme`/`PluginSpacing`/`PluginCard`/`PluginSection`/`PluginText`/`PluginHint`/`PluginButton`/`PluginProgress`/`PluginEmpty`/`PluginError` |
 | `Ui.kt` | 槽位目录 `SlotIds`、`SlotBinding` / `SlotContent.Compose`、页面/输入区动作 |
 | `SlotStates.kt` | 各槽位族的状态 DTO 与 `SlotState` / `NoSlotState` |
-| `ServiceModels.kt` | 宿主服务 DTO：Linux/特权/屏幕/通知/网络/文件/会话/job/timer/goal/工坊/MCP/App/总线 |
+| `ServiceModels.kt` | 宿主服务 DTO：Linux/特权/屏幕/通知/网络/文件/会话/job/timer/goal/小程序/MCP/App/总线 |
 | `Services.kt` | 宿主服务接口与 `PluginServiceUnavailable` |
 
 测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较（semver 与 `compareCore`）、槽位 ID 规则、设置 normalize、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。公开 ABI 由 `scripts/plugin-api-abi.sh` + `plugin-api/abi/` 的 golden 清单固定，删改公开类型/签名必须显式更新清单并升版本。
@@ -45,5 +45,5 @@
 - 插件 UI 只有自由 Compose 一条轨道：`SlotContent.Compose(uiApiLevel, render: @Composable (SlotState) -> Unit)`；宿主不再有声明式节点渲染。`ui/PluginComponents.kt` 是基于宿主 `MaterialTheme` 的最小组件库，复杂界面插件直接用 Material3。
 - `PluginHooks` 21 个通知回调按 `OBSERVE_TIMEOUT_MS`（5s）派发，4 个变换/闸门按 `TRANSFORM_TIMEOUT_MS`（2s）；默认实现全部 no-op，`PluginHooks.None` 是一个空实现。闸门失败按 fail-closed 由宿主决定。
 - `SettingSpec.Group` 只是 UI 分组容器，不落值；`List<SettingSpec>.normalize` 按叶子 key 补默认值并丢弃非法存值。
-- `PluginHost` 暴露 18 个宿主服务访问器（linux/privilege/screen/notifications/secrets/network/files/sessions/jobs/timers/goals/workshop/mcp/ui/app/bus/logs/chat），另保留 `manifest/context/dataDir/assetsDir/scope/text` 旧签名；`text` 的 `vararg args: Any` 是 P0 兼容保留，格式化参数只接受字符串与数字，新 API 不再引入 `Any`。
+- `PluginHost` 暴露 18 个宿主服务访问器（linux/privilege/screen/notifications/secrets/network/files/sessions/jobs/timers/goals/miniapp/mcp/ui/app/bus/logs/chat），另保留 `manifest/context/dataDir/assetsDir/scope/text` 旧签名；`text` 的 `vararg args: Any` 是 P0 兼容保留，格式化参数只接受字符串与数字，新 API 不再引入 `Any`。
 - 本模块没有 res 与用户可见文案；诊断信息是开发侧英文，用户可见字符串由宿主用 `host.text` 解析 `LocalizedText`。

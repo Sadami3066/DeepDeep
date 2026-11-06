@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- refactor: 创意工坊更名为小程序（`miniapp`）：工具、技能、页面桥、深链、存储目录、present 交付类型与插件宿主服务契约同步改名，行为不变 [界面] [运行时] [插件] [架构]
 - refactor: 会话状态收敛到 `ConversationStore`：唯一订阅 runtime 事件，聊天/浮层/通知/悬浮窗共用同一投影，删除会话缓存、增量合批、浮层投影与运行态追踪器 [聊天] [架构]
 - refactor: 进程启动收敛到 `ProcessRuntime`：Application/Activity/浮层/服务统一入口；插件启动幂等，重复启动仍激活待生效版本；删除无调用点的插件 `shutdown` [插件] [架构]
 - fix: 未加载插件不再显示空错误，也不再误派生为 DEGRADED [插件]

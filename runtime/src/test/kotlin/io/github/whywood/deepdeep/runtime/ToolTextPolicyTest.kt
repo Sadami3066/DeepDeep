@@ -66,7 +66,7 @@ class ToolTextPolicyTest {
     private fun tools(): List<CodingTool> {
         val binding = SessionBinding()
         val registry = JobRegistry(scope = scope, notifier = { _, _, _ -> })
-        val store = WorkshopStore(File(root, "workshop"))
+        val store = MiniappStore(File(root, "miniapp"))
         val controller = object : PluginController {
             override val setupPluginIds: List<String> = listOf("feishu", "wecom", "micloud")
 
@@ -79,8 +79,8 @@ class ToolTextPolicyTest {
             add(presentTool(null) { null })
             addAll(goalTools(binding, GoalService()))
             addAll(jobTools(binding, registry))
-            addAll(workshopTools(store))
-            add(workshopEditTool(store))
+            addAll(miniappTools(store))
+            add(miniappEditTool(store))
             add(
                 adbShellTool(
                     executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },

@@ -166,7 +166,7 @@ class PluginValidationTest {
         assertFalse(PluginValidation.isValidEntryClass("HelloPlugin"))
         assertTrue(PluginValidation.isValidToolName("screen_tap"))
         assertFalse(PluginValidation.isValidToolName("Screen Tap"))
-        assertTrue(PluginValidation.isSafeRelativePath("skills/workshop/SKILL.md"))
+        assertTrue(PluginValidation.isSafeRelativePath("skills/miniapp/SKILL.md"))
         assertFalse(PluginValidation.isSafeRelativePath("../escape.md"))
         assertFalse(PluginValidation.isSafeRelativePath("/absolute.md"))
         assertFalse(PluginValidation.isSafeRelativePath("a\\b.md"))
@@ -175,7 +175,7 @@ class PluginValidationTest {
     @Test
     fun validatesSkillFiles() {
         val valid = PluginSkill(
-            id = "workshop",
+            id = "miniapp",
             markdown = "# Skill",
             files = listOf(
                 PluginSkillFile(path = "references/api.md", content = "body"),

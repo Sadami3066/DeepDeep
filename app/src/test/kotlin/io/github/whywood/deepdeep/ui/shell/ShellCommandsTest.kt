@@ -57,10 +57,10 @@ class ShellCommandsTest {
     fun commandItemsCarryEnabledFlags() {
         val items = buildCommandItems(
             "s1", sending = false, compacting = false,
-            skills = listOf(SkillSummary("workshop", "build pages")),
+            skills = listOf(SkillSummary("miniapp", "build pages")),
             compactTitle = "c", compactDescription = "cd", goalTitle = "g", goalDescription = "gd",
         )
-        assertEquals(listOf("compact", "goal", "skill:workshop"), items.map { it.id })
+        assertEquals(listOf("compact", "goal", "skill:miniapp"), items.map { it.id })
         assertEquals(listOf(true, true, true), items.map { it.enabled })
         val busy = buildCommandItems(
             "s1", sending = true, compacting = false, skills = emptyList(),

@@ -18,8 +18,8 @@ import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpPluginBridge
 import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -48,10 +48,10 @@ internal class PluginGraphDeps(
     val pluginBus: PluginBusImpl,
     val mcpConfigStore: McpConfigStore,
     val mcpServerProbe: McpServerProbe,
-    val workshopStore: WorkshopStore,
+    val miniappStore: MiniappStore,
     val builtinWiring: () -> BuiltinPluginWiring,
     val notificationCenter: () -> NotificationCenter,
-    val workshopAgentService: () -> WorkshopAgentService,
+    val miniappAgentService: () -> MiniappAgentService,
     val jobRegistry: () -> JobRegistry,
     val timerService: () -> TimerService,
     val goalService: () -> GoalService,

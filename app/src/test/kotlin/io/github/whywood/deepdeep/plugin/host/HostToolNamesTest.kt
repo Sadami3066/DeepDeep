@@ -14,7 +14,7 @@ class HostToolNamesTest {
             "get_goal", "create_goal", "update_goal",
             "job_start", "job_output", "job_list", "job_kill",
             "timer_create", "timer_list", "timer_update", "timer_delete",
-            "workshop_create", "workshop_load", "workshop_list", "workshop_delete", "workshop_edit",
+            "miniapp_create", "miniapp_load", "miniapp_list", "miniapp_delete", "miniapp_edit",
             "tool_search", "mcp_loaded_tools", "mcp_resource", "mcp_resources",
             "mcp_resource_templates", "mcp_servers",
         )

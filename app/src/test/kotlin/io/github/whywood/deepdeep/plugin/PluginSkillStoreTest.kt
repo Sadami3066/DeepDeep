@@ -175,20 +175,20 @@ class PluginSkillStoreTest {
     @Test
     fun syncWritesSkillFilesIntoRepoAndActive() = runTest {
         val skill = PluginSkill(
-            id = "deepdeep-workshop",
+            id = "deepdeep-miniapp",
             markdown = "# Skill",
             files = listOf(
                 PluginSkillFile("references/api.md", "# API"),
                 PluginSkillFile("examples/01-hello.html", "<html></html>"),
             ),
         )
-        store().sync("workshop", listOf(skill), emptyList(), active = true)
+        store().sync("miniapp", listOf(skill), emptyList(), active = true)
 
-        listOf(File(repoDir, "deepdeep-workshop"), File(activeDir, "deepdeep-workshop")).forEach { dir ->
+        listOf(File(repoDir, "deepdeep-miniapp"), File(activeDir, "deepdeep-miniapp")).forEach { dir ->
             assertEquals("# Skill", File(dir, "SKILL.md").readText())
             assertEquals("# API", File(dir, "references/api.md").readText())
             assertEquals("<html></html>", File(dir, "examples/01-hello.html").readText())
-            assertEquals("workshop", File(dir, ".deepdeep-plugin").readText())
+            assertEquals("miniapp", File(dir, ".deepdeep-plugin").readText())
         }
     }
 
@@ -197,7 +197,7 @@ class PluginSkillStoreTest {
         listOf("../escape.md", "/absolute.md", "a//b.md", "a/./b.md", "").forEach { path ->
             val failed = runCatching {
                 store().sync(
-                    "workshop",
+                    "miniapp",
                     listOf(PluginSkill("safe", "body", files = listOf(PluginSkillFile(path, "x")))),
                     emptyList(),
                     active = true,
@@ -215,7 +215,7 @@ class PluginSkillStoreTest {
         File(foreign, "old.md").writeText("old")
 
         store().sync(
-            "workshop",
+            "miniapp",
             listOf(
                 PluginSkill(
                     id = "claimed",
@@ -229,6 +229,6 @@ class PluginSkillStoreTest {
 
         assertFalse(File(foreign, "old.md").exists())
         assertEquals("# New", File(foreign, "references/new.md").readText())
-        assertEquals("workshop", File(foreign, ".deepdeep-plugin").readText())
+        assertEquals("miniapp", File(foreign, ".deepdeep-plugin").readText())
     }
 }

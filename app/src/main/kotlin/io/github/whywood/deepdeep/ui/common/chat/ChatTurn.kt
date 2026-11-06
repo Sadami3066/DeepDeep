@@ -55,8 +55,8 @@ import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentCards
 import io.github.whywood.deepdeep.ui.common.chat.PluginCustomMessageSlot
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
-import io.github.whywood.deepdeep.ui.common.chat.WorkshopChatCard
-import io.github.whywood.deepdeep.ui.common.chat.parseRegisteredWorkshop
+import io.github.whywood.deepdeep.ui.common.chat.MiniappChatCard
+import io.github.whywood.deepdeep.ui.common.chat.parseRegisteredMiniapp
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -92,7 +92,7 @@ internal fun ChatTurn(
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
-    onOpenWorkshop: (String) -> Unit = {},
+    onOpenMiniapp: (String) -> Unit = {},
     retryAttempt: Int? = null,
 ) {
     val notice = message.notice
@@ -149,7 +149,7 @@ internal fun ChatTurn(
             onAnswerQuestion = onAnswerQuestion,
             onOpenPresentFile = onOpenPresentFile,
             onSharePresentFile = onSharePresentFile,
-            onOpenWorkshop = onOpenWorkshop,
+            onOpenMiniapp = onOpenMiniapp,
             retryAttempt = retryAttempt,
         )
     }
@@ -437,7 +437,7 @@ private fun AssistantTurn(
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
-    onOpenWorkshop: (String) -> Unit,
+    onOpenMiniapp: (String) -> Unit,
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
@@ -467,10 +467,10 @@ private fun AssistantTurn(
             .distinctBy { "${it.type}:${it.path ?: it.id}" }
             .toList()
     }
-    val workshopApps = remember(toolSteps) {
+    val miniappApps = remember(toolSteps) {
         toolSteps.asSequence()
             .map { it.trace }
-            .mapNotNull { trace -> parseRegisteredWorkshop(trace) }
+            .mapNotNull { trace -> parseRegisteredMiniapp(trace) }
             .distinctBy { it.id }
             .toList()
     }
@@ -517,14 +517,14 @@ private fun AssistantTurn(
                 attachmentRoot = attachmentRoot,
                 onOpenFile = onOpenPresentFile,
                 onShareFile = onSharePresentFile,
-                onOpenWorkshop = onOpenWorkshop,
+                onOpenMiniapp = onOpenMiniapp,
             )
         }
-        if (workshopApps.isNotEmpty()) {
+        if (miniappApps.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                workshopApps.forEach { app ->
-                    WorkshopChatCard(app = app, onOpen = onOpenWorkshop)
+                miniappApps.forEach { app ->
+                    MiniappChatCard(app = app, onOpen = onOpenMiniapp)
                 }
             }
         }

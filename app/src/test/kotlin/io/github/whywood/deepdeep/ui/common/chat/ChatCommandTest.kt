@@ -81,24 +81,24 @@ class ChatCommandTest {
     }
 
     @Test
-    fun workshopIsLoadedThroughSkillNamespace() {
-        assertEquals(ParsedCommand.Skill("workshop", ""), parseChatCommand("/skill:workshop"))
+    fun miniappIsLoadedThroughSkillNamespace() {
+        assertEquals(ParsedCommand.Skill("miniapp", ""), parseChatCommand("/skill:miniapp"))
         assertEquals(
-            ParsedCommand.Skill("workshop", "build a todo app"),
-            parseChatCommand("/skill:workshop build a todo app"),
+            ParsedCommand.Skill("miniapp", "build a todo app"),
+            parseChatCommand("/skill:miniapp build a todo app"),
         )
-        assertEquals(ParsedCommand.Unknown("workshop-skill"), parseChatCommand("/workshop-skill build"))
+        assertEquals(ParsedCommand.Unknown("miniapp-skill"), parseChatCommand("/miniapp-skill build"))
     }
 
     @Test
     fun extractsSkillMentionsFromAnyPosition() {
         assertEquals(
-            SkillMentions(listOf("workshop"), "使用一下这个skill"),
-            extractSkillMentions("使用一下这个skill /skill:workshop"),
+            SkillMentions(listOf("miniapp"), "使用一下这个skill"),
+            extractSkillMentions("使用一下这个skill /skill:miniapp"),
         )
         assertEquals(
-            SkillMentions(listOf("workshop"), "用这个做"),
-            extractSkillMentions("/skill:workshop 用这个做"),
+            SkillMentions(listOf("miniapp"), "用这个做"),
+            extractSkillMentions("/skill:miniapp 用这个做"),
         )
         assertEquals(
             SkillMentions(listOf("pdf-tools"), "看一下"),
@@ -109,30 +109,30 @@ class ChatCommandTest {
     @Test
     fun extractsMultipleSkillMentionsAndDeduplicates() {
         assertEquals(
-            SkillMentions(listOf("workshop", "pdf-tools"), "先做 再导出"),
-            extractSkillMentions("/skill:workshop 先做 /skill:pdf-tools 再导出"),
+            SkillMentions(listOf("miniapp", "pdf-tools"), "先做 再导出"),
+            extractSkillMentions("/skill:miniapp 先做 /skill:pdf-tools 再导出"),
         )
         assertEquals(
-            SkillMentions(listOf("workshop"), "两次"),
-            extractSkillMentions("/skill:workshop 两次 /skill:workshop"),
+            SkillMentions(listOf("miniapp"), "两次"),
+            extractSkillMentions("/skill:miniapp 两次 /skill:miniapp"),
         )
     }
 
     @Test
     fun ignoresSkillMentionsThatAreNotStandaloneTokens() {
-        assertEquals(null, extractSkillMentions("x/skill:workshop"))
-        assertEquals(null, extractSkillMentions("/skill:Workshop"))
+        assertEquals(null, extractSkillMentions("x/skill:miniapp"))
+        assertEquals(null, extractSkillMentions("/skill:Miniapp"))
         assertEquals(null, extractSkillMentions("/skill:"))
         assertEquals(null, extractSkillMentions("plain"))
     }
 
     @Test
     fun ignoresSkillMentionsInsideCode() {
-        assertEquals(null, extractSkillMentions("`/skill:workshop`"))
-        assertEquals(null, extractSkillMentions("```\n/skill:workshop\n```"))
+        assertEquals(null, extractSkillMentions("`/skill:miniapp`"))
+        assertEquals(null, extractSkillMentions("```\n/skill:miniapp\n```"))
         assertEquals(
-            SkillMentions(listOf("workshop"), "```\n/skill:workshop\n```\n看代码"),
-            extractSkillMentions("```\n/skill:workshop\n```\n看代码 /skill:workshop"),
+            SkillMentions(listOf("miniapp"), "```\n/skill:miniapp\n```\n看代码"),
+            extractSkillMentions("```\n/skill:miniapp\n```\n看代码 /skill:miniapp"),
         )
     }
 

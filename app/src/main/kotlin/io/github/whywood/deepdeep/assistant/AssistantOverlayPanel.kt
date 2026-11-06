@@ -275,7 +275,7 @@ internal fun AssistantOverlayPanel(
                                     onAnswerQuestion = actions.onAnswerQuestion,
                                     onOpenPresentFile = actions.onOpenFile,
                                     onSharePresentFile = actions.onShareFile,
-                                    onOpenWorkshop = actions.onOpenWorkshop,
+                                    onOpenMiniapp = actions.onOpenMiniapp,
                                     retryAttempt = if (message.id == retryTargetId) {
                                         retryActivity?.attempt
                                     } else {

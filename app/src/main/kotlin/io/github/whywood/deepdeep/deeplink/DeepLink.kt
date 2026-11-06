@@ -12,7 +12,7 @@ sealed interface DeepLink {
 
     companion object {
         private const val SCHEME = "deepdeep"
-        private val WORKSHOP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
+        private val MINIAPP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 
         fun parse(raw: String): DeepLink? {
             val uri = runCatching { URI(raw.trim()) }.getOrNull() ?: return null
@@ -26,7 +26,7 @@ sealed interface DeepLink {
                 "skills" -> rootPage(segments, AppDestination.Skills)
                 "timers" -> rootPage(segments, AppDestination.Timers)
                 "plugins" -> pluginPage(segments)
-                "workshop" -> workshopPage(segments)
+                "miniapp" -> miniappPage(segments)
                 else -> null
             }
         }
@@ -37,11 +37,11 @@ sealed interface DeepLink {
             else -> null
         }
 
-        private fun workshopPage(segments: List<String>): DeepLink? = when (segments.size) {
-            0 -> Page(AppDestination.Workshop)
+        private fun miniappPage(segments: List<String>): DeepLink? = when (segments.size) {
+            0 -> Page(AppDestination.Miniapp)
             1 -> validId(segments[0])
-                ?.takeIf { it.matches(WORKSHOP_ID_REGEX) }
-                ?.let { Page(AppDestination.WorkshopDetail(it)) }
+                ?.takeIf { it.matches(MINIAPP_ID_REGEX) }
+                ?.let { Page(AppDestination.MiniappDetail(it)) }
 
             else -> null
         }

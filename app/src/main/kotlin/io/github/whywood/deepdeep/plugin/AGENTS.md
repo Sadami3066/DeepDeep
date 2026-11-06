@@ -14,7 +14,7 @@
 | `BuiltinPluginWiring.kt` / `Builtin*Plugins.kt` | 内置插件依赖装配与 manifest 注册（顺序即 UI 顺序） |
 | `manager/` | 插件宿主管理器（见目录内 AGENTS.md） |
 | `host/` | 插件宿主：`:plugin-api` 契约实现、注册表、外部包管道、事件、UI 槽位、宿主服务（见目录内 AGENTS.md） |
-| `internal/` | 内置：目标、后台任务、定时、工坊插件 |
+| `internal/` | 内置：目标、后台任务、定时、小程序插件 |
 | `arrange/` `micloud/` `gui/` `websearch/` | 内置插件（均实现 `DeepDeepPlugin`） |
 | `feishu/` `wecom/` `jwxt/` | 可安装的内置能力：下载/复制 CLI 到 rootfs，接入技能与 promptBody |
 | `virtualscreen/` | 特权虚拟屏引擎与工具工厂，供 gui 插件使用 |

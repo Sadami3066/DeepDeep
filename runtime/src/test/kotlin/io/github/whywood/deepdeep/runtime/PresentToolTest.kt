@@ -44,9 +44,9 @@ class PresentToolTest {
     }
 
     private fun tool(
-        creativeLookup: (suspend (String) -> PresentedCreative?)? = null,
+        miniappLookup: (suspend (String) -> PresentedMiniapp?)? = null,
         cwd: File = folder.root,
-    ): CodingTool = presentTool(creativeLookup) { BoundSession("session-1", null, cwd.absolutePath) }
+    ): CodingTool = presentTool(miniappLookup) { BoundSession("session-1", null, cwd.absolutePath) }
 
     private suspend fun run(tool: CodingTool, args: JsonObject): Pair<AgentToolResult, String> {
         val result = tool.execute("call-1", args, null, null)
@@ -97,7 +97,7 @@ class PresentToolTest {
             entry.getValue("required").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
         assertEquals(
-            setOf("file", "image", "video", "html", "creative"),
+            setOf("file", "image", "video", "html", "miniapp"),
             entry.getValue("properties").jsonObject.getValue("type").jsonObject
                 .getValue("enum").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
@@ -302,50 +302,50 @@ class PresentToolTest {
     }
 
     @Test
-    fun creativeNeedsLookupAndKnownApp() = runTest {
+    fun miniappNeedsLookupAndKnownApp() = runTest {
         val (unavailableResult, unavailableText) = run(
             tool(),
-            itemsArgs(item { put("type", "creative"); put("id", "weekly-board") }),
+            itemsArgs(item { put("type", "miniapp"); put("id", "weekly-board") }),
         )
         assertEquals(true, unavailableResult.isError)
         assertTrue(unavailableText.contains("not available"))
-        val missingLookup: suspend (String) -> PresentedCreative? = { null }
+        val missingLookup: suspend (String) -> PresentedMiniapp? = { null }
         val (missingResult, missingText) = run(
-            tool(creativeLookup = missingLookup),
-            itemsArgs(item { put("type", "creative"); put("id", "weekly-board") }),
+            tool(miniappLookup = missingLookup),
+            itemsArgs(item { put("type", "miniapp"); put("id", "weekly-board") }),
         )
         assertEquals(true, missingResult.isError)
-        assertTrue(missingText.contains("workshop app not found"))
+        assertTrue(missingText.contains("miniapp not found"))
     }
 
     @Test
-    fun creativeIsNormalizedFromLookup() = runTest {
-        val lookup: suspend (String) -> PresentedCreative? = { id ->
+    fun miniappIsNormalizedFromLookup() = runTest {
+        val lookup: suspend (String) -> PresentedMiniapp? = { id ->
             if (id == "weekly-board") {
-                PresentedCreative(id = "weekly-board", name = "周报看板", icon = "📊", version = "1.2.0")
+                PresentedMiniapp(id = "weekly-board", name = "周报看板", icon = "📊", version = "1.2.0")
             } else {
                 null
             }
         }
         val (result, text) = run(
-            tool(creativeLookup = lookup),
-            itemsArgs(item { put("type", "creative"); put("id", "weekly-board"); put("title", "本周") }),
+            tool(miniappLookup = lookup),
+            itemsArgs(item { put("type", "miniapp"); put("id", "weekly-board"); put("title", "本周") }),
         )
         assertNull(result.isError)
-        val creative = outputItems(text).single()
-        assertEquals("creative", creative.string("type"))
-        assertEquals("weekly-board", creative.string("id"))
-        assertEquals("周报看板", creative.string("name"))
-        assertEquals("📊", creative.string("icon"))
-        assertEquals("1.2.0", creative.string("version"))
-        assertEquals("本周", creative.string("title"))
-        assertFalse(creative.containsKey("path"))
+        val miniapp = outputItems(text).single()
+        assertEquals("miniapp", miniapp.string("type"))
+        assertEquals("weekly-board", miniapp.string("id"))
+        assertEquals("周报看板", miniapp.string("name"))
+        assertEquals("📊", miniapp.string("icon"))
+        assertEquals("1.2.0", miniapp.string("version"))
+        assertEquals("本周", miniapp.string("title"))
+        assertFalse(miniapp.containsKey("path"))
     }
 
     @Test
-    fun creativeRequiresId() = runTest {
-        val lookup: suspend (String) -> PresentedCreative? = { PresentedCreative(it, "A") }
-        val (result, text) = run(tool(creativeLookup = lookup), itemsArgs(item { put("type", "creative") }))
+    fun miniappRequiresId() = runTest {
+        val lookup: suspend (String) -> PresentedMiniapp? = { PresentedMiniapp(it, "A") }
+        val (result, text) = run(tool(miniappLookup = lookup), itemsArgs(item { put("type", "miniapp") }))
         assertEquals(true, result.isError)
         assertTrue(text.contains("id is required"))
     }

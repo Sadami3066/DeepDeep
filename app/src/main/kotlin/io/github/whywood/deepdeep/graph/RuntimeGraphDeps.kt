@@ -17,7 +17,7 @@ import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
 import io.github.whywood.deepdeep.service.AppShellExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -42,7 +42,7 @@ internal class RuntimeGraphDeps(
     val pluginSettingsStore: PluginSettingsStore,
     val questionCenter: QuestionCenter,
     val goalService: GoalService,
-    val workshopStore: WorkshopStore,
+    val miniappStore: MiniappStore,
     val rootShell: RootShell,
     val adbExecutor: RootCommandExecutor,
     val privilege: () -> PrivilegeController,

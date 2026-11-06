@@ -35,16 +35,16 @@
     <string name="plugins_setting_section">Settings</string>
     <string name="plugins_setting_max_rounds">Max goal rounds (0 = unlimited)</string>
     <string name="plugins_setting_max_running">Concurrent jobs</string>
-    <string name="plugins_setting_skill_enabled">Enable Workshop skill</string>
-    <string name="plugins_setting_max_turns">Max Workshop agent turns</string>
+    <string name="plugins_setting_skill_enabled">Enable Miniapp skill</string>
+    <string name="plugins_setting_max_turns">Max Miniapp agent turns</string>
     <string name="plugins_internal_goal_name">Goals</string>
     <string name="plugins_internal_goal_summary">Advance long-running goals across turns with pause, resume and automatic continuation.</string>
     <string name="plugins_internal_jobs_name">Background jobs</string>
     <string name="plugins_internal_jobs_summary">Start, inspect and stop background command jobs.</string>
     <string name="plugins_internal_timer_name">Timer</string>
     <string name="plugins_internal_timer_summary">Create reminders and recurring tasks in this conversation.</string>
-    <string name="plugins_internal_workshop_name">Workshop</string>
-    <string name="plugins_internal_workshop_summary">Create, edit and load Workshop mini apps.</string>
+    <string name="plugins_internal_miniapp_name">Miniapp</string>
+    <string name="plugins_internal_miniapp_summary">Create, edit and load miniapps.</string>
     <string name="plugins_tab_external">External</string>
     <string name="plugins_tab_internal">Internal</string>
     <string name="plugins_empty_external">No external plugins</string>

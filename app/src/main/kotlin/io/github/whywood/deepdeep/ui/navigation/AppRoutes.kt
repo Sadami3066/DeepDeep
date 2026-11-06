@@ -24,8 +24,8 @@ import io.github.whywood.deepdeep.ui.navigation.routes.SearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
-import io.github.whywood.deepdeep.ui.navigation.routes.WorkshopDetailRoute
-import io.github.whywood.deepdeep.ui.navigation.routes.WorkshopRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.MiniappDetailRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.MiniappRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.WorkspaceSettingsRoute
 import io.github.whywood.deepdeep.ui.settings.FloatingWindowScreen
 import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
@@ -39,13 +39,13 @@ data class RouteSpec(
 
 private const val PLUGIN_DETAIL_PREFIX = "plugins/"
 private const val PLUGIN_PAGE_MARKER = "/page/"
-private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
+private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
 
 fun parentRouteKey(routeKey: String): String? = when {
     routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey ->
         PLUGIN_DETAIL_PREFIX + routeKey.removePrefix(PLUGIN_DETAIL_PREFIX).substringBefore(PLUGIN_PAGE_MARKER)
     routeKey.startsWith(PLUGIN_DETAIL_PREFIX) -> "plugins"
-    routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> "workshop"
+    routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> "miniapp"
     else -> null
 }
 
@@ -179,14 +179,14 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onBack = onBack,
         )
 
-        AppDestination.Workshop -> WorkshopRoute(
+        AppDestination.Miniapp -> MiniappRoute(
             dependencies = dependencies,
             navigator = host.navigator,
-            onOpenWorkshopCreate = host.onOpenWorkshopCreate,
+            onOpenMiniappCreate = host.onOpenMiniappCreate,
             onBack = onBack,
         )
 
-        is AppDestination.WorkshopDetail -> WorkshopDetailRoute(
+        is AppDestination.MiniappDetail -> MiniappDetailRoute(
             dependencies = dependencies,
             creationId = destination.id,
             onBack = onBack,

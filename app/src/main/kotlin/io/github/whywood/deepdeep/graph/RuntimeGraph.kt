@@ -15,11 +15,11 @@ import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.adbShellTool
 import io.github.whywood.deepdeep.runtime.presentTool
 import io.github.whywood.deepdeep.runtime.rootShellTool
-import io.github.whywood.deepdeep.runtime.workshopCreativeLookup
+import io.github.whywood.deepdeep.runtime.miniappLookup
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.RootStatus
 import java.io.File
@@ -48,7 +48,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             extraToolFactories = listOf(
                 { _, binding ->
                     buildList {
-                        add(presentTool(workshopCreativeLookup(deps.workshopStore)) { binding.current() })
+                        add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
                         for (backend in availableShellBackends()) {
                             when (backend) {
                                 PrivilegeLevel.ROOT -> add(
@@ -112,8 +112,8 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         )
     }
 
-    val workshopAgentService: WorkshopAgentService by lazy {
-        WorkshopAgentService(
+    val miniappAgentService: MiniappAgentService by lazy {
+        MiniappAgentService(
             providers = deps.providerCatalog,
             credentials = deps.credentials,
             transport = deps.httpTransport,
@@ -125,7 +125,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
-            defaultMaxTurns = { deps.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            defaultMaxTurns = { deps.pluginSettingsStore.cachedInt("miniapp", "max_turns", 16) },
             workspace = deps.homeDir,
             shellExecutorFor = deps.shellExecutorFor,
             backgroundRunnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },

@@ -327,9 +327,9 @@ internal fun AppShell(
         drawerOpen = false
     }
 
-    fun openWorkshopCreate() {
+    fun openMiniappCreate() {
         drawerOpen = false
-        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, WORKSHOP_SKILL_COMMAND)
+        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, MINIAPP_SKILL_COMMAND)
         navigator.reset(AppDestination.Chat)
     }
 
@@ -478,7 +478,7 @@ internal fun AppShell(
                                                     }
                                                 }
                                             },
-                        onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                        onOpenMiniapp = { id -> navigator.push(AppDestination.MiniappDetail(id)) },
                         onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
                         onFollowUp = chatViewModel::followUpNow,
                         onClearQueue = chatViewModel::clearQueuedInputs,
@@ -528,7 +528,7 @@ internal fun AppShell(
                         configuredProviderIds = configuredProviders,
                     ),
                     onOpenChat = ::openChat,
-                    onOpenWorkshopCreate = ::openWorkshopCreate,
+                    onOpenMiniappCreate = ::openMiniappCreate,
                     onOpenFile = openWorkspaceFile,
                     onOpenAssistantSettings = { navigator.push(AppDestination.AssistantSettings) },
                 ),
@@ -593,4 +593,4 @@ internal fun AppShell(
     }
 }
 
-private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
+private const val MINIAPP_SKILL_COMMAND = "/skill:miniapp "

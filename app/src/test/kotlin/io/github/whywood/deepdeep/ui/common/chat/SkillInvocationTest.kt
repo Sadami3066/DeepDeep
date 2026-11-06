@@ -45,7 +45,7 @@ class SkillInvocationTest {
 
     @Test
     fun stripsMultipleSkillBlocks() {
-        val other = block.replace("pdf-tools", "workshop")
+        val other = block.replace("pdf-tools", "miniapp")
         val text = "$block\n\n$other\n\nuse both"
         val invocation = requireNotNull(parseSkillInvocation(text))
         assertEquals("pdf-tools", invocation.name)

@@ -210,7 +210,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 userName = state.userName,
                 avatar = state.avatar,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },
-                onOpenWorkshop = { actions.onNavigate(AppDestination.Workshop) },
+                onOpenMiniapp = { actions.onNavigate(AppDestination.Miniapp) },
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },
                 onOpenMcp = { actions.onNavigate(AppDestination.Mcp) },
                 onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },

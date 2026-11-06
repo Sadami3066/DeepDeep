@@ -26,8 +26,8 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -72,7 +72,7 @@ interface StorageDependencies {
 
     val shareStaging: ShareStaging
 
-    val workshopStore: WorkshopStore
+    val miniappStore: MiniappStore
 
     val mcpConfigStore: McpConfigStore
 
@@ -108,7 +108,7 @@ interface ServiceDependencies {
 
     val mcpOAuthService: McpOAuthService
 
-    val workshopAgentService: WorkshopAgentService
+    val miniappAgentService: MiniappAgentService
 
     val processRuntime: ProcessRuntime
 }

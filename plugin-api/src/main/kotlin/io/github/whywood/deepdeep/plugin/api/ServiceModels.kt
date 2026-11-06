@@ -213,44 +213,44 @@ data class GoalInfo(
     val updatedAt: Long = 0,
 )
 
-data class WorkshopApp(
+data class MiniappApp(
     val id: String,
     val name: String,
     val description: String? = null,
     val updatedAt: Long = 0,
 )
 
-data class WorkshopInvalid(
+data class MiniappInvalid(
     val id: String,
     val reason: String,
 )
 
-data class WorkshopScan(
-    val apps: List<WorkshopApp> = emptyList(),
-    val invalid: List<WorkshopInvalid> = emptyList(),
+data class MiniappScan(
+    val apps: List<MiniappApp> = emptyList(),
+    val invalid: List<MiniappInvalid> = emptyList(),
 )
 
-sealed interface WorkshopEntry {
+sealed interface MiniappEntry {
     data class Valid(
-        val app: WorkshopApp,
+        val app: MiniappApp,
         val manifest: JsonObject = JsonObject(emptyMap()),
-    ) : WorkshopEntry
+    ) : MiniappEntry
 
     data class Invalid(
         val id: String,
         val reason: String,
-    ) : WorkshopEntry
+    ) : MiniappEntry
 
-    data object Missing : WorkshopEntry
+    data object Missing : MiniappEntry
 }
 
-data class WorkshopCreateRequest(
+data class MiniappCreateRequest(
     val name: String,
     val description: String,
     val prompt: String = "",
 )
 
-data class WorkshopRun(
+data class MiniappRun(
     val appId: String,
     val accepted: Boolean,
     val error: String? = null,

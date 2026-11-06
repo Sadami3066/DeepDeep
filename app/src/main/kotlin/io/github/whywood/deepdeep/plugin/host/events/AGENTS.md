@@ -26,4 +26,4 @@
 - 会话 id 由适配器写入所有请求；输入钩子的图片以 `ImagePart.path` 作为 plugin-api `imagePaths` 双向转换，插件返回的路径按扩展名判定图片并读文件回填，空列表按契约清空图片。
 - 事件映射单一来源：runtime 路径只映射 Run 生命周期与注入/用户消息，Turn/Message/Tool/ThinkingLevel 一律来自 SDK `AgentEventReceived`；compaction/retry 只来自 SDK `SessionEvent`，避免重复派发。
 - 事件由 `SessionEventPump` 每会话串行派发；`SessionStarted` 在 `updateSnapshot` 之后入队，`SessionClosed` 入队后再 `close`，确保不越序。
-- 装配：`AppGraph` 为每个 `RuntimeHooks` 建一个 `PluginHooksDelegate` 传给 `PiSessionEngine`；会话建立时 `PluginHostManager.bindSessionHooks` 收到该会话的 `SessionBinding`，用会话贡献 + registry 快照造一个 `SessionHookSource`，再由 `PluginRuntimeHooksFactory` 造适配器并 `delegate.bind(adapter)`；工坊用 `hooksFactory` 每 run 新建 delegate，因此两个入口共用同一条管线。
+- 装配：`AppGraph` 为每个 `RuntimeHooks` 建一个 `PluginHooksDelegate` 传给 `PiSessionEngine`；会话建立时 `PluginHostManager.bindSessionHooks` 收到该会话的 `SessionBinding`，用会话贡献 + registry 快照造一个 `SessionHookSource`，再由 `PluginRuntimeHooksFactory` 造适配器并 `delegate.bind(adapter)`；小程序用 `hooksFactory` 每 run 新建 delegate，因此两个入口共用同一条管线。

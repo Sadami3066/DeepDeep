@@ -1,0 +1,23 @@
+<resources>
+    <string name="miniapp_title">Miniapp</string>
+    <string name="miniapp_refresh">Refresh</string>
+    <string name="miniapp_new">New miniapp</string>
+    <string name="miniapp_empty_title">No miniapps yet</string>
+    <string name="miniapp_empty_hint">Tap + or type /skill:miniapp in chat to ask DeepDeep to make one</string>
+    <string name="miniapp_invalid">Invalid format</string>
+    <string name="miniapp_invalid_title">Could not read this miniapp</string>
+    <string name="miniapp_invalid_delete">Delete</string>
+    <string name="miniapp_invalid_delete_title">Delete this miniapp?</string>
+    <string name="miniapp_invalid_delete_message">“%1$s” will be deleted permanently.</string>
+    <string name="miniapp_invalid_close">Close</string>
+    <string name="miniapp_chat_card_created">Created</string>
+    <string name="miniapp_reason_manifest_missing">Manifest missing</string>
+    <string name="miniapp_reason_manifest_unreadable">Manifest unreadable</string>
+    <string name="miniapp_reason_manifest_invalid">Manifest invalid</string>
+    <string name="miniapp_reason_entry_missing">Entry point missing</string>
+    <string name="miniapp_reason_id_mismatch">ID does not match folder</string>
+    <string name="miniapp_search_placeholder">Search miniapps</string>
+    <string name="miniapp_retry">Retry</string>
+    <string name="miniapp_error_scan_failed">Scan failed. Try again.</string>
+    <string name="miniapp_error_delete_failed">Delete failed. Try again.</string>
+</resources>

@@ -12,11 +12,11 @@ import org.junit.Test
 class SkillCatalogTest {
     @Test
     fun expandsAgentSkillWithArguments() = runTest {
-        val agentDir = tempDir("workshop-agent")
+        val agentDir = tempDir("miniapp-agent")
         writeSkill(File(agentDir, "skills/foo/SKILL.md"), "foo", "Foo helper", "FOO BODY")
         val catalog = SkillCatalog(agentDir)
 
-        val expansion = catalog.expand(tempDir("workshop-project").absolutePath, "foo", "  extra args  ")
+        val expansion = catalog.expand(tempDir("miniapp-project").absolutePath, "foo", "  extra args  ")
 
         assertNotNull(expansion)
         assertEquals("foo", expansion!!.name)
@@ -28,10 +28,10 @@ class SkillCatalogTest {
 
     @Test
     fun expansionOmitsArgumentsWhenBlank() = runTest {
-        val agentDir = tempDir("workshop-agent")
+        val agentDir = tempDir("miniapp-agent")
         writeSkill(File(agentDir, "skills/foo/SKILL.md"), "foo", "Foo helper", "FOO BODY")
 
-        val expansion = SkillCatalog(agentDir).expand(tempDir("workshop-project").absolutePath, "foo", "   ")
+        val expansion = SkillCatalog(agentDir).expand(tempDir("miniapp-project").absolutePath, "foo", "   ")
 
         assertNotNull(expansion)
         assertTrue(expansion!!.prompt.endsWith("FOO BODY\n</skill>"))
@@ -39,11 +39,11 @@ class SkillCatalogTest {
 
     @Test
     fun expandReadsFreshSkillContent() = runTest {
-        val agentDir = tempDir("workshop-agent")
+        val agentDir = tempDir("miniapp-agent")
         val skillFile = File(agentDir, "skills/foo/SKILL.md")
         writeSkill(skillFile, "foo", "Foo helper", "OLD BODY")
         val catalog = SkillCatalog(agentDir)
-        val project = tempDir("workshop-project").absolutePath
+        val project = tempDir("miniapp-project").absolutePath
 
         assertTrue(catalog.expand(project, "foo", "")!!.prompt.contains("OLD BODY"))
 
@@ -56,8 +56,8 @@ class SkillCatalogTest {
 
     @Test
     fun expandsProjectSkill() = runTest {
-        val agentDir = tempDir("workshop-agent")
-        val projectDir = tempDir("workshop-project")
+        val agentDir = tempDir("miniapp-agent")
+        val projectDir = tempDir("miniapp-project")
         writeSkill(File(projectDir, ".pi/skills/bar/SKILL.md"), "bar", "Bar helper", "BAR BODY")
 
         val expansion = SkillCatalog(agentDir).expand(projectDir.absolutePath, "bar", "")
@@ -70,18 +70,18 @@ class SkillCatalogTest {
 
     @Test
     fun missingSkillReturnsNull() = runTest {
-        val agentDir = tempDir("workshop-agent")
+        val agentDir = tempDir("miniapp-agent")
         writeSkill(File(agentDir, "skills/foo/SKILL.md"), "foo", "Foo helper", "FOO BODY")
         val catalog = SkillCatalog(agentDir)
 
-        assertNull(catalog.expand(tempDir("workshop-project").absolutePath, "nope", ""))
-        assertNull(catalog.expand(tempDir("workshop-project").absolutePath, "", ""))
+        assertNull(catalog.expand(tempDir("miniapp-project").absolutePath, "nope", ""))
+        assertNull(catalog.expand(tempDir("miniapp-project").absolutePath, "", ""))
     }
 
     @Test
     fun listsSkillsWithDescriptions() = runTest {
-        val agentDir = tempDir("workshop-agent")
-        val projectDir = tempDir("workshop-project")
+        val agentDir = tempDir("miniapp-agent")
+        val projectDir = tempDir("miniapp-project")
         writeSkill(File(agentDir, "skills/foo/SKILL.md"), "foo", "Foo helper", "FOO BODY")
         writeSkill(File(projectDir, ".pi/skills/bar/SKILL.md"), "bar", "Bar helper", "BAR BODY")
 
