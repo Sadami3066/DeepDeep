@@ -7,7 +7,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,24 +22,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -58,7 +52,6 @@ import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.ui.common.chat.AnsweredAskCard
 import io.github.whywood.deepdeep.ui.common.chat.parseQuestionRecord
 import java.util.Locale
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun ProcessSection(
@@ -70,14 +63,6 @@ internal fun ProcessSection(
     excludedStepId: Long? = null,
 ) {
     val colors = deepDeepColors()
-    var now by remember(message.id) { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(message.streaming) {
-        if (!message.streaming) return@LaunchedEffect
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(1000)
-        }
-    }
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
     val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
     val answerStarted = message.streaming && trailingText?.text?.isNotBlank() == true
@@ -109,11 +94,12 @@ internal fun ProcessSection(
     val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
     val toolCount = message.steps.count { it is AssistantStep.Tool }
     val finishedAt = message.finishedAt
-    val duration = when {
-        message.streaming && message.startedAt > 0 -> (now - message.startedAt).coerceAtLeast(0L)
-        !message.streaming && finishedAt != null && message.startedAt > 0 &&
-            finishedAt > message.startedAt -> finishedAt - message.startedAt
-        else -> null
+    val duration = if (!message.streaming && finishedAt != null && message.startedAt > 0 &&
+        finishedAt > message.startedAt
+    ) {
+        finishedAt - message.startedAt
+    } else {
+        null
     }
     val reasoningLabel = if (reasoningCount > 0) {
         stringResource(R.string.assistant_process_reasoning, reasoningCount)
@@ -133,8 +119,19 @@ internal fun ProcessSection(
             stringResource(R.string.assistant_elapsed_seconds),
         )
     }
-    val summary = (listOf(statusLabel) + listOfNotNull(reasoningLabel, toolLabel, durationText))
-        .joinToString(" · ")
+    val activity = processActivity(message.steps, message.streaming)
+    val activityLabel = when (activity) {
+        ProcessActivity.Thinking -> stringResource(R.string.assistant_process_thinking)
+        ProcessActivity.CallingTool -> stringResource(R.string.assistant_process_calling_tool)
+        ProcessActivity.Replying -> stringResource(R.string.assistant_process_replying)
+        null -> null
+    }
+    val summary = if (semanticStatus == ProcessStatus.Running) {
+        activityLabel ?: statusLabel
+    } else {
+        (listOf(statusLabel) + listOfNotNull(reasoningLabel, toolLabel, durationText))
+            .joinToString(" · ")
+    }
     val activeReasoningId = if (message.streaming) {
         message.steps.lastOrNull()?.takeIf { it is AssistantStep.Reasoning }?.id
     } else {
@@ -195,42 +192,29 @@ internal fun ProcessSection(
                 Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                groupToolSteps(message.steps.filter { step -> step.id != excludedStepId })
-                    .forEach { entry ->
-                        when (entry) {
-                            is ProcessEntry.Single -> when (val step = entry.step) {
-                                is AssistantStep.Reasoning -> ReasoningCard(
-                                    step = step,
-                                    active = step.id == activeReasoningId,
-                                    onToggle = { onToggleStep(step.id) },
-                                    terminatedStatus = terminatedStatus.takeIf {
-                                        step.id == lastReasoningId
-                                    },
-                                )
+                message.steps.filter { step -> step.id != excludedStepId }.forEach { step ->
+                    when (step) {
+                        is AssistantStep.Reasoning -> ReasoningCard(
+                            step = step,
+                            active = step.id == activeReasoningId,
+                            onToggle = { onToggleStep(step.id) },
+                            terminatedStatus = terminatedStatus.takeIf { step.id == lastReasoningId },
+                        )
 
-                                is AssistantStep.Tool -> ProcessToolStep(
-                                    step = step,
-                                    onToggleStep = onToggleStep,
-                                    onCopyOutput = onCopyOutput,
-                                    onFileClick = onFileClick,
-                                )
+                        is AssistantStep.Tool -> ProcessToolStep(
+                            step = step,
+                            onToggleStep = onToggleStep,
+                            onCopyOutput = onCopyOutput,
+                            onFileClick = onFileClick,
+                        )
 
-                                is AssistantStep.Text -> ChatMarkdown(
-                                    text = step.text.trim(),
-                                    modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
-                                    onFileClick = onFileClick,
-                                )
-                            }
-
-                            is ProcessEntry.ToolGroup -> ToolGroupRow(
-                                tools = entry.tools,
-                                messageId = message.id,
-                                onToggleStep = onToggleStep,
-                                onCopyOutput = onCopyOutput,
-                                onFileClick = onFileClick,
-                            )
-                        }
+                        is AssistantStep.Text -> ChatMarkdown(
+                            text = step.text.trim(),
+                            modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                            onFileClick = onFileClick,
+                        )
                     }
+                }
             }
         }
         if (!expanded) {
@@ -275,114 +259,6 @@ private fun ProcessToolStep(
                 record = record,
                 toolCallId = trace.toolCallId,
             )
-        }
-    }
-}
-
-@Composable
-private fun ToolGroupRow(
-    tools: List<AssistantStep.Tool>,
-    messageId: Long,
-    onToggleStep: (Long) -> Unit,
-    onCopyOutput: (String) -> Unit,
-    onFileClick: (String) -> Unit,
-) {
-    val colors = deepDeepColors()
-    val firstId = tools.first().id
-    var expanded by rememberSaveable(messageId, firstId) { mutableIntStateOf(0) }
-    val rotation = animateFloatAsState(
-        targetValue = if (expanded == 1) 180f else 0f,
-        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-        label = "tool-group-chevron",
-    )
-    val running = tools.any { it.trace.status == ToolActivityStatus.RUNNING }
-    val failed = tools.any { it.trace.status == ToolActivityStatus.FAILED }
-    val statusText = when {
-        running -> stringResource(R.string.assistant_tool_running)
-        failed -> stringResource(R.string.assistant_tool_failed)
-        else -> stringResource(R.string.assistant_tool_done)
-    }
-    val statusColor = when {
-        running -> colors.accent
-        failed -> colors.danger
-        else -> colors.inkSecondary
-    }
-    val totalDuration = tools.mapNotNull { it.trace.durationMs }.takeIf { it.isNotEmpty() }?.sum()
-    val title = stringResource(R.string.assistant_process_tools, tools.size)
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .heightIn(min = 32.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .clickable(role = Role.Button) { expanded = if (expanded == 1) 0 else 1 }
-                .padding(horizontal = 8.dp)
-                .testTag("tool_group_$firstId"),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = title,
-                style = DdType.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                ),
-                color = colors.inkSecondary,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = statusText,
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
-                color = statusColor,
-            )
-            if (totalDuration != null) {
-                Text(
-                    text = " · ",
-                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
-                    color = colors.inkTertiary,
-                )
-                Text(
-                    text = durationLabel(totalDuration),
-                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
-                    color = colors.inkTertiary,
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-            DdIcon(
-                icon = DdIcons.ChevronDown,
-                modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
-                size = 12.dp,
-            )
-            Spacer(Modifier.width(2.dp))
-        }
-        AnimatedVisibility(
-            visible = expanded == 1,
-            enter = expandVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                expandFrom = Alignment.Top,
-            ) + fadeIn(tween(DdMotion.FAST)),
-            exit = shrinkVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                shrinkTowards = Alignment.Top,
-            ) + fadeOut(tween(DdMotion.FAST)),
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(start = 6.dp, top = 2.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                tools.forEach { tool ->
-                    key(tool.id) {
-                        ProcessToolStep(
-                            step = tool,
-                            onToggleStep = onToggleStep,
-                            onCopyOutput = onCopyOutput,
-                            onFileClick = onFileClick,
-                        )
-                    }
-                }
-            }
         }
     }
 }

@@ -3,6 +3,9 @@
     <string name="assistant_ux_process_running">Working</string>
     <string name="assistant_ux_process_done">Done</string>
     <string name="assistant_ux_process_failed">Failed</string>
+    <string name="assistant_process_thinking">Thinking deeply</string>
+    <string name="assistant_process_calling_tool">Calling tools</string>
+    <string name="assistant_process_replying">Replying</string>
     <string name="assistant_ux_queue_remove">Remove</string>
     <string name="assistant_ux_queue_send">Send now</string>
 </resources>

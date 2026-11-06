@@ -3,6 +3,9 @@
     <string name="assistant_ux_process_running">执行中</string>
     <string name="assistant_ux_process_done">已完成</string>
     <string name="assistant_ux_process_failed">失败</string>
+    <string name="assistant_process_thinking">正在深度思考</string>
+    <string name="assistant_process_calling_tool">正在调用工具</string>
+    <string name="assistant_process_replying">正在回复</string>
     <string name="assistant_ux_queue_remove">撤回</string>
     <string name="assistant_ux_queue_send">直接发送</string>
 </resources>

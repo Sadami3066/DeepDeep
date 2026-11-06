@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.common.chat
 
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 
 internal fun reasoningPreview(text: String): String {
     val paragraph = text.split(Regex("\\n[ \\t]*\\n"))
@@ -22,31 +23,16 @@ private fun cleanPreviewLine(line: String): String = line.trim()
     .replace(Regex("\\s+"), " ")
     .trim()
 
-internal sealed interface ProcessEntry {
-    data class Single(val step: AssistantStep) : ProcessEntry
-    data class ToolGroup(val tools: List<AssistantStep.Tool>) : ProcessEntry
-}
+internal enum class ProcessActivity { Thinking, CallingTool, Replying }
 
-internal fun groupToolSteps(steps: List<AssistantStep>): List<ProcessEntry> {
-    val entries = mutableListOf<ProcessEntry>()
-    val tools = mutableListOf<AssistantStep.Tool>()
-    fun flushTools() {
-        when {
-            tools.size >= 2 -> entries += ProcessEntry.ToolGroup(tools.toList())
-            tools.size == 1 -> entries += ProcessEntry.Single(tools.first())
-        }
-        tools.clear()
+internal fun processActivity(steps: List<AssistantStep>, streaming: Boolean): ProcessActivity? {
+    if (!streaming) return null
+    if (steps.any { it is AssistantStep.Tool && it.trace.status == ToolActivityStatus.RUNNING }) {
+        return ProcessActivity.CallingTool
     }
-    steps.forEach { step ->
-        if (step is AssistantStep.Tool) {
-            tools += step
-        } else {
-            flushTools()
-            entries += ProcessEntry.Single(step)
-        }
-    }
-    flushTools()
-    return entries
+    val last = steps.lastOrNull()
+    if (last is AssistantStep.Text && last.text.isNotBlank()) return ProcessActivity.Replying
+    return ProcessActivity.Thinking
 }
 
 internal enum class ProcessStatus { Running, Done, Stopped, Failed }

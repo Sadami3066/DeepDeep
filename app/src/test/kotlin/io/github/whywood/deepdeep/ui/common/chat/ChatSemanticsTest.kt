@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.common.chat
 
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
+import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -30,43 +31,53 @@ class ChatSemanticsTest {
         assertEquals("", reasoningPreview("\n\n   "))
     }
 
-    private fun tool(id: Long): AssistantStep.Tool = AssistantStep.Tool(
-        ToolTrace(id = id, name = "tool", arguments = emptyMap()),
-    )
+    private fun tool(id: Long, status: ToolActivityStatus = ToolActivityStatus.RUNNING): AssistantStep.Tool =
+        AssistantStep.Tool(ToolTrace(id = id, name = "tool", arguments = emptyMap(), status = status))
 
     @Test
-    fun consecutiveToolsBecomeGroup() {
-        val entries = groupToolSteps(
-            listOf(
-                AssistantStep.Reasoning(id = 1, text = "想"),
-                tool(2),
-                tool(3),
-                AssistantStep.Text(id = 4, text = "答"),
+    fun processActivityOnlyWhileStreaming() {
+        assertEquals(null, processActivity(emptyList(), streaming = false))
+        assertEquals(null, processActivity(listOf(tool(1)), streaming = false))
+    }
+
+    @Test
+    fun processActivityDefaultsToThinking() {
+        assertEquals(ProcessActivity.Thinking, processActivity(emptyList(), streaming = true))
+        assertEquals(
+            ProcessActivity.Thinking,
+            processActivity(listOf(AssistantStep.Reasoning(id = 1, text = "想")), streaming = true),
+        )
+        assertEquals(
+            ProcessActivity.Thinking,
+            processActivity(listOf(tool(1, ToolActivityStatus.DONE)), streaming = true),
+        )
+    }
+
+    @Test
+    fun processActivityReportsRunningTool() {
+        assertEquals(
+            ProcessActivity.CallingTool,
+            processActivity(listOf(tool(1, ToolActivityStatus.RUNNING)), streaming = true),
+        )
+        assertEquals(
+            ProcessActivity.CallingTool,
+            processActivity(
+                listOf(AssistantStep.Text(id = 1, text = "上段"), tool(2, ToolActivityStatus.RUNNING)),
+                streaming = true,
             ),
         )
-        assertEquals(3, entries.size)
-        assertEquals(AssistantStep.Reasoning(id = 1, text = "想"), (entries[0] as ProcessEntry.Single).step)
-        assertEquals(listOf(tool(2), tool(3)), (entries[1] as ProcessEntry.ToolGroup).tools)
-        assertEquals(AssistantStep.Text(id = 4, text = "答"), (entries[2] as ProcessEntry.Single).step)
     }
 
     @Test
-    fun singleToolStaysSingle() {
-        val entries = groupToolSteps(listOf(tool(1), AssistantStep.Reasoning(id = 2, text = "想")))
-        assertEquals(2, entries.size)
-        assertEquals(tool(1), (entries[0] as ProcessEntry.Single).step)
-        assertEquals(AssistantStep.Reasoning(id = 2, text = "想"), (entries[1] as ProcessEntry.Single).step)
-    }
-
-    @Test
-    fun nonToolStepsBreakGroups() {
-        val entries = groupToolSteps(
-            listOf(tool(1), tool(2), AssistantStep.Text(id = 3, text = "中"), tool(4), tool(5), tool(6)),
+    fun processActivityReportsReplying() {
+        assertEquals(
+            ProcessActivity.Replying,
+            processActivity(listOf(AssistantStep.Text(id = 1, text = "答")), streaming = true),
         )
-        assertEquals(3, entries.size)
-        assertEquals(listOf(tool(1), tool(2)), (entries[0] as ProcessEntry.ToolGroup).tools)
-        assertEquals(AssistantStep.Text(id = 3, text = "中"), (entries[1] as ProcessEntry.Single).step)
-        assertEquals(listOf(tool(4), tool(5), tool(6)), (entries[2] as ProcessEntry.ToolGroup).tools)
+        assertEquals(
+            ProcessActivity.Thinking,
+            processActivity(listOf(AssistantStep.Text(id = 1, text = " ")), streaming = true),
+        )
     }
 
     @Test
