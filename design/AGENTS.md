@@ -1,6 +1,6 @@
 # design · 主题与通用组件
 
-DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通用 Compose 组件和图标资源。只被界面层使用，不含业务逻辑。
+DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通用 Compose 组件和图标资源。只被界面层使用，不含业务逻辑；同时作为插件 UI 的 SDK 与 `plugin-api` 同版本发布（`io.github.whywood.deepdeep:design`），让插件页面与 App 共用同一套组件与主题。
 
 ## 文件
 
@@ -31,3 +31,5 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 - 组件只用 Compose 与本模块资源，不依赖 `:app`/`:runtime`；跨模块复用的控件先落到这里。
 - 圆角是 8/12/14/16/20/24/28dp 体系，可点区域按 44dp；改视觉先改 token 再改调用点。
 - 本模块无单测，改组件以编译通过 + 真机截图验收。
+- 插件 UI 直接消费本模块组件（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），所以公共组件的签名与视觉是跨仓库 API：改签名要同步 `plugin-api` ABI 与 `docs/PLUGIN_DEV.md`，并让 `plugins/` 仓库重编译。
+- 发布：`./scripts/gradlew-locked :design:publishToMavenLocal`（`maven-publish`，artifact `design`，版本取 `pluginApiVersion`，与 `plugin-api` 同版本发布）。

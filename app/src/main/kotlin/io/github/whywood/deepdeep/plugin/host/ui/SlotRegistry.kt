@@ -28,8 +28,6 @@ internal data class HostUiVersions(
 sealed interface SlotDisabledReason {
     data class UiApiLevelUnsupported(val declared: Int, val host: Int) : SlotDisabledReason
 
-    data class ComposeApiLevelUnsupported(val declared: Int, val host: Int) : SlotDisabledReason
-
     data class KotlinVersionMismatch(val declared: String, val host: String) : SlotDisabledReason
 
     data class ComposeVersionMismatch(val declared: String, val host: String) : SlotDisabledReason
@@ -58,6 +56,9 @@ class SlotRegistry internal constructor(
 
     fun entriesOf(pluginId: String): List<SlotRenderEntry> = resolve { it.pluginId == pluginId }
 
+    fun uiCompatible(pluginId: String): Boolean =
+        disabledReasonFor(snapshotProvider().plugin(pluginId)?.manifest?.ui) == null
+
     private fun resolve(predicate: (PluginBindingEntry) -> Boolean): List<SlotRenderEntry> {
         val snapshot = snapshotProvider()
         val order = snapshot.plugins.mapIndexed { index, descriptor -> descriptor.id to index }.toMap()
@@ -74,16 +75,13 @@ class SlotRegistry internal constructor(
                     priority = entry.binding.priority,
                     content = content,
                     assetsDir = PluginPaths.assetsDir(pluginsRoot, descriptor.id, descriptor.manifest.version),
-                    disabledReason = disabledReasonFor(content, descriptor.manifest.ui),
+                    disabledReason = disabledReasonFor(descriptor.manifest.ui),
                 )
             }
             .sortedWith(compareByDescending<SlotRenderEntry> { it.priority }.thenBy { order[it.pluginId] ?: Int.MAX_VALUE })
     }
 
-    private fun disabledReasonFor(content: SlotContent.Compose, manifest: UiManifest?): SlotDisabledReason? {
-        if (content.uiApiLevel > HOST_UI_API_LEVEL) {
-            return SlotDisabledReason.ComposeApiLevelUnsupported(content.uiApiLevel, HOST_UI_API_LEVEL)
-        }
+    private fun disabledReasonFor(manifest: UiManifest?): SlotDisabledReason? {
         if (manifest == null) return null
         if (manifest.apiLevel > HOST_UI_API_LEVEL) {
             return SlotDisabledReason.UiApiLevelUnsupported(manifest.apiLevel, HOST_UI_API_LEVEL)

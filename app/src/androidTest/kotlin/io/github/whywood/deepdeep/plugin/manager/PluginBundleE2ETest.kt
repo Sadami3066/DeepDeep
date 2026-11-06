@@ -79,8 +79,8 @@ class PluginBundleE2ETest {
         }
         expectedPages.forEach { page ->
             assertTrue(
-                "${bundle.name} page $page has no slot binding",
-                manager.slotEntries("plugin.page:$page").any { it.pluginId == pluginId },
+                "${bundle.name} page $page is missing",
+                manager.pagesOf(pluginId).any { it.id == page },
             )
         }
         val icon = File(

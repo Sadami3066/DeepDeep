@@ -21,7 +21,7 @@ class PluginUiProjectionTest {
         override fun ui(host: PluginHost): PluginUiContributions = object : PluginUiContributions {
             override val bindings = emptyList<io.github.whywood.deepdeep.plugin.api.SlotBinding>()
 
-            override val pages = listOf(PluginPage("home", LocalizedText.Literal("Home")))
+            override val pages = listOf(PluginPage("home", LocalizedText.Literal("Home"), content = {}))
         }
     }
 

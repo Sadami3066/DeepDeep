@@ -300,6 +300,7 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
         onSurfaceVariant = inkSecondary,
         surfaceContainer = surface,
         surfaceContainerHigh = raised,
+        surfaceContainerHighest = raised,
         surfaceContainerLow = paper,
         surfaceContainerLowest = paper,
         outline = hairline,
@@ -326,6 +327,7 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
         onSurfaceVariant = inkSecondary,
         surfaceContainer = surface,
         surfaceContainerHigh = raised,
+        surfaceContainerHighest = raised,
         surfaceContainerLow = paper,
         surfaceContainerLowest = paper,
         outline = hairline,
@@ -337,7 +339,6 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
         scrim = Color.Black,
     )
 }
-
 @Composable
 fun DeepDeepTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,

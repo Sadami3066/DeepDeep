@@ -107,7 +107,7 @@
 
 71. **插件记录 v4（破坏式）**：外部插件记录在 `files/plugins/plugins.json`（schemaVersion 4：version/installedAt/enabled/skillIds/installPath/activeBundleSha256/size/publisherKeyId/apiLevel/uiApiLevel/lastError/pendingVersion/pendingBundleSha256，含 previous* 回滚字段；相位已改为纯函数派生，不再落盘，见 #77），读到非 v4 时备份 `.v2.bak` 后重建。相位 `INSTALLED/ACTIVE/DEGRADED/FAILED/DISABLED`（`PENDING_RESTART` 由 UI 从 pending 记录派生）表达「用户选择 ≠ 加载成功」。
 
-72. **插件 UI 扩展（页面 + 三个槽位）**：宿主维护槽位目录 `tool.card.content:<toolName>`、`chat.message:<customType>`、`plugin.page:<pageId>`，插件按 slotId 注册 Compose 绑定、宿主默认渲染兜底；插件页面通过 `PluginUiContributions.pages` 声明，是插件唯一的自绘界面入口；输入区动作用 `ComposerAction` 贡献，点击打开对应页面。不替换主壳/导航/聊天骨架，不注册 Activity；槽位异常捕获 + 渲染前崩溃标记，若进程在槽渲染中死亡则下次启动自动禁用该绑定。
+72. **插件 UI 扩展（页面 + 两类槽位）**：宿主维护槽位目录 `tool.card.content:<toolName>`、`chat.message:<customType>`，插件按 slotId 注册 Compose 绑定、宿主默认渲染兜底；插件页面通过 `PluginUiContributions.pages` 的 `PluginPage(id, title, icon?, content)` 声明并内联内容，是插件唯一的整页界面入口（见 #101）；输入区动作用 `ComposerAction` 贡献，点击打开对应页面。不替换主壳/导航/聊天骨架，不注册 Activity；槽位与页面内容异常捕获 + 渲染前崩溃标记，若进程在渲染中死亡则下次启动自动回退提示（绑定槽位则禁用该绑定）。
 
 73. **插件事件语义与安全点**（观察事件现为 21 个、`toolSetChanged` 已随无消费方删除，见 #79）：`PluginHooks` 覆盖 session/run/turn/message/prompt/input/tool-before/tool-after/compaction/model/retry/MCP/总线事件；语义分观察/变换/闸门，闸门 fail-closed；超时 2s（变换/闸门）/5s（观察）；派发按加载+注册顺序（每次分发读当前生效快照；run 级冻结见 #86）；能力变更走 `host.reconfigure()` 安全点提交（复用 #14）；插件抛错只记录，不吞安全闸门错误。接线：`PiSessionEngine` 在会话绑定后把 hooks delegate 交给 `PluginHostManager.bindSessionHooks`（读写 `PluginEventBus`/闸门派发），运行期事件由 `RuntimeEventMapper` 从 `host.events` 转成 `PluginEvent` 派发；SDK `SessionEvent` 通过 `AgentRuntimeHost.sdkEvents` 暴露并映射（ModelChanged/Compaction/Retry/MCP/自定义消息）；runtime 事件路线的重复 fallback 已关闭。
 
@@ -133,7 +133,7 @@
 
 84. **插件错误可见**：所有失败路径都留痕且可达用户：装载/激活/启用的 `Throwable` 记入 record 的 `lastError` 并显示在插件页行内错误文本；单插件失败只影响自己（`CancellationException` 重抛，其它捕获后继续启动其它插件）；插件日志统一走 `host.logs()`（`LogService`，logcat tag `DeepDeepPlugin/<id>`）；Compose 槽进入组合时写崩溃标记、正常退出组合时清除，残留标记禁用对应绑定并回退宿主视图（插件页可恢复）；外部包安装/更新失败保留旧版本并显示原因。代价：错误不再静默，部分原本「跳过继续」的路径会显式标 `FAILED`/`DEGRADED`。
 
-85. **插件 UI 单轨：只保留自由 Compose**：插件 UI 扩展只有 `SlotContent.Compose(uiApiLevel, render)`，覆盖工具卡/自定义消息/插件页面三类槽位，插件页面是唯一整页界面。槽位兼容按 `ui.apiLevel`/`ui.kotlin`/`ui.compose` 判定，不匹配只禁用该绑定并显示原因；宿主提供基于 `MaterialTheme` 的最小组件库（`plugin-api` 的 `api.ui` 包），复杂界面直接用 Material3。代价：插件与宿主 Kotlin/Compose 版本强绑，宿主升级 Compose 后插件必须重编译；跨版本稳定的声明式 UI 不再提供。
+85. **插件 UI 单轨：只保留自由 Compose + `:design` 组件**：插件 UI 扩展只有 `SlotContent.Compose(render)`（工具卡/自定义消息两类槽位）与 `PluginPage.content`（整页界面），不提供声明式 UI 节点。UI 兼容按清单 `ui.apiLevel`/`ui.kotlin`/`ui.compose` 判定，不匹配只禁用该插件的 UI（`pagesOf` 空、槽位不渲染）并显示原因，工具/技能/hooks 照常；组件与 App 同源，来自按同版本发布的 `design` 模块的 Dd 组件（见 #100），不再有 `plugin-api` 自带的最小组件库，也不建议直接使用 Material3 默认控件。代价：插件与宿主 Kotlin/Compose 版本强绑，宿主升级 Compose 后插件必须重编译；跨版本稳定的声明式 UI 不提供。
 
 86. **会话级 hooks 与 run 级冻结**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，会话 hooks 按 pluginId 覆盖该插件的全局 hooks；默认实现委托 `contributions`，只在 `contributionsFor` 里加工具（`contributions(host).copy(tools = ...)`）时保留全局 hooks。会话贡献返回默认 `PluginHooks.None`（未显式提供 hooks）时沿用全局 hooks，避免写了 `contributionsFor` 后 hooks 静默失效。同一 `SessionBinding` 从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次物化；插件能力变化经 `host.reconfigure()` 在安全点重建会话（新的 `SessionBinding`）后才重新物化，当前 run 内不变。每轮 run 开始时冻结当时生效的 hooks 集合（观察事件与变换/闸门共用）：本轮内启停插件、刷新贡献、新增插件都不影响冻结集合——已冻结的插件即使被停用也继续收到本轮剩余事件，新启用插件从下一轮开始生效；`RunFinished`（失败 run 同样以 `RunFinished(error)` 到达）派发完成后解冻，下一轮按最新快照重新冻结。实现为 per-session `SessionHookSource`（registry 快照 + 会话覆盖 + frozen 槽）；冻结集合为空时事件泵会直接丢弃事件，因此 run 结束还有一条兜底解冻路径，不能只依赖派发回调。前提：同一会话同一时刻只有一个活跃 run（run 生命周期串行）；若将来允许并发 run，需要按 runId 多槽冻结。代价：会话 hooks 只物化一次，插件不能靠运行中刷新改变当前会话的 hooks；停用后本轮仍可能收到事件，回调需自行判断插件状态。
 
@@ -206,3 +206,27 @@ web/目标/后台任务/定时/小程序/安排/屏幕这组能力以前是随�
 `plugin-api` 是宿主加载器的 ABI 契约，版本、apiLevel、Compose/Kotlin 版本与宿主强绑，校验与 ABI 基线（`plugin-api/abi/`、`scripts/plugin-api-abi.sh`）也依赖宿主构建；因此它继续放在宿主仓库作为唯一契约源，通过 mavenLocal 发布给 `plugins/` 仓库消费，而不是独立仓库或独立发布渠道。
 
 代价：插件作者要先拿到与宿主匹配的 SDK 版本；发布 SDK 需要宿主仓库可构建（或已发布到 mavenLocal 的 AAR）。
+
+## 100. design 作为插件 UI 的 SDK
+
+`:design` 与 `plugin-api` 以同一 `pluginApiVersion` 发布到 mavenLocal（`io.github.whywood.deepdeep:design`），`plugin-api` 用 `api(project(":design"))` 把设计系统传递给插件；插件仍然 `compileOnly` 不打包，运行期由宿主 parent classloader 解析同一份类。插件页面直接用 `DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()`，与 App 完全同源。原 `plugin-api` 自带的 `ui/PluginComponents.kt` 最小工具盒（`PluginCard`/`PluginButton`/`PluginTheme` 等）删除。
+
+代价：公共 Dd 组件的签名与视觉成为跨仓库 API，改组件要同步 `plugin-api` ABI、`docs/PLUGIN_DEV.md` 并重编 `plugins/`；插件作者不能再只靠 `plugin-api` 拿到 UI 组件，需要能解析 `design` 制品（由 `api()` 传递，通常无感）。
+
+## 101. 插件页面内联内容，取消 plugin.page 槽位
+
+`PluginPage(id, title, icon?, content)` 直接携带 `@Composable () -> Unit` 页面内容，宿主 `PluginPageHost` 渲染；删除 `plugin.page:<pageId>` 槽位、`SlotIds.page` 与对应绑定。一个页面只属于一个插件、一份内容，槽位机制在这里只产生重复声明与分散的兼容判定。
+
+代价：页面不再经过 `SlotState`，需要宿主信息时在 composable 闭包里捕获 `host`；页面崩溃兜底改由 `PluginPageHost` 的 page guardKey 记录（行为不变）。
+
+## 102. 去掉 SlotContent.Compose.uiApiLevel
+
+UI 兼容性统一由 manifest `ui` 块（`ui.apiLevel`/`ui.kotlin`/`ui.compose`）判定；绑定级再写 `uiApiLevel` 是重复信息，而且逐绑定禁用会造成同一插件只有一半 UI 可用。
+
+代价：不能再为单个槽位声明低于插件的 UI 等级；UI 不兼容时整个插件的页面与槽位一起禁用，工具/技能/hooks 不受影响。插件需删除该参数重编译。
+
+## 103. 主题补 surfaceContainerHighest 映射
+
+Material3 `Card` 的默认容器色是 `surfaceContainerHighest`，而 `DeepDeepTheme.materialScheme()` 之前没有映射这个角色，导致任何 Material3 `Card`（尤其是插件页面）落回默认紫色 `#E6E0E9`，与 App 白底卡片完全脱节。明暗两套 scheme 都补 `surfaceContainerHighest = raised`。
+
+代价：App 内所有 Material3 `Card` 底色统一到 `raised`；当前没有界面依赖默认紫，属纯修复。
