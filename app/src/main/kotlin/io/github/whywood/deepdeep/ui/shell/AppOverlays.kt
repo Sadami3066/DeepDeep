@@ -16,7 +16,6 @@ import androidx.compose.ui.res.stringResource
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AttachmentRef
-import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
@@ -27,7 +26,6 @@ import io.github.whywood.deepdeep.ui.common.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.common.shareChooser
-import io.github.whywood.deepdeep.ui.plugins.PluginSetupSheet
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -78,7 +76,6 @@ internal fun AppOverlays(
     chatViewModel: ChatViewModel,
     state: ChatUiState,
     activeJobs: List<JobSnapshot>,
-    pluginInteraction: PluginInteraction?,
     attachmentRoot: File,
     drawer: ShellDrawerState,
     drawerActions: ShellDrawerActions,
@@ -119,7 +116,6 @@ internal fun AppOverlays(
             },
             usage = state.usage?.takeIf { overlays.usageSheetOpen }?.let(ShellOverlay::Usage),
             jobs = ShellOverlay.Jobs(activeJobs, overlays.selectedJobId, overlays.jobOutput).takeIf { overlays.jobsSheetOpen },
-            pluginSetup = pluginInteraction?.let(ShellOverlay::PluginSetup),
         ),
         overlayActions = ShellOverlayActions(
             onConfirmWorkspaceCreate = { name -> overlays.workspaceCreateOpen = false; chatViewModel.createWorkspace(name) },
@@ -156,7 +152,6 @@ internal fun AppOverlays(
         ),
         drawer = drawer,
         drawerActions = drawerActions,
-        pluginSetupContent = { interaction -> PluginSetupSheet(graph.pluginManager, interaction) },
     )
     if (overlays.attachmentSheetOpen) {
         AttachmentSourceSheet(

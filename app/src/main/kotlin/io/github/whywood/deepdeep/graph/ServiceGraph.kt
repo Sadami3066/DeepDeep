@@ -44,7 +44,6 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
             prepare = deps.prepare,
             installBundledSkills = { deps.bundledSkills.sync() },
             startPlugins = { deps.pluginManager().start() },
-            onForegroundPlugins = { deps.pluginManager().onAppForeground() },
             refreshPluginsIfStale = { deps.pluginManager().refreshIfStale(it) },
             reconfigureHost = { deps.host().reconfigure() },
             ensureHostStarted = { deps.host().ensureStarted() },

@@ -126,6 +126,7 @@ data class ChatComposerActions(
     val onFollowUp: () -> Unit,
     val onClearQueue: () -> Unit,
     val onModelsOpenChange: (Boolean) -> Unit,
+    val onOpenPluginPage: (String, String) -> Unit,
 )
 
 @Composable
@@ -578,6 +579,7 @@ private fun ChatComposerExpandedContent(
         }
     }
     PluginComposerActionRow(
+        onOpenPluginPage = actions.onOpenPluginPage,
         modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
     )
     Row(

@@ -4,20 +4,18 @@ import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import java.io.File
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-internal fun testBuiltinManifest(id: String, version: String = "1.0"): PluginManifest = PluginManifest(
+internal fun testManifest(id: String, version: String = "1.0.0"): PluginManifest = PluginManifest(
     id = id,
     version = version,
     name = LocalizedText.Literal("name"),
     summary = LocalizedText.Literal("summary"),
-    icon = IconRef.Resource(0),
-    source = PluginSource.BUILTIN,
+    icon = IconRef.Asset("icon.png"),
 )
 
 internal fun testPluginHost(

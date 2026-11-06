@@ -67,14 +67,7 @@ class ToolTextPolicyTest {
         val binding = SessionBinding()
         val registry = JobRegistry(scope = scope, notifier = { _, _, _ -> })
         val store = MiniappStore(File(root, "miniapp"))
-        val controller = object : PluginController {
-            override val setupPluginIds: List<String> = listOf("feishu", "wecom", "micloud")
-
-            override suspend fun setup(pluginId: String): PluginSetupResult =
-                PluginSetupResult(true, pluginId, true, true)
-        }
         return buildList {
-            add(pluginSetupTool(controller)!!)
             add(askUserQuestionTool(QuestionCenter(), binding))
             add(presentTool(null) { null })
             addAll(goalTools(binding, GoalService()))

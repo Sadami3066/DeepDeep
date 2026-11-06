@@ -1,8 +1,6 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi
-import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
@@ -13,109 +11,64 @@ import org.junit.Test
 
 class PluginFilterTest {
     @Test
-    fun tabIndexMapsToSource() {
-        assertEquals(PluginSource.EXTERNAL, pluginTabSource(0))
-        assertEquals(PluginSource.BUILTIN, pluginTabSource(1))
-    }
-
-    @Test
     fun emptyQueryMatchesEverything() {
-        assertTrue(pluginMatchesQuery("", "feishu", "Feishu", "Connect Feishu"))
+        assertTrue(pluginMatchesQuery("", "sample.echo", "Sample", "Echo plugin"))
         assertTrue(pluginMatchesQuery("   ", "goal", "目标", "推进长期目标"))
     }
 
     @Test
-    fun groupsPluginsBySourcePreservingOrder() {
-        val plugins = listOf(
-            snapshot("a", PluginSource.BUILTIN),
-            snapshot("b", PluginSource.EXTERNAL),
-            snapshot("c", PluginSource.BUILTIN),
-        )
+    fun filterPluginsPreservesOrder() {
+        val plugins = listOf(snapshot("a"), snapshot("b"), snapshot("c"))
 
-        assertEquals(listOf("b"), pluginItems(plugins, PluginSource.EXTERNAL).map { it.snapshot.id })
-        assertEquals(listOf("a", "c"), pluginItems(plugins, PluginSource.BUILTIN).map { it.snapshot.id })
+        assertEquals(listOf("a", "b", "c"), filterPlugins(plugins, "").map { it.id })
+        assertEquals(listOf("b"), filterPlugins(plugins, "b").map { it.id })
     }
 
     @Test
-    fun reinstallOnlyForInstallableInstalledPlugins() {
-        assertTrue(pluginShowsReinstall(snapshot("ddp", PluginSource.EXTERNAL, installable = true, installedVersion = "1.0")))
-        assertFalse(pluginShowsReinstall(snapshot("cli", PluginSource.EXTERNAL, installable = true)))
-        assertFalse(pluginShowsReinstall(snapshot("builtin", PluginSource.BUILTIN)))
-    }
-
-    @Test
-    fun deleteOnlyForInstallableExternalPlugins() {
-        assertTrue(pluginShowsDelete(snapshot("ddp", PluginSource.EXTERNAL, installable = true, installedVersion = "1.0")))
-        assertTrue(pluginShowsDelete(snapshot("cli", PluginSource.EXTERNAL, installable = true)))
-        assertFalse(pluginShowsDelete(snapshot("micloud", PluginSource.EXTERNAL)))
-        assertFalse(pluginShowsDelete(snapshot("builtin", PluginSource.BUILTIN, installable = true)))
-    }
-
-    @Test
-    fun listInteractiveUnlessBusyOrInteracting() {
+    fun listInteractiveUnlessBusy() {
         assertTrue(pluginListInteractive(PluginsUiState()))
         assertFalse(pluginListInteractive(PluginsUiState(busy = true)))
-        assertFalse(
-            pluginListInteractive(
-                PluginsUiState(interaction = PluginInteraction(pluginId = "a", title = "Title", stageTitle = "Stage")),
-            ),
-        )
     }
 
     @Test
     fun catalogReadyOnlyAfterManagerLoaded() {
         assertFalse(pluginCatalogReady(PluginsUiState(loading = true)))
-        assertFalse(pluginCatalogReady(PluginsUiState()))
-        assertTrue(pluginCatalogReady(PluginsUiState(plugins = listOf(snapshot("a", PluginSource.BUILTIN)))))
+        assertTrue(pluginCatalogReady(PluginsUiState()))
+        assertTrue(pluginCatalogReady(PluginsUiState(plugins = listOf(snapshot("a")))))
         assertTrue(pluginCatalogReady(PluginsUiState(error = "boom")))
     }
 
     @Test
-    fun detailMissingOnlyWhenCatalogLoaded() {
-        val plugin = snapshot("a", PluginSource.BUILTIN)
-
-        assertFalse(pluginDetailMissing(PluginsUiState(loading = true), "a"))
-        assertFalse(pluginDetailMissing(PluginsUiState(), "a"))
-        assertFalse(pluginDetailMissing(PluginsUiState(plugins = listOf(plugin)), "a"))
-        assertTrue(pluginDetailMissing(PluginsUiState(plugins = listOf(plugin)), "missing"))
+    fun matchesNameSummaryAndIdCaseInsensitively() {
+        assertTrue(pluginMatchesQuery("SAMPLE", "sample.echo", "Sample", "Echo plugin"))
+        assertTrue(pluginMatchesQuery("echo", "sample.echo", "Sample", "Echo plugin"))
+        assertTrue(pluginMatchesQuery("目标", "goal", "目标", "跨回合推进长期目标"))
+        assertFalse(pluginMatchesQuery("missing", "sample.echo", "Sample", "Echo plugin"))
     }
 
     @Test
-    fun matchesNameSummaryAndIdCaseInsensitively() {
-        assertTrue(pluginMatchesQuery("FEISHU", "feishu", "Feishu", "Sync messages"))
-        assertTrue(pluginMatchesQuery("sync", "feishu", "Feishu", "Sync messages"))
-        assertTrue(pluginMatchesQuery("fei", "feishu", "Feishu", "Sync messages"))
-        assertTrue(pluginMatchesQuery("目标", "goal", "目标", "跨回合推进长期目标"))
-        assertFalse(pluginMatchesQuery("missing", "feishu", "Feishu", "Sync messages"))
+    fun pagesExposeRowEntryPoint() {
+        assertTrue(snapshot("a", pages = listOf("home")).hasPages)
+        assertFalse(snapshot("a").hasPages)
     }
 
     private fun snapshot(
         id: String,
-        source: PluginSource,
-        installable: Boolean = false,
-        installedVersion: String? = null,
+        pages: List<String> = emptyList(),
     ): PluginSnapshot = PluginSnapshot(
         id = id,
         name = id,
         summary = id,
         description = null,
         version = "1.0",
-        installedVersion = installedVersion,
+        installedVersion = "1.0",
         previousVersion = null,
-        sizeLabel = null,
         icon = null,
-        source = source,
-        installable = installable,
-        requiresPrivilege = false,
         enabled = true,
         phase = PluginPhaseUi.ACTIVE,
         availability = PluginAvailabilityUi.Available,
-        status = null,
         updateAvailable = false,
-        settingsValues = emptyMap(),
-        settings = emptyList(),
-        actions = emptyList(),
-        detailRows = emptyList(),
+        pages = pages.map { io.github.whywood.deepdeep.plugin.manager.PluginPageUi(it, it) },
         skills = emptyList(),
         installedSizeBytes = null,
         lastError = null,

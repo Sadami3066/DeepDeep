@@ -20,8 +20,6 @@
     <string name="floating_card_failed">Failed: %1$s</string>
     <string name="floating_card_dismiss">Dismiss</string>
     <string name="floating_card_queue"> · %1$d</string>
-    <string name="floating_card_plugin_setup">Plugin setup</string>
-    <string name="floating_card_plugin_setup_hint">Tap to continue</string>
     <string name="floating_tracking_tool">Tool · %1$s</string>
     <string name="floating_tracking_thinking">Thinking · %1$s</string>
 

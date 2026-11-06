@@ -95,11 +95,9 @@ class ProcessRuntimeTest {
 
     @Test
     fun onForegroundRefreshesPluginsAndSyncsSkills() = runTest {
-        var foregrounded = 0
         var refreshedAfter = -1L
         var synced = 0
         val runtime = runtime(
-            onForegroundPlugins = { foregrounded += 1 },
             refreshPluginsIfStale = { refreshedAfter = it },
             syncSkills = { synced += 1 },
         )
@@ -107,7 +105,6 @@ class ProcessRuntimeTest {
         runtime.onForeground()
         advanceUntilIdle()
 
-        assertEquals(1, foregrounded)
         assertEquals(ProcessRuntime.PLUGIN_REFRESH_MIN_INTERVAL_MS, refreshedAfter)
         assertEquals(1, synced)
     }
@@ -116,7 +113,6 @@ class ProcessRuntimeTest {
         installBundledSkills: suspend () -> Unit = { steps += "bundled" },
         startPlugins: suspend () -> Unit = { steps += "plugin" },
         prepare: suspend () -> Unit = { steps += "prepare" },
-        onForegroundPlugins: () -> Unit = {},
         refreshPluginsIfStale: (Long) -> Unit = {},
         syncSkills: suspend () -> Unit = {},
     ) = ProcessRuntime(
@@ -124,7 +120,6 @@ class ProcessRuntimeTest {
         prepare = prepare,
         installBundledSkills = installBundledSkills,
         startPlugins = startPlugins,
-        onForegroundPlugins = onForegroundPlugins,
         refreshPluginsIfStale = refreshPluginsIfStale,
         reconfigureHost = { steps += "reconfigure" },
         ensureHostStarted = { steps += "ensure" },

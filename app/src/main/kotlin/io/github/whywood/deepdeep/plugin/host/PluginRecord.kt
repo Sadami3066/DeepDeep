@@ -11,7 +11,6 @@ internal data class PluginRecord(
 
 internal data class PluginRuntimeFacts(
     val loaded: Boolean,
-    val installable: Boolean,
     val failed: String? = null,
     val degraded: String? = null,
 )

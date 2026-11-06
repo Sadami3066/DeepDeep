@@ -186,24 +186,6 @@ class PluginInstallerTest {
     }
 
     @Test
-    fun rejectsReservedPluginId() = runBlocking {
-        val installer = installer(reservedPluginIds = { setOf(SyntheticDdp.PLUGIN_ID) })
-
-        val result = installer.install(packageV1(), acceptPublisher = true)
-
-        assertEquals(InstallRejection.ID_CONFLICT, (result as InstallResult.Rejected).code)
-    }
-
-    @Test
-    fun rejectsDuplicateToolNames() = runBlocking {
-        val installer = installer(reservedToolNames = { setOf("sample_tool") })
-
-        val result = installer.install(packageV1(), acceptPublisher = true)
-
-        assertEquals(InstallRejection.TOOL_CONFLICT, (result as InstallResult.Rejected).code)
-    }
-
-    @Test
     fun rejectsInvalidSignature() = runBlocking {
         val installer = installer()
         val unsigned = SyntheticDdp.build(dir, "unsigned.dpp")
@@ -376,16 +358,11 @@ class PluginInstallerTest {
         assertFalse(PluginPaths.pluginRoot(pluginsRoot, installed.id).exists())
     }
 
-    private fun installer(
-        reservedPluginIds: () -> Set<String> = { emptySet() },
-        reservedToolNames: () -> Set<String> = { emptySet() },
-    ): PluginInstaller = PluginInstaller(
+    private fun installer(): PluginInstaller = PluginInstaller(
         pluginsRoot = pluginsRoot,
         trustStore = trustStore,
         recordStore = recordStore,
         hostVersion = "0.2.0-dev",
-        reservedPluginIds = reservedPluginIds,
-        reservedToolNames = reservedToolNames,
     )
 
     private fun packageV1(): File = SyntheticDdp.build(dir, "v1.dpp", SyntheticDdp.BuildRequest(key = key))

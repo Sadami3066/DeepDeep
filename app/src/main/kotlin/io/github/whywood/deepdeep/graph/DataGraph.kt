@@ -19,7 +19,6 @@ import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
 import io.github.whywood.deepdeep.runtime.ApiKeyStore
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -103,7 +102,6 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val timerStore = TimerStore(TimerStore.prepareDataDirectory(deps.appContext.filesDir))
     val miniappStore = MiniappStore(File(deps.appContext.filesDir, "miniapp"))
     val skillCatalog = SkillCatalog(agentDir)
-    val pluginSettingsStore = PluginSettingsStore(File(deps.appContext.filesDir, "plugins/settings.json"))
     val pluginStrings = AndroidPluginStrings(deps.uiContext)
     val pluginBus = PluginBusImpl()
     val goalService: GoalService by lazy { GoalService() }

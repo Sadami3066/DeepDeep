@@ -5,7 +5,6 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginManifestCodec
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.host.external.ActivationMarker
 import io.github.whywood.deepdeep.plugin.host.external.BundleState
 import io.github.whywood.deepdeep.plugin.host.external.DdpPackage
@@ -158,8 +157,6 @@ internal class ExternalPluginRuntime(
             version = record.version,
             name = LocalizedText.Literal(record.id),
             summary = LocalizedText.Literal(""),
-            source = PluginSource.EXTERNAL,
-            installable = true,
         )
     }
 

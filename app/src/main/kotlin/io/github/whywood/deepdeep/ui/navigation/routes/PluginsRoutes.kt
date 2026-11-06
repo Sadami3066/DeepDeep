@@ -1,5 +1,4 @@
 package io.github.whywood.deepdeep.ui.navigation.routes
-import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +31,6 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
-import io.github.whywood.deepdeep.ui.plugins.PluginDetailScreen
 import io.github.whywood.deepdeep.ui.plugins.PluginPageSlot
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 
@@ -40,30 +39,8 @@ internal fun PluginsRoute(dependencies: AppDependencies, navigator: AppNavigator
     PluginsScreen(
         manager = dependencies.pluginManager,
         onBack = onBack,
-        onOpenPlugin = { pluginId -> navigator.push(AppDestination.PluginDetail(pluginId)) },
-    )
-}
-
-@Composable
-internal fun PluginDetailRoute(
-    dependencies: AppDependencies,
-    navigator: AppNavigator,
-    pluginId: String,
-    onBack: () -> Unit,
-) {
-    val manager = dependencies.pluginManager
-    PluginDetailScreen(
-        manager = manager,
-        pluginId = pluginId,
-        onBack = onBack,
-        onOpenPermission = { navigator.push(AppDestination.Permission) },
-        onOpenPluginPage = { pageId ->
-            val title = manager.pagesOf(pluginId)
-                .firstOrNull { it.id == pageId }
-                ?.title
-                ?.let(manager::resolveText)
-                .orEmpty()
-            navigator.push(AppDestination.PluginPage(pluginId, pageId, title))
+        onOpenPluginPage = { pluginId, pageId ->
+            navigator.push(AppDestination.PluginPage(pluginId, pageId))
         },
     )
 }

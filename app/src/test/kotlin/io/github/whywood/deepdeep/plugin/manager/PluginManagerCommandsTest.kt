@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.manager
 
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
@@ -20,8 +19,6 @@ import org.junit.Test
 class PluginManagerCommandsTest {
     private class FakeStrings : PluginStrings {
         override fun get(id: Int): String = "string_$id"
-
-        override fun format(id: Int, vararg args: Any): String = "string_$id"
     }
 
     private class Harness(val gate: PluginRuntimeRegistry, val commands: PluginManagerCommands, val cleared: MutableList<String>)
@@ -41,11 +38,17 @@ class PluginManagerCommandsTest {
             gate = gate,
             skillStore = skillStore,
             external = null,
-            settingsFor = { emptyMap() },
         )
-        lifecycle.registerBuiltin(BuiltinPluginEntry(managerManifest("alpha"), CountingPlugin()), null)
-        gate.setEnabled("alpha", false)
-        val settingsStore = PluginSettingsStore(root.resolve("settings.json"), Dispatchers.Unconfined)
+        val manifest = managerManifest("alpha")
+        val runtime = lifecycle.createRuntime(managerRecord("alpha", enabled = false), manifest)
+        gate.register(managerRecord("alpha", enabled = false), runtime)
+        gate.markLoaded(
+            pluginId = "alpha",
+            manifest = manifest,
+            plugin = CountingPlugin(),
+            host = testPluginHost(manifest),
+            scope = runtime.scope,
+        )
         val externalFlow = PluginExternalFlow(
             scope = scope,
             state = state,
@@ -56,7 +59,6 @@ class PluginManagerCommandsTest {
             strings = strings,
             textResolver = textResolver,
             lifecycle = lifecycle,
-            settingsStore = settingsStore,
             refresh = {},
             onContributionsChanged = {},
         )
@@ -70,8 +72,6 @@ class PluginManagerCommandsTest {
             lifecycle = lifecycle,
             external = null,
             externalFlow = externalFlow,
-            settingsStore = settingsStore,
-            builtinStateStore = BuiltinPluginStateStore(root.resolve("builtin.json"), Dispatchers.Unconfined),
             busy = AtomicBoolean(false),
             mutex = Mutex(),
             refresh = {},

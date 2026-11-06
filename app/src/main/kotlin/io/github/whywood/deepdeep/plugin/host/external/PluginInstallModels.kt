@@ -7,7 +7,6 @@ internal enum class InstallRejection {
     PACKAGE_INVALID,
     SIGNATURE_INVALID,
     MANIFEST_INVALID,
-    ID_CONFLICT,
     VERSION_CONFLICT,
     PUBLISHER_CONFLICT,
     TOOL_CONFLICT,

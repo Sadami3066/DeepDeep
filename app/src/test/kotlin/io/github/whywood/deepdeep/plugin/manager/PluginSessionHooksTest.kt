@@ -7,7 +7,6 @@ import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.events.EventRecordingHooks
@@ -267,8 +266,6 @@ class PluginSessionHooksTest {
         }
 
         override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
-
-        override suspend fun status(host: PluginHost): PluginStatus = PluginStatus.Ready("ready")
 
         override fun contributions(host: PluginHost): Contributions {
             hit("contributions")

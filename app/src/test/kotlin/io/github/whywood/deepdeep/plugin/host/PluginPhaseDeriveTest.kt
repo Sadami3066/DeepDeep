@@ -11,12 +11,10 @@ class PluginPhaseDeriveTest {
 
     private fun facts(
         loaded: Boolean = true,
-        installable: Boolean = false,
         failed: String? = null,
         degraded: String? = null,
     ): PluginRuntimeFacts = PluginRuntimeFacts(
         loaded = loaded,
-        installable = installable,
         failed = failed,
         degraded = degraded,
     )
@@ -27,19 +25,8 @@ class PluginPhaseDeriveTest {
     }
 
     @Test
-    fun disabledInstallablePluginThatWasNeverInstalledIsStillDisabled() {
-        assertEquals(
-            PluginPhase.DISABLED,
-            PluginPhase.derive(record(enabled = false, installedVersion = null), facts(loaded = false, installable = true)),
-        )
-    }
-
-    @Test
-    fun enabledInstallablePluginWithoutInstalledVersionIsInstalled() {
-        assertEquals(
-            PluginPhase.INSTALLED,
-            PluginPhase.derive(record(installedVersion = null), facts(loaded = false, installable = true)),
-        )
+    fun enabledPluginWithoutInstalledVersionStaysInstalled() {
+        assertEquals(PluginPhase.INSTALLED, PluginPhase.derive(record(installedVersion = null), facts(loaded = false)))
     }
 
     @Test
@@ -71,12 +58,11 @@ class PluginPhaseDeriveTest {
     }
 
     @Test
-    fun contributesOnlyForActiveDegradedAndPendingRestart() {
+    fun contributesOnlyForActiveAndDegraded() {
         assertEquals(true, PluginPhase.ACTIVE.contributes)
         assertEquals(true, PluginPhase.DEGRADED.contributes)
         assertEquals(false, PluginPhase.INSTALLED.contributes)
         assertEquals(false, PluginPhase.FAILED.contributes)
         assertEquals(false, PluginPhase.DISABLED.contributes)
-        assertEquals(false, PluginPhase.IMPORTED.contributes)
     }
 }

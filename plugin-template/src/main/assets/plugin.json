@@ -1,7 +1,7 @@
 {
   "id": "io.github.whywood.deepdeep.plugintemplate",
   "version": "1.0.0",
-  "apiLevel": 1,
+  "apiLevel": 2,
   "minHostVersion": "0.2.0",
   "entryClass": "io.github.whywood.deepdeep.plugintemplate.TemplatePlugin",
   "name": {
@@ -10,9 +10,9 @@
     "en": "Plugin Template"
   },
   "summary": {
-    "default": "Reference external plugin covering tools, skills, settings, setup and UI slots.",
-    "zh": "覆盖工具、技能、设置、连接流程与 UI 槽位的外部插件参考实现。",
-    "en": "Reference external plugin covering tools, skills, settings, setup and UI slots."
+    "default": "Reference external plugin covering tools, skills and self-drawn pages.",
+    "zh": "覆盖工具、技能与插件自绘页面的外部插件参考实现。",
+    "en": "Reference external plugin covering tools, skills and self-drawn pages."
   },
   "description": {
     "default": "Copy this project, rename the plugin id, replace the sample plugin class and ship a .ddp bundle.",
@@ -31,18 +31,12 @@
     "skills": [
       "template-skill"
     ],
-    "settings": [
-      "api_key",
-      "streaming",
-      "mode",
-      "max_results"
-    ],
     "uiSlots": [
-      "setup.content",
-      "tool.card.content:template_echo"
+      "tool.card.content:template_echo",
+      "plugin.page:home"
+    ],
+    "pages": [
+      "home"
     ]
-  },
-  "installable": true,
-  "requiresPrivilege": false,
-  "defaultEnabled": true
+  }
 }

@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.plugin.host.external
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginManifestCodec
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -94,7 +93,6 @@ internal object PluginPackageVerifier {
                 manifestJson,
                 hostApiLevel = hostApiLevel,
                 hostVersion = hostVersion,
-                source = PluginSource.EXTERNAL,
             )
         ) {
             is PluginManifestCodec.Result.Valid -> decoded.manifest

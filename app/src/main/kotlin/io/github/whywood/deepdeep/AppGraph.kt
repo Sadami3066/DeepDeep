@@ -32,7 +32,6 @@ import io.github.whywood.deepdeep.graph.RuntimeGraph
 import io.github.whywood.deepdeep.graph.RuntimeGraphDeps
 import io.github.whywood.deepdeep.graph.ServiceGraph
 import io.github.whywood.deepdeep.graph.ServiceGraphDeps
-import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -127,17 +126,6 @@ class AppGraph(context: Context) : AppDependencies {
     override val devPackageManager: DevPackageManager get() = serviceGraph.devPackageManager
     override val processRuntime: ProcessRuntime get() = serviceGraph.processRuntime
 
-    private val builtinWiring: BuiltinPluginWiring by lazy {
-        BuiltinPluginWiring(
-            uiContext = uiContext,
-            cacheDir = appContext.cacheDir,
-            linux = platformGraph.linuxEnvironment,
-            linuxSettings = dataGraph.linuxSettings,
-            workspaceDir = homeDir,
-            onCapabilitiesChanged = { scope.launch { host.reconfigure() } },
-            onSessionInvalidated = { scope.launch { pluginManager.refresh() } },
-        )
-    }
     private val pluginGraph: PluginGraph by lazy { PluginGraph(pluginGraphDeps()) }
 
     override val pluginManager: PluginHostManager get() = pluginGraph.manager
@@ -242,7 +230,6 @@ class AppGraph(context: Context) : AppDependencies {
         scope = scope,
         agentDir = agentDir,
         homeDir = homeDir,
-        pluginSettingsStore = dataGraph.pluginSettingsStore,
         pluginStrings = dataGraph.pluginStrings,
         host = host,
         installationId = dataGraph.installationId,
@@ -257,8 +244,6 @@ class AppGraph(context: Context) : AppDependencies {
         mcpConfigStore = dataGraph.mcpConfigStore,
         mcpServerProbe = dataGraph.mcpServerProbe,
         miniappStore = dataGraph.miniappStore,
-        builtinWiring = { builtinWiring },
-        notificationCenter = { serviceGraph.notificationCenter },
         miniappAgentService = { runtimeGraph.miniappAgentService },
         jobRegistry = { serviceGraph.jobRegistry },
         timerService = { serviceGraph.timerService },

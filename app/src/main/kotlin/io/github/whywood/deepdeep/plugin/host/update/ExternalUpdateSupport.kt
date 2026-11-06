@@ -45,7 +45,7 @@ internal class ExternalUpdateSupport(
     fetcher: PluginFetcher = HttpPluginFetcher(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val settingsStore = PluginSourceSettingsStore(
+    private val settingsStore = PluginRepositorySettingsStore(
         file = PluginUpdateDefaults.settingsFile(filesDir),
         ioDispatcher = ioDispatcher,
     )
@@ -70,9 +70,9 @@ internal class ExternalUpdateSupport(
         ioDispatcher = ioDispatcher,
     )
 
-    suspend fun loadSettings(): PluginSourceSettings = settingsStore.load()
+    suspend fun loadSettings(): PluginRepositorySettings = settingsStore.load()
 
-    suspend fun saveSettings(settings: PluginSourceSettings) {
+    suspend fun saveSettings(settings: PluginRepositorySettings) {
         settingsStore.save(settings)
     }
 

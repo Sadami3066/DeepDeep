@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.floating
 
-import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -10,7 +9,6 @@ import io.github.whywood.deepdeep.ui.common.chat.PresentedItem
 const val FLOATING_SLEEPY_AFTER_MS = 10 * 60_000L
 const val FLOATING_COMPLETED_LIMIT = 20
 const val FLOATING_DISMISSED_LIMIT = 50
-const val PLUGIN_SETUP_CARD_PREFIX = "setup:"
 
 enum class FloatingWhaleMood {
     IDLE,
@@ -60,7 +58,6 @@ data class FloatingFeedState(
     val completed: List<FloatingCompletion> = emptyList(),
     val stagedDeliveries: Map<String, List<PresentedItem>> = emptyMap(),
     val sessionTitles: Map<String, String> = emptyMap(),
-    val setup: PluginSetupNotice? = null,
     val subscription: FloatingSubscription? = null,
     val manualSubscription: Boolean = false,
     val lastEventAt: Long = 0L,
@@ -72,10 +69,6 @@ sealed interface FloatingEventCard {
 
     data class Question(val pending: PendingQuestion) : FloatingEventCard {
         override val key: String = "question:${pending.requestId}"
-    }
-
-    data class PluginSetup(val notice: PluginSetupNotice) : FloatingEventCard {
-        override val key: String = PLUGIN_SETUP_CARD_PREFIX + notice.pluginId
     }
 
     data class Completed(val completion: FloatingCompletion) : FloatingEventCard {
@@ -107,8 +100,6 @@ sealed interface FloatingFeedEvent {
     ) : FloatingFeedEvent
 
     data class DismissCard(val key: String) : FloatingFeedEvent
-
-    data class SetupChanged(val notice: PluginSetupNotice?) : FloatingFeedEvent
 
     data class RemoveCompleted(val key: String) : FloatingFeedEvent
 
@@ -230,20 +221,6 @@ fun reduceFloatingFeed(
             stagedDeliveries = state.stagedDeliveries - event.sessionId,
             lastEventAt = now,
         )
-    }
-
-    is FloatingFeedEvent.SetupChanged -> {
-        val setup = event.notice
-        val next = if (setup == null) {
-            state.copy(
-                setup = null,
-                dismissedCardKeys = state.dismissedCardKeys
-                    .filterTo(LinkedHashSet()) { !it.startsWith(PLUGIN_SETUP_CARD_PREFIX) },
-            )
-        } else {
-            state.copy(setup = setup)
-        }
-        if (next.copy(lastEventAt = state.lastEventAt) == state) state else next.copy(lastEventAt = now)
     }
 
     is FloatingFeedEvent.DismissCard -> state.copy(
@@ -378,8 +355,7 @@ fun floatingPendingCount(state: FloatingFeedState): Int =
 
 fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = when {
     state.runs.isNotEmpty() -> FloatingWhaleMood.THINKING
-    state.questions.isNotEmpty() || state.setup != null ||
-        floatingVisibleCompletions(state).isNotEmpty() -> FloatingWhaleMood.WAVE
+    state.questions.isNotEmpty() || floatingVisibleCompletions(state).isNotEmpty() -> FloatingWhaleMood.WAVE
     now - state.lastEventAt >= FLOATING_SLEEPY_AFTER_MS -> FloatingWhaleMood.SLEEPY
     else -> FloatingWhaleMood.IDLE
 }
@@ -387,7 +363,6 @@ fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = 
 fun floatingEventQueue(state: FloatingFeedState): List<FloatingEventCard> {
     val candidates = buildList {
         state.questions.forEach { add(FloatingEventCard.Question(it)) }
-        state.setup?.let { add(FloatingEventCard.PluginSetup(it)) }
         floatingVisibleCompletions(state).forEach { add(FloatingEventCard.Completed(it)) }
         state.subscription?.let { add(FloatingEventCard.Tracking(it)) }
     }

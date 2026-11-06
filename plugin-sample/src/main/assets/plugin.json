@@ -1,7 +1,7 @@
 {
   "id": "io.github.whywood.deepdeep.pluginsample",
   "version": "1.0.0",
-  "apiLevel": 1,
+  "apiLevel": 2,
   "minHostVersion": "0.2.0",
   "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
   "name": {
@@ -21,9 +21,11 @@
       "sample_card"
     ],
     "uiSlots": [
-      "setup.content",
-      "chat.message:sample.card"
+      "chat.message:sample.card",
+      "plugin.page:sample.main"
+    ],
+    "pages": [
+      "sample.main"
     ]
-  },
-  "installable": true
+  }
 }

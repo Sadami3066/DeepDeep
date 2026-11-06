@@ -3,7 +3,7 @@ package io.github.whywood.deepdeep.plugin.manager
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginSource
+import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
@@ -58,7 +58,6 @@ internal class PluginRuntimeRegistry {
     fun markLoaded(
         pluginId: String,
         manifest: PluginManifest,
-        source: PluginSource,
         plugin: DeepDeepPlugin,
         host: PluginHost,
         scope: CoroutineScope,
@@ -67,7 +66,6 @@ internal class PluginRuntimeRegistry {
     ): PluginRuntimeView? = synchronized(lock) {
         val runtime = runtimes[pluginId] ?: return null
         runtime.manifest = manifest
-        runtime.source = source
         runtime.plugin = plugin
         runtime.host = host
         runtime.scope = scope
@@ -94,8 +92,7 @@ internal class PluginRuntimeRegistry {
         val runtime = runtimes[pluginId] ?: return null
         runtime.plugin = null
         runtime.externalHandle = null
-        runtime.contributions = io.github.whywood.deepdeep.plugin.host.PluginContributions.Empty
-        runtime.status = null
+        runtime.contributions = PluginContributions.Empty
         runtime.skillIds = emptyList()
         viewLocked(pluginId)
     }
@@ -112,7 +109,6 @@ internal class PluginRuntimeRegistry {
             val runtime = runtimes[pluginId] ?: return null
             runtime.contributions = result.contributions
             runtime.availability = result.availability
-            runtime.status = result.status
             runtime.materializationFailure = result.failure
             if (result.failure != null) {
                 records[pluginId] = records.getValue(pluginId).copy(lastError = result.failure)

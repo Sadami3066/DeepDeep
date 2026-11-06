@@ -126,18 +126,13 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
-    data class PluginDetail(val id: String) : AppDestination {
-        override val routeKey: String = "plugins/$id"
-        override val depth: Int = 2
-    }
-
     data class PluginPage(
         val pluginId: String,
         val pageId: String,
         val title: String = "",
     ) : AppDestination {
         override val routeKey: String = "plugins/$pluginId/page/" + encodeRoutePath(pageId)
-        override val depth: Int = 3
+        override val depth: Int = 2
     }
 
     data class WorkspaceSettings(val workspaceId: String) : AppDestination {
@@ -199,11 +194,6 @@ sealed interface AppDestination {
                     null
                 }
             }
-
-            routeKey.startsWith(PLUGIN_DETAIL_PREFIX) ->
-                PluginDetail(routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)).takeIf {
-                    it.id.isNotBlank() && !it.id.contains('/')
-                }
 
             routeKey.startsWith(FILES_PREFIX) -> decodeRoutePath(routeKey.removePrefix(FILES_PREFIX))?.let(::Files)
 

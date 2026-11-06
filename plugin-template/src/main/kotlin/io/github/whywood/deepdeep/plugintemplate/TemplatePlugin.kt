@@ -1,40 +1,29 @@
 package io.github.whywood.deepdeep.plugintemplate
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
-import io.github.whywood.deepdeep.plugin.api.PluginAction
-import io.github.whywood.deepdeep.plugin.api.PluginActionStyle
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
-import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
-import io.github.whywood.deepdeep.plugin.api.PluginNotification
-import io.github.whywood.deepdeep.plugin.api.PluginProgress
+import io.github.whywood.deepdeep.plugin.api.PluginPage
+import io.github.whywood.deepdeep.plugin.api.PluginPageState
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
-import io.github.whywood.deepdeep.plugin.api.PluginSetupUi
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.PluginSkillFile
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.PromptSection
-import io.github.whywood.deepdeep.plugin.api.SettingOption
-import io.github.whywood.deepdeep.plugin.api.SettingSpec
-import io.github.whywood.deepdeep.plugin.api.SetupSlotState
 import io.github.whywood.deepdeep.plugin.api.SlotBinding
 import io.github.whywood.deepdeep.plugin.api.SlotContent
 import io.github.whywood.deepdeep.plugin.api.SlotIds
@@ -53,31 +42,16 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 class TemplatePlugin : DeepDeepPlugin {
-    private var connected: Boolean = false
-    private var settings: Map<String, String> = emptyMap()
+    private var streaming: Boolean = true
 
     override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
 
-    override suspend fun status(host: PluginHost): PluginStatus =
-        if (connected) {
-            PluginStatus.Ready(host.text(literal("Connected", "已连接")), account = accountLabel(host))
-        } else {
-            PluginStatus.NotReady(host.text(literal("Not connected yet", "尚未连接")))
-        }
-
-    override suspend fun install(host: PluginHost, progress: PluginProgress) {
-        progress.report(20, literal("Preparing plugin files", "准备插件文件"))
-        delay(120)
-        progress.report(100, literal("Installed", "已安装"))
-    }
-
     override suspend fun uninstall(host: PluginHost) {
         runCatching { host.secrets().remove(SECRET_TOKEN) }
-        connected = false
     }
 
     override suspend fun onEnable(host: PluginHost) {
-        connected = readToken(host) != null
+        host.logs().info("template plugin enabled")
     }
 
     override suspend fun onDisable(host: PluginHost) {
@@ -87,80 +61,6 @@ class TemplatePlugin : DeepDeepPlugin {
     override suspend fun onUpgrade(host: PluginHost, fromVersion: String) {
         host.logs().info("template plugin upgraded from $fromVersion")
     }
-
-    override suspend fun setup(host: PluginHost, ui: PluginSetupUi) {
-        ui.stage(literal("Checking environment", "检查运行环境"))
-        ui.progress(25, literal("Reading assets", "读取插件资源"))
-        delay(200)
-        if (ui.cancelled()) return
-        ui.stage(
-            title = literal("Connect the template plugin", "连接模板插件"),
-            message = literal(
-                "This demo stores a token through host.secrets().",
-                "示例会通过 host.secrets() 保存令牌。",
-            ),
-            url = "https://example.com/plugin-template/setup",
-            progress = 60,
-        )
-        delay(200)
-        if (ui.cancelled()) return
-        runCatching { host.secrets().put(SECRET_TOKEN, "demo-token") }
-        connected = true
-        ui.progress(100, literal("Connected", "已连接"))
-    }
-
-    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> = listOf(
-        PluginAction(
-            id = ACTION_RECONNECT,
-            label = literal("Reconnect", "重新连接"),
-            enabled = !connected,
-        ),
-        PluginAction(
-            id = ACTION_RESET,
-            label = literal("Reset template state", "重置模板状态"),
-            style = PluginActionStyle.DESTRUCTIVE,
-            enabled = connected,
-        ),
-    )
-
-    override suspend fun runAction(host: PluginHost, actionId: String, ui: PluginSetupUi) {
-        when (actionId) {
-            ACTION_RECONNECT -> {
-                connected = readToken(host) != null || runCatching {
-                    host.secrets().put(SECRET_TOKEN, "demo-token")
-                }.isSuccess
-                runCatching {
-                    host.notifications().notify(
-                        PluginNotification(
-                            id = "template-reconnected",
-                            title = host.text(literal("Template plugin", "模板插件")),
-                            body = host.text(literal("Reconnected", "已重新连接")),
-                        ),
-                    )
-                }
-            }
-
-            ACTION_RESET -> {
-                runCatching { host.secrets().remove(SECRET_TOKEN) }
-                connected = false
-            }
-        }
-    }
-
-    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> = listOf(
-        PluginDetailRow(
-            label = literal("Connection", "连接状态"),
-            value = host.text(if (connected) literal("Connected", "已连接") else literal("Not connected", "未连接")),
-        ),
-        PluginDetailRow(
-            label = literal("Mode", "模式"),
-            value = settings["mode"] ?: "fast",
-        ),
-        PluginDetailRow(
-            label = literal("Plugin API", "插件 API"),
-            value = runCatching { host.app().info.pluginApiLevel }.getOrNull()?.toString() ?: "unknown",
-        ),
-    )
 
     override fun skills(host: PluginHost): List<PluginSkill> {
         val skillRoot = File(host.assetsDir, "skills/template-skill")
@@ -189,52 +89,6 @@ class TemplatePlugin : DeepDeepPlugin {
         ),
     )
 
-    override fun settings(): List<SettingSpec> = listOf(
-        SettingSpec.Group(
-            key = "connection",
-            title = literal("Connection", "连接"),
-            items = listOf(
-                SettingSpec.Text(
-                    key = "api_key",
-                    title = literal("API key", "API Key"),
-                    default = "",
-                    secret = true,
-                    requiresRestart = true,
-                    summary = literal(
-                        "Stored in plaintext plugin settings; use host.secrets() for real secrets.",
-                        "明文保存在插件设置里；真正的密钥请用 host.secrets()。",
-                    ),
-                ),
-                SettingSpec.Toggle(
-                    key = "streaming",
-                    title = literal("Stream partial results", "流式返回中间结果"),
-                    defaultValue = true,
-                ),
-            ),
-        ),
-        SettingSpec.Choice(
-            key = "mode",
-            title = literal("Echo mode", "回显模式"),
-            options = listOf(
-                SettingOption("fast", literal("Fast", "快速")),
-                SettingOption("thorough", literal("Thorough", "完整")),
-            ),
-            default = "fast",
-        ),
-        SettingSpec.Number(
-            key = "max_results",
-            title = literal("Max results", "最大结果数"),
-            min = 1,
-            max = 20,
-            defaultValue = 5,
-        ),
-    )
-
-    override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
-        settings = values
-        host.logs().info("template settings changed: ${values.keys.sorted()}")
-    }
-
     override fun contributions(host: PluginHost): Contributions = Contributions(
         tools = listOf(echoTool()),
         hooks = object : PluginHooks {
@@ -262,18 +116,24 @@ class TemplatePlugin : DeepDeepPlugin {
     override fun ui(host: PluginHost): PluginUiContributions = object : PluginUiContributions {
         override val bindings: List<SlotBinding> = listOf(
             SlotBinding(
-                slotId = SlotIds.setupContent(),
-                priority = 10,
-                content = SlotContent.Compose(uiApiLevel = 1) { state ->
-                    TemplateSetupSlot(host, state)
-                },
-            ),
-            SlotBinding(
                 slotId = SlotIds.toolCard("template_echo"),
                 priority = 0,
                 content = SlotContent.Compose(uiApiLevel = 1) {
                     TemplateToolCard(host)
                 },
+            ),
+            SlotBinding(
+                slotId = SlotIds.page(PAGE_ID),
+                content = SlotContent.Compose(uiApiLevel = 1) { state ->
+                    TemplatePage(host, state)
+                },
+            ),
+        )
+
+        override val pages: List<PluginPage> = listOf(
+            PluginPage(
+                id = PAGE_ID,
+                title = literal("Template Page", "模板页面"),
             ),
         )
     }
@@ -297,17 +157,15 @@ class TemplatePlugin : DeepDeepPlugin {
     ) { call ->
         call.signal?.throwIfCancelled()
         val text = call.args["text"]?.jsonPrimitive?.contentOrNull.orEmpty()
-        val mode = settings["mode"] ?: "fast"
-        call.partial(PluginToolResult.Text("received ${text.length} chars (mode=$mode)"))
-        if (settings["streaming"] != "false") delay(PARTIAL_DELAY_MS)
+        call.partial(PluginToolResult.Text("received ${text.length} chars"))
+        if (streaming) delay(PARTIAL_DELAY_MS)
         call.signal?.throwIfCancelled()
         PluginToolResult.Rich(
             blocks = listOf(
                 ToolBlock.Text("echo: $text"),
-                ToolBlock.Text("mode: $mode, chars: ${text.length}"),
+                ToolBlock.Text("chars: ${text.length}"),
             ),
             details = buildJsonObject {
-                put("mode", mode)
                 put("chars", text.length)
             },
         )
@@ -346,50 +204,37 @@ class TemplatePlugin : DeepDeepPlugin {
         }
     }
 
-    private suspend fun readToken(host: PluginHost): String? =
-        runCatching { host.secrets().get(SECRET_TOKEN) }.getOrNull()
-
-    private fun accountLabel(host: PluginHost): String =
-        settings["api_key"]?.takeIf { it.isNotBlank() }?.let { host.text(literal("API key configured", "已配置 API Key")) }
-            ?: host.text(literal("Demo account", "演示账号"))
-
     private companion object {
         const val SECRET_TOKEN = "template-token"
-        const val ACTION_RECONNECT = "reconnect"
-        const val ACTION_RESET = "reset"
         const val SKILL_ID = "template-skill"
+        const val PAGE_ID = "home"
         const val PARTIAL_DELAY_MS = 120L
-    }
-}
-
-@Composable
-private fun TemplateSetupSlot(host: PluginHost, state: SlotState) {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = host.text(literal("Plugin template", "插件模板")),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        when (state) {
-            is SetupSlotState -> {
-                Text(host.text(state.title), style = MaterialTheme.typography.bodyMedium)
-                state.message?.let { Text(host.text(it), style = MaterialTheme.typography.bodySmall) }
-                state.url?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                state.progress?.let { Text("progress: $it%", style = MaterialTheme.typography.bodySmall) }
-            }
-
-            else -> Text(
-                text = host.text(literal("waiting for setup state", "等待 setup 状态")),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
     }
 }
 
 private fun literal(default: String, zh: String, en: String = default): LocalizedText =
     LocalizedText.Literal(mapOf("default" to default, "zh" to zh, "en" to en))
+
+@Composable
+private fun TemplatePage(host: PluginHost, state: SlotState) {
+    Column(
+        modifier = Modifier.padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = host.text(literal("Template plugin page", "模板插件页面")),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = if (state is PluginPageState) "page=${state.pageId}" else "template page",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = host.text(literal("This page is drawn by the plugin itself.", "该页面由插件自绘。")),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
 
 @Composable
 private fun TemplateToolCard(host: PluginHost) {
@@ -401,14 +246,9 @@ private fun TemplateToolCard(host: PluginHost) {
             text = host.text(literal("Template echo", "模板回显")),
             style = MaterialTheme.typography.titleSmall,
         )
-        HorizontalDivider()
-        val uriHandler = LocalUriHandler.current
         Text(
-            text = host.text(literal("Plugin development guide", "插件开发文档")),
+            text = host.text(literal("Plugin development example", "插件开发示例")),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.clickable {
-                uriHandler.openUri("https://example.com/plugin-template/docs")
-            },
         )
     }
 }

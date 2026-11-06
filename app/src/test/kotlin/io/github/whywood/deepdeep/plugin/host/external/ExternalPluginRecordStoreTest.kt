@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
@@ -171,7 +170,6 @@ class ExternalPluginRecordStoreTest {
         installedAt = 1000L,
         enabled = true,
         skillIds = listOf("skill_a"),
-        source = PluginSource.EXTERNAL,
         installPath = "/tmp/plugins/$id/1.0.0",
         activeBundleSha256 = "abc123",
         size = 4096L,

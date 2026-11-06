@@ -18,7 +18,6 @@ class PluginValidationTest {
         name: LocalizedText = this.name,
         summary: LocalizedText = this.summary,
         entryClass: String? = "com.example.plugin.Plugin",
-        source: PluginSource = PluginSource.EXTERNAL,
         provides: Provides = Provides(),
         homepage: String? = null,
         icon: IconRef? = null,
@@ -32,17 +31,15 @@ class PluginValidationTest {
         summary = summary,
         homepage = homepage,
         icon = icon,
-        source = source,
         entryClass = entryClass,
         provides = provides,
     )
 
     private fun issues(
         manifest: PluginManifest,
-        source: PluginSource = manifest.source,
         hostApiLevel: Int = PLUGIN_API_LEVEL,
         hostVersion: String? = null,
-    ) = PluginValidation.validate(manifest, source, hostApiLevel, hostVersion)
+    ) = PluginValidation.validate(manifest, hostApiLevel, hostVersion)
 
     private fun codes(manifest: PluginManifest): List<PluginValidation.Code> = issues(manifest).map { it.code }
 
@@ -53,18 +50,15 @@ class PluginValidationTest {
     }
 
     @Test
-    fun validatesIdFormatPerSource() {
+    fun validatesIdFormat() {
         assertEquals(listOf(PluginValidation.Code.INVALID_ID), codes(manifest(id = "NoDots")))
         assertEquals(listOf(PluginValidation.Code.INVALID_ID), codes(manifest(id = "Com.Example")))
         assertEquals(listOf(PluginValidation.Code.INVALID_ID), codes(manifest(id = "com..example")))
+        assertEquals(listOf(PluginValidation.Code.INVALID_ID), codes(manifest(id = "timer")))
         assertFalse(
-            codes(manifest(id = "io.github.whywood.deepdeep.pluginsample", entryClass = null))
+            codes(manifest(id = "io.github.whywood.deepdeep.pluginsample"))
                 .contains(PluginValidation.Code.INVALID_ID),
         )
-
-        val builtin = manifest(id = "timer", entryClass = null, source = PluginSource.BUILTIN)
-        assertTrue(issues(builtin).isEmpty())
-        assertTrue(codes(manifest(id = "Timer Plugin", source = PluginSource.BUILTIN, entryClass = null)).contains(PluginValidation.Code.INVALID_ID))
     }
 
     @Test
@@ -76,7 +70,7 @@ class PluginValidationTest {
 
     @Test
     fun validatesApiLevel() {
-        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 2)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 3)))
         assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 0)))
         assertTrue(issues(manifest(apiLevel = 1), hostApiLevel = 2).isEmpty())
     }
@@ -95,7 +89,7 @@ class PluginValidationTest {
     }
 
     @Test
-    fun externalPluginRequiresEntryClass() {
+    fun requiresEntryClass() {
         assertEquals(listOf(PluginValidation.Code.ENTRY_CLASS_MISSING), codes(manifest(entryClass = null)))
         assertEquals(listOf(PluginValidation.Code.ENTRY_CLASS_MISSING), codes(manifest(entryClass = " ")))
         assertEquals(listOf(PluginValidation.Code.INVALID_ENTRY_CLASS), codes(manifest(entryClass = "Plugin")))
@@ -103,18 +97,9 @@ class PluginValidationTest {
     }
 
     @Test
-    fun externalPluginCannotUseResourceText() {
-        val external = manifest(name = LocalizedText.Resource(1))
-        assertTrue(codes(external).contains(PluginValidation.Code.INVALID_TEXT))
-
-        val builtin = manifest(
-            id = "timer",
-            name = LocalizedText.Resource(1),
-            summary = LocalizedText.Resource(2),
-            entryClass = null,
-            source = PluginSource.BUILTIN,
-        )
-        assertTrue(issues(builtin).isEmpty())
+    fun rejectsResourceText() {
+        assertTrue(codes(manifest(name = LocalizedText.Resource(1))).contains(PluginValidation.Code.INVALID_TEXT))
+        assertTrue(codes(manifest(summary = LocalizedText.Resource(2))).contains(PluginValidation.Code.INVALID_TEXT))
     }
 
     @Test
@@ -141,11 +126,12 @@ class PluginValidationTest {
     fun validatesProvidesEntriesAndSlots() {
         val provides = Provides(
             tools = listOf("echo", "Bad Tool", "echo"),
-            uiSlots = listOf("setup.content", "plugin.detail.section", "tool.card.content:echo", "composer.action"),
+            uiSlots = listOf("setup.content", "plugin.page", "tool.card.content:echo", "composer.action"),
+            pages = listOf("home", "bad page", "home"),
         )
         val codes = codes(manifest(provides = provides))
-        assertEquals(2, codes.count { it == PluginValidation.Code.INVALID_PROVIDES })
-        assertEquals(2, codes.count { it == PluginValidation.Code.INVALID_UI_SLOT })
+        assertEquals(4, codes.count { it == PluginValidation.Code.INVALID_PROVIDES })
+        assertEquals(3, codes.count { it == PluginValidation.Code.INVALID_UI_SLOT })
     }
 
     @Test
@@ -157,11 +143,9 @@ class PluginValidationTest {
 
     @Test
     fun formatHelpersMatchManifestRules() {
-        assertTrue(PluginValidation.isValidExternalId("io.github.whywood.deepdeep.pluginsample"))
-        assertFalse(PluginValidation.isValidExternalId("timer"))
-        assertTrue(PluginValidation.isValidBuiltinId("timer"))
-        assertTrue(PluginValidation.isValidBuiltinId("web-search"))
-        assertFalse(PluginValidation.isValidBuiltinId("Web Search"))
+        assertTrue(PluginValidation.isValidId("io.github.whywood.deepdeep.pluginsample"))
+        assertFalse(PluginValidation.isValidId("timer"))
+        assertFalse(PluginValidation.isValidId("io.github.whywood.deepdeep.pluginsample.Bad"))
         assertTrue(PluginValidation.isValidEntryClass("com.example.HelloPlugin"))
         assertFalse(PluginValidation.isValidEntryClass("HelloPlugin"))
         assertTrue(PluginValidation.isValidToolName("screen_tap"))
@@ -208,5 +192,11 @@ class PluginValidationTest {
 
         val shorthand = LocalizedText.Literal("only default")
         assertEquals(mapOf(DEFAULT_LANGUAGE to "only default"), shorthand.values)
+    }
+
+    @Test
+    fun availabilityReadinessHelper() {
+        assertTrue(PluginAvailability.Available.isReady)
+        assertFalse(PluginAvailability.Unavailable("offline").isReady)
     }
 }

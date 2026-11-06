@@ -33,12 +33,8 @@ class DeepLinkTest {
     @Test
     fun parsesDetailPages() {
         assertEquals(
-            DeepLink.Page(AppDestination.PluginDetail("feishu")),
-            DeepLink.parse("deepdeep://plugins/feishu"),
-        )
-        assertEquals(
-            DeepLink.Page(AppDestination.PluginDetail("dev.pi.foo")),
-            DeepLink.parse("deepdeep://plugins/dev.pi.foo"),
+            DeepLink.Page(AppDestination.PluginPage("dev.pi.foo", "home")),
+            DeepLink.parse("deepdeep://plugins/dev.pi.foo/home"),
         )
         assertEquals(
             DeepLink.Page(AppDestination.MiniappDetail("abc_def-123")),
@@ -57,8 +53,8 @@ class DeepLinkTest {
         assertEquals(DeepLink.Page(AppDestination.Settings), DeepLink.parse("deepdeep://settings/"))
         assertEquals(DeepLink.Page(AppDestination.Plugins), DeepLink.parse("deepdeep://plugins/"))
         assertEquals(
-            DeepLink.Page(AppDestination.PluginDetail("feishu")),
-            DeepLink.parse("deepdeep://plugins/feishu/"),
+            DeepLink.Page(AppDestination.PluginPage("dev.pi.foo", "home")),
+            DeepLink.parse("deepdeep://plugins/dev.pi.foo/home/"),
         )
         assertEquals(DeepLink.Session("abc"), DeepLink.parse("deepdeep://chat/abc/"))
     }
@@ -132,8 +128,10 @@ class DeepLinkTest {
             "deepdeep://plugins/%20",
             "deepdeep://plugins/a%20b",
             "deepdeep://plugins/a%2Fb",
-            "deepdeep://plugins/a/b",
+            "deepdeep://plugins/a",
+            "deepdeep://plugins/a/b/c",
             "deepdeep://plugins//feishu",
+            "deepdeep://plugins/a/%20",
         ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }
     }
 

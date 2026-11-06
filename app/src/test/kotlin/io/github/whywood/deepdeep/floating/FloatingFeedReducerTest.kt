@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.floating
 
-import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -446,34 +445,6 @@ class FloatingFeedReducerTest {
     }
 
     @Test
-    fun pluginSetupCardAppearsAndClears() {
-        val notice = PluginSetupNotice("micloud", "小米云服务", "等待扫码")
-        val state = reduceFloatingFeed(baseState(), FloatingFeedEvent.SetupChanged(notice), 2_000L)
-        val card = floatingEventCard(state) as FloatingEventCard.PluginSetup
-        assertEquals("micloud", card.notice.pluginId)
-        assertEquals(FloatingWhaleMood.WAVE, floatingWhaleMood(state, 2_100L))
-
-        val dismissed = reduceFloatingFeed(state, FloatingFeedEvent.DismissCard(card.key), 2_200L)
-        assertNull(floatingEventCard(dismissed))
-
-        val cleared = reduceFloatingFeed(dismissed, FloatingFeedEvent.SetupChanged(null), 2_300L)
-        assertNull(cleared.setup)
-        assertTrue(cleared.dismissedCardKeys.none { it.startsWith(PLUGIN_SETUP_CARD_PREFIX) })
-    }
-
-    @Test
-    fun pluginSetupCardRanksBelowQuestionAndAboveCompleted() {
-        val state = baseState().copy(
-            setup = PluginSetupNotice("micloud", "小米云服务", "等待扫码"),
-            completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
-        )
-        assertEquals(FloatingEventCard.PluginSetup::class.java, floatingEventCard(state)?.javaClass)
-
-        val withQuestion = state.copy(questions = listOf(pending("req-1")))
-        assertEquals(FloatingEventCard.Question::class.java, floatingEventCard(withQuestion)?.javaClass)
-    }
-
-    @Test
     fun runsChangedAutoSubscribesLatestRun() {
         val state = reduceFloatingFeed(
             baseState(),
@@ -651,16 +622,14 @@ class FloatingFeedReducerTest {
     fun trackingCardQueuesAfterAllOtherCards() {
         val state = baseState().copy(
             questions = listOf(pending("req-1")),
-            setup = PluginSetupNotice("micloud", "小米云服务", "等待扫码"),
             completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
             subscription = subscription("session-z"),
         )
         val queue = floatingEventQueue(state)
-        assertEquals(4, queue.size)
+        assertEquals(3, queue.size)
         assertTrue(queue[0] is FloatingEventCard.Question)
-        assertTrue(queue[1] is FloatingEventCard.PluginSetup)
-        assertTrue(queue[2] is FloatingEventCard.Completed)
-        val tracking = queue[3] as FloatingEventCard.Tracking
+        assertTrue(queue[1] is FloatingEventCard.Completed)
+        val tracking = queue[2] as FloatingEventCard.Tracking
         assertEquals("session-z", tracking.subscription.sessionId)
         assertEquals("session-z", tracking.sessionId())
         assertEquals(queue.first(), floatingEventCard(state))

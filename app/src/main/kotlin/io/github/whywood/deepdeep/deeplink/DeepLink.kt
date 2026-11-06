@@ -33,7 +33,12 @@ sealed interface DeepLink {
 
         private fun pluginPage(segments: List<String>): DeepLink? = when (segments.size) {
             0 -> Page(AppDestination.Plugins)
-            1 -> validId(segments[0])?.let { Page(AppDestination.PluginDetail(it)) }
+            2 -> {
+                val pluginId = validId(segments[0]) ?: return null
+                val pageId = validId(segments[1]) ?: return null
+                Page(AppDestination.PluginPage(pluginId, pageId))
+            }
+
             else -> null
         }
 

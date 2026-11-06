@@ -58,7 +58,6 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     val appToolContext: AppToolContext by lazy {
         AppToolContext(
             questionCenter = deps.questionCenter,
-            pluginController = deps.pluginManager(),
             pluginTools = { binding -> deps.pluginManager().tools(binding) },
             extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
         )

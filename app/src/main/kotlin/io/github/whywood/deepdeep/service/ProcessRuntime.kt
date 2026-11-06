@@ -22,7 +22,6 @@ class ProcessRuntime(
     private val prepare: suspend () -> Unit,
     private val installBundledSkills: suspend () -> Unit,
     private val startPlugins: suspend () -> Unit,
-    private val onForegroundPlugins: () -> Unit,
     private val refreshPluginsIfStale: (Long) -> Unit,
     private val reconfigureHost: suspend () -> Unit,
     private val ensureHostStarted: suspend () -> Unit,
@@ -63,7 +62,6 @@ class ProcessRuntime(
     }
 
     fun onForeground() {
-        onForegroundPlugins()
         refreshPluginsIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
         scope.launch {
             runCatching { syncSkills() }.onFailure {

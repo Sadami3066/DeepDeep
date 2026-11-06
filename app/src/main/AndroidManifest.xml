@@ -95,13 +95,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".plugin.micloud.MiCloudLoginActivity"
-            android:exported="false"
-            android:label="@string/plugin_micloud_name"
-            android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
             android:name=".arrange.ArrangePermissionActivity"
             android:exported="false"
             android:excludeFromRecents="true"

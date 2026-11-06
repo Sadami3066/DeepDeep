@@ -27,11 +27,11 @@ class AppRoutesTest {
         AppDestination.Plugins,
         AppDestination.Miniapp,
         AppDestination.MiniappDetail("demo-miniapp"),
-        AppDestination.PluginDetail("demo-plugin"),
+        AppDestination.PluginPage("demo-plugin", "home"),
         AppDestination.WorkspaceSettings("workspace-1"),
     )
     private val detailDestinations = allDestinations.filter {
-        it is AppDestination.PluginDetail || it is AppDestination.MiniappDetail
+        it is AppDestination.PluginPage || it is AppDestination.MiniappDetail
     }
     private val rootDestinations = allDestinations - detailDestinations.toSet()
 
@@ -53,7 +53,7 @@ class AppRoutesTest {
 
     @Test
     fun onlyPluginAndMiniappDetailDeclareParentRouteKey() {
-        assertEquals("plugins", routeSpec(AppDestination.PluginDetail("demo-plugin")).parentRouteKey)
+        assertEquals("plugins", routeSpec(AppDestination.PluginPage("demo-plugin", "home")).parentRouteKey)
         assertEquals("miniapp", routeSpec(AppDestination.MiniappDetail("demo-miniapp")).parentRouteKey)
     }
 
@@ -63,10 +63,10 @@ class AppRoutesTest {
     }
 
     @Test
-    fun pluginDetailDeepLinkAddsPluginsParent() {
+    fun pluginPageDeepLinkAddsPluginsParent() {
         assertEquals(
-            listOf(AppDestination.Plugins, AppDestination.PluginDetail("demo-plugin")),
-            deepLinkStack(AppDestination.PluginDetail("demo-plugin")),
+            listOf(AppDestination.Plugins, AppDestination.PluginPage("demo-plugin", "home")),
+            deepLinkStack(AppDestination.PluginPage("demo-plugin", "home")),
         )
     }
 

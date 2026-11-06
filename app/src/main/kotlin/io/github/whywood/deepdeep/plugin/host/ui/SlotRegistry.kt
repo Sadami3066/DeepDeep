@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.host.ui
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.SlotContent
-import io.github.whywood.deepdeep.plugin.api.SlotIds
 import io.github.whywood.deepdeep.plugin.api.UiManifest
 import io.github.whywood.deepdeep.plugin.host.PluginBindingEntry
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
@@ -58,9 +57,6 @@ class SlotRegistry internal constructor(
     fun bindings(slotId: String): List<SlotRenderEntry> = resolve { it.binding.slotId == slotId }
 
     fun entriesOf(pluginId: String): List<SlotRenderEntry> = resolve { it.pluginId == pluginId }
-
-    fun detailSectionsOf(pluginId: String): List<SlotRenderEntry> =
-        entriesOf(pluginId).filter { it.slotId.startsWith(SlotIds.DETAIL_SECTION_PREFIX) }
 
     private fun resolve(predicate: (PluginBindingEntry) -> Boolean): List<SlotRenderEntry> {
         val snapshot = snapshotProvider()

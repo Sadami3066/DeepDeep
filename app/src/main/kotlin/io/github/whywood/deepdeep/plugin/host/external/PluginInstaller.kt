@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.host.external
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.PluginVersion
 import io.github.whywood.deepdeep.plugin.host.HostToolNames
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
@@ -17,8 +16,6 @@ internal class PluginInstaller(
     internal val recordStore: ExternalPluginRecordStore,
     hostApiLevel: Int = PLUGIN_API_LEVEL,
     hostVersion: String? = null,
-    private val reservedPluginIds: () -> Set<String> = { emptySet() },
-    private val reservedToolNames: () -> Set<String> = { emptySet() },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -48,11 +45,7 @@ internal class PluginInstaller(
         }
         val manifest = candidate.manifest
         val pluginId = manifest.id
-        if (pluginId in reservedPluginIds()) {
-            return@withContext InstallResult.Rejected(InstallRejection.ID_CONFLICT, "plugin id '$pluginId' is reserved")
-        }
-        val toolConflicts = manifest.provides.tools
-            .filter { it in reservedToolNames() || HostToolNames.isReserved(it) }
+        val toolConflicts = manifest.provides.tools.filter(HostToolNames::isReserved)
         if (toolConflicts.isNotEmpty()) {
             return@withContext InstallResult.Rejected(
                 InstallRejection.TOOL_CONFLICT,
@@ -221,7 +214,6 @@ internal class PluginInstaller(
             version = version,
             installedAt = clock(),
             enabled = candidate.manifest.defaultEnabled,
-            source = PluginSource.EXTERNAL,
             installPath = versionRoot.absolutePath,
             activeBundleSha256 = candidate.digests.bundleSha256,
             size = candidate.digests.size,

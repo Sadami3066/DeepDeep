@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.manager
 
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import java.util.concurrent.CountDownLatch
@@ -65,7 +64,6 @@ class PluginRuntimeRegistryTest {
         val result = MaterializedPlugin(
             contributions = PluginContributions(tools = listOf(managerTool("alpha_tool"))),
             availability = PluginAvailabilityUi.Available,
-            status = PluginStatusUi.Ready("ok"),
             skills = emptyList(),
             failure = null,
         )
@@ -80,7 +78,6 @@ class PluginRuntimeRegistryTest {
         val result = MaterializedPlugin(
             contributions = PluginContributions(),
             availability = PluginAvailabilityUi.Available,
-            status = null,
             skills = emptyList(),
             failure = "materialize failed",
         )
@@ -95,7 +92,6 @@ class PluginRuntimeRegistryTest {
         val result = MaterializedPlugin(
             contributions = PluginContributions(),
             availability = PluginAvailabilityUi.Unavailable("offline"),
-            status = null,
             skills = emptyList(),
             failure = null,
         )
@@ -179,7 +175,4 @@ class PluginRuntimeRegistryTest {
 internal class ManagerTestPlugin : io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin {
     override suspend fun availability(host: io.github.whywood.deepdeep.plugin.api.PluginHost): io.github.whywood.deepdeep.plugin.api.PluginAvailability =
         io.github.whywood.deepdeep.plugin.api.PluginAvailability.Available
-
-    override suspend fun status(host: io.github.whywood.deepdeep.plugin.api.PluginHost): PluginStatus =
-        PluginStatus.Ready("ok")
 }

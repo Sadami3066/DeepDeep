@@ -10,7 +10,7 @@ class HostToolNamesTest {
     fun reservesEngineAndHostTools() {
         val expected = listOf(
             "read", "write", "edit", "bash", "ls", "grep", "find",
-            "ask_user_question", "plugin_setup", "present", "adb_shell", "root_shell",
+            "ask_user_question", "present", "adb_shell", "root_shell",
             "get_goal", "create_goal", "update_goal",
             "job_start", "job_output", "job_list", "job_kill",
             "timer_create", "timer_list", "timer_update", "timer_delete",

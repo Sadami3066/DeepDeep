@@ -6,21 +6,6 @@ sealed interface SlotState
 
 data object NoSlotState : SlotState
 
-data class SetupSlotState(
-    val title: LocalizedText,
-    val message: LocalizedText? = null,
-    val url: String? = null,
-    val imagePath: String? = null,
-    val progress: Int? = null,
-    val cancelled: Boolean = false,
-) : SlotState
-
-data class DetailSlotState(
-    val pluginId: String,
-    val status: PluginStatus,
-    val rows: List<PluginDetailRow> = emptyList(),
-) : SlotState
-
 data class ToolCardSlotState(
     val callId: String,
     val toolName: String,

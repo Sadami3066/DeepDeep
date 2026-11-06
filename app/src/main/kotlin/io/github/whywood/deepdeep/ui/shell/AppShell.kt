@@ -133,7 +133,6 @@ internal fun AppShell(
         initialValue = false,
     )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
-    val pluginsState by graph.pluginManager.state.collectAsStateWithLifecycle()
     val voiceAutoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(initialValue = false)
     val appLanguage = remember(context) { LanguagePreferences(context).read() }
     val colors = deepDeepColors()
@@ -479,6 +478,7 @@ internal fun AppShell(
                                                 }
                                             },
                         onOpenMiniapp = { id -> navigator.push(AppDestination.MiniappDetail(id)) },
+                        onOpenPluginPage = { pluginId, pageId -> navigator.push(AppDestination.PluginPage(pluginId, pageId)) },
                         onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
                         onFollowUp = chatViewModel::followUpNow,
                         onClearQueue = chatViewModel::clearQueuedInputs,
@@ -582,7 +582,6 @@ internal fun AppShell(
             chatViewModel = chatViewModel,
             state = state,
             activeJobs = activeJobs,
-            pluginInteraction = pluginsState.interaction,
             attachmentRoot = attachmentRoot,
             drawer = drawerState,
             drawerActions = drawerActions,

@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 
 internal data class ExternalPluginRecord(
     val id: String,
@@ -8,7 +7,6 @@ internal data class ExternalPluginRecord(
     val installedAt: Long,
     val enabled: Boolean = true,
     val skillIds: List<String> = emptyList(),
-    val source: PluginSource = PluginSource.EXTERNAL,
     val installPath: String,
     val activeBundleSha256: String,
     val size: Long,

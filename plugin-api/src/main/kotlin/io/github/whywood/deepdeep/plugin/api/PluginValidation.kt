@@ -33,9 +33,7 @@ object PluginValidation {
 
     const val MAX_ID_LENGTH: Int = 128
 
-    private val EXTERNAL_ID = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$")
-
-    private val BUILTIN_ID = Regex("^[a-z][a-z0-9_-]*$")
+    private val PLUGIN_ID = Regex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$")
 
     private val ENTRY_CLASS = Regex("^[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)+$")
 
@@ -43,11 +41,11 @@ object PluginValidation {
 
     private val PROVIDES_ID = Regex("^[a-z][A-Za-z0-9_-]*$")
 
+    private val PAGE_ID = Regex("^[a-z][a-z0-9_.-]*$")
+
     private val SKILL_ID = Regex("^[a-z][a-z0-9_-]*$")
 
-    fun isValidExternalId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && EXTERNAL_ID.matches(id)
-
-    fun isValidBuiltinId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && BUILTIN_ID.matches(id)
+    fun isValidId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && PLUGIN_ID.matches(id)
 
     fun isValidEntryClass(value: String): Boolean = value.length <= 256 && ENTRY_CLASS.matches(value)
 
@@ -55,14 +53,11 @@ object PluginValidation {
 
     fun validate(
         manifest: PluginManifest,
-        source: PluginSource = manifest.source,
         hostApiLevel: Int = PLUGIN_API_LEVEL,
         hostVersion: String? = null,
     ): List<Issue> = buildList {
-        val external = source == PluginSource.EXTERNAL
-        val idValid = if (external) isValidExternalId(manifest.id) else isValidBuiltinId(manifest.id)
-        if (!idValid) {
-            add(error(Code.INVALID_ID, "id", "invalid ${source.name.lowercase()} plugin id: ${manifest.id}"))
+        if (!isValidId(manifest.id)) {
+            add(error(Code.INVALID_ID, "id", "invalid plugin id: ${manifest.id}"))
         }
         if (PluginVersion.parse(manifest.version) == null) {
             add(error(Code.INVALID_VERSION, "version", "version must be major.minor.patch with optional suffix: ${manifest.version}"))
@@ -93,20 +88,17 @@ object PluginValidation {
                 )
             }
         }
-        validateText(manifest.name, "name", required = true, external = external)
-        validateText(manifest.summary, "summary", required = true, external = external)
-        manifest.description?.let { validateText(it, "description", required = false, external = external) }
-        manifest.sizeLabel?.let { validateText(it, "sizeLabel", required = false, external = external) }
+        validateText(manifest.name, "name", required = true)
+        validateText(manifest.summary, "summary", required = true)
+        manifest.description?.let { validateText(it, "description", required = false) }
         manifest.homepage?.let { url ->
             if (!isHttpUrl(url)) add(error(Code.INVALID_URL, "homepage", "homepage must be an http(s) url: $url"))
         }
-        manifest.icon?.let { validateIcon(it, external) }
-        if (external) {
-            val entry = manifest.entryClass
-            when {
-                entry.isNullOrBlank() -> add(error(Code.ENTRY_CLASS_MISSING, "entryClass", "external plugin requires entryClass"))
-                !isValidEntryClass(entry) -> add(error(Code.INVALID_ENTRY_CLASS, "entryClass", "entryClass is not a valid class name: $entry"))
-            }
+        manifest.icon?.let { validateIcon(it) }
+        val entry = manifest.entryClass
+        when {
+            entry.isNullOrBlank() -> add(error(Code.ENTRY_CLASS_MISSING, "entryClass", "plugin requires entryClass"))
+            !isValidEntryClass(entry) -> add(error(Code.INVALID_ENTRY_CLASS, "entryClass", "entryClass is not a valid class name: $entry"))
         }
         validateProvides(manifest.provides)
     }
@@ -145,12 +137,9 @@ object PluginValidation {
         text: LocalizedText,
         field: String,
         required: Boolean,
-        external: Boolean,
     ) {
         when (text) {
-            is LocalizedText.Resource -> if (external) {
-                add(error(Code.INVALID_TEXT, field, "external plugin cannot reference android resources"))
-            }
+            is LocalizedText.Resource -> add(error(Code.INVALID_TEXT, field, "plugin cannot reference android resources"))
             is LocalizedText.Literal -> {
                 if (!text.hasDefault()) {
                     add(
@@ -169,11 +158,9 @@ object PluginValidation {
         }
     }
 
-    private fun MutableList<Issue>.validateIcon(icon: IconRef, external: Boolean) {
+    private fun MutableList<Issue>.validateIcon(icon: IconRef) {
         when (icon) {
-            is IconRef.Resource -> if (external) {
-                add(error(Code.INVALID_ICON, "icon", "external plugin cannot reference android resources"))
-            }
+            is IconRef.Resource -> add(error(Code.INVALID_ICON, "icon", "plugin cannot reference android resources"))
             is IconRef.Asset -> if (!isSafeRelativePath(icon.path)) {
                 add(error(Code.INVALID_ICON, "icon", "icon must be a relative asset path inside the bundle: ${icon.path}"))
             }
@@ -183,9 +170,7 @@ object PluginValidation {
     private fun MutableList<Issue>.validateProvides(provides: Provides) {
         validateIds(provides.tools, "provides.tools", TOOL_NAME)
         validateIds(provides.skills, "provides.skills", PROVIDES_ID)
-        validateIds(provides.settings, "provides.settings", PROVIDES_ID)
-        validateIds(provides.actions, "provides.actions", PROVIDES_ID)
-        validateIds(provides.pages, "provides.pages", PROVIDES_ID)
+        validateIds(provides.pages, "provides.pages", PAGE_ID)
         provides.uiSlots.forEachIndexed { index, slot ->
             if (!SlotIds.matches(slot)) {
                 add(error(Code.INVALID_UI_SLOT, "provides.uiSlots[$index]", "unknown or incomplete slot id: $slot"))

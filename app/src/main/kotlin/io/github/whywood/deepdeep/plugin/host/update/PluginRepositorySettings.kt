@@ -13,25 +13,25 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 
-data class PluginSourceSettings(
+data class PluginRepositorySettings(
     val indexUrl: String? = null,
     val autoCheck: Boolean = true,
     val intervalHours: Int = PluginUpdateDefaults.DEFAULT_INTERVAL_HOURS,
 )
 
-internal class PluginSourceSettingsStore(
+internal class PluginRepositorySettingsStore(
     private val file: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    suspend fun load(): PluginSourceSettings = withContext(ioDispatcher) { loadLocked() }
+    suspend fun load(): PluginRepositorySettings = withContext(ioDispatcher) { loadLocked() }
 
-    suspend fun save(settings: PluginSourceSettings): PluginSourceSettings = withContext(ioDispatcher) {
+    suspend fun save(settings: PluginRepositorySettings): PluginRepositorySettings = withContext(ioDispatcher) {
         val normalized = normalize(settings)
         JsonFiles.write(file, toJson(normalized))
         normalized
     }
 
-    fun normalize(settings: PluginSourceSettings): PluginSourceSettings = settings.copy(
+    fun normalize(settings: PluginRepositorySettings): PluginRepositorySettings = settings.copy(
         indexUrl = settings.indexUrl
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -43,21 +43,21 @@ internal class PluginSourceSettingsStore(
         ),
     )
 
-    private fun loadLocked(): PluginSourceSettings {
-        if (!file.isFile) return PluginSourceSettings()
+    private fun loadLocked(): PluginRepositorySettings {
+        if (!file.isFile) return PluginRepositorySettings()
         val root = JsonFiles.read(file) ?: return resetLocked()
         val schemaVersion = (root["schemaVersion"] as? JsonPrimitive)?.intOrNull
         if (schemaVersion != PluginUpdateDefaults.SETTINGS_SCHEMA_VERSION) return resetLocked()
         return parse(root)
     }
 
-    private fun parse(root: JsonObject): PluginSourceSettings {
+    private fun parse(root: JsonObject): PluginRepositorySettings {
         val indexUrl = (root["indexUrl"] as? JsonPrimitive)?.contentOrNull
         val autoCheck = (root["autoCheck"] as? JsonPrimitive)?.booleanOrNull ?: true
         val intervalHours = (root["intervalHours"] as? JsonPrimitive)?.intOrNull
             ?: PluginUpdateDefaults.DEFAULT_INTERVAL_HOURS
         return normalize(
-            PluginSourceSettings(
+            PluginRepositorySettings(
                 indexUrl = indexUrl,
                 autoCheck = autoCheck,
                 intervalHours = intervalHours,
@@ -65,14 +65,14 @@ internal class PluginSourceSettingsStore(
         )
     }
 
-    private fun resetLocked(): PluginSourceSettings {
+    private fun resetLocked(): PluginRepositorySettings {
         JsonFiles.backup(file, PluginUpdateDefaults.CORRUPT_SUFFIX)
-        val defaults = PluginSourceSettings()
+        val defaults = PluginRepositorySettings()
         JsonFiles.write(file, toJson(defaults))
         return defaults
     }
 
-    private fun toJson(settings: PluginSourceSettings): JsonObject = buildJsonObject {
+    private fun toJson(settings: PluginRepositorySettings): JsonObject = buildJsonObject {
         put("schemaVersion", PluginUpdateDefaults.SETTINGS_SCHEMA_VERSION)
         settings.indexUrl?.let { put("indexUrl", it) }
         put("autoCheck", settings.autoCheck)

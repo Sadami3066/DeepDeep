@@ -1,9 +1,10 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
+import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
 import io.github.whywood.deepdeep.plugin.manager.ExternalInstallUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.plugin.manager.PluginRecoveryResult
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -31,13 +32,7 @@ internal class PluginsStateHolder(
 
     fun refresh() = manager.refresh()
 
-    fun install(pluginId: String) = manager.install(pluginId)
-
-    fun update(pluginId: String) = manager.update(pluginId)
-
     fun uninstall(pluginId: String) = manager.uninstall(pluginId)
-
-    fun runAction(pluginId: String, actionId: String) = manager.runAction(pluginId, actionId)
 
     fun setEnabled(pluginId: String, enabled: Boolean) {
         if (pluginId in _togglingIds.value) return
@@ -51,8 +46,6 @@ internal class PluginsStateHolder(
         }
     }
 
-    fun setSetting(pluginId: String, key: String, value: String) = manager.setSetting(pluginId, key, value)
-
     suspend fun inspectExternal(file: File): ExternalInspectionUi? = manager.inspectExternal(file)
 
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =
@@ -60,11 +53,11 @@ internal class PluginsStateHolder(
 
     suspend fun checkExternalUpdates(): List<PluginUpdateUi> = manager.checkExternalUpdates()
 
-    suspend fun loadSourceSettings(): PluginSourceSettings = manager.pluginSourceSettings()
+    suspend fun loadRepositorySettings(): PluginRepositorySettings = manager.pluginRepositorySettings()
 
-    fun saveSourceSettings(settings: PluginSourceSettings) {
+    fun saveRepositorySettings(settings: PluginRepositorySettings) {
         scope.launch {
-            runCatching { manager.savePluginSourceSettings(settings) }
+            runCatching { manager.savePluginRepositorySettings(settings) }
             runCatching { manager.refreshAvailableUpdates() }
         }
     }
@@ -72,4 +65,13 @@ internal class PluginsStateHolder(
     suspend fun stageUpdate(pluginId: String): String? =
         runCatching { manager.stageExternalUpdate(pluginId) }
             .getOrElse { error -> error.message ?: error.javaClass.simpleName }
+
+    suspend fun retryActivation(pluginId: String): PluginRecoveryResult =
+        runCatching { manager.retryActivation(pluginId) }
+            .getOrElse { error ->
+                PluginRecoveryResult(false, error.message ?: error.javaClass.simpleName)
+            }
+
+    suspend fun rollback(pluginId: String): Boolean =
+        runCatching { manager.rollbackPlugin(pluginId) }.getOrDefault(false)
 }
