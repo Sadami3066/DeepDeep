@@ -24,6 +24,21 @@ internal object HostToolNames {
         "miniapp_list",
         "miniapp_delete",
         "miniapp_edit",
+        "web_search",
+        "web_fetch",
+        "arrange_calendar",
+        "virtual_screen",
+        "screen_status",
+        "screen_observe",
+        "screen_screenshot",
+        "screen_tap",
+        "screen_swipe",
+        "screen_scroll",
+        "screen_type",
+        "screen_key",
+        "screen_wait",
+        "screen_list_apps",
+        "screen_launch",
     )
 
     private val sdkTools = setOf(

@@ -15,7 +15,7 @@
 ## 要点
 
 - 插件页是插件唯一的自绘界面：行点击进入 `pages[0]`，没有 `pages` 不可点；行尾「⋯」菜单 = 卸载 / 检查更新 / 版本与发布者 /（失败时）重试激活、回滚。
-- 生命周期由 `PluginHostManager` 驱动：`start()` 装载外部记录 → 一次物化 → 启用 → 技能同步；每插件独立 `SupervisorJob` scope，停用/卸载先 cancel scope 再 `close()` 收尾；启停变化触发 `host.reconfigure()`，忙碌会话在轮次结束的安全点重建。
+- 生命周期由 `PluginHostManager` 驱动：`start()` 装载外部记录 → 一次物化 → 启用 → 技能同步；每插件独立 `SupervisorJob` scope，停用先 `onDisable` 再 cancel scope 与 `close()` 收尾；启停变化触发 `host.reconfigure()`，忙碌会话在轮次结束的安全点重建。
 - 外部插件只从 `.ddp` 安装（ddp-1 签名、TOFU 发布者、sha256、记录 v4）；安装/更新确认页展示发布者指纹、sha256 与能力清单；更新在下次进程启动激活，失败保留旧版本；激活中断/连续启动崩溃按恢复策略跳过、自动停用或回滚（`PluginManagerCommands.retryActivation`/`rollbackPlugin`）。
 - 插件只能通过 `PluginHost` 的 18 个宿主服务访问 App 能力，且无法使用 Android 资源/组件（字符串/图标走 manifest + assets）。
 - 插件贡献 = tools / skills / promptSections / ui 槽位（tool.card/chat.message/plugin.page）/ pages / composerActions / hooks；每轮 refresh 每插件只物化一次，由 `PluginRegistry` 聚合成不可变快照，工具/提示词/技能/槽位/UI 都消费这份快照。

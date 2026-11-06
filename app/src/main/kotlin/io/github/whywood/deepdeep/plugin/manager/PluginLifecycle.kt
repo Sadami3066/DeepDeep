@@ -78,6 +78,21 @@ internal class PluginLifecycle(
         }
     }
 
+    suspend fun disable(pluginId: String): String? {
+        val view = gate.view(pluginId) ?: return null
+        var failure: String? = null
+        view.plugin?.let { plugin ->
+            try {
+                plugin.onDisable(view.host)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                failure = error.message ?: error.javaClass.simpleName
+            }
+        }
+        return deactivate(pluginId) ?: failure
+    }
+
     private fun freshScopeView(view: PluginRuntimeView): PluginRuntimeView {
         if (view.scope.coroutineContext[Job]?.isActive == true) return view
         val scope = newScope()
