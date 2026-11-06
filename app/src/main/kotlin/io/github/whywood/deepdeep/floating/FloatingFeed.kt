@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.floating
 
-import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -26,7 +25,6 @@ class FloatingFeed(
     private val activeRuns: StateFlow<Map<String, ActiveRunView>>,
     private val pendingQuestions: StateFlow<List<PendingQuestion>>,
     private val scope: CoroutineScope,
-    private val pluginSetup: StateFlow<PluginSetupNotice?> = MutableStateFlow(null),
     private val isForeground: () -> Boolean = { false },
     private val events: kotlinx.coroutines.flow.SharedFlow<SessionRuntimeEvent> = runtime.events,
 ) {
@@ -57,11 +55,6 @@ class FloatingFeed(
         }
         jobs += scope.launch {
             events.collect(::onRuntimeEvent)
-        }
-        jobs += scope.launch {
-            pluginSetup.collect { notice ->
-                dispatch(FloatingFeedEvent.SetupChanged(notice))
-            }
         }
     }
 

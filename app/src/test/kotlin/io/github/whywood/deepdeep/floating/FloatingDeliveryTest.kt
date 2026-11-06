@@ -23,17 +23,17 @@ class FloatingDeliveryTest {
     }
 
     @Test
-    fun parsesImageAndCreativeItems() {
+    fun parsesImageAndMiniappItems() {
         val raw = """
             {"items":[
               {"type":"image","path":"/tmp/cover.png"},
-              {"type":"creative","id":"weather","name":"天气助手","icon":"☀","version":"1.2"}
+              {"type":"miniapp","id":"weather","name":"天气助手","icon":"☀","version":"1.2"}
             ]}
         """.trimIndent()
         val items = parsePresentedItems(raw) ?: error("expected parsed items")
         assertEquals(2, items.size)
         assertEquals(PresentedItemType.IMAGE, items[0].type)
-        assertEquals(PresentedItemType.CREATIVE, items[1].type)
+        assertEquals(PresentedItemType.MINIAPP, items[1].type)
         assertEquals("weather", items[1].id)
         assertEquals("天气助手", items[1].name)
     }

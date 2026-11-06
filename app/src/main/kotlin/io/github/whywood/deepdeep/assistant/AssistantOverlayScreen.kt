@@ -100,7 +100,7 @@ internal data class AssistantOverlayActions(
     val onRemoveAttachment: (String) -> Unit,
     val onOpenFile: (String) -> Unit,
     val onShareFile: (String) -> Unit,
-    val onOpenWorkshop: (String) -> Unit,
+    val onOpenMiniapp: (String) -> Unit,
     val onOpenSession: (String) -> Unit,
     val onNewSessionInWorkspace: (String) -> Unit,
     val onRefreshLists: () -> Unit,

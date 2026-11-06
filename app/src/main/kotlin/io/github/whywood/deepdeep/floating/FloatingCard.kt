@@ -40,7 +40,6 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.manager.PluginSetupNotice
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionOption
 import io.github.whywood.deepdeep.runtime.RunStatus
@@ -57,14 +56,12 @@ internal fun FloatingEventCard(
     onOpenQuestion: (PendingQuestion) -> Unit,
     onOpenCompleted: (FloatingCompletion) -> Unit,
     onOpenTracking: (FloatingSubscription) -> Unit,
-    onOpenSetup: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(FloatingCardCorner)
     val onClick = when (card) {
         is FloatingEventCard.Question -> null
-        is FloatingEventCard.PluginSetup -> onOpenSetup
         is FloatingEventCard.Completed -> ({ onOpenCompleted(card.completion) })
         is FloatingEventCard.Tracking -> ({ onOpenTracking(card.subscription) })
     }
@@ -94,12 +91,6 @@ internal fun FloatingEventCard(
                     queueSize = queueSize,
                     onAnswer = onAnswerQuestion,
                     onOpenOverlay = { onOpenQuestion(card.pending) },
-                )
-
-                is FloatingEventCard.PluginSetup -> SetupBody(
-                    notice = card.notice,
-                    queueSize = queueSize,
-                    onDismiss = onDismiss,
                 )
 
                 is FloatingEventCard.Completed -> CompletedBody(
@@ -216,36 +207,6 @@ private fun QuestionOptionRow(
             }
         }
     }
-}
-
-@Composable
-private fun SetupBody(
-    notice: PluginSetupNotice,
-    queueSize: Int,
-    onDismiss: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    CardHeader(
-        label = stringResource(R.string.floating_card_plugin_setup),
-        labelColor = colors.accent,
-        title = notice.pluginName,
-        queueSize = queueSize,
-        onClose = onDismiss,
-    )
-    Spacer(Modifier.height(8.dp))
-    Text(
-        text = notice.stage,
-        style = DdType.body,
-        color = colors.ink,
-        maxLines = 3,
-        overflow = TextOverflow.Ellipsis,
-    )
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text = stringResource(R.string.floating_card_plugin_setup_hint),
-        style = DdType.bodySmall,
-        color = colors.inkTertiary,
-    )
 }
 
 @Composable
@@ -434,12 +395,11 @@ private fun PresentedItemType.icon(): DdIcon = when (this) {
     PresentedItemType.IMAGE -> DdIcons.Image
     PresentedItemType.VIDEO -> DdIcons.Play
     PresentedItemType.HTML -> DdIcons.Globe
-    PresentedItemType.FILE, PresentedItemType.CREATIVE -> DdIcons.File
+    PresentedItemType.FILE, PresentedItemType.MINIAPP -> DdIcons.File
 }
 
 internal fun FloatingEventCard.sessionId(): String = when (this) {
     is FloatingEventCard.Question -> pending.sessionId
-    is FloatingEventCard.PluginSetup -> ""
     is FloatingEventCard.Completed -> completion.sessionId
     is FloatingEventCard.Tracking -> subscription.sessionId
 }

@@ -170,7 +170,6 @@ internal class PluginUpdateManager(
         InstallRejection.VERSION_CONFLICT -> UpdateRejection.NOT_NEWER
         InstallRejection.PENDING_CONFLICT -> UpdateRejection.PENDING_EXISTS
         InstallRejection.STORAGE_ERROR -> UpdateRejection.STORAGE_ERROR
-        InstallRejection.ID_CONFLICT,
         InstallRejection.TOOL_CONFLICT,
         -> UpdateRejection.INSTALL_REJECTED
     }

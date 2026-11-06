@@ -3,11 +3,9 @@ package io.github.whywood.deepdeep.graph
 import android.content.Context
 import dev.pi.ai.http.HttpTransport
 import io.github.whywood.deepdeep.adb.AdbBootstrap
-import io.github.whywood.deepdeep.plugin.BuiltinPluginWiring
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
-import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -18,10 +16,9 @@ import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpPluginBridge
 import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.screen.ScreenController
-import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
 import java.io.File
@@ -34,7 +31,6 @@ internal class PluginGraphDeps(
     val scope: CoroutineScope,
     val agentDir: File,
     val homeDir: File,
-    val pluginSettingsStore: PluginSettingsStore,
     val pluginStrings: PluginStrings,
     val host: AgentRuntimeHost,
     val installationId: InstallationIdStore,
@@ -48,10 +44,8 @@ internal class PluginGraphDeps(
     val pluginBus: PluginBusImpl,
     val mcpConfigStore: McpConfigStore,
     val mcpServerProbe: McpServerProbe,
-    val workshopStore: WorkshopStore,
-    val builtinWiring: () -> BuiltinPluginWiring,
-    val notificationCenter: () -> NotificationCenter,
-    val workshopAgentService: () -> WorkshopAgentService,
+    val miniappStore: MiniappStore,
+    val miniappAgentService: () -> MiniappAgentService,
     val jobRegistry: () -> JobRegistry,
     val timerService: () -> TimerService,
     val goalService: () -> GoalService,

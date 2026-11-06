@@ -24,9 +24,12 @@ import io.github.whywood.deepdeep.ui.plugins.pluginComposerActions
 import io.github.whywood.deepdeep.ui.plugins.rememberPluginTextResolver
 
 @Composable
-internal fun PluginComposerActionRow(modifier: Modifier = Modifier) {
+internal fun PluginComposerActionRow(
+    onOpenPluginPage: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val manager = LocalPluginManager.current ?: return
-    val actions = pluginComposerActions()
+    val actions = pluginComposerActions(manager)
     if (actions.isEmpty()) return
     val textResolver = rememberPluginTextResolver()
     Row(
@@ -38,7 +41,7 @@ internal fun PluginComposerActionRow(modifier: Modifier = Modifier) {
             PluginComposerActionChip(
                 entry = entry,
                 label = textResolver.resolve(entry.action.label),
-                onClick = { manager.runAction(entry.pluginId, entry.action.id) },
+                onClick = { onOpenPluginPage(entry.pluginId, entry.pageId) },
             )
         }
     }

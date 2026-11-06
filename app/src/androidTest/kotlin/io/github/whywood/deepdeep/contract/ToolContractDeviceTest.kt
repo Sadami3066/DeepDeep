@@ -13,7 +13,7 @@ import dev.pi.ai.http.HttpResponse
 import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.DeepDeepApplication
-import io.github.whywood.deepdeep.plugin.gui.GuiAccessibilityActions
+import io.github.whywood.deepdeep.screen.GuiAccessibilityActions
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
@@ -71,7 +71,7 @@ class ToolContractDeviceTest {
         var log: File? = null
         val downloaded = File(context.filesDir, "micloud/recordings/contract-${UUID.randomUUID()}.txt")
         downloaded.parentFile!!.mkdirs()
-        val draft = graph.workshopStore.createDraft("Contract ${UUID.randomUUID().toString().take(8)}")
+        val draft = graph.miniappStore.createDraft("Contract ${UUID.randomUUID().toString().take(8)}")
         try {
             assertNull(run(tools.getValue("write"), buildJsonObject { put("path", file.absolutePath); put("content", "contract-marker\n") }).isError)
             val command = run(tools.getValue("bash"), buildJsonObject { put("command", "printf 'from-linux\\n' >> '${file.absolutePath}'; cat '${file.absolutePath}'") })
@@ -80,13 +80,13 @@ class ToolContractDeviceTest {
             downloaded.writeText("neutral-download")
             assertTrue(run(tools.getValue("bash"), buildJsonObject { put("command", "cat '${downloaded.absolutePath}'") }).text().contains("neutral-download"))
             assertTrue(run(tools.getValue("read"), args(downloaded)).text().contains("neutral-download"))
-            File(draft.directory, "index.html").writeText("<html><body>neutral-workshop</body></html>")
-            val loader = io.github.whywood.deepdeep.runtime.workshopTools(graph.workshopStore, false).first { it.name == "workshop_load" }
+            File(draft.directory, "index.html").writeText("<html><body>neutral-miniapp</body></html>")
+            val loader = io.github.whywood.deepdeep.runtime.miniappTools(graph.miniappStore, false).first { it.name == "miniapp_load" }
             val installed = run(loader, args(draft.directory))
             assertNull(installed.text(), installed.isError)
             val installedDirectory = File(Json.parseToJsonElement(installed.text()).jsonObject.getValue("path").jsonPrimitive.content)
-            assertTrue(run(tools.getValue("bash"), buildJsonObject { put("command", "cat '${File(installedDirectory, "index.html").absolutePath}'") }).text().contains("neutral-workshop"))
-            assertTrue(run(tools.getValue("read"), args(File(installedDirectory, "index.html"))).text().contains("neutral-workshop"))
+            assertTrue(run(tools.getValue("bash"), buildJsonObject { put("command", "cat '${File(installedDirectory, "index.html").absolutePath}'") }).text().contains("neutral-miniapp"))
+            assertTrue(run(tools.getValue("read"), args(File(installedDirectory, "index.html"))).text().contains("neutral-miniapp"))
 
             assertTrue(run(tools.getValue("read"), args(file)).text().contains("from-linux"))
             val attachment = io.github.whywood.deepdeep.data.AttachmentRef(
@@ -110,7 +110,7 @@ class ToolContractDeviceTest {
             assertEquals(180013L, log.length())
             assertTrue(run(tools.getValue("read"), buildJsonObject { put("path", log.absolutePath); put("offset", 2); put("limit", 1) }).text().contains("FINAL_ERROR"))
             assertTrue(run(tools.getValue("bash"), buildJsonObject { put("command", "tail -c 32 '${log.absolutePath}'") }).text().contains("FINAL_ERROR"))
-        } finally { file.delete(); log?.delete(); downloaded.delete(); graph.workshopStore.delete(draft.manifest.id); draft.directory.deleteRecursively() }
+        } finally { file.delete(); log?.delete(); downloaded.delete(); graph.miniappStore.delete(draft.manifest.id); draft.directory.deleteRecursively() }
     }
 
     @Test

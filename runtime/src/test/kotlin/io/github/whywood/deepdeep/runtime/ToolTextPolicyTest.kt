@@ -66,21 +66,14 @@ class ToolTextPolicyTest {
     private fun tools(): List<CodingTool> {
         val binding = SessionBinding()
         val registry = JobRegistry(scope = scope, notifier = { _, _, _ -> })
-        val store = WorkshopStore(File(root, "workshop"))
-        val controller = object : PluginController {
-            override val setupPluginIds: List<String> = listOf("feishu", "wecom", "micloud")
-
-            override suspend fun setup(pluginId: String): PluginSetupResult =
-                PluginSetupResult(true, pluginId, true, true)
-        }
+        val store = MiniappStore(File(root, "miniapp"))
         return buildList {
-            add(pluginSetupTool(controller)!!)
             add(askUserQuestionTool(QuestionCenter(), binding))
             add(presentTool(null) { null })
             addAll(goalTools(binding, GoalService()))
             addAll(jobTools(binding, registry))
-            addAll(workshopTools(store))
-            add(workshopEditTool(store))
+            addAll(miniappTools(store))
+            add(miniappEditTool(store))
             add(
                 adbShellTool(
                     executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },

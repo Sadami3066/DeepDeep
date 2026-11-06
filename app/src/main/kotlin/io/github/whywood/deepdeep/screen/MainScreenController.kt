@@ -1,10 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.GuiActions
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
 import kotlinx.coroutines.CancellationException
 
 class MainScreenController(

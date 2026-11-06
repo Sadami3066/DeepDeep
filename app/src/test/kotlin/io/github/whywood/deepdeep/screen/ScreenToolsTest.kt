@@ -7,15 +7,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runCurrent
-import io.github.whywood.deepdeep.plugin.gui.GUI_MAX_DEPTH
-import io.github.whywood.deepdeep.plugin.gui.GuiBounds
-import io.github.whywood.deepdeep.plugin.gui.GuiNode
-import io.github.whywood.deepdeep.plugin.gui.GuiNodeTree
-import io.github.whywood.deepdeep.plugin.gui.GuiScrollDirection
-import io.github.whywood.deepdeep.plugin.gui.GuiSelector
-import io.github.whywood.deepdeep.plugin.gui.GuiSnapshot
-import io.github.whywood.deepdeep.plugin.gui.GuiWindowInfo
-import io.github.whywood.deepdeep.plugin.gui.GuiWindowKind
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray

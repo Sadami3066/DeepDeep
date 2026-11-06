@@ -25,13 +25,13 @@ class AppRoutesTest {
         AppDestination.Skills,
         AppDestination.Timers,
         AppDestination.Plugins,
-        AppDestination.Workshop,
-        AppDestination.WorkshopDetail("demo-workshop"),
-        AppDestination.PluginDetail("demo-plugin"),
+        AppDestination.Miniapp,
+        AppDestination.MiniappDetail("demo-miniapp"),
+        AppDestination.PluginPage("demo-plugin", "home"),
         AppDestination.WorkspaceSettings("workspace-1"),
     )
     private val detailDestinations = allDestinations.filter {
-        it is AppDestination.PluginDetail || it is AppDestination.WorkshopDetail
+        it is AppDestination.PluginPage || it is AppDestination.MiniappDetail
     }
     private val rootDestinations = allDestinations - detailDestinations.toSet()
 
@@ -52,9 +52,9 @@ class AppRoutesTest {
     }
 
     @Test
-    fun onlyPluginAndWorkshopDetailDeclareParentRouteKey() {
-        assertEquals("plugins", routeSpec(AppDestination.PluginDetail("demo-plugin")).parentRouteKey)
-        assertEquals("workshop", routeSpec(AppDestination.WorkshopDetail("demo-workshop")).parentRouteKey)
+    fun onlyPluginAndMiniappDetailDeclareParentRouteKey() {
+        assertEquals("plugins", routeSpec(AppDestination.PluginPage("demo-plugin", "home")).parentRouteKey)
+        assertEquals("miniapp", routeSpec(AppDestination.MiniappDetail("demo-miniapp")).parentRouteKey)
     }
 
     @Test
@@ -63,18 +63,18 @@ class AppRoutesTest {
     }
 
     @Test
-    fun pluginDetailDeepLinkAddsPluginsParent() {
+    fun pluginPageDeepLinkAddsPluginsParent() {
         assertEquals(
-            listOf(AppDestination.Plugins, AppDestination.PluginDetail("demo-plugin")),
-            deepLinkStack(AppDestination.PluginDetail("demo-plugin")),
+            listOf(AppDestination.Plugins, AppDestination.PluginPage("demo-plugin", "home")),
+            deepLinkStack(AppDestination.PluginPage("demo-plugin", "home")),
         )
     }
 
     @Test
-    fun workshopDetailDeepLinkAddsWorkshopParent() {
+    fun miniappDetailDeepLinkAddsMiniappParent() {
         assertEquals(
-            listOf(AppDestination.Workshop, AppDestination.WorkshopDetail("demo-workshop")),
-            deepLinkStack(AppDestination.WorkshopDetail("demo-workshop")),
+            listOf(AppDestination.Miniapp, AppDestination.MiniappDetail("demo-miniapp")),
+            deepLinkStack(AppDestination.MiniappDetail("demo-miniapp")),
         )
     }
 

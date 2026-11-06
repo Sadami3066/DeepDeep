@@ -21,7 +21,7 @@ class ProcessRuntimeTest {
         val jobs = List(2) { async { runtime.start() } }
         jobs.awaitAll()
 
-        assertEquals(listOf("plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(listOf("bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
         assertEquals(ProcessState.STARTED, runtime.state.value)
     }
 
@@ -32,7 +32,7 @@ class ProcessRuntimeTest {
         runtime.start()
         runtime.start()
 
-        assertEquals(listOf("plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(listOf("bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
     }
 
     @Test
@@ -43,7 +43,7 @@ class ProcessRuntimeTest {
         advanceUntilIdle()
         runtime.start()
 
-        assertEquals(listOf("plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(listOf("bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
         assertEquals(ProcessState.STARTED, runtime.state.value)
     }
 
@@ -53,9 +53,20 @@ class ProcessRuntimeTest {
 
         runtime.start()
 
-        assertEquals(listOf("plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(listOf("bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
         assertEquals(ProcessState.STARTED, runtime.state.value)
         assertTrue(java.io.File(diagnosticsDir, "errors.log").readText().contains("plugin start failed"))
+    }
+
+    @Test
+    fun bundledSkillFailureDoesNotBlockStartup() = runTest {
+        val runtime = runtime(installBundledSkills = { steps += "bundled"; error("skill boom") })
+
+        runtime.start()
+
+        assertEquals(listOf("bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(ProcessState.STARTED, runtime.state.value)
+        assertTrue(java.io.File(diagnosticsDir, "errors.log").readText().contains("bundled skill sync failed"))
     }
 
     @Test
@@ -79,16 +90,14 @@ class ProcessRuntimeTest {
         runtime.start()
         assertEquals(ProcessState.STARTED, runtime.state.value)
         assertEquals(2, attempts)
-        assertEquals(listOf("plugin", "prepare", "plugin", "prepare", "reconfigure", "ensure"), steps)
+        assertEquals(listOf("bundled", "plugin", "prepare", "bundled", "plugin", "prepare", "reconfigure", "ensure"), steps)
     }
 
     @Test
     fun onForegroundRefreshesPluginsAndSyncsSkills() = runTest {
-        var foregrounded = 0
         var refreshedAfter = -1L
         var synced = 0
         val runtime = runtime(
-            onForegroundPlugins = { foregrounded += 1 },
             refreshPluginsIfStale = { refreshedAfter = it },
             syncSkills = { synced += 1 },
         )
@@ -96,22 +105,21 @@ class ProcessRuntimeTest {
         runtime.onForeground()
         advanceUntilIdle()
 
-        assertEquals(1, foregrounded)
         assertEquals(ProcessRuntime.PLUGIN_REFRESH_MIN_INTERVAL_MS, refreshedAfter)
         assertEquals(1, synced)
     }
 
     private fun kotlinx.coroutines.test.TestScope.runtime(
+        installBundledSkills: suspend () -> Unit = { steps += "bundled" },
         startPlugins: suspend () -> Unit = { steps += "plugin" },
         prepare: suspend () -> Unit = { steps += "prepare" },
-        onForegroundPlugins: () -> Unit = {},
         refreshPluginsIfStale: (Long) -> Unit = {},
         syncSkills: suspend () -> Unit = {},
     ) = ProcessRuntime(
         scope = this,
         prepare = prepare,
+        installBundledSkills = installBundledSkills,
         startPlugins = startPlugins,
-        onForegroundPlugins = onForegroundPlugins,
         refreshPluginsIfStale = refreshPluginsIfStale,
         reconfigureHost = { steps += "reconfigure" },
         ensureHostStarted = { steps += "ensure" },

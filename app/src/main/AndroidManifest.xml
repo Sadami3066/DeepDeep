@@ -70,7 +70,7 @@
         <service
             android:name=".service.GuiAccessibilityService"
             android:exported="true"
-            android:label="@string/plugin_screen_name"
+            android:label="@string/screen_ops_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -93,20 +93,6 @@
         <receiver
             android:name=".adb.AdbPairingReceiver"
             android:exported="false" />
-
-        <activity
-            android:name=".plugin.micloud.MiCloudLoginActivity"
-            android:exported="false"
-            android:label="@string/plugin_micloud_name"
-            android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".plugin.arrange.ArrangePermissionActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <activity
             android:name=".assistant.AssistantOverlayActivity"
@@ -149,7 +135,7 @@
                 <data android:host="mcp" />
                 <data android:host="skills" />
                 <data android:host="timers" />
-                <data android:host="workshop" />
+                <data android:host="miniapp" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

@@ -1,12 +1,8 @@
 package io.github.whywood.deepdeep.plugin.host
 
-import io.github.whywood.deepdeep.plugin.api.LocalizedText
-import io.github.whywood.deepdeep.plugin.api.PluginAction
-import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.PromptSection
-import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import java.util.concurrent.CountDownLatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -66,7 +62,7 @@ class PluginRegistryTest {
     fun phaseControlsSnapshotContributions() {
         val registry = PluginRegistry()
         val contributions = PluginContributions(tools = listOf(testTool("alpha_tool")))
-        registry.register(testDescriptor("alpha", phase = PluginPhase.IMPORTED, contributions = contributions))
+        registry.register(testDescriptor("alpha", phase = PluginPhase.FAILED, contributions = contributions))
         assertEquals(0, registry.snapshot().tools.size)
 
         assertTrue(registry.update("alpha") { it.copy(phase = PluginPhase.ACTIVE) })
@@ -155,36 +151,29 @@ class PluginRegistryTest {
 
     @Test
     fun aggregatesPerPluginContributions() {
-        val settings = listOf(SettingSpec.Toggle("flag", LocalizedText.Literal("flag")))
         val registry = PluginRegistry()
         registry.register(
             testDescriptor(
                 "alpha",
-                contributions = PluginContributions(
-                    settings = settings,
-                    actions = listOf(PluginAction("run", LocalizedText.Literal("Run"))),
-                    detailRows = listOf(PluginDetailRow(LocalizedText.Literal("Rows"), "3")),
-                    hooks = PluginHooks.None,
-                ),
+                contributions = PluginContributions(hooks = PluginHooks.None),
             ),
         )
 
         val snapshot = registry.snapshot()
-        assertEquals(listOf("alpha"), snapshot.settings.map { it.pluginId })
-        assertEquals(settings, snapshot.settings.single().specs)
-        assertEquals(listOf("alpha"), snapshot.actions.map { it.pluginId })
-        assertEquals(listOf("alpha"), snapshot.detailRows.map { it.pluginId })
         assertEquals(listOf("alpha"), snapshot.ui.map { it.pluginId })
         assertEquals(listOf("alpha"), snapshot.hooks.map { it.pluginId })
+        assertTrue(snapshot.bindings.isEmpty())
+        assertTrue(snapshot.pages.isEmpty())
+        assertTrue(snapshot.composerActions.isEmpty())
     }
 
     @Test
-    fun nonContributingPhasesAreExcludedFromDetailAggregation() {
-        val contributions = PluginContributions(detailRows = listOf(PluginDetailRow(LocalizedText.Literal("Rows"), "1")))
+    fun nonContributingPhasesAreExcludedFromAggregation() {
+        val contributions = PluginContributions(tools = listOf(testTool("alpha_tool")))
         val registry = PluginRegistry()
         registry.register(testDescriptor("alpha", phase = PluginPhase.FAILED, contributions = contributions))
-        assertTrue(registry.snapshot().detailRows.isEmpty())
-        assertTrue(registry.snapshot().settings.isEmpty())
+        assertTrue(registry.snapshot().tools.isEmpty())
+        assertTrue(registry.snapshot().ui.isEmpty())
         assertTrue(registry.snapshot().plugins.isNotEmpty())
     }
 

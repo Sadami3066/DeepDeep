@@ -38,7 +38,7 @@ internal class AppRouteHost(
     val chat: ChatRouteData,
     val ui: ShellRouteUi,
     val onOpenChat: () -> Unit,
-    val onOpenWorkshopCreate: () -> Unit,
+    val onOpenMiniappCreate: () -> Unit,
     val onOpenFile: (String) -> Unit,
     val onOpenAssistantSettings: () -> Unit,
 ) {

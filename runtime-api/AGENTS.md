@@ -11,7 +11,6 @@
 | `GoalContracts.kt` | 目标阶段、轮次模型与两个驱动接口 |
 | `JobContracts.kt` | 后台任务快照、状态与 JobController |
 | `Notices.kt` | 回合来源、回合提示与三类带外事件 |
-| `PluginContracts.kt` | 插件连接结果与 PluginController |
 | `QuestionContracts.kt` | ask_user_question 的题目与选项模型 |
 | `UsageModels.kt` | 会话用量与压缩结果 |
 | `ModelConfig.kt` | 模型配置：Provider、模型与思考档（全局默认与会话共用） |

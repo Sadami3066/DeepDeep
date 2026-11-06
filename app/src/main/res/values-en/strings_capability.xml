@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_screen_ops">Screen control</string>
+    <string name="settings_screen_ops_summary">Let the agent read the screen, tap, type and take screenshots</string>
+    <string name="screen_ops_service_label">Screen control</string>
+    <string name="screen_ops_service_description">Allow DeepDeep to read the current screen, tap, type, scroll and take screenshots</string>
+</resources>

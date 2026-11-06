@@ -2,11 +2,8 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import android.content.Context
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
-import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
@@ -31,18 +28,11 @@ class PluginHostManager internal constructor(
     private val filesDir: File,
     private val scope: CoroutineScope,
     private val language: () -> String,
-    private val builtins: List<BuiltinPluginEntry>,
     private val servicesFactory: (pluginId: String, dataDir: File, scope: CoroutineScope) -> PluginServices,
-    private val builtinStateStore: BuiltinPluginStateStore,
-    private val settingsStore: PluginSettingsStore,
     private val skillStore: PluginSkillStore,
     private val external: ExternalPluginRuntime?,
     private val externalUpdates: ExternalUpdateSupport? = null,
-    private val isForeground: () -> Boolean,
-    private val notifyInstall: (label: String, stage: String?, progress: Int?) -> Unit,
-    private val notifyInstallFinished: (label: String, success: Boolean, error: String?) -> Unit,
     private val onContributionsChanged: () -> Unit,
-    private val onSetupReady: (label: String) -> Unit,
 ) : PluginManagerDelegation() {
     private val _state = MutableStateFlow(PluginsUiState())
     override val state: StateFlow<PluginsUiState> = _state.asStateFlow()
@@ -59,17 +49,27 @@ class PluginHostManager internal constructor(
         resourceString = { id -> strings.get(id) },
         language = language,
     )
-    private val hostFactory = PluginHostFactory(context, pluginsRoot, textResolver, servicesFactory)
+    private val hostFactory = PluginHostFactory(
+        context = context,
+        pluginsRoot = pluginsRoot,
+        textResolver = textResolver,
+        servicesFactory = servicesFactory,
+        onRefreshRequest = {
+            scope.launch {
+                refreshNow()
+                onContributionsChanged()
+            }
+        },
+    )
     private val lifecycle = PluginLifecycle(
         parentScope = scope,
         hostFactory = hostFactory::create,
         gate = gate,
         skillStore = skillStore,
         external = external,
-        settingsFor = { view -> commands.settingsFor(view) },
     )
     private val materializer = PluginContributionMaterializer(gate)
-    private val uiProjection = PluginUiProjection(textResolver, settingsStore)
+    private val uiProjection = PluginUiProjection(textResolver)
     override val sessionHooks: PluginSessionHooks = PluginSessionHooks(scope, gate, registry)
     override val externalFlow: PluginExternalFlow = PluginExternalFlow(
         scope = scope,
@@ -81,7 +81,6 @@ class PluginHostManager internal constructor(
         strings = strings,
         textResolver = textResolver,
         lifecycle = lifecycle,
-        settingsStore = settingsStore,
         refresh = { refreshNow() },
         onContributionsChanged = onContributionsChanged,
     )
@@ -94,39 +93,12 @@ class PluginHostManager internal constructor(
         lifecycle = lifecycle,
         external = external,
         externalFlow = externalFlow,
-        settingsStore = settingsStore,
-        builtinStateStore = builtinStateStore,
         busy = busy,
         mutex = mutex,
         refresh = { refreshLocked() },
         clearStartupCount = { pluginId -> external?.clearStartupCount(pluginId) ?: false },
         onContributionsChanged = onContributionsChanged,
     )
-    override val setupFlow: PluginSetupFlow = PluginSetupFlow(
-        scope = scope,
-        state = _state,
-        strings = strings,
-        textResolver = textResolver,
-        busy = busy,
-        gate = gate,
-        isForeground = isForeground,
-        builtinStateStore = builtinStateStore,
-        notifyInstall = notifyInstall,
-        notifyInstallFinished = notifyInstallFinished,
-        refresh = { refreshNow() },
-        syncSkills = { pluginId -> lifecycle.syncSkills(pluginId) },
-        activate = { view -> lifecycle.activate(view) },
-        onContributionsChanged = onContributionsChanged,
-        onSetupReady = onSetupReady,
-        onError = commands::setError,
-        onOperation = commands::setOperation,
-    )
-
-    override val setupPluginIds: List<String>
-        get() = gate.views()
-            .filter { it.manifest.source == PluginSource.EXTERNAL }
-            .map { it.id }
-            .sorted()
 
     override val appScope: CoroutineScope get() = scope
 
@@ -145,25 +117,18 @@ class PluginHostManager internal constructor(
         }
         _state.update { it.copy(loading = true) }
         try {
-            val states = builtinStateStore.load()
-            builtins.forEach { entry -> lifecycle.registerBuiltin(entry, states[entry.manifest.id]) }
             externalFlow.registerRecords()
             gate.publishTo(registry)
             val startupBlocked = guardStartup()
             externalFlow.activatePendingVersions(startupBlocked)
             externalFlow.activateEnabledRecords(startupBlocked)
-            settingsStore.warm(gate.ids())
             refreshLocked()
-            activatableViews().forEach { view -> lifecycle.applySettings(view) }
-            refreshLocked()
-            activatableViews().forEach { view ->
+            gate.views().filter { view -> view.enabled }.forEach { view ->
                 val failure = lifecycle.enable(view)
-                if (view.source == PluginSource.EXTERNAL) {
-                    if (failure == null) external?.clearStartupCount(view.id)
-                    externalFlow.recordFailure(view.id, failure)
-                }
-                lifecycle.syncSkills(view.id)
+                if (failure == null) external?.clearStartupCount(view.id)
+                externalFlow.recordFailure(view.id, failure)
             }
+            gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
             externalFlow.scheduleUpdateCheck()
             started = true
         } finally {
@@ -197,16 +162,11 @@ class PluginHostManager internal constructor(
 
     override fun setEnabled(pluginId: String, enabled: Boolean) = commands.setEnabled(pluginId, enabled)
 
-    override fun setSetting(pluginId: String, key: String, value: String) =
-        commands.setSetting(pluginId, key, value)
-
     override fun uninstall(pluginId: String) = commands.uninstall(pluginId)
 
     override suspend fun retryActivation(pluginId: String) = commands.retryActivation(pluginId)
 
     override suspend fun rollbackPlugin(pluginId: String) = commands.rollbackPlugin(pluginId)
-
-    override suspend fun prepareConnect(pluginId: String) = commands.prepareConnect(pluginId)
 
     private suspend fun refreshLocked() {
         lastRefreshAt = System.currentTimeMillis()
@@ -215,10 +175,6 @@ class PluginHostManager internal constructor(
         sessionHooks.refreshSnapshots()
         val snapshot = registry.snapshot()
         _state.update { it.copy(plugins = uiProjection.snapshots(gate.views(), snapshot), loading = false) }
-    }
-
-    private fun activatableViews(): List<PluginRuntimeView> = gate.views().filter { view ->
-        view.enabled && (view.record.installedVersion != null || !view.manifest.installable)
     }
 
     private suspend fun guardStartup(): Set<String> {
@@ -256,8 +212,4 @@ class PluginHostManager internal constructor(
         gate.setEnabled(pluginId, false)
         gate.markFailure(pluginId, strings.get(message))
     }
-}
-
-internal fun List<SettingSpec>.settingLeaves(): List<SettingSpec> = flatMap { spec ->
-    if (spec is SettingSpec.Group) spec.items.settingLeaves() else listOf(spec)
 }

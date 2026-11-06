@@ -1,7 +1,7 @@
 <resources>
     <string name="present_share">分享</string>
     <string name="present_open">打开</string>
-    <string name="present_creative">创意</string>
+    <string name="present_miniapp">小程序</string>
     <string name="present_fullscreen">全屏</string>
     <string name="present_failed">无法预览</string>
     <string name="present_tool_delivered">已交付 %1$d 项</string>

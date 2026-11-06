@@ -75,8 +75,8 @@ class ShellIntakeTest {
         assertEquals(DeepLinkIntake.Idle, resolveDeepLinkIntake(null, ready = true))
         assertEquals(DeepLinkIntake.WaitingForReady, resolveDeepLinkIntake(AppDestination.Skills, ready = false))
         assertEquals(
-            DeepLinkIntake.Apply(AppDestination.PluginDetail("p1")),
-            resolveDeepLinkIntake(AppDestination.PluginDetail("p1"), ready = true),
+            DeepLinkIntake.Apply(AppDestination.PluginPage("p1", "home")),
+            resolveDeepLinkIntake(AppDestination.PluginPage("p1", "home"), ready = true),
         )
     }
 }

@@ -30,7 +30,7 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
             },
             wakeEnabled = { deps.jobWake.value },
             runnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },
-            maxRunningPerSession = { deps.pluginSettingsStore.cachedInt("jobs", "max_running", 10) },
+            maxRunningPerSession = { 10 },
         )
     }
 
@@ -42,8 +42,8 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
         ProcessRuntime(
             scope = deps.scope,
             prepare = deps.prepare,
+            installBundledSkills = { deps.bundledSkills.sync() },
             startPlugins = { deps.pluginManager().start() },
-            onForegroundPlugins = { deps.pluginManager().onAppForeground() },
             refreshPluginsIfStale = { deps.pluginManager().refreshIfStale(it) },
             reconfigureHost = { deps.host().reconfigure() },
             ensureHostStarted = { deps.host().ensureStarted() },

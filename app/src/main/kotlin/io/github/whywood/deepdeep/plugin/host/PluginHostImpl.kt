@@ -22,7 +22,7 @@ import io.github.whywood.deepdeep.plugin.api.SecretService
 import io.github.whywood.deepdeep.plugin.api.SessionService
 import io.github.whywood.deepdeep.plugin.api.TimerService
 import io.github.whywood.deepdeep.plugin.api.UiService
-import io.github.whywood.deepdeep.plugin.api.WorkshopService
+import io.github.whywood.deepdeep.plugin.api.MiniappService
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 
@@ -38,7 +38,7 @@ internal data class PluginServices(
     val jobs: JobService? = null,
     val timers: TimerService? = null,
     val goals: GoalService? = null,
-    val workshop: WorkshopService? = null,
+    val miniapp: MiniappService? = null,
     val mcp: McpService? = null,
     val ui: UiService? = null,
     val app: AppInfoService? = null,
@@ -58,6 +58,7 @@ internal class PluginHostImpl(
     private val services: PluginServices,
     private val textResolver: PluginTextResolver,
     pluginsRoot: File,
+    private val onRefreshRequest: () -> Unit = {},
 ) : PluginHost {
     override val dataDir: File = PluginPaths.dataDir(pluginsRoot, manifest.id)
 
@@ -87,7 +88,7 @@ internal class PluginHostImpl(
 
     override fun goals(): GoalService = service("goals", services.goals)
 
-    override fun workshop(): WorkshopService = service("workshop", services.workshop)
+    override fun miniapp(): MiniappService = service("miniapp", services.miniapp)
 
     override fun mcp(): McpService = service("mcp", services.mcp)
 
@@ -100,6 +101,8 @@ internal class PluginHostImpl(
     override fun logs(): LogService = service("logs", services.logs)
 
     override fun chat(): ChatService = service("chat", services.chat)
+
+    override fun requestContributionsRefresh() = onRefreshRequest()
 
     private fun <T : Any> service(name: String, value: T?): T = value ?: throw PluginServiceUnavailable(name)
 }

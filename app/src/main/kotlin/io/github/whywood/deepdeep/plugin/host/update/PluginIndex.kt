@@ -96,7 +96,7 @@ internal object PluginIndexCodec {
 
     private fun parseEntry(json: JsonObject): PluginIndexEntry {
         val id = json.requiredString("id")
-        if (!PluginValidation.isValidExternalId(id)) throw EntryException("invalid plugin id: $id")
+        if (!PluginValidation.isValidId(id)) throw EntryException("invalid plugin id: $id")
         val version = json.requiredString("version")
         if (PluginVersion.parse(version) == null) throw EntryException("invalid version: $version")
         val apiLevel = (json["apiLevel"] as? JsonPrimitive)?.intOrNull ?: PLUGIN_API_LEVEL

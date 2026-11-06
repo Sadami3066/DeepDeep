@@ -116,18 +116,13 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
-    data object Workshop : AppDestination {
-        override val routeKey: String = "workshop"
+    data object Miniapp : AppDestination {
+        override val routeKey: String = "miniapp"
         override val depth: Int = 1
     }
 
-    data class WorkshopDetail(val id: String) : AppDestination {
-        override val routeKey: String = "workshop/$id"
-        override val depth: Int = 2
-    }
-
-    data class PluginDetail(val id: String) : AppDestination {
-        override val routeKey: String = "plugins/$id"
+    data class MiniappDetail(val id: String) : AppDestination {
+        override val routeKey: String = "miniapp/$id"
         override val depth: Int = 2
     }
 
@@ -137,7 +132,7 @@ sealed interface AppDestination {
         val title: String = "",
     ) : AppDestination {
         override val routeKey: String = "plugins/$pluginId/page/" + encodeRoutePath(pageId)
-        override val depth: Int = 3
+        override val depth: Int = 2
     }
 
     data class WorkspaceSettings(val workspaceId: String) : AppDestination {
@@ -149,11 +144,11 @@ sealed interface AppDestination {
         private const val FILES_PREFIX = "files/"
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
         private const val PLUGIN_DETAIL_PREFIX = "plugins/"
-        private const val WORKSHOP_DETAIL_PREFIX = "workshop/"
+        private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
         private const val PLUGIN_PAGE_MARKER = "/page/"
-        private val WORKSHOP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
+        private val MINIAPP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 
         fun encodeRoutePath(path: String): String =
             Base64.getUrlEncoder().withoutPadding().encodeToString(path.toByteArray(Charsets.UTF_8))
@@ -183,10 +178,10 @@ sealed interface AppDestination {
             routeKey == Mcp.routeKey -> Mcp
             routeKey == Timers.routeKey -> Timers
             routeKey == Plugins.routeKey -> Plugins
-            routeKey == Workshop.routeKey -> Workshop
-            routeKey.startsWith(WORKSHOP_DETAIL_PREFIX) -> {
-                val id = routeKey.removePrefix(WORKSHOP_DETAIL_PREFIX)
-                WorkshopDetail(id).takeIf { id.matches(WORKSHOP_ID_REGEX) }
+            routeKey == Miniapp.routeKey -> Miniapp
+            routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> {
+                val id = routeKey.removePrefix(MINIAPP_DETAIL_PREFIX)
+                MiniappDetail(id).takeIf { id.matches(MINIAPP_ID_REGEX) }
             }
 
             routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey -> {
@@ -199,11 +194,6 @@ sealed interface AppDestination {
                     null
                 }
             }
-
-            routeKey.startsWith(PLUGIN_DETAIL_PREFIX) ->
-                PluginDetail(routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)).takeIf {
-                    it.id.isNotBlank() && !it.id.contains('/')
-                }
 
             routeKey.startsWith(FILES_PREFIX) -> decodeRoutePath(routeKey.removePrefix(FILES_PREFIX))?.let(::Files)
 

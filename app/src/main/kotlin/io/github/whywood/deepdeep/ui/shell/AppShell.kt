@@ -133,7 +133,6 @@ internal fun AppShell(
         initialValue = false,
     )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
-    val pluginsState by graph.pluginManager.state.collectAsStateWithLifecycle()
     val voiceAutoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(initialValue = false)
     val appLanguage = remember(context) { LanguagePreferences(context).read() }
     val colors = deepDeepColors()
@@ -327,9 +326,9 @@ internal fun AppShell(
         drawerOpen = false
     }
 
-    fun openWorkshopCreate() {
+    fun openMiniappCreate() {
         drawerOpen = false
-        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, WORKSHOP_SKILL_COMMAND)
+        chatViewModel.newSession(AgentRuntimeHost.HOME_ID, MINIAPP_SKILL_COMMAND)
         navigator.reset(AppDestination.Chat)
     }
 
@@ -478,7 +477,8 @@ internal fun AppShell(
                                                     }
                                                 }
                                             },
-                        onOpenWorkshop = { id -> navigator.push(AppDestination.WorkshopDetail(id)) },
+                        onOpenMiniapp = { id -> navigator.push(AppDestination.MiniappDetail(id)) },
+                        onOpenPluginPage = { pluginId, pageId -> navigator.push(AppDestination.PluginPage(pluginId, pageId)) },
                         onOpenFiles = { navigator.push(AppDestination.Files(attachmentRoot.absolutePath)) },
                         onFollowUp = chatViewModel::followUpNow,
                         onClearQueue = chatViewModel::clearQueuedInputs,
@@ -528,7 +528,7 @@ internal fun AppShell(
                         configuredProviderIds = configuredProviders,
                     ),
                     onOpenChat = ::openChat,
-                    onOpenWorkshopCreate = ::openWorkshopCreate,
+                    onOpenMiniappCreate = ::openMiniappCreate,
                     onOpenFile = openWorkspaceFile,
                     onOpenAssistantSettings = { navigator.push(AppDestination.AssistantSettings) },
                 ),
@@ -582,7 +582,6 @@ internal fun AppShell(
             chatViewModel = chatViewModel,
             state = state,
             activeJobs = activeJobs,
-            pluginInteraction = pluginsState.interaction,
             attachmentRoot = attachmentRoot,
             drawer = drawerState,
             drawerActions = drawerActions,
@@ -593,4 +592,4 @@ internal fun AppShell(
     }
 }
 
-private const val WORKSHOP_SKILL_COMMAND = "/skill:workshop "
+private const val MINIAPP_SKILL_COMMAND = "/skill:miniapp "

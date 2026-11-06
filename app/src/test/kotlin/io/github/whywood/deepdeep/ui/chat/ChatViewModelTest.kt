@@ -1051,18 +1051,18 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun workshopSkillExpandsPromptBeforeSending() = runTest(dispatcher) {
+    fun miniappSkillExpandsPromptBeforeSending() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
-        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val expander = FakeSkillExpander(SkillExpansion("miniapp", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         settle()
 
-        viewModel.onInputChange("/skill:workshop build a todo app")
+        viewModel.onInputChange("/skill:miniapp build a todo app")
         viewModel.send()
         assertTrue(viewModel.state.value.sending)
         settle()
 
-        assertEquals(listOf(Triple(HOME_CWD, "workshop", "build a todo app")), expander.calls)
+        assertEquals(listOf(Triple(HOME_CWD, "miniapp", "build a todo app")), expander.calls)
         assertEquals(SKILL_PROMPT, runtime.sent.single())
         assertEquals(SKILL_PROMPT, viewModel.state.value.messages.first().text)
         assertEquals("build a todo app", viewModel.state.value.conversationTitle)
@@ -1070,19 +1070,19 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun workshopSkillWithoutArgsUsesSkillNameAsTitle() = runTest(dispatcher) {
+    fun miniappSkillWithoutArgsUsesSkillNameAsTitle() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
-        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val expander = FakeSkillExpander(SkillExpansion("miniapp", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         settle()
 
-        viewModel.onInputChange("/skill:workshop")
+        viewModel.onInputChange("/skill:miniapp")
         viewModel.send()
         settle()
 
-        assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
+        assertEquals(Triple(HOME_CWD, "miniapp", ""), expander.calls.single())
         assertEquals(SKILL_PROMPT, runtime.sent.single())
-        assertEquals("workshop", viewModel.state.value.conversationTitle)
+        assertEquals("miniapp", viewModel.state.value.conversationTitle)
     }
 
     @Test
@@ -1103,16 +1103,16 @@ class ChatViewModelTest {
     @Test
     fun trailingSkillMentionExpandsInlineBeforeSending() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
-        val expander = FakeSkillExpander(SkillExpansion("workshop", SKILL_PROMPT))
+        val expander = FakeSkillExpander(SkillExpansion("miniapp", SKILL_PROMPT))
         val viewModel = viewModel(runtime, skillExpander = expander)
         settle()
 
-        viewModel.onInputChange("使用一下这个skill /skill:workshop")
+        viewModel.onInputChange("使用一下这个skill /skill:miniapp")
         viewModel.send()
         assertTrue(viewModel.state.value.sending)
         settle()
 
-        assertEquals(listOf(Triple(HOME_CWD, "workshop", "")), expander.calls)
+        assertEquals(listOf(Triple(HOME_CWD, "miniapp", "")), expander.calls)
         assertEquals("$SKILL_PROMPT\n\n使用一下这个skill", runtime.sent.single())
         assertEquals("使用一下这个skill", viewModel.state.value.conversationTitle)
     }
@@ -1124,14 +1124,14 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime, skillExpander = expander)
         settle()
 
-        viewModel.onInputChange("使用一下这个skill /skill:workshop")
+        viewModel.onInputChange("使用一下这个skill /skill:miniapp")
         viewModel.send()
         settle()
 
-        assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
+        assertEquals(Triple(HOME_CWD, "miniapp", ""), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(ConversationStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().skillMissing("miniapp"), viewModel.state.value.error)
     }
 
     @Test
@@ -1174,14 +1174,14 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime, skillExpander = expander)
         settle()
 
-        viewModel.onInputChange("/skill:workshop build something")
+        viewModel.onInputChange("/skill:miniapp build something")
         viewModel.send()
         settle()
 
-        assertEquals(Triple(HOME_CWD, "workshop", "build something"), expander.calls.single())
+        assertEquals(Triple(HOME_CWD, "miniapp", "build something"), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(ConversationStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().skillMissing("miniapp"), viewModel.state.value.error)
     }
 
     @Test
@@ -1190,10 +1190,10 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime)
         settle()
 
-        viewModel.newSession(HOME_ID, initialInput = "/skill:workshop build a todo app")
+        viewModel.newSession(HOME_ID, initialInput = "/skill:miniapp build a todo app")
         settle()
 
-        assertEquals("/skill:workshop build a todo app", viewModel.state.value.input)
+        assertEquals("/skill:miniapp build a todo app", viewModel.state.value.input)
         assertTrue(viewModel.state.value.messages.isEmpty())
     }
 
@@ -1717,6 +1717,6 @@ class ChatViewModelTest {
 
     private companion object {
         const val SKILL_PROMPT =
-            "<skill name=\"workshop\" location=\"/home/skills/workshop/SKILL.md\">\n# Workshop\n</skill>\n\nbuild a todo app"
+            "<skill name=\"miniapp\" location=\"/home/skills/miniapp/SKILL.md\">\n# Miniapp\n</skill>\n\nbuild a todo app"
     }
 }

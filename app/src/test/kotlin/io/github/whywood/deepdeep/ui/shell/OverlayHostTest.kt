@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.ui.shell
 
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
-import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.SessionUsage
@@ -23,7 +22,6 @@ class OverlayHostTest {
     private val jobs = ShellOverlay.Jobs(
         listOf(JobSnapshot("j1", "s1", "label", "cmd", JobStatus.RUNNING, 0L)), "j1", "out",
     )
-    private val pluginSetup = ShellOverlay.PluginSetup(PluginInteraction("p1", "title", "stage"))
     private val all = ShellOverlayState(
         workspaceCreate = workspaceCreate,
         workspaceRename = workspaceRename,
@@ -31,7 +29,6 @@ class OverlayHostTest {
         attachmentPreview = attachment,
         usage = usage,
         jobs = jobs,
-        pluginSetup = pluginSetup,
     )
 
     @Test
@@ -44,16 +41,15 @@ class OverlayHostTest {
     fun allOverlaysResolveInCompositionOrder() {
         val expected = listOf(
             workspaceCreate, workspaceRename, workspaceDelete,
-            attachment, usage, jobs, pluginSetup,
+            attachment, usage, jobs,
         )
         assertEquals(expected, resolveOverlays(all))
     }
 
     @Test
     fun topmostOverlayIsLastResolved() {
-        assertEquals(pluginSetup, resolveOverlay(all))
-        assertEquals(jobs, resolveOverlay(all.copy(pluginSetup = null)))
-        assertEquals(usage, resolveOverlay(all.copy(pluginSetup = null, jobs = null)))
+        assertEquals(jobs, resolveOverlay(all))
+        assertEquals(usage, resolveOverlay(all.copy(jobs = null)))
     }
 
     @Test

@@ -2,6 +2,15 @@
 
 ## HEAD (since m2)
 
+- docs: 同步小程序化、App 自带工具与插件外部化后的文档：重写 `docs/PLUGIN_DEV.md`（外部插件作者文档），更新 `docs/GUIDE.md`/`docs/DECISIONS.md`/`README.md` 与各级 `AGENTS.md` [docs]
+- refactor: 四个官方插件（飞书/企业微信/教务/小米云）迁出宿主仓库到 `plugins/` 独立仓库，按外部 `.ddp` 构建分发；宿主只保留插件契约与真机回归 [插件] [架构]
+- feat: 插件可通过 `host.requestContributionsRefresh()` 在页面操作后重建贡献与会话，开关/登录状态即时生效 [插件]
+- refactor: 插件示例与模板迁出到 `plugins/` 独立仓库，宿主仓库只保留契约与真机 e2e 脚本 [插件] [架构]
+- refactor: 删除无入口的日历授权 Activity，日历权限改由系统应用权限页授予 [界面]
+- fix: 停用插件调用 `onDisable` 再收尾；外部插件安装期保留工具名补齐 web/arrange/screen/virtual 全部 App 工具 [插件]
+- refactor: 插件系统只服务外部 `.ddp` 插件：删除内置插件体系与安装/连接/设置/动作/详情行契约（`plugin-api` 升 0.5.0 / apiLevel 2），删除 `plugin_setup` 工具与内置插件资源；插件页重绘为单列表（行内开关 + 行尾菜单 + 插件自绘页面），composer 入口直达插件页面，asset 图标按显示尺寸降采样；sample/template 同步新形态 [插件] [界面] [架构]
+- feat: 内置插件降为 App 自带工具：web/目标/任务/定时/小程序/安排/屏幕工具改在 `RuntimeGraph` 的 `AppToolContext` 单点装配，删除插件壳、插件设置与相关文案；屏幕操作改为设置页开关（默认关闭），随包内置 deepdeep-gui/deepdeep-arrange/miniapp 技能，进程启动时先同步内置技能 [插件] [界面] [架构]
+- refactor: 创意工坊更名为小程序（`miniapp`）：工具、技能、页面桥、深链、存储目录、present 交付类型与插件宿主服务契约同步改名，行为不变 [界面] [运行时] [插件] [架构]
 - refactor: 会话状态收敛到 `ConversationStore`：唯一订阅 runtime 事件，聊天/浮层/通知/悬浮窗共用同一投影，删除会话缓存、增量合批、浮层投影与运行态追踪器 [聊天] [架构]
 - refactor: 进程启动收敛到 `ProcessRuntime`：Application/Activity/浮层/服务统一入口；插件启动幂等，重复启动仍激活待生效版本；删除无调用点的插件 `shutdown` [插件] [架构]
 - fix: 未加载插件不再显示空错误，也不再误派生为 DEGRADED [插件]

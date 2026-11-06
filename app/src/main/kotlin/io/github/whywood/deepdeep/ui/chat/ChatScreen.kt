@@ -157,7 +157,8 @@ data class ChatScreenActions(
     val onOpenForeignQuestion: (String) -> Unit,
     val onOpenPresentFile: (String) -> Unit,
     val onSharePresentFile: (String) -> Unit,
-    val onOpenWorkshop: (String) -> Unit,
+    val onOpenMiniapp: (String) -> Unit,
+    val onOpenPluginPage: (String, String) -> Unit,
     val onOpenFiles: () -> Unit,
     val onFollowUp: () -> Unit,
     val onClearQueue: () -> Unit,
@@ -199,7 +200,7 @@ fun ChatScreen(
         onOpenAttachment, onOpenFile, onOpenTimers, onRetry, onPickCommand,
         onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
         onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
-        onOpenWorkshop, onOpenFiles, onFollowUp, onClearQueue, onScrollAnchorChange,
+        onOpenMiniapp, onOpenPluginPage, onOpenFiles, onFollowUp, onClearQueue, onScrollAnchorChange,
     ) = actions
     val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
     val attachments = state.attachments
@@ -433,7 +434,7 @@ fun ChatScreen(
                                         onAnswerQuestion = onAnswerQuestion,
                                         onOpenPresentFile = onOpenPresentFile,
                                         onSharePresentFile = onSharePresentFile,
-                                        onOpenWorkshop = onOpenWorkshop,
+                                        onOpenMiniapp = onOpenMiniapp,
                                         retryAttempt = if (message.id == retryTargetId) {
                                             retryActivity?.attempt
                                         } else {
@@ -593,6 +594,7 @@ fun ChatScreen(
                         onFollowUp = onFollowUp,
                         onClearQueue = onClearQueue,
                         onModelsOpenChange = onModelsOpenChange,
+                        onOpenPluginPage = onOpenPluginPage,
                     ),
                     voiceLanguage = voiceLanguage,
                     modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),

@@ -9,7 +9,6 @@ import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
-import io.github.whywood.deepdeep.plugin.builtinPlugins
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
 import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
@@ -18,10 +17,8 @@ import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
 import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
-import io.github.whywood.deepdeep.plugin.manager.BuiltinPluginStateStore
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
-import io.github.whywood.deepdeep.service.AppVisibility
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,14 +31,11 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
         val pluginsRoot = File(deps.appContext.filesDir, "plugins")
         val trustStore = PublisherTrustStore(File(pluginsRoot, "trusted_publishers.json"))
         val recordStore = ExternalPluginRecordStore(File(pluginsRoot, "plugins.json"))
-        val builtins = builtinPlugins(deps.builtinWiring())
         val installer = PluginInstaller(
             pluginsRoot = pluginsRoot,
             trustStore = trustStore,
             recordStore = recordStore,
             hostVersion = BuildConfig.VERSION_NAME,
-            reservedPluginIds = { builtins.map { it.manifest.id }.toSet() },
-            reservedToolNames = { builtins.flatMap { it.manifest.provides.tools }.toSet() },
         )
         PluginHostManager(
             context = deps.appContext,
@@ -49,12 +43,9 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             filesDir = deps.appContext.filesDir,
             scope = deps.scope,
             language = language,
-            builtins = builtins,
             servicesFactory = { pluginId, dataDir, pluginScope ->
                 buildPluginServices(pluginServices(pluginId, dataDir, pluginScope))
             },
-            builtinStateStore = BuiltinPluginStateStore(File(pluginsRoot, "builtin_state.json")),
-            settingsStore = deps.pluginSettingsStore,
             skillStore = PluginSkillStore(
                 skillsDir = File(deps.agentDir, "skills"),
                 repoDir = File(deps.appContext.filesDir, "skills"),
@@ -67,18 +58,8 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
                 trustStore = trustStore,
                 recordStore = recordStore,
             ),
-            isForeground = { AppVisibility.foreground },
-            notifyInstall = { label, stage, progress ->
-                deps.notificationCenter().notifyInstall(label, stage, progress)
-            },
-            notifyInstallFinished = { label, success, error ->
-                deps.notificationCenter().notifyInstallFinished(label, success, error)
-            },
             onContributionsChanged = {
                 deps.scope.launch { deps.host.reconfigure() }
-            },
-            onSetupReady = { _ ->
-                if (!AppVisibility.foreground) deps.scope.launch { AppVisibility.bringToFront(deps.appContext) }
             },
         )
     }
@@ -108,9 +89,9 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             jobs = deps.jobRegistry(),
             timers = deps.timerService(),
             goals = deps.goalService(),
-            workshopStore = deps.workshopStore,
-            workshopAgent = deps.workshopAgentService(),
-            workshopMaxTurns = { deps.pluginSettingsStore.cachedInt("workshop", "max_turns", 16) },
+            miniappStore = deps.miniappStore,
+            miniappAgent = deps.miniappAgentService(),
+            miniappMaxTurns = { 16 },
             mcpConfig = deps.mcpConfigStore,
             mcpProbe = deps.mcpServerProbe,
             mcpTools = { server ->

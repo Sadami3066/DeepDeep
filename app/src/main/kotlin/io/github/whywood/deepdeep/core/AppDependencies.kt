@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
@@ -26,8 +27,8 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -72,11 +73,13 @@ interface StorageDependencies {
 
     val shareStaging: ShareStaging
 
-    val workshopStore: WorkshopStore
+    val miniappStore: MiniappStore
 
     val mcpConfigStore: McpConfigStore
 
     val agentDocStore: AgentDocStore
+
+    val capabilitySettingsStore: CapabilitySettingsStore
 }
 
 interface FeatureDependencies {
@@ -108,7 +111,7 @@ interface ServiceDependencies {
 
     val mcpOAuthService: McpOAuthService
 
-    val workshopAgentService: WorkshopAgentService
+    val miniappAgentService: MiniappAgentService
 
     val processRuntime: ProcessRuntime
 }

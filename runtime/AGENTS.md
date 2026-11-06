@@ -1,6 +1,6 @@
 # runtime · Agent 运行时
 
-dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/凭据、MCP、定时与目标、后台任务、创意工坊、工作区。会话以 pi JSONL 为唯一权威，目标与任务只在进程内；测试在 `src/test/kotlin`（JUnit4 + coroutines-test）。
+dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/凭据、MCP、定时与目标、后台任务、小程序、工作区。会话以 pi JSONL 为唯一权威，目标与任务只在进程内；测试在 `src/test/kotlin`（JUnit4 + coroutines-test）。
 
 ## 文件
 
@@ -41,7 +41,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 
 | 文件 | 职责 |
 |---|---|
-| `AppTools.kt` | App 专有工具注入：提问、插件与扩展工厂 |
+| `AppTools.kt` | App 专有工具注入：提问、插件工具与扩展工厂 |
 | `ToolVariants.kt` | 从统一工具派生具名变体并校验参数 |
 | `CommandResult.kt` | 命令结果模型与可带详细输出的执行器 |
 | `DeepDeepBashTool.kt` | bash 工具：执行、截尾、退出码与超时 |
@@ -50,8 +50,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `AskUserQuestionTool.kt` | 结构化提问：1–5 题，等答最多 10 分钟 |
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |
 | `QuestionPersistence.kt` | 待答问题落盘，重启后提示曾中断 |
-| `PresentTool.kt` | present 交付：文件、图片、视频、HTML、创意 |
-| `PluginTools.kt` | plugin_setup：拉起插件安装与连接流程；监听运行取消信号并同步取消插件 setup |
+| `PresentTool.kt` | present 交付：文件、图片、视频、HTML、小程序 |
 | `WorkspacePaths.kt` | 强制文件工具绝对路径，输出补全目录前缀 |
 | `ToolPayloadMapping.kt` | SDK 工具内容 + details 保留键 ↔ runtime-api `ToolResultPayload`（含 FileRef 还原）、JsonObject 参数展示映射 |
 
@@ -87,15 +86,15 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `JobRegistry.kt` | 后台任务注册表：输出环形缓冲、通知与回收 |
 | `JobTools.kt` | 后台任务的启动/读取/列出/取消四个工具 |
 
-### 创意工坊
+### 小程序
 
 | 文件 | 职责 |
 |---|---|
-| `WorkshopModels.kt` | manifest 校验与草稿/条目数据模型 |
-| `WorkshopStore.kt` | 工坊目录：扫描、草稿装载、删除与数据文件 |
-| `WorkshopDataStore.kt` | 每个创意的 SQLite 键值数据层 |
-| `WorkshopTools.kt` | 建草稿/装载/列出/删除/改数据的工坊工具 |
-| `WorkshopBridge.kt` | 页面与 App 的 JS bridge 方法路由 |
-| `WorkshopAgentService.kt` | 页面发起的一次性 Agent：临时引擎、工具裁剪与 `hooksFactory`（同一套插件钩子/会话绑定） |
-| `WorkshopAgentSupport.kt` | 工坊 Agent 的事件映射、请求校验/模型与工具选择、技能复制与资源文件系统 |
-| `WorkshopAgent.kt` | 一次性 Agent 的请求、事件与网关模型 |
+| `MiniappModels.kt` | manifest 校验与草稿/条目数据模型 |
+| `MiniappStore.kt` | 小程序目录：扫描、草稿装载、删除与数据文件 |
+| `MiniappDataStore.kt` | 每个小程序的 SQLite 键值数据层 |
+| `MiniappTools.kt` | 建草稿/装载/列出/删除/改数据的小程序工具 |
+| `MiniappBridge.kt` | 页面与 App 的 JS bridge 方法路由 |
+| `MiniappAgentService.kt` | 页面发起的一次性 Agent：临时引擎、工具裁剪与 `hooksFactory`（同一套插件钩子/会话绑定） |
+| `MiniappAgentSupport.kt` | 小程序 Agent 的事件映射、请求校验/模型与工具选择、技能复制与资源文件系统 |
+| `MiniappAgent.kt` | 一次性 Agent 的请求、事件与网关模型 |

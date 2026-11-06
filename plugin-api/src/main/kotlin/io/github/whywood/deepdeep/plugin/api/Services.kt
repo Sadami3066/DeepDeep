@@ -188,18 +188,18 @@ interface GoalService {
     suspend fun clear(sessionId: String)
 }
 
-interface WorkshopService {
-    suspend fun scan(): WorkshopScan
+interface MiniappService {
+    suspend fun scan(): MiniappScan
 
-    suspend fun load(id: String): WorkshopEntry
+    suspend fun load(id: String): MiniappEntry
 
-    suspend fun create(request: WorkshopCreateRequest): WorkshopApp?
+    suspend fun create(request: MiniappCreateRequest): MiniappApp?
 
-    suspend fun edit(id: String, instruction: String): WorkshopRun
+    suspend fun edit(id: String, instruction: String): MiniappRun
 
     suspend fun delete(id: String): Boolean
 
-    suspend fun run(id: String, instruction: String): WorkshopRun
+    suspend fun run(id: String, instruction: String): MiniappRun
 }
 
 interface McpService {

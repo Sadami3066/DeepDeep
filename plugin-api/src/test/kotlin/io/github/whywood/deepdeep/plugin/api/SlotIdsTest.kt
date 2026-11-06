@@ -8,32 +8,29 @@ import org.junit.Test
 class SlotIdsTest {
     @Test
     fun buildsSlotIds() {
-        assertEquals("setup.content", SlotIds.setupContent())
-        assertEquals("setup.content", SlotIds.SETUP_CONTENT)
-        assertEquals("plugin.detail.section:account", SlotIds.detailSection("account"))
         assertEquals("tool.card.content:sample_echo", SlotIds.toolCard("sample_echo"))
         assertEquals("chat.message:card", SlotIds.chatMessage("card"))
+        assertEquals("plugin.page:home", SlotIds.page("home"))
     }
 
     @Test
     fun matchesSupportedSlotIds() {
-        assertTrue(SlotIds.matches(SlotIds.setupContent()))
-        assertTrue(SlotIds.matches(SlotIds.detailSection("account")))
         assertTrue(SlotIds.matches(SlotIds.toolCard("sample_echo")))
-        assertTrue(SlotIds.matches(SlotIds.chatMessage("card")))
+        assertTrue(SlotIds.matches(SlotIds.chatMessage("sample.card")))
+        assertTrue(SlotIds.matches(SlotIds.page("home")))
     }
 
     @Test
     fun rejectsUnsupportedOrIncompleteSlotIds() {
         listOf(
             "",
+            "setup.content",
             "composer.action",
+            "plugin.element:home",
             "plugin.page",
-            "plugin.detail.section",
-            "plugin.detail.section:",
+            "plugin.page:",
             "tool.card.content:",
             "chat.message:",
-            "setup.content.extra",
             "tool.card.content:sample_echo.extra",
         ).forEach { slotId ->
             assertFalse(slotId, SlotIds.matches(slotId))

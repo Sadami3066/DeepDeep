@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
+import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
@@ -26,8 +27,8 @@ import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -62,11 +63,13 @@ internal class FakeAppDependencies(
 
     override val shareStaging: ShareStaging get() = unavailable("shareStaging")
 
-    override val workshopStore: WorkshopStore get() = unavailable("workshopStore")
+    override val miniappStore: MiniappStore get() = unavailable("miniappStore")
 
     override val mcpConfigStore: McpConfigStore get() = unavailable("mcpConfigStore")
 
     override val agentDocStore: AgentDocStore get() = unavailable("agentDocStore")
+
+    override val capabilitySettingsStore: CapabilitySettingsStore get() = unavailable("capabilitySettingsStore")
 
     override val linuxEnvironment: LinuxEnvironment get() = unavailable("linuxEnvironment")
 
@@ -94,7 +97,7 @@ internal class FakeAppDependencies(
 
     override val mcpOAuthService: McpOAuthService get() = unavailable("mcpOAuthService")
 
-    override val workshopAgentService: WorkshopAgentService get() = unavailable("workshopAgentService")
+    override val miniappAgentService: MiniappAgentService get() = unavailable("miniappAgentService")
 
     override val processRuntime: ProcessRuntime get() = unavailable("processRuntime")
 

@@ -73,7 +73,7 @@ class PiSessionEngineScopeTest {
                 file = null,
                 config = null,
                 shellEnabled = false,
-                toolsFilter = { tool -> workshopAgentToolVisible(tool.name) },
+                toolsFilter = { tool -> miniappAgentToolVisible(tool.name) },
                 mcpEnabled = false,
             )
             try {
@@ -111,7 +111,7 @@ class PiSessionEngineScopeTest {
         try {
             assertEquals(
                 listOf("edit", "read", "write"),
-                buildWorkshopAgentTools(engine.availableTools()).map { it.name },
+                buildMiniappAgentTools(engine.availableTools()).map { it.name },
             )
             File(workspace, "notes.txt").writeText("hello scope\n")
             File(workspace, "draft").mkdirs()

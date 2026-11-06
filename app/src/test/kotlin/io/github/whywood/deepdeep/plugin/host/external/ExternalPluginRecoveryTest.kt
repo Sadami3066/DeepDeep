@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
 import java.io.File
 import java.nio.file.Files

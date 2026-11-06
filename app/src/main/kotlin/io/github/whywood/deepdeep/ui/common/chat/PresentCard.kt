@@ -49,8 +49,8 @@ import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.ui.common.chat.HtmlFileView
-import io.github.whywood.deepdeep.ui.common.chat.WorkshopCardApp
-import io.github.whywood.deepdeep.ui.common.chat.WorkshopChatCard
+import io.github.whywood.deepdeep.ui.common.chat.MiniappCardApp
+import io.github.whywood.deepdeep.ui.common.chat.MiniappChatCard
 import java.io.File
 import java.net.URI
 import java.util.Locale
@@ -67,7 +67,7 @@ import kotlinx.serialization.json.jsonObject
 
 
 
-enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, CREATIVE }
+enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, MINIAPP }
 
 data class PresentedItem(
     val type: PresentedItemType,
@@ -110,11 +110,11 @@ private fun parsePresentedItem(element: JsonElement): PresentedItem? {
         "image" -> PresentedItemType.IMAGE
         "video" -> PresentedItemType.VIDEO
         "html" -> PresentedItemType.HTML
-        "creative" -> PresentedItemType.CREATIVE
+        "miniapp" -> PresentedItemType.MINIAPP
         else -> return null
     }
     val title = item.stringOrNull("title")?.trim()?.takeIf { it.isNotEmpty() }
-    if (type == PresentedItemType.CREATIVE) {
+    if (type == PresentedItemType.MINIAPP) {
         val id = item.stringOrNull("id")?.trim().orEmpty()
         if (id.isEmpty()) return null
         return PresentedItem(
@@ -164,7 +164,7 @@ private fun derivePresentedName(path: String): String =
 private fun String.extension(): String = substringAfterLast('.', "").lowercase(Locale.US)
 
 private val PresentedItem.key: String
-    get() = if (type == PresentedItemType.CREATIVE) "creative:${id.orEmpty()}" else "${type.name}:${path.orEmpty()}"
+    get() = if (type == PresentedItemType.MINIAPP) "miniapp:${id.orEmpty()}" else "${type.name}:${path.orEmpty()}"
 
 internal fun resolvePresentedPath(raw: String, root: File): String {
     val trimmed = raw.trim().trim('<', '>', '"', '\'')
@@ -184,7 +184,7 @@ fun PresentCard(
     attachmentRoot: File,
     onOpenFile: (String) -> Unit,
     onShareFile: (String) -> Unit,
-    onOpenWorkshop: (String) -> Unit,
+    onOpenMiniapp: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -210,7 +210,7 @@ fun PresentCard(
                     onShare = { onShareFile(item.path.orEmpty()) },
                 )
 
-                PresentedItemType.CREATIVE -> PresentedCreativeItem(item, onOpenWorkshop)
+                PresentedItemType.MINIAPP -> PresentedMiniappItem(item, onOpenMiniapp)
             }
         }
     }
@@ -420,16 +420,16 @@ private fun PresentedFileItem(
 }
 
 @Composable
-private fun PresentedCreativeItem(item: PresentedItem, onOpenWorkshop: (String) -> Unit) {
-    WorkshopChatCard(
-        app = WorkshopCardApp(
+private fun PresentedMiniappItem(item: PresentedItem, onOpenMiniapp: (String) -> Unit) {
+    MiniappChatCard(
+        app = MiniappCardApp(
             id = item.id.orEmpty(),
             name = item.title ?: item.name,
             icon = item.icon.orEmpty().ifBlank { "✦" },
             version = item.version.orEmpty(),
         ),
-        onOpen = onOpenWorkshop,
-        subtitle = stringResource(R.string.present_creative),
+        onOpen = onOpenMiniapp,
+        subtitle = stringResource(R.string.present_miniapp),
     )
 }
 
@@ -466,7 +466,7 @@ private val PresentedItemType.icon: DdIcon
         PresentedItemType.IMAGE -> DdIcons.Image
         PresentedItemType.VIDEO -> DdIcons.Play
         PresentedItemType.HTML -> DdIcons.Globe
-        PresentedItemType.FILE, PresentedItemType.CREATIVE -> DdIcons.File
+        PresentedItemType.FILE, PresentedItemType.MINIAPP -> DdIcons.File
     }
 
 @Composable

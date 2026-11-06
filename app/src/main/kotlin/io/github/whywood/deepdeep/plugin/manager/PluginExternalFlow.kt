@@ -1,22 +1,18 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.plugin.PluginSettingsStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginProgress
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
-import io.github.whywood.deepdeep.plugin.host.external.BundleState
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.InspectionResult
 import io.github.whywood.deepdeep.plugin.host.external.InstallResult
 import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
+import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi
 import io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi
 import java.io.File
@@ -38,7 +34,6 @@ internal class PluginExternalFlow(
     private val strings: PluginStrings,
     private val textResolver: PluginTextResolver,
     private val lifecycle: PluginLifecycle,
-    private val settingsStore: PluginSettingsStore,
     private val refresh: suspend () -> Unit,
     private val onContributionsChanged: () -> Unit,
 ) {
@@ -46,7 +41,6 @@ internal class PluginExternalFlow(
         gate = gate,
         lifecycle = lifecycle,
         external = external,
-        settingsStore = settingsStore,
     )
 
     suspend fun registerRecords() {
@@ -64,8 +58,6 @@ internal class PluginExternalFlow(
         val managed = lifecycle.createRuntime(
             record = pluginRecord,
             manifest = manifest,
-            builtin = false,
-            source = PluginSource.EXTERNAL,
             externalRecord = record,
         )
         gate.register(pluginRecord, managed)
@@ -74,9 +66,7 @@ internal class PluginExternalFlow(
     suspend fun activateEnabledRecords(skipPluginIds: Set<String> = emptySet()) {
         val runtime = external ?: return
         gate.views()
-            .filter { view ->
-                view.source == PluginSource.EXTERNAL && view.enabled && view.plugin == null && view.id !in skipPluginIds
-            }
+            .filter { view -> view.enabled && view.plugin == null && view.id !in skipPluginIds }
             .forEach { view ->
                 val record = view.externalRecord ?: runtime.record(view.id) ?: return@forEach
                 if (record.pendingVersion != null) return@forEach
@@ -263,10 +253,10 @@ internal class PluginExternalFlow(
         return updates
     }
 
-    suspend fun pluginSourceSettings(): PluginSourceSettings =
-        externalUpdates?.loadSettings() ?: PluginSourceSettings()
+    suspend fun pluginRepositorySettings(): PluginRepositorySettings =
+        externalUpdates?.loadSettings() ?: PluginRepositorySettings()
 
-    suspend fun savePluginSourceSettings(settings: PluginSourceSettings) {
+    suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings) {
         externalUpdates?.saveSettings(settings)
         scheduleUpdateCheck()
     }
@@ -318,21 +308,7 @@ internal class PluginExternalFlow(
             persistFailure(pluginId, "plugin is not registered")
             return "plugin is not registered"
         }
-        val installFailure = try {
-            attached.plugin?.install(attached.host, progressFor(pluginId))
-            null
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Throwable) {
-            error.message ?: error.javaClass.simpleName
-        }
-        state.update { it.copy(operation = null) }
-        if (installFailure != null) {
-            persistFailure(pluginId, installFailure)
-            return installFailure
-        }
-        val settingsFailure = lifecycle.applySettings(attached)
-        val enableFailure = if (settingsFailure == null && attached.enabled) lifecycle.enable(attached) else settingsFailure
+        val enableFailure = if (attached.enabled) lifecycle.enable(attached) else null
         if (enableFailure != null) {
             persistFailure(pluginId, enableFailure)
             return enableFailure
@@ -347,14 +323,6 @@ internal class PluginExternalFlow(
             clearErrors(pluginId)
         } else {
             persistFailure(pluginId, message)
-        }
-    }
-
-    private fun progressFor(pluginId: String): PluginProgress = object : PluginProgress {
-        override fun report(percent: Int?, label: LocalizedText) {
-            state.update {
-                it.copy(operation = PluginOperation(pluginId, textResolver.resolve(label), null, percent))
-            }
         }
     }
 
@@ -375,8 +343,6 @@ internal class PluginExternalFlow(
         version = record.version,
         name = LocalizedText.Literal(record.id),
         summary = LocalizedText.Literal(""),
-        source = PluginSource.EXTERNAL,
-        installable = true,
     )
 
     private fun ExternalPluginRecord.toPluginRecord(): PluginRecord = PluginRecord(

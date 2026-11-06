@@ -11,7 +11,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.host.PluginServices
-import io.github.whywood.deepdeep.plugin.virtualscreen.VirtualScreenFeature
+import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -21,8 +21,8 @@ import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.runtime.SessionCommands
 import io.github.whywood.deepdeep.runtime.TimerService
-import io.github.whywood.deepdeep.runtime.WorkshopAgentService
-import io.github.whywood.deepdeep.runtime.WorkshopStore
+import io.github.whywood.deepdeep.runtime.MiniappAgentService
+import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
@@ -55,9 +55,9 @@ data class PluginServiceDependencies(
     val jobs: JobRegistry? = null,
     val timers: TimerService? = null,
     val goals: GoalService? = null,
-    val workshopStore: WorkshopStore? = null,
-    val workshopAgent: WorkshopAgentService? = null,
-    val workshopMaxTurns: () -> Int = { 16 },
+    val miniappStore: MiniappStore? = null,
+    val miniappAgent: MiniappAgentService? = null,
+    val miniappMaxTurns: () -> Int = { 16 },
     val mcpConfig: McpConfigStore? = null,
     val mcpProbe: McpServerProbe? = null,
     val mcpTools: (suspend (String) -> List<McpTool>)? = null,
@@ -136,12 +136,12 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
             )
         },
         goals = deps.goals?.let { GoalPluginService(it) },
-        workshop = deps.workshopStore?.let {
-            WorkshopPluginService(
+        miniapp = deps.miniappStore?.let {
+            MiniappPluginService(
                 store = it,
-                agent = deps.workshopAgent,
+                agent = deps.miniappAgent,
                 scope = deps.scope,
-                maxTurns = deps.workshopMaxTurns,
+                maxTurns = deps.miniappMaxTurns,
             )
         },
         mcp = deps.mcpConfig?.let {

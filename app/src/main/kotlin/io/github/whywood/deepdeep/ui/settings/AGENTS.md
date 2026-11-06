@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `SettingsScreen.kt` | 设置首页：账户卡、功能入口、主题/字体/语言、通知、版本与许可 |
+| `SettingsScreen.kt` | 设置首页：账户卡、功能入口、屏幕操作开关、主题/字体/语言、通知、版本与许可 |
 | `ChatSettingsScreen.kt` | 聊天设置：正文字号、过程折叠、自动重试、后台唤醒、自动朗读 |
 | `FloatingWindowScreen.kt` | 悬浮窗开关与悬浮权限申请/状态 |
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |

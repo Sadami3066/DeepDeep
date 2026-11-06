@@ -23,17 +23,17 @@ private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp",
 private val HTML_EXTENSIONS = setOf("html", "htm")
 private val VIDEO_EXTENSIONS = setOf("mp4", "mov", "webm", "mkv", "m4v", "3gp")
 
-data class PresentedCreative(
+data class PresentedMiniapp(
     val id: String,
     val name: String,
     val icon: String = "",
     val version: String = "",
 )
 
-fun workshopCreativeLookup(store: WorkshopStore): suspend (String) -> PresentedCreative? = { id ->
+fun miniappLookup(store: MiniappStore): suspend (String) -> PresentedMiniapp? = { id ->
     when (val entry = store.load(id)) {
-        is WorkshopEntry.Valid -> entry.creation.let { creation ->
-            PresentedCreative(
+        is MiniappEntry.Valid -> entry.creation.let { creation ->
+            PresentedMiniapp(
                 id = creation.manifest.id,
                 name = creation.manifest.name,
                 icon = creation.manifest.icon,
@@ -63,11 +63,11 @@ private val presentParameters: JsonObject = buildJsonObject {
                             add(JsonPrimitive("image"))
                             add(JsonPrimitive("video"))
                             add(JsonPrimitive("html"))
-                            add(JsonPrimitive("creative"))
+                            add(JsonPrimitive("miniapp"))
                         }
                         put(
                             "description",
-                            "file: any generated file; image: picture shown inline; video: clip shown with a cover and player; html: web page shown inline; creative: installed Workshop mini app",
+                            "file: any generated file; image: picture shown inline; video: clip shown with a cover and player; html: web page shown inline; miniapp: installed mini app",
                         )
                     }
                     putJsonObject("path") {
@@ -79,7 +79,7 @@ private val presentParameters: JsonObject = buildJsonObject {
                     }
                     putJsonObject("id") {
                         put("type", "string")
-                        put("description", "For creative: Workshop app id, from workshop_load")
+                        put("description", "For miniapp: miniapp id, from miniapp_load")
                     }
                     putJsonObject("title") {
                         put("type", "string")
@@ -94,11 +94,11 @@ private val presentParameters: JsonObject = buildJsonObject {
 }
 
 fun presentTool(
-    creativeLookup: (suspend (String) -> PresentedCreative?)? = null,
+    miniappLookup: (suspend (String) -> PresentedMiniapp?)? = null,
     session: () -> BoundSession?,
 ): CodingTool = CodingTool(
     name = "present",
-    description = "Deliver one to four finished works to the user: files, images, videos, web pages, or installed Workshop mini apps. Chat shows a delivery card for every item; images and web pages render inline, videos show a cover that opens a player.",
+    description = "Deliver one to four finished works to the user: files, images, videos, web pages, or installed miniapps. Chat shows a delivery card for every item; images and web pages render inline, videos show a cover that opens a player.",
     parameters = presentParameters,
     label = "present",
     execute = { _, args, signal, _ ->
@@ -108,7 +108,7 @@ fun presentTool(
             textResult("Session is not bound", isError = true)
         } else {
             try {
-                val items = parsePresentedItems(args, File(bound.cwd), creativeLookup)
+                val items = parsePresentedItems(args, File(bound.cwd), miniappLookup)
                 textResult(presentedItemsJson(items).toString())
             } catch (error: RequestAbortedException) {
                 throw error
@@ -124,7 +124,7 @@ fun presentTool(
 private suspend fun parsePresentedItems(
     args: JsonObject,
     cwd: File,
-    creativeLookup: (suspend (String) -> PresentedCreative?)?,
+    miniappLookup: (suspend (String) -> PresentedMiniapp?)?,
 ): List<JsonObject> {
     val items = args["items"] as? JsonArray
     if (items != null) {
@@ -132,7 +132,7 @@ private suspend fun parsePresentedItems(
             throw IllegalArgumentException("items needs 1..$MAX_PRESENTED_ITEMS entries")
         }
         return items.mapIndexed { index, element ->
-            normalizeItem(index, element, cwd, creativeLookup)
+            normalizeItem(index, element, cwd, miniappLookup)
         }
     }
     val files = args["files"] as? JsonArray
@@ -147,7 +147,7 @@ private suspend fun normalizeItem(
     index: Int,
     element: JsonElement,
     cwd: File,
-    creativeLookup: (suspend (String) -> PresentedCreative?)?,
+    miniappLookup: (suspend (String) -> PresentedMiniapp?)?,
 ): JsonObject {
     val item = element as? JsonObject
         ?: throw IllegalArgumentException("items[$index] must be an object")
@@ -159,9 +159,9 @@ private suspend fun normalizeItem(
         "image" -> fileItem(index, item, cwd, title, PresentKind.IMAGE)
         "video" -> fileItem(index, item, cwd, title, PresentKind.VIDEO)
         "html" -> fileItem(index, item, cwd, title, PresentKind.HTML)
-        "creative" -> creativeItem(index, item, title, creativeLookup)
+        "miniapp" -> miniappItem(index, item, title, miniappLookup)
         else -> throw IllegalArgumentException(
-            "items[$index].type must be one of file, image, video, html, creative",
+            "items[$index].type must be one of file, image, video, html, miniapp",
         )
     }
 }
@@ -242,25 +242,25 @@ private fun normalizeLegacyFile(
     }
 }
 
-private suspend fun creativeItem(
+private suspend fun miniappItem(
     index: Int,
     item: JsonObject,
     title: String?,
-    creativeLookup: (suspend (String) -> PresentedCreative?)?,
+    miniappLookup: (suspend (String) -> PresentedMiniapp?)?,
 ): JsonObject {
     val id = item.argumentString("id")
-        ?: throw IllegalArgumentException("items[$index].id is required for creative")
-    if (creativeLookup == null) {
-        throw IllegalArgumentException("presenting creative items is not available")
+        ?: throw IllegalArgumentException("items[$index].id is required for miniapp")
+    if (miniappLookup == null) {
+        throw IllegalArgumentException("presenting miniapp items is not available")
     }
-    val creative = creativeLookup(id)
-        ?: throw IllegalArgumentException("workshop app not found: $id")
+    val miniapp = miniappLookup(id)
+        ?: throw IllegalArgumentException("miniapp not found: $id")
     return buildJsonObject {
-        put("type", "creative")
-        put("id", creative.id)
-        put("name", creative.name.ifBlank { id })
-        creative.icon.trim().takeIf { it.isNotEmpty() }?.let { put("icon", it) }
-        creative.version.trim().takeIf { it.isNotEmpty() }?.let { put("version", it) }
+        put("type", "miniapp")
+        put("id", miniapp.id)
+        put("name", miniapp.name.ifBlank { id })
+        miniapp.icon.trim().takeIf { it.isNotEmpty() }?.let { put("icon", it) }
+        miniapp.version.trim().takeIf { it.isNotEmpty() }?.let { put("version", it) }
         title?.let { put("title", it) }
     }
 }

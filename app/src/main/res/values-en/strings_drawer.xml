@@ -1,5 +1,5 @@
 <resources>
-    <string name="drawer_nav_workshop">Workshop</string>
+    <string name="drawer_nav_miniapp">Miniapp</string>
     <string name="drawer_nav_skills">Skills</string>
     <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_plugins">Plugins</string>

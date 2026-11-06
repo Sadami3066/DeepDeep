@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.screen
 
-import io.github.whywood.deepdeep.plugin.gui.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.*

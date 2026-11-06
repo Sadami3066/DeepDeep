@@ -1,7 +1,7 @@
 <resources>
     <string name="present_share">Share</string>
     <string name="present_open">Open</string>
-    <string name="present_creative">Creative</string>
+    <string name="present_miniapp">Miniapp</string>
     <string name="present_fullscreen">Full screen</string>
     <string name="present_failed">Could not preview</string>
     <string name="present_tool_delivered">Delivered %1$d</string>

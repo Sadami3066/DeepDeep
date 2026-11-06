@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
@@ -32,7 +33,6 @@ import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
@@ -66,7 +66,7 @@ internal fun PluginIcon(
     modifier: Modifier = Modifier,
 ) {
     if (icon is IconRef.Asset) {
-        val bitmap = rememberPluginBitmap(assetsDir, icon.path)
+        val bitmap = rememberPluginBitmap(assetsDir, icon.path, size)
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
@@ -83,19 +83,33 @@ internal fun PluginIcon(
 }
 
 @Composable
-private fun rememberPluginBitmap(assetsDir: File?, path: String): ImageBitmap? {
+private fun rememberPluginBitmap(assetsDir: File?, path: String, size: Dp): ImageBitmap? {
     if (assetsDir == null) return null
+    val density = LocalDensity.current
+    val targetPx = with(density) { size.roundToPx() }.coerceAtLeast(1)
     val file = remember(assetsDir, path) { File(assetsDir, path).takeIf { it.isFile } }
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = file) {
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = file, key2 = targetPx) {
         value = if (file == null) {
             null
         } else {
             withContext(Dispatchers.IO) {
-                runCatching { BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap() }.getOrNull()
+                runCatching { decodePluginBitmap(file, targetPx) }.getOrNull()
             }
         }
     }
     return bitmap
+}
+
+private fun decodePluginBitmap(file: File, targetPx: Int): ImageBitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sampleSize = 1
+    while (bounds.outWidth / (sampleSize * 2) >= targetPx && bounds.outHeight / (sampleSize * 2) >= targetPx) {
+        sampleSize *= 2
+    }
+    val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+    return BitmapFactory.decodeFile(file.absolutePath, options)?.asImageBitmap()
 }
 
 internal fun pluginAssetsDir(pluginsRoot: File?, snapshot: PluginSnapshot): File? {
@@ -105,7 +119,6 @@ internal fun pluginAssetsDir(pluginsRoot: File?, snapshot: PluginSnapshot): File
 }
 
 internal fun pluginPhaseLabelRes(phase: PluginPhaseUi): Int = when (phase) {
-    PluginPhaseUi.IMPORTED -> R.string.plugins_phase_imported
     PluginPhaseUi.INSTALLED -> R.string.plugins_phase_installed
     PluginPhaseUi.ACTIVE -> R.string.plugins_phase_active
     PluginPhaseUi.DEGRADED -> R.string.plugins_phase_degraded
@@ -114,27 +127,9 @@ internal fun pluginPhaseLabelRes(phase: PluginPhaseUi): Int = when (phase) {
     PluginPhaseUi.PENDING_RESTART -> R.string.plugins_phase_pending_restart
 }
 
-internal fun pluginTabSource(index: Int): PluginSource =
-    if (index == 0) PluginSource.EXTERNAL else PluginSource.BUILTIN
+internal fun pluginCatalogReady(state: PluginsUiState): Boolean = !state.loading
 
-internal data class PluginListItem(val snapshot: PluginSnapshot)
-
-internal fun pluginItems(plugins: List<PluginSnapshot>, source: PluginSource): List<PluginListItem> =
-    plugins.filter { it.source == source }.map(::PluginListItem)
-
-internal fun pluginListInteractive(state: PluginsUiState): Boolean = !state.busy && state.interaction == null
-
-internal fun pluginCatalogReady(state: PluginsUiState): Boolean =
-    !state.loading && (state.plugins.isNotEmpty() || state.error != null)
-
-internal fun pluginDetailMissing(state: PluginsUiState, pluginId: String): Boolean =
-    pluginCatalogReady(state) && state.snapshot(pluginId) == null
-
-internal fun pluginShowsReinstall(snapshot: PluginSnapshot): Boolean =
-    snapshot.installable && snapshot.installed
-
-internal fun pluginShowsDelete(snapshot: PluginSnapshot): Boolean =
-    snapshot.installable && snapshot.source == PluginSource.EXTERNAL
+internal fun pluginListInteractive(state: PluginsUiState): Boolean = !state.busy
 
 internal fun pluginMatchesQuery(query: String, id: String, name: String, summary: String): Boolean {
     val normalized = query.trim()
@@ -144,10 +139,8 @@ internal fun pluginMatchesQuery(query: String, id: String, name: String, summary
         summary.contains(normalized, ignoreCase = true)
 }
 
-internal fun filterPlugins(items: List<PluginListItem>, query: String): List<PluginListItem> =
-    items.filter { item ->
-        pluginMatchesQuery(query, item.snapshot.id, item.snapshot.name, item.snapshot.summary)
-    }
+internal fun filterPlugins(plugins: List<PluginSnapshot>, query: String): List<PluginSnapshot> =
+    plugins.filter { plugin -> pluginMatchesQuery(query, plugin.id, plugin.name, plugin.summary) }
 
 internal fun formatPluginSize(context: Context, bytes: Long): String =
     if (bytes >= MEBIBYTE) {

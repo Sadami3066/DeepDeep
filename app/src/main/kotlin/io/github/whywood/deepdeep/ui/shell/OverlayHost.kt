@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.manager.PluginInteraction
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
@@ -54,7 +53,6 @@ sealed interface ShellOverlay {
     data class AttachmentPreview(val attachment: AttachmentRef, val file: File) : ShellOverlay
     data class Usage(val usage: SessionUsage) : ShellOverlay
     data class Jobs(val jobs: List<JobSnapshot>, val selectedJobId: String?, val output: String?) : ShellOverlay
-    data class PluginSetup(val interaction: PluginInteraction) : ShellOverlay
 }
 
 data class ShellOverlayState(
@@ -64,7 +62,6 @@ data class ShellOverlayState(
     val attachmentPreview: ShellOverlay.AttachmentPreview? = null,
     val usage: ShellOverlay.Usage? = null,
     val jobs: ShellOverlay.Jobs? = null,
-    val pluginSetup: ShellOverlay.PluginSetup? = null,
 )
 
 data class ShellOverlayActions(
@@ -103,7 +100,6 @@ fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
     state.attachmentPreview?.let(::add)
     state.usage?.let(::add)
     state.jobs?.let(::add)
-    state.pluginSetup?.let(::add)
 }
 
 fun resolveOverlay(state: ShellOverlayState): ShellOverlay? = resolveOverlays(state).lastOrNull()
@@ -114,7 +110,6 @@ internal fun OverlayHost(
     overlayActions: ShellOverlayActions,
     drawer: ShellDrawerState,
     drawerActions: ShellDrawerActions,
-    pluginSetupContent: @Composable (PluginInteraction) -> Unit,
 ) {
     ShellDrawerHost(drawer, drawerActions)
     resolveOverlays(overlays).forEach { overlay ->
@@ -155,7 +150,6 @@ internal fun OverlayHost(
                     onDismiss = overlayActions.onDismissJobs,
                 )
 
-                is ShellOverlay.PluginSetup -> pluginSetupContent(overlay.interaction)
             }
         }
     }
@@ -210,7 +204,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 userName = state.userName,
                 avatar = state.avatar,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },
-                onOpenWorkshop = { actions.onNavigate(AppDestination.Workshop) },
+                onOpenMiniapp = { actions.onNavigate(AppDestination.Miniapp) },
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },
                 onOpenMcp = { actions.onNavigate(AppDestination.Mcp) },
                 onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },

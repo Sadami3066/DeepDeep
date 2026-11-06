@@ -20,8 +20,8 @@ enum class ProcessState {
 class ProcessRuntime(
     private val scope: CoroutineScope,
     private val prepare: suspend () -> Unit,
+    private val installBundledSkills: suspend () -> Unit,
     private val startPlugins: suspend () -> Unit,
-    private val onForegroundPlugins: () -> Unit,
     private val refreshPluginsIfStale: (Long) -> Unit,
     private val reconfigureHost: suspend () -> Unit,
     private val ensureHostStarted: suspend () -> Unit,
@@ -62,7 +62,6 @@ class ProcessRuntime(
     }
 
     fun onForeground() {
-        onForegroundPlugins()
         refreshPluginsIfStale(PLUGIN_REFRESH_MIN_INTERVAL_MS)
         scope.launch {
             runCatching { syncSkills() }.onFailure {
@@ -74,6 +73,9 @@ class ProcessRuntime(
     private suspend fun runStart() {
         _state.value = ProcessState.STARTING
         try {
+            runCatching { installBundledSkills() }.onFailure {
+                Diagnostics.log(diagnosticsDir, "process: bundled skill sync failed", it)
+            }
             runCatching { startPlugins() }.onFailure { Diagnostics.log(diagnosticsDir, "process: plugin start failed", it) }
             prepare()
             reconfigureHost()

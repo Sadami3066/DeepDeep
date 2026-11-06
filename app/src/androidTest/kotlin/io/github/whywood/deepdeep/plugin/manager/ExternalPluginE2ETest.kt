@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.plugin.api.IconRef
+import io.github.whywood.deepdeep.plugin.api.SlotIds
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.delay
@@ -52,6 +53,11 @@ class ExternalPluginE2ETest {
             val installed = awaitSnapshot(PLUGIN_ID) { it.installed }
             assertTrue(installed.enabled)
             assertEquals(IconRef.Asset("icon.png"), installed.icon)
+            assertEquals(listOf("sample.main"), installed.pages.map { it.id })
+            assertTrue(
+                "sample page binding missing",
+                manager.slotEntries(SlotIds.page("sample.main")).any { it.pluginId == PLUGIN_ID },
+            )
             val icon = File(
                 File(File(context.filesDir, "plugins"), PLUGIN_ID),
                 installed.installedVersion.orEmpty() + "/assets/icon.png",

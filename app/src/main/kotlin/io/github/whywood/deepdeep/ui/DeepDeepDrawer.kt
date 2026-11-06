@@ -149,7 +149,7 @@ fun DeepDeepDrawer(
     userName: String,
     avatar: ImageBitmap?,
     onOpenSearch: () -> Unit,
-    onOpenWorkshop: () -> Unit,
+    onOpenMiniapp: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onOpenPlugins: () -> Unit,
@@ -236,9 +236,9 @@ fun DeepDeepDrawer(
         Column(Modifier.fillMaxWidth()) {
             DrawerNavItem(
                 icon = DdIcons.Apps,
-                label = stringResource(R.string.drawer_nav_workshop),
-                onClick = onOpenWorkshop,
-                testTag = "drawer_workshop",
+                label = stringResource(R.string.drawer_nav_miniapp),
+                onClick = onOpenMiniapp,
+                testTag = "drawer_miniapp",
             )
             DrawerNavItem(
                 icon = DdIcons.Sparkles,

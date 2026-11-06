@@ -5,8 +5,6 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -14,18 +12,14 @@ import kotlinx.serialization.json.JsonObject
 
 internal class TestPlugin : DeepDeepPlugin {
     override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
-
-    override suspend fun status(host: PluginHost): PluginStatus = PluginStatus.Ready("ready")
 }
 
-internal fun testManifest(
+internal fun testDescriptorManifest(
     id: String,
     version: String = "1.0.0",
-    source: PluginSource = PluginSource.BUILTIN,
 ): PluginManifest = PluginManifest(
     id = id,
     version = version,
-    source = source,
     name = LocalizedText.Literal(mapOf("default" to id, "en" to "name of $id")),
     summary = LocalizedText.Literal("summary of $id"),
 )
@@ -44,11 +38,9 @@ internal fun testTool(
 internal fun testDescriptor(
     id: String,
     phase: PluginPhase = PluginPhase.ACTIVE,
-    source: PluginSource = PluginSource.BUILTIN,
     contributions: PluginContributions = PluginContributions.Empty,
 ): PluginDescriptor = PluginDescriptor(
-    manifest = testManifest(id, source = source),
-    source = source,
+    manifest = testDescriptorManifest(id),
     phase = phase,
     contributions = contributions,
 )

@@ -8,18 +8,14 @@ import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
-import io.github.whywood.deepdeep.runtime.PluginSetupResult
+import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 abstract class PluginManagerDelegation internal constructor() : PluginManagerFacade {
     internal abstract val appScope: CoroutineScope
-
-    internal abstract val setupFlow: PluginSetupFlow
 
     internal abstract val externalFlow: PluginExternalFlow
 
@@ -33,34 +29,7 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     internal abstract val registrySnapshot: PluginRegistrySnapshot
 
-    internal abstract suspend fun prepareConnect(pluginId: String)
-
     override fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool> = sessionHooks.tools(binding)
-
-    override fun install(pluginId: String) = setupFlow.install(pluginId)
-
-    override fun update(pluginId: String) = setupFlow.install(pluginId)
-
-    override fun connect(pluginId: String) {
-        appScope.launch {
-            runCatching {
-                prepareConnect(pluginId)
-                setupFlow.setup(pluginId)
-            }
-        }
-    }
-
-    override fun runAction(pluginId: String, actionId: String) = setupFlow.runAction(pluginId, actionId)
-
-    override fun onAppForeground() = setupFlow.onAppForeground()
-
-    override fun confirmInstall() = setupFlow.confirmInstall()
-
-    override fun cancelInteraction() = setupFlow.cancelInteraction()
-
-    override fun cancelSetup(pluginId: String) = setupFlow.cancelSetup(pluginId)
-
-    override suspend fun setup(pluginId: String): PluginSetupResult = setupFlow.setup(pluginId)
 
     override suspend fun inspectExternal(file: File): ExternalInspectionUi? = externalFlow.inspectExternal(file)
 
@@ -71,31 +40,25 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override suspend fun stageExternalUpdate(pluginId: String): String? = externalFlow.stageExternalUpdate(pluginId)
 
-    override suspend fun pluginSourceSettings(): PluginSourceSettings = externalFlow.pluginSourceSettings()
+    override suspend fun pluginRepositorySettings(): PluginRepositorySettings = externalFlow.pluginRepositorySettings()
 
-    override suspend fun savePluginSourceSettings(settings: PluginSourceSettings) {
-        externalFlow.savePluginSourceSettings(settings)
+    override suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings) {
+        externalFlow.savePluginRepositorySettings(settings)
     }
 
     override suspend fun refreshAvailableUpdates(): List<PluginUpdateUi> = externalFlow.checkExternalUpdates()
 
     override fun slotEntries(slotId: String): List<SlotRenderEntry> = slotRegistry.bindings(slotId)
 
-    override fun pluginSlotEntries(pluginId: String): List<SlotRenderEntry> {
-        val slotIds = registrySnapshot.bindings
-            .filter { it.pluginId == pluginId }
-            .map { it.binding.slotId }
-            .distinct()
-        return slotIds.flatMap { slotId ->
-            slotRegistry.bindings(slotId).filter { it.pluginId == pluginId }
-        }
-    }
-
     override fun pagesOf(pluginId: String): List<PluginPage> =
         registrySnapshot.pages.filter { it.pluginId == pluginId }.map { it.page }
 
     override fun composerActions(): List<PluginComposerActionUi> =
-        registrySnapshot.composerActions.map { PluginComposerActionUi(it.pluginId, it.action) }
+        registrySnapshot.composerActions.mapNotNull { entry ->
+            val pages = registrySnapshot.pages.filter { it.pluginId == entry.pluginId }.map { it.page }
+            val page = pages.firstOrNull { it.id == entry.action.id } ?: pages.firstOrNull() ?: return@mapNotNull null
+            PluginComposerActionUi(entry.pluginId, entry.action, page.id)
+        }
 
     override fun slotFailureGuard(): PluginFailureGuard = guard
 

@@ -26,14 +26,12 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextField
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
+import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 
 @Composable
@@ -70,12 +68,12 @@ internal fun PluginImportDialog(
                         DdListRow(title = inspection.name)
                         DdHairline()
                         DdListRow(
-                            title = stringResource(R.string.plugins_detail_version),
+                            title = stringResource(R.string.plugins_import_version),
                             value = inspection.version,
                         )
                         DdHairline()
                         DdListRow(
-                            title = stringResource(R.string.plugins_detail_size),
+                            title = stringResource(R.string.plugins_import_size),
                             value = formatPluginSize(context, inspection.size),
                         )
                         DdHairline()
@@ -85,7 +83,7 @@ internal fun PluginImportDialog(
                         )
                         DdHairline()
                         DdListRow(
-                            title = stringResource(R.string.plugins_detail_publisher),
+                            title = stringResource(R.string.plugins_import_publisher),
                             value = inspection.publisherName.ifBlank { inspection.publisherKeyId.take(12) },
                             subtitle = inspection.publisherKeyId,
                         )
@@ -237,9 +235,9 @@ internal fun PluginUpdatesDialog(
 }
 
 @Composable
-internal fun PluginSourceDialog(
-    settings: PluginSourceSettings,
-    onSave: (PluginSourceSettings) -> Unit,
+internal fun PluginRepositoryDialog(
+    settings: PluginRepositorySettings,
+    onSave: (PluginRepositorySettings) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -287,7 +285,7 @@ internal fun PluginSourceDialog(
                 text = stringResource(R.string.plugins_source_save),
                 onClick = {
                     onSave(
-                        PluginSourceSettings(
+                        PluginRepositorySettings(
                             indexUrl = url.trim().takeIf { it.isNotEmpty() },
                             autoCheck = autoCheck,
                         ),
@@ -333,6 +331,10 @@ private fun providedSummary(inspection: ExternalInspectionUi): String = buildStr
     if (provides.skills.isNotEmpty()) {
         if (isNotEmpty()) append(" · ")
         append(provides.skills.joinToString(", "))
+    }
+    if (provides.pages.isNotEmpty()) {
+        if (isNotEmpty()) append(" · ")
+        append(provides.pages.joinToString(", "))
     }
     if (isEmpty()) append("-")
 }

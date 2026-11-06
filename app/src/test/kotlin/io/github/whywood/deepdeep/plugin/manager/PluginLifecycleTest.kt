@@ -1,9 +1,8 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
-import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -29,55 +28,68 @@ class PluginLifecycleTest {
             gate = gate,
             skillStore = PluginSkillStore(root.resolve("skills"), root.resolve("repo")),
             external = null,
-            settingsFor = { emptyMap() },
         )
     }
 
-    private fun registerBuiltin(lifecycle: PluginLifecycle, plugin: CountingPlugin) {
-        lifecycle.registerBuiltin(BuiltinPluginEntry(managerManifest("alpha"), plugin), null)
+    private fun register(lifecycle: PluginLifecycle, gate: PluginRuntimeRegistry, plugin: CountingPlugin) {
+        val manifest = managerManifest("alpha")
+        gate.register(managerRecord("alpha"), lifecycle.createRuntime(managerRecord("alpha"), manifest))
+        gate.markLoaded(
+            pluginId = "alpha",
+            manifest = manifest,
+            plugin = plugin,
+            host = testPluginHost(manifest, gate.view("alpha")!!.scope),
+            scope = gate.view("alpha")!!.scope,
+        )
     }
 
     @Test
-    fun activateInjectsSettingsThenEnablesPlugin() = runTest {
+    fun enableLoadsPluginAndMarksActive() = runTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
         val plugin = CountingPlugin()
-        registerBuiltin(lifecycle, plugin)
+        register(lifecycle, gate, plugin)
 
-        assertNull(lifecycle.activate(gate.view("alpha")!!))
-        assertEquals(listOf("settings", "enable"), plugin.events)
+        assertNull(lifecycle.enable(gate.view("alpha")!!))
+        assertEquals(listOf("enable"), plugin.events)
         assertEquals(PluginPhase.ACTIVE, gate.descriptor("alpha")?.phase)
     }
 
     @Test
-    fun deactivateCancelsScopeClosesPluginAndKeepsBuiltinInstance() = runTest {
+    fun deactivateCancelsScopeClosesPluginAndDetaches() = runTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
         val plugin = CountingPlugin()
-        registerBuiltin(lifecycle, plugin)
+        register(lifecycle, gate, plugin)
         val scope = gate.view("alpha")!!.scope
-        lifecycle.activate(gate.view("alpha")!!)
+        lifecycle.enable(gate.view("alpha")!!)
 
         assertNull(lifecycle.deactivate("alpha"))
 
         assertFalse(scope.isActive)
         assertEquals(1, plugin.count("close"))
-        assertNotNull(gate.view("alpha")?.plugin)
-        gate.setEnabled("alpha", false)
-        assertEquals(PluginPhase.DISABLED, gate.descriptor("alpha")?.phase)
+        assertNull(gate.view("alpha")?.plugin)
+        assertEquals(PluginPhase.INSTALLED, gate.descriptor("alpha")?.phase)
     }
 
     @Test
-    fun reenablingBuiltinPluginGetsFreshScopeAndCallsEnableAgain() = runTest {
+    fun reenablingPluginGetsFreshScopeAndCallsEnableAgain() = runTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
         val plugin = CountingPlugin()
-        registerBuiltin(lifecycle, plugin)
-        lifecycle.activate(gate.view("alpha")!!)
+        register(lifecycle, gate, plugin)
+        lifecycle.enable(gate.view("alpha")!!)
         val oldScope = gate.view("alpha")!!.scope
         lifecycle.deactivate("alpha")
 
-        assertNull(lifecycle.activate(gate.view("alpha")!!))
+        gate.markLoaded(
+            pluginId = "alpha",
+            manifest = managerManifest("alpha"),
+            plugin = plugin,
+            host = testPluginHost(managerManifest("alpha"), gate.view("alpha")!!.scope),
+            scope = gate.view("alpha")!!.scope,
+        )
+        assertNull(lifecycle.enable(gate.view("alpha")!!))
         val newScope = gate.view("alpha")!!.scope
         assertFalse(oldScope.isActive)
         assertTrue(newScope.isActive)
@@ -86,37 +98,16 @@ class PluginLifecycleTest {
     }
 
     @Test
-    fun deactivateDetachesExternalPlugin() = runTest {
-        val gate = PluginRuntimeRegistry()
-        val lifecycle = lifecycle(gate)
-        val plugin = CountingPlugin()
-        val manifest = managerManifest("alpha", source = PluginSource.EXTERNAL, installable = true)
-        gate.register(
-            managerRecord("alpha"),
-            lifecycle.createRuntime(managerRecord("alpha"), manifest, builtin = false, source = PluginSource.EXTERNAL),
-        )
-        gate.markLoaded("alpha", manifest, PluginSource.EXTERNAL, plugin, testPluginHost(manifest), gate.view("alpha")!!.scope)
-
-        lifecycle.deactivate("alpha")
-
-        assertNull(gate.view("alpha")?.plugin)
-        assertFalse(gate.view("alpha")!!.scope.isActive)
-        assertEquals(1, plugin.count("close"))
-    }
-
-    @Test
     fun closeFailureIsReportedButTeardownContinues() = runTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
         val plugin = CountingPlugin(closeError = IllegalStateException("close failed"))
-        registerBuiltin(lifecycle, plugin)
+        register(lifecycle, gate, plugin)
         val scope = gate.view("alpha")!!.scope
 
         assertEquals("close failed", lifecycle.deactivate("alpha"))
         assertFalse(scope.isActive)
-        gate.setEnabled("alpha", false)
-        assertNotNull(gate.view("alpha"))
-        assertEquals(PluginPhase.DISABLED, gate.descriptor("alpha")?.phase)
+        assertNull(gate.view("alpha")?.plugin)
     }
 
     @Test
@@ -124,22 +115,23 @@ class PluginLifecycleTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
         val plugin = CountingPlugin(enableError = IllegalStateException("enable failed"))
-        registerBuiltin(lifecycle, plugin)
+        register(lifecycle, gate, plugin)
 
-        assertEquals("enable failed", lifecycle.activate(gate.view("alpha")!!))
+        assertEquals("enable failed", lifecycle.enable(gate.view("alpha")!!))
         assertEquals(PluginPhase.FAILED, gate.descriptor("alpha")?.phase)
         assertEquals("enable failed", gate.view("alpha")?.record?.lastError)
     }
 
     @Test
-    fun settingsFailureIsIsolated() = runTest {
+    fun uninstallCallsDisableThenUninstallAndCloses() = runTest {
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate)
-        val plugin = CountingPlugin(settingsChangedError = IllegalStateException("settings failed"))
-        registerBuiltin(lifecycle, plugin)
+        val plugin = CountingPlugin()
+        register(lifecycle, gate, plugin)
 
-        assertEquals("settings failed", lifecycle.activate(gate.view("alpha")!!))
-        assertEquals(0, plugin.count("onEnable"))
+        assertNull(lifecycle.uninstallPlugin(gate.view("alpha")!!))
+        assertFalse(plugin.events.contains("enable"))
+        assertEquals(1, plugin.count("close"))
     }
 
     @Test
@@ -147,7 +139,7 @@ class PluginLifecycleTest {
         val parentScope = CoroutineScope(SupervisorJob())
         val gate = PluginRuntimeRegistry()
         val lifecycle = lifecycle(gate, parentScope)
-        registerBuiltin(lifecycle, CountingPlugin())
+        register(lifecycle, gate, CountingPlugin())
         val pluginScope = gate.view("alpha")!!.scope
 
         parentScope.cancel()

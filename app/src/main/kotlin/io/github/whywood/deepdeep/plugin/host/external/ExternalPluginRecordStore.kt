@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.host.external
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -111,7 +110,6 @@ internal class ExternalPluginRecordStore(
             installedAt = json.long("installedAt") ?: 0L,
             enabled = json.boolean("enabled") ?: true,
             skillIds = json.stringList("skillIds"),
-            source = json.enumValue("source", PluginSource.EXTERNAL),
             installPath = installPath,
             activeBundleSha256 = activeBundleSha256,
             size = json.long("size") ?: 0L,
@@ -146,7 +144,6 @@ internal class ExternalPluginRecordStore(
                                 put("installedAt", record.installedAt)
                                 put("enabled", record.enabled)
                                 putJsonArray("skillIds") { record.skillIds.forEach { add(it) } }
-                                put("source", record.source.name)
                                 put("installPath", record.installPath)
                                 put("activeBundleSha256", record.activeBundleSha256)
                                 put("size", record.size)

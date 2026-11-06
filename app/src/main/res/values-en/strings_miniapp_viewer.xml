@@ -1,0 +1,22 @@
+<resources>
+    <string name="miniapp_back">Back</string>
+    <string name="miniapp_reload">Reload</string>
+    <string name="miniapp_more">More</string>
+    <string name="miniapp_rename">Rename</string>
+    <string name="miniapp_rename_title">Rename</string>
+    <string name="miniapp_rename_hint">Name</string>
+    <string name="miniapp_rename_save">Save</string>
+    <string name="miniapp_delete">Delete</string>
+    <string name="miniapp_delete_title">Delete miniapp</string>
+    <string name="miniapp_delete_message">Deleting “%1$s” removes its page and all of its data permanently.</string>
+    <string name="miniapp_delete_confirm">Delete</string>
+    <string name="miniapp_cancel">Cancel</string>
+    <string name="miniapp_loading">Loading</string>
+    <string name="miniapp_page_failed">Page error</string>
+    <string name="miniapp_page_retry">Retry</string>
+    <string name="miniapp_webview_unsupported">The WebView on this system does not support Miniapp</string>
+    <string name="miniapp_link_failed">Could not open link</string>
+    <string name="miniapp_action_failed">Action failed</string>
+    <string name="miniapp_renderer_crashed">Page renderer crashed</string>
+    <string name="miniapp_http_error">HTTP %1$d</string>
+</resources>

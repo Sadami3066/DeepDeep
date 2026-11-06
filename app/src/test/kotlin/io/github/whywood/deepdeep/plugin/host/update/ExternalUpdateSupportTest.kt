@@ -67,7 +67,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun checkUpdatesMapsCandidatesFromFakeIndex() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         val v2 = packageV2()
         serveV2(v2)
 
@@ -90,7 +90,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun checkUpdatesFallsBackToCacheWhenFetchFails() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         serveV2(packageV2())
         assertTrue(support.checkUpdates() is UpdateCheckResultUi.Ready)
 
@@ -106,7 +106,7 @@ class ExternalUpdateSupportTest {
 
     @Test
     fun checkUpdatesReturnsUnavailableWithoutCache() = runBlocking {
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         fetcher.textFailure = IOException("offline")
 
         assertTrue(support.checkUpdates() is UpdateCheckResultUi.Unavailable)
@@ -114,7 +114,7 @@ class ExternalUpdateSupportTest {
 
     @Test
     fun stageUpdateRejectsUnknownPlugin() = runBlocking {
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
 
         val result = support.stageUpdate(SyntheticDdp.PLUGIN_ID)
 
@@ -125,7 +125,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun stageUpdateRejectsPluginWithoutCandidate() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         fetcher.texts[UpdateFixtures.INDEX_URL] = UpdateFixtures.indexJson(
             UpdateFixtures.entryJson(version = "1.0.0", publisherKeyId = key.keyId),
         )
@@ -139,7 +139,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun stageUpdateWritesPendingRecordWithoutApplying() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         serveV2(packageV2())
 
         val result = support.stageUpdate(SyntheticDdp.PLUGIN_ID)
@@ -157,7 +157,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun stageUpdateRejectsShaMismatch() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         val v2 = packageV2()
         fetcher.texts[UpdateFixtures.INDEX_URL] = UpdateFixtures.indexJson(
             UpdateFixtures.entryJson(
@@ -178,7 +178,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun stageUpdateRejectsSecondStageWhilePending() = runBlocking {
         installV1()
-        support.saveSettings(PluginSourceSettings(indexUrl = UpdateFixtures.INDEX_URL))
+        support.saveSettings(PluginRepositorySettings(indexUrl = UpdateFixtures.INDEX_URL))
         serveV2(packageV2())
         assertTrue(support.stageUpdate(SyntheticDdp.PLUGIN_ID) is UpdateStageResultUi.Staged)
 
@@ -191,7 +191,7 @@ class ExternalUpdateSupportTest {
     @Test
     fun settingsRoundTripThroughFacade() = runBlocking {
         support.saveSettings(
-            PluginSourceSettings(
+            PluginRepositorySettings(
                 indexUrl = "  https://example.test/plugins/index.json  ",
                 autoCheck = false,
                 intervalHours = 0,

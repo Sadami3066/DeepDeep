@@ -3,22 +3,17 @@ package io.github.whywood.deepdeep.plugin.manager
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
-import io.github.whywood.deepdeep.plugin.api.PluginAction
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
-import io.github.whywood.deepdeep.plugin.api.PluginDetailRow
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
-import io.github.whywood.deepdeep.plugin.api.PluginSource
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.PromptSection
-import io.github.whywood.deepdeep.plugin.api.SettingSpec
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
-import io.github.whywood.deepdeep.plugin.internal.testPluginHost
+import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -28,15 +23,11 @@ import kotlinx.serialization.json.JsonObject
 internal fun managerManifest(
     id: String,
     version: String = "1.0.0",
-    installable: Boolean = false,
-    source: PluginSource = PluginSource.BUILTIN,
 ): PluginManifest = PluginManifest(
     id = id,
     version = version,
     name = LocalizedText.Literal(id),
     summary = LocalizedText.Literal("summary"),
-    source = source,
-    installable = installable,
 )
 
 internal fun managerRecord(
@@ -64,24 +55,19 @@ internal fun managerTool(name: String): PluginTool = PluginTool(
 internal fun managerRuntime(
     manifest: PluginManifest,
     plugin: DeepDeepPlugin?,
-    builtin: Boolean = true,
     scope: CoroutineScope = CoroutineScope(SupervisorJob()),
 ): ManagedPlugin = ManagedPlugin(
     id = manifest.id,
-    builtin = builtin,
     manifest = manifest,
-    source = manifest.source,
     plugin = plugin,
     host = testPluginHost(manifest, scope),
     scope = scope,
 )
 
-internal class CountingPlugin(
+internal open class CountingPlugin(
     var availabilityResult: PluginAvailability = PluginAvailability.Available,
-    var statusResult: PluginStatus = PluginStatus.Ready("ready"),
-    var settingsError: Throwable? = null,
     var contributionsError: Throwable? = null,
-    var settingsChangedError: Throwable? = null,
+    var skillsError: Throwable? = null,
     var enableError: Throwable? = null,
     var closeError: Throwable? = null,
     var closeDelayMillis: Long = 0,
@@ -101,19 +87,9 @@ internal class CountingPlugin(
         return availabilityResult
     }
 
-    override suspend fun status(host: PluginHost): PluginStatus {
-        hit("status")
-        return statusResult
-    }
-
-    override fun settings(): List<SettingSpec> {
-        hit("settings")
-        settingsError?.let { throw it }
-        return listOf(SettingSpec.Text("token", LocalizedText.Literal("token")))
-    }
-
     override fun skills(host: PluginHost): List<PluginSkill> {
         hit("skills")
+        skillsError?.let { throw it }
         return emptyList()
     }
 
@@ -138,16 +114,6 @@ internal class CountingPlugin(
         return PluginUiContributions.None
     }
 
-    override fun actions(host: PluginHost, status: PluginStatus): List<PluginAction> {
-        hit("actions")
-        return emptyList()
-    }
-
-    override fun detailRows(host: PluginHost, status: PluginStatus): List<PluginDetailRow> {
-        hit("detailRows")
-        return emptyList()
-    }
-
     override suspend fun onEnable(host: PluginHost) {
         hit("onEnable")
         events += "enable"
@@ -157,12 +123,6 @@ internal class CountingPlugin(
     override suspend fun onDisable(host: PluginHost) {
         hit("onDisable")
         events += "disable"
-    }
-
-    override suspend fun onSettingsChanged(host: PluginHost, values: Map<String, String>) {
-        hit("onSettingsChanged")
-        events += "settings"
-        settingsChangedError?.let { throw it }
     }
 
     override suspend fun close() {

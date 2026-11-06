@@ -6,7 +6,6 @@ import dev.pi.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
-import io.github.whywood.deepdeep.screen.MainScreenShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -22,5 +21,4 @@ internal class PlatformGraphDeps(
     val mcpTokenStore: FileMcpTokenStore,
     val pluginManager: () -> PluginHostManager,
     val host: () -> AgentRuntimeHost,
-    val mainShell: () -> MainScreenShell,
 )

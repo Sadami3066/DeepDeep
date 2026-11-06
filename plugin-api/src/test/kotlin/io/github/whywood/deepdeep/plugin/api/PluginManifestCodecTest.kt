@@ -22,14 +22,17 @@ class PluginManifestCodecTest {
         {
           "id": "io.github.whywood.deepdeep.pluginsample",
           "version": "1.0.0",
-          "apiLevel": 1,
+          "apiLevel": 2,
           "minHostVersion": "0.2.0",
           "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
           "name": { "default": "Sample Plugin", "zh": "示例插件", "en": "Sample Plugin" },
           "summary": { "default": "External plugin sample", "zh": "外部插件示例", "en": "External plugin sample" },
           "icon": "asset:icon.png",
-          "provides": { "tools": ["sample_echo"], "uiSlots": ["setup.content"] },
-          "installable": true
+          "provides": {
+            "tools": ["sample_echo"],
+            "uiSlots": ["tool.card.content:sample_echo"],
+            "pages": ["home"]
+          }
         }
         """.trimIndent(),
     )
@@ -41,19 +44,16 @@ class PluginManifestCodecTest {
         assertEquals("1.0.0", manifest.version)
         assertEquals(PLUGIN_API_LEVEL, manifest.apiLevel)
         assertEquals("0.2.0", manifest.minHostVersion)
-        assertEquals(PluginSource.EXTERNAL, manifest.source)
         assertEquals("io.github.whywood.deepdeep.pluginsample.SamplePlugin", manifest.entryClass)
         assertEquals(IconRef.Asset("icon.png"), manifest.icon)
-        assertEquals(PluginSource.EXTERNAL, manifest.source)
         assertEquals(listOf("sample_echo"), manifest.provides.tools)
-        assertEquals(listOf("setup.content"), manifest.provides.uiSlots)
-        assertTrue(manifest.installable)
+        assertEquals(listOf("tool.card.content:sample_echo"), manifest.provides.uiSlots)
+        assertEquals(listOf("home"), manifest.provides.pages)
         assertEquals(true, manifest.defaultEnabled)
         assertEquals(false, manifest.requiresPrivilege)
         assertNull(manifest.ui)
         assertNull(manifest.publisher)
         assertNull(manifest.description)
-        assertNull(manifest.sizeLabel)
         assertNull(manifest.homepage)
         assertNull(manifest.changelog)
     }
@@ -93,13 +93,12 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.demo",
                   "version": "1.2.3",
-                  "apiLevel": 1,
+                  "apiLevel": 2,
                   "minHostVersion": "0.2.0",
                   "ui": { "apiLevel": 1, "kotlin": "2.1.0", "compose": "1.8.0" },
                   "name": { "default": "Demo" },
                   "summary": { "default": "Demo plugin" },
                   "description": { "default": "Long description" },
-                  "sizeLabel": { "default": "1.2 MB" },
                   "homepage": "https://example.com/demo",
                   "changelog": "Initial release",
                   "icon": "asset:assets/icon.png",
@@ -108,12 +107,9 @@ class PluginManifestCodecTest {
                   "provides": {
                     "tools": ["demo_echo"],
                     "skills": ["demo-skill"],
-                    "settings": ["api_key"],
-                    "actions": ["login"],
-                    "uiSlots": ["setup.content", "tool.card.content:demo_echo"],
+                    "uiSlots": ["tool.card.content:demo_echo", "chat.message:demo.card"],
                     "pages": ["home"]
                   },
-                  "installable": true,
                   "requiresPrivilege": true,
                   "defaultEnabled": false
                 }
@@ -126,15 +122,12 @@ class PluginManifestCodecTest {
         assertEquals("https://example.com/demo", manifest.homepage)
         assertEquals("Initial release", manifest.changelog)
         assertEquals("Long description", (manifest.description as LocalizedText.Literal).resolve())
-        assertEquals("1.2 MB", (manifest.sizeLabel as LocalizedText.Literal).resolve())
         assertEquals(UiManifest(apiLevel = 1, kotlin = "2.1.0", compose = "1.8.0"), manifest.ui)
         assertEquals(
             Provides(
                 tools = listOf("demo_echo"),
                 skills = listOf("demo-skill"),
-                settings = listOf("api_key"),
-                actions = listOf("login"),
-                uiSlots = listOf("setup.content", "tool.card.content:demo_echo"),
+                uiSlots = listOf("tool.card.content:demo_echo", "chat.message:demo.card"),
                 pages = listOf("home"),
             ),
             manifest.provides,
@@ -153,15 +146,32 @@ class PluginManifestCodecTest {
                   "name": { "default": "Tolerant" },
                   "summary": { "default": "Tolerant plugin" },
                   "apiLevel": "one",
-                  "installable": "false",
                   "requiresPrivilege": "maybe"
                 }
                 """.trimIndent(),
             ),
         )
         assertEquals(BASELINE_API_LEVEL, manifest.apiLevel)
-        assertEquals(false, manifest.installable)
         assertEquals(false, manifest.requiresPrivilege)
+    }
+
+    @Test
+    fun rejectsLegacyIconWithoutAssetPrefix() {
+        val manifest = PluginManifestCodec.parse(
+            json(
+                """
+                {
+                  "id": "com.example.icon",
+                  "version": "1.0.0",
+                  "entryClass": "com.example.icon.IconPlugin",
+                  "name": { "default": "Icon" },
+                  "summary": { "default": "Icon" },
+                  "icon": "icon.png"
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertNull(manifest.icon)
     }
 
     @Test
@@ -174,7 +184,7 @@ class PluginManifestCodecTest {
                   "version": "1.0.0",
                   "entryClass": "com.example.future.FuturePlugin",
                   "name": { "default": "Future" },
-                  "summary": { "default": "Future plugin" },
+                  "summary": { "default": "Future" },
                   "futureField": { "nested": [1, 2, 3] }
                 }
                 """.trimIndent(),
@@ -241,7 +251,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.future",
                   "version": "1.0.0",
-                  "apiLevel": 2,
+                  "apiLevel": 3,
                   "entryClass": "com.example.future.FuturePlugin",
                   "name": { "default": "Future" },
                   "summary": { "default": "Future" }
@@ -276,7 +286,7 @@ class PluginManifestCodecTest {
     }
 
     @Test
-    fun rejectsExternalManifestWithoutEntryClass() {
+    fun rejectsManifestWithoutEntryClass() {
         val result = PluginManifestCodec.decode(
             json(
                 """
@@ -294,21 +304,21 @@ class PluginManifestCodecTest {
     }
 
     @Test
-    fun acceptsBuiltinManifestWithoutEntryClass() {
+    fun rejectsLegacyBuiltinId() {
         val result = PluginManifestCodec.decode(
             json(
                 """
                 {
                   "id": "timer",
                   "version": "1.0.0",
+                  "entryClass": "com.example.timer.TimerPlugin",
                   "name": { "default": "Timer" },
                   "summary": { "default": "Timer" }
                 }
                 """.trimIndent(),
             ),
-            source = PluginSource.BUILTIN,
         )
-        assertTrue(result is PluginManifestCodec.Result.Valid)
+        assertTrue(codes(result).contains(PluginValidation.Code.INVALID_ID))
     }
 
     @Test
@@ -349,23 +359,5 @@ class PluginManifestCodecTest {
         )
         assertTrue(result is PluginManifestCodec.Result.Valid)
         assertTrue(codes(result).contains(PluginValidation.Code.UI_API_LEVEL_UNSUPPORTED))
-    }
-
-    @Test
-    fun builtinAndExternalIdsFollowDifferentRules() {
-        val externalBuiltinId = PluginManifestCodec.decode(
-            json(
-                """
-                {
-                  "id": "timer",
-                  "version": "1.0.0",
-                  "entryClass": "com.example.timer.TimerPlugin",
-                  "name": { "default": "Timer" },
-                  "summary": { "default": "Timer" }
-                }
-                """.trimIndent(),
-            ),
-        )
-        assertTrue(codes(externalBuiltinId).contains(PluginValidation.Code.INVALID_ID))
     }
 }

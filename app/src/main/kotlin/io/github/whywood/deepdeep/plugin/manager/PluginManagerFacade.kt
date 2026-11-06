@@ -5,9 +5,7 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.PluginFailureGuard
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
-import io.github.whywood.deepdeep.plugin.host.update.PluginSourceSettings
-import io.github.whywood.deepdeep.runtime.PluginController
-import io.github.whywood.deepdeep.runtime.PluginSetupResult
+import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
@@ -15,12 +13,11 @@ import kotlinx.coroutines.flow.StateFlow
 data class PluginComposerActionUi(
     val pluginId: String,
     val action: ComposerAction,
+    val pageId: String,
 )
 
-interface PluginManagerFacade : PluginController {
+interface PluginManagerFacade {
     val state: StateFlow<PluginsUiState>
-
-    override val setupPluginIds: List<String>
 
     suspend fun start()
 
@@ -38,23 +35,7 @@ interface PluginManagerFacade : PluginController {
 
     fun setEnabled(pluginId: String, enabled: Boolean)
 
-    fun setSetting(pluginId: String, key: String, value: String)
-
-    fun install(pluginId: String)
-
-    fun update(pluginId: String)
-
     fun uninstall(pluginId: String)
-
-    fun connect(pluginId: String)
-
-    fun runAction(pluginId: String, actionId: String)
-
-    fun onAppForeground()
-
-    fun confirmInstall()
-
-    fun cancelInteraction()
 
     suspend fun inspectExternal(file: File): ExternalInspectionUi?
 
@@ -64,19 +45,17 @@ interface PluginManagerFacade : PluginController {
 
     suspend fun stageExternalUpdate(pluginId: String): String?
 
-    suspend fun pluginSourceSettings(): PluginSourceSettings
+    suspend fun pluginRepositorySettings(): PluginRepositorySettings
 
-    suspend fun savePluginSourceSettings(settings: PluginSourceSettings)
+    suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings)
 
     suspend fun refreshAvailableUpdates(): List<PluginUpdateUi>
 
-    suspend fun retryActivation(pluginId: String): PluginSetupResult
+    suspend fun retryActivation(pluginId: String): PluginRecoveryResult
 
     suspend fun rollbackPlugin(pluginId: String): Boolean
 
     fun slotEntries(slotId: String): List<SlotRenderEntry>
-
-    fun pluginSlotEntries(pluginId: String): List<SlotRenderEntry>
 
     fun pagesOf(pluginId: String): List<PluginPage>
 

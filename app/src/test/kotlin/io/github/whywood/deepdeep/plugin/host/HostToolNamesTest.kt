@@ -10,11 +10,14 @@ class HostToolNamesTest {
     fun reservesEngineAndHostTools() {
         val expected = listOf(
             "read", "write", "edit", "bash", "ls", "grep", "find",
-            "ask_user_question", "plugin_setup", "present", "adb_shell", "root_shell",
+            "ask_user_question", "present", "adb_shell", "root_shell",
             "get_goal", "create_goal", "update_goal",
             "job_start", "job_output", "job_list", "job_kill",
             "timer_create", "timer_list", "timer_update", "timer_delete",
-            "workshop_create", "workshop_load", "workshop_list", "workshop_delete", "workshop_edit",
+            "miniapp_create", "miniapp_load", "miniapp_list", "miniapp_delete", "miniapp_edit",
+            "web_search", "web_fetch", "arrange_calendar", "virtual_screen",
+            "screen_status", "screen_observe", "screen_screenshot", "screen_tap", "screen_swipe",
+            "screen_scroll", "screen_type", "screen_key", "screen_wait", "screen_list_apps", "screen_launch",
             "tool_search", "mcp_loaded_tools", "mcp_resource", "mcp_resources",
             "mcp_resource_templates", "mcp_servers",
         )
@@ -33,7 +36,7 @@ class HostToolNamesTest {
     @Test
     fun pluginOwnedNamesAreNotReserved() {
         assertFalse(HostToolNames.isReserved("sample_echo"))
-        assertFalse(HostToolNames.isReserved("screen_tap"))
+        assertFalse(HostToolNames.isReserved("plugin_note"))
     }
 
     @Test

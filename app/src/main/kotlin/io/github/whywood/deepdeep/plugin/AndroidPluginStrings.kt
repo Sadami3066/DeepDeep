@@ -10,7 +10,4 @@ class AndroidPluginStrings(
     private val localized = LocalizedContext(context)
 
     override fun get(@StringRes id: Int): String = localized.resources.getString(id)
-
-    override fun format(@StringRes id: Int, vararg args: Any): String =
-        localized.resources.getString(id, *args)
 }

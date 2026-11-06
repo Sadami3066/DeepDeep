@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
-import io.github.whywood.deepdeep.plugin.api.PluginStatus
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import java.io.File
@@ -11,7 +10,6 @@ import kotlinx.coroutines.CancellationException
 internal data class MaterializedPlugin(
     val contributions: PluginContributions,
     val availability: PluginAvailabilityUi,
-    val status: PluginStatusUi?,
     val skills: List<PluginSkill>,
     val failure: String?,
 )
@@ -26,26 +24,17 @@ internal class PluginContributionMaterializer(
     suspend fun materialize(view: PluginRuntimeView): MaterializedPlugin {
         val plugin = view.plugin
             ?: return MaterializedPlugin(
-                contributions = PluginContributions(),
+                contributions = PluginContributions.Empty,
                 availability = view.record.lastError
                     ?.takeIf { it.isNotBlank() }
                     ?.let { PluginAvailabilityUi.Unavailable(it) }
                     ?: PluginAvailabilityUi.Available,
-                status = null,
                 skills = emptyList(),
                 failure = null,
             )
         var failure: String? = null
         fun record(error: Throwable) {
             if (failure == null) failure = error.message ?: error.javaClass.simpleName
-        }
-        val settings = try {
-            plugin.settings()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Throwable) {
-            record(error)
-            emptyList()
         }
         val skills = try {
             materializeSkills(view, plugin)
@@ -63,31 +52,13 @@ internal class PluginContributionMaterializer(
             record(error)
             PluginAvailability.Unavailable(error.message ?: error.javaClass.simpleName)
         }
-        val installed = view.installed || !view.manifest.installable
-        val available = availability is PluginAvailability.Available
-        val status = if (view.enabled && installed && available) {
+        val contributions = if (view.enabled) {
             try {
-                plugin.status(view.host).toUi()
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                record(error)
-                null
-            }
-        } else {
-            null
-        }
-        val contributions = if (view.enabled && installed) {
-            try {
-                val statusApi = status?.toApi() ?: PluginStatus.NotReady("")
                 val base = plugin.contributions(view.host)
                 PluginContributions(
                     tools = base.tools,
                     skills = skills,
                     promptSections = plugin.promptSections(view.host),
-                    settings = settings,
-                    actions = if (status != null) plugin.actions(view.host, statusApi) else emptyList(),
-                    detailRows = plugin.detailRows(view.host, statusApi),
                     ui = plugin.ui(view.host),
                     hooks = base.hooks,
                 )
@@ -95,15 +66,14 @@ internal class PluginContributionMaterializer(
                 throw error
             } catch (error: Throwable) {
                 record(error)
-                PluginContributions(skills = skills, settings = settings)
+                PluginContributions(skills = skills)
             }
         } else {
-            PluginContributions(skills = skills, settings = settings)
+            PluginContributions(skills = skills)
         }
         return MaterializedPlugin(
             contributions = contributions,
             availability = availability.toUi(),
-            status = status,
             skills = skills,
             failure = failure,
         )

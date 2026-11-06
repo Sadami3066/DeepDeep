@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.plugin.manager
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginSource
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
@@ -15,9 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 
 internal class ManagedPlugin(
     val id: String,
-    val builtin: Boolean,
     var manifest: PluginManifest,
-    var source: PluginSource,
     var plugin: DeepDeepPlugin?,
     var host: PluginHost,
     var scope: CoroutineScope,
@@ -25,16 +22,13 @@ internal class ManagedPlugin(
     var externalRecord: ExternalPluginRecord? = null,
     var contributions: PluginContributions = PluginContributions.Empty,
     var availability: PluginAvailabilityUi = PluginAvailabilityUi.Available,
-    var status: PluginStatusUi? = null,
     var skillIds: List<String> = emptyList(),
     var failure: String? = null,
     var materializationFailure: String? = null,
 ) {
     fun view(record: PluginRecord): PluginRuntimeView = PluginRuntimeView(
         record = record,
-        builtin = builtin,
         manifest = manifest,
-        source = source,
         plugin = plugin,
         host = host,
         scope = scope,
@@ -42,7 +36,6 @@ internal class ManagedPlugin(
         externalRecord = externalRecord,
         contributions = contributions,
         availability = availability,
-        status = status,
         skillIds = skillIds,
         failure = failure,
         materializationFailure = materializationFailure,
@@ -51,9 +44,7 @@ internal class ManagedPlugin(
 
 internal data class PluginRuntimeView(
     val record: PluginRecord,
-    val builtin: Boolean,
     val manifest: PluginManifest,
-    val source: PluginSource,
     val plugin: DeepDeepPlugin?,
     val host: PluginHost,
     val scope: CoroutineScope,
@@ -61,7 +52,6 @@ internal data class PluginRuntimeView(
     val externalRecord: ExternalPluginRecord?,
     val contributions: PluginContributions,
     val availability: PluginAvailabilityUi,
-    val status: PluginStatusUi?,
     val skillIds: List<String>,
     val failure: String?,
     val materializationFailure: String?,
@@ -75,8 +65,7 @@ internal data class PluginRuntimeView(
     val facts: PluginRuntimeFacts
         get() = PluginRuntimeFacts(
             loaded = plugin != null,
-            installable = manifest.installable,
-            failed = failure ?: materializationFailure ?: (status as? PluginStatusUi.Failed)?.label,
+            failed = failure ?: materializationFailure,
             degraded = (availability as? PluginAvailabilityUi.Unavailable)?.reason?.takeIf { it.isNotBlank() },
         )
 
@@ -85,7 +74,6 @@ internal data class PluginRuntimeView(
 
 internal fun PluginRuntimeView.toDescriptor(): PluginDescriptor = PluginDescriptor(
     manifest = manifest,
-    source = source,
     phase = phase,
     error = record.lastError,
     contributions = contributions,
