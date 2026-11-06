@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
 import android.util.Log
-import dev.pi.agent.AgentEvent
 import dev.pi.agent.AgentMessage
 import dev.pi.agent.asAssistantMessage
 import dev.pi.agent.asLlmMessage
@@ -9,11 +8,8 @@ import dev.pi.ai.BlockContent
 import dev.pi.ai.PlainTextContent
 import dev.pi.ai.StopReason
 import dev.pi.ai.TextContent
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.ThinkingDeltaEvent
 import dev.pi.ai.UserMessage
 import dev.pi.coding.session.QueueBehavior
-import dev.pi.coding.session.SessionEvent
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -94,6 +90,35 @@ class AgentRuntimeHost internal constructor(
     private val commands = SessionCommandPlane()
     private val handles = ConcurrentHashMap<String, RuntimeHandle>()
     private val mcp = RuntimeMcp(mutex, handles)
+    private val translator = RuntimeEventTranslator(
+        sdkEvents = sdkEventsBuffer,
+        emit = ::emit,
+        emitActivity = ::emitActivity,
+        emitTerminal = { handle, runId, text, status, message ->
+            emitTerminal(handle, runId, text, status, message)
+        },
+        emitUsage = { handle, runId -> emitUsage(handle, runId) },
+        admitQueuedInput = ::admitQueuedInput,
+    )
+    private val workspaceAdmin = RuntimeWorkspaces(
+        mutex = mutex,
+        homeDir = homeDir,
+        workspacesDir = workspacesDir,
+        directories = workspaces,
+        catalog = catalog,
+        emitListChanged = ::emitListChanged,
+        emitRemoved = ::emitSessionRemoved,
+        stopTurn = ::stop,
+        detachForget = { sessionId -> mutex.withLock { detach(sessionId, forget = true) } },
+        sessionCleaner = sessionCleaner,
+    )
+    private val models = RuntimeModels(
+        mutex = mutex,
+        handles = handles,
+        modelSettings = modelSettings,
+        providers = providers,
+        emitUsage = ::emitUsageEvent,
+    )
     private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private var lastOpenedSessionId: String? = null
@@ -123,60 +148,18 @@ class AgentRuntimeHost internal constructor(
         if (!started) start()
     }
 
-    override suspend fun workspaces(): List<RuntimeWorkspace> = buildList {
-        add(homeWorkspace())
-        addAll(workspaces.read().filter { it.id != HOME_ID })
-    }
+    override suspend fun workspaces(): List<RuntimeWorkspace> = workspaceAdmin.list()
 
-    override suspend fun createWorkspace(name: String): RuntimeWorkspace = mutex.withLock {
-        val trimmed = name.trim()
-        require(trimmed.isNotEmpty()) { "工作区名称不能为空" }
-        val id = UUID.randomUUID().toString().replace("-", "").take(12)
-        val directory = File(workspacesDir, id).apply { mkdirs() }
-        val workspace = RuntimeWorkspace(
-            id = id,
-            name = trimmed,
-            cwd = directory.absolutePath,
-            createdAt = System.currentTimeMillis(),
-        )
-        workspaces.add(workspace)
-        emitListChanged()
-        workspace
-    }
+    override suspend fun createWorkspace(name: String): RuntimeWorkspace = workspaceAdmin.create(name)
 
-    override suspend fun renameWorkspace(id: String, name: String) {
-        if (id == HOME_ID) return
-        val workspace = workspaces.read().firstOrNull { it.id == id } ?: return
-        val trimmed = name.trim()
-        if (trimmed.isEmpty()) return
-        workspaces.add(workspace.copy(name = trimmed))
-        emitListChanged()
-    }
+    override suspend fun renameWorkspace(id: String, name: String) = workspaceAdmin.rename(id, name)
 
-    override suspend fun deleteWorkspace(id: String) {
-        if (id == HOME_ID) return
-        val workspace = workspaces.read().firstOrNull { it.id == id } ?: return
-        val sessions = catalog.list(workspace.cwd)
-        sessions.forEach { session ->
-            runCatching { stop(session.id) }
-            mutex.withLock { detach(session.id, forget = true) }
-            sessionCleaner?.invoke(session.id)
-        }
-        sessions.forEach { session ->
-            catalog.delete(session.filePath)
-            catalog.removeMeta(session.id)
-            eventsBuffer.emit(SessionRuntimeEvent(session.id, RuntimeEvent.SessionRemoved()))
-        }
-        runCatching { File(workspace.cwd).deleteRecursively() }
-        workspaces.remove(id)
-        emitListChanged()
-    }
+    override suspend fun deleteWorkspace(id: String) = workspaceAdmin.delete(id)
 
     override suspend fun allSessions(): List<ConversationSummary> =
         catalog.listAll(visibleCwds()).filterNot { it.archived }
 
-    override suspend fun workspaceSessionCount(workspaceId: String): Int =
-        catalog.list(workspaceFor(workspaceId).cwd).size
+    override suspend fun workspaceSessionCount(workspaceId: String): Int = workspaceAdmin.sessionCount(workspaceId)
 
     override suspend fun newSession(workspaceId: String): OpenedSession {
         val opened = mutex.withLock {
@@ -514,13 +497,7 @@ class AgentRuntimeHost internal constructor(
         return droppedInputs
     }
 
-    override suspend fun history(sessionId: String): List<AssistantMessage> {
-        val loaded = mutex.withLock {
-            handles[sessionId]?.let { handle -> handle to handle.session.history() }
-        } ?: return emptyList()
-        emitUsage(loaded.first)
-        return loaded.second
-    }
+    override suspend fun history(sessionId: String): List<AssistantMessage> = models.history(sessionId)
 
     override suspend fun sessionTitle(sessionId: String): String? = mutex.withLock {
         handles[sessionId]?.session?.sessionName()
@@ -564,69 +541,26 @@ class AgentRuntimeHost internal constructor(
         emitListChanged()
     }
 
-    override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = mutex.withLock {
-        val handle = handles[sessionId] ?: return@withLock null
-        runCatching {
-            SessionModelSnapshot(
-                providerId = handle.session.model.provider,
-                modelId = handle.session.model.id,
-                thinkingLevel = thinkingLevelOf(handle.session.thinkingLevel),
-            )
-        }.getOrNull()
-    }
+    override suspend fun sessionModel(sessionId: String): SessionModelSnapshot? = models.session(sessionId)
 
     override suspend fun setSessionModel(
         sessionId: String,
         providerId: String,
         modelId: String,
         thinkingLevel: ThinkingLevel,
-    ) {
-        val handle = mutex.withLock { handles[sessionId] } ?: return
-        val config = providers.resolveConfig(ModelConfig(providerId, modelId, thinkingLevel))
-        val model = providers.sdkModel(config.providerId, config.modelId)
-            ?: error("Model not found: ${config.providerId}/${config.modelId}")
-        handle.session.setModel(model, config.thinkingLevel.runtimeValue())
-        emitUsage(handle)
-    }
+    ) = models.setSession(sessionId, providerId, modelId, thinkingLevel)
 
-    override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) {
-        val handle = mutex.withLock { handles[sessionId] } ?: return
-        handle.session.setThinkingLevel(thinkingLevel.runtimeValue())
-    }
+    override suspend fun setSessionThinkingLevel(sessionId: String, thinkingLevel: ThinkingLevel) =
+        models.setThinking(sessionId, thinkingLevel)
 
-    override suspend fun currentConfig(): ModelConfig = modelSettings.read()
+    override suspend fun currentConfig(): ModelConfig = models.currentConfig()
 
-    override suspend fun usage(sessionId: String): SessionUsage? {
-        val handle = mutex.withLock { handles[sessionId] } ?: return null
-        return handle.session.usage()
-    }
+    override suspend fun usage(sessionId: String): SessionUsage? = models.usage(sessionId)
 
-    override suspend fun compact(sessionId: String): CompactionOutcome {
-        val handle = mutex.withLock { handles[sessionId] } ?: return CompactionOutcome.Unavailable
-        if (handle.state.busy || handle.session.isStreaming) {
-            emitUsage(handle)
-            return CompactionOutcome.Busy
-        }
-        val outcome = try {
-            val result = handle.session.compact()
-            if (result == null) {
-                CompactionOutcome.Empty
-            } else {
-                CompactionOutcome.Done(result.tokensBefore, result.estimatedTokensAfter)
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            CompactionOutcome.Failed(error.message)
-        }
-        emitUsage(handle)
-        return outcome
-    }
+    override suspend fun compact(sessionId: String): CompactionOutcome = models.compact(sessionId)
 
-    internal suspend fun emitUsage(handle: RuntimeHandle, runId: String = handle.state.runId.orEmpty()) {
-        val current = usage(handle.session.sessionId) ?: return
-        emit(handle, UsageChanged(runId, current))
-    }
+    internal suspend fun emitUsage(handle: RuntimeHandle, runId: String = handle.state.runId.orEmpty()) =
+        models.emitUsage(handle, runId)
 
     suspend fun reconfigure() = withContext(Dispatchers.IO) {
         val sessionIds = mutex.withLock { handles.keys.toList() }
@@ -672,20 +606,9 @@ class AgentRuntimeHost internal constructor(
         return file.isFile && file.length() > 0L
     }
 
-    private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
-        id = HOME_ID,
-        name = HOME_NAME,
-        cwd = homeDir.absolutePath,
-        isHome = true,
-    )
+    private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace = workspaceAdmin.find(workspaceId)
 
-    private suspend fun workspaceFor(workspaceId: String): RuntimeWorkspace {
-        if (workspaceId == HOME_ID || workspaceId.isBlank()) return homeWorkspace()
-        return workspaces.read().firstOrNull { it.id == workspaceId } ?: homeWorkspace()
-    }
-
-    private suspend fun visibleCwds(): List<String> =
-        listOf(homeDir.absolutePath) + workspaces.read().map { it.cwd }
+    private suspend fun visibleCwds(): List<String> = workspaceAdmin.visibleCwds()
 
     private suspend fun attach(cwd: String, file: String?): RuntimeHandle {
         val existing = handles.values.firstOrNull { it.cwd == cwd && it.session.sessionFile == file }
@@ -700,7 +623,7 @@ class AgentRuntimeHost internal constructor(
             state = commands.attach(session.sessionId),
         )
         handles[session.sessionId] = handle
-        handle.unsubscribe = session.subscribe { event -> onSessionEvent(handle, event) }
+        handle.unsubscribe = session.subscribe { event -> translator.onSessionEvent(handle, event) }
         mcp.logState(handle, "attach")
         return handle
     }
@@ -820,6 +743,15 @@ class AgentRuntimeHost internal constructor(
 
     private suspend fun emitListChanged() {
         eventsBuffer.emit(SessionRuntimeEvent("", RuntimeEvent.SessionListChanged()))
+    }
+
+    private suspend fun emitUsageEvent(handle: RuntimeHandle, runId: String) {
+        val current = handle.session.usage() ?: return
+        emit(handle, UsageChanged(runId, current))
+    }
+
+    private suspend fun emitSessionRemoved(sessionId: String) {
+        eventsBuffer.emit(SessionRuntimeEvent(sessionId, RuntimeEvent.SessionRemoved()))
     }
 
     private fun admitQueuedInput(handle: RuntimeHandle, runId: String, message: AgentMessage) {
@@ -951,121 +883,6 @@ class AgentRuntimeHost internal constructor(
             )
             true
         }.getOrDefault(false)
-    }
-
-    private suspend fun onSessionEvent(handle: RuntimeHandle, event: SessionEvent) {
-        sdkEventsBuffer.tryEmit(SessionSdkEvent(handle.session.sessionId, event))
-        val runId = handle.state.runId.orEmpty()
-        val active = runId.isNotEmpty()
-        when (event) {
-            is SessionEvent.AgentEventReceived -> if (active) onAgentEvent(handle, runId, event.event)
-            is SessionEvent.RetryScheduled -> if (active) {
-                emitActivity(handle, runId, RuntimeActivity.Retrying(event.attempt))
-            }
-
-            is SessionEvent.RetrySucceeded -> if (active) {
-                emitActivity(handle, runId, RuntimeActivity.Thinking)
-            }
-
-            is SessionEvent.RetryExhausted -> if (active) {
-                emitTerminal(
-                    handle = handle,
-                    runId = runId,
-                    text = handle.session.lastAssistantText().orEmpty(),
-                    status = RunStatus.FAILED,
-                    message = event.errorMessage.orEmpty(),
-                )
-            }
-
-            is SessionEvent.CompactionStarted -> if (active) {
-                emitActivity(handle, runId, RuntimeActivity.Compacting)
-            }
-
-            is SessionEvent.CompactionFinished -> {
-                if (active) emitActivity(handle, runId, RuntimeActivity.Thinking)
-                emit(handle, NoticeEvent(runId, TurnNotice.Compacted(event.tokensBefore, event.tokensAfter)))
-                emitUsage(handle, runId)
-            }
-
-            is SessionEvent.CompactionFailed -> if (active) {
-                emitActivity(handle, runId, RuntimeActivity.CompactionFailed)
-            }
-
-            is SessionEvent.SessionError -> if (active) {
-                emitTerminal(
-                    handle = handle,
-                    runId = runId,
-                    text = handle.session.lastAssistantText().orEmpty(),
-                    status = RunStatus.FAILED,
-                    message = event.message,
-                )
-            }
-
-            is SessionEvent.McpServerStatusChanged -> logInfo(
-                TAG,
-                "mcp status ${event.name}=${event.status.state.name}/${event.status.toolCount}/${event.status.lastError.orEmpty()}",
-            )
-
-            else -> Unit
-        }
-    }
-
-    private suspend fun onAgentEvent(handle: RuntimeHandle, runId: String, event: AgentEvent) {
-        when (event) {
-            is AgentEvent.MessageStart -> {
-                admitQueuedInput(handle, runId, event.message)
-                emitActivity(handle, runId, RuntimeActivity.Thinking)
-            }
-
-            is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
-                is TextDeltaEvent -> {
-                    emit(handle, RuntimeEvent.TextDelta(runId, update.delta))
-                    emitActivity(handle, runId, RuntimeActivity.Thinking)
-                }
-
-                is ThinkingDeltaEvent -> {
-                    emit(handle, RuntimeEvent.ReasoningDelta(runId, update.delta))
-                    emitActivity(handle, runId, RuntimeActivity.Thinking)
-                }
-
-                else -> Unit
-            }
-
-            is AgentEvent.ToolExecutionStart -> {
-                emit(
-                    handle,
-                    RuntimeEvent.ToolStarted(
-                        runId = runId,
-                        callId = event.toolCallId,
-                        name = event.toolName,
-                        arguments = event.args.toDisplayArguments(),
-                        startedAt = System.currentTimeMillis(),
-                        rawArguments = event.args,
-                    ),
-                )
-                emitActivity(handle, runId, RuntimeActivity.RunningTool(event.toolName))
-            }
-
-            is AgentEvent.ToolExecutionEnd -> {
-                val payload = event.result.toToolResultPayload()
-                emit(
-                    handle,
-                    RuntimeEvent.ToolFinished(
-                        runId = runId,
-                        callId = event.toolCallId,
-                        name = event.toolName,
-                        result = payload.text(),
-                        isError = event.isError,
-                        durationMs = event.durationMs,
-                        payload = payload,
-                    ),
-                )
-                emitActivity(handle, runId, RuntimeActivity.Thinking)
-                emitUsage(handle, runId)
-            }
-
-            else -> Unit
-        }
     }
 
     companion object {
