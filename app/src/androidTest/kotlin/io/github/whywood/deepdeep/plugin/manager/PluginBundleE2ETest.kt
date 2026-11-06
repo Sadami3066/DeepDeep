@@ -68,10 +68,13 @@ class PluginBundleE2ETest {
         assertEquals("${bundle.name} pages", expectedPages, snapshot.pages.map { it.id })
         assertEquals("${bundle.name} skills", expectedSkills, snapshot.skills)
         assertTrue("${bundle.name} is not active: ${snapshot.phase}", snapshot.phase == PluginPhaseUi.ACTIVE)
+        manager.refreshNow()
+        val toolNames = allToolNames()
+        val errors = manager.state.value.plugins.joinToString { "${it.id}:${it.phase}" }
         expectedTools.forEach { tool ->
             assertTrue(
-                "${bundle.name} tool $tool missing from ${allToolNames()}",
-                allToolNames().contains(tool),
+                "${bundle.name} tool $tool missing from $toolNames (lastError=${snapshot.lastError}, plugins=$errors)",
+                toolNames.contains(tool),
             )
         }
         expectedPages.forEach { page ->
