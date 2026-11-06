@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
@@ -27,7 +27,7 @@ data class ConversationState(
 internal fun reduce(
     state: ConversationState,
     event: RuntimeEvent,
-    strings: ChatUiStrings,
+    strings: ConversationStrings,
     now: Long = System.currentTimeMillis(),
 ): ConversationState = when (event) {
     is RuntimeEvent.RunStarted -> state.onRunStarted(event)

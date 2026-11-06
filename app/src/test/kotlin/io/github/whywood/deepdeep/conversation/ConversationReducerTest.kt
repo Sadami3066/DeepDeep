@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
@@ -25,7 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConversationReducerTest {
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
 
     @Test
     fun runStartedAdoptsStreamingPlaceholder() {

@@ -25,7 +25,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_ID
@@ -45,7 +45,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class AssistantOverlayControllerTest {
     private val dispatcher = StandardTestDispatcher()
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
     private val providers = FakeProviders()
 
     private fun session(id: String = "session-1", updatedAt: Long = 10L) = ConversationSummary(

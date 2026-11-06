@@ -10,9 +10,9 @@ import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.WorkspaceAdmin
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.SessionSearchHit
-import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
+import io.github.whywood.deepdeep.conversation.adoptActiveRun
 import io.github.whywood.deepdeep.ui.chat.localizedRunError
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -23,7 +23,7 @@ internal class SessionListController(
     private val ioDispatcher: CoroutineDispatcher,
     private val state: () -> ChatUiState,
     private val update: ((ChatUiState) -> ChatUiState) -> Unit,
-    private val strings: () -> ChatUiStrings,
+    private val strings: () -> ConversationStrings,
     private val cacheCurrentSession: () -> Unit,
     private val retainCache: (Set<String>) -> Unit,
     private val target: ConversationWriteTarget,
@@ -142,7 +142,7 @@ internal class SessionListController(
         title.isBlank() ||
             title == LEGACY_NEW_TITLE ||
             title == strings().newChatTitle ||
-            title == ChatUiStrings.fallback().newChatTitle
+            title == ConversationStrings.fallback().newChatTitle
 
     fun titleFrom(text: String): String {
         val normalized = text.trim().replace(Regex("\\s+"), " ")
@@ -154,7 +154,7 @@ internal class SessionListController(
     }
 }
 
-internal fun chatError(strings: ChatUiStrings, message: String): String = when {
+internal fun chatError(strings: ConversationStrings, message: String): String = when {
     message.contains("API key", ignoreCase = true) || message.contains("401") -> strings.invalidApiKey
     message.contains("429") -> strings.rateLimited
     message.contains("timed out", ignoreCase = true) -> strings.timeout

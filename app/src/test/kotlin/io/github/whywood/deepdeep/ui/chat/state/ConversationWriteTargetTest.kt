@@ -2,7 +2,7 @@ package io.github.whywood.deepdeep.ui.chat.state
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationState
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope

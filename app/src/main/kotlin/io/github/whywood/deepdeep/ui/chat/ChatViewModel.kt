@@ -3,6 +3,12 @@ package io.github.whywood.deepdeep.ui.chat
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.beginTurn
+import io.github.whywood.deepdeep.conversation.nextMessageId
+import io.github.whywood.deepdeep.conversation.reduce
+import io.github.whywood.deepdeep.conversation.toggleStep
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
@@ -63,7 +69,7 @@ class ChatViewModel(
     private val attachmentStore: AttachmentStore,
     private val prepareRuntime: suspend () -> Unit,
     private val autoRetry: Flow<Boolean> = flowOf(false),
-    @Volatile private var uiStrings: ChatUiStrings = ChatUiStrings.fallback(),
+    @Volatile private var uiStrings: ConversationStrings = ConversationStrings.fallback(),
     private val skillExpander: SkillExpander? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val interruptedQuestions: suspend (String) -> List<InterruptedQuestion> = { emptyList() },
@@ -192,7 +198,7 @@ class ChatViewModel(
             }
         }
     }
-    fun updateUiStrings(strings: ChatUiStrings) {
+    fun updateUiStrings(strings: ConversationStrings) {
         val languageChanged = uiStrings.newChatTitle != strings.newChatTitle ||
             uiStrings.thinking != strings.thinking
         uiStrings = strings

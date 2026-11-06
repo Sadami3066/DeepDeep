@@ -23,7 +23,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.runtime.ConversationSummary
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.displayToolName
 import io.github.whywood.deepdeep.service.GuiAccessibilityState
@@ -171,11 +171,11 @@ internal fun ShellIntakeHost(
 }
 
 @Composable
-internal fun rememberShellChatUiStrings(): ChatUiStrings {
+internal fun rememberShellConversationStrings(): ConversationStrings {
     val runningToolTemplate = stringResource(R.string.chat_status_running_tool_format)
     val errorCodeTemplate = stringResource(R.string.chat_error_with_code)
     val skillMissingTemplate = stringResource(R.string.chat_error_skill_missing)
-    return ChatUiStrings(
+    return ConversationStrings(
         thinking = stringResource(R.string.chat_status_thinking),
         compacting = stringResource(R.string.chat_status_compacting),
         compactionFailed = stringResource(R.string.chat_status_compaction_failed),
@@ -221,7 +221,7 @@ internal fun rememberShellChatUiStrings(): ChatUiStrings {
 }
 
 @Composable
-internal fun rememberShellChatViewModel(dependencies: AppDependencies, uiStrings: ChatUiStrings): ChatViewModel {
+internal fun rememberShellChatViewModel(dependencies: AppDependencies, uiStrings: ConversationStrings): ChatViewModel {
     val chatViewModel: ChatViewModel = viewModel(
         factory = viewModelFactory {
             initializer {

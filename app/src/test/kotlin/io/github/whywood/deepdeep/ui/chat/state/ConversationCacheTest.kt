@@ -4,7 +4,7 @@ import android.content.ComponentCallbacks2
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

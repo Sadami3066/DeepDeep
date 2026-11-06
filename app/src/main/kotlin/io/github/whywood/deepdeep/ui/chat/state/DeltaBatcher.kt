@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

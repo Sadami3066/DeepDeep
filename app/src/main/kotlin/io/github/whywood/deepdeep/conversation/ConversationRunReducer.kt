@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
@@ -68,7 +68,7 @@ internal fun ConversationState.finishWithStatus(
 internal fun ConversationState.finishWithError(
     runId: String,
     rawError: String?,
-    strings: ChatUiStrings,
+    strings: ConversationStrings,
     now: Long = System.currentTimeMillis(),
 ): ConversationState {
     val index = finishTargetIndex(runId)

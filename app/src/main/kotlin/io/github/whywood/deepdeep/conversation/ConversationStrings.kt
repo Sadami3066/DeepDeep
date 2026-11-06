@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 
@@ -15,7 +15,7 @@ enum class RunErrorKind {
     UNKNOWN,
 }
 
-data class ChatUiStrings(
+data class ConversationStrings(
     val thinking: String,
     val compacting: String,
     val compactionFailed: String,
@@ -121,7 +121,7 @@ data class ChatUiStrings(
             RegexOption.IGNORE_CASE,
         )
 
-        fun fallback(): ChatUiStrings = ChatUiStrings(
+        fun fallback(): ConversationStrings = ConversationStrings(
             thinking = "Thinking",
             compacting = "Compacting context…",
             compactionFailed = "Compaction failed",

@@ -5,7 +5,7 @@ import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.QuotedMessage
 import io.github.whywood.deepdeep.ui.chat.ScrollAnchor
 import java.io.File
@@ -27,7 +27,7 @@ class SessionDraftStoreTest {
         attachmentStore = NoopAttachmentStore,
         normalizeImage = { _, _ -> null },
         state = { state },
-        strings = { ChatUiStrings.fallback() },
+        strings = { ConversationStrings.fallback() },
         updateState = { transform -> state = transform(state) },
     )
     @Test

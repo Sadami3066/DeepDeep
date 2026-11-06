@@ -21,8 +21,8 @@ import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.state.SessionDraftStore
 import io.github.whywood.deepdeep.ui.chat.state.SessionProjection
 import java.io.File
@@ -83,7 +83,7 @@ class AssistantOverlayController(
     private val onSessionSelected: (String) -> Unit = {},
     private val initialSessionId: () -> String? = { null },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
+    strings: () -> ConversationStrings = { ConversationStrings.fallback() },
     private val normalizeImage: suspend (File, String) -> NormalizedImage? = { file, mime ->
         ImageNormalizer.normalize(file, mime)
     },

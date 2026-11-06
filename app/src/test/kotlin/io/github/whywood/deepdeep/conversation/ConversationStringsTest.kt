@@ -1,11 +1,11 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
-class ChatUiStringsTest {
-    private val strings = ChatUiStrings.fallback()
+class ConversationStringsTest {
+    private val strings = ConversationStrings.fallback()
 
     @Test
     fun oversizedRequestErrorsMapToActionableKind() {

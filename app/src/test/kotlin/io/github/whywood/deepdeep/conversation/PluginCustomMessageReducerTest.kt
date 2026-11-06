@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.chat
+package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PluginCustomMessageReducerTest {
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
 
     @Test
     fun appendsCustomMessageCardAndKeepsPayload() {

@@ -9,7 +9,7 @@ import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.QuotedMessage
 import io.github.whywood.deepdeep.ui.chat.ScrollAnchor
 import io.github.whywood.deepdeep.ui.chat.markdownToPlainText
@@ -32,7 +32,7 @@ internal class SessionDraftStore(
     private val attachmentStore: AttachmentStore,
     private val normalizeImage: suspend (File, String) -> NormalizedImage?,
     private val state: () -> ChatUiState,
-    private val strings: () -> ChatUiStrings,
+    private val strings: () -> ConversationStrings,
     private val updateState: ((ChatUiState) -> ChatUiState) -> Unit,
 ) {
     private val drafts = mutableMapOf<String, SessionDraft>()

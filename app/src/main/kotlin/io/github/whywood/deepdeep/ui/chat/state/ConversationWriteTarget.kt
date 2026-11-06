@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat.state
 
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationState
 import java.util.LinkedHashMap
 
 internal class ConversationWriteTarget(

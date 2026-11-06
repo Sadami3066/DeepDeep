@@ -4,16 +4,16 @@ import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RunStatus
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
-import io.github.whywood.deepdeep.ui.chat.adoptActiveRun
-import io.github.whywood.deepdeep.ui.chat.beginTurn
-import io.github.whywood.deepdeep.ui.chat.finishWithError
-import io.github.whywood.deepdeep.ui.chat.finishWithStatus
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.adoptActiveRun
+import io.github.whywood.deepdeep.conversation.beginTurn
+import io.github.whywood.deepdeep.conversation.finishWithError
+import io.github.whywood.deepdeep.conversation.finishWithStatus
 import io.github.whywood.deepdeep.ui.chat.localizedRunError
-import io.github.whywood.deepdeep.ui.chat.markRetryingTail
-import io.github.whywood.deepdeep.ui.chat.reduce
-import io.github.whywood.deepdeep.ui.chat.toggleStep
+import io.github.whywood.deepdeep.conversation.markRetryingTail
+import io.github.whywood.deepdeep.conversation.reduce
+import io.github.whywood.deepdeep.conversation.toggleStep
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +32,7 @@ internal class SessionProjection(
     private val runtime: AgentRuntime,
     private val scope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val strings: () -> ChatUiStrings = { ChatUiStrings.fallback() },
+    private val strings: () -> ConversationStrings = { ConversationStrings.fallback() },
 ) {
     private val mutableState = MutableStateFlow(ConversationState())
     val state: StateFlow<ConversationState> = mutableState.asStateFlow()

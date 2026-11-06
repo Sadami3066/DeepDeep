@@ -6,9 +6,9 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
-import io.github.whywood.deepdeep.ui.chat.reduce
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.reduce
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -47,7 +47,7 @@ class DeltaBatcherTest {
         activeSessionId = { "session-1" },
         reduceEvent = { state, event ->
             reduceCalls += 1
-            reduce(state, event, ChatUiStrings.fallback())
+            reduce(state, event, ConversationStrings.fallback())
         },
         delayMillis = delayMillis,
     )

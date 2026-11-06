@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import org.junit.Assert.assertEquals
@@ -8,7 +9,7 @@ import org.junit.Assert.assertSame
 import org.junit.Test
 
 class RunErrorDetailsTest {
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
 
     @Test
     fun localizedRunErrorReplacesSummaryAndKeepsProviderError() {

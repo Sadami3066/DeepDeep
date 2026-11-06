@@ -33,7 +33,7 @@ import io.github.whywood.deepdeep.ui.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.plugins.ProvidePluginManager
-import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
+import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
 import io.github.whywood.deepdeep.ui.common.shareChooser
 
 class AssistantOverlayActivity : ComponentActivity() {
@@ -55,7 +55,7 @@ class AssistantOverlayActivity : ComponentActivity() {
         val language = LanguagePreferences(this).read()
         val fontStyle = graph.fontPreferences.read()
         setContent {
-            val chatUiStrings = rememberShellChatUiStrings()
+            val chatUiStrings = rememberShellConversationStrings()
             val controller = remember {
                 AssistantOverlayController(
                     runtime = graph.host,

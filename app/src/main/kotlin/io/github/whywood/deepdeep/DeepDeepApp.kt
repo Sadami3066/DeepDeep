@@ -62,7 +62,7 @@ import io.github.whywood.deepdeep.ui.shell.ShellSubmitPlan
 import io.github.whywood.deepdeep.ui.shell.buildCommandItems
 import io.github.whywood.deepdeep.ui.shell.commandInsertion
 import io.github.whywood.deepdeep.ui.shell.planSubmission
-import io.github.whywood.deepdeep.ui.shell.rememberShellChatUiStrings
+import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
 import io.github.whywood.deepdeep.ui.shell.ShellCommandPalette
 import io.github.whywood.deepdeep.ui.shell.ShellNavigationBackHandler
 import io.github.whywood.deepdeep.ui.shell.ShellNavigationChrome
@@ -110,7 +110,7 @@ internal fun DeepDeepApp(
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
     val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
     val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
-    val chatUiStrings = rememberShellChatUiStrings()
+    val chatUiStrings = rememberShellConversationStrings()
     val chatViewModel: ChatViewModel = rememberShellChatViewModel(graph, chatUiStrings)
     val stateHolder = chatViewModel.state.collectAsStateWithLifecycle()
     val state by stateHolder

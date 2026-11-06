@@ -9,8 +9,8 @@ import io.github.whywood.deepdeep.runtime.OpenedSession
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import kotlinx.coroutines.CoroutineDispatcher
@@ -166,7 +166,7 @@ class SessionOpenerTest {
     @Test
     fun failedHistoryLocalizesSummaryAndKeepsProviderDetails() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val strings = ChatUiStrings.fallback()
+        val strings = ConversationStrings.fallback()
         val raw = "413 Request Entity Too Large"
         val runtime = FakeAgentRuntime().apply {
             histories = mapOf(

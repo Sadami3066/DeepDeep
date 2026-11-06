@@ -10,7 +10,7 @@
 |---|---|
 | `ChatScreen.kt` | 聊天主页面：消息列表、输入卡叠层、空状态与回到底部 |
 | `ChatViewModel.kt` | 订阅 runtime 事件产出 ChatUiState，驱动发送/停止/切换/重试 |
-| `ChatUiState.kt`、`ChatUiStrings.kt` | 聊天状态模型与本地化文案/运行错误分类 |
+| `ChatUiState.kt` | 聊天页面状态模型；会话投影来自 `conversation/` |
 | `ChatTopBar.kt` | 顶栏：菜单、定时/任务/用量/文件入口 |
 
 ### 消息/回合渲染
@@ -18,11 +18,6 @@
 | 文件 | 职责 |
 |---|---|
 | `ChatTurn.kt` | 单个回合渲染：用户气泡、assistant 正文、过程、交付、重试 |
-| `ConversationReducer.kt` | 会话状态模型 `ConversationState`、runtime 事件 `reduce()` 入口与消息/步骤共享小工具 |
-| `ConversationRunReducer.kt` | 运行生命周期归约：RunStarted/Finished/Failed、外部 run 接管、后台轮次、失败/重试收敛 |
-| `ConversationMessageReducer.kt` | assistant 消息归约：文本/思考增量、工具步骤与结果回填、插件消息卡 |
-| `ConversationInputReducer.kt` | 用户输入归约：admission、插话/定时提醒注入、排队输入与通知消息 |
-| `ConversationEdits.kt` | 会话纯编辑操作：开回合、步骤折叠、重试调度/恢复/取消 |
 | `ProcessSection.kt`、`ReasoningCard.kt` | 过程区与思考卡：步骤列表、运行计时、折叠 |
 | `RunErrorDetails.kt` | 运行失败文案本地化与原始错误详情 |
 | `SelectionActions.kt`、`SelectionCoordinator.kt`、`ChatActions.kt` | 文本选择菜单、跨消息选择协调与剪贴板复制 |
@@ -70,5 +65,5 @@
 
 - 状态单向：ChatViewModel 从 `runtime.events` 归约出 ChatUiState，ChatScreen 只读状态并回传 `ChatScreenActions`；不要在这里加第二份会话真相（消息、busy、运行态都以 runtime 为准）。
 - 流式渲染：Markdown 经 `MarkdownStreamPlanner` 按稳定前缀分块缓存，只有新增内容才重新解析；改解析/分块要保住流式性能与代码块未闭合时的容错。
-- 与浮层共用：`ComposerChip`/`QueueStrip`（在 `ChatComposer.kt`）、`ChatInputField`、`ComposerMetrics`、`ChatTurn`、`rememberChatScrollController`、`ConversationState` 等同时被系统助手浮层复用，改签名要同步。
-- 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ChatUiStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。
+- 与浮层共用：`ComposerChip`/`QueueStrip`（在 `ChatComposer.kt`）、`ChatInputField`、`ComposerMetrics`、`ChatTurn`、`rememberChatScrollController`、`conversation.ConversationState` 等同时被系统助手浮层复用，改签名要同步。
+- 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ConversationStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。

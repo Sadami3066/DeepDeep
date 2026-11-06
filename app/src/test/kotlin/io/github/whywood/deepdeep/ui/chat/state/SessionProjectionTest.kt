@@ -8,8 +8,8 @@ import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionUsage
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,7 +23,7 @@ import org.junit.Test
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SessionProjectionTest {
     private val dispatcher = StandardTestDispatcher()
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
     private val usage = SessionUsage(
         contextTokens = 1_000,
         contextWindow = 128_000,

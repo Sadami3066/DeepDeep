@@ -2,7 +2,7 @@ package io.github.whywood.deepdeep.ui.chat.state
 
 import android.content.ComponentCallbacks2
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationState
 
 internal class ConversationCache(private val target: ConversationWriteTarget) {
     fun store(sessionId: String, state: ConversationState) = target.store(sessionId, state)

@@ -20,6 +20,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 |---|---|
 | [graph/](src/main/kotlin/io/github/whywood/deepdeep/graph/AGENTS.md) | 装配子图：相关全局依赖的构造与接线从 AppGraph 拆出（当前为插件装配 `PluginGraph`） |
 | [ui/](src/main/kotlin/io/github/whywood/deepdeep/ui/AGENTS.md) | 全部 Compose 页面与组件、导航、抽屉 |
+| [conversation/](src/main/kotlin/io/github/whywood/deepdeep/conversation/AGENTS.md) | 会话状态投影：runtime 事件 → ConversationState 的纯函数与文案 |
 | [data/](src/main/kotlin/io/github/whywood/deepdeep/data/AGENTS.md) | 偏好、附件、技能、迁移等本地存储 |
 | [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 插件契约与生命周期、外部/内置插件 |
 | [service/](src/main/kotlin/io/github/whywood/deepdeep/service/AGENTS.md) | 前台服务、通知中心、无障碍服务 |

@@ -5,13 +5,13 @@ import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ConversationState
-import io.github.whywood.deepdeep.ui.chat.cancelRetry
-import io.github.whywood.deepdeep.ui.chat.finishWithError
-import io.github.whywood.deepdeep.ui.chat.markRetryScheduled
-import io.github.whywood.deepdeep.ui.chat.markRetryingTail
+import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.conversation.cancelRetry
+import io.github.whywood.deepdeep.conversation.finishWithError
+import io.github.whywood.deepdeep.conversation.markRetryScheduled
+import io.github.whywood.deepdeep.conversation.markRetryingTail
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -108,7 +108,7 @@ internal class AutoRetryController(
         begin(sessionId)
     }
 
-    fun finishRunError(sessionId: String, message: String?, strings: ChatUiStrings) {
+    fun finishRunError(sessionId: String, message: String?, strings: ConversationStrings) {
         val reduced = writeTarget.read(sessionId).finishWithError("", message, strings)
         if (!writeTarget.isActive(sessionId)) {
             writeTarget.updateIfPresent(sessionId) { reduced }

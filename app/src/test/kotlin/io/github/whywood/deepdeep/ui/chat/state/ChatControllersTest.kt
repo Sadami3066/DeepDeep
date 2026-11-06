@@ -14,8 +14,8 @@ import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.ui.chat.ChatUiState
-import io.github.whywood.deepdeep.ui.chat.ChatUiStrings
-import io.github.whywood.deepdeep.ui.chat.ConversationState
+import io.github.whywood.deepdeep.conversation.ConversationStrings
+import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import io.github.whywood.deepdeep.ui.chat.testing.HOME_CWD
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,7 @@ import org.junit.Test
 class ChatControllersTest {
     private var state = ChatUiState(ready = true)
     private val updates = mutableListOf<ChatUiState>()
-    private val strings = ChatUiStrings.fallback()
+    private val strings = ConversationStrings.fallback()
 
     private fun update(transform: (ChatUiState) -> ChatUiState) {
         state = transform(state)

@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.chat
 
 import android.content.Intent
 import android.net.Uri
+import io.github.whywood.deepdeep.conversation.ConversationStrings
 import io.github.whywood.deepdeep.data.AttachmentImport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
@@ -20,16 +21,16 @@ import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ModelSettings
 import io.github.whywood.deepdeep.runtime.ProviderDirectory
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.runtime.QueuedInput
+import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
-import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SkillExpander
 import io.github.whywood.deepdeep.runtime.SkillExpansion
 import io.github.whywood.deepdeep.runtime.SkillSummary
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.runtime.TurnNotice
-import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.TurnSource
 import io.github.whywood.deepdeep.runtime.UserQuestion
 import io.github.whywood.deepdeep.ui.chat.testing.DelayedOpenRuntime
@@ -117,7 +118,7 @@ class ChatViewModelTest {
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
 
-        viewModel.updateUiStrings(ChatUiStrings.fallback().copy(newChatTitle = "新对话"))
+        viewModel.updateUiStrings(ConversationStrings.fallback().copy(newChatTitle = "新对话"))
         viewModel.onInputChange("hello")
         viewModel.send()
 
@@ -176,7 +177,7 @@ class ChatViewModelTest {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         advanceUntilIdle()
-        viewModel.updateUiStrings(ChatUiStrings.fallback().copy(requestFailed = "localized failure"))
+        viewModel.updateUiStrings(ConversationStrings.fallback().copy(requestFailed = "localized failure"))
 
         viewModel.onInputChange("hello")
         viewModel.send()
@@ -746,7 +747,7 @@ class ChatViewModelTest {
 
         val failed = viewModel.state.value.messages.last()
         assertEquals(MessageStatus.FAILED, failed.status)
-        assertEquals(ChatUiStrings.fallback().withCode(ChatUiStrings.fallback().insufficientBalance, "402"), failed.error)
+        assertEquals(ConversationStrings.fallback().withCode(ConversationStrings.fallback().insufficientBalance, "402"), failed.error)
 
         viewModel.retry(failed.id)
         advanceUntilIdle()
@@ -974,7 +975,7 @@ class ChatViewModelTest {
 
     @Test
     fun runErrorMapsInsufficientBalance() {
-        val strings = ChatUiStrings.fallback()
+        val strings = ConversationStrings.fallback()
         assertEquals(strings.withCode(strings.insufficientBalance, "402"), strings.runError("402 Insufficient Balance"))
         assertEquals(strings.insufficientBalance, strings.runError("insufficient_quota"))
         assertEquals(strings.withCode(strings.invalidApiKey, "401"), strings.runError("401 API key invalid"))
@@ -1066,7 +1067,7 @@ class ChatViewModelTest {
         assertEquals(Triple(HOME_CWD, "workshop", ""), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(ChatUiStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
     }
 
     @Test
@@ -1098,7 +1099,7 @@ class ChatViewModelTest {
 
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(ChatUiStrings.fallback().skillMissing("nope"), viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().skillMissing("nope"), viewModel.state.value.error)
         assertEquals("/skill:nope do it", viewModel.state.value.input)
     }
 
@@ -1116,7 +1117,7 @@ class ChatViewModelTest {
         assertEquals(Triple(HOME_CWD, "workshop", "build something"), expander.calls.single())
         assertFalse(viewModel.state.value.sending)
         assertTrue(runtime.sent.isEmpty())
-        assertEquals(ChatUiStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().skillMissing("workshop"), viewModel.state.value.error)
     }
 
     @Test
@@ -1163,7 +1164,7 @@ class ChatViewModelTest {
         viewModel.send()
         advanceUntilIdle()
 
-        assertEquals(ChatUiStrings.fallback().stopBeforeCommand, viewModel.state.value.error)
+        assertEquals(ConversationStrings.fallback().stopBeforeCommand, viewModel.state.value.error)
         assertTrue(runtime.steered.isEmpty())
     }
 
