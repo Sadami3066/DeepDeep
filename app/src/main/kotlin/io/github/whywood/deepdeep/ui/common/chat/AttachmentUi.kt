@@ -147,7 +147,7 @@ private fun FileAttachmentCard(
                 ) {
                     Text(
                         text = extension.ifEmpty { "FILE" },
-                        style = DdType.micro.copy(fontSize = 9.sp),
+                        style = DdType.micro.copy(fontSize = 11.sp),
                         color = colors.inkSecondary,
                     )
                 }
@@ -161,7 +161,7 @@ private fun FileAttachmentCard(
                     )
                     Text(
                         text = formatAttachmentSize(attachment.size),
-                        style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 13.sp),
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                         color = colors.inkTertiary,
                         maxLines = 1,
                     )
@@ -252,7 +252,7 @@ private fun AttachmentPreviewCard(
                 Text(
                     text = snippet.ifBlank { attachment.name },
                     modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
-                    style = DdType.bodySmall.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
                     color = colors.inkTertiary,
                     maxLines = 7,
                     overflow = TextOverflow.Clip,
@@ -278,7 +278,7 @@ private fun AttachmentPreviewCard(
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = formatAttachmentSize(attachment.size),
-                        style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
                         color = colors.inkTertiary,
                         maxLines = 1,
                     )

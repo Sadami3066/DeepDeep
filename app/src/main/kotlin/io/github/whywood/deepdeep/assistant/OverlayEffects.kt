@@ -42,6 +42,7 @@ private const val GLOW_DRIFT_Y = 0.06f
 private const val GLOW_ANGLE_SWING = 6f
 private const val GLOW_AMBIENT_DARK = 0.55f
 private const val GLOW_AMBIENT_LIGHT = 1.0f
+private const val HALO_INTENSITY = 0.55f
 private const val PERIOD_X = 4.6f
 private const val PERIOD_Y = 5.9f
 private const val PERIOD_SCALE = 6.8f
@@ -87,7 +88,7 @@ private const val WASH_ALPHA_DARK = 0.18f
 private const val WASH_ALPHA_LIGHT = 0.30f
 private const val MIN_ALPHA = 0.002f
 private val TwoPi = (2.0 * PI).toFloat()
-private val HaloBleed = 56.dp
+private val HaloBleed = 44.dp
 private val HaloShape = RoundedCornerShape(28.dp)
 private val EdgeBand = 64.dp
 private val ScreenStroke = 1.5.dp
@@ -250,7 +251,7 @@ internal fun OverlayComposerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(
-                        elevation = if (dark) 12.dp else 20.dp,
+                        elevation = if (dark) 10.dp else 14.dp,
                         shape = HaloShape,
                         clip = false,
                         ambientColor = haloShadowAmbient(dark),
@@ -514,7 +515,7 @@ private fun DrawScope.drawHalo(
     val height = size.height
     if (width <= 0f || height <= 0f) return
     val ambient = if (dark) GLOW_AMBIENT_DARK else GLOW_AMBIENT_LIGHT
-    val level = (ambient + (1f - ambient) * activity) *
+    val level = HALO_INTENSITY * (ambient + (1f - ambient) * activity) *
         (1f + GLOW_ENTRY_BOOST * entry) *
         (1f + GLOW_PULSE_BOOST * pulse)
     val radius = max(width, height)

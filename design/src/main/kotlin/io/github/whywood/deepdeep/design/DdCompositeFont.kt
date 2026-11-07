@@ -85,7 +85,16 @@ internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
                 if (font.variable) setFontVariationSettings(variation(font.weight.weight))
             }
             .build()
-        compositeTypeface(PlatformFontFamily.Builder(platformFont).build(), font.weight, font.serifChinese)
+        val typeface = compositeTypeface(
+            PlatformFontFamily.Builder(platformFont).build(),
+            font.weight,
+            font.serifChinese,
+        )
+        if (font.weight.weight >= 600 && (font.serifChinese || font.latinRes == SYSTEM_LATIN_RES)) {
+            Typeface.create(typeface, Typeface.BOLD)
+        } else {
+            typeface
+        }
     }.getOrElse {
         Typeface.create("sans-serif", Typeface.NORMAL)
     }

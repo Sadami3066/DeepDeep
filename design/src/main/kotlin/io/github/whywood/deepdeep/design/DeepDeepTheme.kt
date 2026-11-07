@@ -169,10 +169,14 @@ object DdFonts {
         this.serifChinese = serifChinese
     }
 
-    fun familyFor(style: DdFontStyle): FontFamily =
-        (if (serifChinese) serifFamilies else families).getValue(style)
+    fun familyFor(style: DdFontStyle): FontFamily = when {
+        style == DdFontStyle.SYSTEM && !serifChinese -> FontFamily.Default
+        serifChinese -> serifFamilies.getValue(style)
+        else -> families.getValue(style)
+    }
 
     fun preload(context: Context) {
+        if (style == DdFontStyle.SYSTEM && !serifChinese) return
         val fonts = when (style) {
             DdFontStyle.FREDOKA -> fredokaFonts
             DdFontStyle.OPEN_RUNDE -> openRundeFonts

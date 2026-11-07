@@ -43,7 +43,7 @@ fun JobsMeter(
             Spacer(Modifier.width(4.dp))
             Text(
                 text = count.toString(),
-                style = DdType.bodySmall.copy(fontSize = 9.5.sp, lineHeight = 13.sp),
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                 color = colors.inkTertiary,
                 maxLines = 1,
             )

@@ -290,10 +290,10 @@ private fun WorkspaceRow(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(48.dp)
             .testTag("assistant_overlay_switcher_workspace_${workspace.id}"),
         shape = RoundedCornerShape(14.dp),
-        background = if (selected) colors.accentSoft else Color.Transparent,
+        background = if (selected) colors.wash else Color.Transparent,
         contentDescription = workspace.name,
     ) {
         Row(
@@ -309,29 +309,21 @@ private fun WorkspaceRow(
             ) {
                 DdIcon(
                     icon = DdIcons.Folder,
-                    tint = if (selected) colors.accent else colors.inkSecondary,
+                    tint = colors.inkSecondary,
                     size = 15.dp,
                 )
             }
             Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = workspace.name,
-                    style = DdType.label.copy(fontSize = 13.sp, lineHeight = 17.sp),
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = workspace.cwd,
-                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = workspace.name,
+                modifier = Modifier.weight(1f),
+                style = DdType.label.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (selected) {
-                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 15.dp)
+                DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
                 Spacer(Modifier.width(2.dp))
             }
             DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
@@ -417,7 +409,7 @@ private fun SessionRow(
             .height(44.dp)
             .testTag("assistant_overlay_switcher_session_${session.id}"),
         shape = RoundedCornerShape(14.dp),
-        background = if (selected) colors.accentSoft else Color.Transparent,
+        background = if (selected) colors.wash else Color.Transparent,
         contentDescription = session.title,
     ) {
         Row(
@@ -443,7 +435,7 @@ private fun SessionRow(
             }
             if (selected) {
                 Spacer(Modifier.width(6.dp))
-                DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 15.dp)
+                DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
             }
         }
     }
@@ -465,12 +457,12 @@ private fun NewSessionRow(onClick: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Plus, tint = colors.accent, size = 15.dp)
+            DdIcon(icon = DdIcons.Compose, tint = colors.inkSecondary, size = 15.dp)
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.drawer_workspace_new_session),
-                style = DdType.label.copy(fontSize = 13.sp, lineHeight = 17.sp),
-                color = colors.accent,
+                style = DdType.label.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
+                color = colors.inkSecondary,
                 maxLines = 1,
             )
         }

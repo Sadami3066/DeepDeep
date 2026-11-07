@@ -82,7 +82,7 @@ fun ContextMeter(
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.usage_meter_percent, percent),
-                    style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                     color = colors.inkSecondary,
                     maxLines = 1,
                 )

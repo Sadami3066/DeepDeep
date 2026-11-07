@@ -352,6 +352,7 @@ fun DdPrimaryButton(
 fun DdSheet(
     onDismiss: () -> Unit,
     fullBleed: Boolean = false,
+    containerColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -359,7 +360,7 @@ fun DdSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
-        containerColor = if (fullBleed) Color.Black else colors.raised,
+        containerColor = containerColor ?: if (fullBleed) Color.Black else colors.raised,
         contentColor = if (fullBleed) Color.White else colors.ink,
         tonalElevation = 0.dp,
         scrimColor = colors.scrim,

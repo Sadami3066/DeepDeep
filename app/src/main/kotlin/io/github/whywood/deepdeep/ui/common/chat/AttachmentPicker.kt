@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +43,8 @@ internal fun AttachmentSourceSheet(
     onDismiss: () -> Unit,
     onPick: (AttachmentSource) -> Unit,
 ) {
-    DdSheet(onDismiss = onDismiss) {
+    val colors = deepDeepColors()
+    DdSheet(onDismiss = onDismiss, containerColor = colors.paper) {
         DdSheetHeader(
             title = stringResource(R.string.assistant_attach_add),
             onClose = onDismiss,
@@ -50,9 +52,18 @@ internal fun AttachmentSourceSheet(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            AttachmentSourceItem(
+                icon = DdIcons.Camera,
+                label = stringResource(R.string.attach_take_photo),
+                onClick = {
+                    onDismiss()
+                    onPick(AttachmentSource.CAMERA)
+                },
+                modifier = Modifier.weight(1f),
+            )
             AttachmentSourceItem(
                 icon = DdIcons.Image,
                 label = stringResource(R.string.attach_pick_image),
@@ -71,17 +82,8 @@ internal fun AttachmentSourceSheet(
                 },
                 modifier = Modifier.weight(1f),
             )
-            AttachmentSourceItem(
-                icon = DdIcons.Camera,
-                label = stringResource(R.string.attach_take_photo),
-                onClick = {
-                    onDismiss()
-                    onPick(AttachmentSource.CAMERA)
-                },
-                modifier = Modifier.weight(1f),
-            )
         }
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -96,29 +98,30 @@ private fun AttachmentSourceItem(
     DdPressable(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
+        background = colors.raised,
         contentDescription = label,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.wash),
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(colors.paper),
                 contentAlignment = Alignment.Center,
             ) {
-                DdIcon(icon = icon, tint = colors.inkSecondary, size = 22.dp)
+                DdIcon(icon = icon, tint = colors.inkSecondary, size = 20.dp)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(9.dp))
             Text(
                 text = label,
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                color = colors.inkSecondary,
+                style = DdType.label.copy(fontSize = 13.sp, lineHeight = 17.sp),
+                color = colors.ink,
             )
         }
     }
