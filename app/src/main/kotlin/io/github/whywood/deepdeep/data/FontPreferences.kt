@@ -12,8 +12,15 @@ class FontPreferences(context: Context) {
         preferences.edit().putString(KEY_FONT_STYLE, style.id).apply()
     }
 
+    fun readSerifChinese(): Boolean = preferences.getBoolean(KEY_SERIF_CHINESE, false)
+
+    fun saveSerifChinese(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_SERIF_CHINESE, enabled).apply()
+    }
+
     companion object {
         private const val FILE_NAME = "font_settings"
         private const val KEY_FONT_STYLE = "font_style"
+        private const val KEY_SERIF_CHINESE = "serif_chinese"
     }
 }

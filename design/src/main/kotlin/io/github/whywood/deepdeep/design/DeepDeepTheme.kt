@@ -120,6 +120,7 @@ enum class DdFontStyle(val id: String, val displayName: String) {
     OPEN_RUNDE("open-runde", "Open Runde"),
     LORA("lora", "Lora"),
     MANROPE("manrope", "Manrope"),
+    SYSTEM("system", "System"),
     ;
 
     companion object {
@@ -136,30 +137,50 @@ object DdFonts {
     private val fredokaFonts = variableFonts(R.font.fredoka_variable)
     private val loraFonts = variableFonts(R.font.lora_variable)
     private val manropeFonts = variableFonts(R.font.manrope_variable)
+    private val systemFonts = listOf(
+        DdCompositeFont(SYSTEM_LATIN_RES, FontWeight.Normal, variable = false),
+        DdCompositeFont(SYSTEM_LATIN_RES, FontWeight.Medium, variable = false),
+        DdCompositeFont(SYSTEM_LATIN_RES, FontWeight.SemiBold, variable = false),
+    )
 
-    private val OpenRundeFamily = FontFamily(openRundeFonts)
-    private val FredokaFamily = FontFamily(fredokaFonts)
-    private val LoraFamily = FontFamily(loraFonts)
-    private val ManropeFamily = FontFamily(manropeFonts)
-
-    private val preloadedFonts = openRundeFonts + fredokaFonts + loraFonts + manropeFonts
+    private val families = mapOf(
+        DdFontStyle.FREDOKA to FontFamily(fredokaFonts),
+        DdFontStyle.OPEN_RUNDE to FontFamily(openRundeFonts),
+        DdFontStyle.LORA to FontFamily(loraFonts),
+        DdFontStyle.MANROPE to FontFamily(manropeFonts),
+        DdFontStyle.SYSTEM to FontFamily(systemFonts),
+    )
+    private val serifFamilies = mapOf(
+        DdFontStyle.FREDOKA to FontFamily(fredokaFonts.map { it.withSerifChinese() }),
+        DdFontStyle.OPEN_RUNDE to FontFamily(openRundeFonts.map { it.withSerifChinese() }),
+        DdFontStyle.LORA to FontFamily(loraFonts.map { it.withSerifChinese() }),
+        DdFontStyle.MANROPE to FontFamily(manropeFonts.map { it.withSerifChinese() }),
+        DdFontStyle.SYSTEM to FontFamily(systemFonts.map { it.withSerifChinese() }),
+    )
 
     var style: DdFontStyle = DdFontStyle.FREDOKA
         private set
 
-    fun apply(style: DdFontStyle) {
+    var serifChinese: Boolean = false
+        private set
+
+    fun apply(style: DdFontStyle, serifChinese: Boolean = false) {
         this.style = style
+        this.serifChinese = serifChinese
     }
 
-    fun familyFor(style: DdFontStyle): FontFamily = when (style) {
-        DdFontStyle.OPEN_RUNDE -> OpenRundeFamily
-        DdFontStyle.FREDOKA -> FredokaFamily
-        DdFontStyle.LORA -> LoraFamily
-        DdFontStyle.MANROPE -> ManropeFamily
-    }
+    fun familyFor(style: DdFontStyle): FontFamily =
+        (if (serifChinese) serifFamilies else families).getValue(style)
 
     fun preload(context: Context) {
-        DdCompositeTypefaceLoader.preload(context, preloadedFonts)
+        val fonts = when (style) {
+            DdFontStyle.FREDOKA -> fredokaFonts
+            DdFontStyle.OPEN_RUNDE -> openRundeFonts
+            DdFontStyle.LORA -> loraFonts
+            DdFontStyle.MANROPE -> manropeFonts
+            DdFontStyle.SYSTEM -> systemFonts
+        }
+        DdCompositeTypefaceLoader.preload(context, if (serifChinese) fonts.map { it.withSerifChinese() } else fonts)
     }
 
     val Sans: FontFamily get() = familyFor(style)
@@ -177,7 +198,7 @@ object DdType {
     val wordmark: TextStyle
         get() = TextStyle(
             fontFamily = DdFonts.Display,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 27.sp,
             lineHeight = 32.sp,
             letterSpacing = (-0.4).sp,
@@ -185,7 +206,7 @@ object DdType {
     val display: TextStyle
         get() = TextStyle(
             fontFamily = DdFonts.Display,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 40.sp,
             lineHeight = 49.sp,
             letterSpacing = (-0.3).sp,
@@ -193,7 +214,7 @@ object DdType {
     val pageTitle: TextStyle
         get() = TextStyle(
             fontFamily = DdFonts.Display,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 32.sp,
             lineHeight = 40.sp,
             letterSpacing = (-0.2).sp,
@@ -201,7 +222,7 @@ object DdType {
     val heading: TextStyle
         get() = TextStyle(
             fontFamily = DdFonts.Display,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 24.sp,
             lineHeight = 31.sp,
         )
@@ -343,6 +364,7 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 fun DeepDeepTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,
     fontStyle: DdFontStyle = DdFonts.style,
+    serifChinese: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dark = when (mode) {
@@ -351,8 +373,8 @@ fun DeepDeepTheme(
         ThemeMode.DARK -> true
     }
     val colors = if (dark) Dark else Light
-    DdFonts.apply(fontStyle)
-    val typography = remember(fontStyle) { deepDeepTypography() }
+    DdFonts.apply(fontStyle, serifChinese)
+    val typography = remember(fontStyle, serifChinese) { deepDeepTypography() }
     val colorScheme = remember(dark) { colors.materialScheme() }
     CompositionLocalProvider(LocalDeepDeepColors provides colors) {
         MaterialTheme(

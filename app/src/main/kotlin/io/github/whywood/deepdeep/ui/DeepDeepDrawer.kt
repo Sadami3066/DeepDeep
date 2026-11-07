@@ -230,7 +230,7 @@ fun DeepDeepDrawer(
                 tint = colors.inkSecondary,
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(26.dp))
         val newChatWorkspaceId = workspaces.firstOrNull { it.id == activeWorkspaceId }?.id
             ?: workspaces.firstOrNull()?.id
         DrawerNewChatButton(
@@ -468,11 +468,6 @@ private fun DrawerWorkspaceRow(
         animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "workspace-row-wash",
     )
-    val chevronRotation by animateFloatAsState(
-        targetValue = if (expanded) 90f else 0f,
-        animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-        label = "workspace-chevron",
-    )
     var menuOpen by remember { mutableStateOf(false) }
     Box(modifier.fillMaxWidth().padding(top = if (first) 0.dp else 6.dp)) {
         Row(
@@ -499,30 +494,20 @@ private fun DrawerWorkspaceRow(
                 .padding(start = 10.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Folder, tint = colors.inkTertiary, size = 16.dp)
+            DdIcon(
+                icon = if (expanded) DdIcons.FolderOpen else DdIcons.Folder,
+                tint = colors.inkTertiary,
+                size = 16.dp,
+            )
             Spacer(Modifier.width(8.dp))
-            Row(
+            Text(
+                text = workspace.name,
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = workspace.name,
-                    modifier = Modifier.weight(1f, fill = false),
-                    style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.width(4.dp))
-                DdIcon(
-                    icon = DdIcons.ChevronRight,
-                    tint = colors.inkTertiary,
-                    size = 14.dp,
-                    modifier = Modifier
-                        .graphicsLayer { rotationZ = chevronRotation }
-                        .testTag("workspace_chevron_${workspace.id}"),
-                )
-            }
+                style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             DdIconButton(
                 icon = DdIcons.More,
                 onClick = { menuOpen = true },
@@ -662,7 +647,7 @@ private fun DrawerNavItem(
     ) {
         DdIcon(
             icon = icon,
-            tint = colors.inkSecondary,
+            tint = colors.inkTertiary,
             size = 20.dp,
         )
         Text(
@@ -708,7 +693,7 @@ private fun DrawerSessionRow(
                 .fillMaxWidth()
                 .height(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (selected) colors.wash else colors.ink.copy(alpha = wash))
+                .background(colors.ink.copy(alpha = if (selected) 0.06f else wash))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = { offset ->

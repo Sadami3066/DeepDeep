@@ -106,6 +106,7 @@ class AgentService : Service() {
             preferences = FloatingWindowPreferences(this),
             theme = graph.themePreferences.theme,
             fontStyle = graph.fontPreferences.read(),
+            serifChinese = graph.fontPreferences.readSerifChinese(),
             virtualScreenProvider = { VirtualScreenRuntime.engine() },
             onOpenApp = { AppVisibility.bringToFront(this) },
         )

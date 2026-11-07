@@ -24,6 +24,7 @@ class DdCompositeFont(
     @FontRes internal val latinRes: Int,
     override val weight: FontWeight,
     internal val variable: Boolean,
+    internal val serifChinese: Boolean = false,
 ) : AndroidFont(
     loadingStrategy = FontLoadingStrategy.Async,
     typefaceLoader = DdCompositeTypefaceLoader,
@@ -32,9 +33,17 @@ class DdCompositeFont(
     override val style: FontStyle get() = FontStyle.Normal
 }
 
+internal fun DdCompositeFont.withSerifChinese(): DdCompositeFont =
+    DdCompositeFont(latinRes, weight, variable, serifChinese = true)
+
+internal const val SYSTEM_LATIN_RES = 0
+
 internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
     private val cache = ConcurrentHashMap<Int, Typeface>()
     private val files = ConcurrentHashMap<Int, File>()
+    private val serifFamilies = ConcurrentHashMap<Int, PlatformFontFamily>()
+    private val systemLatin = File("/system/fonts/Roboto-Regular.ttf")
+    private val serifCjk = File("/system/fonts/NotoSerifCJK-Regular.ttc")
     private val lock = Any()
 
     override fun loadBlocking(context: Context, font: AndroidFont): Typeface? {
@@ -54,7 +63,8 @@ internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
         fonts.forEach { font -> runCatching { typeface(application, font) } }
     }
 
-    private fun cacheKey(font: DdCompositeFont): Int = font.latinRes * 1000 + font.weight.weight
+    private fun cacheKey(font: DdCompositeFont): Int =
+        (font.latinRes * 1000 + font.weight.weight) * 2 + if (font.serifChinese) 1 else 0
 
     private fun typeface(context: Context, font: DdCompositeFont): Typeface {
         val key = cacheKey(font)
@@ -68,18 +78,44 @@ internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
     }
 
     private fun build(context: Context, font: DdCompositeFont): Typeface = runCatching {
-        val platformFont = PlatformFont.Builder(fontFile(context, font.latinRes))
+        val file = if (font.latinRes == SYSTEM_LATIN_RES) systemLatin else fontFile(context, font.latinRes)
+        val platformFont = PlatformFont.Builder(file)
             .setWeight(font.weight.weight)
             .apply {
                 if (font.variable) setFontVariationSettings(variation(font.weight.weight))
             }
             .build()
-        val latin = PlatformFontFamily.Builder(platformFont).build()
-        Typeface.CustomFallbackBuilder(latin)
-            .setSystemFallback("sans-serif")
-            .build()
+        compositeTypeface(PlatformFontFamily.Builder(platformFont).build(), font.weight, font.serifChinese)
     }.getOrElse {
         Typeface.create("sans-serif", Typeface.NORMAL)
+    }
+
+    private fun compositeTypeface(
+        latin: PlatformFontFamily,
+        weight: FontWeight,
+        serifChinese: Boolean,
+    ): Typeface {
+        val builder = Typeface.CustomFallbackBuilder(latin)
+        if (serifChinese) {
+            val fallback = serifFamily(weight)
+            if (fallback != null) builder.addCustomFallback(fallback) else builder.setSystemFallback("serif")
+        } else {
+            builder.setSystemFallback("sans-serif")
+        }
+        return builder.build()
+    }
+
+    private fun serifFamily(weight: FontWeight): PlatformFontFamily? {
+        serifFamilies[weight.weight]?.let { return it }
+        val family = runCatching {
+            val font = PlatformFont.Builder(serifCjk)
+                .setTtcIndex(SERIF_CJK_TTC_INDEX)
+                .setWeight(weight.weight)
+                .build()
+            PlatformFontFamily.Builder(font).build()
+        }.getOrNull() ?: return null
+        serifFamilies[weight.weight] = family
+        return family
     }
 
     private fun fontFile(context: Context, resId: Int): File {
@@ -101,4 +137,6 @@ internal object DdCompositeTypefaceLoader : AndroidFont.TypefaceLoader {
 
     private fun variation(weight: Int): Array<FontVariationAxis> =
         arrayOf(FontVariationAxis("wght", weight.toFloat()))
+
+    private const val SERIF_CJK_TTC_INDEX = 2
 }

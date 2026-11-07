@@ -144,7 +144,9 @@
 
     <string name="settings_font_title">字体样式</string>
     <string name="settings_font_current">当前</string>
-    <string name="settings_font_preview_note">中文字符使用系统字体。</string>
+    <string name="settings_font_chinese_title">中文</string>
+    <string name="settings_font_chinese_system">使用系统字体</string>
+    <string name="settings_font_system">Roboto</string>
 
     <string name="dev_bundles_title">安装组合</string>
     <string name="dev_install">安装</string>

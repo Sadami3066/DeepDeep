@@ -76,6 +76,7 @@ class FloatingWindowController(
     private val preferences: FloatingWindowPreferences,
     private val theme: Flow<ThemeMode>,
     private val fontStyle: DdFontStyle,
+    private val serifChinese: Boolean = false,
     private val virtualScreenProvider: () -> VirtualScreenController?,
     private val onOpenApp: () -> Unit,
 ) {
@@ -400,7 +401,7 @@ class FloatingWindowController(
         val compose = host.composeView(windowContext)
         compose.setContent {
             val theme by themeMode.collectAsState()
-            DeepDeepTheme(theme, fontStyle) {
+            DeepDeepTheme(theme, fontStyle, serifChinese) {
                 val surface by surfaceUi.collectAsState()
                 val content = surface
                 if (content != null) {
@@ -545,7 +546,7 @@ class FloatingWindowController(
         val compose = host.composeView(windowContext)
         compose.setContent {
             val theme by themeMode.collectAsState()
-            DeepDeepTheme(theme, fontStyle) {
+            DeepDeepTheme(theme, fontStyle, serifChinese) {
                 val state by bubbleState.collectAsState()
                 val bubbleRing by ring.collectAsState()
                 FloatingBubble(mood = state.mood, pending = state.pending, ring = bubbleRing)

@@ -58,6 +58,7 @@ class AssistantOverlayActivity : ComponentActivity() {
         requestedSessionId?.let { graph.activeSessionId.value = it }
         val language = LanguagePreferences(this).read()
         val fontStyle = graph.fontPreferences.read()
+        val serifChinese = graph.fontPreferences.readSerifChinese()
         setContent {
             val chatUiStrings = rememberShellConversationStrings()
             val controller = remember {
@@ -137,7 +138,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                 }
             }
 
-            DeepDeepTheme(theme, fontStyle) {
+            DeepDeepTheme(theme, fontStyle, serifChinese) {
                 ProvidePluginManager(graph.pluginManager) {
                 AssistantOverlayScreen(
                     state = state,

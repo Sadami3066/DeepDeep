@@ -65,6 +65,7 @@ object DdIcons {
     val Stop = DdIcon(R.drawable.ic_dd_stop)
     val Terminal = DdIcon(R.drawable.ic_dd_terminal)
     val Folder = DdIcon(R.drawable.ic_dd_folder)
+    val FolderOpen = DdIcon(R.drawable.ic_dd_folder_open)
     val Play = DdIcon(R.drawable.ic_dd_play)
     val Clock = DdIcon(R.drawable.ic_dd_clock)
     val Plug = DdIcon(R.drawable.ic_dd_plug)

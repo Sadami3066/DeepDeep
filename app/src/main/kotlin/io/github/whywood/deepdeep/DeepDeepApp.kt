@@ -21,6 +21,7 @@ internal fun DeepDeepApp(
     graph: AppDependencies,
     theme: ThemeMode,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
+    serifChinese: Boolean = false,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingDeepDestination: AppDestination? = null,
@@ -29,6 +30,7 @@ internal fun DeepDeepApp(
     onShareConsumed: () -> Unit = {},
     onActiveSessionChanged: (String?) -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
+    onSerifChineseChange: (Boolean) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val chatUiStrings = rememberShellConversationStrings()
@@ -52,6 +54,7 @@ internal fun DeepDeepApp(
             state = state,
             theme = theme,
             fontStyle = fontStyle,
+            serifChinese = serifChinese,
             openSessionId = openSessionId,
             onOpenSessionConsumed = onOpenSessionConsumed,
             pendingDeepDestination = pendingDeepDestination,
@@ -59,6 +62,7 @@ internal fun DeepDeepApp(
             pendingShare = pendingShare,
             onShareConsumed = onShareConsumed,
             onFontStyleChange = onFontStyleChange,
+            onSerifChineseChange = onSerifChineseChange,
             onThemeChange = onThemeChange,
         )
     }

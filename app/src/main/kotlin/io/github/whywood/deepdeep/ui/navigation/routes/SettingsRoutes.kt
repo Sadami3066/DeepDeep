@@ -4,9 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.BuildConfig
+import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.UiPreferences
@@ -49,7 +52,11 @@ internal fun SettingsRoute(
         themeMode = ui.theme,
         linuxState = linuxState,
         versionName = BuildConfig.VERSION_NAME,
-        fontLabel = ui.fontStyle.displayName,
+        fontLabel = if (ui.fontStyle == DdFontStyle.SYSTEM) {
+            stringResource(R.string.settings_font_system)
+        } else {
+            ui.fontStyle.displayName
+        },
         onBack = onBack,
         onThemeModeChange = ui.onThemeChange,
         onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
@@ -107,7 +114,13 @@ internal fun UsageHabitsRoute(dependencies: AppDependencies, scope: CoroutineSco
 
 @Composable
 internal fun FontsRoute(ui: ShellRouteUi, onBack: () -> Unit) {
-    FontScreen(current = ui.fontStyle, onBack = onBack, onSelect = ui.onFontStyleChange)
+    FontScreen(
+        current = ui.fontStyle,
+        serifChinese = ui.serifChinese,
+        onBack = onBack,
+        onSelect = ui.onFontStyleChange,
+        onSerifChineseChange = ui.onSerifChineseChange,
+    )
 }
 
 @Composable

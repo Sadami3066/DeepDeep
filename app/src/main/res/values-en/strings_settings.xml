@@ -138,7 +138,9 @@
 
     <string name="settings_font_title">Font</string>
     <string name="settings_font_current">Current</string>
-    <string name="settings_font_preview_note">Chinese characters use the system font.</string>
+    <string name="settings_font_chinese_title">Chinese</string>
+    <string name="settings_font_chinese_system">Use system font</string>
+    <string name="settings_font_system">Roboto</string>
 
     <string name="dev_bundles_title">Install bundles</string>
     <string name="dev_install">Install</string>
