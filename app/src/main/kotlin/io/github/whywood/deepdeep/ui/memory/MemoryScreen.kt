@@ -85,19 +85,27 @@ internal fun MemoryScreen(
                     )
                     DdListRow(
                         title = stringResource(R.string.memory_context),
-                        value = stringResource(
-                            R.string.memory_context_value,
-                            status.activeProjects,
-                            status.contextChars,
-                        ),
+                        value = stringResource(R.string.memory_chars, status.contextChars),
                     )
                     DdListRow(
-                        title = stringResource(R.string.memory_playbook),
-                        value = stringResource(R.string.memory_chars, status.playbookChars),
+                        title = stringResource(R.string.memory_cookbook),
+                        value = stringResource(R.string.memory_chars, status.cookbookChars),
+                    )
+                    DdListRow(
+                        title = stringResource(R.string.memory_today),
+                        value = stringResource(R.string.memory_chars, status.todayChars),
+                    )
+                    DdListRow(
+                        title = stringResource(R.string.memory_month),
+                        value = stringResource(R.string.memory_chars, status.monthChars),
+                    )
+                    DdListRow(
+                        title = stringResource(R.string.memory_year),
+                        value = stringResource(R.string.memory_chars, status.yearChars),
                     )
                     DdListRow(
                         title = stringResource(R.string.memory_daily),
-                        value = stringResource(R.string.memory_days, status.dailyDays),
+                        value = stringResource(R.string.memory_days, status.dayCount),
                     )
                     DdListRow(
                         title = stringResource(R.string.memory_index),

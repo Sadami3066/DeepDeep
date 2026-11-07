@@ -22,7 +22,9 @@ import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.SessionCloseReason
 import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
+import io.github.whywood.deepdeep.runtime.memory.MemoryRollup
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
+import io.github.whywood.deepdeep.runtime.memory.completeWithCheapModel
 import io.github.whywood.deepdeep.runtime.memory.memoryTools
 import io.github.whywood.deepdeep.runtime.todoWriteTool
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
@@ -66,6 +68,11 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     private val memoryStore = MemoryStore(File(deps.agentDir, "memory"))
 
     private val memoryRecap = MemoryRecap(memoryStore, deps.providerCatalog, deps.scope)
+    private val memoryRollup = MemoryRollup(
+        store = memoryStore,
+        scope = deps.scope,
+        complete = { prompt -> completeWithCheapModel(deps.providerCatalog, prompt) },
+    )
 
     private fun availableShellBackends(): List<PrivilegeLevel> =
         shellBackendsFor(deps.privilege().state.value.effective)
@@ -147,7 +154,11 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             systemContext = delegate.systemContext,
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
-            onSessionBound = { binding -> deps.pluginManager().bindSessionHooks(binding, delegate) },
+            onSessionBound = { binding ->
+                deps.pluginManager().bindSessionHooks(binding, delegate)
+                memoryRollup.launchIfDue()
+                memoryRecap.launchRetryPending()
+            },
             onSessionClosed = { sessionId -> deps.pluginManager().onSessionClosed(sessionId) },
         )
     }
@@ -230,15 +241,20 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     val memoryRecapService: MemoryRecap get() = memoryRecap
 
     init {
+        memoryRollup.launchIfDue()
+        memoryRecap.launchRetryPending()
+    }
+
+    init {
         deps.scope.launch {
             host.sdkEvents.collect { event ->
                 if (event.event is SessionEvent.CompactionStarted) {
                     try {
-                        memoryStore.onCompaction(event.sessionId)
+                        memoryStore.refresh("compaction")
                     } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         throw cancelled
                     } catch (error: Exception) {
-                        android.util.Log.w("Memory", "compaction handoff failed", error)
+                        android.util.Log.w("Memory", "compaction snapshot refresh failed", error)
                     }
                 }
             }

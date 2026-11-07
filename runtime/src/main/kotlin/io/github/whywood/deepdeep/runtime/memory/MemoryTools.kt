@@ -27,14 +27,18 @@ private fun integerProperty(description: String): JsonObject = buildJsonObject {
     put("description", description)
 }
 
+private val writeTargets = listOf("profile", "context", "cookbook", "today")
+private val writeModes = listOf("append", "replace_section", "overwrite")
+private val readTargets = listOf("profile", "context", "cookbook", "today", "month", "year")
+
 private val writeParameters: JsonObject = buildJsonObject {
     put("type", "object")
     put("properties", buildJsonObject {
         put("target", stringProperty(
-            "Where to write. profile: durable facts about the user, you, how you collaborate and the environment. " +
-                "context: goals, active projects and commitments. playbook: methods that work and lessons learned. " +
-                "daily: raw record of what happened on a day.",
-            listOf("profile", "context", "playbook", "daily"),
+            "Where to write. profile: who the user is, who you are, and how you work together. " +
+                "context: what is current or planned — ongoing threads, commitments, reminders, near-term state. " +
+                "cookbook: reusable methods and lessons learned. today: raw record of what happened today.",
+            writeTargets,
         ))
         put("content", stringProperty(
             "Markdown to save. Keep entries short. Understanding you infer must cite its evidence and any expiry condition.",
@@ -42,12 +46,12 @@ private val writeParameters: JsonObject = buildJsonObject {
         put("mode", stringProperty(
             "How to write. append (default) adds new content. replace_section replaces one section body and requires section. " +
                 "overwrite rewrites the whole curated file and should be used only after memory_read.",
-            listOf("append", "replace_section", "overwrite"),
+            writeModes,
         ))
         put("section", stringProperty(
-            "Section title for replace_section or for appending inside a section, such as 用户 or 项目名, with or without leading ##.",
+            "Heading to replace or to append under, such as 健身计划 or 近期; leading # is optional.",
         ))
-        put("date", stringProperty("Daily log date as yyyy-MM-dd. Only for target=daily; defaults to today."))
+        put("date", stringProperty("Day for target=today as yyyy-MM-dd; defaults to today."))
     })
     put("required", buildJsonArray { add(JsonPrimitive("target")); add(JsonPrimitive("content")) })
 }
@@ -56,11 +60,11 @@ private val readParameters: JsonObject = buildJsonObject {
     put("type", "object")
     put("properties", buildJsonObject {
         put("target", stringProperty(
-            "Which memory file to read: profile, context, playbook or daily.",
-            listOf("profile", "context", "playbook", "daily"),
+            "Which memory to read: profile, context, cookbook, today, month or year.",
+            readTargets,
         ))
-        put("section", stringProperty("When set, return only this section body."))
-        put("date", stringProperty("Daily log date as yyyy-MM-dd; defaults to today."))
+        put("section", stringProperty("Optional heading to show only that section (curated zones)."))
+        put("date", stringProperty("Day for today, month for month (yyyy-MM or any day in it), year for year."))
     })
     put("required", buildJsonArray { add(JsonPrimitive("target")) })
 }
@@ -68,48 +72,45 @@ private val readParameters: JsonObject = buildJsonObject {
 private val searchParameters: JsonObject = buildJsonObject {
     put("type", "object")
     put("properties", buildJsonObject {
-        put("query", stringProperty("Keyword query, Chinese or English."))
+        put("query", stringProperty("Keywords to search for. Chinese and English both work; short distinctive words are best."))
         put("limit", integerProperty("Maximum results from 1 to 25; default 5."))
     })
     put("required", buildJsonArray { add(JsonPrimitive("query")) })
 }
 
-private val statusParameters: JsonObject = buildJsonObject {
-    put("type", "object")
-    put("properties", buildJsonObject {})
-}
+private val statusParameters: JsonObject = buildJsonObject { put("type", "object") }
 
 fun memoryTools(store: MemoryStore, sessionId: () -> String?): List<CodingTool> = listOf(
-    memoryWriteTool(store, sessionId),
-    memoryReadTool(store),
-    memorySearchTool(store),
-    memoryStatusTool(store),
-)
-
-private fun memoryWriteTool(store: MemoryStore, sessionId: () -> String?): CodingTool = CodingTool(
-    name = "memory_write",
-    description = "Save something to long-term memory. Curated files hold current understanding; daily holds raw events. " +
-        "Use append by default, read before revising, and never drop unrelated content when replacing.",
-    parameters = writeParameters,
-    label = "Save memory",
-    promptSnippet = "Save durable understanding or session events to long-term memory.",
-    promptGuidelines = listOf(
-        "Write decisions, preferences, active project state and methods that worked or failed to memory_write so they survive the session.",
-        "Curated files (profile, context, playbook) hold current understanding; daily holds events. Do not copy daily events into curated files.",
-        "Inferred understanding must cite its evidence and any expiry condition; keep each entry short.",
-        "Before replace_section or overwrite, call memory_read first and keep unrelated content.",
-        "When the user asks you to remember something, write it with memory_write before replying.",
-    ),
-    execute = { _, args, signal, _ ->
+    CodingTool(
+        name = "memory_write",
+        label = "Save memory",
+        description = "Save something into long-term memory. The app owns the level-1 headings of the memory files; " +
+            "write any structure you like underneath them.",
+        parameters = writeParameters,
+        promptSnippet = "Save durable memory",
+        promptGuidelines = listOf(
+            "Use memory_write for durable understanding: preferences, current threads and commitments, and reusable lessons. " +
+                "Keep the raw log of events in today.",
+            "Inferred understanding must cite its evidence and any expiry condition in the entry itself.",
+            "Before replace_section or overwrite, call memory_read first and keep unrelated content.",
+            "When the user says to remember something, write it immediately.",
+        ),
+    ) { _, args, signal, _ ->
         signal?.throwIfAborted()
         withContext(Dispatchers.IO) {
             try {
-                val target = args.stringArg("target") ?: return@withContext textResult("Missing target", isError = true)
-                val content = args.stringArg("content")
-                if (content.isNullOrBlank()) return@withContext textResult("Missing content", isError = true)
-                val mode = MemoryWriteMode.fromWire(args.stringArg("mode") ?: "append")
-                    ?: return@withContext textResult("Unknown mode", isError = true)
-                textResult(store.write(target, content, mode, args.stringArg("section"), sessionId(), args.stringArg("date")))
+                val target = args.stringArg("target").ifBlank { "context" }
+                val mode = MemoryWriteMode.fromWire(args.stringArg("mode")) ?: MemoryWriteMode.APPEND
+                textResult(
+                    store.write(
+                        target = target,
+                        content = args.stringArg("content"),
+                        mode = mode,
+                        section = args.stringArg("section").takeIf { it.isNotBlank() },
+                        sessionId = sessionId(),
+                        date = args.stringArg("date").takeIf { it.isNotBlank() },
+                    ),
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -117,24 +118,27 @@ private fun memoryWriteTool(store: MemoryStore, sessionId: () -> String?): Codin
             }
         }
     },
-)
-
-private fun memoryReadTool(store: MemoryStore): CodingTool = CodingTool(
-    name = "memory_read",
-    description = "Read a memory file, one section of it, or one day of the daily log. Use it before revising curated memory.",
-    parameters = readParameters,
-    label = "Read memory",
-    promptSnippet = "Read long-term memory files or sections.",
-    promptGuidelines = listOf(
-        "Read a curated file before rewriting it so you do not drop existing content.",
-        "Use memory_search for recall across everything; use memory_read to inspect the exact current text.",
-    ),
-    execute = { _, args, signal, _ ->
+    CodingTool(
+        name = "memory_read",
+        label = "Read memory",
+        description = "Read a memory zone or a time slice of the memory. Read before changing memory so nothing unrelated is lost.",
+        parameters = readParameters,
+        promptSnippet = "Read memory before rewriting it",
+        promptGuidelines = listOf(
+            "Read before replace_section or overwrite.",
+            "Use month or year to look back at older summaries; today is the raw log.",
+        ),
+    ) { _, args, signal, _ ->
         signal?.throwIfAborted()
         withContext(Dispatchers.IO) {
             try {
-                val target = args.stringArg("target") ?: return@withContext textResult("Missing target", isError = true)
-                textResult(store.read(target, args.stringArg("section"), args.stringArg("date")))
+                textResult(
+                    store.read(
+                        target = args.stringArg("target").ifBlank { "profile" },
+                        section = args.stringArg("section").takeIf { it.isNotBlank() },
+                        date = args.stringArg("date").takeIf { it.isNotBlank() },
+                    ),
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -142,27 +146,24 @@ private fun memoryReadTool(store: MemoryStore): CodingTool = CodingTool(
             }
         }
     },
-)
-
-private fun memorySearchTool(store: MemoryStore): CodingTool = CodingTool(
-    name = "memory_search",
-    description = "Search long-term memory (profile, context, playbook and daily logs) by keyword. Use it before answering " +
-        "questions about past sessions, prior decisions or user preferences, and cite what you find instead of guessing.",
-    parameters = searchParameters,
-    label = "Search memory",
-    promptSnippet = "Search long-term memory by keyword.",
-    promptGuidelines = listOf(
-        "Search memory before assuming past context; if nothing matches, say so instead of inventing a memory.",
-        "Prefer short, distinctive Chinese or English keywords over long sentences.",
-    ),
-    execute = { _, args, signal, _ ->
+    CodingTool(
+        name = "memory_search",
+        label = "Search memory",
+        description = "Search long-term memory across profile, context, cookbook and the time files. " +
+            "Local keyword search, works offline.",
+        parameters = searchParameters,
+        promptSnippet = "Search long-term memory",
+        promptGuidelines = listOf(
+            "Search memory before assuming past context; if nothing matches, say so instead of inventing a memory.",
+            "Prefer short, distinctive keywords over long sentences.",
+        ),
+    ) { _, args, signal, _ ->
         signal?.throwIfAborted()
         withContext(Dispatchers.IO) {
             try {
                 val query = args.stringArg("query")
-                if (query.isNullOrBlank()) return@withContext textResult("Missing query", isError = true)
                 val limit = args.intArg("limit")?.coerceIn(1, MAX_SEARCH_LIMIT) ?: DEFAULT_SEARCH_LIMIT
-                textResult(formatSearchResult(query, store.search(query, limit)))
+                textResult(formatSearchResult(store.search(query, limit)))
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -170,16 +171,16 @@ private fun memorySearchTool(store: MemoryStore): CodingTool = CodingTool(
             }
         }
     },
-)
-
-private fun memoryStatusTool(store: MemoryStore): CodingTool = CodingTool(
-    name = "memory_status",
-    description = "Show long-term memory statistics: file sizes, active projects, daily log count, search index state and snapshot state.",
-    parameters = statusParameters,
-    label = "Memory status",
-    promptSnippet = "Show long-term memory statistics.",
-    promptGuidelines = listOf("Use memory_status when the user asks what you remember or how much memory exists."),
-    execute = { _, _, signal, _ ->
+    CodingTool(
+        name = "memory_status",
+        label = "Memory status",
+        description = "Show long-term memory statistics: file sizes, day count, search index and snapshot state.",
+        parameters = statusParameters,
+        promptSnippet = "Inspect memory status",
+        promptGuidelines = listOf(
+            "Use memory_status when the user asks what you remember or how much memory exists.",
+        ),
+    ) { _, _, signal, _ ->
         signal?.throwIfAborted()
         withContext(Dispatchers.IO) {
             try {
@@ -193,38 +194,49 @@ private fun memoryStatusTool(store: MemoryStore): CodingTool = CodingTool(
     },
 )
 
-private fun formatSearchResult(query: String, outcome: MemorySearchOutcome): String {
+private fun formatSearchResult(outcome: MemorySearchOutcome): String {
     if (outcome.hits.isEmpty()) {
-        return "No matches for \"$query\" (${outcome.chunks} chunks, ${outcome.elapsedMs} ms)."
+        return "No matches (${outcome.chunks} chunks, ${outcome.elapsedMs} ms)."
     }
-    return buildString {
+    val text = buildString {
         outcome.hits.forEachIndexed { index, hit ->
             appendLine("### Result ${index + 1}")
-            val heading = hit.section?.trim()?.trimStart('#', ' ')?.takeIf { it.isNotEmpty() }
-            appendLine("**File:** ${hit.label}${if (heading != null) " · $heading" else ""}")
+            val section = hit.section?.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
+            appendLine("**File:** ${hit.fileName}$section")
             appendLine("**Score:** ${String.format(Locale.US, "%.3f", hit.score)}")
             appendLine()
-            appendLine(hit.snippet)
+            appendLine(hit.snippet.trim())
             appendLine()
         }
         append("(${outcome.hits.size} result(s), ${outcome.chunks} chunks, ${outcome.elapsedMs} ms)")
     }
+    return text.trim()
 }
 
 private fun formatStatus(status: MemoryStatus): String = buildString {
-    appendLine("路径：${status.rootDir}")
+    appendLine("数据目录：${status.rootDir}")
+    appendLine()
     appendLine("profile.md：${status.profileChars} 字符")
-    appendLine("context.md：${status.contextChars} 字符 · 进行中项目 ${status.activeProjects}")
-    appendLine("playbook.md：${status.playbookChars} 字符")
-    appendLine("daily 日志：${status.dailyDays} 天")
-    appendLine("索引：${status.indexedChunks} 个片段，构建 ${status.indexBuildMs} ms")
-    val snapshot = if (status.snapshotAt == null) "尚未生成" else "${status.snapshotAt} · ${status.snapshotReason}"
-    appendLine("快照：${status.snapshotChars} 字符 · $snapshot${if (status.dirty) "（待刷新）" else ""}")
-    append("占用：${MemoryText.formatBytes(status.totalBytes)}")
+    appendLine("context.md：${status.contextChars} 字符")
+    appendLine("cookbook.md：${status.cookbookChars} 字符")
+    appendLine("今天：${status.todayChars} 字符")
+    appendLine("本月：${status.monthChars} 字符")
+    appendLine("本年：${status.yearChars} 字符")
+    appendLine("日记共 ${status.dayCount} 天")
+    appendLine()
+    appendLine("搜索索引：${status.indexedChunks} 片段 · ${status.indexBuildMs} ms")
+    val snapshot = if (status.snapshotAt == null) {
+        "注入快照：${status.snapshotChars} 字符 · 尚未重建"
+    } else {
+        "注入快照：${status.snapshotChars} 字符 · ${status.snapshotAt} · ${status.snapshotReason}"
+    }
+    appendLine(snapshot)
+    if (status.dirty) appendLine("（快照待刷新）")
+    appendLine("占用：${MemoryText.formatBytes(status.totalBytes)}")
 }
 
-private fun JsonObject.stringArg(key: String): String? =
-    (this[key] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+private fun JsonObject.stringArg(name: String): String =
+    (this[name] as? JsonPrimitive)?.contentOrNull.orEmpty()
 
-private fun JsonObject.intArg(key: String): Int? =
-    (this[key] as? JsonPrimitive)?.contentOrNull?.trim()?.toIntOrNull()
+private fun JsonObject.intArg(name: String): Int? =
+    (this[name] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()

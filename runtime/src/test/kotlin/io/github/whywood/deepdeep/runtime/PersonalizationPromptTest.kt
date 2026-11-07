@@ -25,14 +25,13 @@ class PersonalizationPromptTest {
         val environment = result.getValue("environment")
         assertTrue(environment.startsWith("<environment>"))
         assertTrue(environment.endsWith("</environment>"))
-        assertTrue(environment.contains("当前日期：2026-10-23（UTC+08:00）"))
-        assertTrue(environment.contains("模型：deepseek/deepseek-v4.1-flash"))
-        assertTrue(environment.contains("默认工作位置：/data/user/0/io.github.whywood.deepdeep/files/home"))
-        assertTrue(environment.contains("不是访问边界"))
+        assertTrue(environment.contains("Date: 2026-10-23 (UTC+08:00)."))
+        assertTrue(environment.contains("Model: deepseek/deepseek-v4.1-flash."))
+        assertTrue(environment.contains("Working directory: /data/user/0/io.github.whywood.deepdeep/files/home."))
         assertFalse(environment.contains("/skill-repo"))
         assertFalse(environment.contains("文件工具仍须显式提供绝对路径"))
-        assertTrue(environment.contains("称呼用户为「Milous」"))
-        assertTrue(environment.contains("主动"))
+        assertTrue(environment.contains("Nickname: Milous."))
+        assertTrue(environment.contains("Interaction style: Proactive."))
         assertFalse(result.containsKey("instruction"))
     }
 
@@ -41,8 +40,8 @@ class PersonalizationPromptTest {
         val morning = sectionAt("2026-10-23T08:00:00+08:00")
         val evening = sectionAt("2026-10-23T23:59:59+08:00")
         assertEquals(morning, evening)
-        assertTrue(morning.contains("默认工作位置"))
-        assertTrue(evening.contains("不是访问边界"))
+        assertTrue(morning.contains("Working directory:"))
+        assertTrue(evening.contains("Date: 2026-10-23"))
     }
 
     @Test
@@ -50,7 +49,7 @@ class PersonalizationPromptTest {
         val today = sectionAt("2026-10-23T23:59:59+08:00")
         val tomorrow = sectionAt("2026-10-24T00:00:01+08:00")
         assertNotEquals(today, tomorrow)
-        assertTrue(tomorrow.contains("当前日期：2026-10-24"))
+        assertTrue(tomorrow.contains("Date: 2026-10-24"))
     }
 
     @Test
@@ -67,10 +66,10 @@ class PersonalizationPromptTest {
         )
 
         assertEquals(
-            listOf("environment", "instruction", "shared_storage", "official_plugins", "page"),
+            listOf("environment", "instruction", "shared_storage", "plugins", "page"),
             result.keys.toList(),
         )
-        assertTrue(result.getValue("official_plugins").contains("feishu ready"))
+        assertTrue(result.getValue("plugins").contains("feishu ready"))
         assertEquals("<page>prompt</page>", result.getValue("page"))
     }
 
@@ -100,8 +99,8 @@ class PersonalizationPromptTest {
     @Test
     fun blankNicknameFallsBackToSecondPerson() {
         val environment = sections(Personalization(nickname = "   ")).getValue("environment")
-        assertTrue(environment.contains("直接称呼「你」"))
-        assertFalse(environment.contains("称呼用户为"))
+        assertTrue(environment.contains("Address the user as \"you\"."))
+        assertFalse(environment.contains("Nickname:"))
     }
 
     @Test
@@ -125,9 +124,9 @@ class PersonalizationPromptTest {
         val quiet = sections(Personalization(interaction = InteractionStyle.QUIET)).getValue("environment")
         val balanced = sections(Personalization(interaction = InteractionStyle.BALANCED)).getValue("environment")
         val proactive = sections(Personalization(interaction = InteractionStyle.PROACTIVE)).getValue("environment")
-        assertTrue(quiet.contains("少提问、少打断"))
-        assertTrue(balanced.contains("必要时提问"))
-        assertTrue(proactive.contains("更主动地澄清"))
-        assertFalse(quiet.contains("更主动地澄清"))
+        assertTrue(quiet.contains("Be quiet"))
+        assertTrue(balanced.contains("Be balanced"))
+        assertTrue(proactive.contains("Be proactive"))
+        assertFalse(quiet.contains("Be proactive"))
     }
 }

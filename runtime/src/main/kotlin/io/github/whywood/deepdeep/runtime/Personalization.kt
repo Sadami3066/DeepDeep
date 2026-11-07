@@ -26,15 +26,15 @@ internal fun buildPersonalizationSections(
     sections["environment"] = wrapPromptSection(
         "environment",
         buildString {
-            appendLine("当前日期：${escapePromptXml(now.toLocalDate().toString())}（UTC${escapePromptXml(now.offset.id)}）。")
-            appendLine("模型：${escapePromptXml(providerId)}/${escapePromptXml(modelId)}。")
-            appendLine("默认工作位置：${escapePromptXml(cwd)}。这只是默认位置，不是访问边界。")
-            if (nickname.isEmpty()) {
-                appendLine("直接称呼「你」，不要使用名字。")
+            appendLine("Date: ${escapePromptXml(now.toLocalDate().toString())} (UTC${escapePromptXml(now.offset.id)}).")
+            appendLine("Model: ${escapePromptXml(providerId)}/${escapePromptXml(modelId)}.")
+            appendLine("Working directory: ${escapePromptXml(cwd)}.")
+            if (nickname.isNotEmpty()) {
+                appendLine("Nickname: ${escapePromptXml(nickname)}.")
             } else {
-                appendLine("称呼用户为「$nickname」。")
+                appendLine("Address the user as \"you\".")
             }
-            appendLine("当前交互风格：${interactionLabel(personalization.interaction)}。")
+            appendLine("Interaction style: ${interactionLabel(personalization.interaction)}.")
             appendLine(interactionInstructions(personalization.interaction))
         }.trim(),
     )
@@ -42,7 +42,7 @@ internal fun buildPersonalizationSections(
     val instruction = personalization.instruction.trim()
     if (instruction.isNotEmpty()) {
         val body = buildString {
-            appendLine("以下是用户长期偏好。在不违背事实、安全和系统指令的前提下遵守；若冲突，以系统指令为准。")
+            appendLine("User's instruction:")
             appendLine()
             appendLine(escapePromptXml(instruction))
         }.trim()
@@ -65,7 +65,7 @@ internal fun buildSessionSystemPromptSections(
     if (sharedStorage) sections.putAll(sharedStorageSection())
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
-        sections["official_plugins"] = wrapPromptSection("official_plugins", escapePromptXml(body))
+        sections["plugins"] = wrapPromptSection("plugins", escapePromptXml(body))
     }
     sections.putAll(extra)
     return sections
@@ -75,27 +75,27 @@ internal fun sharedStorageSection(): Map<String, String> = mapOf(
     "shared_storage" to wrapPromptSection(
         "shared_storage",
         listOf(
-            "Android shared storage is mounted read-write at /storage/emulated/0; /sdcard points to the same place, with Download, Documents, Pictures, DCIM, Music and Movies writable.",
-            "Treat these as the user's real files: look before changing, and never delete or overwrite anything unless the user asked for it.",
+            "Android shared storage is available at /storage/emulated/0; file operations there are allowed.",
+            "Do not delete or overwrite user files there unless the user asks.",
         ).joinToString("\n") { "- $it" },
     ),
 )
 
 private fun interactionLabel(style: InteractionStyle): String = when (style) {
-    InteractionStyle.QUIET -> "安静"
-    InteractionStyle.BALANCED -> "默认"
-    InteractionStyle.PROACTIVE -> "主动"
+    InteractionStyle.QUIET -> "Quiet"
+    InteractionStyle.BALANCED -> "Balanced"
+    InteractionStyle.PROACTIVE -> "Proactive"
 }
 
 private fun interactionInstructions(style: InteractionStyle): String = when (style) {
     InteractionStyle.QUIET ->
-        "少提问、少打断。能根据上下文合理推断的就直接做，做完简要说明假设。只有缺少关键信息且无法安全推断时才提问，一次最多一个问题。不要主动追加与当前任务无关的建议。"
+        "Be quiet: act directly and do not ask questions unless the intent is unclear or the action is risky."
 
     InteractionStyle.BALANCED ->
-        "必要时提问，一次最多一个问题；能自行判断的不要打断。任务完成后可以给一条简短的下一步建议，但不要反复追问。"
+        "Be balanced: act directly when the request is clear; ask when the intent is ambiguous or the action is risky."
 
     InteractionStyle.PROACTIVE ->
-        "更主动地澄清关键歧义，必要时追问到任务清楚；任务完成后主动给出可执行的下一步或可选方案。不要为了表现主动而问无意义的问题。"
+        "Be proactive: ask more, suggest more, and act on likely follow-ups."
 }
 
 internal fun wrapPromptSection(name: String, content: String): String =

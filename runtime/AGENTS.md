@@ -104,8 +104,9 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 
 | 文件 | 职责 |
 |---|---|
-| `MemoryMarkdown.kt` | 记忆文本工具：日期与时间戳、预览/截断、二级标题分段与注入段渲染（16K 预算） |
-| `MemoryStore.kt` | `agent/memory` 下 profile/context/playbook/daily 四类文件：原子写、stable 快照、BM25 语料、纪要去重与水位、压缩前 handoff |
+| `MemoryMarkdown.kt` | 记忆文本工具：四区一级标题、日期与时间戳、预览/截断、标题分段与注入段渲染（16K 预算：profile 2.5K / context 2.5K / cookbook 800 / 今天 2.5K / 本月 1.2K / 本年 800） |
+| `MemoryStore.kt` | `agent/memory` 下四区文件（profile/context/cookbook）+ 时间树 `daily/YYYY/YYYY.md → daily/YYYY/MM/YYYY-MM.md → daily/YYYY/MM/YYYY-MM/YYYY-MM-DD.md`：原子写、stable 快照、BM25 语料、归卷标记、纪要去重与水位、纪要失败持久队列 `pending/` |
 | `MemorySearch.kt` | 自研 BM25 检索：中文 bigram、拉丁分词与片段摘要 |
-| `MemoryTools.kt` | `memory_write / memory_read / memory_search / memory_status` 四个工具 |
-| `MemoryRecap.kt` | 闲置/显式关闭与手动纪要：按 entries 水位只总结增量、自适应列表或 SKIP、便宜模型候选，写入当天 daily |
+| `MemoryTools.kt` | `memory_write / memory_read / memory_search / memory_status` 四个工具（write 目标 profile/context/cookbook/today；read 可读 month/year） |
+| `MemoryRecap.kt` | 闲置/显式关闭与手动纪要：按 entries 水位只总结增量、自适应列表或 SKIP、便宜模型候选，写入当天日志；失败落 pending 下次启动重试 |
+| `MemoryRollup.kt` | 日→月、月→年后台归卷：会话启动/App 启动触发，文件内 `## 日期` 标记幂等，模型失败即停且下次重试，不限流 |

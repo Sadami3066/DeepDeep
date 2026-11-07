@@ -39,9 +39,11 @@ class SystemPromptTest {
 
     @Test
     fun defaultPromptStaysIdentityOnly() {
-        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.length < 200)
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.length < 300)
         assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("DeepDeep"))
-        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("当前使用的语言"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("personal agent"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("Android"))
+        assertTrue(DEEP_DEEP_SYSTEM_PROMPT.contains("Never invent tool results"))
         assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("绝对路径"))
         assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("[exit: N]"))
         assertFalse(DEEP_DEEP_SYSTEM_PROMPT.contains("/workspace"))
@@ -58,36 +60,11 @@ class SystemPromptTest {
     }
 
     @Test
-    fun migratesLegacyDefaultSystemPrompt() {
-        val file = File(directory, SYSTEM_PROMPT_FILE)
-        LEGACY_SYSTEM_PROMPTS.forEach { legacy ->
-            file.writeText(legacy + "\n")
-
-            ensureSystemPromptFile(directory)
-
-            assertEquals(DEEP_DEEP_SYSTEM_PROMPT, file.readText().trimEnd())
-        }
-    }
-
-    @Test
-    fun keepsUserEditThatResemblesLegacyPrompt() {
-        val file = File(directory, SYSTEM_PROMPT_FILE)
-        LEGACY_SYSTEM_PROMPTS.forEach { legacy ->
-            file.writeText(legacy + "\nMy extra rule.\n")
-
-            ensureSystemPromptFile(directory)
-
-            assertTrue(file.readText().contains("My extra rule."))
-        }
-    }
-
-    @Test
     fun ruleSectionCarriesGlobalRulesFirst() {
         val rules = buildToolRuleSection(emptyList()).getValue("rules")
 
         assertTrue(rules.startsWith("<rules>"))
         assertTrue(rules.endsWith("</rules>"))
-        assertTrue(rules.contains("- Never type, read, copy or repeat passwords"))
         assertTrue(rules.contains("outside that scope"))
         assertFalse(rules.contains("present"))
     }
