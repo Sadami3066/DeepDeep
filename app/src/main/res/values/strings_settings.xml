@@ -5,6 +5,11 @@
     <string name="usage_habits_mode_voice">语音模式</string>
     <string name="usage_habits_mode_camera">拍照模式</string>
     <string name="usage_habits_mode_none">无</string>
+    <string name="settings_group_model">模型与运行</string>
+    <string name="settings_group_appearance">外观与语言</string>
+    <string name="settings_group_conversation">交互与会话</string>
+    <string name="settings_group_notifications">通知与隐私</string>
+    <string name="settings_group_about">关于</string>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
 

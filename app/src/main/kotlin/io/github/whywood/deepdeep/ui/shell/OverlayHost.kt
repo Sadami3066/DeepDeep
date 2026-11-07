@@ -78,8 +78,10 @@ data class ShellDrawerState(
     val open: Boolean,
     val sessions: List<ConversationSummary>,
     val workspaces: List<RuntimeWorkspace>,
+    val activeWorkspaceId: String,
+    val activeSessionId: String?,
     val pinnedWorkspaceIds: Set<String>, val expandedWorkspaceIds: Set<String>,
-    val busySessionIds: Set<String>, val reminderSessionIds: Set<String>,
+    val busySessionIds: Set<String>,
     val userName: String,
     val avatar: ImageBitmap? = null,
 )
@@ -197,6 +199,8 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
             DeepDeepDrawer(
                 sessions = state.sessions,
                 workspaces = state.workspaces,
+                activeWorkspaceId = state.activeWorkspaceId,
+                activeSessionId = state.activeSessionId,
                 pinnedWorkspaceIds = state.pinnedWorkspaceIds,
                 expandedWorkspaceIds = state.expandedWorkspaceIds,
                 busySessionIds = state.busySessionIds,

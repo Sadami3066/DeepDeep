@@ -573,10 +573,11 @@ internal fun AppShell(
             drawerOpen,
             state.conversations,
             state.workspaces,
+            state.currentWorkspaceId,
+            state.conversationId,
             uiPreferences.pinnedWorkspaceIds,
             expandedWorkspaceIds,
             state.busySessionIds,
-            timers.filter { it.enabled }.mapTo(mutableSetOf()) { it.sessionId },
             nickname,
             avatarBitmap,
         )

@@ -48,12 +48,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdMenu
+import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -138,6 +141,8 @@ internal fun buildDrawerEntries(
 fun DeepDeepDrawer(
     sessions: List<ConversationSummary>,
     workspaces: List<RuntimeWorkspace>,
+    activeWorkspaceId: String,
+    activeSessionId: String?,
     pinnedWorkspaceIds: Set<String>,
     expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
@@ -225,7 +230,13 @@ fun DeepDeepDrawer(
                 tint = colors.inkSecondary,
             )
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
+        val newChatWorkspaceId = workspaces.firstOrNull { it.id == activeWorkspaceId }?.id
+            ?: workspaces.firstOrNull()?.id
+        DrawerNewChatButton(
+            onClick = { newChatWorkspaceId?.let(onNewSessionInWorkspace) },
+        )
+        Spacer(Modifier.height(8.dp))
         Column(Modifier.fillMaxWidth()) {
             DrawerNavItem(
                 icon = DdIcons.Apps,
@@ -258,7 +269,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_timer",
             )
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(14.dp))
         DdHairline(color = colors.hairline.copy(alpha = 0.45f))
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -318,6 +329,7 @@ fun DeepDeepDrawer(
 
                     is DrawerEntry.Session -> DrawerSessionRow(
                         conversation = entry.conversation,
+                        selected = entry.conversation.id == activeSessionId,
                         busy = entry.conversation.id in busySessionIds,
                         menuExpanded = sessionMenuTarget?.id == entry.conversation.id,
                         menuAnchor = sessionMenuAnchor,
@@ -410,6 +422,31 @@ private fun DrawerWorkspacesHeader(
 }
 
 @Composable
+private fun DrawerNewChatButton(onClick: () -> Unit) {
+    val colors = deepDeepColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.ink)
+            .clickable(onClick = onClick)
+            .testTag("drawer_new_chat")
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        DdIcon(icon = DdIcons.Compose, tint = colors.paper, size = 18.dp)
+        Text(
+            text = stringResource(R.string.drawer_new_chat),
+            style = DdType.label.copy(fontSize = 15.5.sp),
+            color = colors.paper,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
 private fun DrawerWorkspaceRow(
     workspace: RuntimeWorkspace,
     first: Boolean,
@@ -436,11 +473,12 @@ private fun DrawerWorkspaceRow(
         animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
         label = "workspace-chevron",
     )
+    var menuOpen by remember { mutableStateOf(false) }
     Box(modifier.fillMaxWidth().padding(top = if (first) 0.dp else 6.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(42.dp)
+                .height(44.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
                 .pointerInput(workspace.id) {
@@ -463,50 +501,89 @@ private fun DrawerWorkspaceRow(
         ) {
             DdIcon(icon = DdIcons.Folder, tint = colors.inkTertiary, size = 16.dp)
             Spacer(Modifier.width(8.dp))
-            Text(
-                text = workspace.name,
+            Row(
                 modifier = Modifier.weight(1f),
-                style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = workspace.name,
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(4.dp))
+                DdIcon(
+                    icon = DdIcons.ChevronRight,
+                    tint = colors.inkTertiary,
+                    size = 14.dp,
+                    modifier = Modifier
+                        .graphicsLayer { rotationZ = chevronRotation }
+                        .testTag("workspace_chevron_${workspace.id}"),
+                )
+            }
             DdIconButton(
-                icon = DdIcons.Plus,
-                onClick = onNewSession,
-                contentDescription = stringResource(R.string.drawer_workspace_new_session),
-                modifier = Modifier.testTag("workspace_new_session_${workspace.id}"),
-                size = 30.dp,
-                iconSize = 15.dp,
+                icon = DdIcons.More,
+                onClick = { menuOpen = true },
+                contentDescription = stringResource(R.string.drawer_workspace_more),
+                modifier = Modifier.testTag("workspace_more_${workspace.id}"),
+                size = 32.dp,
+                iconSize = 18.dp,
                 tint = colors.inkTertiary,
             )
-            DdIconButton(
+        }
+        DdMenu(
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false },
+            offset = DpOffset(x = 52.dp, y = 0.dp),
+            menuWidth = 196.dp,
+        ) {
+            DdMenuItem(
+                text = stringResource(R.string.drawer_action_new_session),
+                icon = DdIcons.Compose,
+                testTag = "workspace_menu_new_${workspace.id}",
+                onClick = {
+                    menuOpen = false
+                    onNewSession()
+                },
+            )
+            DdMenuItem(
+                text = stringResource(R.string.drawer_action_rename),
+                icon = DdIcons.Compose,
+                testTag = "workspace_menu_rename_${workspace.id}",
+                onClick = {
+                    menuOpen = false
+                    onRename()
+                },
+            )
+            DdMenuItem(
+                text = stringResource(if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin),
                 icon = DdIcons.Pin,
-                onClick = onTogglePinned,
-                contentDescription = stringResource(
-                    if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin,
-                ),
-                modifier = Modifier.testTag("workspace_pin_${workspace.id}"),
-                size = 30.dp,
-                iconSize = 14.dp,
-                tint = if (pinned) colors.accent else colors.inkTertiary,
+                testTag = "workspace_menu_pin_${workspace.id}",
+                onClick = {
+                    menuOpen = false
+                    onTogglePinned()
+                },
             )
-            DdIconButton(
+            DdMenuItem(
+                text = stringResource(R.string.drawer_workspace_settings),
                 icon = DdIcons.Settings,
-                onClick = onSettings,
-                contentDescription = stringResource(R.string.drawer_workspace_settings),
-                modifier = Modifier.testTag("workspace_settings_${workspace.id}"),
-                size = 30.dp,
-                iconSize = 14.dp,
-                tint = colors.inkTertiary,
+                testTag = "workspace_menu_settings_${workspace.id}",
+                onClick = {
+                    menuOpen = false
+                    onSettings()
+                },
             )
-            DdIcon(
-                icon = DdIcons.ChevronRight,
-                tint = colors.inkTertiary,
-                size = 14.dp,
-                modifier = Modifier
-                    .graphicsLayer { rotationZ = chevronRotation }
-                    .testTag("workspace_chevron_${workspace.id}"),
+            DdMenuItem(
+                text = stringResource(R.string.drawer_action_delete),
+                icon = DdIcons.Trash,
+                destructive = true,
+                testTag = "workspace_menu_delete_${workspace.id}",
+                onClick = {
+                    menuOpen = false
+                    onDelete()
+                },
             )
         }
     }
@@ -575,11 +652,11 @@ private fun DrawerNavItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .testTag(testTag)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -591,7 +668,7 @@ private fun DrawerNavItem(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            style = DdType.body.copy(fontSize = 16.sp, lineHeight = 22.sp),
+            style = DdType.body.copy(fontSize = 15.5.sp, lineHeight = 21.sp),
             color = colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -603,6 +680,7 @@ private fun DrawerNavItem(
 @Composable
 private fun DrawerSessionRow(
     conversation: ConversationSummary,
+    selected: Boolean,
     busy: Boolean,
     menuExpanded: Boolean,
     menuAnchor: Offset,
@@ -629,8 +707,8 @@ private fun DrawerSessionRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(colors.ink.copy(alpha = wash))
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (selected) colors.wash else colors.ink.copy(alpha = wash))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = { offset ->
@@ -657,7 +735,7 @@ private fun DrawerSessionRow(
                 text = conversation.title,
                 modifier = Modifier.weight(1f),
                 style = DdType.bodySmall.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
-                color = colors.inkSecondary,
+                color = if (selected) colors.ink else colors.inkSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -682,7 +760,7 @@ private fun DrawerSessionRow(
 
                     else -> Text(
                         text = relativeTime,
-                        style = DdType.bodySmall.copy(fontSize = 11.sp),
+                        style = DdType.bodySmall.copy(fontSize = 10.5.sp),
                         color = colors.inkTertiary,
                         maxLines = 1,
                     )
@@ -733,6 +811,11 @@ private fun DrawerAccountRow(
                 maxLines = 1,
             )
         }
-        DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 15.dp)
+        DdIcon(
+            icon = DdIcons.Settings,
+            tint = colors.inkTertiary,
+            size = 16.dp,
+            modifier = Modifier.testTag("drawer_account_settings"),
+        )
     }
 }

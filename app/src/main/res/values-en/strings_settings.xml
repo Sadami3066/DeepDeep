@@ -5,6 +5,11 @@
     <string name="usage_habits_mode_voice">Voice mode</string>
     <string name="usage_habits_mode_camera">Camera mode</string>
     <string name="usage_habits_mode_none">None</string>
+    <string name="settings_group_model">Model &amp; runtime</string>
+    <string name="settings_group_appearance">Appearance</string>
+    <string name="settings_group_conversation">Chats</string>
+    <string name="settings_group_notifications">Notifications &amp; privacy</string>
+    <string name="settings_group_about">About</string>
     <string name="settings_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_account_no_model">No model selected</string>

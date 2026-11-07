@@ -18,13 +18,13 @@ fun DdGroupCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
-    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
+    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 18.dp) {
         Column(
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(colors.surface)
-                .padding(vertical = 4.dp),
+                .padding(vertical = 2.dp),
             content = content,
         )
     }

@@ -159,6 +159,21 @@ fun DdHairline(
 }
 
 @Composable
+fun DdRowDivider(
+    modifier: Modifier = Modifier,
+    leadingInset: Dp = 0.dp,
+    color: Color = deepDeepColors().hairline.copy(alpha = 0.4f),
+) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .padding(start = leadingInset)
+            .height(1.dp)
+            .background(color),
+    )
+}
+
+@Composable
 fun DdSectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
@@ -218,13 +233,13 @@ fun DdListRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 60.dp)
-                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 12.dp),
+                .heightIn(min = 56.dp)
+                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {
                 DdIcon(icon = icon, tint = colors.inkSecondary.copy(alpha = alpha), size = 20.dp)
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
@@ -257,7 +272,11 @@ fun DdListRow(
             }
             if (showChevron) {
                 Spacer(Modifier.width(6.dp))
-                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = alpha), size = 16.dp)
+                DdIcon(
+                    icon = DdIcons.ChevronRight,
+                    tint = colors.inkTertiary.copy(alpha = 0.55f * alpha),
+                    size = 15.dp,
+                )
             }
         }
     }

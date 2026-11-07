@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -48,6 +49,7 @@ import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdRowDivider
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
@@ -146,23 +148,7 @@ fun SettingsScreen(
                 onClick = onOpenPersonalization,
             )
 
-            Spacer(Modifier.height(16.dp))
-            DdGroupCard {
-                DdListRow(
-                    icon = DdIcons.Folder,
-                    title = stringResource(R.string.settings_archived),
-                    value = if (archivedCount > 0) {
-                        stringResource(R.string.settings_archived_count, archivedCount)
-                    } else {
-                        null
-                    },
-                    onClick = onOpenArchived,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_archived"),
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
+            SettingsSectionLabel(stringResource(R.string.settings_group_model))
             DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Cloud,
@@ -172,7 +158,15 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_provider"),
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
+                DdListRow(
+                    icon = DdIcons.Sparkles,
+                    title = stringResource(R.string.settings_agent),
+                    onClick = onOpenAgentSettings,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_agent"),
+                )
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Shield,
                     title = stringResource(R.string.settings_privilege),
@@ -187,24 +181,16 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_permission"),
                 )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.settings_agent),
-                    onClick = onOpenAgentSettings,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_agent"),
-                )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Terminal,
                     title = stringResource(R.string.settings_environment),
-                    value = linuxStatusLabel(linuxState),
+                    value = linuxShortLabel(linuxState),
                     onClick = onOpenRuntime,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_environment"),
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Phone,
                     title = stringResource(R.string.settings_android),
@@ -214,13 +200,13 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            SettingsSectionLabel(stringResource(R.string.settings_group_appearance))
             DdGroupCard {
                 ThemeControl(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Font,
                     title = stringResource(R.string.settings_font),
@@ -229,7 +215,7 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_font"),
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 LanguageRow(
                     language = language,
                     onLanguageChange = { selected ->
@@ -245,7 +231,7 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            SettingsSectionLabel(stringResource(R.string.settings_group_conversation))
             DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Message,
@@ -254,7 +240,7 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_chat"),
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.HandClick,
                     title = stringResource(R.string.settings_usage_habits),
@@ -263,7 +249,20 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_usage_habits"),
                 )
-                DdHairline()
+                DdRowDivider(leadingInset = SettingsDividerInset)
+                DdListRow(
+                    icon = DdIcons.Folder,
+                    title = stringResource(R.string.settings_archived),
+                    value = if (archivedCount > 0) {
+                        stringResource(R.string.settings_archived_count, archivedCount)
+                    } else {
+                        null
+                    },
+                    onClick = onOpenArchived,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_archived"),
+                )
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Scan,
                     title = stringResource(R.string.scan_settings_title),
@@ -273,13 +272,10 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            SettingsSectionLabel(stringResource(R.string.settings_group_notifications))
             DdGroupCard {
                 NotificationRow()
-            }
-
-            Spacer(Modifier.height(16.dp))
-            DdGroupCard {
+                DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Eye,
                     title = stringResource(R.string.settings_privacy),
@@ -289,14 +285,8 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            SettingsSectionLabel(stringResource(R.string.settings_group_about))
             DdGroupCard {
-                DdListRow(
-                    icon = DdIcons.Info,
-                    title = stringResource(R.string.settings_version),
-                    value = versionName,
-                )
-                DdHairline()
                 DdListRow(
                     icon = DdIcons.File,
                     title = stringResource(R.string.settings_license),
@@ -305,6 +295,15 @@ fun SettingsScreen(
                 )
             }
 
+            Text(
+                text = "DeepDeep · $versionName",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+                style = DdType.micro,
+                color = colors.inkTertiary,
+                textAlign = TextAlign.Center,
+            )
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -312,6 +311,26 @@ fun SettingsScreen(
     if (showLicenses) {
         LicenseSheet(onClose = { showLicenses = false })
     }
+}
+
+private val SettingsDividerInset = 50.dp
+
+@Composable
+private fun SettingsSectionLabel(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 4.dp, top = 22.dp, bottom = 8.dp),
+        style = DdType.micro,
+        color = deepDeepColors().inkTertiary,
+    )
+}
+
+@Composable
+private fun linuxShortLabel(state: LinuxInstallState): String = when (state) {
+    LinuxInstallState.NotInstalled -> stringResource(R.string.settings_linux_status_not_installed)
+    LinuxInstallState.Installing -> stringResource(R.string.settings_linux_status_installing)
+    is LinuxInstallState.Installed -> state.version
+    is LinuxInstallState.Failed -> stringResource(R.string.settings_linux_status_failed, state.message)
 }
 
 @Composable
