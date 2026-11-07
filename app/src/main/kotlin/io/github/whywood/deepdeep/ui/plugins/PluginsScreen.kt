@@ -389,15 +389,7 @@ private fun PluginsContent(
                 Spacer(Modifier.height(8.dp))
             }
             when {
-                !pluginCatalogReady(state) -> Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 96.dp)
-                        .testTag("plugins_loading"),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DdSpinner(size = 22.dp, strokeWidth = 2.dp)
-                }
+                state.loading && state.plugins.isEmpty() -> Unit
 
                 visible.isEmpty() -> {
                     if (state.plugins.isEmpty()) {

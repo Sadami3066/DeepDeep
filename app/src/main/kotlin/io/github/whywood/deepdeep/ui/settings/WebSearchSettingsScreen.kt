@@ -27,7 +27,6 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
-import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -67,16 +66,13 @@ fun WebSearchSettingsScreen(
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.web_search_summary),
-                style = DdType.bodySmall,
-                color = colors.inkSecondary,
-            )
-            Spacer(Modifier.height(24.dp))
-            DdSectionLabel(stringResource(R.string.web_search_section_providers))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
             SettingsGroup {
+                WebSearchProviderEntry(
+                    id = WebSearchSettingsStore.DEEPSEEK,
+                    configured = configured[WebSearchSettingsStore.DEEPSEEK] == true,
+                    onEdit = { editing = WebSearchSettingsStore.DEEPSEEK },
+                )
                 WebSearchProviderEntry(
                     id = WebSearchSettingsStore.EXA,
                     configured = configured[WebSearchSettingsStore.EXA] == true,
@@ -98,12 +94,6 @@ fun WebSearchSettingsScreen(
                     onEdit = { editing = WebSearchSettingsStore.SERPER },
                 )
             }
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = stringResource(R.string.web_search_note),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -168,8 +158,6 @@ private fun WebSearchProviderEntry(
 ) {
     DdListRow(
         title = stringResource(webSearchProviderName(id)),
-        subtitle = stringResource(webSearchProviderDescription(id)),
-        subtitleMaxLines = 2,
         value = stringResource(if (configured) R.string.web_search_configured else R.string.web_search_not_configured),
         onClick = onEdit,
         modifier = Modifier.testTag("web_search_$id"),
@@ -177,15 +165,9 @@ private fun WebSearchProviderEntry(
 }
 
 private fun webSearchProviderName(id: String): Int = when (id) {
+    WebSearchSettingsStore.DEEPSEEK -> R.string.web_search_deepseek
     WebSearchSettingsStore.EXA -> R.string.web_search_exa
     WebSearchSettingsStore.TAVILY -> R.string.web_search_tavily
     WebSearchSettingsStore.BRAVE -> R.string.web_search_brave
     else -> R.string.web_search_serper
-}
-
-private fun webSearchProviderDescription(id: String): Int = when (id) {
-    WebSearchSettingsStore.EXA -> R.string.web_search_exa_summary
-    WebSearchSettingsStore.TAVILY -> R.string.web_search_tavily_summary
-    WebSearchSettingsStore.BRAVE -> R.string.web_search_brave_summary
-    else -> R.string.web_search_serper_summary
 }

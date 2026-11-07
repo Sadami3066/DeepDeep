@@ -209,12 +209,7 @@ private fun SkillsContent(
                 .padding(horizontal = 16.dp),
         ) {
             when {
-                state.loading && state.items.isEmpty() -> Box(
-                    Modifier.fillMaxWidth().padding(top = 120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DdSpinner(size = 22.dp)
-                }
+                state.loading && state.items.isEmpty() -> Unit
 
                 state.items.isEmpty() && state.error != null -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),

@@ -36,7 +36,6 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -164,9 +163,7 @@ internal fun TimersContent(
             }
         }
         when {
-            state.loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                DdSpinner(size = 22.dp, strokeWidth = 2.dp)
-            }
+            state.loading && state.items.isEmpty() -> Unit
 
             state.items.isEmpty() -> EmptyTimers(Modifier.weight(1f))
 

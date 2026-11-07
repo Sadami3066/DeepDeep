@@ -18,9 +18,10 @@ internal fun WebSearchRoute(
     onBack: () -> Unit,
 ) {
     val store = dependencies.webSearchSettings
+    val credentials = dependencies.credentials
     val scope = rememberCoroutineScope()
     var configured by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    LaunchedEffect(store) {
+    LaunchedEffect(store, credentials) {
         configured = store.readAll().keys.associateWith { true }
         WebSearchSettingsStore.providers.forEach { id ->
             launch {
@@ -29,18 +30,37 @@ internal fun WebSearchRoute(
                 }
             }
         }
+        credentials.preload(WebSearchSettingsStore.DEEPSEEK)
+        launch {
+            credentials.revision.collect {
+                configured = configured + (
+                    WebSearchSettingsStore.DEEPSEEK to
+                        (credentials.cachedApiKey(WebSearchSettingsStore.DEEPSEEK) != null)
+                    )
+            }
+        }
     }
     WebSearchSettingsScreen(
         configured = configured,
         onSave = { id, key ->
             scope.launch {
-                store.save(id, key)
+                if (id == WebSearchSettingsStore.DEEPSEEK) {
+                    credentials.writeApiKey(id, key, null)
+                    credentials.awaitCommit(id)
+                } else {
+                    store.save(id, key)
+                }
                 configured = configured + (id to true)
             }
         },
         onClear = { id ->
             scope.launch {
-                store.save(id, null)
+                if (id == WebSearchSettingsStore.DEEPSEEK) {
+                    credentials.delete(id)
+                    credentials.awaitCommit(id)
+                } else {
+                    store.save(id, null)
+                }
                 configured = configured + (id to false)
             }
         },

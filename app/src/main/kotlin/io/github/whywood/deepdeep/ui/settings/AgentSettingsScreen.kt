@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -48,8 +49,10 @@ import io.github.whywood.deepdeep.runtime.ModelOption
 @Composable
 fun AgentSettingsScreen(
     screenOps: Boolean,
+    screenOpsReady: Boolean,
     onScreenOpsChange: (Boolean) -> Unit,
     onOpenWebSearch: () -> Unit,
+    onOpenPermission: () -> Unit,
     metadataMode: SessionNamingMode,
     metadataModelLabel: String?,
     metadataModels: List<ModelOption>,
@@ -87,6 +90,7 @@ fun AgentSettingsScreen(
             Spacer(Modifier.height(20.dp))
             DdSectionLabel(stringResource(R.string.agent_section_capabilities))
             Spacer(Modifier.height(8.dp))
+            val needsPermission = screenOps && !screenOpsReady
             SettingsGroup {
                 AgentRow(
                     title = stringResource(R.string.settings_screen_ops),
@@ -104,10 +108,20 @@ fun AgentSettingsScreen(
                         )
                     },
                 )
+                if (needsPermission) {
+                    Text(
+                        text = stringResource(R.string.agent_screen_ops_permission),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenPermission)
+                            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 8.dp),
+                        style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                        color = colors.danger,
+                    )
+                }
                 DdHairline(Modifier.padding(horizontal = 16.dp))
                 AgentRow(
                     title = stringResource(R.string.agent_web_search),
-                    subtitle = stringResource(R.string.agent_web_search_summary),
                     value = stringResource(R.string.agent_web_search_value),
                     onClick = onOpenWebSearch,
                     testTag = "agent_web_search",

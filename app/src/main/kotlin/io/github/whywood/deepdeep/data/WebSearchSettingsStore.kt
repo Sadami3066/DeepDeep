@@ -13,6 +13,7 @@ class WebSearchSettingsStore(private val secrets: EncryptedSecretStore) {
     suspend fun save(providerId: String, key: String?) = secrets.save(PREFIX, providerId, key)
 
     companion object {
+        const val DEEPSEEK = "deepseek"
         const val EXA = "exa"
         const val TAVILY = "tavily"
         const val BRAVE = "brave"

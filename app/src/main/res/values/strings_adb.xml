@@ -2,19 +2,19 @@
     <string name="adb_pairing_channel_name">无线调试配对</string>
     <string name="adb_pairing_channel_description">输入系统无线调试的配对码</string>
     <string name="adb_pairing_notification_title">配对无线调试</string>
-    <string name="adb_pairing_notification_text">打开「无线调试 → 使用配对码配对设备」，展开通知点「输入配对码」填入 6 位码；通知无法输入时请分屏后在 App 弹窗内输入。</string>
+    <string name="adb_pairing_notification_text">打开「无线调试 → 使用配对码配对设备」，在通知或 App 弹窗输入 6 位配对码。</string>
     <string name="adb_pairing_reply_label">配对码</string>
     <string name="adb_pairing_reply_action">输入配对码</string>
     <string name="adb_pairing_dialog_title">配对无线调试</string>
-    <string name="adb_pairing_dialog_steps">保持系统「使用配对码配对设备」页打开，把 6 位码输入到这里；两个界面不能同屏时先分屏。</string>
+    <string name="adb_pairing_dialog_steps">在系统的无线调试配对页获取 6 位配对码，输入到这里。</string>
     <string name="adb_pairing_dialog_code_placeholder">6 位配对码</string>
     <string name="adb_pairing_dialog_cancel">取消</string>
     <string name="adb_pairing_dialog_confirm">开始配对</string>
     <string name="adb_pairing_dialog_waiting">正在与系统配对…</string>
     <string name="adb_pairing_progress_title">正在配对无线调试</string>
-    <string name="adb_pairing_progress_text">正在与系统无线调试握手并启动守护进程</string>
+    <string name="adb_pairing_progress_text">正在连接无线调试…</string>
     <string name="adb_pairing_success_title">无线调试已连接</string>
-    <string name="adb_pairing_success_text">配对成功，ADB 守护进程运行中（uid 2000）</string>
+    <string name="adb_pairing_success_text">配对成功，无线调试已连接</string>
     <string name="adb_pairing_failed_title">无线调试配对失败</string>
     <string name="adb_pairing_retry_action">打开无线调试设置</string>
 

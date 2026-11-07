@@ -2,19 +2,19 @@
     <string name="adb_pairing_channel_name">Wireless debugging pairing</string>
     <string name="adb_pairing_channel_description">Enter the pairing code from system wireless debugging</string>
     <string name="adb_pairing_notification_title">Pair wireless debugging</string>
-    <string name="adb_pairing_notification_text">Open Wireless debugging → Pair device with pairing code, expand the notification and tap Enter pairing code. If input is unavailable, use split screen and enter it in the app dialog.</string>
+    <string name="adb_pairing_notification_text">Open Wireless debugging → Pair device with pairing code, then enter the 6-digit code from the notification or the app dialog.</string>
     <string name="adb_pairing_reply_label">Pairing code</string>
     <string name="adb_pairing_reply_action">Enter pairing code</string>
     <string name="adb_pairing_dialog_title">Pair wireless debugging</string>
-    <string name="adb_pairing_dialog_steps">Keep the system pairing code page open and enter its 6 digits here. If both screens cannot be shown together, use split screen first.</string>
+    <string name="adb_pairing_dialog_steps">Get the 6-digit code from the system pairing page and enter it here.</string>
     <string name="adb_pairing_dialog_code_placeholder">6-digit pairing code</string>
     <string name="adb_pairing_dialog_cancel">Cancel</string>
     <string name="adb_pairing_dialog_confirm">Start pairing</string>
     <string name="adb_pairing_dialog_waiting">Pairing with the system…</string>
     <string name="adb_pairing_progress_title">Pairing wireless debugging</string>
-    <string name="adb_pairing_progress_text">Handshaking with system wireless debugging and starting the daemon</string>
+    <string name="adb_pairing_progress_text">Connecting wireless debugging…</string>
     <string name="adb_pairing_success_title">Wireless debugging connected</string>
-    <string name="adb_pairing_success_text">Paired successfully. The ADB daemon is running (uid 2000)</string>
+    <string name="adb_pairing_success_text">Paired successfully. Wireless debugging is connected</string>
     <string name="adb_pairing_failed_title">Wireless debugging pairing failed</string>
     <string name="adb_pairing_retry_action">Open wireless debugging settings</string>
 

@@ -39,7 +39,6 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -167,20 +166,14 @@ private fun McpScreenContent(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (state.probing || state.loading) {
-                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                }
-            } else {
-                DdIconButton(
-                    icon = DdIcons.Refresh,
-                    onClick = onRefresh,
-                    contentDescription = stringResource(R.string.mcp_refresh),
-                    modifier = Modifier.testTag("mcp_probe_refresh"),
-                    tint = colors.ink,
-                    iconSize = 21.dp,
-                )
-            }
+            DdIconButton(
+                icon = DdIcons.Refresh,
+                onClick = onRefresh,
+                contentDescription = stringResource(R.string.mcp_refresh),
+                modifier = Modifier.testTag("mcp_probe_refresh"),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
             DdIconButton(
                 icon = DdIcons.Plus,
                 onClick = onAdd,
@@ -216,12 +209,7 @@ private fun McpScreenContent(
                 )
             }
             when {
-                state.loading -> Box(
-                    Modifier.fillMaxWidth().padding(top = 120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DdSpinner(size = 22.dp)
-                }
+                state.loading && state.servers.isEmpty() -> Unit
 
                 state.servers.isEmpty() && error != null -> Box(
                     Modifier.fillMaxWidth().padding(top = 72.dp),

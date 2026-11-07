@@ -29,8 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,7 +41,6 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -93,7 +90,6 @@ internal fun MiniappContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val loadingLabel = stringResource(R.string.miniapp_loading)
     var invalidTarget by remember { mutableStateOf<MiniappInvalid?>(null) }
 
     Column(
@@ -122,20 +118,14 @@ internal fun MiniappContent(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (state.loading) {
-                Box(Modifier.size(44.dp).testTag("miniapp_refresh_spinner"), contentAlignment = Alignment.Center) {
-                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                }
-            } else {
-                DdIconButton(
-                    icon = DdIcons.Refresh,
-                    onClick = onRefresh,
-                    contentDescription = stringResource(R.string.miniapp_refresh),
-                    modifier = Modifier.testTag("miniapp_refresh"),
-                    tint = colors.ink,
-                    iconSize = 21.dp,
-                )
-            }
+            DdIconButton(
+                icon = DdIcons.Refresh,
+                onClick = onRefresh,
+                contentDescription = stringResource(R.string.miniapp_refresh),
+                modifier = Modifier.testTag("miniapp_refresh"),
+                tint = colors.ink,
+                iconSize = 21.dp,
+            )
             DdIconButton(
                 icon = DdIcons.Plus,
                 onClick = onCreate,
@@ -168,15 +158,7 @@ internal fun MiniappContent(
                 )
             }
             when {
-                state.loading && state.isEmpty -> Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 120.dp)
-                        .semantics { contentDescription = loadingLabel },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DdSpinner(size = 22.dp)
-                }
+                state.loading && state.isEmpty -> Unit
 
                 state.error != null && state.isEmpty -> Unit
 
