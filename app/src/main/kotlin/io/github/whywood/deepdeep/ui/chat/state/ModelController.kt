@@ -32,7 +32,7 @@ internal class ModelController(
 ) {
     fun setModel(modelId: String) {
         val current = state()
-        if (current.sending || current.switchingConversation) return
+        if (current.switchingConversation) return
         val option = current.models.firstOrNull { it.id == modelId } ?: return
         val providerId = current.providerId.ifBlank { option.providerId }
         val thinking = current.thinkingLevel.takeIf { it in option.thinkingLevels } ?: ThinkingLevel.OFF
@@ -41,7 +41,7 @@ internal class ModelController(
 
     fun setProvider(providerId: String) {
         val current = state()
-        if (current.sending || current.switchingConversation) return
+        if (current.switchingConversation) return
         if (providerId == current.providerId) return
         val options = providers.models(providerId)
         val model = options.firstOrNull { it.id == current.modelId } ?: options.firstOrNull() ?: return
@@ -51,7 +51,7 @@ internal class ModelController(
 
     fun setThinkingLevel(level: ThinkingLevel) {
         val current = state()
-        if (current.sending || current.switchingConversation) return
+        if (current.switchingConversation) return
         val model = current.sessionModel() ?: return
         if (model.thinkingLevel == level) return
         changeSessionModel(model.copy(thinkingLevel = level), thinkingOnly = true)

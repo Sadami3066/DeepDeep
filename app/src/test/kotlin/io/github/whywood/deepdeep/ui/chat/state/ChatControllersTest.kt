@@ -144,6 +144,35 @@ class ChatControllersTest {
     }
 
     @Test
+    fun modelSelectionWorksWhileSending() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val runtime = FakeAgentRuntime().apply {
+            sessionModels = mutableMapOf()
+        }
+        state = state.copy(
+            conversationId = "session-1",
+            providerId = "p",
+            modelId = "m1",
+            models = FakeProviders.options,
+            conversation = ConversationState(sending = true, loaded = true),
+        )
+        val settings = FakeSettings()
+        val controller = ModelController(
+            runtime = runtime, queries = runtime, providers = FakeProviders, settings = settings,
+            ioDispatcher = dispatcher, scope = this, state = { state }, update = ::update,
+            onModelChanged = { _, _ -> }, userFacingError = { it },
+            switchModelFailedText = { "model failed" }, switchThinkingFailedText = { "thinking failed" },
+        )
+
+        controller.setModel("m2")
+        advanceUntilIdle()
+
+        assertEquals("m2", state.modelId)
+        assertEquals("m2", runtime.sessionModels["session-1"]?.modelId)
+        assertEquals("m2", settings.saved.lastOrNull()?.modelId)
+    }
+
+    @Test
     fun adoptConfiguredModelSwitchesEmptySession() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val runtime = FakeAgentRuntime()

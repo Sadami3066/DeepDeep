@@ -348,7 +348,6 @@ private fun AssistantOverlayExpandedContent(
             ComposerChip(
                 text = modelLabel,
                 onClick = onOpenModels,
-                enabled = !busy,
                 contentDescription = stringResource(R.string.assistant_model_sheet),
                 testTag = "assistant_overlay_model_chip",
                 maxWidth = 150.dp,

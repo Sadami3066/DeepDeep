@@ -662,7 +662,7 @@ class AssistantOverlayControllerTest {
     }
 
     @Test
-    fun modelSwitchIgnoredWhileBusy() = runTest(dispatcher) {
+    fun modelSwitchWorksWhileBusy() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime().apply {
             sessionModels["session-1"] = SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF)
         }
@@ -674,9 +674,9 @@ class AssistantOverlayControllerTest {
         controller.selectModel("model-2")
         runCurrent()
 
-        assertEquals("model", controller.state.value.modelId)
+        assertEquals("model-2", controller.state.value.modelId)
         assertEquals(
-            SessionModelSnapshot("deepseek", "model", ThinkingLevel.OFF),
+            SessionModelSnapshot("deepseek", "model-2", ThinkingLevel.OFF),
             runtime.sessionModels["session-1"],
         )
         controller.reset()

@@ -650,7 +650,6 @@ private fun ChatComposerExpandedContent(
                     actions.onManageProviders()
                 }
             },
-            enabled = !state.sending,
             contentDescription = stringResource(R.string.assistant_model_chip, label),
             testTag = "assistant_model",
             maxWidth = 150.dp,
@@ -828,7 +827,6 @@ internal fun QueuedInputBuffer(
 internal fun ComposerChip(
     text: String,
     onClick: () -> Unit,
-    enabled: Boolean,
     contentDescription: String,
     testTag: String,
     maxWidth: Dp,
@@ -838,7 +836,6 @@ internal fun ComposerChip(
         onClick = onClick,
         modifier = Modifier.height(32.dp).testTag(testTag),
         shape = RoundedCornerShape(10.dp),
-        enabled = enabled,
         contentDescription = contentDescription,
     ) {
         Row(

@@ -303,7 +303,6 @@ class AssistantOverlayController(
     fun selectProvider(providerId: String) {
         val current = mutableState.value
         val sessionId = current.sessionId ?: return
-        if (isBusy(sessionId, current)) return
         val options = runCatching { providers.models(providerId) }.getOrDefault(emptyList())
         if (options.isEmpty()) return
         val model = options.firstOrNull { it.id == current.modelId } ?: options.first()
@@ -314,7 +313,6 @@ class AssistantOverlayController(
     fun selectModel(modelId: String) {
         val current = mutableState.value
         val sessionId = current.sessionId ?: return
-        if (isBusy(sessionId, current)) return
         val option = current.models.firstOrNull { it.id == modelId } ?: return
         val providerId = current.providerId.ifBlank { option.providerId }
         val thinking = current.thinkingLevel.takeIf { it in option.thinkingLevels } ?: ThinkingLevel.OFF
@@ -324,7 +322,6 @@ class AssistantOverlayController(
     fun selectThinking(level: ThinkingLevel) {
         val current = mutableState.value
         val sessionId = current.sessionId ?: return
-        if (isBusy(sessionId, current)) return
         if (level == current.thinkingLevel || level !in current.thinkingLevels) return
         mutableState.update { it.copy(error = null) }
         scope.launch {
