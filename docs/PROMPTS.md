@@ -2,10 +2,7 @@
 
 一次会话的系统提示词由 SDK 与 App 两层拼成：SDK 负责 preamble / 项目指令 / skills / cwd 等静态段，App 通过 `RuntimeHooks.extraSystemPromptSections` 每轮提供动态段。工具定义（name/description/参数 schema）不走系统提示词，走模型的 function calling；工具的 `promptGuidelines` 汇总成 `<rules>` 段进提示词。
 
-本目录配套快照：
-
-- `docs/prompts/assembly-chain.md`：装配链全文（逐段字面文本、资源加载、diff 机制、插件/记忆链路）。
-- `docs/prompts/tool-inventory.md`：全部工具/Skill 的描述文案清单、HostToolNames 冲突表、rules 输入、18 条问题清单与优先修改项。
+配套勘察快照未入库，放在工作区临时目录：`tmp/assembly-chain.md`（装配链全文）、`tmp/tool-inventory.md`（工具/Skill 描述清单、冲突表、问题清单）；讲解页在 `tmp/memory.html`、`tmp/prompts.html`。
 
 ## 1. 调用链
 
@@ -73,7 +70,7 @@ ChatViewModel / RuntimeRuns.send
 
 ## 5. 已定位的问题（先看这些）
 
-完整 18 条见 `docs/prompts/tool-inventory.md` §5。优先处理：
+完整 18 条见工作区 `tmp/tool-inventory.md` §5（未入库）。优先处理：
 
 1. `promptSnippet` 是死配置：7 个内置 + 14 个插件工具的 snippet 从未进入上下文。
 2. `deepdeep-memory` 插件与 runtime 记忆的 4 个工具同名、两份规则段语义重叠；插件安装会被 `HostToolNames` 整包拒绝。
@@ -89,7 +86,7 @@ ChatViewModel / RuntimeRuns.send
 - **生产提示词里混入插件调试内容**：`template` 插件的英文 demo 提示段（priority 100）、`interop` 段内嵌的 `InteropState.refreshCount`（每次刷新必变）都会进入 `official_plugins`；后者还会导致每轮 system patch，破坏前缀缓存。
 - **AGENTS.md 无大小限制**：`ResourceLoader` 把命中的 AGENTS/CLAUDE 文件整份读入，逐级向上、不去重；App 侧 64KB 只是编辑器的写入上限。
 
-（插件段实际顺序：`feishu_prompt`/`wecom_prompt`/`micloud`/`interop.debug`（priority 0，按装载序）→ `jwxt_prompt`(10) → `template-hint`(100) → `deepdeep-memory-rules`(120)。完整 22 条可疑点见 `docs/prompts/assembly-chain.md` §12。）
+（插件段实际顺序：`feishu_prompt`/`wecom_prompt`/`micloud`/`interop.debug`（priority 0，按装载序）→ `jwxt_prompt`(10) → `template-hint`(100) → `deepdeep-memory-rules`(120)。完整 22 条可疑点见工作区 `tmp/assembly-chain.md` §12（未入库）。）
 
 ## 6. 改描述时的注意事项
 
