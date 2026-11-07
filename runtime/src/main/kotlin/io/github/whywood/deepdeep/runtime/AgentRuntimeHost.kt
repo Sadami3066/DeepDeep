@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -115,6 +118,20 @@ class AgentRuntimeHost internal constructor(
         clearActiveRun = runs::clearActiveRun,
         emitListChanged = runs::emitListChanged,
     )
+    init {
+        backgroundScope.launch {
+            while (isActive) {
+                delay(HandleBudget.SWEEP_INTERVAL_MS)
+                try {
+                    sweepIdleHandles()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    logWarn(TAG, "idle handle sweep failed", error)
+                }
+            }
+        }
+    }
     private val workspaceAdmin = RuntimeWorkspaces(
         mutex = mutex,
         homeDir = homeDir,

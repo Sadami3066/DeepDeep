@@ -29,7 +29,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `SessionMetaStore.kt` | 会话元数据（置顶/归档/重命名）存 DataStore |
 | `HistoryMapper.kt` | JSONL 条目转消息与工具轨迹（含 rawArguments/结构化 resultPayload），识别定时提醒；工具结果按 toolCallId 回填旧记录，FileRef 从 ToolResultMessage.details 的保留键还原 |
 | `RunLedger.kt` | 落盘未完成运行，重启后提示被中断 |
-| `HandleBudget.kt` | 句柄上限与空闲淘汰规则（6 个 / 10 分钟） |
+| `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
 | `SystemPrompt.kt` | 系统提示词文件、全局规则与工具规则合并 |
 | `Personalization.kt` | 称呼、交互风格、共享存储等提示词分节 |

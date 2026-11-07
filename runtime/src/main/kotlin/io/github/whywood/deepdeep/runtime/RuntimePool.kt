@@ -219,10 +219,9 @@ internal class RuntimePool(
     }
 
     private fun evictionVictimsLocked(): List<String> {
-        if (handles.size <= HandleBudget.MAX_HANDLES) return emptyList()
         val now = System.currentTimeMillis()
         val entries = handles.map { (sessionId, handle) -> budgetEntryLocked(sessionId, handle, now) }
-        return HandleBudget.decideEvictions(entries, handles.size, now)
+        return HandleBudget.decideEvictions(entries, now)
     }
 
     private fun evictableLocked(sessionId: String, handle: RuntimeHandle): Boolean {
