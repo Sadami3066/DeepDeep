@@ -132,7 +132,7 @@
     <string name="personalization_preset_calm">用冷静、克制的语气回应；直接给结论和依据，不寒暄，不过度共情。</string>
 
     <string name="privacy_local_title">本地保存</string>
-    <string name="privacy_local_body">对话、工作区文件、API Key 与 OAuth 凭据只保存在应用私有目录；MCP 的配置、请求头与授权 token 也只保存在本地。</string>
+    <string name="privacy_local_body">对话、工作区文件、API Key 与 OAuth 凭据只保存在应用私有目录；连接器 的配置、请求头与授权 token 也只保存在本地。</string>
     <string name="privacy_provider_title">只发送给所选厂商</string>
     <string name="privacy_provider_body">只有你选择的模型服务会收到对话内容，DeepDeep 不上传副本。</string>
     <string name="privacy_tracking_title">无统计与广告</string>

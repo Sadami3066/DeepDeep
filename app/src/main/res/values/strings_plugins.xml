@@ -34,7 +34,7 @@
     <string name="plugins_capability_timers">定时器</string>
     <string name="plugins_capability_goals">目标</string>
     <string name="plugins_capability_miniapp">小程序</string>
-    <string name="plugins_capability_mcp">MCP 服务</string>
+    <string name="plugins_capability_mcp">连接器 服务</string>
     <string name="plugins_capability_ui">界面扩展</string>
     <string name="plugins_capability_app">应用信息</string>
     <string name="plugins_capability_bus">事件总线</string>

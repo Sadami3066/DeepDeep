@@ -1,8 +1,8 @@
 <resources>
-    <string name="mcp_title">MCP</string>
+    <string name="mcp_title">连接器</string>
     <string name="mcp_back">返回</string>
     <string name="mcp_add">添加服务器</string>
-    <string name="mcp_empty_title">还没有 MCP 服务器</string>
+    <string name="mcp_empty_title">还没有 连接器 服务器</string>
     <string name="mcp_import_title">导入 JSON</string>
     <string name="mcp_import_template" formatted="false">{\"mcpServers\":{\"name\":{\"type\":\"streamablehttp\",\"url\":\"https://...\",\"headers\":{\"Authorization\":\"Bearer ...\"}}}}</string>
     <string name="mcp_import_error">导入失败，请检查 JSON 格式和必填字段</string>
@@ -22,7 +22,7 @@
     <string name="mcp_test">测试连接</string>
     <string name="mcp_test_failed">连接失败：%1$s</string>
     <string name="mcp_delete">删除服务器</string>
-    <string name="mcp_delete_title">删除 MCP 服务器？</string>
+    <string name="mcp_delete_title">删除 连接器 服务器？</string>
     <string name="mcp_delete_message">「%1$s」删除后无法恢复。</string>
     <string name="mcp_delete_confirm">删除</string>
     <string name="mcp_cancel">取消</string>
@@ -46,6 +46,6 @@
     <string name="mcp_error_save_failed">保存失败</string>
     <string name="mcp_error_delete_failed">删除失败</string>
     <string name="mcp_error_toggle_failed">切换启用状态失败</string>
-    <string name="mcp_error_load_failed">读取 MCP 配置失败</string>
+    <string name="mcp_error_load_failed">读取 连接器 配置失败</string>
     <string name="mcp_search_placeholder">搜索服务器</string>
 </resources>

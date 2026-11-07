@@ -436,18 +436,18 @@ private fun DrawerNewChatButton(onClick: () -> Unit) {
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(colors.ink)
+            .background(colors.accentSoft)
             .clickable(onClick = onClick)
             .testTag("drawer_new_chat")
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        DdIcon(icon = DdIcons.Compose, tint = colors.paper, size = 18.dp)
+        DdIcon(icon = DdIcons.Compose, tint = colors.accent, size = 17.dp)
         Text(
             text = stringResource(R.string.drawer_new_chat),
             style = DdType.label.copy(fontSize = 15.5.sp),
-            color = colors.paper,
+            color = colors.accent,
             maxLines = 1,
         )
     }

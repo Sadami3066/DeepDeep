@@ -146,4 +146,5 @@
     <string name="chat_font_size_value">%1$d%%</string>
     <string name="chat_font_size_preview">这是一段示例正文，字号会应用到聊天内容。</string>
     <string name="assistant_todo_title">任务清单</string>
+    <string name="assistant_todo_progress">%1$d/%2$d</string>
 </resources>

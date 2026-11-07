@@ -12,6 +12,8 @@ import androidx.compose.ui.res.stringResource
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.runtime.memory.MemoryStatus
+import io.github.whywood.deepdeep.ui.memory.MemoryOpenRequest
+import io.github.whywood.deepdeep.ui.memory.MemoryPreview
 import io.github.whywood.deepdeep.ui.memory.MemoryScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,17 +28,35 @@ internal fun MemoryRoute(
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<MemoryStatus?>(null) }
+    var recentDays by remember { mutableStateOf<List<String>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var preview by remember { mutableStateOf<MemoryPreview?>(null) }
     val manualReason = stringResource(R.string.memory_reason_manual)
 
     suspend fun load() {
-        status = withContext(Dispatchers.IO) {
-            runCatching { dependencies.memory.status() }.getOrNull()
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                dependencies.memory.status() to dependencies.memory.recentDayKeys(7)
+            }.getOrNull()
+        }
+        if (result != null) {
+            status = result.first
+            recentDays = result.second
         }
     }
 
     LaunchedEffect(dependencies.memory) { load() }
+
+    fun open(request: MemoryOpenRequest) {
+        preview = MemoryPreview(title = request.title, loading = true, content = null)
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching { dependencies.memory.fileText(request.target, request.date) }.getOrNull()
+            }
+            preview = preview?.copy(loading = false, content = text)
+        }
+    }
 
     fun summarizeCurrent() {
         val sessionId = conversationId
@@ -75,14 +95,19 @@ internal fun MemoryRoute(
             } finally {
                 busy = false
             }
+            load()
         }
     }
 
     MemoryScreen(
         status = status,
+        recentDays = recentDays,
         busy = busy,
         notice = notice,
         canSummarize = conversationId != null,
+        preview = preview,
+        onOpen = ::open,
+        onClosePreview = { preview = null },
         onSummarize = ::summarizeCurrent,
         onRebuild = ::rebuildIndex,
         onRefresh = {

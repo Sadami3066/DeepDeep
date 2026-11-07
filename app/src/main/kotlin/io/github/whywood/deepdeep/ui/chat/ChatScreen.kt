@@ -57,6 +57,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -116,6 +117,7 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatComposerState
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
+import io.github.whywood.deepdeep.ui.common.chat.TodoPanel
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import java.io.File
@@ -260,6 +262,8 @@ fun ChatScreen(
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
+    val streamMessages = remember(messages) { messages.filterNot { it.customType == "todo_write" } }
+    val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
     val stablePendingQuestions = remember(pendingQuestions) { pendingQuestions }
@@ -455,7 +459,7 @@ fun ChatScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
-                        items(messages, key = { it.id }) { message ->
+                        items(streamMessages, key = { it.id }) { message ->
                             Box(
                                 Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.TopCenter,
@@ -579,6 +583,9 @@ fun ChatScreen(
                     )
                 }
                 state.error?.let { ErrorRow(it) }
+                key(state.conversationId) {
+                    TodoPanel(payload = todoPayload)
+                }
                 val paletteQuery = commandQuery(state.input)
                 var lastPaletteQuery by remember { mutableStateOf("") }
                 LaunchedEffect(paletteQuery) {

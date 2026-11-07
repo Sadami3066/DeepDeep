@@ -2,9 +2,9 @@
     <string name="memory_title">Memory</string>
     <string name="memory_back">Back</string>
     <string name="memory_loading">Reading memory status…</string>
-    <string name="memory_profile">profile.md</string>
-    <string name="memory_context">context.md</string>
-    <string name="memory_cookbook">cookbook.md</string>
+    <string name="memory_profile">About me</string>
+    <string name="memory_context">Current &amp; upcoming</string>
+    <string name="memory_cookbook">Lessons</string>
     <string name="memory_today">Today</string>
     <string name="memory_month">This month</string>
     <string name="memory_year">This year</string>
@@ -28,4 +28,7 @@
     <string name="memory_summarized">Written to today’s log</string>
     <string name="memory_rebuild_done">Index rebuilt: %1$d chunks</string>
     <string name="memory_reason_manual">manual</string>
+    <string name="memory_recent_days">Recent days</string>
+    <string name="memory_empty">Nothing here yet</string>
+    <string name="memory_footer">Index · %1$d chunks · %2$s</string>
 </resources>

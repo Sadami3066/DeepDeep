@@ -2,9 +2,9 @@
     <string name="memory_title">记忆</string>
     <string name="memory_back">返回</string>
     <string name="memory_loading">正在读取记忆状态…</string>
-    <string name="memory_profile">profile.md</string>
-    <string name="memory_context">context.md</string>
-    <string name="memory_cookbook">cookbook.md</string>
+    <string name="memory_profile">用户与我</string>
+    <string name="memory_context">当下与将来</string>
+    <string name="memory_cookbook">经验与教训</string>
     <string name="memory_today">今天</string>
     <string name="memory_month">本月</string>
     <string name="memory_year">本年</string>
@@ -28,4 +28,7 @@
     <string name="memory_summarized">已写入今天的日志</string>
     <string name="memory_rebuild_done">索引已重建：%1$d 个片段</string>
     <string name="memory_reason_manual">手动沉淀</string>
+    <string name="memory_recent_days">最近日记</string>
+    <string name="memory_empty">暂无内容</string>
+    <string name="memory_footer">索引 %1$d 片段 · 占用 %2$s</string>
 </resources>

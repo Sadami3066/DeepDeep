@@ -9,6 +9,19 @@
 
     <string name="onboarding_welcome_tagline">你的随身 agent</string>
 
+    <string name="onboarding_feature_memory_title">记忆</string>
+    <string name="onboarding_feature_memory_body">记住你的偏好与上下文，换一段对话也接得上。</string>
+    <string name="onboarding_feature_connector_title">连接器</string>
+    <string name="onboarding_feature_connector_body">接入 MCP 服务器，外部工具随取随用。</string>
+    <string name="onboarding_feature_skills_title">技能与插件</string>
+    <string name="onboarding_feature_skills_body">安装技能包与插件，扩展它能做的事。</string>
+    <string name="onboarding_feature_timers_title">定时任务</string>
+    <string name="onboarding_feature_timers_body">到点自动运行，结果投递回原来的对话。</string>
+    <string name="onboarding_feature_ask_title">提问与交付</string>
+    <string name="onboarding_feature_ask_body">需要你拍板时会提问，文件、图片与页面直接交付。</string>
+    <string name="onboarding_feature_privacy_title">隐私与本地数据</string>
+    <string name="onboarding_feature_privacy_body">对话只发送给所选厂商，数据只留在本机。</string>
+
     <string name="onboarding_account_title">认识一下</string>
     <string name="onboarding_account_subtitle">之后都可以在设置里修改。</string>
     <string name="onboarding_avatar_pick">选择头像</string>

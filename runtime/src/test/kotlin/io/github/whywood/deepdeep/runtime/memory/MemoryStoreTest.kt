@@ -213,4 +213,28 @@ class MemoryStoreTest {
         assertNull(store.readDay("2026-01-01"))
         assertTrue(store.read("today", null, "2026-01-01").contains("还没有记录"))
     }
+
+    @Test
+    fun recentDayKeysReturnsNewestFirst() = runTest {
+        store.ensure()
+        store.appendDayBlock("2026-11-03", "- 三天前")
+        store.appendDayBlock("2026-11-05", "- 昨天")
+
+        val days = store.recentDayKeys(7)
+
+        assertTrue(days.contains("2026-11-03"))
+        assertTrue(days.contains("2026-11-05"))
+        assertTrue(days.indexOf("2026-11-05") < days.indexOf("2026-11-03"))
+    }
+
+    @Test
+    fun fileTextReturnsZoneBodyAndNullForEmptyDay() = runTest {
+        store.ensure()
+        store.write("profile", "## 身份\n- 学生", MemoryWriteMode.APPEND, null, null, null)
+
+        val profile = store.fileText("profile")
+        assertTrue(profile != null)
+        assertTrue(profile!!.contains("学生"))
+        assertNull(store.fileText("today", "2026-01-01"))
+    }
 }

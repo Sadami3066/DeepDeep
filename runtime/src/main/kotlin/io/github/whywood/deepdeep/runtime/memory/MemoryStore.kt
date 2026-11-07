@@ -218,6 +218,22 @@ class MemoryStore(private val rootDir: File) {
         }
     }
 
+    suspend fun recentDayKeys(limit: Int = 7): List<String> = withContext(Dispatchers.IO) {
+        mutex.withLock { dayKeysLocked().sortedDescending().take(limit.coerceIn(1, 60)) }
+    }
+
+    suspend fun fileText(target: String, date: String? = null): String? = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            when (target.trim().lowercase()) {
+                "today", "daily", "diary" -> readDayLocked(normalizedDay(date)).trim().takeIf { it.isNotEmpty() }
+                "month" -> readMonthLocked(normalizedMonth(date)).trim().takeIf { it.isNotEmpty() }
+                "year" -> readYearLocked(normalizedYear(date)).trim().takeIf { it.isNotEmpty() }
+                "profile", "context", "cookbook" -> zoneFile(target)?.readTextOrEmpty()?.trim()?.takeIf { it.isNotEmpty() }
+                else -> null
+            }
+        }
+    }
+
     internal suspend fun search(query: String, limit: Int): MemorySearchOutcome = withContext(Dispatchers.IO) {
         mutex.withLock { MemorySearch.search(corpusLocked(), query, limit) }
     }

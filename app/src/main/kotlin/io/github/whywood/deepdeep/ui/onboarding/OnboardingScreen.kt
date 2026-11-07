@@ -75,9 +75,15 @@ import kotlinx.coroutines.withContext
 private const val STEP_WELCOME = 0
 private const val STEP_ACCOUNT = 1
 private const val STEP_PROVIDER = 2
-private const val STEP_PERMISSIONS = 3
-private const val STEP_LINUX = 4
-private const val STEP_PRIVILEGE = 5
+private const val STEP_FEATURE_MEMORY = 3
+private const val STEP_FEATURE_CONNECTOR = 4
+private const val STEP_FEATURE_SKILLS = 5
+private const val STEP_FEATURE_TIMERS = 6
+private const val STEP_FEATURE_ASK = 7
+private const val STEP_FEATURE_PRIVACY = 8
+private const val STEP_PERMISSIONS = 9
+private const val STEP_LINUX = 10
+private const val STEP_PRIVILEGE = 11
 private const val LAST_STEP = STEP_PRIVILEGE
 
 @Composable
@@ -146,6 +152,10 @@ fun OnboardingScreen(
         if (step < LAST_STEP) step += 1
     }
 
+    fun skipFeatureTour() {
+        step = STEP_PERMISSIONS
+    }
+
     fun saveProfile() {
         val instruction = tonePresetRes(tone).takeIf { it != 0 }?.let(context::getString).orEmpty()
         val value = PersonalizationUi(
@@ -197,7 +207,7 @@ fun OnboardingScreen(
                         graph.providerCatalog.resolveConfig(ModelConfig(providerId = providerId, modelId = "")),
                     )
                 }
-                if (step == STEP_PROVIDER) step = STEP_PERMISSIONS
+                if (step == STEP_PROVIDER) goNext()
             }
         }
     }
@@ -259,11 +269,14 @@ fun OnboardingScreen(
         STEP_PRIVILEGE -> stringResource(R.string.onboarding_primary_done)
         else -> stringResource(R.string.onboarding_primary_continue)
     }
-    val secondaryLabel = when (step) {
-        STEP_PROVIDER -> stringResource(R.string.onboarding_skip)
-        STEP_PERMISSIONS, STEP_LINUX -> stringResource(R.string.onboarding_later)
+    val inFeatureTour = step in STEP_FEATURE_MEMORY..STEP_FEATURE_PRIVACY
+    val secondaryLabel = when {
+        step == STEP_PROVIDER -> stringResource(R.string.onboarding_skip)
+        inFeatureTour && step != STEP_FEATURE_PRIVACY -> stringResource(R.string.onboarding_skip)
+        step == STEP_PERMISSIONS || step == STEP_LINUX -> stringResource(R.string.onboarding_later)
         else -> null
     }
+    val secondaryAction: () -> Unit = if (inFeatureTour) ::skipFeatureTour else ::goNext
     val savingKey = step == STEP_PROVIDER && keyState == KEY_STATE_SAVING
     val primaryEnabled = !savingKey
     val secondaryEnabled = !savingKey
@@ -343,6 +356,12 @@ fun OnboardingScreen(
                     onSignOutOAuth = ::signOutOAuth,
                 )
 
+                STEP_FEATURE_MEMORY -> MemoryFeatureStep()
+                STEP_FEATURE_CONNECTOR -> ConnectorFeatureStep()
+                STEP_FEATURE_SKILLS -> SkillsFeatureStep()
+                STEP_FEATURE_TIMERS -> TimersFeatureStep()
+                STEP_FEATURE_ASK -> AskFeatureStep()
+                STEP_FEATURE_PRIVACY -> PrivacyFeatureStep()
                 STEP_PERMISSIONS -> PermissionsStep()
                 STEP_LINUX -> LinuxStep(
                     state = linuxState,
@@ -365,7 +384,7 @@ fun OnboardingScreen(
             onPrimary = ::primaryAction,
             secondaryLabel = secondaryLabel,
             secondaryEnabled = secondaryEnabled,
-            onSecondary = ::goNext,
+            onSecondary = secondaryAction,
         )
     }
 

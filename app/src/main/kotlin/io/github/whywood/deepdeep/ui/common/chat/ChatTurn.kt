@@ -108,10 +108,6 @@ internal fun ChatTurn(
     }
     val customType = message.customType
     if (customType != null) {
-        if (customType == "todo_write") {
-            TodoCard(message.customPayload)
-            return
-        }
         val payload = remember(message.customPayload) {
             message.customPayload
                 ?.let { raw -> runCatching { Json.parseToJsonElement(raw).jsonObject }.getOrNull() }
@@ -548,7 +544,7 @@ private fun AssistantTurn(
                 )
             }
 
-            MessageStatus.FAILED -> FailedMark(message = message, onRetry = onRetry, retryAttempt = retryAttempt)
+            MessageStatus.FAILED -> FailedMark(message = message, retryAttempt = retryAttempt)
 
             else -> Unit
         }
@@ -556,7 +552,7 @@ private fun AssistantTurn(
 }
 
 @Composable
-private fun FailedMark(message: AssistantMessage, retryAttempt: Int?, onRetry: (Long) -> Unit) {
+private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
     val colors = deepDeepColors()
     val rawDetails = rawErrorDetails(message.rawError)
     var detailsExpanded by rememberSaveable(message.id, message.rawError) { mutableStateOf(false) }
@@ -582,50 +578,58 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?, onRetry: (
                 }
             }
         } else {
-            Text(
-                text = message.error ?: stringResource(R.string.assistant_failed),
-                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                color = colors.inkSecondary,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (rawDetails != null && detailsExpanded) {
-                Text(
-                    text = rawDetails,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(colors.codeBackground)
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                        .testTag("assistant_error_details"),
-                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
-                    color = colors.inkSecondary,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.danger.copy(alpha = if (colors.dark) 0.12f else 0.06f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
-                DdTextAction(
-                    text = stringResource(R.string.assistant_retry),
-                    onClick = { onRetry(message.id) },
-                    modifier = Modifier.testTag("assistant_retry"),
-                )
-                if (rawDetails != null) {
-                    Spacer(Modifier.width(16.dp))
-                    DdTextAction(
-                        text = stringResource(
-                            if (detailsExpanded) {
-                                R.string.assistant_error_details_hide
-                            } else {
-                                R.string.assistant_error_details_show
-                            },
-                        ),
-                        onClick = { detailsExpanded = !detailsExpanded },
-                        color = colors.inkTertiary,
-                        modifier = Modifier.testTag("assistant_error_details_toggle"),
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    DdIcon(icon = DdIcons.Info, tint = colors.danger, size = 15.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = message.error ?: stringResource(R.string.assistant_failed),
+                        modifier = Modifier.weight(1f),
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                        color = colors.inkSecondary,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                }
+                if (rawDetails != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(36.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DdTextAction(
+                            text = stringResource(
+                                if (detailsExpanded) {
+                                    R.string.assistant_error_details_hide
+                                } else {
+                                    R.string.assistant_error_details_show
+                                },
+                            ),
+                            onClick = { detailsExpanded = !detailsExpanded },
+                            color = colors.inkTertiary,
+                            modifier = Modifier.testTag("assistant_error_details_toggle"),
+                        )
+                    }
+                    if (detailsExpanded) {
+                        Text(
+                            text = rawDetails,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(colors.codeBackground)
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                .testTag("assistant_error_details"),
+                            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
+                            color = colors.inkSecondary,
+                        )
+                    }
                 }
             }
         }
