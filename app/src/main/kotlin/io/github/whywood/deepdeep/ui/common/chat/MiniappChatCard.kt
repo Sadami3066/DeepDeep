@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,12 +33,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import java.io.File
 
 data class MiniappCardApp(
     val id: String,
     val name: String,
     val icon: String,
     val version: String,
+    val entryPath: String? = null,
 )
 
 private const val ICON_FALLBACK = "✦"
@@ -54,11 +57,16 @@ fun parseRegisteredMiniapp(trace: ToolTrace): MiniappCardApp? {
         val id = app.stringOrNull("id")?.trim().orEmpty()
         val name = app.stringOrNull("name")?.trim().orEmpty()
         if (id.isEmpty() || name.isEmpty()) return null
+        val directory = root.stringOrNull("path")?.trim().orEmpty()
         MiniappCardApp(
             id = id,
             name = name,
             icon = app.stringOrNull("icon")?.trim().orEmpty().ifBlank { ICON_FALLBACK },
             version = app.stringOrNull("version")?.trim().orEmpty().ifBlank { MiniappManifest.DEFAULT_VERSION },
+            entryPath = directory.takeIf { it.isNotEmpty() }
+                ?.let { File(it, "index.html") }
+                ?.takeIf { it.isFile }
+                ?.absolutePath,
         )
     } catch (_: Exception) {
         null
@@ -81,13 +89,30 @@ fun MiniappChatCard(
         background = colors.surface,
         contentDescription = app.name,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape),
         ) {
+            val preview = app.entryPath
+            if (preview != null) {
+                HtmlFileView(
+                    path = preview,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .padding(top = 10.dp, start = 10.dp, end = 10.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .testTag("miniapp_chat_preview"),
+                    onActivate = { onOpen(app.id) },
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Text(text = app.icon.ifBlank { ICON_FALLBACK }, fontSize = 22.sp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -109,6 +134,7 @@ fun MiniappChatCard(
             }
             Spacer(Modifier.width(10.dp))
             DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 16.dp)
+            }
         }
     }
 }

@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -76,15 +75,6 @@ fun AgentSettingsScreen(
                         )
                     },
                 )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Shield,
-                    title = stringResource(R.string.agent_privilege),
-                    value = privilegeLabel(privilege),
-                    onClick = onOpenPermission,
-                    showChevron = true,
-                    modifier = Modifier.testTag("agent_privilege"),
-                )
             }
             if (screenOps && privilege != PrivilegeLevel.ADB && privilege != PrivilegeLevel.ROOT) {
                 Spacer(Modifier.height(8.dp))
@@ -102,12 +92,3 @@ fun AgentSettingsScreen(
         }
     }
 }
-
-@Composable
-private fun privilegeLabel(privilege: PrivilegeLevel): String = stringResource(
-    when (privilege) {
-        PrivilegeLevel.NORMAL -> R.string.permission_level_normal
-        PrivilegeLevel.ADB -> R.string.permission_level_adb
-        PrivilegeLevel.ROOT -> R.string.permission_level_root
-    },
-)

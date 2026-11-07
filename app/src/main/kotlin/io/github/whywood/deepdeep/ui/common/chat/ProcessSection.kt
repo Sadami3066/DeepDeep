@@ -33,9 +33,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import android.graphics.ImageDecoder
-import android.graphics.drawable.AnimatedImageDrawable
-import android.widget.ImageView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -44,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
@@ -134,7 +130,7 @@ internal fun ProcessSection(
             initialValue = 0.45f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 620, easing = DdMotion.EaseInOut),
+                animation = tween(durationMillis = 1000, easing = DdMotion.EaseInOut),
                 repeatMode = RepeatMode.Reverse,
             ),
             label = "process_text_alpha",
@@ -179,7 +175,7 @@ internal fun ProcessSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (message.streaming) {
-                    ProcessActivityIcon()
+                    ActivityGifIcon()
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(
@@ -350,25 +346,4 @@ internal fun formatElapsed(
         minutes > 0 -> String.format(Locale.ROOT, minutesSeconds, minutes, seconds)
         else -> String.format(Locale.ROOT, secondsOnly, seconds)
     }
-}
-
-
-@Composable
-private fun ProcessActivityIcon() {
-    AndroidView(
-        factory = { context ->
-            val animated = ImageDecoder.decodeDrawable(
-                ImageDecoder.createSource(context.resources, R.drawable.process_activity),
-            )
-            (animated as? AnimatedImageDrawable)?.apply {
-                repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
-                start()
-            }
-            ImageView(context).apply {
-                setImageDrawable(animated)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-            }
-        },
-        modifier = Modifier.size(15.dp),
-    )
 }

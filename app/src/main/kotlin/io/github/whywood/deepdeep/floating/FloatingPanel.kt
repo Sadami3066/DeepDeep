@@ -35,8 +35,8 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.ui.common.chat.ActivityGifIcon
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.PendingQuestion
@@ -176,7 +176,7 @@ private fun RunRow(
 ) {
     val colors = deepDeepColors()
     PanelRow(onClick = onClick, contentDescription = run.title) {
-        DdSpinner(color = colors.accent, size = 14.dp, strokeWidth = 1.6.dp)
+        ActivityGifIcon(size = 14.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(

@@ -518,7 +518,7 @@ private fun AssistantTurn(
                 ChatMarkdown(answer, onFileClick = onOpenFile, live = message.streaming)
             }
         }
-        if (presentedItems.isNotEmpty()) {
+        if (presentedItems.isNotEmpty() && !message.streaming) {
             Spacer(Modifier.height(12.dp))
             PresentCard(
                 items = presentedItems,

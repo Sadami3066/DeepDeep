@@ -34,8 +34,8 @@
     <string name="settings_sign_out">退出登录</string>
 
     <string name="settings_provider">厂商</string>
-    <string name="settings_environment">Linux 设置</string>
-    <string name="settings_android">Android 设置</string>
+    <string name="settings_environment">Linux</string>
+    <string name="settings_android">Android</string>
     <string name="settings_theme">颜色模式</string>
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>

@@ -117,8 +117,8 @@ internal fun ChatTopBar(
                             onClick = actions.onOpenTimers,
                             contentDescription = stringResource(R.string.assistant_reminders),
                             modifier = Modifier.testTag("assistant_reminders"),
-                            size = TopBarIconButtonSize,
-                            iconSize = 19.dp,
+                            size = 36.dp,
+                            iconSize = 16.dp,
                             tint = colors.inkSecondary,
                         )
                     }

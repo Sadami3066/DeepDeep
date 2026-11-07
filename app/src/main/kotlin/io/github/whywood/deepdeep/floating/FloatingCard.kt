@@ -35,9 +35,9 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.ui.common.chat.ActivityGifIcon
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.PendingQuestion
@@ -312,7 +312,7 @@ private fun TrackingBody(
         else -> thinkingLine
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        DdSpinner(color = colors.accent, size = 12.dp, strokeWidth = 1.4.dp)
+        ActivityGifIcon(size = 12.dp)
         Spacer(Modifier.width(8.dp))
         Text(
             text = primary,

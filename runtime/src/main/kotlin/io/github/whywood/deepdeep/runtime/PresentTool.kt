@@ -28,6 +28,7 @@ data class PresentedMiniapp(
     val name: String,
     val icon: String = "",
     val version: String = "",
+    val entryPath: String? = null,
 )
 
 fun miniappLookup(store: MiniappStore): suspend (String) -> PresentedMiniapp? = { id ->
@@ -38,6 +39,9 @@ fun miniappLookup(store: MiniappStore): suspend (String) -> PresentedMiniapp? = 
                 name = creation.manifest.name,
                 icon = creation.manifest.icon,
                 version = creation.manifest.version,
+                entryPath = File(creation.directory, creation.manifest.entry)
+                    .takeIf { it.isFile }
+                    ?.absolutePath,
             )
         }
 
@@ -261,6 +265,7 @@ private suspend fun miniappItem(
         put("name", miniapp.name.ifBlank { id })
         miniapp.icon.trim().takeIf { it.isNotEmpty() }?.let { put("icon", it) }
         miniapp.version.trim().takeIf { it.isNotEmpty() }?.let { put("version", it) }
+        miniapp.entryPath?.let { put("path", it) }
         title?.let { put("title", it) }
     }
 }

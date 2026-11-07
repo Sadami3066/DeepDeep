@@ -44,16 +44,16 @@ fun ContextMeter(
     DdPressable(
         onClick = onClick,
         modifier = modifier
-            .sizeIn(minWidth = 36.dp, minHeight = 36.dp)
+            .sizeIn(minWidth = 31.dp, minHeight = 31.dp)
             .testTag("context_meter"),
         shape = RoundedCornerShape(8.dp),
         contentDescription = description,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 6.dp),
+            modifier = Modifier.padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Canvas(Modifier.size(20.dp)) {
+            Canvas(Modifier.size(17.dp)) {
                 val strokeWidth = 2.5.dp.toPx()
                 val inset = strokeWidth / 2f
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
@@ -82,7 +82,7 @@ fun ContextMeter(
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.usage_meter_percent, percent),
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                    style = DdType.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
                     color = colors.inkSecondary,
                     maxLines = 1,
                 )

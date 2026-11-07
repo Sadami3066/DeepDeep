@@ -427,6 +427,7 @@ private fun PresentedMiniappItem(item: PresentedItem, onOpenMiniapp: (String) ->
             name = item.title ?: item.name,
             icon = item.icon.orEmpty().ifBlank { "✦" },
             version = item.version.orEmpty(),
+            entryPath = item.path,
         ),
         onOpen = onOpenMiniapp,
         subtitle = stringResource(R.string.present_miniapp),

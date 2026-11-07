@@ -149,14 +149,6 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.settings_personalization),
-                    onClick = onOpenPersonalization,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_personalization"),
-                )
-                DdHairline()
-                DdListRow(
                     icon = DdIcons.Folder,
                     title = stringResource(R.string.settings_archived),
                     value = if (archivedCount > 0) {

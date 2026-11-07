@@ -69,6 +69,8 @@ object DdIcons {
     val Clock = DdIcon(R.drawable.ic_dd_clock)
     val Plug = DdIcon(R.drawable.ic_dd_plug)
     val Puzzle = DdIcon(R.drawable.ic_dd_puzzle)
+    val Book = DdIcon(R.drawable.ic_dd_book)
+    val Package = DdIcon(R.drawable.ic_dd_package)
     val Copy = DdIcon(R.drawable.ic_dd_copy)
     val Quote = DdIcon(R.drawable.ic_dd_quote)
     val SelectAll = DdIcon(R.drawable.ic_dd_select_all)

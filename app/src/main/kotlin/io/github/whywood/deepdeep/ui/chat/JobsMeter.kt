@@ -31,19 +31,19 @@ fun JobsMeter(
     val colors = deepDeepColors()
     DdPressable(
         onClick = onClick,
-        modifier = modifier.sizeIn(minWidth = 36.dp, minHeight = 36.dp).testTag("jobs_meter"),
+        modifier = modifier.sizeIn(minWidth = 31.dp, minHeight = 31.dp).testTag("jobs_meter"),
         shape = RoundedCornerShape(8.dp),
         contentDescription = stringResource(R.string.jobs_meter_description, count),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 13.dp)
+            DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 11.dp)
             Spacer(Modifier.width(4.dp))
             Text(
                 text = count.toString(),
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                style = DdType.bodySmall.copy(fontSize = 9.5.sp, lineHeight = 13.sp),
                 color = colors.inkTertiary,
                 maxLines = 1,
             )

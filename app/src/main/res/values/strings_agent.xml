@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_agent">Agent 设置</string>
+    <string name="settings_agent">Agent</string>
     <string name="agent_settings_title">Agent 设置</string>
     <string name="agent_privilege">权限级别</string>
     <string name="agent_screen_ops_inactive">未生效：需要 ADB 或 Root 权限</string>

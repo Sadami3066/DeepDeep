@@ -95,7 +95,7 @@ internal fun ToolCard(
         ToolActivityStatus.FAILED -> stringResource(R.string.assistant_tool_failed)
     }
     val statusColor = when (tool.status) {
-        ToolActivityStatus.RUNNING -> colors.accent
+        ToolActivityStatus.RUNNING -> colors.inkSecondary
         ToolActivityStatus.DONE -> colors.inkSecondary
         ToolActivityStatus.FAILED -> colors.danger
     }

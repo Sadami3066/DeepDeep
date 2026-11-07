@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_agent">Agent settings</string>
+    <string name="settings_agent">Agent</string>
     <string name="agent_settings_title">Agent settings</string>
     <string name="agent_privilege">Permission level</string>
     <string name="agent_screen_ops_inactive">Not active: ADB or Root permission required</string>

@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -358,6 +359,26 @@ fun ChatScreen(
                         selectionCoordinator.clear()
                     }
                 }
+            }
+            .pointerInput(onOpenDrawer) {
+                var startX = 0f
+                var total = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        startX = offset.x
+                        total = 0f
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        total += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        val width = size.width.toFloat()
+                        val middle = startX > width * 0.25f && startX < width * 0.75f
+                        if (middle && total > 80.dp.toPx()) onOpenDrawer()
+                    },
+                    onDragCancel = { total = 0f },
+                )
             },
     ) {
         CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {

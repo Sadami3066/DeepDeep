@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +69,7 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 
 
@@ -161,6 +163,13 @@ internal fun AssistantOverlayPanel(
     LaunchedEffect(scroll, contentClamped) {
         if (!contentClamped) return@LaunchedEffect
         snapshotFlow { panelHeight.value }.collect { scroll.anchorToBottom() }
+    }
+    LaunchedEffect(scroll, state.conversation.sending) {
+        if (!state.conversation.sending) return@LaunchedEffect
+        while (isActive) {
+            withFrameNanos { }
+            scroll.followContent()
+        }
     }
 
     val copyOutput: (String) -> Unit = { text ->

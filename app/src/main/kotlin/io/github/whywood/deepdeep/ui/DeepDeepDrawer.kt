@@ -56,7 +56,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
-import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
@@ -241,7 +241,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_miniapp",
             )
             DrawerNavItem(
-                icon = DdIcons.Sparkles,
+                icon = DdIcons.Book,
                 label = stringResource(R.string.drawer_nav_skills),
                 onClick = onOpenSkills,
                 testTag = "drawer_skills",
@@ -253,7 +253,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_mcp",
             )
             DrawerNavItem(
-                icon = DdIcons.Puzzle,
+                icon = DdIcons.Package,
                 label = stringResource(R.string.drawer_nav_plugins),
                 onClick = onOpenPlugins,
                 testTag = "drawer_plugins",
@@ -407,12 +407,20 @@ private fun DrawerWorkspacesHeader(
             color = colors.inkTertiary,
             maxLines = 1,
         )
-        DdTextAction(
-            text = stringResource(R.string.drawer_workspace_create_short),
+        DdPressable(
             onClick = onCreate,
             modifier = Modifier.testTag("drawer_workspace_create").padding(end = 4.dp),
-            color = colors.inkTertiary,
-        )
+            shape = RoundedCornerShape(8.dp),
+            contentDescription = stringResource(R.string.drawer_workspace_create_short),
+        ) {
+            Text(
+                text = stringResource(R.string.drawer_workspace_create_short),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                style = DdType.bodySmall.copy(fontSize = 12.sp),
+                color = colors.inkTertiary,
+                maxLines = 1,
+            )
+        }
     }
 }
 
