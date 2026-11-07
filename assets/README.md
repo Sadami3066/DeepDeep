@@ -1,6 +1,6 @@
 # 资产目录
 
-- [鲸鱼娘 UI 整板套件](ui-kit/whale-flat-v1/README.md)：一次生成 4×4 整板，脚本切成 16 张透明 PNG，含可复用分割配置。
+- [鲸鱼娘 UI 整板套件](ui-kit/whale-flat-v1/README.md)：保留整板与四张吉祥物（wave/idle/thinking/sleepy），其余切图已移出。
 
 - [品牌、字体与第三方许可](branding/README.md)：当前随 APK 发布的图标与字体。
 - [鲸鱼娘候选素材](mascot/README.md)：用户设定原图、六张生成插画、预览、用途和生成记录；其中 `mascot_welcome.webp` 已用于新会话空态。

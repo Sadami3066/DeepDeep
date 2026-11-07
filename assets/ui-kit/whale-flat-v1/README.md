@@ -7,7 +7,7 @@
 ## 文件
 
 - [atlas.png](atlas.png)：生成器原始整板，1254 × 1254 RGBA，未覆盖或修改。
-- [pieces/](pieces/)：16 张清理后的透明 PNG，文件名可直接用作 Android drawable 名称。
+- [pieces/](pieces/)：仅保留 `mascot_wave/idle/thinking/sleepy` 四张吉祥物；其余 12 张切图与预览、参考图已移出本仓库。
 - [pieces/manifest.json](pieces/manifest.json)：原图摘要、切图配置、每张的来源矩形、尺寸和 SHA-256。
 - [layout.json](layout.json)：4×4 分区、实际行边界与透明度/留白设置。
 - 切图脚本：Pillow + Python 标准库，无网络请求或模型调用。**脚本未入库**（一次性本地产物），复现依据是 `layout.json` 与 `pieces/manifest.json`。
