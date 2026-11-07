@@ -12,7 +12,7 @@
     <string name="agent_metadata_model_pick">选择模型</string>
     <string name="agent_metadata_model_empty">暂无已配置的模型，请先在厂商设置中配置</string>
     <string name="agent_metadata_cancel">取消</string>
-    <string name="agent_screen_ops_permission">去开启权限</string>
+    <string name="agent_screen_ops_permission">权限不足，请开启 ADB/Root 权限</string>
     <string name="agent_web_search">搜索服务</string>
     <string name="agent_web_search_value">配置</string>
     <string name="web_search_title">搜索服务</string>

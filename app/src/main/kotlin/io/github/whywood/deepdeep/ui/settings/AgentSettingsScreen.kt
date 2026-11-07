@@ -101,7 +101,7 @@ fun AgentSettingsScreen(
                         DdSwitch(
                             checked = screenOps,
                             onCheckedChange = onScreenOpsChange,
-                            activeColor = colors.warning,
+                            activeColor = if (screenOpsReady) colors.accent else colors.warning,
                             stateDescription = stringResource(
                                 if (screenOps) R.string.settings_switch_on else R.string.settings_switch_off,
                             ),

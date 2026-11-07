@@ -12,7 +12,7 @@
     <string name="agent_metadata_model_pick">Pick a model</string>
     <string name="agent_metadata_model_empty">No configured models. Set up a provider first</string>
     <string name="agent_metadata_cancel">Cancel</string>
-    <string name="agent_screen_ops_permission">Grant permission</string>
+    <string name="agent_screen_ops_permission">Permission required. Enable ADB or Root access.</string>
     <string name="agent_web_search">Web search</string>
     <string name="agent_web_search_value">Configure</string>
     <string name="web_search_title">Web search</string>
