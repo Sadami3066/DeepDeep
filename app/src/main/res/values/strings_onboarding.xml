@@ -1,21 +1,27 @@
 <resources>
     <string name="onboarding_back">返回</string>
     <string name="onboarding_progress_description">第 %1$d 步，共 %2$d 步</string>
-    <string name="onboarding_primary_start">开始</string>
+    <string name="onboarding_step_counter">%1$02d / %2$02d</string>
+
+    <string name="onboarding_primary_start">开始认识</string>
     <string name="onboarding_primary_continue">继续</string>
-    <string name="onboarding_primary_done">完成</string>
-    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_primary_connect">连接并继续</string>
+    <string name="onboarding_primary_done">好了，开始聊天</string>
+    <string name="onboarding_skip">稍后设置</string>
     <string name="onboarding_later">稍后</string>
 
-    <string name="onboarding_welcome_tagline">你的随身 agent</string>
+    <string name="onboarding_welcome_title">你好，\n我是 DeepDeep。</string>
+    <string name="onboarding_welcome_lead">你的随身 AI 助手。\n从日常小事，到新的想法。</string>
+    <string name="onboarding_welcome_note">只需几步，随时可以调整</string>
 
-    <string name="onboarding_account_title">认识一下</string>
-    <string name="onboarding_account_subtitle">之后都可以在设置里修改。</string>
+    <string name="onboarding_account_title">先认识一下</string>
+    <string name="onboarding_account_subtitle">让每一次对话，都更合你心意。</string>
+    <string name="onboarding_account_note">之后都可以在设置中修改。</string>
     <string name="onboarding_avatar_pick">选择头像</string>
     <string name="onboarding_avatar_failed">头像保存失败</string>
-    <string name="onboarding_nickname_label">称呼</string>
-    <string name="onboarding_nickname_hint">怎么称呼你</string>
-    <string name="onboarding_tone_label">语气</string>
+    <string name="onboarding_nickname_label">你的称呼</string>
+    <string name="onboarding_nickname_hint">怎么称呼你？</string>
+    <string name="onboarding_tone_label">交流风格</string>
     <string name="onboarding_tone_warm">温和</string>
     <string name="onboarding_tone_cute">可爱</string>
     <string name="onboarding_tone_calm">冷静</string>
@@ -24,11 +30,17 @@
     <string name="onboarding_language_chinese">简体中文</string>
     <string name="onboarding_language_english">English</string>
 
-    <string name="onboarding_provider_title">连接模型</string>
-    <string name="onboarding_provider_subtitle">推荐 DeepSeek，也可以选其他厂商。</string>
+    <string name="onboarding_provider_title">连接你的模型</string>
+    <string name="onboarding_provider_subtitle">选好服务商，就可以开始聊天。</string>
+    <string name="onboarding_provider_section">服务商</string>
     <string name="onboarding_provider_recommended">推荐</string>
+    <string name="onboarding_provider_deepseek_body">快、便宜，中文表现好</string>
+    <string name="onboarding_provider_models">%1$d 个模型</string>
+    <string name="onboarding_provider_choose_other">选择其他服务商</string>
     <string name="onboarding_provider_api_key_label">API Key</string>
-    <string name="onboarding_provider_api_key_hint">粘贴 API Key</string>
+    <string name="onboarding_provider_api_key_hint">粘贴你的 API Key</string>
+    <string name="onboarding_provider_key_show">显示 API Key</string>
+    <string name="onboarding_provider_key_hide">隐藏 API Key</string>
     <string name="onboarding_provider_key_saving">保存中…</string>
     <string name="onboarding_provider_key_saved">已保存</string>
     <string name="onboarding_provider_key_failed">保存失败，请重试</string>
@@ -38,14 +50,11 @@
     <string name="onboarding_provider_oauth_signed_in">已登录</string>
     <string name="onboarding_provider_oauth_sign_out">退出登录</string>
     <string name="onboarding_provider_oauth_failed">登录失败</string>
-    <string name="onboarding_provider_extra_config">需要额外配置，请到 设置 → 厂商 中连接。</string>
-    <string name="onboarding_provider_other">其他厂商</string>
-    <string name="onboarding_provider_other_count">其他 %1$d 家厂商</string>
-    <string name="onboarding_provider_models">%1$d 个模型</string>
-    <string name="onboarding_provider_search">搜索厂商</string>
+    <string name="onboarding_provider_extra_config">需要额外配置，请到 设置 → 服务商 中连接。</string>
+    <string name="onboarding_provider_search">搜索服务商</string>
     <string name="onboarding_search_clear">清除</string>
-    <string name="onboarding_provider_no_result">没有匹配的厂商</string>
-    <string name="onboarding_provider_sheet_title">选择厂商</string>
+    <string name="onboarding_provider_no_result">没有匹配的服务商</string>
+    <string name="onboarding_provider_sheet_title">选择服务商</string>
 
     <string name="onboarding_permissions_title">通知与权限</string>
     <string name="onboarding_permissions_subtitle">按需开启，之后也可以在设置里打开。</string>
@@ -67,8 +76,9 @@
     <string name="onboarding_linux_install">安装到本机</string>
     <string name="onboarding_linux_unsupported">当前设备不支持 Linux 环境，可以跳过这一步。</string>
 
-    <string name="onboarding_privilege_title">选择权限等级</string>
-    <string name="onboarding_privilege_subtitle">随时可以在 设置 → 权限 中更改。</string>
+    <string name="onboarding_privilege_title">给它多少权限</string>
+    <string name="onboarding_privilege_subtitle">普通模式就能用 bash 和常用工具；之后随时可以升级。</string>
+    <string name="onboarding_privilege_note">之后都可以在设置里改</string>
     <string name="onboarding_privilege_normal">普通</string>
     <string name="onboarding_privilege_normal_body">无需授权，使用 Linux 内的 bash 与常用工具。</string>
     <string name="onboarding_privilege_adb">无线调试 ADB</string>

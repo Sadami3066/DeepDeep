@@ -1,9 +1,8 @@
 package io.github.whywood.deepdeep.ui.onboarding
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -16,13 +15,17 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -32,8 +35,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,16 +50,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdEmptyState
+import io.github.whywood.deepdeep.design.DdGroupCard
+import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
@@ -75,61 +90,33 @@ internal const val KEY_STATE_FAILED = 3
 
 @Composable
 internal fun OnboardingHeader(step: Int, onBack: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp)) {
-        AnimatedVisibility(
-            visible = step > 0,
-            modifier = Modifier.align(Alignment.CenterStart),
-            enter = fadeIn(tween(DdMotion.FAST, easing = DdMotion.EaseOut)),
-            exit = fadeOut(tween(120)),
-        ) {
-            DdIconButton(
-                icon = DdIcons.ArrowLeft,
-                onClick = onBack,
-                contentDescription = stringResource(R.string.onboarding_back),
-                iconSize = 21.dp,
-            )
-        }
-        AnimatedVisibility(
-            visible = step > 0,
-            modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
-            exit = fadeOut(tween(120)),
-        ) {
-            StepProgress(current = step)
-        }
-    }
-}
-
-@Composable
-private fun StepProgress(current: Int) {
     val colors = deepDeepColors()
     val description = stringResource(
         R.string.onboarding_progress_description,
-        current + 1,
+        step + 1,
         ONBOARDING_STEP_COUNT,
     )
-    Row(
-        modifier = Modifier.semantics { contentDescription = description },
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (index in 0 until ONBOARDING_STEP_COUNT) {
-            val active = index == current
-            val width by animateDpAsState(
-                targetValue = if (active) 24.dp else 6.dp,
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                label = "onboarding-progress-width-$index",
-            )
-            val color by animateColorAsState(
-                targetValue = when {
-                    active -> colors.accent
-                    index < current -> colors.accent.copy(alpha = 0.32f)
-                    else -> colors.hairline
-                },
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                label = "onboarding-progress-color-$index",
-            )
-            Box(Modifier.width(width).height(6.dp).clip(CircleShape).background(color))
+    Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)) {
+        if (step > 0) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DdIconButton(
+                    icon = DdIcons.ArrowLeft,
+                    onClick = onBack,
+                    contentDescription = stringResource(R.string.onboarding_back),
+                    iconSize = 23.dp,
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_step_counter, step + 1, ONBOARDING_STEP_COUNT),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .clearAndSetSemantics { contentDescription = description },
+                    style = DdType.micro,
+                    color = colors.inkTertiary,
+                )
+            }
         }
     }
 }
@@ -137,10 +124,229 @@ private fun StepProgress(current: Int) {
 @Composable
 internal fun StepHeading(title: String, subtitle: String? = null) {
     val colors = deepDeepColors()
-    Text(text = title, style = DdType.heading, color = colors.ink)
+    Text(text = title, style = DdType.pageTitle, color = colors.ink)
     if (subtitle != null) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(10.dp))
         Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
+    }
+}
+
+@Composable
+internal fun FieldLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text = text, modifier = modifier, style = DdType.label, color = deepDeepColors().inkTertiary)
+}
+
+@Composable
+internal fun OnboardingCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(Modifier.fillMaxWidth().border(1.dp, deepDeepColors().hairline, RoundedCornerShape(18.dp))) {
+        DdGroupCard(modifier = modifier, content = content)
+    }
+}
+
+@Composable
+internal fun UnderlineField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
+    testTag: String? = null,
+) {
+    val colors = deepDeepColors()
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val underline by animateColorAsState(
+        targetValue = if (focused) colors.accent else colors.hairline,
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "onboarding-underline",
+    )
+    val textStyle = DdType.body.copy(fontSize = 20.sp, lineHeight = 28.sp)
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+                textStyle = textStyle.copy(color = colors.ink),
+                cursorBrush = SolidColor(colors.accent),
+                singleLine = true,
+                keyboardOptions = keyboardOptions,
+                visualTransformation = visualTransformation,
+                interactionSource = interaction,
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                style = textStyle,
+                                color = colors.inkTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+            if (trailing != null) {
+                Spacer(Modifier.width(12.dp))
+                trailing()
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(underline))
+    }
+}
+
+@Composable
+internal fun SegmentedControl(
+    options: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    testTags: List<String>? = null,
+) {
+    val colors = deepDeepColors()
+    val segmentShape = RoundedCornerShape(11.dp)
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.wash),
+    ) {
+        val segmentWidth = maxWidth / options.size
+        val animatedIndex by animateFloatAsState(
+            targetValue = selectedIndex.coerceIn(0, options.lastIndex).toFloat(),
+            animationSpec = DdMotion.SegmentedSpring,
+            label = "onboarding-segment-index",
+        )
+        val indicatorAlpha by animateFloatAsState(
+            targetValue = if (selectedIndex in options.indices) 1f else 0f,
+            animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+            label = "onboarding-segment-alpha",
+        )
+        Box(
+            Modifier
+                .offset(x = segmentWidth * animatedIndex)
+                .width(segmentWidth)
+                .fillMaxHeight()
+                .padding(4.dp),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = indicatorAlpha }
+                    .shadow(2.dp, segmentShape)
+                    .clip(segmentShape)
+                    .background(colors.surface),
+            )
+        }
+        Row(Modifier.fillMaxSize().selectableGroup()) {
+            options.forEachIndexed { index, label ->
+                val selected = index == selectedIndex
+                val textColor by animateColorAsState(
+                    targetValue = if (selected) colors.ink else colors.inkTertiary,
+                    animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+                    label = "onboarding-segment-text-$index",
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .then(if (testTags != null) Modifier.testTag(testTags[index]) else Modifier)
+                        .selectable(
+                            selected = selected,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.RadioButton,
+                            onClick = { onSelect(index) },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = label, style = DdType.label, color = textColor, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingRow(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String? = null,
+) {
+    val colors = deepDeepColors()
+    Column(modifier.fillMaxWidth()) {
+        DdPressable(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+            shape = RoundedCornerShape(10.dp),
+        ) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = text, modifier = Modifier.weight(1f), style = DdType.body, color = colors.ink)
+                Spacer(Modifier.width(8.dp))
+                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = 0.7f), size = 16.dp)
+            }
+        }
+        DdHairline()
+    }
+}
+
+@Composable
+internal fun OnboardingPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val colors = deepDeepColors()
+    val background = if (enabled) colors.accent else colors.accent.copy(alpha = 0.32f)
+    val contentColor = if (enabled) colors.onAccent else colors.onAccent.copy(alpha = 0.85f)
+    DdPressable(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().height(54.dp),
+        shape = RoundedCornerShape(15.dp),
+        background = background,
+        enabled = enabled,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier.weight(1f),
+                style = DdType.button,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(12.dp))
+            DdIcon(
+                icon = DdIcons.ArrowLeft,
+                tint = contentColor,
+                modifier = Modifier.graphicsLayer { rotationZ = 180f },
+                size = 19.dp,
+            )
+        }
     }
 }
 

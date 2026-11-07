@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,8 +58,8 @@ import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdMotion
-import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
@@ -95,7 +97,7 @@ fun OnboardingScreen(
 
     var step by rememberSaveable { mutableIntStateOf(STEP_WELCOME) }
     var nickname by rememberSaveable { mutableStateOf("") }
-    var toneName by rememberSaveable { mutableStateOf(TonePreset.CUSTOM.name) }
+    var toneName by rememberSaveable { mutableStateOf(TonePreset.WARM.name) }
     var languageTag by rememberSaveable { mutableStateOf(languagePreferences.read().tag) }
     var avatarVersion by remember { mutableIntStateOf(0) }
     var providerId by rememberSaveable { mutableStateOf(ProviderCatalog.DEFAULT_PROVIDER_ID) }
@@ -256,8 +258,14 @@ fun OnboardingScreen(
 
     val primaryLabel = when (step) {
         STEP_WELCOME -> stringResource(R.string.onboarding_primary_start)
+        STEP_PROVIDER -> stringResource(R.string.onboarding_primary_connect)
         STEP_PRIVILEGE -> stringResource(R.string.onboarding_primary_done)
         else -> stringResource(R.string.onboarding_primary_continue)
+    }
+    val hint = when (step) {
+        STEP_WELCOME -> stringResource(R.string.onboarding_welcome_note)
+        STEP_PRIVILEGE -> stringResource(R.string.onboarding_privilege_note)
+        else -> null
     }
     val secondaryLabel = when (step) {
         STEP_PROVIDER -> stringResource(R.string.onboarding_skip)
@@ -265,7 +273,7 @@ fun OnboardingScreen(
         else -> null
     }
     val savingKey = step == STEP_PROVIDER && keyState == KEY_STATE_SAVING
-    val primaryEnabled = !savingKey
+    val primaryEnabled = !savingKey && (step != STEP_ACCOUNT || nickname.isNotBlank())
     val secondaryEnabled = !savingKey
 
     BackHandler(onBack = ::back)
@@ -273,7 +281,7 @@ fun OnboardingScreen(
     Column(
         modifier
             .fillMaxSize()
-            .background(colors.paper)
+            .background(colors.surface)
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()
@@ -363,6 +371,7 @@ fun OnboardingScreen(
             primaryEnabled = primaryEnabled,
             primaryTestTag = if (step == STEP_PRIVILEGE) "onboarding_privilege_done" else "onboarding_primary",
             onPrimary = ::primaryAction,
+            hint = hint,
             secondaryLabel = secondaryLabel,
             secondaryEnabled = secondaryEnabled,
             onSecondary = ::goNext,
@@ -388,6 +397,7 @@ private fun OnboardingFooter(
     primaryEnabled: Boolean,
     primaryTestTag: String,
     onPrimary: () -> Unit,
+    hint: String?,
     secondaryLabel: String?,
     secondaryEnabled: Boolean,
     onSecondary: () -> Unit,
@@ -397,16 +407,23 @@ private fun OnboardingFooter(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 12.dp),
+            .padding(top = 6.dp, bottom = 10.dp),
     ) {
-        DdPrimaryButton(
+        OnboardingPrimaryButton(
             text = primaryLabel,
             onClick = onPrimary,
             enabled = primaryEnabled,
             modifier = Modifier.fillMaxWidth().testTag(primaryTestTag),
         )
         Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
-            if (secondaryLabel != null) {
+            if (hint != null) {
+                Text(
+                    text = hint,
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                    textAlign = TextAlign.Center,
+                )
+            } else if (secondaryLabel != null) {
                 DdTextAction(
                     text = secondaryLabel,
                     onClick = onSecondary,
@@ -424,7 +441,7 @@ fun OnboardingSplash(modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
     Box(
-        modifier.fillMaxSize().background(colors.paper),
+        modifier.fillMaxSize().background(colors.surface),
         contentAlignment = Alignment.Center,
     ) {
         AnimatedVisibility(

@@ -1,34 +1,46 @@
 <resources>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_progress_description">Step %1$d of %2$d</string>
-    <string name="onboarding_primary_start">Start</string>
+    <string name="onboarding_step_counter">%1$02d / %2$02d</string>
+
+    <string name="onboarding_primary_start">Get started</string>
     <string name="onboarding_primary_continue">Continue</string>
-    <string name="onboarding_primary_done">Done</string>
-    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_primary_connect">Connect and continue</string>
+    <string name="onboarding_primary_done">Let\'s chat</string>
+    <string name="onboarding_skip">Set up later</string>
     <string name="onboarding_later">Later</string>
 
-    <string name="onboarding_welcome_tagline">Your personal agent</string>
+    <string name="onboarding_welcome_title">Hi,\nI\'m DeepDeep.</string>
+    <string name="onboarding_welcome_lead">Your everyday AI assistant.\nFrom daily chores to new ideas.</string>
+    <string name="onboarding_welcome_note">A few steps. You can change them anytime.</string>
 
-    <string name="onboarding_account_title">Say hello</string>
-    <string name="onboarding_account_subtitle">You can change these later in Settings.</string>
+    <string name="onboarding_account_title">A little about you</string>
+    <string name="onboarding_account_subtitle">Make every conversation feel like yours.</string>
+    <string name="onboarding_account_note">You can change these later in Settings.</string>
     <string name="onboarding_avatar_pick">Choose avatar</string>
     <string name="onboarding_avatar_failed">Couldn\'t save the avatar</string>
-    <string name="onboarding_nickname_label">Name</string>
+    <string name="onboarding_nickname_label">Your name</string>
     <string name="onboarding_nickname_hint">What should I call you?</string>
-    <string name="onboarding_tone_label">Tone</string>
+    <string name="onboarding_tone_label">Communication style</string>
     <string name="onboarding_tone_warm">Warm</string>
     <string name="onboarding_tone_cute">Playful</string>
     <string name="onboarding_tone_calm">Calm</string>
     <string name="onboarding_language_label">Language</string>
-    <string name="onboarding_language_system">System</string>
+    <string name="onboarding_language_system">System default</string>
     <string name="onboarding_language_chinese">简体中文</string>
     <string name="onboarding_language_english">English</string>
 
-    <string name="onboarding_provider_title">Connect a model</string>
-    <string name="onboarding_provider_subtitle">DeepSeek is recommended, or pick another provider.</string>
+    <string name="onboarding_provider_title">Connect your model</string>
+    <string name="onboarding_provider_subtitle">Pick a provider and start chatting.</string>
+    <string name="onboarding_provider_section">Provider</string>
     <string name="onboarding_provider_recommended">Recommended</string>
+    <string name="onboarding_provider_deepseek_body">Fast, affordable, great at Chinese</string>
+    <string name="onboarding_provider_models">Models: %1$d</string>
+    <string name="onboarding_provider_choose_other">Choose another provider</string>
     <string name="onboarding_provider_api_key_label">API key</string>
     <string name="onboarding_provider_api_key_hint">Paste your API key</string>
+    <string name="onboarding_provider_key_show">Show API key</string>
+    <string name="onboarding_provider_key_hide">Hide API key</string>
     <string name="onboarding_provider_key_saving">Saving…</string>
     <string name="onboarding_provider_key_saved">Saved</string>
     <string name="onboarding_provider_key_failed">Couldn\'t save. Try again.</string>
@@ -39,9 +51,6 @@
     <string name="onboarding_provider_oauth_sign_out">Sign out</string>
     <string name="onboarding_provider_oauth_failed">Sign-in failed</string>
     <string name="onboarding_provider_extra_config">Extra setup needed. Connect it in Settings → Providers.</string>
-    <string name="onboarding_provider_other">Other providers</string>
-    <string name="onboarding_provider_other_count">Other providers: %1$d</string>
-    <string name="onboarding_provider_models">Models: %1$d</string>
     <string name="onboarding_provider_search">Search providers</string>
     <string name="onboarding_search_clear">Clear</string>
     <string name="onboarding_provider_no_result">No matching providers</string>
@@ -67,8 +76,9 @@
     <string name="onboarding_linux_install">Install on device</string>
     <string name="onboarding_linux_unsupported">This device doesn\'t support the Linux environment. You can skip this step.</string>
 
-    <string name="onboarding_privilege_title">Choose a privilege level</string>
-    <string name="onboarding_privilege_subtitle">You can change this anytime in Settings → Permissions.</string>
+    <string name="onboarding_privilege_title">How much access?</string>
+    <string name="onboarding_privilege_subtitle">The standard mode covers bash and everyday tools. You can upgrade anytime.</string>
+    <string name="onboarding_privilege_note">You can change this later in Settings.</string>
     <string name="onboarding_privilege_normal">Standard</string>
     <string name="onboarding_privilege_normal_body">No authorization needed. Uses bash and common tools inside Linux.</string>
     <string name="onboarding_privilege_adb">Wireless debugging ADB</string>

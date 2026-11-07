@@ -60,6 +60,8 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 
+private val chatTracking = (-0.2).sp
+
 private val tableCellStyle = DdType.bodySmall.copy(fontSize = 14.sp, lineHeight = 20.sp)
 private val tableHeaderStyle = tableCellStyle.copy(fontWeight = FontWeight.SemiBold)
 
@@ -148,13 +150,14 @@ private fun MarkdownBlockItem(
                     else -> 24.sp
                 },
                 fontWeight = FontWeight.SemiBold,
+                letterSpacing = chatTracking,
             ),
             color = colors.ink,
         )
 
         is MarkdownBlock.Paragraph -> InlineCodeText(
             rendered = rememberedInline(block.text, document, colors, onFileClick),
-            style = DdType.body,
+            style = DdType.body.copy(letterSpacing = chatTracking),
             color = colors.ink,
         )
 

@@ -706,7 +706,7 @@ private fun EmptyState(
                         Spacer(Modifier.height(16.dp))
                     } else {
                         Image(
-                            painter = painterResource(R.drawable.mascot_welcome),
+                            painter = painterResource(R.drawable.mascot_wave),
                             contentDescription = null,
                             modifier = Modifier.size(148.dp),
                             contentScale = ContentScale.Fit,
