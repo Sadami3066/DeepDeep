@@ -4,6 +4,8 @@ import android.content.Context
 import dev.pi.ai.auth.oauth.OAuthRuntime
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
+import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AppPreferences
@@ -122,6 +124,8 @@ class AppGraph(context: Context) : AppDependencies {
 
     override val host: AgentRuntimeHost get() = runtimeGraph.host
     override val conversationStore: ConversationStore get() = runtimeGraph.conversationStore
+    override val memory: MemoryStore get() = runtimeGraph.memory
+    override val memoryRecap: MemoryRecap get() = runtimeGraph.memoryRecapService
     override val miniappAgentService: MiniappAgentService get() = runtimeGraph.miniappAgentService
 
     val notificationCenter: NotificationCenter get() = serviceGraph.notificationCenter

@@ -1,0 +1,29 @@
+<resources>
+    <string name="memory_title">记忆</string>
+    <string name="memory_back">返回</string>
+    <string name="memory_loading">正在读取记忆状态…</string>
+    <string name="memory_profile">profile.md</string>
+    <string name="memory_context">context.md</string>
+    <string name="memory_playbook">playbook.md</string>
+    <string name="memory_daily">日志</string>
+    <string name="memory_index">搜索索引</string>
+    <string name="memory_snapshot">注入快照</string>
+    <string name="memory_size">占用</string>
+    <string name="memory_path">数据目录</string>
+    <string name="memory_chars">%1$d 字符</string>
+    <string name="memory_context_value">%1$d 个项目 · %2$d 字符</string>
+    <string name="memory_days">%1$d 天</string>
+    <string name="memory_index_value">%1$d 个片段 · %2$d ms</string>
+    <string name="memory_snapshot_value">%1$s · %2$s</string>
+    <string name="memory_snapshot_none">尚未生成</string>
+    <string name="memory_snapshot_dirty">待刷新</string>
+    <string name="memory_summarize">沉淀当前会话</string>
+    <string name="memory_rebuild">重建搜索索引</string>
+    <string name="memory_refresh">刷新状态</string>
+    <string name="memory_no_session">当前没有打开的会话</string>
+    <string name="memory_too_short">对话内容太少，未生成纪要</string>
+    <string name="memory_summarizing">正在沉淀当前会话…</string>
+    <string name="memory_summarized">已写入今天的日志</string>
+    <string name="memory_rebuild_done">索引已重建：%1$d 个片段</string>
+    <string name="memory_reason_manual">手动</string>
+</resources>

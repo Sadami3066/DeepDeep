@@ -5,6 +5,7 @@
     <string name="drawer_nav_mcp">MCP</string>
     <string name="drawer_nav_plugins">插件</string>
     <string name="drawer_nav_timer">定时任务</string>
+    <string name="drawer_nav_memory">记忆</string>
     <string name="drawer_account_hint">个人账户</string>
     <string name="drawer_archived_title">已归档</string>
     <string name="drawer_archived_empty">还没有已归档的对话</string>

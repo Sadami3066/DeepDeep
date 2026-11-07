@@ -23,6 +23,8 @@ import dev.pi.coding.tools.CodingTool
 import dev.pi.coding.tools.FileMutationQueue
 import dev.pi.coding.tools.ShellExecutor
 import dev.pi.coding.tools.defaultCodingTools
+import io.github.whywood.deepdeep.runtime.memory.MemoryStore
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.time.OffsetDateTime
 import okio.FileSystem
@@ -43,6 +45,7 @@ class PiSessionEngine(
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
     private val supportsChatDelivery: Boolean = true,
+    private val memory: MemoryStore? = null,
     internal val hooks: RuntimeHooks = RuntimeHooks.None,
 ) : SessionEngine {
     val cwd: Path = workspace.absolutePath.toPath()
@@ -58,6 +61,14 @@ class PiSessionEngine(
         extraSystemPromptSections: Map<String, String> = emptyMap(),
     ): AgentSession {
         ensureSystemPromptFile(agentDirectory.toFile())
+        try {
+            memory?.ensure()
+            memory?.refresh("session_start")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logWarn("Memory", "memory startup failed", error)
+        }
         val fallback = providers.resolveConfig(config ?: ModelConfig())
         val restored = if (file == null) {
             null
@@ -81,6 +92,18 @@ class PiSessionEngine(
             val context = hooks.systemContext?.invoke()?.takeIf { it.isNotBlank() } ?: return emptyMap()
             return mapOf("plugin_context" to wrapPromptSection("plugin_context", context))
         }
+        suspend fun memoryContextSections(): Map<String, String> {
+            val text = try {
+                memory?.section()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                logWarn("Memory", "memory section failed", error)
+                null
+            } ?: return emptyMap()
+            if (text.isBlank()) return emptyMap()
+            return mapOf("memory" to wrapPromptSection("memory", escapePromptXml(text)))
+        }
         val currentSections: suspend () -> Map<String, String> = {
             val session = created
             buildSessionSystemPromptSections(
@@ -91,7 +114,7 @@ class PiSessionEngine(
                 now = OffsetDateTime.now(),
                 sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                extra = mapOf(
+                extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",
                         "技能目录：${agentDirectory / "skills"}。App 私有数据目录：${agentDirectory.parent?.parent ?: agentDirectory}（/data/data 等价），bash 与文件工具按同一真实路径读写。",
@@ -130,6 +153,10 @@ class PiSessionEngine(
         binding.attach(session)
         hooks.onSessionBound?.invoke(binding)
         return session
+    }
+
+    internal fun captureMemory(sessionId: String, sessionFile: String?, entries: List<dev.pi.coding.session.SessionEntry>?) {
+        memory?.capture(sessionId, sessionFile, entries)
     }
 
     internal suspend fun prepareInput(text: String, images: List<ImagePart>): PreparedPrompt {
@@ -277,7 +304,14 @@ internal class PiSessionHandle(
 
     override suspend fun close() {
         val sessionId = session.sessionId
+        val entries = try {
+            session.sessionManager.getBranch()
+        } catch (error: Exception) {
+            null
+        }
+        val sessionFile = session.sessionFile?.toString()
         session.close()
+        engine.captureMemory(sessionId, sessionFile, entries)
         engine.hooks.onSessionClosed?.let { it(sessionId) }
     }
 

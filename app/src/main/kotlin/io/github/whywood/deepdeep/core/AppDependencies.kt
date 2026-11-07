@@ -30,6 +30,8 @@ import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SkillCatalog
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.MiniappStore
+import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
+import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
@@ -101,6 +103,10 @@ interface FeatureDependencies {
     val jobRegistry: JobRegistry
 
     val timerService: TimerService
+
+    val memory: MemoryStore
+
+    val memoryRecap: MemoryRecap
 }
 
 interface ServiceDependencies {

@@ -154,6 +154,7 @@ fun DeepDeepDrawer(
     onOpenMcp: () -> Unit,
     onOpenPlugins: () -> Unit,
     onOpenTimers: () -> Unit,
+    onOpenMemory: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
@@ -267,6 +268,12 @@ fun DeepDeepDrawer(
                 label = stringResource(R.string.drawer_nav_timer),
                 onClick = onOpenTimers,
                 testTag = "drawer_timer",
+            )
+            DrawerNavItem(
+                icon = DdIcons.Brain,
+                label = stringResource(R.string.drawer_nav_memory),
+                onClick = onOpenMemory,
+                testTag = "drawer_memory",
             )
         }
         Spacer(Modifier.height(14.dp))

@@ -1,0 +1,29 @@
+<resources>
+    <string name="memory_title">Memory</string>
+    <string name="memory_back">Back</string>
+    <string name="memory_loading">Reading memory status…</string>
+    <string name="memory_profile">profile.md</string>
+    <string name="memory_context">context.md</string>
+    <string name="memory_playbook">playbook.md</string>
+    <string name="memory_daily">Daily logs</string>
+    <string name="memory_index">Search index</string>
+    <string name="memory_snapshot">Snapshot</string>
+    <string name="memory_size">Size</string>
+    <string name="memory_path">Data directory</string>
+    <string name="memory_chars">%1$d chars</string>
+    <string name="memory_context_value">%1$d projects · %2$d chars</string>
+    <string name="memory_days">%1$d days</string>
+    <string name="memory_index_value">%1$d chunks · %2$d ms</string>
+    <string name="memory_snapshot_value">%1$s · %2$s</string>
+    <string name="memory_snapshot_none">Not generated</string>
+    <string name="memory_snapshot_dirty">Refresh pending</string>
+    <string name="memory_summarize">Summarize this conversation</string>
+    <string name="memory_rebuild">Rebuild search index</string>
+    <string name="memory_refresh">Refresh status</string>
+    <string name="memory_no_session">No open conversation</string>
+    <string name="memory_too_short">Conversation too short to summarize</string>
+    <string name="memory_summarizing">Summarizing this conversation…</string>
+    <string name="memory_summarized">Written to today’s log</string>
+    <string name="memory_rebuild_done">Index rebuilt: %1$d chunks</string>
+    <string name="memory_reason_manual">manual</string>
+</resources>

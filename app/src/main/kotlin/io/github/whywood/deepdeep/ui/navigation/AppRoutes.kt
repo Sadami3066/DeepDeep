@@ -26,6 +26,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappDetailRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.MemoryRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.WorkspaceSettingsRoute
 import io.github.whywood.deepdeep.ui.settings.AndroidSettingsScreen
@@ -169,6 +170,12 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             chatViewModel = host.chatViewModel,
             conversationId = host.chat.conversationId,
             navigator = host.navigator,
+            onBack = onBack,
+        )
+
+        AppDestination.Memory -> MemoryRoute(
+            dependencies = dependencies,
+            conversationId = host.chat.conversationId,
             onBack = onBack,
         )
 

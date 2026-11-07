@@ -121,6 +121,11 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Memory : AppDestination {
+        override val routeKey: String = "memory"
+        override val depth: Int = 1
+    }
+
     data object Plugins : AppDestination {
         override val routeKey: String = "plugins"
         override val depth: Int = 1
@@ -189,6 +194,7 @@ sealed interface AppDestination {
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp
             routeKey == Timers.routeKey -> Timers
+            routeKey == Memory.routeKey -> Memory
             routeKey == Plugins.routeKey -> Plugins
             routeKey == Miniapp.routeKey -> Miniapp
             routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> {

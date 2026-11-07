@@ -98,3 +98,13 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `MiniappAgentService.kt` | 页面发起的一次性 Agent：临时引擎、工具裁剪与 `hooksFactory`（同一套插件钩子/会话绑定） |
 | `MiniappAgentSupport.kt` | 小程序 Agent 的事件映射、请求校验/模型与工具选择、技能复制与资源文件系统 |
 | `MiniappAgent.kt` | 一次性 Agent 的请求、事件与网关模型 |
+
+### 长期记忆
+
+| 文件 | 职责 |
+|---|---|
+| `MemoryMarkdown.kt` | 记忆文本工具：日期与时间戳、预览/截断、二级标题分段与注入段渲染（16K 预算） |
+| `MemoryStore.kt` | `agent/memory` 下 profile/context/playbook/daily 四类文件：原子写、stable 快照、BM25 语料、纪要去重与压缩前 handoff |
+| `MemorySearch.kt` | 自研 BM25 检索：中文 bigram、拉丁分词与片段摘要 |
+| `MemoryTools.kt` | `memory_write / memory_read / memory_search / memory_status` 四个工具 |
+| `MemoryRecap.kt` | 会话关闭与手动纪要：会话事件转录、便宜模型候选、四段摘要写入当天 daily |

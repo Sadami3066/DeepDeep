@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.graph
 
 import dev.pi.coding.tools.CodingTool
+import dev.pi.coding.session.SessionEvent
 import io.github.whywood.deepdeep.arrange.AndroidArrangeCalendarGateway
 import io.github.whywood.deepdeep.arrange.arrangeTools
 import io.github.whywood.deepdeep.conversation.ConversationStore
@@ -19,6 +20,9 @@ import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RunLedger
+import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
+import io.github.whywood.deepdeep.runtime.memory.MemoryStore
+import io.github.whywood.deepdeep.runtime.memory.memoryTools
 import io.github.whywood.deepdeep.runtime.todoWriteTool
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
 import io.github.whywood.deepdeep.runtime.SessionBinding
@@ -57,6 +61,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     }
 
     private val arrangeCalendar by lazy { AndroidArrangeCalendarGateway(deps.appContext) }
+
+    private val memoryStore = MemoryStore(File(deps.agentDir, "memory"))
+
+    private val memoryRecap = MemoryRecap(memoryStore, deps.providerCatalog, deps.scope)
 
     private fun availableShellBackends(): List<PrivilegeLevel> =
         shellBackendsFor(deps.privilege().state.value.effective)
@@ -124,6 +132,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         addAll(timerTools(deps.timerService(), binding))
         addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
         add(miniappEditTool(deps.miniappStore))
+        addAll(memoryTools(memoryStore) { binding.current()?.sessionId })
         if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.privilege().state.value.effective)) {
             addAll(deps.screenTools())
             addAll(deps.virtualScreenTools())
@@ -138,7 +147,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding -> deps.pluginManager().bindSessionHooks(binding, delegate) },
-            onSessionClosed = { sessionId -> deps.pluginManager().onSessionClosed(sessionId) },
+            onSessionClosed = { sessionId ->
+                deps.pluginManager().onSessionClosed(sessionId)
+                memoryRecap.launchSessionClose(sessionId)
+            },
         )
     }
 
@@ -154,6 +166,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             toolContext = appToolContext,
+            memory = memoryStore,
             hooks = pluginRuntimeHooks(),
         )
     }
@@ -212,6 +225,26 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
                     deps.questionCenter.pending.value.any { question -> question.sessionId == sessionId }
             },
         )
+    }
+
+    val memory: MemoryStore get() = memoryStore
+
+    val memoryRecapService: MemoryRecap get() = memoryRecap
+
+    init {
+        deps.scope.launch {
+            host.sdkEvents.collect { event ->
+                if (event.event is SessionEvent.CompactionStarted) {
+                    try {
+                        memoryStore.onCompaction(event.sessionId)
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        android.util.Log.w("Memory", "compaction handoff failed", error)
+                    }
+                }
+            }
+        }
     }
 
     val conversationStore: ConversationStore by lazy {

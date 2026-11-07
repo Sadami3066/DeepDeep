@@ -15,6 +15,7 @@ class HostToolNamesTest {
             "job_start", "job_output", "job_list", "job_kill",
             "timer_create", "timer_list", "timer_update", "timer_delete",
             "miniapp_create", "miniapp_load", "miniapp_list", "miniapp_delete", "miniapp_edit",
+            "memory_write", "memory_read", "memory_search", "memory_status",
             "web_search", "web_fetch", "arrange_calendar", "virtual_screen",
             "screen_status", "screen_observe", "screen_screenshot", "screen_tap", "screen_swipe",
             "screen_scroll", "screen_type", "screen_key", "screen_wait", "screen_list_apps", "screen_launch",
