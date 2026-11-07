@@ -116,10 +116,8 @@ internal fun UsageHabitsRoute(dependencies: AppDependencies, scope: CoroutineSco
 internal fun FontsRoute(ui: ShellRouteUi, onBack: () -> Unit) {
     FontScreen(
         current = ui.fontStyle,
-        serifChinese = ui.serifChinese,
         onBack = onBack,
         onSelect = ui.onFontStyleChange,
-        onSerifChineseChange = ui.onSerifChineseChange,
     )
 }
 

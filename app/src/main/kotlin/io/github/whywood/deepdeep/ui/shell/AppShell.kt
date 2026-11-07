@@ -86,7 +86,6 @@ internal fun AppShell(
     state: ChatUiState,
     theme: ThemeMode,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
-    serifChinese: Boolean = false,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingDeepDestination: AppDestination? = null,
@@ -94,7 +93,6 @@ internal fun AppShell(
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
-    onSerifChineseChange: (Boolean) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -556,8 +554,6 @@ internal fun AppShell(
                         onThemeChange = onThemeChange,
                         fontStyle = fontStyle,
                         onFontStyleChange = onFontStyleChange,
-                        serifChinese = serifChinese,
-                        onSerifChineseChange = onSerifChineseChange,
                         nickname = nickname,
                         avatar = avatarBitmap,
                         providerName = defaultProvider?.name,

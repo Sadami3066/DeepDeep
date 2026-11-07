@@ -22,8 +22,6 @@ internal data class ShellRouteUi(
     val onThemeChange: (ThemeMode) -> Unit,
     val fontStyle: DdFontStyle,
     val onFontStyleChange: (DdFontStyle) -> Unit,
-    val serifChinese: Boolean,
-    val onSerifChineseChange: (Boolean) -> Unit,
     val nickname: String,
     val avatar: ImageBitmap?,
     val providerName: String?,

@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,19 +33,15 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPressable
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 @Composable
 fun FontScreen(
     current: DdFontStyle,
-    serifChinese: Boolean,
     onBack: () -> Unit,
     onSelect: (DdFontStyle) -> Unit,
-    onSerifChineseChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -83,7 +78,6 @@ fun FontScreen(
                 color = colors.ink,
             )
             Spacer(Modifier.height(20.dp))
-            val chinese = LocalConfiguration.current.locales[0].language == "zh"
             SettingsGroup {
                 DdFontStyle.entries.forEachIndexed { index, style ->
                     if (index > 0) {
@@ -98,27 +92,6 @@ fun FontScreen(
                         },
                         selected = style == current,
                         onClick = { onSelect(style) },
-                    )
-                }
-            }
-            if (chinese) {
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.settings_font_chinese_title),
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-                    style = DdType.chip,
-                    color = colors.inkTertiary,
-                )
-                SettingsGroup {
-                    DdListRow(
-                        title = stringResource(R.string.settings_font_chinese_system),
-                        modifier = Modifier.testTag("font_chinese_switch"),
-                        trailing = {
-                            DdSwitch(
-                                checked = !serifChinese,
-                                onCheckedChange = { checked -> onSerifChineseChange(!checked) },
-                            )
-                        },
                     )
                 }
             }

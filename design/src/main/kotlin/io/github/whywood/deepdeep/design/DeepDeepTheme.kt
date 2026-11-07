@@ -124,7 +124,7 @@ enum class DdFontStyle(val id: String, val displayName: String) {
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: FREDOKA
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: SYSTEM
     }
 }
 
@@ -150,33 +150,16 @@ object DdFonts {
         DdFontStyle.MANROPE to FontFamily(manropeFonts),
         DdFontStyle.SYSTEM to FontFamily(systemFonts),
     )
-    private val serifFamilies = mapOf(
-        DdFontStyle.FREDOKA to FontFamily(fredokaFonts.map { it.withSerifChinese() }),
-        DdFontStyle.OPEN_RUNDE to FontFamily(openRundeFonts.map { it.withSerifChinese() }),
-        DdFontStyle.LORA to FontFamily(loraFonts.map { it.withSerifChinese() }),
-        DdFontStyle.MANROPE to FontFamily(manropeFonts.map { it.withSerifChinese() }),
-        DdFontStyle.SYSTEM to FontFamily(systemFonts.map { it.withSerifChinese() }),
-    )
-
-    var style: DdFontStyle = DdFontStyle.FREDOKA
+    var style: DdFontStyle = DdFontStyle.SYSTEM
         private set
 
-    var serifChinese: Boolean = false
-        private set
-
-    fun apply(style: DdFontStyle, serifChinese: Boolean = false) {
+    fun apply(style: DdFontStyle) {
         this.style = style
-        this.serifChinese = serifChinese
     }
 
-    fun familyFor(style: DdFontStyle): FontFamily = when {
-        style == DdFontStyle.SYSTEM && !serifChinese -> FontFamily.Default
-        serifChinese -> serifFamilies.getValue(style)
-        else -> families.getValue(style)
-    }
+    fun familyFor(style: DdFontStyle): FontFamily = families.getValue(style)
 
     fun preload(context: Context) {
-        if (style == DdFontStyle.SYSTEM && !serifChinese) return
         val fonts = when (style) {
             DdFontStyle.FREDOKA -> fredokaFonts
             DdFontStyle.OPEN_RUNDE -> openRundeFonts
@@ -184,7 +167,7 @@ object DdFonts {
             DdFontStyle.MANROPE -> manropeFonts
             DdFontStyle.SYSTEM -> systemFonts
         }
-        DdCompositeTypefaceLoader.preload(context, if (serifChinese) fonts.map { it.withSerifChinese() } else fonts)
+        DdCompositeTypefaceLoader.preload(context, fonts)
     }
 
     val Sans: FontFamily get() = familyFor(style)
@@ -368,7 +351,6 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 fun DeepDeepTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,
     fontStyle: DdFontStyle = DdFonts.style,
-    serifChinese: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dark = when (mode) {
@@ -377,8 +359,8 @@ fun DeepDeepTheme(
         ThemeMode.DARK -> true
     }
     val colors = if (dark) Dark else Light
-    DdFonts.apply(fontStyle, serifChinese)
-    val typography = remember(fontStyle, serifChinese) { deepDeepTypography() }
+    DdFonts.apply(fontStyle)
+    val typography = remember(fontStyle) { deepDeepTypography() }
     val colorScheme = remember(dark) { colors.materialScheme() }
     CompositionLocalProvider(LocalDeepDeepColors provides colors) {
         MaterialTheme(

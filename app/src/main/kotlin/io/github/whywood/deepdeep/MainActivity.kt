@@ -56,17 +56,15 @@ class MainActivity : ComponentActivity() {
         graph.processRuntime.startAsync()
         requestNotificationPermission()
         val fontStyle = graph.fontPreferences.read()
-        val serifChinese = graph.fontPreferences.readSerifChinese()
         setContent {
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
             val scope = rememberCoroutineScope()
-            DeepDeepTheme(theme, fontStyle, serifChinese) {
+            DeepDeepTheme(theme, fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
                     DeepDeepApp(
                         graph = graph,
                         theme = theme,
                         fontStyle = fontStyle,
-                        serifChinese = serifChinese,
                         openSessionId = pendingSessionId.value,
                         onOpenSessionConsumed = { pendingSessionId.value = null },
                         pendingDeepDestination = pendingDeepDestination.value,
@@ -76,10 +74,6 @@ class MainActivity : ComponentActivity() {
                         onActiveSessionChanged = { graph.activeSessionId.value = it },
                         onFontStyleChange = { style ->
                             graph.fontPreferences.save(style)
-                            recreate()
-                        },
-                        onSerifChineseChange = { enabled ->
-                            graph.fontPreferences.saveSerifChinese(enabled)
                             recreate()
                         },
                         onThemeChange = { mode -> scope.launch { graph.themePreferences.setTheme(mode) } },
