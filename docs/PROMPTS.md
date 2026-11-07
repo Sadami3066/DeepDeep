@@ -81,6 +81,16 @@ ChatViewModel / RuntimeRuns.send
 4. `HostToolNames` 过时：保留已丢弃的 `ls/grep/find`，MCP 资源工具名与 SDK 实际不符，冲突校验漏检。
 5. rules 段冗余与缺失并存：`edit` 5 处同义、`web_*` 重复引用规范、`root/adb` 共用一条；goal/job/timer/miniapp 16 个工具 0 条 guideline。
 
+### 5.1 勘察定稿后追加确认的异常
+
+- **SDK 默认规则被整体覆盖后消失**：SDK 自带 `RULE_CONCISE`（简洁）与 `RULE_FILE_PATHS`（文件路径说明）本应出现在 `rules` 段；App 用同名 `rules` key 整段替换后，这两条不再出现。目前简洁要求只存在于 `DEEP_DEEP_SYSTEM_PROMPT` 一句话里，文件路径规则只靠工具的 `withAbsolutePaths` 描述。
+- **`rules` 段无长度上限**：`buildToolRuleSection` 接收全部工具（含插件工具）的 guideline，无条数/字符上限，`PromptBudgetTest` 只覆盖 4 条全局规则。
+- **两套记忆系统冲突且文案互相矛盾**：内置 `memory_*`（`HostToolNames` 保留名）与 `plugins/deepdeep-memory` 的 `provides.tools` 同名，安装期 `PluginInstaller` 会以 `TOOL_CONFLICT` 整包拒绝；插件 `PROMPT_RULES` 描述的 MEMORY.md/SCRATCHPAD 结构与内置 MemoryMarkdown 实际渲染的 `profile/context/playbook/daily` 不一致。
+- **生产提示词里混入插件调试内容**：`template` 插件的英文 demo 提示段（priority 100）、`interop` 段内嵌的 `InteropState.refreshCount`（每次刷新必变）都会进入 `official_plugins`；后者还会导致每轮 system patch，破坏前缀缓存。
+- **AGENTS.md 无大小限制**：`ResourceLoader` 把命中的 AGENTS/CLAUDE 文件整份读入，逐级向上、不去重；App 侧 64KB 只是编辑器的写入上限。
+
+（插件段实际顺序：`feishu_prompt`/`wecom_prompt`/`micloud`/`interop.debug`（priority 0，按装载序）→ `jwxt_prompt`(10) → `template-hint`(100) → `deepdeep-memory-rules`(120)。完整 22 条可疑点见 `docs/prompts/assembly-chain.md` §12。）
+
 ## 6. 改描述时的注意事项
 
 - 工具 `description` 写「何时用/何时别用/失败后怎么办」，参数语义放 `parameters.description`，不要两边重复。

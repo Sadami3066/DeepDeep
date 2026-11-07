@@ -613,7 +613,7 @@ return sections.joinToString("\n\n") { it.body }
 | template | `plugins/template/src/main/kotlin/io/github/whywood/deepdeep/plugintemplate/TemplatePlugin.kt:92-99` | `template-hint` | 100 | 英文示例：`The template plugin exposes template_echo and template_session demo tools. They are examples for plugin development, not production tools.` |
 | interop | `plugins/interop/.../InteropPlugin.kt:47-52`（正文 `:103-115`） | `interop.debug` | 0 | `The interop debug plugin is active. Contribution refresh counter: <n>. Tools: … interop_send_message is DEFERRED and must be discovered with tool_search. … The context hook injects \`<marker>\` into every system prompt. …` |
 | deepdeep-memory | `plugins/deepdeep-memory/.../DeepDeepMemoryPlugin.kt:45-51`（`PROMPT_RULES` `:188-197`） | `deepdeep-memory-rules` | 120 | `【长期记忆 · deepdeep-memory】` + 7 条：MEMORY.md / daily / SCRATCHPAD 用法、`记住` 必须落盘、先 `memory_search` 不要编造、`memory_forget`、精炼写入、不写密钥 |
-| sample | `plugins/sample/.../SamplePlugin.kt` | — | — | 未重写 `promptSections`（grep 无命中） |
+| sample | `plugins/sample/src/main/kotlin/io/github/whywood/deepdeep/pluginsample/SamplePlugin.kt` | — | — | 未重写 `promptSections`（grep 无命中） |
 
 最终 `<official_plugins>` 内顺序（主会话，按 priority 稳定排序）：`feishu_prompt`、`wecom_prompt`、`micloud`、`interop.debug`（同为 0，取决于装载顺序）→ `jwxt_prompt`(10) → `template-hint`(100) → `deepdeep-memory-rules`(120)。
 
