@@ -13,4 +13,25 @@
     <string name="agent_metadata_model_empty">No configured models. Set up a provider first</string>
     <string name="agent_metadata_cancel">Cancel</string>
     <string name="agent_screen_ops_inactive">Not active: ADB or Root permission required</string>
+    <string name="agent_web_search">Web search</string>
+    <string name="agent_web_search_summary">Configure provider API keys for web_search, with automatic fallback</string>
+    <string name="agent_web_search_value">Configure</string>
+    <string name="web_search_title">Web search</string>
+    <string name="web_search_summary">web_search uses the first configured provider; if none is configured it falls back to DeepSeek.</string>
+    <string name="web_search_section_providers">Providers</string>
+    <string name="web_search_exa">Exa</string>
+    <string name="web_search_exa_summary">Semantic search for research and long-tail questions</string>
+    <string name="web_search_tavily">Tavily</string>
+    <string name="web_search_tavily_summary">Agent-oriented search with concise snippets</string>
+    <string name="web_search_brave">Brave</string>
+    <string name="web_search_brave_summary">Independent index with fresh results</string>
+    <string name="web_search_serper">Serper</string>
+    <string name="web_search_serper_summary">Google results with broad coverage</string>
+    <string name="web_search_configured">Configured</string>
+    <string name="web_search_not_configured">Not configured</string>
+    <string name="web_search_key_hint">Enter API key</string>
+    <string name="web_search_clear">Clear key</string>
+    <string name="web_search_save">Save</string>
+    <string name="web_search_cancel">Cancel</string>
+    <string name="web_search_note">web_fetch still uses DeepSeek. Keys are stored in local encrypted storage.</string>
 </resources>

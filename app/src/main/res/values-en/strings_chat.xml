@@ -145,4 +145,5 @@
     <string name="chat_font_size_title">Text size</string>
     <string name="chat_font_size_value">%1$d%%</string>
     <string name="chat_font_size_preview">This is sample text; the size applies to chat content.</string>
+    <string name="assistant_todo_title">Tasks</string>
 </resources>

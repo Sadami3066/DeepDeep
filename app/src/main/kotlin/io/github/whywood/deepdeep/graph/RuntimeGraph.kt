@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.RunLedger
+import io.github.whywood.deepdeep.runtime.todoWriteTool
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.adbShellTool
@@ -33,12 +34,27 @@ import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.RootStatus
 import io.github.whywood.deepdeep.web.DeepSeekWebProvider
+import io.github.whywood.deepdeep.web.RoutingWebProvider
+import io.github.whywood.deepdeep.web.braveBackend
+import io.github.whywood.deepdeep.web.exaBackend
+import io.github.whywood.deepdeep.web.serperBackend
+import io.github.whywood.deepdeep.web.tavilyBackend
 import io.github.whywood.deepdeep.web.webTools
 import java.io.File
 import kotlinx.coroutines.launch
 
 internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
-    private val webProvider by lazy { DeepSeekWebProvider(deps.apiKeyProvider) }
+    private val webProvider by lazy {
+        RoutingWebProvider(
+            backends = listOf(
+                exaBackend { deps.webSearchKeyProvider("exa") },
+                tavilyBackend { deps.webSearchKeyProvider("tavily") },
+                braveBackend { deps.webSearchKeyProvider("brave") },
+                serperBackend { deps.webSearchKeyProvider("serper") },
+            ),
+            fallback = DeepSeekWebProvider(deps.apiKeyProvider),
+        )
+    }
 
     private val arrangeCalendar by lazy { AndroidArrangeCalendarGateway(deps.appContext) }
 
@@ -97,6 +113,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
                 PrivilegeLevel.NORMAL -> Unit
             }
         }
+        add(todoWriteTool(
+            sessionId = { binding.current()?.sessionId },
+            post = deps.postCustomMessage,
+        ))
         addAll(webTools(webProvider))
         addAll(arrangeTools(arrangeCalendar))
         addAll(goalTools(binding, deps.goalService))

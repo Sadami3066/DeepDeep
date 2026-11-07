@@ -37,7 +37,6 @@ import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
 import io.github.whywood.deepdeep.data.normalizeChatFontScale
 import kotlin.math.roundToInt
-import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -100,7 +99,6 @@ fun ChatSettingsScreen(
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.ChevronDown,
                     title = R.string.settings_auto_collapse_process,
                     checked = preferences.autoCollapseProcess,
                     onCheckedChange = { onToggle(UiToggle.AUTO_COLLAPSE_PROCESS, it) },
@@ -112,21 +110,18 @@ fun ChatSettingsScreen(
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.Refresh,
                     title = R.string.settings_auto_retry,
                     checked = preferences.autoRetry,
                     onCheckedChange = { onToggle(UiToggle.AUTO_RETRY, it) },
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.Terminal,
                     title = R.string.settings_background_job_wake,
                     checked = preferences.backgroundJobWake,
                     onCheckedChange = { onToggle(UiToggle.BACKGROUND_JOB_WAKE, it) },
                 )
                 DdHairline()
                 SwitchRow(
-                    icon = DdIcons.Volume,
                     title = R.string.voice_setting_auto_speak,
                     checked = voiceAutoSpeak,
                     onCheckedChange = onVoiceAutoSpeakChange,
@@ -146,7 +141,6 @@ private fun SendWhileRunningRow(
     val colors = deepDeepColors()
     Box {
         DdListRow(
-            icon = DdIcons.ArrowUp,
             title = stringResource(R.string.settings_send_while_running),
             value = sendWhileRunningLabel(value),
             onClick = { expanded = true },
@@ -161,7 +155,6 @@ private fun SendWhileRunningRow(
             SendWhileRunningMenuItem(
                 selected = value == SendWhileRunning.STEER,
                 label = stringResource(R.string.settings_send_while_running_steer),
-                accent = colors.accent,
                 onClick = {
                     expanded = false
                     onChange(SendWhileRunning.STEER)
@@ -171,7 +164,6 @@ private fun SendWhileRunningRow(
             SendWhileRunningMenuItem(
                 selected = value == SendWhileRunning.QUEUE,
                 label = stringResource(R.string.settings_send_while_running_queue),
-                accent = colors.accent,
                 onClick = {
                     expanded = false
                     onChange(SendWhileRunning.QUEUE)
@@ -186,7 +178,6 @@ private fun SendWhileRunningRow(
 private fun SendWhileRunningMenuItem(
     selected: Boolean,
     label: String,
-    accent: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
     testTag: String,
 ) {
@@ -194,17 +185,6 @@ private fun SendWhileRunningMenuItem(
         text = label,
         onClick = onClick,
         selected = selected,
-        trailing = if (selected) {
-            {
-                DdIcon(
-                    icon = DdIcons.Check,
-                    tint = accent,
-                    size = 18.dp,
-                )
-            }
-        } else {
-            null
-        },
         testTag = testTag,
     )
 }
@@ -219,7 +199,6 @@ private fun sendWhileRunningLabel(value: SendWhileRunning): String = stringResou
 
 @Composable
 private fun SwitchRow(
-    icon: DdIcon,
     @StringRes title: Int,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -228,7 +207,6 @@ private fun SwitchRow(
         if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
     )
     DdListRow(
-        icon = icon,
         title = stringResource(title),
         onClick = { onCheckedChange(!checked) },
         trailing = {

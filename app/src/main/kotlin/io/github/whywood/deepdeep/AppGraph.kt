@@ -110,6 +110,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val skillRepository: SkillRepository get() = dataGraph.skillRepository
     override val agentDocStore: AgentDocStore get() = dataGraph.agentDocStore
     override val capabilitySettingsStore: CapabilitySettingsStore get() = dataGraph.capabilitySettingsStore
+    override val webSearchSettings: io.github.whywood.deepdeep.data.WebSearchSettingsStore get() = dataGraph.webSearchSettings
     override val miniappStore: MiniappStore get() = dataGraph.miniappStore
     override val skillCatalog: SkillCatalog get() = dataGraph.skillCatalog
     override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
@@ -213,6 +214,10 @@ class AppGraph(context: Context) : AppDependencies {
                 dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
                 dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID)
             }
+        },
+        webSearchKeyProvider = { providerId -> dataGraph.webSearchSettings.key(providerId) },
+        postCustomMessage = { sessionId, customType, payload, text ->
+            host.postPluginMessage(sessionId, customType, payload, text)
         },
         screenTools = { platformGraph.screenToolset.tools() },
         virtualScreenTools = { platformGraph.virtualScreenFeature.tools() },

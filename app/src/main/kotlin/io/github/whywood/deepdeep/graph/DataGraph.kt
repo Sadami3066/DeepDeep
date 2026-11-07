@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
+import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
@@ -94,6 +95,7 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     )
     val agentDocStore = AgentDocStore()
     val capabilitySettingsStore = CapabilitySettingsStore(File(deps.appContext.filesDir, "capabilities.json"))
+    val webSearchSettings = WebSearchSettingsStore(secretStore)
     val bundledSkills = BundledSkills.fromAssets(
         assets = deps.appContext.assets,
         repoDir = File(deps.appContext.filesDir, "skills"),

@@ -96,6 +96,11 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data object WebSearch : AppDestination {
+        override val routeKey: String = "settings/web-search"
+        override val depth: Int = 3
+    }
+
     data object Search : AppDestination {
         override val routeKey: String = "search"
         override val depth: Int = 1
@@ -179,6 +184,7 @@ sealed interface AppDestination {
             routeKey == Permission.routeKey -> Permission
             routeKey == AndroidSettings.routeKey -> AndroidSettings
             routeKey == AgentSettings.routeKey -> AgentSettings
+            routeKey == WebSearch.routeKey -> WebSearch
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp

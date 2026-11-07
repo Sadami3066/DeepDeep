@@ -108,6 +108,10 @@ internal fun ChatTurn(
     }
     val customType = message.customType
     if (customType != null) {
+        if (customType == "todo_write") {
+            TodoCard(message.customPayload)
+            return
+        }
         val payload = remember(message.customPayload) {
             message.customPayload
                 ?.let { raw -> runCatching { Json.parseToJsonElement(raw).jsonObject }.getOrNull() }

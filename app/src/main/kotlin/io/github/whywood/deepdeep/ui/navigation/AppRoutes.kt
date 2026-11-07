@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.ui.assistant.AssistantSettingsScreen
 import io.github.whywood.deepdeep.ui.mcp.McpScreen
 import io.github.whywood.deepdeep.ui.navigation.routes.ArchivedRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.AgentSettingsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.WebSearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ChatSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FilesRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
@@ -102,6 +103,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             configuredProviderIds = host.ui.configuredProviderIds,
             onBack = onBack,
         )
+
+        AppDestination.WebSearch -> WebSearchRoute(dependencies, onBack)
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
 

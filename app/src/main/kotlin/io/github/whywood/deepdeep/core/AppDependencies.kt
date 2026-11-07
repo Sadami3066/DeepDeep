@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
+import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -80,6 +81,8 @@ interface StorageDependencies {
     val agentDocStore: AgentDocStore
 
     val capabilitySettingsStore: CapabilitySettingsStore
+
+    val webSearchSettings: WebSearchSettingsStore
 }
 
 interface FeatureDependencies {

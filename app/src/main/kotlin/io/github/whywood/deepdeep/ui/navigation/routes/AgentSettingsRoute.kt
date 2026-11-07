@@ -22,7 +22,6 @@ internal fun AgentSettingsRoute(
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val privilegeState by dependencies.privilege.state.collectAsStateWithLifecycle()
     val screenOps by dependencies.capabilitySettingsStore.screenOps.collectAsStateWithLifecycle(
         initialValue = false,
     )
@@ -38,12 +37,11 @@ internal fun AgentSettingsRoute(
         it.providerId == preferences.metadataProviderId && it.id == preferences.metadataModelId
     }
     AgentSettingsScreen(
-        privilege = privilegeState.effective,
         screenOps = screenOps,
         onScreenOpsChange = { enabled ->
             scope.launch { dependencies.capabilitySettingsStore.setScreenOps(enabled) }
         },
-        onOpenPermission = { navigator.push(AppDestination.Permission) },
+        onOpenWebSearch = { navigator.push(AppDestination.WebSearch) },
         metadataMode = preferences.metadataMode,
         metadataModelLabel = selectedModel?.displayName,
         metadataModels = models,

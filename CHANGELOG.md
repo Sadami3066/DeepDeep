@@ -2,6 +2,9 @@
 
 ## HEAD (since m2)
 
+- feat: web_search 支持 Exa/Tavily/Brave/Serper 服务商密钥，按顺序尝试并自动回退 DeepSeek；Agent 设置「能力」新增搜索服务配置页，密钥存入本机加密存储 [工具] [界面]
+- feat: 新增内置 `todo_write` 工具：模型提交完整任务清单，聊天内渲染任务清单卡片（待办/进行中/已完成），校验去重与单进行中 [工具] [聊天]
+- feat: Agent 设置视觉精简：移除未生效提示与图标，屏幕操作开关改黄色，标题/说明字号与间距调整，会话标题菜单改为与卡片同宽；Android 设置与聊天设置移除行图标 [界面]
 - feat: 会话标题异步命名：新会话先显示用户消息标题，再由后台快速模型生成并回写；Agent 设置新增元数据模式（自动/手动）与命名模型选择，自动优先 DeepSeek Flash、其他 Flash、Haiku、Terra，失败保留原标题并在下次发送重试 [聊天] [界面]
 - fix: miniapp 预览对旧会话生效：旧 present 卡片无入口路径时回退到 `filesDir/miniapp/apps/<id>/manifest.json` 的 entry 解析 [聊天] [小程序]
 - feat: 抽屉工作区行内直接显示置顶与设置图标，移除长按菜单；聊天过程折叠箭头统一改为右向 [界面] [聊天]

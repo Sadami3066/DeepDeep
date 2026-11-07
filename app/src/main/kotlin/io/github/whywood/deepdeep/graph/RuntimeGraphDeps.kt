@@ -56,6 +56,8 @@ internal class RuntimeGraphDeps(
     val capabilitySettingsStore: CapabilitySettingsStore,
     val appPreferences: AppPreferences,
     val apiKeyProvider: suspend () -> String?,
+    val webSearchKeyProvider: suspend (String) -> String?,
+    val postCustomMessage: suspend (String, String, String, String) -> Boolean,
     val screenTools: () -> List<CodingTool>,
     val virtualScreenTools: () -> List<CodingTool>,
 )

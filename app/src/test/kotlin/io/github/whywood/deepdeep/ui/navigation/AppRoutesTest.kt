@@ -22,6 +22,7 @@ class AppRoutesTest {
         AppDestination.Permission,
         AppDestination.AndroidSettings,
         AppDestination.AgentSettings,
+        AppDestination.WebSearch,
         AppDestination.Search,
         AppDestination.Skills,
         AppDestination.Timers,
@@ -38,7 +39,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(22, allDestinations.size)
+        assertEquals(23, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 

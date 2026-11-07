@@ -90,7 +90,6 @@ fun AndroidSettingsScreen(
             Spacer(Modifier.height(8.dp))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Monitor,
                     title = stringResource(R.string.floating_settings_enable),
                     onClick = {
                         val enabled = !floatingSettings.enabled
@@ -115,7 +114,6 @@ fun AndroidSettingsScreen(
                 if (floatingSettings.enabled) {
                     DdHairline()
                     DdListRow(
-                        icon = DdIcons.Shield,
                         title = stringResource(R.string.floating_settings_permission),
                         value = stringResource(
                             if (canDrawOverlays) {
@@ -135,7 +133,6 @@ fun AndroidSettingsScreen(
             Spacer(Modifier.height(8.dp))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Sparkles,
                     title = stringResource(R.string.assistant_settings_role),
                     value = stringResource(
                         if (roleHeld) R.string.assistant_settings_role_held
@@ -153,7 +150,6 @@ fun AndroidSettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Terminal,
                     title = stringResource(R.string.assistant_settings_power),
                     onClick = {
                         val intent = AssistantEntry.powerSettingsIntent(context)
