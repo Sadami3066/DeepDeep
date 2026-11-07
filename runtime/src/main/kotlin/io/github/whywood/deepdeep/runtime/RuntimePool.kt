@@ -23,6 +23,7 @@ internal class RuntimePool(
     private val publishActiveRun: (RuntimeHandle) -> Unit,
     private val clearActiveRun: (String) -> Unit,
     private val emitListChanged: suspend () -> Unit,
+    private val onSessionClosed: (String, SessionCloseReason) -> Unit,
 ) {
     private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
@@ -59,11 +60,11 @@ internal class RuntimePool(
     }
 
     suspend fun close(sessionId: String) {
-        mutex.withLock { detach(sessionId) }
+        mutex.withLock { detach(sessionId, reason = SessionCloseReason.Closed) }
     }
 
     suspend fun detachForget(sessionId: String) {
-        mutex.withLock { detach(sessionId, forget = true) }
+        mutex.withLock { detach(sessionId, forget = true, reason = SessionCloseReason.Deleted) }
     }
 
     suspend fun reload(sessionId: String): String {
@@ -74,7 +75,7 @@ internal class RuntimePool(
             val cwd = handle.cwd
             val selected = lastOpenedSessionId == sessionId
             val lastActiveAt = handle.lastActiveAt
-            detach(sessionId)
+            detach(sessionId, reason = SessionCloseReason.Reload)
             val reopened = attach(cwd, file)
             reopened.lastActiveAt = lastActiveAt
             if (selected) lastOpenedSessionId = reopened.session.sessionId
@@ -116,7 +117,7 @@ internal class RuntimePool(
                     val file = handle.session.sessionFile
                     val selected = lastOpenedSessionId == sessionId
                     val lastActiveAt = handle.lastActiveAt
-                    detach(sessionId, keepReconfigure = true)
+                    detach(sessionId, keepReconfigure = true, reason = SessionCloseReason.Reconfigure)
                     val reopened = attach(cwd, file)
                     reopened.lastActiveAt = lastActiveAt
                     if (selected) lastOpenedSessionId = reopened.session.sessionId
@@ -153,7 +154,7 @@ internal class RuntimePool(
             } ?: continue
             val file = handle.session.sessionFile
             try {
-                closeHandle(handle)
+                closeHandle(handle, SessionCloseReason.Idle)
             } finally {
                 closingSessions.remove(sessionId)
                 if (file != null) closingFiles.remove(file)
@@ -186,9 +187,10 @@ internal class RuntimePool(
         sessionId: String,
         forget: Boolean = false,
         keepReconfigure: Boolean = false,
+        reason: SessionCloseReason = SessionCloseReason.Closed,
     ): RuntimeHandle? {
         val handle = detachLocked(sessionId, forget, keepReconfigure) ?: return null
-        closeHandle(handle)
+        closeHandle(handle, reason)
         publishBusy()
         clearActiveRun(sessionId)
         return handle
@@ -206,10 +208,12 @@ internal class RuntimePool(
         return handle
     }
 
-    private suspend fun closeHandle(handle: RuntimeHandle) {
+    private suspend fun closeHandle(handle: RuntimeHandle, reason: SessionCloseReason) {
         handle.unsubscribe?.invoke()
         handle.unsubscribe = null
+        val sessionId = handle.session.sessionId
         handle.session.close()
+        runCatching { onSessionClosed(sessionId, reason) }
     }
 
     private fun isPersistedSession(handle: RuntimeHandle): Boolean {

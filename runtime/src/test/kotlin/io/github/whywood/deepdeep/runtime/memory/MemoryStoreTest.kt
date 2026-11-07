@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -153,5 +154,30 @@ class MemoryStoreTest {
         assertEquals(2, status.activeProjects)
         assertTrue(status.contextChars > 0)
         assertTrue(status.dailyDays >= 0)
+    }
+
+    @Test
+    fun summaryWatermarkAdvancesWithEachCommit() = runTest {
+        val store = store()
+
+        store.commitSummary("s1", "hash-1", "entry-1")
+
+        assertTrue(store.isSummaryDuplicate("s1", "hash-1"))
+        assertFalse(store.isSummaryDuplicate("s1", "hash-2"))
+        assertEquals("entry-1", store.lastSummarizedEntryId("s1"))
+
+        store.commitSummary("s1", "hash-2", "entry-2")
+
+        assertEquals("entry-2", store.lastSummarizedEntryId("s1"))
+    }
+
+    @Test
+    fun summaryCommitWithoutEntryDoesNotMoveWatermark() = runTest {
+        val store = store()
+
+        store.commitSummary("s1", "hash-1", null)
+
+        assertTrue(store.isSummaryDuplicate("s1", "hash-1"))
+        assertNull(store.lastSummarizedEntryId("s1"))
     }
 }

@@ -10,7 +10,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 |---|---|
 | `AgentRuntimeHost.kt` | 会话总管装配：事件流入口、接口委托与目录适配构造 |
 | `RuntimeHandle.kt` | 单个已打开会话的句柄：引擎、会话、cwd、命令状态、排队输入与活跃时间 |
-| `RuntimePool.kt` | 句柄池：打开/关闭/重载/淘汰/重配与按会话取句柄 |
+| `RuntimePool.kt` | 句柄池：打开/关闭/重载/淘汰/重配与按会话取句柄；关闭时按原因发出 `SessionClosure` |
 | `RuntimeRuns.kt` | 运行编排：发送、排队、重试、提醒、后台回合、停止、终态与事件投影 |
 | `RuntimeMcp.kt` | 对所有已打开会话重载 MCP 配置与重连单台服务器，输出状态日志 |
 | `RuntimeEventTranslator.kt` | 把 SDK 会话/Agent 事件翻译为运行时事件与活动状态 |
@@ -30,6 +30,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `HistoryMapper.kt` | JSONL 条目转消息与工具轨迹（含 rawArguments/结构化 resultPayload），识别定时提醒；工具结果按 toolCallId 回填旧记录，FileRef 从 ToolResultMessage.details 的保留键还原 |
 | `RunLedger.kt` | 落盘未完成运行，重启后提示被中断 |
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
+| `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
 | `SystemPrompt.kt` | 系统提示词文件、全局规则与工具规则合并 |
 | `Personalization.kt` | 称呼、交互风格、共享存储等提示词分节 |
@@ -104,7 +105,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | 文件 | 职责 |
 |---|---|
 | `MemoryMarkdown.kt` | 记忆文本工具：日期与时间戳、预览/截断、二级标题分段与注入段渲染（16K 预算） |
-| `MemoryStore.kt` | `agent/memory` 下 profile/context/playbook/daily 四类文件：原子写、stable 快照、BM25 语料、纪要去重与压缩前 handoff |
+| `MemoryStore.kt` | `agent/memory` 下 profile/context/playbook/daily 四类文件：原子写、stable 快照、BM25 语料、纪要去重与水位、压缩前 handoff |
 | `MemorySearch.kt` | 自研 BM25 检索：中文 bigram、拉丁分词与片段摘要 |
 | `MemoryTools.kt` | `memory_write / memory_read / memory_search / memory_status` 四个工具 |
-| `MemoryRecap.kt` | 会话关闭与手动纪要：会话事件转录、便宜模型候选、四段摘要写入当天 daily |
+| `MemoryRecap.kt` | 闲置/显式关闭与手动纪要：按 entries 水位只总结增量、自适应列表或 SKIP、便宜模型候选，写入当天 daily |

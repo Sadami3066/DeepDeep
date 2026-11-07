@@ -67,6 +67,9 @@ class AgentRuntimeHost internal constructor(
     )
     val sdkEvents: SharedFlow<SessionSdkEvent> = sdkEventsBuffer.asSharedFlow()
 
+    private val sessionClosureBuffer = MutableSharedFlow<SessionClosure>(extraBufferCapacity = 32)
+    val sessionClosures: SharedFlow<SessionClosure> = sessionClosureBuffer.asSharedFlow()
+
     private val busyState = MutableStateFlow<Set<String>>(emptySet())
     override val busySessionIds: StateFlow<Set<String>> = busyState.asStateFlow()
 
@@ -117,6 +120,9 @@ class AgentRuntimeHost internal constructor(
         publishActiveRun = runs::publishActiveRun,
         clearActiveRun = runs::clearActiveRun,
         emitListChanged = runs::emitListChanged,
+        onSessionClosed = { sessionId, reason ->
+            sessionClosureBuffer.tryEmit(SessionClosure(sessionId, reason))
+        },
     )
     init {
         backgroundScope.launch {

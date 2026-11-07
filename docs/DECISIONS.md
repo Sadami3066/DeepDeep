@@ -290,3 +290,15 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 
 代价：后台常驻一个每分钟的轻量扫描；闲置会话被回收后再次进入需要重新 attach（会话文件不变）。
 
+## 113. 记忆纪要改为增量自适应，只在真正结束时触发
+
+原来每次句柄关闭都会触发纪要——包括切换模型引起的 reload/reconfigure、删除会话、闲置回收。同一会话被反复总结，且纪要固定按「决定 / 结论与教训 / 未完成 / 用户情况」四段输出，日常对话被硬套模板。
+
+现在：
+
+- 关闭原因由 `SessionCloseReason` 区分（Idle / Reload / Reconfigure / Deleted / Closed），经 `AgentRuntimeHost.sessionClosures` 事件暴露；只有 Idle（闲置回收）与 Closed（显式关闭）写纪要，其余直接丢弃已抓取的 transcript。
+- `summaries.log` 记录每条纪要的 `sessionId|hash|lastEntryId`，下次只总结该 entry 之后的增量（首次要求 ≥4 条消息，增量 ≥2 条），同一会话的纪要由 per-session Mutex 串行。
+- 纪要 prompt 改为自适应：只列值得跨会话记住的内容（≤6 条），没有可记就输出 `SKIP`；不再固定分段、不再强制分类。
+- 手动「沉淀当前会话」不推进水位，后续自动纪要可能包含已手动总结的内容。
+
+代价：纪要变成分散在当天 daily 的增量列表，时间线上的连续性变弱；水位依赖 JSONL entry id，分支重写时可能跳过一轮。

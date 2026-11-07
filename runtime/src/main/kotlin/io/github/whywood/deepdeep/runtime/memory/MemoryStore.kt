@@ -262,13 +262,31 @@ class MemoryStore(private val rootDir: File) {
     }
 
     internal fun isSummaryDuplicate(sessionId: String, hash: String): Boolean =
-        runCatching { summaryLogFile.isFile && summaryLogFile.readLines().any { it.trim() == "$sessionId|$hash" } }
-            .getOrDefault(false)
+        runCatching {
+            summaryLogFile.isFile && summaryLogFile.readLines().any { line ->
+                val parts = line.split('|')
+                parts.size >= 2 && parts[0] == sessionId && parts[1] == hash
+            }
+        }.getOrDefault(false)
 
-    internal fun markSummary(sessionId: String, hash: String) {
+    internal fun lastSummarizedEntryId(sessionId: String): String? =
+        runCatching {
+            if (!summaryLogFile.isFile) return@runCatching null
+            summaryLogFile.readLines()
+                .map { it.split('|') }
+                .filter { it.size >= 3 && it[0] == sessionId && it[2].isNotBlank() }
+                .lastOrNull()
+                ?.get(2)
+        }.getOrNull()
+
+    internal fun commitSummary(sessionId: String, hash: String, lastEntryId: String?) {
         runCatching {
             if (!summaryLogFile.exists()) summaryLogFile.createNewFile()
-            summaryLogFile.appendText("$sessionId|$hash\n")
+            summaryLogFile.appendText(buildString {
+                append(sessionId).append('|').append(hash)
+                if (!lastEntryId.isNullOrBlank()) append('|').append(lastEntryId)
+                append('\n')
+            })
         }
     }
 

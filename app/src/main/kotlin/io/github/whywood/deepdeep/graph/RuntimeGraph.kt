@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.runtime.PiSessionEngine
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.RootToolStatus
+import io.github.whywood.deepdeep.runtime.SessionCloseReason
 import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
@@ -147,10 +148,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding -> deps.pluginManager().bindSessionHooks(binding, delegate) },
-            onSessionClosed = { sessionId ->
-                deps.pluginManager().onSessionClosed(sessionId)
-                memoryRecap.launchSessionClose(sessionId)
-            },
+            onSessionClosed = { sessionId -> deps.pluginManager().onSessionClosed(sessionId) },
         )
     }
 
@@ -242,6 +240,15 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
                     } catch (error: Exception) {
                         android.util.Log.w("Memory", "compaction handoff failed", error)
                     }
+                }
+            }
+        }
+        deps.scope.launch {
+            host.sessionClosures.collect { closure ->
+                if (closure.reason == SessionCloseReason.Idle || closure.reason == SessionCloseReason.Closed) {
+                    memoryRecap.launchSessionClose(closure.sessionId)
+                } else {
+                    memoryRecap.discard(closure.sessionId)
                 }
             }
         }

@@ -25,5 +25,5 @@
     <string name="memory_summarizing">正在沉淀当前会话…</string>
     <string name="memory_summarized">已写入今天的日志</string>
     <string name="memory_rebuild_done">索引已重建：%1$d 个片段</string>
-    <string name="memory_reason_manual">手动</string>
+    <string name="memory_reason_manual">手动沉淀</string>
 </resources>
