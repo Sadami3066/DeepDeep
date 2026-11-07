@@ -165,7 +165,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Globe,
+                    icon = DdIcons.Cloud,
                     title = stringResource(R.string.settings_provider),
                     value = providerLabel,
                     onClick = onOpenProviders,
@@ -189,7 +189,7 @@ fun SettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Brain,
+                    icon = DdIcons.Sparkles,
                     title = stringResource(R.string.settings_agent),
                     onClick = onOpenAgentSettings,
                     showChevron = true,
@@ -206,7 +206,7 @@ fun SettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Monitor,
+                    icon = DdIcons.Phone,
                     title = stringResource(R.string.settings_android),
                     onClick = onOpenAndroidSettings,
                     showChevron = true,
@@ -281,7 +281,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Shield,
+                    icon = DdIcons.Eye,
                     title = stringResource(R.string.settings_privacy),
                     onClick = onOpenPrivacy,
                     showChevron = true,
@@ -305,10 +305,6 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-            DdGroupCard {
-                PlaceholderRow(DdIcons.ArrowLeft, R.string.settings_sign_out)
-            }
             Spacer(Modifier.height(40.dp))
         }
     }

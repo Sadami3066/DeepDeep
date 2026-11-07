@@ -31,7 +31,6 @@
     <string name="settings_notifications_on">已开启</string>
     <string name="settings_notifications_off">未开启</string>
     <string name="settings_privacy">隐私</string>
-    <string name="settings_sign_out">退出登录</string>
 
     <string name="settings_provider">厂商</string>
     <string name="settings_environment">Linux</string>
@@ -53,8 +52,6 @@
     <string name="settings_license_lora">Lora</string>
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>
     <string name="settings_license_mit">MIT License</string>
-
-    <string name="settings_placeholder">尚未接入</string>
 
     <string name="settings_linux_status_not_installed">未安装</string>
     <string name="settings_linux_status_installing">正在安装…</string>

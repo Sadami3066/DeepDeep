@@ -141,7 +141,6 @@ fun DeepDeepDrawer(
     pinnedWorkspaceIds: Set<String>,
     expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
-    reminderSessionIds: Set<String>,
     userName: String,
     avatar: ImageBitmap?,
     onOpenSearch: () -> Unit,
@@ -320,7 +319,6 @@ fun DeepDeepDrawer(
                     is DrawerEntry.Session -> DrawerSessionRow(
                         conversation = entry.conversation,
                         busy = entry.conversation.id in busySessionIds,
-                        hasReminder = entry.conversation.id in reminderSessionIds,
                         menuExpanded = sessionMenuTarget?.id == entry.conversation.id,
                         menuAnchor = sessionMenuAnchor,
                         modifier = Modifier.animateItem(),
@@ -474,6 +472,15 @@ private fun DrawerWorkspaceRow(
                 overflow = TextOverflow.Ellipsis,
             )
             DdIconButton(
+                icon = DdIcons.Plus,
+                onClick = onNewSession,
+                contentDescription = stringResource(R.string.drawer_workspace_new_session),
+                modifier = Modifier.testTag("workspace_new_session_${workspace.id}"),
+                size = 30.dp,
+                iconSize = 15.dp,
+                tint = colors.inkTertiary,
+            )
+            DdIconButton(
                 icon = DdIcons.Pin,
                 onClick = onTogglePinned,
                 contentDescription = stringResource(
@@ -493,18 +500,6 @@ private fun DrawerWorkspaceRow(
                 iconSize = 14.dp,
                 tint = colors.inkTertiary,
             )
-            if (expanded) {
-                DdIconButton(
-                    icon = DdIcons.Plus,
-                    onClick = onNewSession,
-                    contentDescription = stringResource(R.string.drawer_workspace_new_session),
-                    modifier = Modifier.testTag("workspace_new_session_${workspace.id}"),
-                    size = 30.dp,
-                    iconSize = 15.dp,
-                    tint = colors.inkTertiary,
-                )
-                Spacer(Modifier.width(2.dp))
-            }
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 tint = colors.inkTertiary,
@@ -609,7 +604,6 @@ private fun DrawerNavItem(
 private fun DrawerSessionRow(
     conversation: ConversationSummary,
     busy: Boolean,
-    hasReminder: Boolean,
     menuExpanded: Boolean,
     menuAnchor: Offset,
     onClick: () -> Unit,
@@ -659,8 +653,6 @@ private fun DrawerSessionRow(
                 .padding(start = 34.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(icon = if (hasReminder) DdIcons.Clock else DdIcons.Message, tint = colors.inkTertiary, size = 13.dp)
-            Spacer(Modifier.width(6.dp))
             Text(
                 text = conversation.title,
                 modifier = Modifier.weight(1f),

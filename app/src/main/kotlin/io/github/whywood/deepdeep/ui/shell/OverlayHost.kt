@@ -200,7 +200,6 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 pinnedWorkspaceIds = state.pinnedWorkspaceIds,
                 expandedWorkspaceIds = state.expandedWorkspaceIds,
                 busySessionIds = state.busySessionIds,
-                reminderSessionIds = state.reminderSessionIds,
                 userName = state.userName,
                 avatar = state.avatar,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },

@@ -1,7 +1,5 @@
 package io.github.whywood.deepdeep.ui.settings
 
-import android.widget.Toast
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,12 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -54,21 +49,5 @@ internal fun StatusPill(text: String, active: Boolean) {
         style = DdType.chip,
         color = if (active) colors.accent else colors.inkTertiary,
         maxLines = 1,
-    )
-}
-
-@Composable
-internal fun PlaceholderRow(
-    icon: DdIcon,
-    @StringRes title: Int,
-) {
-    val context = LocalContext.current
-    DdListRow(
-        icon = icon,
-        title = stringResource(title),
-        value = stringResource(R.string.settings_placeholder),
-        onClick = {
-            Toast.makeText(context, R.string.settings_placeholder, Toast.LENGTH_SHORT).show()
-        },
     )
 }
