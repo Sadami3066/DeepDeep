@@ -28,7 +28,12 @@ data class UiPreferences(
     val pinnedWorkspaceIds: Set<String> = emptySet(),
     val chatFontScale: Float = CHAT_FONT_SCALE_DEFAULT,
     val sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER,
+    val metadataMode: SessionNamingMode = SessionNamingMode.AUTO,
+    val metadataProviderId: String = "",
+    val metadataModelId: String = "",
 )
+
+enum class SessionNamingMode { AUTO, MANUAL }
 
 const val CHAT_FONT_SCALE_MIN = 0.85f
 const val CHAT_FONT_SCALE_MAX = 1.4f
@@ -59,6 +64,9 @@ class AppPreferences(context: Context) {
     private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
     private val chatFontScaleKey = floatPreferencesKey("chat_font_scale")
     private val sendWhileRunningKey = stringPreferencesKey("send_while_running")
+    private val metadataModeKey = stringPreferencesKey("metadata_mode")
+    private val metadataProviderKey = stringPreferencesKey("metadata_provider")
+    private val metadataModelKey = stringPreferencesKey("metadata_model")
 
     val preferences: Flow<UiPreferences> = store.data
         .map { values ->
@@ -71,6 +79,11 @@ class AppPreferences(context: Context) {
                 sendWhileRunning = values[sendWhileRunningKey]
                     ?.let { stored -> SendWhileRunning.entries.firstOrNull { it.name == stored } }
                     ?: SendWhileRunning.STEER,
+                metadataMode = values[metadataModeKey]
+                    ?.let { stored -> SessionNamingMode.entries.firstOrNull { it.name == stored } }
+                    ?: SessionNamingMode.AUTO,
+                metadataProviderId = values[metadataProviderKey].orEmpty(),
+                metadataModelId = values[metadataModelKey].orEmpty(),
             )
         }
         .catch { error ->
@@ -95,6 +108,17 @@ class AppPreferences(context: Context) {
 
     suspend fun setSendWhileRunning(value: SendWhileRunning) {
         store.edit { it[sendWhileRunningKey] = value.name }
+    }
+
+    suspend fun setMetadataMode(value: SessionNamingMode) {
+        store.edit { it[metadataModeKey] = value.name }
+    }
+
+    suspend fun setMetadataModel(providerId: String, modelId: String) {
+        store.edit { values ->
+            values[metadataProviderKey] = providerId
+            values[metadataModelKey] = modelId
+        }
     }
 
     suspend fun setWorkspacePinned(workspaceId: String, pinned: Boolean) {

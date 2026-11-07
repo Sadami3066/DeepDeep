@@ -2,6 +2,9 @@
 
 ## HEAD (since m2)
 
+- feat: 会话标题异步命名：新会话先显示用户消息标题，再由后台快速模型生成并回写；Agent 设置新增元数据模式（自动/手动）与命名模型选择，自动优先 DeepSeek Flash、其他 Flash、Haiku、Terra，失败保留原标题并在下次发送重试 [聊天] [界面]
+- fix: miniapp 预览对旧会话生效：旧 present 卡片无入口路径时回退到 `filesDir/miniapp/apps/<id>/manifest.json` 的 entry 解析 [聊天] [小程序]
+- feat: 抽屉工作区行内直接显示置顶与设置图标，移除长按菜单；聊天过程折叠箭头统一改为右向 [界面] [聊天]
 - feat: 插件主动消息：`ChatService.sendMessage` 支持显示卡片、起新轮、运行中插话/排队（`triggerTurn`/`deliverAs`），运行时新增 `TurnSource.PLUGIN` 与 `deliverPluginTurn`，聊天显示「来自插件」[插件] [运行时] [聊天]
 - feat: 插件工具按需加载：`PluginTool.exposure`（DIRECT/DEFERRED），宿主默认提供 `tool_search`/`tool_execute`，MCP deferred 工具按名执行且不加载进会话；`plugin-api` 升 0.7.0 / apiLevel 4，pi SDK 升 0.5.0 [插件] [运行时] [架构]
 - feat: 插件能力清单：manifest 新增 `capabilities` 声明（18 项），安装确认与详情展示，宿主只注入声明过的服务，未声明调用抛 `PluginServiceUnavailable`；`plugin-api` 升 0.6.0 / apiLevel 3 [插件] [架构]

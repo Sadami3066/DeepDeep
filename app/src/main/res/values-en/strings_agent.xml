@@ -2,6 +2,15 @@
 <resources>
     <string name="settings_agent">Agent</string>
     <string name="agent_settings_title">Agent settings</string>
-    <string name="agent_privilege">Permission level</string>
+    <string name="agent_section_capabilities">Capabilities</string>
+    <string name="agent_section_metadata">Metadata</string>
+    <string name="agent_metadata_title">Session titles</string>
+    <string name="agent_metadata_summary">Use a fast model to name sessions; keep the user message title until it succeeds</string>
+    <string name="agent_metadata_auto">Auto</string>
+    <string name="agent_metadata_manual">Manual</string>
+    <string name="agent_metadata_model">Naming model</string>
+    <string name="agent_metadata_model_pick">Pick a model</string>
+    <string name="agent_metadata_model_empty">No configured models. Set up a provider first</string>
+    <string name="agent_metadata_cancel">Cancel</string>
     <string name="agent_screen_ops_inactive">Not active: ADB or Root permission required</string>
 </resources>

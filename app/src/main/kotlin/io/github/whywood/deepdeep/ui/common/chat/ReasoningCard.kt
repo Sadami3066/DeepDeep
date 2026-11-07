@@ -50,7 +50,7 @@ internal fun ReasoningCard(
     val colors = deepDeepColors()
     val expanded = step.expanded
     val rotation = animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
+        targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "reasoning-chevron",
     )
@@ -121,7 +121,7 @@ internal fun ReasoningCard(
             }
             Spacer(Modifier.size(2.dp))
             DdIcon(
-                icon = DdIcons.ChevronDown,
+                icon = DdIcons.ChevronRight,
                 modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 12.dp,

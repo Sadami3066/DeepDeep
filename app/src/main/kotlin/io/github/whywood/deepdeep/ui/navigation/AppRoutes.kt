@@ -99,6 +99,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.AgentSettings -> AgentSettingsRoute(
             dependencies = dependencies,
             navigator = host.navigator,
+            configuredProviderIds = host.ui.configuredProviderIds,
             onBack = onBack,
         )
 

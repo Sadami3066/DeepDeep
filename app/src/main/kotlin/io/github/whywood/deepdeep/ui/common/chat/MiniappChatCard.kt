@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,10 +65,7 @@ fun parseRegisteredMiniapp(trace: ToolTrace): MiniappCardApp? {
             name = name,
             icon = app.stringOrNull("icon")?.trim().orEmpty().ifBlank { ICON_FALLBACK },
             version = app.stringOrNull("version")?.trim().orEmpty().ifBlank { MiniappManifest.DEFAULT_VERSION },
-            entryPath = directory.takeIf { it.isNotEmpty() }
-                ?.let { File(it, "index.html") }
-                ?.takeIf { it.isFile }
-                ?.absolutePath,
+            entryPath = directory.takeIf { it.isNotEmpty() }?.let { resolveMiniappEntry(File(it)) },
         )
     } catch (_: Exception) {
         null
@@ -94,7 +93,11 @@ fun MiniappChatCard(
                 .fillMaxWidth()
                 .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape),
         ) {
-            val preview = app.entryPath
+            val context = LocalContext.current
+            val preview = remember(context, app.id, app.entryPath) {
+                app.entryPath?.takeIf { File(it).isFile }
+                    ?: File(context.filesDir, "miniapp/apps/${app.id}").let(::resolveMiniappEntry)
+            }
             if (preview != null) {
                 HtmlFileView(
                     path = preview,
@@ -137,6 +140,14 @@ fun MiniappChatCard(
             }
         }
     }
+}
+
+private fun resolveMiniappEntry(directory: File): String? {
+    if (!directory.isDirectory) return null
+    val entry = runCatching {
+        MiniappManifest.parse(File(directory, "manifest.json").readText()).entry
+    }.getOrDefault(MiniappManifest.DEFAULT_ENTRY)
+    return File(directory, entry).takeIf { it.isFile }?.absolutePath
 }
 
 private fun JsonObject.stringOrNull(name: String): String? =

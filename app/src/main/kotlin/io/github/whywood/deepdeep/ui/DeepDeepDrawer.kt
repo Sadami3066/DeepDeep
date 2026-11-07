@@ -44,12 +44,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -58,8 +56,6 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdMenu
-import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
@@ -170,8 +166,6 @@ fun DeepDeepDrawer(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var workspaceMenuTarget by remember { mutableStateOf<RuntimeWorkspace?>(null) }
-    var workspaceMenuAnchor by remember { mutableStateOf(Offset.Zero) }
     var sessionMenuTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var sessionMenuAnchor by remember { mutableStateOf(Offset.Zero) }
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
@@ -283,8 +277,6 @@ fun DeepDeepDrawer(
                         first = entry.first,
                         pinned = entry.workspace.id in pinnedWorkspaceIds,
                         expanded = entry.workspace.id in expandedWorkspaceIds,
-                        menuExpanded = workspaceMenuTarget?.id == entry.workspace.id,
-                        menuAnchor = workspaceMenuAnchor,
                         modifier = Modifier.animateItem(),
                         onToggleExpanded = {
                             if (entry.workspace.id in expandedWorkspaceIds) {
@@ -292,11 +284,6 @@ fun DeepDeepDrawer(
                             }
                             onToggleWorkspaceExpanded(entry.workspace.id)
                         },
-                        onLongClick = { offset ->
-                            workspaceMenuAnchor = offset
-                            workspaceMenuTarget = entry.workspace
-                        },
-                        onDismissMenu = { workspaceMenuTarget = null },
                         onTogglePinned = { onToggleWorkspacePinned(entry.workspace.id) },
                         onNewSession = { onNewSessionInWorkspace(entry.workspace.id) },
                         onSettings = { onWorkspaceSettings(entry.workspace.id) },
@@ -430,11 +417,7 @@ private fun DrawerWorkspaceRow(
     first: Boolean,
     pinned: Boolean,
     expanded: Boolean,
-    menuExpanded: Boolean,
-    menuAnchor: Offset,
     onToggleExpanded: () -> Unit,
-    onLongClick: (Offset) -> Unit,
-    onDismissMenu: () -> Unit,
     onTogglePinned: () -> Unit,
     onNewSession: () -> Unit,
     onSettings: () -> Unit,
@@ -443,9 +426,6 @@ private fun DrawerWorkspaceRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    val haptic = LocalHapticFeedback.current
-    val hapticsEnabled = LocalHapticsEnabled.current
-    val density = LocalDensity.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val wash by animateFloatAsState(
@@ -477,10 +457,6 @@ private fun DrawerWorkspaceRow(
                             }
                         },
                         onTap = { onToggleExpanded() },
-                        onLongPress = { offset ->
-                            if (hapticsEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onLongClick(offset)
-                        },
                     )
                 }
                 .testTag("workspace_${workspace.id}")
@@ -497,10 +473,26 @@ private fun DrawerWorkspaceRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (pinned) {
-                DdIcon(icon = DdIcons.Pin, tint = colors.inkTertiary, size = 12.dp)
-                Spacer(Modifier.width(6.dp))
-            }
+            DdIconButton(
+                icon = DdIcons.Pin,
+                onClick = onTogglePinned,
+                contentDescription = stringResource(
+                    if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin,
+                ),
+                modifier = Modifier.testTag("workspace_pin_${workspace.id}"),
+                size = 30.dp,
+                iconSize = 14.dp,
+                tint = if (pinned) colors.accent else colors.inkTertiary,
+            )
+            DdIconButton(
+                icon = DdIcons.Settings,
+                onClick = onSettings,
+                contentDescription = stringResource(R.string.drawer_workspace_settings),
+                modifier = Modifier.testTag("workspace_settings_${workspace.id}"),
+                size = 30.dp,
+                iconSize = 14.dp,
+                tint = colors.inkTertiary,
+            )
             if (expanded) {
                 DdIconButton(
                     icon = DdIcons.Plus,
@@ -521,54 +513,6 @@ private fun DrawerWorkspaceRow(
                     .graphicsLayer { rotationZ = chevronRotation }
                     .testTag("workspace_chevron_${workspace.id}"),
             )
-        }
-        DdMenu(
-            expanded = menuExpanded,
-            onDismissRequest = onDismissMenu,
-            offset = with(density) { DpOffset(menuAnchor.x.toDp(), menuAnchor.y.toDp() - 24.dp) },
-            menuWidth = 176.dp,
-        ) {
-            DdMenuItem(
-                text = stringResource(
-                    if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin,
-                ),
-                onClick = {
-                    onDismissMenu()
-                    onTogglePinned()
-                },
-                icon = DdIcons.Pin,
-                testTag = "workspace_action_pin",
-            )
-            DdMenuItem(
-                text = stringResource(R.string.drawer_workspace_settings),
-                onClick = {
-                    onDismissMenu()
-                    onSettings()
-                },
-                icon = DdIcons.Settings,
-                testTag = "workspace_action_settings",
-            )
-            if (!workspace.isHome) {
-                DdMenuItem(
-                    text = stringResource(R.string.drawer_action_rename),
-                    onClick = {
-                        onDismissMenu()
-                        onRename()
-                    },
-                    icon = DdIcons.Compose,
-                    testTag = "workspace_action_rename",
-                )
-                DdMenuItem(
-                    text = stringResource(R.string.drawer_action_delete),
-                    onClick = {
-                        onDismissMenu()
-                        onDelete()
-                    },
-                    icon = DdIcons.Trash,
-                    destructive = true,
-                    testTag = "workspace_action_delete",
-                )
-            }
         }
     }
 }

@@ -12,6 +12,7 @@ import dev.pi.coding.session.QueueBehavior
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 
 internal class RuntimeRuns(
     private val mutex: Mutex,
@@ -28,6 +30,7 @@ internal class RuntimeRuns(
     private val busyState: MutableStateFlow<Set<String>>,
     private val activeRunState: MutableStateFlow<Map<String, ActiveRunSnapshot>>,
     private val backgroundScope: CoroutineScope,
+    private val titleNamer: SessionTitleNamer? = null,
     private val runLedger: RunLedger,
     private val goalDriver: GoalDriver?,
     private val handleFor: suspend (String) -> RuntimeHandle,
@@ -389,10 +392,44 @@ internal class RuntimeRuns(
         }
     }
 
+    private val titleJobs = ConcurrentHashMap<String, Job>()
+    private val titleFirstTexts = ConcurrentHashMap<String, String>()
+
     private suspend fun ensureTitle(handle: RuntimeHandle, text: String) {
-        if (handle.session.sessionName() != null) return
-        handle.session.appendTitle(handle.engine.titleFor(text))
-        emitListChanged()
+        val namer = titleNamer ?: return
+        val sessionId = handle.session.sessionId
+        val current = handle.session.sessionName()
+        val first = titleFirstTexts[sessionId] ?: run {
+            if (current != null) return
+            val history = handle.session.history()
+            val firstText = history.firstOrNull { it.role == AssistantRole.USER && it.reminder == null }?.text ?: text
+            titleFirstTexts[sessionId] = firstText
+            firstText
+        }
+        val fallback = handle.engine.titleFor(first)
+        if (current == null) {
+            handle.session.appendTitle(fallback)
+            emitListChanged()
+        } else if (current != fallback) {
+            titleFirstTexts.remove(sessionId)
+            return
+        }
+        if (titleJobs[sessionId]?.isActive == true) return
+        titleJobs[sessionId] = backgroundScope.launch {
+            try {
+                val title = withTimeout(15_000) { namer.title(first) } ?: return@launch
+                if (handle.session.sessionName() != fallback) return@launch
+                handle.session.appendTitle(title)
+                titleFirstTexts.remove(sessionId)
+                emitListChanged()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                logWarn(TAG, "title naming failed session=$sessionId", error)
+            } finally {
+                titleJobs.remove(sessionId)
+            }
+        }
     }
 
     internal fun emit(handle: RuntimeHandle, event: RuntimeEvent) {

@@ -214,8 +214,8 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
             }
             Spacer(Modifier.weight(1f))
             DdIcon(
-                icon = DdIcons.ChevronDown,
-                modifier = Modifier.rotate(if (expanded) 180f else 0f),
+                icon = DdIcons.ChevronRight,
+                modifier = Modifier.rotate(if (expanded) 90f else 0f),
                 tint = colors.inkTertiary,
                 size = 14.dp,
             )

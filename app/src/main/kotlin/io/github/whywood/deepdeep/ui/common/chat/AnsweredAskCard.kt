@@ -60,7 +60,7 @@ internal fun AnsweredAskCard(
         if (skippedCount > 0) "$base · ${stringResource(R.string.ask_card_skipped)}" else base
     }
     val rotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
+        targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "answered-ask-chevron",
     )
@@ -90,7 +90,7 @@ internal fun AnsweredAskCard(
             )
             Spacer(Modifier.width(8.dp))
             DdIcon(
-                icon = DdIcons.ChevronDown,
+                icon = DdIcons.ChevronRight,
                 modifier = Modifier.rotate(rotation),
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 12.dp,

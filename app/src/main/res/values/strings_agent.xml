@@ -2,6 +2,15 @@
 <resources>
     <string name="settings_agent">Agent</string>
     <string name="agent_settings_title">Agent 设置</string>
-    <string name="agent_privilege">权限级别</string>
+    <string name="agent_section_capabilities">能力</string>
+    <string name="agent_section_metadata">元数据</string>
+    <string name="agent_metadata_title">会话标题</string>
+    <string name="agent_metadata_summary">自动选择快速模型为会话命名；失败时保留用户消息标题</string>
+    <string name="agent_metadata_auto">自动</string>
+    <string name="agent_metadata_manual">手动</string>
+    <string name="agent_metadata_model">命名模型</string>
+    <string name="agent_metadata_model_pick">选择模型</string>
+    <string name="agent_metadata_model_empty">暂无已配置的模型，请先在厂商设置中配置</string>
+    <string name="agent_metadata_cancel">取消</string>
     <string name="agent_screen_ops_inactive">未生效：需要 ADB 或 Root 权限</string>
 </resources>

@@ -339,6 +339,38 @@ class AgentRuntimeHostTest {
         AgentEvent.ToolExecutionStart("call-$name", name, JsonObject(emptyMap())),
     )
 
+    @Test
+    fun namesNewSessionAsynchronously() = runTest {
+        val fixture = Fixture(backgroundScope, titleNamer = { "AI 标题" })
+        try {
+            val handle = fixture.open("session-1")
+            fixture.host.send("session-1", "hello world")
+            settle()
+            assertEquals("AI 标题", handle.sessionNameValue)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun keepsFallbackAndRetriesNamingOnNextSend() = runTest {
+        var calls = 0
+        val fixture = Fixture(backgroundScope, titleNamer = { calls++; null })
+        try {
+            val handle = fixture.open("session-1")
+            fixture.host.send("session-1", "same")
+            settle()
+            assertEquals("same", handle.sessionNameValue)
+            assertEquals(1, calls)
+            fixture.host.send("session-1", "same")
+            settle()
+            assertEquals("same", handle.sessionNameValue)
+            assertEquals(2, calls)
+        } finally {
+            fixture.close()
+        }
+    }
+
     private fun toolEnd(name: String): SessionEvent = SessionEvent.AgentEventReceived(
         AgentEvent.ToolExecutionEnd("call-$name", name, AgentToolResult(), false),
     )
@@ -368,7 +400,10 @@ class AgentRuntimeHostTest {
         ),
     )
 
-    private class Fixture(private val scope: CoroutineScope) {
+    private class Fixture(
+        private val scope: CoroutineScope,
+        private val titleNamer: SessionTitleNamer? = null,
+    ) {
         val homeDir: File = Files.createTempDirectory("host-home").toFile()
         val workspacesDir: File = Files.createTempDirectory("host-workspaces").toFile()
         val engine = FakeSessionEngine()
@@ -388,6 +423,7 @@ class AgentRuntimeHostTest {
             providers = providers,
             backgroundScope = scope,
             goalDriver = goalDriver,
+            titleNamer = titleNamer,
             sessionCleaner = null,
             sessionArchived = null,
         )

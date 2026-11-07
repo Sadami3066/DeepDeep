@@ -4,6 +4,7 @@ import android.content.Context
 import dev.pi.ai.http.HttpTransport
 import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.conversation.ConversationState
+import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -53,6 +54,7 @@ internal class RuntimeGraphDeps(
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,
     val capabilitySettingsStore: CapabilitySettingsStore,
+    val appPreferences: AppPreferences,
     val apiKeyProvider: suspend () -> String?,
     val screenTools: () -> List<CodingTool>,
     val virtualScreenTools: () -> List<CodingTool>,

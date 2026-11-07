@@ -76,7 +76,7 @@ internal fun ProcessSection(
         else -> true
     }
     val rotation = animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
+        targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "process-chevron",
     )
@@ -186,7 +186,7 @@ internal fun ProcessSection(
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(2.dp))
                 DdIcon(
-                    icon = DdIcons.ChevronDown,
+                    icon = DdIcons.ChevronRight,
                     modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                     tint = colors.inkTertiary.copy(alpha = 0.7f),
                     size = 13.dp,

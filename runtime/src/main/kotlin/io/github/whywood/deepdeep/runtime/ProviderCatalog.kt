@@ -1,11 +1,18 @@
 package io.github.whywood.deepdeep.runtime
 
+import dev.pi.ai.Context
 import dev.pi.ai.Model
+import dev.pi.ai.Models
+import dev.pi.ai.PlainTextContent
 import dev.pi.ai.Provider
+import dev.pi.ai.StreamOptions
+import dev.pi.ai.TextContent
+import dev.pi.ai.UserMessage
 import dev.pi.ai.auth.CredentialStore
 import dev.pi.ai.auth.oauth.bundledOAuthFlows
 import dev.pi.ai.http.HttpTransport
 import dev.pi.ai.providers.builtinProviders
+import java.util.UUID
 
 class ProviderCatalog(
     transport: HttpTransport,
@@ -13,6 +20,7 @@ class ProviderCatalog(
 ) : ProviderDirectory {
     private val providerMap: Map<String, Provider> = builtinProviders(transport, credentials)
         .associateBy { it.id }
+    private val registry = Models(providerMap.toMutableMap())
 
     override val summaries: List<ProviderSummary> = providerMap.values.map { provider ->
         ProviderSummary(
@@ -49,6 +57,38 @@ class ProviderCatalog(
     }
 
     override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
+
+    suspend fun complete(providerId: String, modelId: String, prompt: String): String? {
+        val provider = providerMap[providerId] ?: run {
+            android.util.Log.w("SessionTitle", "provider not found: $providerId")
+            return null
+        }
+        val model = provider.models.firstOrNull { it.id == modelId } ?: run {
+            android.util.Log.w("SessionTitle", "model not found: $providerId/$modelId")
+            return null
+        }
+        val message = registry.complete(
+            model = model,
+            context = Context(
+                messages = listOf(UserMessage(PlainTextContent(prompt), System.currentTimeMillis())),
+            ),
+            options = StreamOptions(
+                maxTokens = 4096,
+                temperature = 0.3,
+                timeoutMs = 20_000,
+                sessionId = UUID.randomUUID().toString(),
+            ),
+        )
+        val text = message.content
+            .mapNotNull { (it as? TextContent)?.text }
+            .joinToString("")
+            .trim()
+        if (text.isBlank()) {
+            android.util.Log.w("SessionTitle", "empty completion $providerId/$modelId stop=${message.stopReason} error=${message.errorMessage} parts=${message.content.map { it::class.simpleName }}")
+            return null
+        }
+        return text
+    }
 
     fun modelsForConfiguredProviders(): List<ModelOption> =
         summaries.flatMap { models(it.id) }

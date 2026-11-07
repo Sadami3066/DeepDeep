@@ -4,6 +4,7 @@ import dev.pi.coding.tools.CodingTool
 import io.github.whywood.deepdeep.arrange.AndroidArrangeCalendarGateway
 import io.github.whywood.deepdeep.arrange.arrangeTools
 import io.github.whywood.deepdeep.conversation.ConversationStore
+import io.github.whywood.deepdeep.core.SessionTitleService
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
@@ -169,6 +170,11 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             providers = deps.providerCatalog,
             backgroundScope = deps.scope,
             goalDriver = deps.goalService,
+            titleNamer = SessionTitleService(
+                catalog = deps.providerCatalog,
+                credentials = deps.credentials,
+                preferences = deps.appPreferences,
+            ),
             sessionCleaner = { sessionId: String ->
                 deps.jobRegistry().clearSession(sessionId)
                 deps.scope.launch { deps.goalService.clearSession(sessionId) }

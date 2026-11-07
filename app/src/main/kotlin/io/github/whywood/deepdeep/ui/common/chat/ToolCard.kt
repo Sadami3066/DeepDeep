@@ -66,7 +66,7 @@ internal fun ToolCard(
 ) {
     val colors = deepDeepColors()
     val rotation = animateFloatAsState(
-        targetValue = if (tool.expanded) 180f else 0f,
+        targetValue = if (tool.expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "tool-chevron",
     )
@@ -158,7 +158,7 @@ internal fun ToolCard(
             }
             Spacer(Modifier.width(4.dp))
             DdIcon(
-                icon = DdIcons.ChevronDown,
+                icon = DdIcons.ChevronRight,
                 modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 12.dp,

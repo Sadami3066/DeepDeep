@@ -151,7 +151,7 @@ fun AskQuestionCard(
         label = "ask-card-progress",
     )
     val rotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
+        targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
         label = "ask-card-chevron",
     )
@@ -268,7 +268,7 @@ fun AskQuestionCard(
                 Spacer(Modifier.width(6.dp))
             }
             DdIcon(
-                icon = DdIcons.ChevronDown,
+                icon = DdIcons.ChevronRight,
                 modifier = Modifier.rotate(rotation),
                 tint = colors.inkTertiary.copy(alpha = 0.7f),
                 size = 13.dp,

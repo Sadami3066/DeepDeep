@@ -25,6 +25,7 @@ class AgentRuntimeHost internal constructor(
     private val providers: ProviderDirectory,
     private val backgroundScope: CoroutineScope,
     private val goalDriver: GoalDriver?,
+    private val titleNamer: SessionTitleNamer? = null,
     private val sessionCleaner: ((String) -> Unit)?,
     private val sessionArchived: ((String) -> Unit)?,
     private val runLedger: RunLedger = RunLedger(null),
@@ -40,6 +41,7 @@ class AgentRuntimeHost internal constructor(
         providers: ProviderCatalog,
         backgroundScope: CoroutineScope,
         goalDriver: GoalDriver? = null,
+        titleNamer: SessionTitleNamer? = null,
         sessionCleaner: ((String) -> Unit)? = null,
         sessionArchived: ((String) -> Unit)? = null,
         runLedger: RunLedger = RunLedger(null),
@@ -47,7 +49,7 @@ class AgentRuntimeHost internal constructor(
     ) : this(
         homeDir, workspacesDir, { cwd -> engineFactory(cwd) }, modelConfigStore,
         CatalogSessionDirectory(catalog), WorkspaceStoreDirectory(workspaceStore),
-        providers, backgroundScope, goalDriver, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
+        providers, backgroundScope, goalDriver, titleNamer, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
     )
 
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
@@ -82,6 +84,7 @@ class AgentRuntimeHost internal constructor(
         busyState = busyState,
         activeRunState = activeRunState,
         backgroundScope = backgroundScope,
+        titleNamer = titleNamer,
         runLedger = runLedger,
         goalDriver = goalDriver,
         handleFor = ::handleFor,
