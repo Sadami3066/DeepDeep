@@ -2,7 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 object HandleBudget {
     const val MAX_HANDLES = 6
-    const val IDLE_TTL_MS = 10 * 60 * 1000L
+    const val IDLE_TTL_MS = 3 * 60 * 1000L
 
     data class Entry(
         val sessionId: String,
