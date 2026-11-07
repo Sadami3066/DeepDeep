@@ -182,7 +182,7 @@ internal class ContinuousVoiceSession(context: Context) {
         }
 
         private fun createRecognizer(): SpeechRecognizer? {
-            val speech = runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }.getOrNull()
+            val speech = createSpeechRecognizer(appContext)
             if (speech == null) {
                 fail(SpeechError.UNAVAILABLE)
                 return null

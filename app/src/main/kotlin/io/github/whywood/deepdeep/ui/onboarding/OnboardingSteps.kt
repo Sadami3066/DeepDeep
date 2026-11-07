@@ -19,7 +19,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,12 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -119,52 +114,15 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(280.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val middle = center
-                    val minSide = size.minDimension
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(colors.accent.copy(alpha = 0.14f), Color.Transparent),
-                            center = middle,
-                            radius = minSide * 0.5f,
-                        ),
-                        radius = minSide * 0.5f,
-                        center = middle,
-                    )
-                    drawCircle(
-                        color = colors.accent.copy(alpha = 0.16f),
-                        radius = minSide * 0.36f,
-                        center = middle,
-                        style = Stroke(width = 1.dp.toPx()),
-                    )
-                    drawCircle(
-                        color = colors.accent.copy(alpha = 0.08f),
-                        radius = minSide * 0.46f,
-                        center = middle,
-                        style = Stroke(width = 1.dp.toPx()),
-                    )
-                    drawCircle(
-                        color = colors.accent.copy(alpha = 0.40f),
-                        radius = 2.dp.toPx(),
-                        center = Offset(middle.x - minSide * 0.33f, middle.y - minSide * 0.24f),
-                    )
-                    drawCircle(
-                        color = colors.accent.copy(alpha = 0.26f),
-                        radius = 1.5.dp.toPx(),
-                        center = Offset(middle.x + minSide * 0.35f, middle.y + minSide * 0.20f),
-                    )
-                }
-                Image(
-                    painter = painterResource(R.drawable.mascot_welcome),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(196.dp)
-                        .graphicsLayer { translationY = offset.dp.toPx() },
-                    contentScale = ContentScale.Fit,
-                )
-            }
-            Spacer(Modifier.height(20.dp))
+            Image(
+                painter = painterResource(R.drawable.mascot_welcome),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(208.dp)
+                    .graphicsLayer { translationY = offset.dp.toPx() },
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.height(24.dp))
             DdWordmark(
                 color = colors.ink,
                 dotColor = colors.accent,
@@ -208,7 +166,6 @@ internal fun AccountStep(
         StepHeading(
             title = stringResource(R.string.onboarding_account_title),
             subtitle = stringResource(R.string.onboarding_account_subtitle),
-            icon = DdIcons.Sparkles,
         )
         Spacer(Modifier.height(28.dp))
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -330,7 +287,6 @@ internal fun ProviderStep(
         StepHeading(
             title = stringResource(R.string.onboarding_provider_title),
             subtitle = stringResource(R.string.onboarding_provider_subtitle),
-            icon = DdIcons.Cloud,
         )
         Spacer(Modifier.height(24.dp))
         DdGroupCard {
@@ -487,7 +443,6 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
         StepHeading(
             title = stringResource(R.string.onboarding_permissions_title),
             subtitle = stringResource(R.string.onboarding_permissions_subtitle),
-            icon = DdIcons.Shield,
         )
         Spacer(Modifier.height(24.dp))
         DdGroupCard {
@@ -545,7 +500,6 @@ internal fun LinuxStep(
         StepHeading(
             title = stringResource(R.string.onboarding_linux_title),
             subtitle = stringResource(R.string.onboarding_linux_subtitle),
-            icon = DdIcons.Terminal,
         )
         Spacer(Modifier.height(24.dp))
         DdGroupCard {
@@ -644,7 +598,6 @@ internal fun PrivilegeStep(
         StepHeading(
             title = stringResource(R.string.onboarding_privilege_title),
             subtitle = stringResource(R.string.onboarding_privilege_subtitle),
-            icon = DdIcons.Target,
         )
         Spacer(Modifier.height(24.dp))
         DdGroupCard {

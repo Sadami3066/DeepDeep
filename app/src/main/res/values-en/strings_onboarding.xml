@@ -9,19 +9,6 @@
 
     <string name="onboarding_welcome_tagline">Your personal agent</string>
 
-    <string name="onboarding_feature_memory_title">Memory</string>
-    <string name="onboarding_feature_memory_body">Remembers your preferences and context across conversations.</string>
-    <string name="onboarding_feature_connector_title">Connectors</string>
-    <string name="onboarding_feature_connector_body">Connect MCP servers and use their tools right in chat.</string>
-    <string name="onboarding_feature_skills_title">Skills &amp; plugins</string>
-    <string name="onboarding_feature_skills_body">Install skill packs and plugins to extend what it can do.</string>
-    <string name="onboarding_feature_timers_title">Timers</string>
-    <string name="onboarding_feature_timers_body">Runs on schedule and delivers results back to the conversation.</string>
-    <string name="onboarding_feature_ask_title">Questions &amp; delivery</string>
-    <string name="onboarding_feature_ask_body">Asks when it needs your call, and delivers files, images and pages.</string>
-    <string name="onboarding_feature_privacy_title">Privacy &amp; local data</string>
-    <string name="onboarding_feature_privacy_body">Chats go only to your chosen provider; data stays on this device.</string>
-
     <string name="onboarding_account_title">Say hello</string>
     <string name="onboarding_account_subtitle">You can change these later in Settings.</string>
     <string name="onboarding_avatar_pick">Choose avatar</string>

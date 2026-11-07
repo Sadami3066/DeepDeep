@@ -7,13 +7,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
@@ -74,6 +74,13 @@ internal fun MemoryScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = if (preview != null) preview.title else stringResource(R.string.memory_title),
+                modifier = Modifier.weight(1f),
+                style = DdType.heading,
+                color = colors.ink,
+            )
         },
         modifier = modifier.testTag("memory_page"),
     ) {
@@ -116,12 +123,7 @@ private fun MemoryWorkbench(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
     ) {
-        Text(
-            text = stringResource(R.string.memory_title),
-            style = DdType.pageTitle,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(8.dp))
         if (status == null) {
             DdLoadingBlock()
             return@Column
@@ -249,15 +251,7 @@ private fun MemoryPreviewPanel(preview: MemoryPreview, modifier: Modifier = Modi
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = preview.title,
-                style = DdType.pageTitle,
-                color = colors.ink,
-            )
-            Spacer(Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         when {
             preview.loading -> DdLoadingBlock()
             preview.content != null -> Column(

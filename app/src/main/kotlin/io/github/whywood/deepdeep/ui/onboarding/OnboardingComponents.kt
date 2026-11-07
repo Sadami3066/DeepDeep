@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.onboarding
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -65,7 +66,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.ui.common.ProviderIcon
 
-internal const val ONBOARDING_STEP_COUNT = 12
+internal const val ONBOARDING_STEP_COUNT = 6
 
 internal const val KEY_STATE_IDLE = 0
 internal const val KEY_STATE_SAVING = 1
@@ -109,50 +110,37 @@ private fun StepProgress(current: Int) {
     )
     Row(
         modifier = Modifier.semantics { contentDescription = description },
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         for (index in 0 until ONBOARDING_STEP_COUNT) {
+            val active = index == current
+            val width by animateDpAsState(
+                targetValue = if (active) 24.dp else 6.dp,
+                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                label = "onboarding-progress-width-$index",
+            )
             val color by animateColorAsState(
                 targetValue = when {
-                    index == current -> colors.accent
-                    index < current -> colors.accent.copy(alpha = 0.35f)
+                    active -> colors.accent
+                    index < current -> colors.accent.copy(alpha = 0.32f)
                     else -> colors.hairline
                 },
                 animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
                 label = "onboarding-progress-color-$index",
             )
-            Box(Modifier.width(8.dp).height(4.dp).clip(CircleShape).background(color))
+            Box(Modifier.width(width).height(6.dp).clip(CircleShape).background(color))
         }
     }
 }
 
 @Composable
-internal fun StepHeading(title: String, subtitle: String? = null, icon: DdIcon? = null) {
+internal fun StepHeading(title: String, subtitle: String? = null) {
     val colors = deepDeepColors()
-    if (icon == null) {
-        Text(text = title, style = DdType.heading, color = colors.ink)
-        if (subtitle != null) {
-            Spacer(Modifier.height(6.dp))
-            Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
-        }
-    } else {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(colors.accentSoft),
-                contentAlignment = Alignment.Center,
-            ) {
-                DdIcon(icon = icon, tint = colors.accent, size = 22.dp)
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(text = title, style = DdType.heading, color = colors.ink)
-                if (subtitle != null) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
-                }
-            }
-        }
+    Text(text = title, style = DdType.heading, color = colors.ink)
+    if (subtitle != null) {
+        Spacer(Modifier.height(6.dp))
+        Text(text = subtitle, style = DdType.bodySmall, color = colors.inkTertiary)
     }
 }
 

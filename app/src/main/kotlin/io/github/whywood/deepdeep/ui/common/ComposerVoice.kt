@@ -25,6 +25,9 @@ import androidx.core.content.ContextCompat
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.voice.ContinuousVoiceSession
+import io.github.whywood.deepdeep.voice.hasDefaultRecognitionService
+import io.github.whywood.deepdeep.voice.systemVoiceIntent
+import io.github.whywood.deepdeep.voice.systemVoiceText
 import io.github.whywood.deepdeep.voice.SpeechError
 import io.github.whywood.deepdeep.voice.SpeechEvent
 import io.github.whywood.deepdeep.voice.VoiceLanguage
@@ -67,6 +70,7 @@ internal fun rememberComposerVoice(
     val activity = remember(context) { context.findVoiceActivity() }
     val scope = rememberCoroutineScope()
     val session = remember(context) { ContinuousVoiceSession(context) }
+    val usesSystemVoice = remember(context) { !hasDefaultRecognitionService(context) }
     val currentLanguage by rememberUpdatedState(language)
     val commit by rememberUpdatedState(onCommit)
     val sendRequested by rememberUpdatedState(onSendRequested)
@@ -93,6 +97,25 @@ internal fun rememberComposerVoice(
         if (sendAfterCommit) sendRequested()
     }
 
+    val systemVoiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            systemVoiceText(result.data)?.let { commit(it) }
+        }
+    }
+
+    fun launchSystemVoice() {
+        val tag = VoiceLanguage.recognitionTag(currentLanguage)
+        val intent = systemVoiceIntent(context, tag)
+        if (intent == null) {
+            failure = SpeechError.UNAVAILABLE
+            return
+        }
+        failure = null
+        systemVoiceLauncher.launch(intent)
+    }
+
     fun beginRecording() {
         job?.cancel()
         job = null
@@ -114,7 +137,10 @@ internal fun rememberComposerVoice(
                         partial = ""
                     }
 
-                    is SpeechEvent.Failed -> failure = event.error
+                    is SpeechEvent.Failed -> {
+                        failure = event.error
+                        if (usesSystemVoice || event.error == SpeechError.UNAVAILABLE) launchSystemVoice()
+                    }
                     SpeechEvent.Timeout -> failure = SpeechError.SPEECH_TIMEOUT
                 }
             }
@@ -160,6 +186,7 @@ internal fun rememberComposerVoice(
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         when {
+            granted && usesSystemVoice -> launchSystemVoice()
             granted -> beginRecording()
             permanentlyDenied -> {
                 failure = SpeechError.INSUFFICIENT_PERMISSIONS

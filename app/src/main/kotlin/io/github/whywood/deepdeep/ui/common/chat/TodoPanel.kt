@@ -163,8 +163,6 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.width(8.dp))
-                        DdIcon(icon = DdIcons.Check, tint = colors.inkTertiary, size = 12.dp)
-                        Spacer(Modifier.width(4.dp))
                         Text(
                             text = stringResource(
                                 R.string.assistant_todo_progress,

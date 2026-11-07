@@ -87,9 +87,7 @@ internal class SpeechRecognizerController(context: Context) {
         }
         main.post {
             if (isClosedForSend) return@post
-            val speech = runCatching {
-                SpeechRecognizer.createSpeechRecognizer(appContext)
-            }.getOrNull()
+            val speech = createRecognizer()
             if (speech == null) {
                 trySend(SpeechEvent.Failed(SpeechError.UNAVAILABLE, 0))
                 close()
@@ -118,6 +116,8 @@ internal class SpeechRecognizerController(context: Context) {
             }
         }
     }.buffer(Channel.UNLIMITED)
+
+    private fun createRecognizer(): SpeechRecognizer? = createSpeechRecognizer(appContext)
 
     private fun recognitionIntent(languageTag: String): Intent =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {

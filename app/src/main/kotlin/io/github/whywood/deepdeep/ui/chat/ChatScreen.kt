@@ -25,6 +25,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -448,10 +449,17 @@ fun ChatScreen(
                 CompositionLocalProvider(LocalDensity provides chatDensity) {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    focusManager.clearFocus()
+                                    keyboard?.hide()
+                                }
+                            },
                         contentPadding = PaddingValues(
-                            start = 18.dp,
-                            end = 18.dp,
+                            start = 14.dp,
+                            end = 14.dp,
                             top = 6.dp,
                             bottom = with(chatDensity) {
                                 (overlayHeightPx + 12.dp.roundToPx()).toDp()
@@ -582,7 +590,6 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
-                state.error?.let { ErrorRow(it) }
                 key(state.conversationId) {
                     TodoPanel(payload = todoPayload)
                 }
@@ -734,30 +741,6 @@ private fun greeting(nickname: String): String {
         else -> stringResource(R.string.assistant_greeting_evening)
     }
     return if (nickname.isBlank()) base else "$base，$nickname"
-}
-
-@Composable
-private fun ErrorRow(error: String) {
-    val colors = deepDeepColors()
-    Box(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        Row(
-            Modifier
-                .widthIn(max = 780.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(colors.wash)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Text(
-                text = error,
-                style = DdType.bodySmall.copy(lineHeight = 20.sp),
-                color = colors.inkSecondary,
-            )
-        }
-    }
 }
 
 @Composable
