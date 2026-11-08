@@ -7,7 +7,9 @@ import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -35,12 +41,17 @@ import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.data.mountDisplayPath
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextArea
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -85,6 +96,7 @@ internal fun LinuxEnvironmentSection(
             draftError = R.string.settings_linux_mount_invalid_path
         } else {
             draftPath = path
+            if (draftName.isBlank()) draftName = folderName(path)
             draftError = null
         }
     }
@@ -207,23 +219,36 @@ internal fun LinuxEnvironmentSection(
         )
         if (available) {
             DdHairline()
-            DdListRow(
-                icon = DdIcons.Folder,
-                title = stringResource(R.string.settings_linux_mounts),
-                subtitle = if (mounts.isEmpty()) {
-                    stringResource(R.string.settings_linux_mounts_empty)
-                } else {
-                    stringResource(R.string.settings_linux_mount_count, mounts.size)
-                },
-                subtitleMaxLines = 2,
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DdSectionLabel(
+                    text = stringResource(R.string.settings_linux_mounts),
+                    modifier = Modifier.weight(1f),
+                )
+                if (mounts.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_linux_mount_count, mounts.size),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+            }
+            if (mounts.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.settings_linux_mounts_empty),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+            }
             mounts.forEach { mount ->
                 DdListRow(
-                    icon = DdIcons.FolderOpen,
+                    icon = DdIcons.Folder,
                     title = mount.name,
                     subtitle = mount.description.ifBlank { null },
                     subtitleMaxLines = 2,
-                    value = mountDisplayPath(mount.path),
                     onClick = { openEdit(mount) },
                     showChevron = true,
                     modifier = Modifier.testTag("linux_mount_${mount.id}"),
@@ -289,80 +314,161 @@ internal fun LinuxEnvironmentSection(
     }
 
     if (editorOpen) {
-        DdDialog(
-            onDismissRequest = { editorOpen = false },
-            title = stringResource(
-                if (editingMount == null) {
-                    R.string.settings_linux_mount_add
-                } else {
-                    R.string.settings_linux_mount_edit
-                },
-            ),
-            content = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DdTextField(
-                        value = draftName,
-                        onValueChange = { draftName = it },
-                        placeholder = stringResource(R.string.settings_linux_mount_name_hint),
-                        singleLine = true,
-                        testTag = "linux_mount_name",
+        DdSheet(onDismiss = { editorOpen = false }) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 24.dp, end = 24.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    DdIconButton(
+                        icon = DdIcons.Close,
+                        onClick = { editorOpen = false },
+                        contentDescription = stringResource(R.string.dev_close),
+                        tint = colors.inkSecondary,
+                        iconSize = 20.dp,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                }
+                Text(
+                    text = stringResource(
+                        if (editingMount == null) {
+                            R.string.settings_linux_mount_add_title
+                        } else {
+                            R.string.settings_linux_mount_edit_title
+                        },
+                    ),
+                    style = DdType.heading,
+                    color = colors.ink,
+                )
+                Text(
+                    text = stringResource(R.string.settings_linux_mount_subtitle),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
+                )
+                Text(
+                    text = stringResource(R.string.settings_linux_mount_section),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    style = DdType.label,
+                    color = colors.ink,
+                )
+                val cardShape = RoundedCornerShape(16.dp)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(cardShape)
+                        .border(1.dp, colors.hairline, cardShape)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DdIcon(icon = DdIcons.Folder, tint = colors.accent, size = 26.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
                         Text(
                             text = if (draftPath.isEmpty()) {
                                 stringResource(R.string.settings_linux_mount_choose)
                             } else {
-                                mountDisplayPath(draftPath)
+                                folderName(draftPath)
                             },
-                            modifier = Modifier.weight(1f),
                             style = DdType.body,
                             color = if (draftPath.isEmpty()) colors.inkTertiary else colors.ink,
                         )
-                        DdTextAction(
-                            text = stringResource(
-                                if (draftPath.isEmpty()) {
-                                    R.string.settings_linux_mount_choose
-                                } else {
-                                    R.string.settings_linux_mount_change
-                                },
-                            ),
-                            onClick = { pickDirectory.launch(null) },
-                        )
+                        if (draftPath.isNotEmpty()) {
+                            Text(
+                                text = displayMountPath(draftPath),
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
                     }
-                    DdTextField(
-                        value = draftDescription,
-                        onValueChange = { draftDescription = it },
-                        placeholder = stringResource(R.string.settings_linux_mount_description_hint),
-                        singleLine = false,
-                        testTag = "linux_mount_description",
-                    )
-                    draftError?.let { message ->
-                        Text(text = stringResource(message), style = DdType.bodySmall, color = colors.danger)
-                    }
-                }
-            },
-            actions = {
-                if (editingMount != null) {
                     DdTextAction(
-                        text = stringResource(R.string.settings_linux_mount_remove),
-                        onClick = {
-                            onRemoveMount(editingMount!!.id)
-                            editorOpen = false
-                        },
+                        text = stringResource(
+                            if (draftPath.isEmpty()) {
+                                R.string.settings_linux_mount_pick
+                            } else {
+                                R.string.settings_linux_mount_change
+                            },
+                        ),
+                        onClick = { pickDirectory.launch(null) },
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.settings_linux_mount_name_label),
+                    modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
+                    style = DdType.label,
+                    color = colors.ink,
+                )
+                DdTextField(
+                    value = draftName,
+                    onValueChange = { draftName = it },
+                    placeholder = stringResource(R.string.settings_linux_mount_name_hint),
+                    singleLine = true,
+                    testTag = "linux_mount_name",
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_linux_mount_description_label),
+                        style = DdType.label,
+                        color = colors.ink,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.settings_linux_mount_optional),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+                DdTextArea(
+                    value = draftDescription,
+                    onValueChange = { draftDescription = it },
+                    placeholder = stringResource(R.string.settings_linux_mount_description_hint),
+                    minHeight = 96.dp,
+                    maxHeight = 180.dp,
+                    testTag = "linux_mount_description",
+                )
+                draftError?.let { message ->
+                    Text(
+                        text = stringResource(message),
+                        modifier = Modifier.padding(top = 10.dp),
+                        style = DdType.bodySmall,
                         color = colors.danger,
                     )
                 }
-                DdTextAction(
-                    text = stringResource(R.string.settings_linux_mount_cancel),
-                    onClick = { editorOpen = false },
-                    color = colors.inkSecondary,
-                )
-                DdTextAction(
-                    text = stringResource(R.string.settings_linux_mount_save),
+                Spacer(Modifier.height(20.dp))
+                DdPrimaryButton(
+                    text = stringResource(
+                        if (editingMount == null) {
+                            R.string.settings_linux_mount_add_confirm
+                        } else {
+                            R.string.settings_linux_mount_save
+                        },
+                    ),
                     onClick = { saveDraft() },
+                    modifier = Modifier.fillMaxWidth().testTag("linux_mount_save"),
+                    enabled = draftName.isNotBlank() && draftPath.isNotBlank(),
                 )
-            },
-        )
+                if (editingMount != null) {
+                    Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+                        DdTextAction(
+                            text = stringResource(R.string.settings_linux_mount_remove),
+                            onClick = {
+                                onRemoveMount(editingMount!!.id)
+                                editorOpen = false
+                            },
+                            color = colors.danger,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
     }
 }
 
@@ -399,6 +505,12 @@ private fun SharedStorageRow(
         },
     )
 }
+
+private fun folderName(path: String): String =
+    path.trimEnd('/').substringAfterLast('/')
+
+private fun displayMountPath(path: String): String =
+    mountDisplayPath(path).split('/').filter { it.isNotBlank() }.joinToString(" / ")
 
 private fun openSharedStorageSettings(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return

@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 
 class LinuxEnvironment(
     context: Context,
@@ -77,6 +79,20 @@ class LinuxEnvironment(
             "Linux environment is not installed"
         }
         return executor.executeStreaming(command, timeoutMillis, onOutputLine)
+    }
+
+    suspend fun applyApkRepositories(lines: List<String>): Boolean {
+        if (lines.isEmpty()) return false
+        if (installer.quickState() !is LinuxInstallState.Installed) return false
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val etcApk = File(rootfsDir, "etc/apk")
+                etcApk.mkdirs()
+                File(etcApk, "repositories").writeText(
+                    lines.joinToString(separator = "\n", postfix = "\n"),
+                )
+            }.isSuccess
+        }
     }
 
     suspend fun refreshDns() {

@@ -37,7 +37,7 @@
     <string name="settings_notifications_off">未开启</string>
     <string name="settings_privacy">隐私</string>
 
-    <string name="settings_provider">厂商</string>
+    <string name="settings_provider">服务商</string>
     <string name="settings_environment">Linux</string>
     <string name="settings_android">Android</string>
     <string name="settings_theme">颜色模式</string>
@@ -77,7 +77,7 @@
     <string name="settings_linux_shared_storage">共享目录</string>
     <string name="settings_linux_shared_storage_grant">需要在系统设置中授予「所有文件访问权限」</string>
 
-    <string name="settings_provider_title">厂商</string>
+    <string name="settings_provider_title">服务商</string>
     <string name="settings_provider_search">搜索厂商</string>
     <string name="settings_provider_all_count">全部厂商 · %1$d</string>
     <string name="settings_provider_result_count">搜索结果 · %1$d</string>
@@ -133,7 +133,7 @@
 
     <string name="privacy_local_title">本地保存</string>
     <string name="privacy_local_body">对话、工作区文件、API Key 与 OAuth 凭据只保存在应用私有目录；连接器 的配置、请求头与授权 token 也只保存在本地。</string>
-    <string name="privacy_provider_title">只发送给所选厂商</string>
+    <string name="privacy_provider_title">只发送给所选服务商</string>
     <string name="privacy_provider_body">只有你选择的模型服务会收到对话内容，DeepDeep 不上传副本。</string>
     <string name="privacy_tracking_title">无统计与广告</string>
     <string name="privacy_tracking_body">不接入分析、广告或第三方追踪 SDK。</string>
@@ -204,10 +204,10 @@
     <string name="settings_assistant">系统助手</string>
     <string name="assistant_settings_title">系统助手</string>
     <string name="assistant_settings_subtitle">用于替换手机系统助手</string>
-    <string name="assistant_settings_role">默认助手</string>
-    <string name="assistant_settings_role_held">已设为默认助手</string>
-    <string name="assistant_settings_role_missing">未设为默认助手</string>
-    <string name="assistant_settings_power">设置长按唤醒</string>
+    <string name="assistant_settings_role">设置DeepDeep为默认助手</string>
+    <string name="assistant_settings_role_held">已设置DeepDeep为默认助手</string>
+    <string name="assistant_settings_role_missing">未设置DeepDeep为默认助手</string>
+    <string name="assistant_settings_power">长按电源键启动DeepDeep</string>
     <string name="assistant_settings_power_unavailable">系统没有这个设置页</string>
     <string name="settings_privilege">权限</string>
 
@@ -217,14 +217,74 @@
     <string name="settings_linux_mount_add">添加挂载目录</string>
     <string name="settings_linux_mount_add_grant">需要先授予「所有文件访问权限」</string>
     <string name="settings_linux_mount_edit">编辑挂载</string>
-    <string name="settings_linux_mount_name_hint">名称，例如 Obsidian</string>
+    <string name="settings_linux_mount_name_hint">笔记</string>
     <string name="settings_linux_mount_choose">选择目录</string>
     <string name="settings_linux_mount_change">重新选择</string>
-    <string name="settings_linux_mount_description_hint">说明这个目录里有什么、DeepDeep 该拿它做什么</string>
+    <string name="settings_linux_mount_description_hint">例如：这里存放我的笔记，帮我整理和查找内容。</string>
     <string name="settings_linux_mount_remove">移除挂载</string>
     <string name="settings_linux_mount_save">保存</string>
     <string name="settings_linux_mount_cancel">取消</string>
     <string name="settings_linux_mount_invalid_path">只能选择主存储里的目录</string>
     <string name="settings_linux_mount_name_required">请填写名称</string>
     <string name="settings_linux_mount_choose_required">请先选择目录</string>
+
+    <string name="settings_linux_mount_add_title">添加共享目录</string>
+    <string name="settings_linux_mount_edit_title">编辑共享目录</string>
+    <string name="settings_linux_mount_subtitle">选好目录，让助手知道如何使用。</string>
+    <string name="settings_linux_mount_section">共享目录</string>
+    <string name="settings_linux_mount_name_label">目录名称</string>
+    <string name="settings_linux_mount_description_label">使用说明</string>
+    <string name="settings_linux_mount_optional">选填</string>
+    <string name="settings_linux_mount_add_confirm">添加目录</string>
+    <string name="settings_linux_mount_pick">选择目录</string>
+
+    <string name="dev_bundle_apk_dev">APK 开发组合</string>
+    <string name="dev_bundle_base_body">常用命令行与脚本运行环境，装好即可开始。</string>
+    <string name="dev_bundle_office_body">处理 PDF、Excel、图片和扫描件的日常工具。</string>
+    <string name="dev_bundle_dev_body">Git、编译工具链与软件构建工具。</string>
+    <string name="dev_bundle_apk_dev_body">在 Linux 里编译 Android APK，附带构建工具下载。</string>
+    <string name="dev_bundle_form_packages">包含应用</string>
+    <string name="dev_bundle_form_package_count">%1$d 个应用 · 约 %2$s</string>
+    <string name="dev_bundle_form_extras">附加应用</string>
+    <string name="dev_bundle_form_extras_add">添加应用</string>
+    <string name="dev_bundle_form_extras_empty">还没有附加应用</string>
+    <string name="dev_bundle_form_overlays">叠加组合</string>
+    <string name="dev_bundle_form_overlays_hint">选中的组合会和当前组合一起安装</string>
+    <string name="dev_bundle_form_source">软件源</string>
+    <string name="dev_bundle_form_source_multi">已选 %1$d 个镜像</string>
+    <string name="dev_bundle_form_install">安装组合</string>
+    <string name="dev_bundle_form_installed">已安装</string>
+    <string name="dev_bundle_form_downloads">构建工具下载</string>
+    <string name="dev_bundle_form_downloads_body">额外下载 JDK 21、Android SDK、Platform 36 与 Gradle，约 480 MB。</string>
+    <string name="dev_remove">移除</string>
+    <string name="dev_done">完成</string>
+    <string name="dev_package_picker_title">添加应用</string>
+    <string name="dev_package_picker_subtitle">选中的应用会追加到当前组合。</string>
+    <string name="dev_mirror_sheet_title">软件源</string>
+    <string name="dev_mirror_sheet_subtitle">选择下载 Linux 软件包的镜像站，可多选。</string>
+    <string name="dev_mirror_apply">应用软件源</string>
+    <string name="dev_mirror_required">至少选择一个镜像</string>
+    <string name="dev_mirror_official_name">官方</string>
+    <string name="dev_mirror_aliyun_name">阿里云</string>
+    <string name="dev_mirror_tuna_name">清华镜像</string>
+    <string name="dev_mirror_tencent_name">腾讯云</string>
+    <string name="dev_mirror_apply_label">更新软件源</string>
+    <string name="dev_stage_mirror">正在切换软件源…</string>
+    <string name="dev_stage_download">正在下载 %1$s…</string>
+    <string name="dev_stage_download_progress">正在下载 %1$d/%2$d</string>
+    <string name="dev_download_jdk">JDK 21</string>
+    <string name="dev_download_sdk">Android SDK</string>
+    <string name="dev_download_platform">Android Platform 36</string>
+    <string name="dev_download_gradle">Gradle 9.8.2</string>
+    <string name="dev_package_bash">运行 Bash 脚本</string>
+    <string name="dev_package_coreutils">提供 ls、cp、sed 等基础命令</string>
+    <string name="dev_package_findutils">查找文件与目录</string>
+    <string name="dev_package_procps">查看与管理进程</string>
+    <string name="dev_package_xz">解压 .xz 压缩包</string>
+    <string name="dev_package_tar">打包与解压归档文件</string>
+    <string name="dev_package_gcc">编译 C 代码</string>
+    <string name="dev_package_musl_dev">编译所需的 musl 开发头文件</string>
+    <string name="settings_linux_bootstrap_title">环境基础</string>
+    <string name="settings_linux_bootstrap_hint">安装完成后才能继续</string>
+    <string name="settings_linux_bootstrap_time">首次安装约 1–2 分钟</string>
 </resources>

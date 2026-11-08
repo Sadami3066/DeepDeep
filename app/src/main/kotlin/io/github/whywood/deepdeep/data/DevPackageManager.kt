@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 
 data class DevPackageOperation(
@@ -52,8 +53,8 @@ class DevPackageManager(
             return
         }
         running.set(true)
+        _state.update { it.copy(checking = true, error = null) }
         scope.launch {
-            _state.update { it.copy(checking = true, error = null) }
             try {
                 val installed = queryInstalled()
                 _state.update { it.copy(installed = installed, checking = false) }
@@ -72,8 +73,19 @@ class DevPackageManager(
         }
     }
 
+    suspend fun refreshAndAwait() {
+        refresh()
+        state.first { !it.checking && !it.busy }
+    }
+
     fun installBundle(bundle: DevBundle) {
-        install(bundle.packageIds, context.getString(bundle.titleRes), bundle.postInstallCommand)
+        install(
+            packageIds = bundle.packageIds,
+            label = context.getString(bundle.titleRes),
+            postInstall = bundle.postInstallCommand,
+            mirrorUrls = bundle.mirrorUrls,
+            downloads = bundle.downloads,
+        )
     }
 
     fun installPackage(packageId: String) {
@@ -122,9 +134,15 @@ class DevPackageManager(
         _state.update { it.copy(error = null) }
     }
 
-    private fun install(packageIds: List<String>, label: String, postInstall: String? = null) {
+    private fun install(
+        packageIds: List<String>,
+        label: String,
+        postInstall: String? = null,
+        mirrorUrls: List<String> = emptyList(),
+        downloads: List<DevDownload> = emptyList(),
+    ) {
         val ids = packageIds.distinct().filter { DevPackageCatalog.packageById(it) != null }
-        if (ids.isEmpty()) return
+        if (ids.isEmpty() && mirrorUrls.isEmpty() && downloads.isEmpty()) return
         if (running.get()) {
             _state.update { it.copy(error = context.getString(R.string.dev_error_busy)) }
             return
@@ -146,31 +164,70 @@ class DevPackageManager(
             }
             notifications.notifyInstall(label, context.getString(R.string.dev_stage_updating), null)
             try {
+                if (mirrorUrls.isNotEmpty()) {
+                    val stage = context.getString(R.string.dev_stage_mirror)
+                    _state.update { it.copy(operation = it.operation?.copy(stage = stage)) }
+                    notifications.notifyInstall(label, stage, null)
+                    if (!linux.applyApkRepositories(mirrorUrls)) {
+                        throw IllegalStateException(context.getString(R.string.dev_error_linux_missing))
+                    }
+                }
+                val updateStage = context.getString(R.string.dev_stage_updating)
+                _state.update { it.copy(operation = it.operation?.copy(stage = updateStage)) }
+                notifications.notifyInstall(label, updateStage, null)
                 val update = linux.executeStreaming("apk update", TIMEOUT_UPDATE) { }
                 if (update.exitCode != 0) {
                     throw IllegalStateException(
                         update.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
                     )
                 }
-                _state.update {
-                    it.copy(operation = it.operation?.copy(stage = context.getString(R.string.dev_stage_installing)))
+                if (ids.isNotEmpty()) {
+                    _state.update {
+                        it.copy(operation = it.operation?.copy(stage = context.getString(R.string.dev_stage_installing)))
+                    }
+                    notifications.notifyInstall(label, context.getString(R.string.dev_stage_installing), null)
+                    val command = "apk add ${ids.joinToString(" ")}"
+                    val result = linux.executeStreaming(command, TIMEOUT_INSTALL) { line ->
+                        val match = PROGRESS.find(line) ?: return@executeStreaming
+                        val current = match.groupValues[1].toIntOrNull() ?: return@executeStreaming
+                        val total = match.groupValues[2].toIntOrNull() ?: return@executeStreaming
+                        if (total <= 0) return@executeStreaming
+                        val progress = (current * 100 / total).coerceIn(0, 100)
+                        val stage = context.getString(R.string.dev_stage_progress, current, total)
+                        _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = progress)) }
+                        notifications.notifyInstall(label, stage, progress)
+                    }
+                    if (result.exitCode != 0) {
+                        throw IllegalStateException(
+                            result.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
+                        )
+                    }
                 }
-                notifications.notifyInstall(label, context.getString(R.string.dev_stage_installing), null)
-                val command = "apk add ${ids.joinToString(" ")}"
-                val result = linux.executeStreaming(command, TIMEOUT_INSTALL) { line ->
-                    val match = PROGRESS.find(line) ?: return@executeStreaming
-                    val current = match.groupValues[1].toIntOrNull() ?: return@executeStreaming
-                    val total = match.groupValues[2].toIntOrNull() ?: return@executeStreaming
-                    if (total <= 0) return@executeStreaming
-                    val progress = (current * 100 / total).coerceIn(0, 100)
-                    val stage = context.getString(R.string.dev_stage_progress, current, total)
-                    _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = progress)) }
-                    notifications.notifyInstall(label, stage, progress)
-                }
-                if (result.exitCode != 0) {
-                    throw IllegalStateException(
-                        result.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
+                downloads.forEachIndexed { index, download ->
+                    val stage = context.getString(
+                        R.string.dev_stage_download_progress,
+                        index + 1,
+                        downloads.size,
                     )
+                    _state.update {
+                        it.copy(
+                            operation = it.operation?.copy(
+                                stage = stage,
+                                progress = (index * 100 / downloads.size).coerceIn(0, 100),
+                            ),
+                        )
+                    }
+                    notifications.notifyInstall(label, stage, index * 100 / downloads.size)
+                    val downloadResult = linux.executeStreaming(
+                        download.installCommand(),
+                        TIMEOUT_DOWNLOAD,
+                    ) { }
+                    if (downloadResult.exitCode != 0) {
+                        throw IllegalStateException(
+                            downloadResult.output.takeLast(600).trim()
+                                .ifBlank { context.getString(R.string.dev_error_generic) },
+                        )
+                    }
                 }
                 if (!postInstall.isNullOrBlank()) {
                     val stage = context.getString(R.string.dev_stage_python)
@@ -217,6 +274,7 @@ class DevPackageManager(
         private const val TIMEOUT_INSTALL = 15 * 60_000L
         private const val TIMEOUT_UNINSTALL = 120_000L
         private const val TIMEOUT_POST = 10 * 60_000L
+        private const val TIMEOUT_DOWNLOAD = 30 * 60_000L
         private val PROGRESS = Regex("""^\((\d+)/(\d+)\)""")
     }
 }

@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AppLanguage
+import io.github.whywood.deepdeep.data.DevPackageCatalog
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OnboardingPreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
@@ -112,6 +113,13 @@ fun OnboardingScreen(
     val provider = remember(providers, providerId) { providers.firstOrNull { it.id == providerId } }
     val deepseek = remember(providers) { providers.firstOrNull { it.id == ProviderCatalog.DEFAULT_PROVIDER_ID } }
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
+    val packagesState by graph.devPackageManager.state.collectAsStateWithLifecycle()
+    val baseBundle = remember { DevPackageCatalog.bundleById("base") }
+    val linuxInstalled = linuxState is LinuxInstallState.Installed
+    val basicsInstalled = baseBundle?.let { bundle -> bundle.packageIds.all { it in packagesState.installed } } ?: true
+    val linuxReady = !graph.linuxEnvironment.isSupported || (linuxInstalled && basicsInstalled)
+    var basicsPrepared by rememberSaveable { mutableStateOf(false) }
+    var basicsStarted by rememberSaveable { mutableStateOf(false) }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle()
     val oauthSignedIn = provider?.let { authKinds[it.id] == ProviderAuthKind.OAUTH } == true
     var oauthSession by remember(providerId) { mutableStateOf<OAuthLoginSession?>(null) }
@@ -133,7 +141,37 @@ fun OnboardingScreen(
     }
 
     LaunchedEffect(step) {
-        if (step == STEP_LINUX) graph.linuxEnvironment.refreshState()
+        if (step != STEP_LINUX) return@LaunchedEffect
+        val refreshed = graph.linuxEnvironment.refreshState()
+        if (!graph.linuxEnvironment.isSupported) return@LaunchedEffect
+        if (refreshed is LinuxInstallState.Installed) {
+            graph.linuxSettings.setEnabled(true)
+            return@LaunchedEffect
+        }
+        if (refreshed is LinuxInstallState.NotInstalled) {
+            val result = runCatching { graph.linuxEnvironment.install() }.getOrNull()
+            if (result is LinuxInstallState.Installed) {
+                graph.linuxSettings.setEnabled(true)
+                graph.linuxEnvironment.refreshState()
+            }
+        }
+    }
+
+    LaunchedEffect(step, linuxInstalled) {
+        if (step != STEP_LINUX || !linuxInstalled) return@LaunchedEffect
+        scope.launch {
+            graph.devPackageManager.refreshAndAwait()
+            basicsPrepared = true
+        }
+    }
+
+    LaunchedEffect(step, linuxInstalled, basicsPrepared, packagesState.checking, packagesState.busy, packagesState.installed) {
+        if (step != STEP_LINUX || !linuxInstalled || !basicsPrepared || basicsStarted) return@LaunchedEffect
+        if (packagesState.checking || packagesState.busy) return@LaunchedEffect
+        val bundle = baseBundle ?: return@LaunchedEffect
+        if (bundle.packageIds.all { it in packagesState.installed }) return@LaunchedEffect
+        basicsStarted = true
+        graph.devPackageManager.installBundle(bundle)
     }
 
     LaunchedEffect(Unit) {
@@ -177,6 +215,22 @@ fun OnboardingScreen(
     fun selectPrivilege(level: PrivilegeLevel) {
         privilegeName = level.name
         scope.launch { graph.privilege.select(level) }
+    }
+
+    fun installLinux() {
+        scope.launch {
+            val result = runCatching { graph.linuxEnvironment.install() }.getOrNull()
+            if (result !is LinuxInstallState.Installed) return@launch
+            graph.linuxSettings.setEnabled(true)
+            graph.linuxEnvironment.refreshState()
+        }
+    }
+
+    fun installBasics() {
+        val bundle = baseBundle ?: return
+        basicsStarted = true
+        graph.devPackageManager.clearError()
+        graph.devPackageManager.installBundle(bundle)
     }
 
     fun saveKeyThenAdvance() {
@@ -251,6 +305,7 @@ fun OnboardingScreen(
             }
 
             STEP_PROVIDER -> saveKeyThenAdvance()
+            STEP_LINUX -> if (linuxReady) goNext()
             STEP_PRIVILEGE -> finish()
             else -> goNext()
         }
@@ -265,15 +320,22 @@ fun OnboardingScreen(
     val hint = when (step) {
         STEP_WELCOME -> stringResource(R.string.onboarding_welcome_note)
         STEP_PRIVILEGE -> stringResource(R.string.onboarding_privilege_note)
+        STEP_LINUX -> if (!linuxReady && graph.linuxEnvironment.isSupported) {
+            stringResource(R.string.settings_linux_bootstrap_hint)
+        } else {
+            null
+        }
         else -> null
     }
     val secondaryLabel = when (step) {
         STEP_PROVIDER -> stringResource(R.string.onboarding_skip)
-        STEP_PERMISSIONS, STEP_LINUX -> stringResource(R.string.onboarding_later)
+        STEP_PERMISSIONS -> stringResource(R.string.onboarding_later)
         else -> null
     }
     val savingKey = step == STEP_PROVIDER && keyState == KEY_STATE_SAVING
-    val primaryEnabled = !savingKey && (step != STEP_ACCOUNT || nickname.isNotBlank())
+    val primaryEnabled = !savingKey &&
+        (step != STEP_ACCOUNT || nickname.isNotBlank()) &&
+        (step != STEP_LINUX || linuxReady)
     val secondaryEnabled = !savingKey
 
     BackHandler(onBack = ::back)
@@ -355,12 +417,11 @@ fun OnboardingScreen(
                 STEP_LINUX -> LinuxStep(
                     state = linuxState,
                     supported = graph.linuxEnvironment.isSupported,
-                    onInstall = {
-                        scope.launch {
-                            val result = graph.linuxEnvironment.install()
-                            if (result is LinuxInstallState.Installed) graph.linuxSettings.setEnabled(true)
-                        }
-                    },
+                    packages = packagesState,
+                    basePackageIds = baseBundle?.packageIds.orEmpty(),
+                    basicsInstalled = basicsInstalled,
+                    onInstall = ::installLinux,
+                    onInstallBasics = ::installBasics,
                 )
 
                 else -> PrivilegeStep(selected = privilege, onSelect = ::selectPrivilege)

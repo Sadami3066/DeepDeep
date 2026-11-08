@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AssistantRole
 import io.github.whywood.deepdeep.data.AppLanguage
+import io.github.whywood.deepdeep.data.DevPackagesState
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdHairline
@@ -511,7 +512,11 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
 internal fun LinuxStep(
     state: LinuxInstallState,
     supported: Boolean,
+    packages: DevPackagesState,
+    basePackageIds: List<String>,
+    basicsInstalled: Boolean,
     onInstall: () -> Unit,
+    onInstallBasics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -540,14 +545,18 @@ internal fun LinuxStep(
                 when (state) {
                     LinuxInstallState.NotInstalled -> {
                         DdHairline()
-                        DdListRow(
-                            icon = DdIcons.Download,
-                            title = stringResource(R.string.onboarding_linux_install),
-                            subtitle = stringResource(R.string.onboarding_linux_size_hint),
-                            onClick = onInstall,
-                            showChevron = true,
-                            modifier = Modifier.testTag("onboarding_linux_install"),
-                        )
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_linux_bootstrap_time),
+                                style = DdType.bodySmall,
+                                color = colors.inkSecondary,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            DdTextAction(
+                                text = stringResource(R.string.onboarding_linux_install),
+                                onClick = onInstall,
+                            )
+                        }
                     }
 
                     LinuxInstallState.Installing -> {
@@ -576,6 +585,74 @@ internal fun LinuxStep(
                                 title = stringResource(R.string.onboarding_linux_used, text),
                                 icon = DdIcons.Folder,
                             )
+                        }
+                        DdHairline()
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stringResource(R.string.settings_linux_bootstrap_title),
+                                    style = DdType.body,
+                                    color = colors.ink,
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    text = if (basicsInstalled) {
+                                        stringResource(R.string.dev_installed)
+                                    } else {
+                                        "${basePackageIds.count { it in packages.installed }}/${basePackageIds.size}"
+                                    },
+                                    style = DdType.bodySmall,
+                                    color = if (basicsInstalled) colors.accent else colors.inkSecondary,
+                                )
+                            }
+                            val operation = packages.operation
+                            when {
+                                operation != null -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    IndeterminateBar()
+                                    Spacer(Modifier.height(12.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        DdSpinner(size = 14.dp, strokeWidth = 1.5.dp)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = operation.stage
+                                                ?: stringResource(R.string.onboarding_linux_installing),
+                                            style = DdType.bodySmall,
+                                            color = colors.inkSecondary,
+                                        )
+                                    }
+                                }
+
+                                basicsInstalled -> Unit
+
+                                packages.error != null -> {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.dev_error, packages.error.orEmpty()),
+                                        style = DdType.bodySmall,
+                                        color = colors.danger,
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    DdTextAction(
+                                        text = stringResource(R.string.dev_continue),
+                                        onClick = onInstallBasics,
+                                    )
+                                }
+
+                                else -> {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.settings_linux_bootstrap_time),
+                                        style = DdType.bodySmall,
+                                        color = colors.inkSecondary,
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    DdTextAction(
+                                        text = stringResource(R.string.dev_continue),
+                                        onClick = onInstallBasics,
+                                    )
+                                }
+                            }
                         }
                     }
 
