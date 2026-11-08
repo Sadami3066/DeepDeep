@@ -17,9 +17,10 @@
 | `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情 |
 | `ProviderDetailScreen.kt` | 厂商详情：OAuth 登录/退出、API Key 保存/清除 |
 | `RuntimeSettingsScreen.kt` | Linux 设置页：Linux 环境 + 开发包组合页 |
-| `LinuxEnvironmentSection.kt` | Linux 分区：安装/重置/启用、共享存储、挂载目录（SAF 选公共存储子目录 + 名称/说明）与占用 |
+| `LinuxEnvironmentSection.kt` | Linux 分区：内置环境状态（准备中/失败可重试）、启用开关、共享存储、挂载目录（SAF 选公共存储子目录 + 名称/说明）与占用 |
 | `PublicStoragePicker.kt` | 公共存储 SAF 选择：仅接受 externalstorage+primary，解析为 `/storage/emulated/0` 路径 |
-| `DevPackagesSection.kt` | 开发包分区：DevBundle 安装状态、刷新与详情 |
+| `DevPackagesSection.kt` | 开发组合分区：列表行显示进度计数（如 2/8，不显示体积/已安装）、详情 sheet（包含应用、软件源、安装）、镜像选择 |
+| `DevBundleCustomizationStore.kt` | 组合镜像选择持久化（`files/dev_bundle_customization.json`） |
 | `ScanSettingsScreen.kt` | 扫一扫策略：官方/自定义分组、编辑、导入导出、试跑 |
 | `ScanJsonScreen.kt` | 扫一扫策略 JSON 编辑与保存 |
 | `UsageHabitsScreen.kt` | 使用习惯：系统助手浮层进入模式 |

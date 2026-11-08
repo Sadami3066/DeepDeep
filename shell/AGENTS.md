@@ -10,6 +10,7 @@
 | `LinuxExecutor.kt` | 执行结果模型与执行器接口（默认 60s） |
 | `LinuxShellExecutor.kt` | 适配 pi 的 ShellExecutor 接口 |
 | `LinuxInstallState.kt` | 安装状态：未装/安装中/已装/失败 |
+| `LinuxInstallPolicy.kt` | 启动自动准备判定：仅 supported 且未安装时静默安装，已装/安装中跳过 |
 | `LinuxRootfsInstaller.kt` | 解压内置 rootfs，校验 SHA256 并原子安装 |
 | `RootfsExtractor.kt` | 安全 tar 解包，拦截路径穿越与越界软链 |
 | `PRootExecutor.kt` | 起 proot 进程执行，流式取行、超时杀进程树 |
