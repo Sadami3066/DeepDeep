@@ -23,6 +23,7 @@
 | `LanguagePreferences.kt` | App 语言读写与 LocalizedContext 资源包装 |
 | `LegacyWorkspaceMigration.kt` | 旧 projects DataStore 补迁到 runtime WorkspaceStore |
 | `LinuxSettingsStore.kt` | Linux 环境启用/共享存储/root 开关与共享存储授权判断 |
+| `MarketPresets.kt` | 技能/连接器/插件的市场本地预设（名称/说明/标签/类型）与纯函数 `filterMarketPresets` |
 | `OnboardingPreferences.kt` | 新手引导开始/完成标记（SharedPreferences） |
 | `OverlayEntryPreferences.kt` | 助手浮层入口方式（语音/拍照/无）DataStore |
 | `PersonalizationStore.kt` | 昵称、交互风格、语气与附加指令 DataStore |

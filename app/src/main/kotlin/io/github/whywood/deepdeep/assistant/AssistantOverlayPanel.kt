@@ -165,7 +165,13 @@ internal fun AssistantOverlayPanel(
         snapshotFlow { panelHeight.value }.collect { scroll.anchorToBottom() }
     }
     LaunchedEffect(scroll, state.conversation.sending) {
-        if (!state.conversation.sending) return@LaunchedEffect
+        if (!state.conversation.sending) {
+            if (scroll.following) {
+                delay(80)
+                scroll.jumpToBottom(animate = false)
+            }
+            return@LaunchedEffect
+        }
         while (isActive) {
             withFrameNanos { }
             scroll.followContent()

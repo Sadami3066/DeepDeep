@@ -327,7 +327,13 @@ fun ChatScreen(
     }
 
     LaunchedEffect(state.sending) {
-        if (!state.sending) pendingLocalSend = false
+        if (!state.sending) {
+            pendingLocalSend = false
+            if (controller.following) {
+                delay(80)
+                controller.jumpToBottom(animate = false)
+            }
+        }
     }
 
     LaunchedEffect(pendingLocalSend) {

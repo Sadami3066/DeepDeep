@@ -68,11 +68,9 @@ internal fun ProcessSection(
 ) {
     val colors = deepDeepColors()
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
-    val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
-    val answerStarted = message.streaming && trailingText?.text?.isNotBlank() == true
     val expanded = when {
         expansionOverride >= 0 -> expansionOverride == 1
-        autoCollapseProcess -> message.streaming && !answerStarted
+        autoCollapseProcess -> message.streaming
         else -> true
     }
     val rotation = animateFloatAsState(

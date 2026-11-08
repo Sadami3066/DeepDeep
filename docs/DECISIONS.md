@@ -334,3 +334,35 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 - 执行：`PRootExecutor` / `LinuxEnvironment` 的 `extraBinds` 改为 provider lambda，按当前挂载列表把宿主目录绑定到 guest 同路径，并在 bind 前 mkdir 目标。
 
 理由：单一来源、少一段提示词、挂载配置不写死在代码里。代价：SAF 只能选公共存储；挂载目录被删除后 bind 失败由 proot 报错，不额外兜底。
+
+## 117. 提示词渲染修复与转义单点契约
+
+按风格审计与用户第 1 项要求修提示词：environment 段删除与 `<cwd>` 重复的 Working directory 行（`buildPersonalizationSections` 不再收 cwd）；memory 渲染去掉重复的区标题、日记三层标题按层级降级（`# 日记` → `## 今天` → `### 纪要`）、HTML 注释转成可读文本而非 `&lt;!-- --&gt;`；`plugin_context` 删除 runtime 外层 wrap，保留 adapter 每插件一个 `<plugin_context plugin="…">` 兄弟段；`wrapPromptSection(name, content, escape = true)` 统一转义，调用方不再各自 escape（nickname 不再双重转义）；plugin-api `PromptSection.body` 补 KDoc 契约（纯文本/Markdown、禁 XML、禁 `#` 一级标题）。
+
+`mcp_servers` 裸文本本次未修：SDK `AgentSession.kt:738-741` 用 map 覆盖且 `buildMcpServersSection` 为 internal，app 仓库无法包裹，标记为上游 SDK 待修，未改 pi2kotlin、未发布 mavenLocal。
+
+代价：`plugin_context` 顶层从单容器变成每插件一个兄弟段；该段在 `createSession` 内局部函数，无自动化测试，只能靠 SDK 渲染路径核对。
+
+## 118. Linux 设置表单化、组合拓展与引导强制安装
+
+挂载目录按 mock 改为底部表单（DdSheet：右上关闭、标题/副标题、共享目录卡片+更换、名称、说明选填、底部主按钮），列表去图标与路径、只留「闭合文件夹 + 名称 + 说明」，编辑时保留移除。安装组合改为「列表 + 表单 sheet」：包含应用、附加应用（包目录多选）、叠加组合、软件源、构建工具下载。组合拓展持久化到 `files/dev_bundle_customization.json`（附加包/叠加/镜像，未知 id 过滤）；镜像支持官方/阿里云/清华/腾讯 v3.24 main+community，默认阿里云，每次组合安装前重写 `/etc/apk/repositories` 并 `apk update`；新增 `apkdev` 预置组合（基础包 + JDK21 musl、Android SDK aarch64、platform-36、Gradle 9.8.2 的下载/校验/解压步骤，约 480 MB）。引导页 Linux 步不可跳过：进入即装 rootfs，随后自动装「环境基础」并显示阶段进度，失败可重试/续装。
+
+代价与风险：默认阿里云会覆盖用户已有源；apkdev 的下载步骤只做编译与命令字符串单测，未真机跑过（依赖 proot 内 curl/sha256sum/tar/unzip 与网络）；组合拓展只做追加/叠加，不支持用户命名自定义组合；持久化放在 ui/settings 的 JSON 而非 data 包 DataStore。
+
+## 119. 抽屉收纳、远程连接占位与市场/我的本地预设
+
+抽屉一级只保留 5 项（小程序、技能、插件、记忆、远程连接），连接器与定时任务收进「展开更多」折叠行；新增远程连接空页（返回、标题、空态）与 `AppDestination.Remote` 路由。技能/连接器/插件三页在顶栏与搜索框之间加「市场 / 我的」分段：市场为本地静态预设（每类 8 条，可搜索名称/说明/标签，安装按钮置灰并提示即将开放），「我的」保持原列表与操作；两个 tab 的搜索词独立。中文「厂商」统一改为「服务商」。
+
+代价：市场内容为占位，默认 tab 是「市场」；tab 与市场搜索词是页面级 `rememberSaveable`，重新进入会复位；接入真实市场时需替换 `MarketPresets` 与行尾按钮逻辑。
+
+## 120. 新建工作区表单与自定义目录
+
+新建工作区由「只输名称」改为表单：名称 + 工作区目录二选一（应用私有目录，默认，显示路径预览；公共存储目录，经 SAF 选择并引导「所有文件访问权限」）。runtime `createWorkspace(name, directory?)` 支持自定义 cwd（绝对路径、非 Home、未被占用校验，mkdirs）；删除工作区只删除 app 私有 `workspacesDir` 内的目录，自定义/公共目录保留，避免误删用户数据；重命名弹窗收敛为纯重命名。会话 JSONL 仍写 app 私有 `agentDir/sessions`（按 cwd 编码目录），不污染用户目录。
+
+代价与风险：公共目录依赖 `MANAGE_EXTERNAL_STORAGE`，用户撤销权限后读写失败；私有目录路径预览在 AppOverlays 用 `LocalContext.filesDir` 重复计算；工作区相关 key 复用 `strings_drawer.xml`，后续迁移需同步；SAF 选择与公共目录下 bash/文件工具行为未真机验证。
+
+## 121. 小米云插件按登录态注入工具
+
+`MiCloudPlugin` 的 `contributions` 改为仅在 `MiCloudSessionState.VERIFIED/UNVERIFIED` 时注入 `mi_cloud_*` 工具；状态探测、登录、退出、清空、过期时调用 `host.requestContributionsRefresh()`，启动时首次物化拿不到登录态，靠探测完成后的刷新补上。插件版本升到 1.0.1（同版本重装升级会卡在导入对话框，升版本可正常升级，旧 cookie/secrets 保留）。
+
+验证：真机装 1.0.1 后，未登录/未知状态的新会话没有 `mi_cloud_*` 工具，提示「登录状态未知」；登录成功后的注入路径未在本机验证（无账号）。代价：贡献物化与登录探测存在一个刷新周期，登录后立即开新会话可能仍看到无工具，下一次刷新后恢复。
