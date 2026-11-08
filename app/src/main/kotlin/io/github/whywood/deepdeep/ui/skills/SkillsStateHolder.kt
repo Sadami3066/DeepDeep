@@ -154,7 +154,7 @@ class SkillsStateHolder internal constructor(
     }
 
     suspend fun setEnabled(skill: InstalledSkill, enabled: Boolean) {
-        if (_state.value.togglingIds.isNotEmpty()) return
+        if (skill.id in _state.value.togglingIds) return
         _state.update { it.copy(togglingIds = it.togglingIds + skill.id) }
         try {
             val updated = source.setGlobalEnabled(skill.id, enabled)
@@ -172,7 +172,7 @@ class SkillsStateHolder internal constructor(
     }
 
     suspend fun delete(skill: InstalledSkill) {
-        if (_state.value.togglingIds.isNotEmpty()) return
+        if (skill.id in _state.value.togglingIds) return
         _state.update { it.copy(togglingIds = it.togglingIds + skill.id) }
         try {
             val deleted = source.delete(skill.id)

@@ -122,7 +122,7 @@ internal fun PluginsScreen(
 
     LaunchedEffect(Unit) { holder.load() }
     LifecycleResumeEffect(holder) {
-        holder.load()
+        holder.refresh()
         onPauseOrDispose { }
     }
 

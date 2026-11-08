@@ -286,7 +286,7 @@ private fun SkillsContent(
                     Spacer(Modifier.height(8.dp))
                     SkillsGroup(
                         skills = state.visibleItems,
-                        enabled = !state.busy,
+                        togglingIds = state.togglingIds,
                         onOpen = { selected = it },
                         onToggle = onToggle,
                     )
@@ -301,6 +301,7 @@ private fun SkillsContent(
         SkillDetailSheet(
             skill = skill,
             readContent = readContent,
+            deleteEnabled = skill.id !in state.togglingIds,
             onDismiss = { selected = null },
             onDelete = { deleteTarget = skill },
         )
@@ -421,7 +422,7 @@ private fun EmptySkills(onInstall: () -> Unit) {
 @Composable
 private fun SkillsGroup(
     skills: List<InstalledSkill>,
-    enabled: Boolean,
+    togglingIds: Set<String>,
     onOpen: (InstalledSkill) -> Unit,
     onToggle: (InstalledSkill, Boolean) -> Unit,
 ) {
@@ -451,7 +452,7 @@ private fun SkillsGroup(
                         DdSwitch(
                             checked = skill.globalEnabled,
                             onCheckedChange = { onToggle(skill, it) },
-                            enabled = enabled,
+                            enabled = skill.id !in togglingIds,
                             stateDescription = stringResource(
                                 if (skill.globalEnabled) {
                                     R.string.skills_global_enabled
@@ -487,6 +488,7 @@ private fun ManualTag() {
 private fun SkillDetailSheet(
     skill: InstalledSkill,
     readContent: suspend (String) -> String?,
+    deleteEnabled: Boolean,
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -595,6 +597,7 @@ private fun SkillDetailSheet(
                 DdTextAction(
                     text = stringResource(R.string.skills_delete_confirm),
                     onClick = onDelete,
+                    enabled = deleteEnabled,
                     modifier = Modifier.testTag("skill_delete"),
                     color = colors.danger,
                 )
