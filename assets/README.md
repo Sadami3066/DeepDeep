@@ -2,7 +2,7 @@
 
 - [鲸鱼娘 UI 整板套件](ui-kit/whale-flat-v1/README.md)：保留整板与四张吉祥物（wave/idle/thinking/sleepy），其余切图已移出。
 
-- [Milo Modern 图标素材包](milo-modern-icons-200-revised/README.md)：200 个图形 × regular/semibold 两档线重；App 使用 semibold 档，实际用到的图标整理在 [图标分类源](../design/icons/README.md)，由生成脚本导出到 `design/src/main/res/drawable-nodpi/`。
+- [Milo Modern 图标素材包](milo-modern-icons-200-revised/README.md)：200 个图形 × regular/semibold 两档线重；App 使用 regular 档，实际用到的图标整理在 [图标分类源](../design/icons/README.md)，由生成脚本导出到 `design/src/main/res/drawable-nodpi/`。
 - [图标分类源](../design/icons/README.md)：应用内通用 UI 图标的单源目录（分类 + `catalog.json`）、生成脚本与分类预览页；运行时资源由它生成。
 
 - [品牌、字体与第三方许可](branding/README.md)：当前随 APK 发布的图标与字体。

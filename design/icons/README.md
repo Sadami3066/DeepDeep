@@ -52,7 +52,7 @@ node design/icons/gen.mjs --check
 
 ## 视觉规格
 
-- 位图来自 `assets/milo-modern-icons-200-revised/semibold/`：256 画布、线宽约 2.15dp、`#273140` 线稿、图形约占画布 85%，只收录 App 实际用到的图标。
+- 位图来自 `assets/milo-modern-icons-200-revised/regular/`：256 画布、线宽约 1.75dp、`#273140` 线稿、图形约占画布 85%，只收录 App 实际用到的图标。
 - 无 Milo 对应语义的少数线稿为手绘 vector：24 viewport、2.1dp 圆头描边、纯黑描边以便 tint。
 - 两种都交给 `DdIcon` 统一 tint，不要在业务代码里直接 `painterResource`。
 

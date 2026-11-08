@@ -53,7 +53,7 @@
       "dd": [
         "ArrowLeft"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_back.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_back.png"
     },
     {
       "id": "chevron_down",
@@ -80,7 +80,7 @@
       "dd": [
         "Close"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_close.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_close.png"
     },
     {
       "id": "expand",
@@ -89,7 +89,7 @@
       "dd": [
         "Expand"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_expand.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_expand.png"
     },
     {
       "id": "external_link",
@@ -98,7 +98,7 @@
       "dd": [
         "External"
       ],
-      "upstream": "semibold/08_tools_layout/ic_milo_external_link.png"
+      "upstream": "regular/08_tools_layout/ic_milo_external_link.png"
     },
     {
       "id": "menu",
@@ -107,7 +107,7 @@
       "dd": [
         "Menu"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_menu.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_menu.png"
     },
     {
       "id": "more",
@@ -117,7 +117,7 @@
         "DotsVertical",
         "More"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_more.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_more.png"
     },
     {
       "id": "add",
@@ -126,7 +126,7 @@
       "dd": [
         "Plus"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_add.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_add.png"
     },
     {
       "id": "archive",
@@ -135,7 +135,7 @@
       "dd": [
         "Archive"
       ],
-      "upstream": "semibold/01_core/ic_milo_archive.png"
+      "upstream": "regular/01_core/ic_milo_archive.png"
     },
     {
       "id": "copy",
@@ -144,7 +144,7 @@
       "dd": [
         "Copy"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_copy.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_copy.png"
     },
     {
       "id": "delete",
@@ -153,7 +153,7 @@
       "dd": [
         "Trash"
       ],
-      "upstream": "semibold/03_memory_files/ic_milo_delete.png"
+      "upstream": "regular/03_memory_files/ic_milo_delete.png"
     },
     {
       "id": "download",
@@ -162,7 +162,7 @@
       "dd": [
         "Download"
       ],
-      "upstream": "semibold/03_memory_files/ic_milo_download.png"
+      "upstream": "regular/03_memory_files/ic_milo_download.png"
     },
     {
       "id": "eye",
@@ -180,7 +180,7 @@
       "dd": [
         "Pin"
       ],
-      "upstream": "semibold/03_memory_files/ic_milo_pin.png"
+      "upstream": "regular/03_memory_files/ic_milo_pin.png"
     },
     {
       "id": "play",
@@ -189,7 +189,7 @@
       "dd": [
         "Play"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_play.png"
+      "upstream": "regular/04_automation_device/ic_milo_play.png"
     },
     {
       "id": "quote",
@@ -207,7 +207,7 @@
       "dd": [
         "Refresh"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_retry.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_retry.png"
     },
     {
       "id": "scan",
@@ -216,7 +216,7 @@
       "dd": [
         "Scan"
       ],
-      "upstream": "semibold/01_core/ic_milo_scan.png"
+      "upstream": "regular/01_core/ic_milo_scan.png"
     },
     {
       "id": "search",
@@ -225,7 +225,7 @@
       "dd": [
         "Search"
       ],
-      "upstream": "semibold/01_core/ic_milo_search.png"
+      "upstream": "regular/01_core/ic_milo_search.png"
     },
     {
       "id": "select_all",
@@ -243,7 +243,7 @@
       "dd": [
         "Share"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_share.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_share.png"
     },
     {
       "id": "stop",
@@ -252,7 +252,7 @@
       "dd": [
         "Stop"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_stop.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_stop.png"
     },
     {
       "id": "sync",
@@ -261,7 +261,7 @@
       "dd": [
         "Sync"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_sync.png"
+      "upstream": "regular/04_automation_device/ic_milo_sync.png"
     },
     {
       "id": "confirm",
@@ -270,7 +270,7 @@
       "dd": [
         "Check"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_confirm.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_confirm.png"
     },
     {
       "id": "info",
@@ -279,7 +279,7 @@
       "dd": [
         "Info"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_info.png"
+      "upstream": "regular/04_automation_device/ic_milo_info.png"
     },
     {
       "id": "notifications",
@@ -288,7 +288,7 @@
       "dd": [
         "Notifications"
       ],
-      "upstream": "semibold/01_core/ic_milo_notifications.png"
+      "upstream": "regular/01_core/ic_milo_notifications.png"
     },
     {
       "id": "attachment",
@@ -297,7 +297,7 @@
       "dd": [
         "Paperclip"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_attachment.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_attachment.png"
     },
     {
       "id": "camera",
@@ -306,7 +306,7 @@
       "dd": [
         "Camera"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_camera.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_camera.png"
     },
     {
       "id": "code",
@@ -315,7 +315,7 @@
       "dd": [
         "Raw"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_code.png"
+      "upstream": "regular/04_automation_device/ic_milo_code.png"
     },
     {
       "id": "database",
@@ -324,7 +324,7 @@
       "dd": [
         "Database"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_database.png"
+      "upstream": "regular/04_automation_device/ic_milo_database.png"
     },
     {
       "id": "plain",
@@ -333,7 +333,7 @@
       "dd": [
         "File"
       ],
-      "upstream": "semibold/05_file_states/ic_milo_file_plain.png"
+      "upstream": "regular/05_file_states/ic_milo_file_plain.png"
     },
     {
       "id": "folder_closed",
@@ -342,7 +342,7 @@
       "dd": [
         "Folder"
       ],
-      "upstream": "semibold/05_file_states/ic_milo_folder_closed.png"
+      "upstream": "regular/05_file_states/ic_milo_folder_closed.png"
     },
     {
       "id": "folder_open",
@@ -351,7 +351,7 @@
       "dd": [
         "FolderOpen"
       ],
-      "upstream": "semibold/05_file_states/ic_milo_folder_open.png"
+      "upstream": "regular/05_file_states/ic_milo_folder_open.png"
     },
     {
       "id": "image",
@@ -360,7 +360,7 @@
       "dd": [
         "Image"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_image.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_image.png"
     },
     {
       "id": "package_box",
@@ -369,7 +369,7 @@
       "dd": [
         "Package"
       ],
-      "upstream": "semibold/08_tools_layout/ic_milo_package_box.png"
+      "upstream": "regular/08_tools_layout/ic_milo_package_box.png"
     },
     {
       "id": "workspace",
@@ -378,7 +378,7 @@
       "dd": [
         "Workspace"
       ],
-      "upstream": "semibold/01_core/ic_milo_workspace.png"
+      "upstream": "regular/01_core/ic_milo_workspace.png"
     },
     {
       "id": "audio_high",
@@ -387,7 +387,7 @@
       "dd": [
         "Volume"
       ],
-      "upstream": "semibold/06_control_chat_states/ic_milo_audio_high.png"
+      "upstream": "regular/06_control_chat_states/ic_milo_audio_high.png"
     },
     {
       "id": "audio_muted",
@@ -396,7 +396,7 @@
       "dd": [
         "VolumeX"
       ],
-      "upstream": "semibold/06_control_chat_states/ic_milo_audio_muted.png"
+      "upstream": "regular/06_control_chat_states/ic_milo_audio_muted.png"
     },
     {
       "id": "preferences",
@@ -405,7 +405,7 @@
       "dd": [
         "ChatPreferences"
       ],
-      "upstream": "semibold/01_core/ic_milo_chat_preferences.png"
+      "upstream": "regular/01_core/ic_milo_chat_preferences.png"
     },
     {
       "id": "unread",
@@ -414,7 +414,7 @@
       "dd": [
         "Message"
       ],
-      "upstream": "semibold/06_control_chat_states/ic_milo_chat_unread.png"
+      "upstream": "regular/06_control_chat_states/ic_milo_chat_unread.png"
     },
     {
       "id": "microphone",
@@ -423,7 +423,7 @@
       "dd": [
         "Mic"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_microphone.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_microphone.png"
     },
     {
       "id": "new_chat",
@@ -432,7 +432,7 @@
       "dd": [
         "Compose"
       ],
-      "upstream": "semibold/01_core/ic_milo_new_chat.png"
+      "upstream": "regular/01_core/ic_milo_new_chat.png"
     },
     {
       "id": "voice_wave",
@@ -441,7 +441,7 @@
       "dd": [
         "AudioLines"
       ],
-      "upstream": "semibold/02_navigation_chat/ic_milo_voice_wave.png"
+      "upstream": "regular/02_navigation_chat/ic_milo_voice_wave.png"
     },
     {
       "id": "agent",
@@ -450,7 +450,7 @@
       "dd": [
         "Sparkles"
       ],
-      "upstream": "semibold/01_core/ic_milo_agent.png"
+      "upstream": "regular/01_core/ic_milo_agent.png"
     },
     {
       "id": "connectors",
@@ -459,7 +459,7 @@
       "dd": [
         "Plug"
       ],
-      "upstream": "semibold/01_core/ic_milo_connectors.png"
+      "upstream": "regular/01_core/ic_milo_connectors.png"
     },
     {
       "id": "goal",
@@ -468,7 +468,7 @@
       "dd": [
         "Target"
       ],
-      "upstream": "semibold/03_memory_files/ic_milo_goal.png"
+      "upstream": "regular/03_memory_files/ic_milo_goal.png"
     },
     {
       "id": "interaction",
@@ -477,7 +477,7 @@
       "dd": [
         "HandClick"
       ],
-      "upstream": "semibold/01_core/ic_milo_interaction.png"
+      "upstream": "regular/01_core/ic_milo_interaction.png"
     },
     {
       "id": "memory",
@@ -486,7 +486,7 @@
       "dd": [
         "Brain"
       ],
-      "upstream": "semibold/01_core/ic_milo_memory.png"
+      "upstream": "regular/01_core/ic_milo_memory.png"
     },
     {
       "id": "mini_apps",
@@ -495,7 +495,7 @@
       "dd": [
         "Apps"
       ],
-      "upstream": "semibold/01_core/ic_milo_mini_apps.png"
+      "upstream": "regular/01_core/ic_milo_mini_apps.png"
     },
     {
       "id": "model_provider",
@@ -504,7 +504,7 @@
       "dd": [
         "Cloud"
       ],
-      "upstream": "semibold/01_core/ic_milo_model_provider.png"
+      "upstream": "regular/01_core/ic_milo_model_provider.png"
     },
     {
       "id": "plugins",
@@ -513,7 +513,7 @@
       "dd": [
         "Puzzle"
       ],
-      "upstream": "semibold/01_core/ic_milo_plugins.png"
+      "upstream": "regular/01_core/ic_milo_plugins.png"
     },
     {
       "id": "skills",
@@ -522,7 +522,7 @@
       "dd": [
         "Book"
       ],
-      "upstream": "semibold/01_core/ic_milo_skills.png"
+      "upstream": "regular/01_core/ic_milo_skills.png"
     },
     {
       "id": "appearance",
@@ -531,7 +531,7 @@
       "dd": [
         "Moon"
       ],
-      "upstream": "semibold/01_core/ic_milo_appearance.png"
+      "upstream": "regular/01_core/ic_milo_appearance.png"
     },
     {
       "id": "desktop",
@@ -549,7 +549,7 @@
       "dd": [
         "Monitor"
       ],
-      "upstream": "semibold/01_core/ic_milo_device.png"
+      "upstream": "regular/01_core/ic_milo_device.png"
     },
     {
       "id": "device_connected",
@@ -558,7 +558,7 @@
       "dd": [
         "Phone"
       ],
-      "upstream": "semibold/07_connection_task_states/ic_milo_device_connected.png"
+      "upstream": "regular/07_connection_task_states/ic_milo_device_connected.png"
     },
     {
       "id": "floating_window",
@@ -567,7 +567,7 @@
       "dd": [
         "FloatingWindow"
       ],
-      "upstream": "semibold/08_tools_layout/ic_milo_floating_window.png"
+      "upstream": "regular/08_tools_layout/ic_milo_floating_window.png"
     },
     {
       "id": "git_branch",
@@ -576,7 +576,7 @@
       "dd": [
         "GitFork"
       ],
-      "upstream": "semibold/08_tools_layout/ic_milo_git_branch.png"
+      "upstream": "regular/08_tools_layout/ic_milo_git_branch.png"
     },
     {
       "id": "language",
@@ -585,7 +585,7 @@
       "dd": [
         "Globe"
       ],
-      "upstream": "semibold/01_core/ic_milo_language.png"
+      "upstream": "regular/01_core/ic_milo_language.png"
     },
     {
       "id": "license",
@@ -594,7 +594,7 @@
       "dd": [
         "License"
       ],
-      "upstream": "semibold/01_core/ic_milo_license.png"
+      "upstream": "regular/01_core/ic_milo_license.png"
     },
     {
       "id": "permissions",
@@ -603,7 +603,7 @@
       "dd": [
         "Shield"
       ],
-      "upstream": "semibold/01_core/ic_milo_permissions.png"
+      "upstream": "regular/01_core/ic_milo_permissions.png"
     },
     {
       "id": "privacy",
@@ -612,7 +612,7 @@
       "dd": [
         "Privacy"
       ],
-      "upstream": "semibold/01_core/ic_milo_privacy.png"
+      "upstream": "regular/01_core/ic_milo_privacy.png"
     },
     {
       "id": "settings",
@@ -621,7 +621,7 @@
       "dd": [
         "Settings"
       ],
-      "upstream": "semibold/01_core/ic_milo_settings.png"
+      "upstream": "regular/01_core/ic_milo_settings.png"
     },
     {
       "id": "terminal",
@@ -630,7 +630,7 @@
       "dd": [
         "Terminal"
       ],
-      "upstream": "semibold/01_core/ic_milo_terminal.png"
+      "upstream": "regular/01_core/ic_milo_terminal.png"
     },
     {
       "id": "theme",
@@ -648,7 +648,7 @@
       "dd": [
         "Clock"
       ],
-      "upstream": "semibold/04_automation_device/ic_milo_timer.png"
+      "upstream": "regular/04_automation_device/ic_milo_timer.png"
     },
     {
       "id": "today",
@@ -657,7 +657,7 @@
       "dd": [
         "Sun"
       ],
-      "upstream": "semibold/03_memory_files/ic_milo_today.png"
+      "upstream": "regular/03_memory_files/ic_milo_today.png"
     },
     {
       "id": "typography",
@@ -666,7 +666,7 @@
       "dd": [
         "Font"
       ],
-      "upstream": "semibold/01_core/ic_milo_typography.png"
+      "upstream": "regular/01_core/ic_milo_typography.png"
     }
   ]
 }

@@ -39,7 +39,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 
 - 颜色从 `deepDeepColors()` 取，字号走 `DdType`，动效时长走 `DdMotion`，间距/圆角/阴影/透明度走 `DdSpacing`/`DdShapes`/`DdElevation`/`DdAlpha`；不硬编码 dp/sp、色值与时长。
 - 组件只用 Compose 与本模块资源，不依赖 `:app`/`:runtime`；跨模块复用的控件先落到这里。
-- 图标：单源在 `design/icons/`（7 类分类目录 + `catalog.json` 登记），`node design/icons/gen.mjs` 生成 `res/drawable-nodpi/ic_<category>_<id>.png|xml` 与 `DdIcons.kt`，分类预览 `design/icons/preview.html`；位图取自 `assets/milo-modern-icons-200-revised/` 的 **semibold** 档（256 画布、线宽约 2.15dp、`#273140` 线稿、图形约占画布 85%），手写矢量 24 viewport、2.1dp 圆头描边，两种都由 `DdIcon` 统一 tint；运行时资源是生成物，只改 `design/icons/` 再重跑生成。
+- 图标：单源在 `design/icons/`（7 类分类目录 + `catalog.json` 登记），`node design/icons/gen.mjs` 生成 `res/drawable-nodpi/ic_<category>_<id>.png|xml` 与 `DdIcons.kt`，分类预览 `design/icons/preview.html`；位图取自 `assets/milo-modern-icons-200-revised/` 的 **regular** 档（256 画布、线宽约 1.75dp、`#273140` 线稿、图形约占画布 85%），手写矢量 24 viewport、2.1dp 圆头描边，两种都由 `DdIcon` 统一 tint；运行时资源是生成物，只改 `design/icons/` 再重跑生成。
 - 圆角是 8/12/14/16/20/24/28dp 体系，可点区域按 44dp；改视觉先改 token 再改调用点。
 - 边距与按压反馈：可点组件的内容与按压/波纹边缘之间至少留 `DdSpacing.Md`（12dp）横向内边距，文字与图标不许贴边（`DdTextAction` 已按此修正）；按压反馈只覆盖组件可视形状，不许溢出到相邻内容；所有可点区域 ≥ 44dp。
 - 主题预设：`ThemePreset { SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }`，入口是 `DeepDeepTheme(preset, fontStyle)`；Santorini 固定浅色、Oceanic 固定深色、DeepDeep 固定浅色（已删除其深色配色）；默认 SYSTEM 自动在 Santorini/Oceanic 间选择。新增主题只需在 `DdTheme` 加颜色函数并在 `ThemePreset` 登记，设置页会自动出现选项。
