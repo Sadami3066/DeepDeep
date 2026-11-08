@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.runtime.memory.memoryTools
 import io.github.whywood.deepdeep.runtime.todoWriteTool
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
 import io.github.whywood.deepdeep.runtime.SessionBinding
+import io.github.whywood.deepdeep.runtime.StorageMountInfo
 import io.github.whywood.deepdeep.runtime.adbShellTool
 import io.github.whywood.deepdeep.runtime.goalTools
 import io.github.whywood.deepdeep.runtime.jobTools
@@ -163,6 +164,11 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         )
     }
 
+    private fun storageMountInfos(): List<StorageMountInfo> =
+        deps.storageMountStore.cached().map { mount ->
+            StorageMountInfo(name = mount.name, description = mount.description, path = mount.path)
+        }
+
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
         PiSessionEngine(
             workspace = cwd,
@@ -173,6 +179,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             providers = deps.providerCatalog,
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            storageMounts = { storageMountInfos() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             toolContext = appToolContext,
             memory = memoryStore,
@@ -193,6 +200,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
+            storageMounts = { storageMountInfos() },
             defaultMaxTurns = { 16 },
             workspace = deps.homeDir,
             shellExecutorFor = deps.shellExecutorFor,

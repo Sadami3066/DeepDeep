@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.DevPackagesState
+import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -35,12 +36,15 @@ fun RuntimeSettingsScreen(
     linuxSupported: Boolean,
     linuxEnabled: Boolean,
     sharedStorageEnabled: Boolean,
+    mounts: List<StorageMount>,
     devPackages: DevPackagesState,
     onBack: () -> Unit,
     onInstall: () -> Unit,
     onReset: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
     onSharedStorageChange: (Boolean) -> Unit,
+    onSaveMount: (StorageMount) -> Unit,
+    onRemoveMount: (String) -> Unit,
     onInstallBundle: (DevBundle) -> Unit,
     onRefreshPackages: () -> Unit,
     modifier: Modifier = Modifier,
@@ -89,6 +93,9 @@ fun RuntimeSettingsScreen(
                     onReset = onReset,
                     onEnabledChange = onEnabledChange,
                     onSharedStorageChange = onSharedStorageChange,
+                    mounts = mounts,
+                    onSaveMount = onSaveMount,
+                    onRemoveMount = onRemoveMount,
                 )
             }
             Spacer(Modifier.height(24.dp))

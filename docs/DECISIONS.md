@@ -323,3 +323,14 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 - 图标：应用内线性图标换成 Milo Modern 200 枚素材包（`assets/milo-modern-icons-200-revised/semibold/`，线宽约 2.15dp），`DdIcons` 全量重映射并新增 Archive/Privacy/License/Workspace/Database/Notifications/FloatingWindow/ChatPreferences/Sync 等语义成员，避免不同页面共用同一图形；无对应语义的 6 项手写同风格 vector。浮动窗口的鲸鱼心情图与 Canvas 动画图标（DdSpinner/DdTypingDots/波形/悬浮环）保持原样。
 - 引导：六步流程不变，视觉按提供的参考稿重做（白底左对齐、大标题、下划线输入、灰底胶囊分段、右上步骤计数、带箭头主按钮）；吉祥物用 `assets/ui-kit/whale-flat-v1` 的四张全身像（wave/idle/thinking/sleepy），旧的 `assets/mascot` 候选插画移出仓库。
 - 素材目录只保留在用内容（milo 图标、ui-kit 四张吉祥物、provider/vendor 图标与 branding 记录），未使用素材移出 `assets/`。
+
+## 116. Linux 挂载目录与提示词 paths 段合并
+
+整块公共存储共享之外，需要按目录挂载（如 Obsidian vault）并让模型知道每个目录的用途。现在：
+
+- 存储：`files/storage-mounts.json`（`StorageMountStore`），字段 `id/name/description/path`；最多 20 个，名称 ≤32、说明 ≤160，路径限定在 `/storage/emulated/0/` 下，原子写。
+- 选择：设置 → Linux → 挂载目录，经 Storage Access Framework 选公共存储子目录（`PublicStoragePicker` 只接受 `externalstorage` + `primary`），保存为宿主绝对路径。
+- 提示词：原 `shared_storage` 与 `paths` 两段合并为单个 `<paths>`（`PromptPaths.buildPathsSection`），依次输出 Skills / App data / Shared storage / Mounted directories；挂载目录渲染为 `- 名称 (路径): 说明`。`Personalization` 不再接收 sharedStorage。
+- 执行：`PRootExecutor` / `LinuxEnvironment` 的 `extraBinds` 改为 provider lambda，按当前挂载列表把宿主目录绑定到 guest 同路径，并在 bind 前 mkdir 目标。
+
+理由：单一来源、少一段提示词、挂载配置不写死在代码里。代价：SAF 只能选公共存储；挂载目录被删除后 bind 失败由 proot 报错，不额外兜底。

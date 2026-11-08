@@ -204,4 +204,21 @@
     <string name="assistant_settings_power">Set long-press wake-up</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
     <string name="settings_privilege">Permissions</string>
+
+    <string name="settings_linux_mounts">Mounted folders</string>
+    <string name="settings_linux_mounts_empty">Mount a folder from shared storage and tell DeepDeep what it is for.</string>
+    <string name="settings_linux_mount_count">%1$d folders</string>
+    <string name="settings_linux_mount_add">Add mounted folder</string>
+    <string name="settings_linux_mount_add_grant">Grant "All files access" first</string>
+    <string name="settings_linux_mount_edit">Edit mounted folder</string>
+    <string name="settings_linux_mount_name_hint">Name, e.g. Obsidian</string>
+    <string name="settings_linux_mount_choose">Choose folder</string>
+    <string name="settings_linux_mount_change">Change</string>
+    <string name="settings_linux_mount_description_hint">What is in this folder and what should DeepDeep use it for</string>
+    <string name="settings_linux_mount_remove">Remove</string>
+    <string name="settings_linux_mount_save">Save</string>
+    <string name="settings_linux_mount_cancel">Cancel</string>
+    <string name="settings_linux_mount_invalid_path">Only folders in main storage can be mounted</string>
+    <string name="settings_linux_mount_name_required">Enter a name</string>
+    <string name="settings_linux_mount_choose_required">Choose a folder first</string>
 </resources>

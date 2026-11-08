@@ -60,13 +60,12 @@ class PersonalizationPromptTest {
             modelId = "deepseek-v4.1-flash",
             cwd = "/tmp",
             now = now,
-            sharedStorage = true,
             pluginBody = "feishu ready",
             extra = mapOf("page" to "<page>prompt</page>"),
         )
 
         assertEquals(
-            listOf("environment", "instruction", "shared_storage", "plugins", "page"),
+            listOf("environment", "instruction", "plugins", "page"),
             result.keys.toList(),
         )
         assertTrue(result.getValue("plugins").contains("feishu ready"))
@@ -81,7 +80,6 @@ class PersonalizationPromptTest {
             modelId = "deepseek-v4.1-flash",
             cwd = "/tmp",
             now = now,
-            sharedStorage = false,
             pluginBody = "   ",
         )
 

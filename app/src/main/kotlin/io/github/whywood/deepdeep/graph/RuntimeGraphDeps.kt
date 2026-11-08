@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
@@ -41,6 +42,7 @@ internal class RuntimeGraphDeps(
     val httpTransport: HttpTransport,
     val personalizationStore: PersonalizationStore,
     val linuxSettings: LinuxSettingsStore,
+    val storageMountStore: StorageMountStore,
     val questionCenter: QuestionCenter,
     val goalService: GoalService,
     val miniappStore: MiniappStore,

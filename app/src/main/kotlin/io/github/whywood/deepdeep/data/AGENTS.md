@@ -33,6 +33,7 @@
 | `SkillArchive.kt` | 技能 zip 解析：单 SKILL.md、frontmatter、路径安全与体积限制 |
 | `SkillRepository.kt` | 技能仓库：安装/删除/全局开关与项目级 `.pi/skills` 同步 |
 | `StorageMigration.kt` | 旧目录迁到 home/workspaces 并重写会话 JSONL 的 cwd |
+| `StorageMountStore.kt` | 公共存储挂载目录 `files/storage-mounts.json`：`StorageMount(id,name,description,path)`、最多 20 个、名称≤32/说明≤160、限定 `/storage/emulated/0/`、原子写 |
 | `ThemePreferences.kt` | 深浅色主题 DataStore |
 | `VoicePreferences.kt` | 语音自动朗读开关 DataStore |
 

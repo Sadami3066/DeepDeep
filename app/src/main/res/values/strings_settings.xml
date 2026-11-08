@@ -210,4 +210,21 @@
     <string name="assistant_settings_power">设置长按唤醒</string>
     <string name="assistant_settings_power_unavailable">系统没有这个设置页</string>
     <string name="settings_privilege">权限</string>
+
+    <string name="settings_linux_mounts">挂载目录</string>
+    <string name="settings_linux_mounts_empty">把公共存储里的文件夹挂载进来，告诉 DeepDeep 它的用途。</string>
+    <string name="settings_linux_mount_count">%1$d 个目录</string>
+    <string name="settings_linux_mount_add">添加挂载目录</string>
+    <string name="settings_linux_mount_add_grant">需要先授予「所有文件访问权限」</string>
+    <string name="settings_linux_mount_edit">编辑挂载</string>
+    <string name="settings_linux_mount_name_hint">名称，例如 Obsidian</string>
+    <string name="settings_linux_mount_choose">选择目录</string>
+    <string name="settings_linux_mount_change">重新选择</string>
+    <string name="settings_linux_mount_description_hint">说明这个目录里有什么、DeepDeep 该拿它做什么</string>
+    <string name="settings_linux_mount_remove">移除挂载</string>
+    <string name="settings_linux_mount_save">保存</string>
+    <string name="settings_linux_mount_cancel">取消</string>
+    <string name="settings_linux_mount_invalid_path">只能选择主存储里的目录</string>
+    <string name="settings_linux_mount_name_required">请填写名称</string>
+    <string name="settings_linux_mount_choose_required">请先选择目录</string>
 </resources>

@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
+import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
@@ -151,6 +152,7 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
         initialValue = false,
     )
     val devPackages by dependencies.devPackageManager.state.collectAsStateWithLifecycle()
+    val mounts by dependencies.storageMounts.mounts.collectAsStateWithLifecycle(initialValue = emptyList())
     LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }
     LaunchedEffect(linuxState) { dependencies.devPackageManager.refresh() }
     RuntimeSettingsScreen(
@@ -158,6 +160,7 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
         linuxSupported = dependencies.linuxEnvironment.isSupported,
         linuxEnabled = linuxEnabled,
         sharedStorageEnabled = sharedStorageEnabled,
+        mounts = mounts,
         devPackages = devPackages,
         onBack = onBack,
         onInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
@@ -175,6 +178,8 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
             }
         },
         onSharedStorageChange = { enabled -> scope.launch { dependencies.linuxSettings.setSharedStorageEnabled(enabled) } },
+        onSaveMount = { mount -> scope.launch { dependencies.storageMounts.save(mergeMount(mounts, mount)) } },
+        onRemoveMount = { id -> scope.launch { dependencies.storageMounts.remove(id) } },
         onInstallBundle = dependencies.devPackageManager::installBundle,
         onRefreshPackages = dependencies.devPackageManager::refresh,
     )
@@ -196,3 +201,7 @@ internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScop
         onBack = onBack,
     )
 }
+
+
+private fun mergeMount(mounts: List<StorageMount>, mount: StorageMount): List<StorageMount> =
+    mounts.filterNot { it.id == mount.id } + mount

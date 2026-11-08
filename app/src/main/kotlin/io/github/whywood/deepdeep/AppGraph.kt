@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -91,7 +92,7 @@ class AppGraph(context: Context) : AppDependencies {
     val workspacesDir: File get() = dataGraph.workspacesDir
     val agentDir: File get() = dataGraph.agentDir
 
-    fun linuxBinds(): List<Pair<File, String>> = platformGraph.linuxBinds()
+    fun linuxBinds(): () -> List<Pair<File, String>> = platformGraph.linuxBinds()
 
     override val attachmentStore: AttachmentStore get() = dataGraph.attachmentStore
     val themePreferences: ThemePreferences get() = dataGraph.themePreferences
@@ -103,6 +104,8 @@ class AppGraph(context: Context) : AppDependencies {
     val fontPreferences get() = dataGraph.fontPreferences
     override val modelConfigStore: ModelSettings get() = dataGraph.modelConfigStore
     override val linuxSettings: LinuxSettingsStore get() = dataGraph.linuxSettings
+
+    override val storageMounts: StorageMountStore get() = dataGraph.storageMountStore
     override val credentials: SdkCredentialStore get() = dataGraph.credentials
     override val providerCatalog: ProviderDirectory get() = dataGraph.providerCatalog
     override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService
@@ -178,6 +181,7 @@ class AppGraph(context: Context) : AppDependencies {
         homeDir = homeDir,
         sharedStorage = dataGraph.sharedStorage,
         linuxSettings = dataGraph.linuxSettings,
+        storageMountStore = dataGraph.storageMountStore,
         httpTransport = dataGraph.httpTransport,
         mcpTokenStore = dataGraph.mcpTokenStore,
         pluginManager = { pluginManager },
@@ -199,6 +203,7 @@ class AppGraph(context: Context) : AppDependencies {
         httpTransport = dataGraph.httpTransport,
         personalizationStore = dataGraph.personalizationStore,
         linuxSettings = dataGraph.linuxSettings,
+        storageMountStore = dataGraph.storageMountStore,
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,

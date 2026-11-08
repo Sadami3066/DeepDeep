@@ -20,7 +20,7 @@ class PRootExecutor(
     private val workspaceDir: File,
     private val tempDir: File,
     private val sharedStorageEnabled: () -> Boolean = { false },
-    private val extraBinds: List<Pair<File, String>> = emptyList(),
+    private val extraBinds: () -> List<Pair<File, String>> = { emptyList() },
     private val maxOutputBytes: Int = 64 * 1024,
     private val pidReader: (File) -> Long = ::readPidFile,
     private val logDir: File = File(tempDir, "tool-output"),
@@ -90,7 +90,7 @@ class PRootExecutor(
             add("-b")
             add("/storage/emulated/0:/sdcard")
         }
-        extraBinds.forEach { (host, guest) ->
+        extraBinds().forEach { (host, guest) ->
             add("-b")
             add("${host.absolutePath}:$guest")
         }
@@ -116,7 +116,7 @@ class PRootExecutor(
         require(rootfsDir.isDirectory) { "rootfs not installed: $rootfsDir" }
         workspaceDir.mkdirs()
         tempDir.mkdirs()
-        prepareBindDirectories(rootfsDir, extraBinds + (workspaceDir to workspaceDir.absolutePath))
+        prepareBindDirectories(rootfsDir, extraBinds() + (workspaceDir to workspaceDir.absolutePath))
         if (sharedStorageEnabled()) {
             File(rootfsDir, "storage/emulated/0").mkdirs()
             File(rootfsDir, "sdcard").mkdirs()

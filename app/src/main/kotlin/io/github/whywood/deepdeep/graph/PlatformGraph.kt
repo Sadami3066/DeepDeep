@@ -45,7 +45,11 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
 
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
 
-    fun linuxBinds(): List<Pair<File, String>> = listOf(File("/data") to "/data")
+    fun linuxBinds(): () -> List<Pair<File, String>> = {
+        listOf(File("/data") to "/data") + deps.storageMountStore.cached().map { mount ->
+            File(mount.path) to mount.path
+        }
+    }
 
     fun linuxEnvironmentFor(cwd: String?): LinuxEnvironment {
         val directory = cwd?.takeIf { it.isNotBlank() }?.let(::File) ?: deps.homeDir

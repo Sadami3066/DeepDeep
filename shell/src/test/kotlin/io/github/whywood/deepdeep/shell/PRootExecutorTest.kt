@@ -58,10 +58,12 @@ class PRootExecutorTest {
         val skillsHost = File(temp.root, "agent-skills")
         val repoHost = File(temp.root, "skill-repo")
         val fixture = fixture(
-            extraBinds = listOf(
-                skillsHost to "/skills",
-                repoHost to "/skill-repo",
-            ),
+            extraBinds = {
+                listOf(
+                    skillsHost to "/skills",
+                    repoHost to "/skill-repo",
+                )
+            },
         )
 
         val command = fixture.executor.buildCommand("echo hi")
@@ -239,7 +241,7 @@ class PRootExecutorTest {
         maxOutputBytes: Int = 1024,
         pidReader: ((File) -> Long)? = null,
         sharedStorageEnabled: () -> Boolean = { false },
-        extraBinds: List<Pair<File, String>> = emptyList(),
+        extraBinds: () -> List<Pair<File, String>> = { emptyList() },
     ): Fixture {
         val rootfs = temp.newFolder("rootfs")
         val workspace = temp.newFolder("workspace")

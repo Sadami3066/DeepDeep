@@ -40,6 +40,7 @@ class PiSessionEngine(
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
     private val sharedStorage: suspend () -> Boolean = { false },
+    private val storageMounts: suspend () -> List<StorageMountInfo> = { emptyList() },
     private val pluginPromptBody: suspend () -> String? = { null },
     private val toolContext: AppToolContext? = null,
     private val toolFs: FileSystem = FileSystem.SYSTEM,
@@ -106,18 +107,26 @@ class PiSessionEngine(
         }
         val currentSections: suspend () -> Map<String, String> = {
             val session = created
+            val sharedStorageValue = runCatching { sharedStorage() }.getOrDefault(false)
+            val mounts = runCatching { storageMounts() }.getOrDefault(emptyList())
             buildSessionSystemPromptSections(
                 personalization = runCatching { personalization() }.getOrDefault(Personalization()),
                 providerId = session?.model?.provider ?: providerId,
                 modelId = session?.model?.id ?: modelId,
                 cwd = cwd.toString(),
                 now = OffsetDateTime.now(),
-                sharedStorage = runCatching { sharedStorage() }.getOrDefault(false),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",
-                        "技能目录：${agentDirectory / "skills"}。App 私有数据目录：${agentDirectory.parent?.parent ?: agentDirectory}（/data/data 等价），bash 与文件工具按同一真实路径读写。",
+                        escapePromptXml(
+                            buildPathsSection(
+                                skillsDir = (agentDirectory / "skills").toString(),
+                                appDataDir = (agentDirectory.parent?.parent ?: agentDirectory).toString(),
+                                sharedStorage = sharedStorageValue,
+                                mounts = mounts,
+                            ),
+                        ),
                     ),
                 ) + pluginContextSection() + extraSystemPromptSections + buildToolRuleSection(tools),
             )

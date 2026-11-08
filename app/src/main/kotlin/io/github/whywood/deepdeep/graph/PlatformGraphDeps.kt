@@ -4,6 +4,7 @@ import android.content.Context
 import dev.pi.ai.http.HttpTransport
 import dev.pi.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
+import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import java.io.File
@@ -17,6 +18,7 @@ internal class PlatformGraphDeps(
     val homeDir: File,
     val sharedStorage: StateFlow<Boolean>,
     val linuxSettings: LinuxSettingsStore,
+    val storageMountStore: StorageMountStore,
     val httpTransport: HttpTransport,
     val mcpTokenStore: FileMcpTokenStore,
     val pluginManager: () -> PluginHostManager,

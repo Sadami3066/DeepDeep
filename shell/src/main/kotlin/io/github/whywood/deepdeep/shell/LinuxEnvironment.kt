@@ -10,7 +10,7 @@ class LinuxEnvironment(
     context: Context,
     val workspaceDir: File = File(context.applicationContext.filesDir, "workspace"),
     private val sharedStorageEnabled: () -> Boolean = { false },
-    private val extraBinds: List<Pair<File, String>> = emptyList(),
+    private val extraBinds: () -> List<Pair<File, String>> = { emptyList() },
 ) : LinuxExecutor {
     private val appContext = context.applicationContext
     val rootfsDir: File = File(appContext.filesDir, "linux/rootfs")
@@ -45,7 +45,7 @@ class LinuxEnvironment(
         if (result is LinuxInstallState.Installed) {
             workspaceDir.mkdirs()
             prepareBindDirectories(rootfsDir, listOf(workspaceDir to workspaceDir.absolutePath))
-            prepareBindDirectories(rootfsDir, extraBinds)
+            prepareBindDirectories(rootfsDir, extraBinds())
             writeNotices()
             refreshDns()
         }

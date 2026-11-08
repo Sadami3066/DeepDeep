@@ -57,12 +57,10 @@ internal fun buildSessionSystemPromptSections(
     modelId: String,
     cwd: String,
     now: OffsetDateTime,
-    sharedStorage: Boolean,
     pluginBody: String?,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
     val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, cwd, now))
-    if (sharedStorage) sections.putAll(sharedStorageSection())
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
         sections["plugins"] = wrapPromptSection("plugins", escapePromptXml(body))
@@ -70,16 +68,6 @@ internal fun buildSessionSystemPromptSections(
     sections.putAll(extra)
     return sections
 }
-
-internal fun sharedStorageSection(): Map<String, String> = mapOf(
-    "shared_storage" to wrapPromptSection(
-        "shared_storage",
-        listOf(
-            "Android shared storage is available at /storage/emulated/0; file operations there are allowed.",
-            "Do not delete or overwrite user files there unless the user asks.",
-        ).joinToString("\n") { "- $it" },
-    ),
-)
 
 private fun interactionLabel(style: InteractionStyle): String = when (style) {
     InteractionStyle.QUIET -> "Quiet"
