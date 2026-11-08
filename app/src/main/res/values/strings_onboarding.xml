@@ -4,20 +4,20 @@
 
     <string name="onboarding_primary_start">开始</string>
     <string name="onboarding_primary_continue">继续</string>
-    <string name="onboarding_primary_connect">连接</string>
+    <string name="onboarding_primary_connect">连接并继续</string>
     <string name="onboarding_primary_done">开始聊天</string>
-    <string name="onboarding_skip">以后再说</string>
-    <string name="onboarding_later">以后</string>
+    <string name="onboarding_skip">稍后设置</string>
+    <string name="onboarding_later">稍后</string>
 
-    <string name="onboarding_welcome_title">嗨，\n我是 DeepDeep。</string>
+    <string name="onboarding_welcome_title">你好，\n我是 DeepDeep。</string>
     <string name="onboarding_welcome_lead">你的随身 AI 助手。\n从日常小事，到新的想法。</string>
-    <string name="onboarding_welcome_note">几步就好，之后随时能改</string>
+    <string name="onboarding_welcome_note">只需几步，之后你随时可以调整</string>
 
     <string name="onboarding_account_title">先认识一下</string>
-    <string name="onboarding_account_subtitle">先告诉我怎么称呼你，喜欢什么聊法。</string>
-    <string name="onboarding_account_note">之后随时能改</string>
+    <string name="onboarding_account_subtitle">告诉我该怎么称呼你，以及你偏好的聊天方式。</string>
+    <string name="onboarding_account_note">这些设置之后都可以在设置中调整。</string>
     <string name="onboarding_avatar_pick">选择头像</string>
-    <string name="onboarding_avatar_failed">头像没保存上</string>
+    <string name="onboarding_avatar_failed">头像保存失败</string>
     <string name="onboarding_nickname_label">你的称呼</string>
     <string name="onboarding_nickname_hint">怎么称呼你？</string>
     <string name="onboarding_tone_label">交流风格</string>
@@ -30,33 +30,33 @@
     <string name="onboarding_language_english">English</string>
 
     <string name="onboarding_provider_title">连接你的模型</string>
-    <string name="onboarding_provider_subtitle">挑一家服务商，马上就能聊。</string>
+    <string name="onboarding_provider_subtitle">选择一家服务商，就可以开始聊天了。</string>
     <string name="onboarding_provider_section">服务商</string>
     <string name="onboarding_provider_recommended">推荐</string>
-    <string name="onboarding_provider_deepseek_body">中文顺手，快，也便宜</string>
+    <string name="onboarding_provider_deepseek_body">速度较快，价格实惠，中文表现出色</string>
     <string name="onboarding_provider_models">%1$d 个模型</string>
-    <string name="onboarding_provider_choose_other">换一家</string>
+    <string name="onboarding_provider_choose_other">选择其他服务商</string>
     <string name="onboarding_provider_api_key_label">API Key</string>
     <string name="onboarding_provider_api_key_hint">粘贴你的 API Key</string>
     <string name="onboarding_provider_key_show">显示 API Key</string>
     <string name="onboarding_provider_key_hide">隐藏 API Key</string>
     <string name="onboarding_provider_key_saving">保存中…</string>
     <string name="onboarding_provider_key_saved">已保存</string>
-    <string name="onboarding_provider_key_failed">没保存上，再试一次</string>
+    <string name="onboarding_provider_key_failed">保存失败，请稍后重试</string>
     <string name="onboarding_provider_oauth_label">登录方式</string>
-    <string name="onboarding_provider_oauth_login">用浏览器登录</string>
+    <string name="onboarding_provider_oauth_login">使用浏览器登录</string>
     <string name="onboarding_provider_oauth_signing_in">正在登录…</string>
     <string name="onboarding_provider_oauth_signed_in">已登录</string>
     <string name="onboarding_provider_oauth_sign_out">退出登录</string>
-    <string name="onboarding_provider_oauth_failed">登录没成功</string>
-    <string name="onboarding_provider_extra_config">这家要额外配置，去 设置 → 服务商 里连接。</string>
+    <string name="onboarding_provider_oauth_failed">登录失败，请重试</string>
+    <string name="onboarding_provider_extra_config">该服务商需要额外配置，请前往 设置 → 服务商 完成连接。</string>
     <string name="onboarding_provider_search">搜索服务商</string>
     <string name="onboarding_search_clear">清除</string>
-    <string name="onboarding_provider_no_result">没有匹配的服务商</string>
+    <string name="onboarding_provider_no_result">没有找到匹配的服务商</string>
     <string name="onboarding_provider_sheet_title">选择服务商</string>
 
     <string name="onboarding_permissions_title">通知与权限</string>
-    <string name="onboarding_permissions_subtitle">用得到的先开着，之后在设置里也能改。</string>
+    <string name="onboarding_permissions_subtitle">你可以按需开启以下权限，之后也可以在设置中调整。</string>
     <string name="onboarding_permission_notification">通知</string>
     <string name="onboarding_permission_overlay">悬浮窗</string>
     <string name="onboarding_permission_assistant">系统助手</string>
@@ -69,21 +69,21 @@
     <string name="onboarding_linux_not_installed">未安装</string>
     <string name="onboarding_linux_installing">正在安装…</string>
     <string name="onboarding_linux_installed">已安装</string>
-    <string name="onboarding_linux_failed">没装上，稍后再试试</string>
+    <string name="onboarding_linux_failed">安装失败，你可以稍后重试</string>
     <string name="onboarding_linux_used">已占用 %1$s</string>
     <string name="onboarding_linux_size_hint">约 4 MB</string>
     <string name="onboarding_linux_install">安装到本机</string>
-    <string name="onboarding_linux_unsupported">这台设备用不了 Linux，跳过就行。</string>
+    <string name="onboarding_linux_unsupported">当前设备暂不支持 Linux 环境，你可以跳过这一步。</string>
 
     <string name="onboarding_privilege_title">给它多少权限</string>
-    <string name="onboarding_privilege_subtitle">普通模式够日常用；想升级随时说。</string>
-    <string name="onboarding_privilege_note">之后随时能改</string>
+    <string name="onboarding_privilege_subtitle">普通模式即可满足日常使用；如果之后需要更高权限，可以在设置中调整。</string>
+    <string name="onboarding_privilege_note">这些设置之后都可以在设置中调整。</string>
     <string name="onboarding_privilege_normal">普通</string>
-    <string name="onboarding_privilege_normal_body">不用授权，直接用 Linux 里的 bash 和常用工具。</string>
+    <string name="onboarding_privilege_normal_body">无需额外授权，即可使用 Linux 环境内的 bash 与常用工具。</string>
     <string name="onboarding_privilege_adb">无线调试 ADB</string>
-    <string name="onboarding_privilege_adb_body">要先配对；之后到 设置 → 权限 里继续。</string>
+    <string name="onboarding_privilege_adb_body">需要先完成配对；之后可以前往 设置 → 权限 继续配置。</string>
     <string name="onboarding_privilege_root">Root</string>
-    <string name="onboarding_privilege_root_body">需要系统授权；之后到 设置 → 权限 里继续。</string>
+    <string name="onboarding_privilege_root_body">需要系统授权；之后可以前往 设置 → 权限 继续配置。</string>
 
     <string name="personalization_avatar_title">头像</string>
     <string name="personalization_avatar_empty">未设置</string>

@@ -4,20 +4,20 @@
 
     <string name="onboarding_primary_start">Start</string>
     <string name="onboarding_primary_continue">Continue</string>
-    <string name="onboarding_primary_connect">Connect</string>
+    <string name="onboarding_primary_connect">Connect and continue</string>
     <string name="onboarding_primary_done">Start chatting</string>
-    <string name="onboarding_skip">Not now</string>
+    <string name="onboarding_skip">Set up later</string>
     <string name="onboarding_later">Later</string>
 
-    <string name="onboarding_welcome_title">Hi,\nI\'m DeepDeep.</string>
+    <string name="onboarding_welcome_title">Hello,\nI\'m DeepDeep.</string>
     <string name="onboarding_welcome_lead">Your everyday AI assistant.\nFrom daily chores to new ideas.</string>
-    <string name="onboarding_welcome_note">A few steps now. Tweak it anytime.</string>
+    <string name="onboarding_welcome_note">A few steps now; you can adjust them anytime.</string>
 
     <string name="onboarding_account_title">A little about you</string>
-    <string name="onboarding_account_subtitle">Tell me what to call you, and how you like to talk.</string>
-    <string name="onboarding_account_note">Change it anytime.</string>
+    <string name="onboarding_account_subtitle">Tell me how you\'d like to be addressed, and how you prefer to chat.</string>
+    <string name="onboarding_account_note">You can adjust these in Settings anytime.</string>
     <string name="onboarding_avatar_pick">Choose avatar</string>
-    <string name="onboarding_avatar_failed">Couldn\'t save the avatar</string>
+    <string name="onboarding_avatar_failed">Couldn\'t save the avatar.</string>
     <string name="onboarding_nickname_label">Your name</string>
     <string name="onboarding_nickname_hint">What should I call you?</string>
     <string name="onboarding_tone_label">Communication style</string>
@@ -30,33 +30,33 @@
     <string name="onboarding_language_english">English</string>
 
     <string name="onboarding_provider_title">Connect your model</string>
-    <string name="onboarding_provider_subtitle">Pick a provider and you\'re ready to chat.</string>
+    <string name="onboarding_provider_subtitle">Choose a provider to start chatting.</string>
     <string name="onboarding_provider_section">Provider</string>
     <string name="onboarding_provider_recommended">Recommended</string>
-    <string name="onboarding_provider_deepseek_body">Good at Chinese, fast, and cheap</string>
+    <string name="onboarding_provider_deepseek_body">Fast, affordable, and strong at Chinese</string>
     <string name="onboarding_provider_models">Models: %1$d</string>
-    <string name="onboarding_provider_choose_other">Choose another</string>
+    <string name="onboarding_provider_choose_other">Choose another provider</string>
     <string name="onboarding_provider_api_key_label">API key</string>
     <string name="onboarding_provider_api_key_hint">Paste your API key</string>
     <string name="onboarding_provider_key_show">Show API key</string>
     <string name="onboarding_provider_key_hide">Hide API key</string>
     <string name="onboarding_provider_key_saving">Saving…</string>
     <string name="onboarding_provider_key_saved">Saved</string>
-    <string name="onboarding_provider_key_failed">Couldn\'t save it. Try again.</string>
+    <string name="onboarding_provider_key_failed">Couldn\'t save. Please try again.</string>
     <string name="onboarding_provider_oauth_label">Sign-in method</string>
     <string name="onboarding_provider_oauth_login">Sign in with browser</string>
     <string name="onboarding_provider_oauth_signing_in">Signing in…</string>
     <string name="onboarding_provider_oauth_signed_in">Signed in</string>
     <string name="onboarding_provider_oauth_sign_out">Sign out</string>
-    <string name="onboarding_provider_oauth_failed">Sign-in didn\'t work</string>
-    <string name="onboarding_provider_extra_config">This one needs a little setup: connect it in Settings → Providers.</string>
+    <string name="onboarding_provider_oauth_failed">Sign-in failed. Please try again.</string>
+    <string name="onboarding_provider_extra_config">This provider needs extra setup. Connect it in Settings → Providers.</string>
     <string name="onboarding_provider_search">Search providers</string>
     <string name="onboarding_search_clear">Clear</string>
-    <string name="onboarding_provider_no_result">No matching providers</string>
+    <string name="onboarding_provider_no_result">No matching providers found</string>
     <string name="onboarding_provider_sheet_title">Choose a provider</string>
 
     <string name="onboarding_permissions_title">Notifications &amp; permissions</string>
-    <string name="onboarding_permissions_subtitle">Turn on what you need now. Change it later in Settings.</string>
+    <string name="onboarding_permissions_subtitle">Turn on what you need now; you can adjust these later in Settings.</string>
     <string name="onboarding_permission_notification">Notifications</string>
     <string name="onboarding_permission_overlay">Floating window</string>
     <string name="onboarding_permission_assistant">System assistant</string>
@@ -69,21 +69,21 @@
     <string name="onboarding_linux_not_installed">Not installed</string>
     <string name="onboarding_linux_installing">Installing…</string>
     <string name="onboarding_linux_installed">Installed</string>
-    <string name="onboarding_linux_failed">Didn\'t install. Try again later.</string>
+    <string name="onboarding_linux_failed">Installation failed. You can try again later.</string>
     <string name="onboarding_linux_used">Uses %1$s</string>
     <string name="onboarding_linux_size_hint">About 4 MB</string>
     <string name="onboarding_linux_install">Install on device</string>
-    <string name="onboarding_linux_unsupported">Linux isn\'t available on this device. Skip this step.</string>
+    <string name="onboarding_linux_unsupported">Linux isn\'t supported on this device. You can skip this step.</string>
 
     <string name="onboarding_privilege_title">How much access?</string>
-    <string name="onboarding_privilege_subtitle">Normal mode covers everyday use. Upgrade anytime.</string>
-    <string name="onboarding_privilege_note">Change it anytime.</string>
+    <string name="onboarding_privilege_subtitle">Normal mode is enough for everyday use. If you need more later, you can adjust it in Settings.</string>
+    <string name="onboarding_privilege_note">You can adjust these in Settings anytime.</string>
     <string name="onboarding_privilege_normal">Standard</string>
-    <string name="onboarding_privilege_normal_body">No permission needed. Bash and common tools work right away.</string>
+    <string name="onboarding_privilege_normal_body">No extra permission needed. You can use bash and common tools right away.</string>
     <string name="onboarding_privilege_adb">Wireless debugging ADB</string>
-    <string name="onboarding_privilege_adb_body">Pair first; finish later in Settings → Permissions.</string>
+    <string name="onboarding_privilege_adb_body">Pairing is required first; you can continue in Settings → Permissions later.</string>
     <string name="onboarding_privilege_root">Root</string>
-    <string name="onboarding_privilege_root_body">Needs system authorization; finish later in Settings → Permissions.</string>
+    <string name="onboarding_privilege_root_body">System authorization is required; you can continue in Settings → Permissions later.</string>
 
     <string name="personalization_avatar_title">Avatar</string>
     <string name="personalization_avatar_empty">Not set</string>
