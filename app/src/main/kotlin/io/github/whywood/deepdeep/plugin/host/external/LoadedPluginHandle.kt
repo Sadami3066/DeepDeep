@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
 import android.content.Context
+import android.util.Log
 import dalvik.system.InMemoryDexClassLoader
 import dalvik.system.PathClassLoader
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
@@ -124,6 +125,7 @@ internal class LoadedPluginHandle private constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
+                Log.e("PluginLoad", "in-memory dex load failed: ${manifest.id}", error)
                 error
             }
             val jar = writeReadOnlyJar(context, manifest.id, actualSha256, dexBytes)
@@ -142,6 +144,7 @@ internal class LoadedPluginHandle private constructor(
                 jar.delete()
                 throw error
             } catch (error: Throwable) {
+                Log.e("PluginLoad", "path class loader load failed: ${manifest.id}", error)
                 jar.delete()
                 val failure = PluginLoadException(
                     "failed to load plugin ${manifest.id}: ${error.message ?: error.javaClass.simpleName}",

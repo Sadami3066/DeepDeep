@@ -1,0 +1,5 @@
+-keep class io.github.whywood.deepdeep.plugin.api.** { *; }
+-keep class io.github.whywood.deepdeep.design.** { *; }
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
+-keep class androidx.compose.** { *; }
