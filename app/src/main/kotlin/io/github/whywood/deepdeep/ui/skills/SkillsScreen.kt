@@ -49,7 +49,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.InstalledSkill
-import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.design.DdDialog
@@ -67,8 +66,10 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.market.MarketEntryType
+import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
-import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
+import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -84,6 +85,7 @@ private sealed interface ArchiveRead {
 @Composable
 fun SkillsScreen(
     repository: SkillRepository,
+    marketRepository: MarketRepository,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -141,6 +143,8 @@ fun SkillsScreen(
         onInstall = { picker.launch(arrayOf("*/*")) },
         onDismissInstallError = holder::dismissInstallError,
         readContent = holder::readContent,
+        marketRepository = marketRepository,
+        onMarketInstalled = { holder.refresh() },
         modifier = modifier,
     )
 }
@@ -160,6 +164,8 @@ private fun SkillsContent(
     onInstall: () -> Unit,
     onDismissInstallError: () -> Unit,
     readContent: suspend (String) -> String?,
+    marketRepository: MarketRepository,
+    onMarketInstalled: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -239,11 +245,12 @@ private fun SkillsContent(
                 .padding(horizontal = 16.dp),
         ) {
             if (showMarket) {
-                MarketPresetSection(
-                    presets = MarketPresets.skills,
+                MarketTab(
+                    repository = marketRepository,
+                    type = MarketEntryType.Skill,
                     query = marketQuery,
-                    icon = DdIcons.Sparkles,
                     testTagPrefix = "skills",
+                    onInstalled = onMarketInstalled,
                 )
             } else when {
                 state.loading && state.items.isEmpty() -> Unit

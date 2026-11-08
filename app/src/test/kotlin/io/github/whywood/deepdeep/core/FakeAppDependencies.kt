@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
+import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -90,6 +91,8 @@ internal class FakeAppDependencies(
     override val skillCatalog: SkillCatalog get() = unavailable("skillCatalog")
 
     override val pluginManager: PluginManagerFacade get() = unavailable("pluginManager")
+
+    override val marketRepository: MarketRepository get() = unavailable("marketRepository")
 
     override val questionCenter: QuestionCenter get() = unavailable("questionCenter")
 

@@ -9,7 +9,7 @@
 | `AvatarBadge.kt` | 圆形头像；无图时显示名字首字母 |
 | `ComposerVoice.kt` | 输入卡语音：录音状态机、麦克风权限、音量/转写与提交 |
 | `Haptics.kt` | 触感开关的 CompositionLocal（LocalHapticsEnabled） |
-| `market/` | 市场页共用：`MarketSection.kt` 放选项卡下标常量、预设过滤后的行渲染与「即将开放」提示 |
+| `market/` | 市场页共用：`MarketSection.kt` 放市场 tab（加载/失败/离线/空态、条目行、详情弹层与安装）、`MarketLogic.kt` 放纯过滤/状态/体积格式化、`MarketIconLoader.kt` 下载并缓存条目图标 |
 | `OAuthLoginSession.kt` | OAuth 登录交互状态机：URL/提示/选择/输入，供 service 驱动 |
 | `OAuthLoginSheet.kt` | OAuth 登录弹层：打开浏览器、等待、选择与验证码输入 |
 | `ProviderIcon.kt` | 厂商图标：provider id 映射 drawable，缺图回退首字母 |

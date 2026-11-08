@@ -25,6 +25,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | [conversation/](src/main/kotlin/io/github/whywood/deepdeep/conversation/AGENTS.md) | 会话状态投影：runtime 事件 → ConversationState 的纯函数与文案 |
 | [data/](src/main/kotlin/io/github/whywood/deepdeep/data/AGENTS.md) | 偏好、附件、技能、迁移等本地存储 |
 | [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 外部 `.ddp` 插件系统（装载、启停、贡献、更新）；插件工程在上级 `plugins/` 仓库 |
+| [market/](src/main/kotlin/io/github/whywood/deepdeep/market/AGENTS.md) | 市场数据层：远程签名索引、插件/技能/连接器条目解析与安装流水线 |
 | [service/](src/main/kotlin/io/github/whywood/deepdeep/service/AGENTS.md) | 前台服务、通知中心、无障碍服务 |
 | [floating/](src/main/kotlin/io/github/whywood/deepdeep/floating/AGENTS.md) | 跨应用悬浮窗（气泡、卡片、运行面板） |
 | [assistant/](src/main/kotlin/io/github/whywood/deepdeep/assistant/AGENTS.md) | 系统助手浮层（默认助手唤起） |

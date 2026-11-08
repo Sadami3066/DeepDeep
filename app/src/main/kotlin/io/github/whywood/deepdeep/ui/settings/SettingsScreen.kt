@@ -99,6 +99,7 @@ fun SettingsScreen(
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenMarket: () -> Unit = {},
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
     onLanguageChange: () -> Unit = {},
@@ -269,6 +270,17 @@ fun SettingsScreen(
                     onClick = onOpenScan,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_scan"),
+                )
+            }
+
+            SettingsSectionLabel(stringResource(R.string.market_settings_group))
+            DdGroupCard {
+                DdListRow(
+                    icon = DdIcons.Package,
+                    title = stringResource(R.string.market_settings_title),
+                    onClick = onOpenMarket,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_market"),
                 )
             }
 

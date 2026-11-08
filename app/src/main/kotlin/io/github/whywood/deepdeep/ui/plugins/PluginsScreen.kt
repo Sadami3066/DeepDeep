@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
@@ -70,8 +69,10 @@ import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
+import io.github.whywood.deepdeep.market.MarketEntryType
+import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
-import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
+import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,6 +81,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun PluginsScreen(
     manager: PluginManagerFacade,
+    marketRepository: MarketRepository,
     onBack: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -155,6 +157,8 @@ internal fun PluginsScreen(
                 updateBusy = false
             }
         },
+        marketRepository = marketRepository,
+        onMarketInstalled = { holder.refresh() },
         modifier = modifier,
     )
 
@@ -288,6 +292,8 @@ private fun PluginsContent(
     onShowUpdates: () -> Unit,
     onOpenSource: () -> Unit,
     onCheckUpdates: () -> Unit,
+    marketRepository: MarketRepository,
+    onMarketInstalled: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -411,11 +417,12 @@ private fun PluginsContent(
                 .padding(horizontal = 16.dp),
         ) {
             if (showMarket) {
-                MarketPresetSection(
-                    presets = MarketPresets.plugins,
+                MarketTab(
+                    repository = marketRepository,
+                    type = MarketEntryType.Plugin,
                     query = marketQuery,
-                    icon = DdIcons.Puzzle,
                     testTagPrefix = "plugins",
+                    onInstalled = onMarketInstalled,
                 )
             } else {
                 Spacer(Modifier.height(8.dp))

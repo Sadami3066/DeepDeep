@@ -44,14 +44,15 @@ import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpOAuthService
 import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
+import io.github.whywood.deepdeep.market.MarketEntryType
+import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
-import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
+import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.net.URI
 import kotlinx.coroutines.launch
 
@@ -65,6 +66,7 @@ fun McpScreen(
     store: McpConfigStore,
     probe: McpServerProbe,
     oauth: McpOAuthService,
+    marketRepository: MarketRepository,
     onBack: () -> Unit,
     onReloadSessions: suspend () -> Unit,
     onReconnect: suspend (String) -> Unit,
@@ -103,6 +105,11 @@ fun McpScreen(
             editorOpen = true
         },
         onAdd = { importing = true },
+        marketRepository = marketRepository,
+        onMarketInstalled = {
+            onReloadSessions()
+            holder.refresh()
+        },
         modifier = modifier,
     )
 
@@ -149,6 +156,8 @@ private fun McpScreenContent(
     onToggle: (McpServerEntry, Boolean) -> Unit,
     onOpen: (McpServerEntry) -> Unit,
     onAdd: () -> Unit,
+    marketRepository: MarketRepository,
+    onMarketInstalled: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -229,11 +238,12 @@ private fun McpScreenContent(
                 .padding(horizontal = 16.dp),
         ) {
             if (showMarket) {
-                MarketPresetSection(
-                    presets = MarketPresets.mcp,
+                MarketTab(
+                    repository = marketRepository,
+                    type = MarketEntryType.Mcp,
                     query = marketQuery,
-                    icon = DdIcons.Plug,
                     testTagPrefix = "mcp",
+                    onInstalled = onMarketInstalled,
                 )
             } else {
                 if (state.notices.isNotEmpty()) {

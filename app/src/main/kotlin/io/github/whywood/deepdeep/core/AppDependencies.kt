@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
+import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -98,6 +99,8 @@ interface FeatureDependencies {
     val skillCatalog: SkillCatalog
 
     val pluginManager: PluginManagerFacade
+
+    val marketRepository: MarketRepository
 
     val questionCenter: QuestionCenter
 

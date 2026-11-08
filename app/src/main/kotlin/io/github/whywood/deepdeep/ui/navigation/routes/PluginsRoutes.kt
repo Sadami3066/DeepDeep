@@ -38,6 +38,7 @@ import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 internal fun PluginsRoute(dependencies: AppDependencies, navigator: AppNavigator, onBack: () -> Unit) {
     PluginsScreen(
         manager = dependencies.pluginManager,
+        marketRepository = dependencies.marketRepository,
         onBack = onBack,
         onOpenPluginPage = { pluginId, pageId ->
             navigator.push(AppDestination.PluginPage(pluginId, pageId))

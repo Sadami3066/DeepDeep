@@ -384,3 +384,14 @@ Linux 不再作为「推荐安装」的附加组件，而是 App 自带能力：
 组合 sheet 原本把「包含应用」「附加应用」「叠加组合」并列，再叠一个镜像源，用户反馈信息混在一起、不分明。现在只保留：标题 + 一句说明、包含应用（应用数 + 清单）、软件源、底部安装按钮；组合列表行去掉图标与体积，行尾只显示安装进度计数（`2/8`，装完显示满数），不再显示「已安装」文字。底层 `DevBundleCustomizationStore` 暂时保留 extras/overlays 字段以兼容旧数据，但不再有 UI 入口。
 
 代价：用户不能再在 UI 里给单个组合加包或叠加其他组合，只能直接安装整组；需要更细的组合时得回到组合定义或后续另设入口。
+
+## 125. 市场 P1：远程签名索引与三类内容安装
+
+市场要解决「内容从哪来、怎么信任、怎么安装」，但不建后端、不让用户填源。方案是静态签名索引 + 制品仓库：
+
+- 索引：`registry.json`（schema v2）由独立仓库 `deepdeep-market` 的 GitHub Pages 托管；`registry.json.sig` 是对原始字节的 ECDSA P-256 SHA-256 签名（DER base64）。公钥内嵌 App，keyId 必须匹配；不用 canonical-JSON，避免跨语言序列化差异。签名密钥在仓库外（`tmp/market-keys/private.pem`，600，不入库）。
+- 制品：GitHub Releases（`deepdeep-market`）；客户端校验 size + sha256。插件沿用 `.ddp` 内嵌发布者签名与信任库，技能为 zip（单目录 + SKILL.md + LICENSE + ATTRIBUTION），MCP 只写连接器配置模板。
+- 范围与约束：三类统一入口（插件/技能/连接器），官方源固定不可配置；registry ≤ 2MB、条目 ≤ 512、插件 ≤ 50MB、技能 ≤ 20MB、图标 ≤ 128KB；MCP 仅远程 http（Android 端无 stdio 执行路径）。不做评分、评论、二进制托管与自定义源。
+- 客户端：网络 → 本地缓存（`files/market`）→ 内置种子（`assets/market`）三级回退；插件走 `inspectExternal` + `installExternal`，技能走 `SkillRepository.install` 并启用，连接器走 `McpConfigStore.upsert`。
+- 内容：首批 27 条（4 插件来自本仓库构建产物，8 技能来自 obra/superpowers 与 microsoft/skills，15 个 MCP 远程服务器取自官方 Registry 并翻译说明）；社区投稿走 PR，人工审核后签名发布。
+- 已知限制：OAuth / API Key 类 MCP 条目 headers 为空，需要用户在连接器页补授权头；官方源在境内访问 GitHub Pages/Releases 可能不稳定；评分与搜索服务预留到 P2。

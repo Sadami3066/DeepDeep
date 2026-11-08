@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.AgentSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.WebSearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ChatSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FilesRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.MarketSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PermissionRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PersonalizationRoute
@@ -106,6 +107,11 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onBack = onBack,
         )
 
+        AppDestination.MarketSettings -> MarketSettingsRoute(
+            repository = dependencies.marketRepository,
+            onBack = onBack,
+        )
+
         AppDestination.WebSearch -> WebSearchRoute(dependencies, onBack)
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
@@ -139,6 +145,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             store = dependencies.mcpConfigStore,
             probe = dependencies.mcpServerProbe,
             oauth = dependencies.mcpOAuthService,
+            marketRepository = dependencies.marketRepository,
             onBack = onBack,
             onReloadSessions = { dependencies.host.reloadMcp() },
             onReconnect = { server -> dependencies.host.reconnectMcp(server) },
@@ -163,6 +170,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
         AppDestination.Skills -> SkillsScreen(
             repository = dependencies.skillRepository,
+            marketRepository = dependencies.marketRepository,
             onBack = onBack,
         )
 

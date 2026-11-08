@@ -32,6 +32,8 @@ import io.github.whywood.deepdeep.graph.PlatformGraph
 import io.github.whywood.deepdeep.graph.PlatformGraphDeps
 import io.github.whywood.deepdeep.graph.PluginGraph
 import io.github.whywood.deepdeep.graph.PluginGraphDeps
+import io.github.whywood.deepdeep.market.MarketRepository
+import io.github.whywood.deepdeep.market.MarketRepositoryImpl
 import io.github.whywood.deepdeep.graph.RuntimeGraph
 import io.github.whywood.deepdeep.graph.RuntimeGraphDeps
 import io.github.whywood.deepdeep.graph.ServiceGraph
@@ -142,6 +144,16 @@ class AppGraph(context: Context) : AppDependencies {
 
     override val pluginManager: PluginHostManager get() = pluginGraph.manager
 
+    override val marketRepository: MarketRepository by lazy {
+        MarketRepositoryImpl(
+            context = appContext,
+            scope = scope,
+            skillRepository = skillRepository,
+            pluginManager = pluginManager,
+            mcpConfigStore = mcpConfigStore,
+        )
+    }
+
     init {
         scope.launch { StorageMigration.migrate(appContext.filesDir) }
         scope.launch {
@@ -149,6 +161,11 @@ class AppGraph(context: Context) : AppDependencies {
             if (!shouldAutoInstallLinux(environment.isSupported, environment.state.value)) return@launch
             runCatching { environment.install() }.onFailure {
                 Diagnostics.log(appContext, "app: linux environment preparation failed", it)
+            }
+        }
+        scope.launch {
+            runCatching { marketRepository.refresh() }.onFailure {
+                Diagnostics.log(appContext, "app: market refresh failed", it)
             }
         }
         OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
