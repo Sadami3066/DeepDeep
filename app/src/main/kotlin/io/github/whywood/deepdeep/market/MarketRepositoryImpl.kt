@@ -225,7 +225,9 @@ class MarketRepositoryImpl(
         val file = download(artifact, "plugins", MarketDefaults.MAX_PLUGIN_BYTES)
         try {
             val inspection = pluginManager.inspectExternal(file) ?: error("插件包无法识别")
-            if (inspection.pluginId != entry.id) error("插件 ID 与市场条目不匹配")
+            if (inspection.pluginId != entry.id) {
+                error(inspection.error ?: "插件 ID 与市场条目不匹配")
+            }
             if (!inspection.sha256.equals(artifact.sha256, ignoreCase = true)) error("插件包校验失败")
             val result = pluginManager.installExternal(file, acceptPublisher = true)
             if (!result.success) error(result.error ?: "插件安装失败")
