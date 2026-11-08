@@ -38,4 +38,4 @@
 
 ## 会话级排除
 
-`PluginManagerFacade` / `PluginManagerDelegation` 的 `tools`、`deferredTools`、`promptBody`、`bindSessionHooks` 接受 `excludedPlugins: Set<String>`；`PluginSessionHooks` 按 pluginId 过滤 contributions 与 hooks，`PluginHostManager.promptBody` 过滤对应 promptSections。用于工作区关闭继承插件，未传时行为不变。
+`PluginManagerFacade` / `PluginManagerDelegation` 的 `tools`、`deferredTools`、`promptBody`、`bindSessionHooks` 接受 `excludedPlugins: Set<String>`；`PluginSessionHooks` 按 pluginId 过滤 contributions 与 hooks，`PluginHostManager.promptBody` 过滤对应 promptSections。用于工作区关闭继承插件，未传时行为不变。`PluginManagerFacade.skillIds(pluginId)` 返回插件贡献的技能 id，供工作区排除插件时一并排除其技能。

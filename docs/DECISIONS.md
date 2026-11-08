@@ -512,3 +512,19 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - P2-12：界面层硬编码 dp/sp 改为 `DdSpacing`/`DdShapes` 等 token（三线共约 760 处，等值替换，不改语义）。
 - P2-14：字体切换不再 `recreate()`，`MainActivity` 用 `remember { mutableStateOf(fontStyle) }` 直接重组。
 - 约束：撤销「不再扩张组件库」；此后新增公共组件或全局约束前，必须先向用户汇报理由并获同意。
+
+## 139. 工作区可关闭继承的 MCP 服务器
+
+工作区原先只能关闭技能与插件；MCP 服务器在设置页只能全局启停。现在工作区策略 `WorkspaceToolPolicy` 增加 `mcpServers`（`workspace-tool-policies.json` 同步落盘），设置页第三行「MCP」列出已配置服务器并即时保存关闭项；SDK `McpOptions` 新增 `excludedServers`，`attachMcp` 在合并配置前过滤，`<mcp_servers>` 段与工具都不再出现。关闭插件时其贡献的技能（`PluginSkillStore` 复制到 `agentDir/skills` 的 skill id）也一并从技能注入中排除，避免「插件关了但技能还在」。SDK 版本 0.5.4。
+
+## 140. 设置/市场界面对齐与聊天头部下移
+
+按用户反馈收敛：删除设置页「市场」入口与对应路由（市场统一从技能/插件/连接器三个页面进入），刷新按钮抽成 `MarketRefreshButton` 放在三页头部右侧；技能市场与「我的」都去掉行首图标、描述单行截断；连接器「我的」统一成市场的行样式（市场条目复用图标，自建服务器用 `DdIcons.Plug`）；设置「模型与运行」顺序改为服务商→权限→Agent→Linux→Android；聊天/主界面头部整体下移约 12dp（高度 58→70 + 顶部间距 8dp，内容区不变）。MCP 编辑页重做：带行号语法着色的 JSON 卡片、格式状态/复制、账户授权行、底部「测试连接/保存更改」，不再使用分散的文本按钮。
+
+## 141. 扫一扫随策略文件提供 cookbook.md
+
+扫一扫的策略目录新增 `cookbook.md`（App 资产 `assets/scan/cookbook.md`）：说明策略 schema v2、匹配分数（scheme 100 / host 90+长度 / regex 80 / contains 70）、`priority` 决胜、`scan.uri` 与 `activity+action+extras+flags` 两种写法、检查清单与常见坑。`ScanStrategyStore` 首次初始化时若 `files/scan/cookbook.md` 不存在则从资产复制，之后完全由用户/Agent 编辑，不再覆盖。用途是让模型在「添加策略」时按文档写而不是自由发挥。
+
+## 142. 应用图标线宽切换为 regular
+
+Milo Modern 图标从 semibold 换成 regular 档（256 画布、线宽约 1.75dp，原 2.15dp），62 个位图源与生成资源同步替换，8 个手绘 vector 保持 2.1dp；`DdIcons` 成员与资源名不变。此前的 semibold 决策由本条取代。

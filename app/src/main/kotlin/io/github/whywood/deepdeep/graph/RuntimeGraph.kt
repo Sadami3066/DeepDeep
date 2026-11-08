@@ -178,6 +178,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
         val workspacePolicy = deps.workspaceToolPolicies.policyForCwd(cwd.absolutePath)
+        val excludedPluginSkills = workspacePolicy.plugins.flatMap { deps.pluginManager().skillIds(it) }
         PiSessionEngine(
             workspace = cwd,
             agentDir = deps.agentDir,
@@ -189,7 +190,8 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             storageMounts = { storageMountInfos() },
             pluginPromptBody = { deps.pluginManager().promptBody(workspacePolicy.plugins) },
-            excludedSkills = workspacePolicy.skills,
+            excludedSkills = workspacePolicy.skills + excludedPluginSkills,
+            excludedMcpServers = workspacePolicy.mcpServers,
             toolContext = appToolContext,
             memory = memoryStore,
             hooks = pluginRuntimeHooks(),
