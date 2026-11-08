@@ -11,3 +11,7 @@
 
 -keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
+
+# Wireless-debug shell daemon is launched via app_process reflection; R8 must keep the entry class and its main.
+-keep class io.github.whywood.deepdeep.adb.ShellDaemon { *; }
+-keep class io.github.whywood.deepdeep.vscreen.VirtualScreenHelperMain { *; }
