@@ -474,7 +474,7 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(24.dp))
         OnboardingCard {
             PermissionRow(
-                icon = DdIcons.Message,
+                icon = DdIcons.Notifications,
                 title = stringResource(R.string.onboarding_permission_notification),
                 granted = notifications,
                 testTag = "onboarding_permission_notification",
@@ -488,7 +488,7 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
             )
             DdHairline()
             PermissionRow(
-                icon = DdIcons.Monitor,
+                icon = DdIcons.FloatingWindow,
                 title = stringResource(R.string.onboarding_permission_overlay),
                 granted = overlay,
                 testTag = "onboarding_permission_overlay",

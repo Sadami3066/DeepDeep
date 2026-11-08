@@ -29,7 +29,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 
 - 颜色从 `deepDeepColors()` 取，字号走 `DdType`，动效时长走 `DdMotion`；不硬编码色值与时长。
 - 组件只用 Compose 与本模块资源，不依赖 `:app`/`:runtime`；跨模块复用的控件先落到这里。
-- 图标：`res/drawable-nodpi/` 的 `ic_milo_*.png` 来自 `assets/milo-modern-icons-100/`（256 画布、`#303F50` 线稿；已裁掉透明边，内容约占画布 92%，与文字行高对齐）；无 Milo 对应语义的少数线稿是手写 `ic_dd_*.xml`，24 viewport、纯黑描边，两种都由 `DdIcon` 统一 tint。
+- 图标：`res/drawable-nodpi/` 的 `ic_milo_*.png` 来自 `assets/milo-modern-icons-200-revised/` 的 **semibold** 档（256 画布、线宽约 2.15dp、`#273140` 线稿、图形约占画布 85%）；无 Milo 对应语义的少数线稿是手写 `ic_dd_*.xml`（24 viewport、2.1dp 圆头描边），两种都由 `DdIcon` 统一 tint。
 - 圆角是 8/12/14/16/20/24/28dp 体系，可点区域按 44dp；改视觉先改 token 再改调用点。
 - 本模块无单测，改组件以编译通过 + 真机截图验收。
 - 插件 UI 直接消费本模块组件（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），所以公共组件的签名与视觉是跨仓库 API：改签名要同步 `plugin-api` ABI 与 `docs/PLUGIN_DEV.md`，并让 `plugins/` 仓库重编译。

@@ -54,7 +54,7 @@ fun SessionActionMenu(
             )
         }
         MenuAction(
-            icon = DdIcons.Folder,
+            icon = DdIcons.Archive,
             text = stringResource(
                 if (session.archived) R.string.drawer_action_unarchive else R.string.drawer_action_archive,
             ),

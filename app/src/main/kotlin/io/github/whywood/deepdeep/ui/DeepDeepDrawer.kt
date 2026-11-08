@@ -258,7 +258,7 @@ fun DeepDeepDrawer(
                 testTag = "drawer_mcp",
             )
             DrawerNavItem(
-                icon = DdIcons.Package,
+                icon = DdIcons.Puzzle,
                 label = stringResource(R.string.drawer_nav_plugins),
                 onClick = onOpenPlugins,
                 testTag = "drawer_plugins",
@@ -502,7 +502,7 @@ private fun DrawerWorkspaceRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
-                icon = if (expanded) DdIcons.FolderOpen else DdIcons.Folder,
+                icon = if (expanded) DdIcons.FolderOpen else DdIcons.Workspace,
                 tint = colors.inkTertiary,
                 size = 16.dp,
             )

@@ -234,7 +234,7 @@ fun SettingsScreen(
             SettingsSectionLabel(stringResource(R.string.settings_group_conversation))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.Message,
+                    icon = DdIcons.ChatPreferences,
                     title = stringResource(R.string.settings_chat),
                     onClick = onOpenChatSettings,
                     showChevron = true,
@@ -251,7 +251,7 @@ fun SettingsScreen(
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
-                    icon = DdIcons.Folder,
+                    icon = DdIcons.Archive,
                     title = stringResource(R.string.settings_archived),
                     value = if (archivedCount > 0) {
                         stringResource(R.string.settings_archived_count, archivedCount)
@@ -277,7 +277,7 @@ fun SettingsScreen(
                 NotificationRow()
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
-                    icon = DdIcons.Eye,
+                    icon = DdIcons.Privacy,
                     title = stringResource(R.string.settings_privacy),
                     onClick = onOpenPrivacy,
                     showChevron = true,
@@ -288,7 +288,7 @@ fun SettingsScreen(
             SettingsSectionLabel(stringResource(R.string.settings_group_about))
             DdGroupCard {
                 DdListRow(
-                    icon = DdIcons.File,
+                    icon = DdIcons.License,
                     title = stringResource(R.string.settings_license),
                     onClick = { showLicenses = true },
                     showChevron = true,

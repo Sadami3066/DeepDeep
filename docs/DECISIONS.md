@@ -320,6 +320,6 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 
 ## 115. 图标体系切换为 Milo Modern，引导页改用 ui-kit 吉祥物
 
-- 图标：应用内线性图标从 Tabler 快照改为 Milo Modern 100 枚素材包（`assets/milo-modern-icons-100/`），`DdIcons` 的 60 个成员资源全部替换；无对应语义的 6 项手写同风格 vector。Milo 素材带上外留白，入库前统一裁边到内容占画布约 92%，避免同尺寸视觉偏小。浮动窗口的鲸鱼心情图与 Canvas 动画图标（DdSpinner/DdTypingDots/波形/悬浮环）保持原样。
+- 图标：应用内线性图标换成 Milo Modern 200 枚素材包（`assets/milo-modern-icons-200-revised/semibold/`，线宽约 2.15dp），`DdIcons` 全量重映射并新增 Archive/Privacy/License/Workspace/Database/Notifications/FloatingWindow/ChatPreferences/Sync 等语义成员，避免不同页面共用同一图形；无对应语义的 6 项手写同风格 vector。浮动窗口的鲸鱼心情图与 Canvas 动画图标（DdSpinner/DdTypingDots/波形/悬浮环）保持原样。
 - 引导：六步流程不变，视觉按提供的参考稿重做（白底左对齐、大标题、下划线输入、灰底胶囊分段、右上步骤计数、带箭头主按钮）；吉祥物用 `assets/ui-kit/whale-flat-v1` 的四张全身像（wave/idle/thinking/sleepy），旧的 `assets/mascot` 候选插画移出仓库。
 - 素材目录只保留在用内容（milo 图标、ui-kit 四张吉祥物、provider/vendor 图标与 branding 记录），未使用素材移出 `assets/`。

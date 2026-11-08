@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -60,6 +61,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -90,7 +92,6 @@ internal const val KEY_STATE_FAILED = 3
 
 @Composable
 internal fun OnboardingHeader(step: Int, onBack: () -> Unit) {
-    val colors = deepDeepColors()
     val description = stringResource(
         R.string.onboarding_progress_description,
         step + 1,
@@ -98,24 +99,38 @@ internal fun OnboardingHeader(step: Int, onBack: () -> Unit) {
     )
     Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)) {
         if (step > 0) {
-            Row(
+            DdIconButton(
+                icon = DdIcons.ArrowLeft,
+                onClick = onBack,
+                contentDescription = stringResource(R.string.onboarding_back),
                 modifier = Modifier.align(Alignment.CenterStart),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdIconButton(
-                    icon = DdIcons.ArrowLeft,
-                    onClick = onBack,
-                    contentDescription = stringResource(R.string.onboarding_back),
-                    iconSize = 23.dp,
+                iconSize = 23.dp,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .clearAndSetSemantics { contentDescription = description },
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (index in 0 until ONBOARDING_STEP_COUNT) {
+                val active = index == step
+                val width by animateDpAsState(
+                    targetValue = if (active) 24.dp else 6.dp,
+                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                    label = "onboarding-progress-width-$index",
                 )
-                Text(
-                    text = stringResource(R.string.onboarding_step_counter, step + 1, ONBOARDING_STEP_COUNT),
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .clearAndSetSemantics { contentDescription = description },
-                    style = DdType.micro,
-                    color = colors.inkTertiary,
+                val color by animateColorAsState(
+                    targetValue = when {
+                        active -> deepDeepColors().accent
+                        index < step -> deepDeepColors().accent.copy(alpha = 0.32f)
+                        else -> deepDeepColors().hairline
+                    },
+                    animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                    label = "onboarding-progress-color-$index",
                 )
+                Box(Modifier.width(width).height(6.dp).clip(CircleShape).background(color))
             }
         }
     }
@@ -338,6 +353,7 @@ internal fun OnboardingPrimaryButton(
                 color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
             Spacer(Modifier.width(12.dp))
             DdIcon(

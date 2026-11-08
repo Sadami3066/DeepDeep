@@ -1,0 +1,2002 @@
+[
+  {
+    "number": 1,
+    "group": "01_core",
+    "filename": "ic_milo_new_chat.png",
+    "name_zh": "新对话",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 2,
+    "group": "01_core",
+    "filename": "ic_milo_mini_apps.png",
+    "name_zh": "小程序",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 3,
+    "group": "01_core",
+    "filename": "ic_milo_skills.png",
+    "name_zh": "技能",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 4,
+    "group": "01_core",
+    "filename": "ic_milo_connectors.png",
+    "name_zh": "连接器",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 5,
+    "group": "01_core",
+    "filename": "ic_milo_plugins.png",
+    "name_zh": "插件",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 6,
+    "group": "01_core",
+    "filename": "ic_milo_scheduled_tasks.png",
+    "name_zh": "定时任务",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 7,
+    "group": "01_core",
+    "filename": "ic_milo_memory.png",
+    "name_zh": "记忆",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 8,
+    "group": "01_core",
+    "filename": "ic_milo_workspace.png",
+    "name_zh": "工作区",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 9,
+    "group": "01_core",
+    "filename": "ic_milo_search.png",
+    "name_zh": "搜索",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 10,
+    "group": "01_core",
+    "filename": "ic_milo_settings.png",
+    "name_zh": "设置",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 11,
+    "group": "01_core",
+    "filename": "ic_milo_model_provider.png",
+    "name_zh": "模型厂商",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 12,
+    "group": "01_core",
+    "filename": "ic_milo_agent.png",
+    "name_zh": "智能体",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 13,
+    "group": "01_core",
+    "filename": "ic_milo_permissions.png",
+    "name_zh": "权限",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 14,
+    "group": "01_core",
+    "filename": "ic_milo_terminal.png",
+    "name_zh": "终端",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 15,
+    "group": "01_core",
+    "filename": "ic_milo_device.png",
+    "name_zh": "设备",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 16,
+    "group": "01_core",
+    "filename": "ic_milo_appearance.png",
+    "name_zh": "外观",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 17,
+    "group": "01_core",
+    "filename": "ic_milo_typography.png",
+    "name_zh": "字体",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 18,
+    "group": "01_core",
+    "filename": "ic_milo_language.png",
+    "name_zh": "语言",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 19,
+    "group": "01_core",
+    "filename": "ic_milo_chat_preferences.png",
+    "name_zh": "聊天设置",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 20,
+    "group": "01_core",
+    "filename": "ic_milo_interaction.png",
+    "name_zh": "交互",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 21,
+    "group": "01_core",
+    "filename": "ic_milo_archive.png",
+    "name_zh": "归档",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 22,
+    "group": "01_core",
+    "filename": "ic_milo_scan.png",
+    "name_zh": "扫一扫",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 23,
+    "group": "01_core",
+    "filename": "ic_milo_notifications.png",
+    "name_zh": "通知",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 24,
+    "group": "01_core",
+    "filename": "ic_milo_privacy.png",
+    "name_zh": "隐私",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 25,
+    "group": "01_core",
+    "filename": "ic_milo_license.png",
+    "name_zh": "许可",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 26,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_home.png",
+    "name_zh": "首页",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 27,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_back.png",
+    "name_zh": "返回",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 28,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_forward.png",
+    "name_zh": "前进",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 29,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_expand.png",
+    "name_zh": "展开",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 30,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_collapse.png",
+    "name_zh": "收起",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 31,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_menu.png",
+    "name_zh": "菜单",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 32,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_more.png",
+    "name_zh": "更多",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 33,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_add.png",
+    "name_zh": "添加",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 34,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_close.png",
+    "name_zh": "关闭",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 35,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_confirm.png",
+    "name_zh": "确认",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 36,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_send.png",
+    "name_zh": "发送",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 37,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_microphone.png",
+    "name_zh": "麦克风",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 38,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_voice_wave.png",
+    "name_zh": "语音",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 39,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_headphones.png",
+    "name_zh": "耳机",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 40,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_attachment.png",
+    "name_zh": "附件",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 41,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_camera.png",
+    "name_zh": "相机",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 42,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_image.png",
+    "name_zh": "图片",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 43,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_copy.png",
+    "name_zh": "复制",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 44,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_paste.png",
+    "name_zh": "粘贴",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 45,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_share.png",
+    "name_zh": "分享",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 46,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_reply.png",
+    "name_zh": "回复",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 47,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_retry.png",
+    "name_zh": "重试",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 48,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_pause.png",
+    "name_zh": "暂停",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 49,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_stop.png",
+    "name_zh": "停止",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 50,
+    "group": "02_navigation_chat",
+    "filename": "ic_milo_favorite.png",
+    "name_zh": "收藏",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 51,
+    "group": "03_memory_files",
+    "filename": "ic_milo_profile.png",
+    "name_zh": "个人资料",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 52,
+    "group": "03_memory_files",
+    "filename": "ic_milo_people.png",
+    "name_zh": "联系人",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 53,
+    "group": "03_memory_files",
+    "filename": "ic_milo_relationship.png",
+    "name_zh": "关系",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 54,
+    "group": "03_memory_files",
+    "filename": "ic_milo_goal.png",
+    "name_zh": "目标",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 55,
+    "group": "03_memory_files",
+    "filename": "ic_milo_milestone.png",
+    "name_zh": "里程碑",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 56,
+    "group": "03_memory_files",
+    "filename": "ic_milo_experience.png",
+    "name_zh": "经验",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 57,
+    "group": "03_memory_files",
+    "filename": "ic_milo_journal.png",
+    "name_zh": "日记",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 58,
+    "group": "03_memory_files",
+    "filename": "ic_milo_today.png",
+    "name_zh": "今天",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 59,
+    "group": "03_memory_files",
+    "filename": "ic_milo_history.png",
+    "name_zh": "历史",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 60,
+    "group": "03_memory_files",
+    "filename": "ic_milo_timeline.png",
+    "name_zh": "时间线",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 61,
+    "group": "03_memory_files",
+    "filename": "ic_milo_tag.png",
+    "name_zh": "标签",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 62,
+    "group": "03_memory_files",
+    "filename": "ic_milo_pin.png",
+    "name_zh": "置顶",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 63,
+    "group": "03_memory_files",
+    "filename": "ic_milo_bookmark.png",
+    "name_zh": "书签",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 64,
+    "group": "03_memory_files",
+    "filename": "ic_milo_file_add.png",
+    "name_zh": "新建文件",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 65,
+    "group": "03_memory_files",
+    "filename": "ic_milo_folder_add.png",
+    "name_zh": "新建文件夹",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 66,
+    "group": "03_memory_files",
+    "filename": "ic_milo_upload.png",
+    "name_zh": "上传",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 67,
+    "group": "03_memory_files",
+    "filename": "ic_milo_download.png",
+    "name_zh": "下载",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 68,
+    "group": "03_memory_files",
+    "filename": "ic_milo_export.png",
+    "name_zh": "导出",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 69,
+    "group": "03_memory_files",
+    "filename": "ic_milo_import.png",
+    "name_zh": "导入",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 70,
+    "group": "03_memory_files",
+    "filename": "ic_milo_delete.png",
+    "name_zh": "删除",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 71,
+    "group": "03_memory_files",
+    "filename": "ic_milo_rename.png",
+    "name_zh": "重命名",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 72,
+    "group": "03_memory_files",
+    "filename": "ic_milo_filter.png",
+    "name_zh": "筛选",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 73,
+    "group": "03_memory_files",
+    "filename": "ic_milo_sort.png",
+    "name_zh": "排序",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 74,
+    "group": "03_memory_files",
+    "filename": "ic_milo_list_view.png",
+    "name_zh": "列表视图",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 75,
+    "group": "03_memory_files",
+    "filename": "ic_milo_bar_chart.png",
+    "name_zh": "数据统计",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 76,
+    "group": "04_automation_device",
+    "filename": "ic_milo_workflow.png",
+    "name_zh": "工作流",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 77,
+    "group": "04_automation_device",
+    "filename": "ic_milo_trigger.png",
+    "name_zh": "触发器",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 78,
+    "group": "04_automation_device",
+    "filename": "ic_milo_branch.png",
+    "name_zh": "条件分支",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 79,
+    "group": "04_automation_device",
+    "filename": "ic_milo_loop.png",
+    "name_zh": "循环",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 80,
+    "group": "04_automation_device",
+    "filename": "ic_milo_play.png",
+    "name_zh": "运行",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 81,
+    "group": "04_automation_device",
+    "filename": "ic_milo_queue.png",
+    "name_zh": "任务队列",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 82,
+    "group": "04_automation_device",
+    "filename": "ic_milo_timer.png",
+    "name_zh": "倒计时",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 83,
+    "group": "04_automation_device",
+    "filename": "ic_milo_snooze.png",
+    "name_zh": "稍后提醒",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 84,
+    "group": "04_automation_device",
+    "filename": "ic_milo_sync.png",
+    "name_zh": "同步",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 85,
+    "group": "04_automation_device",
+    "filename": "ic_milo_offline.png",
+    "name_zh": "离线",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 86,
+    "group": "04_automation_device",
+    "filename": "ic_milo_wifi.png",
+    "name_zh": "无线网络",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 87,
+    "group": "04_automation_device",
+    "filename": "ic_milo_bluetooth.png",
+    "name_zh": "蓝牙",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 88,
+    "group": "04_automation_device",
+    "filename": "ic_milo_battery.png",
+    "name_zh": "电量",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 89,
+    "group": "04_automation_device",
+    "filename": "ic_milo_location.png",
+    "name_zh": "位置",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 90,
+    "group": "04_automation_device",
+    "filename": "ic_milo_navigation.png",
+    "name_zh": "导航",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 91,
+    "group": "04_automation_device",
+    "filename": "ic_milo_key.png",
+    "name_zh": "密钥",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 92,
+    "group": "04_automation_device",
+    "filename": "ic_milo_lock.png",
+    "name_zh": "锁定",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 93,
+    "group": "04_automation_device",
+    "filename": "ic_milo_unlock.png",
+    "name_zh": "解锁",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 94,
+    "group": "04_automation_device",
+    "filename": "ic_milo_fingerprint.png",
+    "name_zh": "指纹",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 95,
+    "group": "04_automation_device",
+    "filename": "ic_milo_database.png",
+    "name_zh": "数据库",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 96,
+    "group": "04_automation_device",
+    "filename": "ic_milo_code.png",
+    "name_zh": "代码",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 97,
+    "group": "04_automation_device",
+    "filename": "ic_milo_bug.png",
+    "name_zh": "调试",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 98,
+    "group": "04_automation_device",
+    "filename": "ic_milo_help.png",
+    "name_zh": "帮助",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 99,
+    "group": "04_automation_device",
+    "filename": "ic_milo_info.png",
+    "name_zh": "信息",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 100,
+    "group": "04_automation_device",
+    "filename": "ic_milo_warning.png",
+    "name_zh": "提醒",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 101,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_closed.png",
+    "name_zh": "文件夹关闭",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 102,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_open.png",
+    "name_zh": "文件夹打开",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 103,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_empty.png",
+    "name_zh": "空文件夹",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 104,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_locked.png",
+    "name_zh": "文件夹锁定",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 105,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_favorite.png",
+    "name_zh": "文件夹收藏",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 106,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_shared.png",
+    "name_zh": "共享文件夹",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 107,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_syncing.png",
+    "name_zh": "文件夹同步",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 108,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_error.png",
+    "name_zh": "文件夹异常",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 109,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_checked.png",
+    "name_zh": "文件夹已完成",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 110,
+    "group": "05_file_states",
+    "filename": "ic_milo_folder_download.png",
+    "name_zh": "文件夹下载",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 111,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_plain.png",
+    "name_zh": "普通文件",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 112,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_open.png",
+    "name_zh": "文件打开",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 113,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_editing.png",
+    "name_zh": "文件编辑中",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 114,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_checked.png",
+    "name_zh": "文件已完成",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 115,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_locked.png",
+    "name_zh": "文件已锁定",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 116,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_shared.png",
+    "name_zh": "文件已共享",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 117,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_error.png",
+    "name_zh": "文件异常",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 118,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_syncing.png",
+    "name_zh": "文件同步中",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 119,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_search.png",
+    "name_zh": "文件内搜索",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 120,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_code.png",
+    "name_zh": "代码文件",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 121,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_image.png",
+    "name_zh": "图片文件",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 122,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_audio.png",
+    "name_zh": "音频文件",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 123,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_video.png",
+    "name_zh": "视频文件",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 124,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_stack.png",
+    "name_zh": "多页文件",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 125,
+    "group": "05_file_states",
+    "filename": "ic_milo_file_zip.png",
+    "name_zh": "压缩文件",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 126,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_checkbox_unchecked.png",
+    "name_zh": "复选框未选",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 127,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_checkbox_checked.png",
+    "name_zh": "复选框已选",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 128,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_checkbox_indeterminate.png",
+    "name_zh": "复选框部分选中",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 129,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_radio_off.png",
+    "name_zh": "单选未选",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 130,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_radio_on.png",
+    "name_zh": "单选已选",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 131,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_toggle_off.png",
+    "name_zh": "开关关闭",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 132,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_toggle_on.png",
+    "name_zh": "开关开启",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 133,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_visibility_off.png",
+    "name_zh": "内容隐藏",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 134,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_notifications_muted.png",
+    "name_zh": "通知静音",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 135,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_notifications_active.png",
+    "name_zh": "通知开启",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 136,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_microphone_muted.png",
+    "name_zh": "麦克风静音",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 137,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_microphone_active.png",
+    "name_zh": "麦克风收音",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 138,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_audio_muted.png",
+    "name_zh": "声音关闭",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 139,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_audio_low.png",
+    "name_zh": "低音量",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 140,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_audio_high.png",
+    "name_zh": "高音量",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 141,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_playback_paused.png",
+    "name_zh": "播放已暂停",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 142,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_unread.png",
+    "name_zh": "消息未读",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 143,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_typing.png",
+    "name_zh": "正在输入",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 144,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_error.png",
+    "name_zh": "消息失败",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 145,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_locked.png",
+    "name_zh": "私密聊天",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 146,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_completed.png",
+    "name_zh": "对话已完成",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 147,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_pending.png",
+    "name_zh": "消息待发送",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 148,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_favorite.png",
+    "name_zh": "对话收藏",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 149,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_pinned.png",
+    "name_zh": "对话置顶",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 150,
+    "group": "06_control_chat_states",
+    "filename": "ic_milo_chat_muted.png",
+    "name_zh": "对话静音",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 151,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_wifi_weak.png",
+    "name_zh": "无线信号弱",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 152,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_wifi_strong.png",
+    "name_zh": "无线信号强",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 153,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_wifi_connecting.png",
+    "name_zh": "无线连接中",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 154,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_bluetooth_connected.png",
+    "name_zh": "蓝牙已连接",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 155,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_bluetooth_disabled.png",
+    "name_zh": "蓝牙已关闭",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 156,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_battery_low.png",
+    "name_zh": "低电量",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 157,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_battery_charging.png",
+    "name_zh": "电池充电中",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 158,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_battery_full.png",
+    "name_zh": "电量充足",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 159,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_cloud_upload.png",
+    "name_zh": "云端上传",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 160,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_cloud_download.png",
+    "name_zh": "云端下载",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 161,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_cloud_offline.png",
+    "name_zh": "云端离线",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 162,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_sync_complete.png",
+    "name_zh": "同步完成",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 163,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_sync_error.png",
+    "name_zh": "同步失败",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 164,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_pending.png",
+    "name_zh": "任务等待中",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 165,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_running.png",
+    "name_zh": "任务执行中",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 166,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_completed.png",
+    "name_zh": "任务已完成",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 167,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_failed.png",
+    "name_zh": "任务失败",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 168,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_cancelled.png",
+    "name_zh": "任务已取消",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 169,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_task_paused.png",
+    "name_zh": "任务已暂停",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 170,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_permission_denied.png",
+    "name_zh": "权限被拒绝",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 171,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_shield_locked.png",
+    "name_zh": "安全已锁定",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 172,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_location_disabled.png",
+    "name_zh": "定位关闭",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 173,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_location_live.png",
+    "name_zh": "实时位置",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 174,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_device_connected.png",
+    "name_zh": "设备已连接",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 175,
+    "group": "07_connection_task_states",
+    "filename": "ic_milo_device_disconnected.png",
+    "name_zh": "设备已断开",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 176,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_keyboard.png",
+    "name_zh": "键盘",
+    "row": 1,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 177,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_mouse.png",
+    "name_zh": "鼠标",
+    "row": 1,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 178,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_pointer.png",
+    "name_zh": "指针",
+    "row": 1,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 179,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_text_cursor.png",
+    "name_zh": "文本光标",
+    "row": 1,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 180,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_crop.png",
+    "name_zh": "裁剪",
+    "row": 1,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 181,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_rotate_left.png",
+    "name_zh": "向左旋转",
+    "row": 2,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 182,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_rotate_right.png",
+    "name_zh": "向右旋转",
+    "row": 2,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 183,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_undo.png",
+    "name_zh": "撤销",
+    "row": 2,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 184,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_redo.png",
+    "name_zh": "重做",
+    "row": 2,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 185,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_zoom_in.png",
+    "name_zh": "放大",
+    "row": 2,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 186,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_zoom_out.png",
+    "name_zh": "缩小",
+    "row": 3,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 187,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_external_link.png",
+    "name_zh": "外部链接",
+    "row": 3,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 188,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_broken_link.png",
+    "name_zh": "链接断开",
+    "row": 3,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 189,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_restore.png",
+    "name_zh": "恢复版本",
+    "row": 3,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 190,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_git_branch.png",
+    "name_zh": "版本分支",
+    "row": 3,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 191,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_layers.png",
+    "name_zh": "图层",
+    "row": 4,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 192,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_package_box.png",
+    "name_zh": "资源包",
+    "row": 4,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 193,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_save.png",
+    "name_zh": "保存",
+    "row": 4,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 194,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_dashboard.png",
+    "name_zh": "仪表盘",
+    "row": 4,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 195,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_chart_line.png",
+    "name_zh": "折线统计",
+    "row": 4,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 196,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_chart_pie.png",
+    "name_zh": "饼图统计",
+    "row": 5,
+    "column": 1,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 197,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_split_screen.png",
+    "name_zh": "分屏",
+    "row": 5,
+    "column": 2,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 198,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_floating_window.png",
+    "name_zh": "悬浮窗口",
+    "row": 5,
+    "column": 3,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 199,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_sidebar_left.png",
+    "name_zh": "左侧栏",
+    "row": 5,
+    "column": 4,
+    "width": 256,
+    "height": 256
+  },
+  {
+    "number": 200,
+    "group": "08_tools_layout",
+    "filename": "ic_milo_sidebar_right.png",
+    "name_zh": "右侧栏",
+    "row": 5,
+    "column": 5,
+    "width": 256,
+    "height": 256
+  }
+]

@@ -129,29 +129,15 @@ private fun MemoryWorkbench(
             return@Column
         }
         val zones = listOf(
-            Triple(
-                stringResource(R.string.memory_profile),
-                DdIcons.Brain,
-                MemoryOpenRequest(stringResource(R.string.memory_profile), "profile"),
-            ) to status.profileChars,
-            Triple(
-                stringResource(R.string.memory_context),
-                DdIcons.Sparkles,
-                MemoryOpenRequest(stringResource(R.string.memory_context), "context"),
-            ) to status.contextChars,
-            Triple(
-                stringResource(R.string.memory_cookbook),
-                DdIcons.Book,
-                MemoryOpenRequest(stringResource(R.string.memory_cookbook), "cookbook"),
-            ) to status.cookbookChars,
+            MemoryOpenRequest(stringResource(R.string.memory_profile), "profile") to status.profileChars,
+            MemoryOpenRequest(stringResource(R.string.memory_context), "context") to status.contextChars,
+            MemoryOpenRequest(stringResource(R.string.memory_cookbook), "cookbook") to status.cookbookChars,
         )
         DdGroupCard {
-            zones.forEach { (entry, chars) ->
-                val (title, icon, request) = entry
+            zones.forEach { (request, chars) ->
                 DdListRow(
-                    title = title,
+                    title = request.title,
                     value = stringResource(R.string.memory_chars, chars),
-                    icon = icon,
                     onClick = { onOpen(request) },
                     showChevron = true,
                 )
@@ -159,29 +145,15 @@ private fun MemoryWorkbench(
         }
         Spacer(Modifier.height(16.dp))
         val timeline = listOf(
-            Triple(
-                stringResource(R.string.memory_today),
-                DdIcons.Sun,
-                MemoryOpenRequest(stringResource(R.string.memory_today), "today"),
-            ) to status.todayChars,
-            Triple(
-                stringResource(R.string.memory_month),
-                DdIcons.Folder,
-                MemoryOpenRequest(stringResource(R.string.memory_month), "month"),
-            ) to status.monthChars,
-            Triple(
-                stringResource(R.string.memory_year),
-                DdIcons.Clock,
-                MemoryOpenRequest(stringResource(R.string.memory_year), "year"),
-            ) to status.yearChars,
+            MemoryOpenRequest(stringResource(R.string.memory_today), "today") to status.todayChars,
+            MemoryOpenRequest(stringResource(R.string.memory_month), "month") to status.monthChars,
+            MemoryOpenRequest(stringResource(R.string.memory_year), "year") to status.yearChars,
         )
         DdGroupCard {
-            timeline.forEach { (entry, chars) ->
-                val (title, icon, request) = entry
+            timeline.forEach { (request, chars) ->
                 DdListRow(
-                    title = title,
+                    title = request.title,
                     value = stringResource(R.string.memory_chars, chars),
-                    icon = icon,
                     onClick = { onOpen(request) },
                     showChevron = true,
                 )
@@ -195,7 +167,6 @@ private fun MemoryWorkbench(
                 recentDays.forEach { day ->
                     DdListRow(
                         title = day,
-                        icon = DdIcons.File,
                         onClick = { onOpen(MemoryOpenRequest(day, "today", day)) },
                         showChevron = true,
                     )

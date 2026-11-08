@@ -65,14 +65,14 @@ fun PrivacyScreen(
             Spacer(Modifier.height(20.dp))
             SettingsGroup {
                 DdListRow(
-                    icon = DdIcons.Folder,
+                    icon = DdIcons.Database,
                     title = stringResource(R.string.privacy_local_title),
                     subtitle = stringResource(R.string.privacy_local_body),
                     subtitleMaxLines = 3,
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Globe,
+                    icon = DdIcons.Cloud,
                     title = stringResource(R.string.privacy_provider_title),
                     subtitle = stringResource(R.string.privacy_provider_body),
                     subtitleMaxLines = 3,
@@ -86,7 +86,7 @@ fun PrivacyScreen(
                 )
                 DdHairline()
                 DdListRow(
-                    icon = DdIcons.Globe,
+                    icon = DdIcons.Sync,
                     title = stringResource(R.string.privacy_micloud_title),
                     subtitle = stringResource(R.string.privacy_micloud_body),
                     subtitleMaxLines = 5,
