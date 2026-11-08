@@ -441,6 +441,7 @@ fun DdPrimaryButton(
     ) {
         Text(
             text = text,
+            modifier = Modifier.padding(horizontal = DdSpacing.Lg),
             style = DdType.button,
             color = if (enabled) colors.onAccent else colors.inkTertiary,
         )
