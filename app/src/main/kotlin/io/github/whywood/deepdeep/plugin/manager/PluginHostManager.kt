@@ -154,6 +154,9 @@ class PluginHostManager internal constructor(
 
     override suspend fun refreshNow() = mutex.withLock { refreshLocked() }
 
+    override fun skillIds(pluginId: String): List<String> =
+        gate.view(pluginId)?.skillIds.orEmpty()
+
     override fun promptBody(excludedPlugins: Set<String>): String? {
         val sections = registrySnapshot.promptSections
             .filterNot { it.pluginId in excludedPlugins }

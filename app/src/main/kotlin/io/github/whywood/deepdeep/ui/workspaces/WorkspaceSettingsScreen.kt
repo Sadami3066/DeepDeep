@@ -38,6 +38,7 @@ import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
 
@@ -48,6 +49,7 @@ fun WorkspaceSettingsScreen(
     agentDocStore: AgentDocStore,
     workspaceToolPolicies: WorkspaceToolPolicyStore,
     pluginManager: PluginManagerFacade,
+    mcpConfigStore: McpConfigStore,
     onBack: () -> Unit,
     onOpenSkills: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,21 +63,26 @@ fun WorkspaceSettingsScreen(
     var agentsDocSet by remember(workspace.id) { mutableStateOf<Boolean?>(null) }
     var showInheritedSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showInheritedPlugins by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showInheritedMcp by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var inheritedSkillsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
     var inheritedPluginsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
+    var inheritedMcpValue by remember(workspace.id) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(workspace.id, reloadKey) {
         skillsLoadFailed = false
         val skills = skillRepository.list()
         val enabledIds = skillRepository.projectEnabledIds(workspace.cwd)
         skillsLoadFailed = skills.isFailure
-        projectSkillCount = skills.getOrNull()?.count { it.globalEnabled || it.id in enabledIds }
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
         val policy = workspaceToolPolicies.policyForCwd(workspace.cwd)
+        projectSkillCount = skills.getOrNull()?.count {
+            (it.globalEnabled && it.name !in policy.skills) || it.id in enabledIds
+        }
         val globalSkills = skills.getOrNull()?.count { it.globalEnabled } ?: 0
         inheritedSkillsValue = if (globalSkills == 0 || policy.skills.isEmpty()) null
             else "${policy.skills.size}"
         inheritedPluginsValue = if (policy.plugins.isEmpty()) null else "${policy.plugins.size}"
+        inheritedMcpValue = if (policy.mcpServers.isEmpty()) null else "${policy.mcpServers.size}"
     }
 
     Column(
@@ -152,6 +159,16 @@ fun WorkspaceSettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
+                    icon = DdIcons.Plug,
+                    title = stringResource(R.string.workspace_inherit_mcp),
+                    value = inheritedMcpValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
+                        ?: stringResource(R.string.workspace_inherit_all),
+                    onClick = { showInheritedMcp = true },
+                    showChevron = true,
+                    modifier = Modifier.testTag("workspace_settings_inherit_mcp"),
+                )
+                DdHairline()
+                DdListRow(
                     icon = DdIcons.File,
                     title = stringResource(R.string.workspace_settings_agents_doc),
                     value = when (val set = agentsDocSet) {
@@ -172,6 +189,7 @@ fun WorkspaceSettingsScreen(
         ProjectSkillsSheet(
             workspace = workspace,
             skillRepository = skillRepository,
+            workspaceToolPolicies = workspaceToolPolicies,
             onOpenSkills = {
                 showProjectSkills = false
                 onOpenSkills()
@@ -188,6 +206,7 @@ fun WorkspaceSettingsScreen(
             store = workspaceToolPolicies,
             skillRepository = skillRepository,
             pluginManager = pluginManager,
+            mcpConfigStore = mcpConfigStore,
             onSaved = { reloadKey += 1 },
             onDismiss = { showInheritedSkills = false },
         )
@@ -200,8 +219,22 @@ fun WorkspaceSettingsScreen(
             store = workspaceToolPolicies,
             skillRepository = skillRepository,
             pluginManager = pluginManager,
+            mcpConfigStore = mcpConfigStore,
             onSaved = { reloadKey += 1 },
             onDismiss = { showInheritedPlugins = false },
+        )
+    }
+
+    if (showInheritedMcp) {
+        WorkspaceInheritedSheet(
+            workspaceCwd = workspace.cwd,
+            kind = WorkspaceInheritedKind.Mcp,
+            store = workspaceToolPolicies,
+            skillRepository = skillRepository,
+            pluginManager = pluginManager,
+            mcpConfigStore = mcpConfigStore,
+            onSaved = { reloadKey += 1 },
+            onDismiss = { showInheritedMcp = false },
         )
     }
 

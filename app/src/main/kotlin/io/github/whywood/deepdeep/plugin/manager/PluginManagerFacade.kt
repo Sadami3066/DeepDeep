@@ -34,6 +34,8 @@ interface PluginManagerFacade {
 
     fun promptBody(excludedPlugins: Set<String> = emptySet()): String?
 
+    fun skillIds(pluginId: String): List<String>
+
     fun setEnabled(pluginId: String, enabled: Boolean)
 
     fun uninstall(pluginId: String)

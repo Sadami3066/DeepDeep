@@ -18,14 +18,14 @@
     <string name="workspace_directory_invalid">只能选择手机存储里的目录</string>
 
     <string name="project_skills_title">项目技能</string>
-    <string name="project_skills_note">保存后，新会话生效。</string>
+    <string name="project_skills_note">项目技能保存后生效；全局技能开关立即保存。</string>
     <string name="project_skills_save">保存</string>
     <string name="project_skills_save_failed">保存失败，请重试。</string>
     <string name="project_skills_load_failed">读取技能失败。</string>
     <string name="project_skills_empty_title">还没有可用的技能</string>
     <string name="project_skills_empty_hint">先安装技能，再为这个工作区选择要启用的项目技能。</string>
     <string name="project_skills_empty_action">去安装技能</string>
-    <string name="project_skills_global_hint">全局启用 · %1$s</string>
+    <string name="project_skills_global_hint">全局技能，仅对本工作区关闭 · %1$s</string>
 
     <string name="agents_doc_title">AGENTS.md</string>
     <string name="agents_doc_default_file">AGENTS.md</string>
@@ -43,16 +43,22 @@
     <string name="agents_doc_discard_title">放弃修改？</string>
     <string name="agents_doc_discard_message">当前编辑内容尚未保存。</string>
     <string name="agents_doc_discard_confirm">放弃</string>
-    <string name="workspace_inherit_skills">继承的全局技能</string>
-    <string name="workspace_inherit_plugins">继承的插件</string>
+    <string name="workspace_inherit_skills">技能</string>
+    <string name="workspace_inherit_plugins">插件</string>
+    <string name="workspace_inherit_mcp">MCP</string>
     <string name="workspace_inherit_all">全部启用</string>
     <string name="workspace_inherit_disabled_count">%1$s 项关闭</string>
-    <string name="workspace_inherit_skills_title">继承的全局技能</string>
-    <string name="workspace_inherit_plugins_title">继承的插件</string>
+    <string name="workspace_inherit_skills_title">技能</string>
+    <string name="workspace_inherit_plugins_title">插件</string>
+    <string name="workspace_inherit_mcp_title">MCP</string>
     <string name="workspace_inherit_note">关闭后，本工作区的新会话不会注入对应工具与提示词。</string>
+    <string name="workspace_inherit_mcp_note">关闭后，本工作区的新会话不会连接该 MCP 服务器。</string>
     <string name="workspace_inherit_skills_empty">还没有全局启用的技能</string>
     <string name="workspace_inherit_plugins_empty">还没有安装插件</string>
+    <string name="workspace_inherit_mcp_empty">还没有配置 MCP 服务器</string>
     <string name="workspace_inherit_load_failed">读取失败，请重试。</string>
-    <string name="workspace_inherit_save">保存</string>
+    <string name="workspace_inherit_retry">重试</string>
+    <string name="workspace_inherit_enabled">已启用</string>
+    <string name="workspace_inherit_disabled">已关闭</string>
     <string name="workspace_inherit_save_failed">保存失败，请重试。</string>
 </resources>

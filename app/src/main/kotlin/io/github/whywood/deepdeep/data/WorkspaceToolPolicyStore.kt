@@ -10,8 +10,9 @@ import org.json.JSONObject
 data class WorkspaceToolPolicy(
     val skills: Set<String> = emptySet(),
     val plugins: Set<String> = emptySet(),
+    val mcpServers: Set<String> = emptySet(),
 ) {
-    val isEmpty: Boolean get() = skills.isEmpty() && plugins.isEmpty()
+    val isEmpty: Boolean get() = skills.isEmpty() && plugins.isEmpty() && mcpServers.isEmpty()
 }
 
 class WorkspaceToolPolicyStore(private val file: File) {
@@ -48,7 +49,14 @@ class WorkspaceToolPolicyStore(private val file: File) {
             buildMap {
                 root.keys().forEach { cwd ->
                     val item = root.optJSONObject(cwd) ?: return@forEach
-                    put(cwd, WorkspaceToolPolicy(skills = item.stringSet("skills"), plugins = item.stringSet("plugins")))
+                    put(
+                            cwd,
+                            WorkspaceToolPolicy(
+                                skills = item.stringSet("skills"),
+                                plugins = item.stringSet("plugins"),
+                                mcpServers = item.stringSet("mcpServers"),
+                            ),
+                        )
                 }
             }
         }.getOrDefault(emptyMap())
@@ -61,7 +69,8 @@ class WorkspaceToolPolicyStore(private val file: File) {
                 cwd,
                 JSONObject()
                     .put("skills", org.json.JSONArray(policy.skills.toList()))
-                    .put("plugins", org.json.JSONArray(policy.plugins.toList())),
+                    .put("plugins", org.json.JSONArray(policy.plugins.toList()))
+                    .put("mcpServers", org.json.JSONArray(policy.mcpServers.toList())),
             )
         }
         val temp = File(file.parentFile, file.name + ".tmp")

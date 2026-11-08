@@ -18,14 +18,14 @@
     <string name="workspace_directory_invalid">Only folders in shared storage can be used</string>
 
     <string name="project_skills_title">Project skills</string>
-    <string name="project_skills_note">Changes apply to new sessions.</string>
+    <string name="project_skills_note">Project skills apply on save. Global skills save immediately.</string>
     <string name="project_skills_save">Save</string>
     <string name="project_skills_save_failed">Save failed. Try again.</string>
     <string name="project_skills_load_failed">Could not load skills.</string>
     <string name="project_skills_empty_title">No skills available yet</string>
     <string name="project_skills_empty_hint">Install skills first, then choose which project skills this workspace enables.</string>
     <string name="project_skills_empty_action">Install skills</string>
-    <string name="project_skills_global_hint">Global · %1$s</string>
+    <string name="project_skills_global_hint">Global skill, off only for this workspace · %1$s</string>
 
     <string name="agents_doc_title">AGENTS.md</string>
     <string name="agents_doc_default_file">AGENTS.md</string>
@@ -43,16 +43,22 @@
     <string name="agents_doc_discard_title">Discard changes?</string>
     <string name="agents_doc_discard_message">Your edits have not been saved.</string>
     <string name="agents_doc_discard_confirm">Discard</string>
-    <string name="workspace_inherit_skills">Inherited global skills</string>
-    <string name="workspace_inherit_plugins">Inherited plugins</string>
+    <string name="workspace_inherit_skills">Skills</string>
+    <string name="workspace_inherit_plugins">Plugins</string>
+    <string name="workspace_inherit_mcp">MCP</string>
     <string name="workspace_inherit_all">All enabled</string>
     <string name="workspace_inherit_disabled_count">%1$s off</string>
-    <string name="workspace_inherit_skills_title">Inherited global skills</string>
-    <string name="workspace_inherit_plugins_title">Inherited plugins</string>
+    <string name="workspace_inherit_skills_title">Skills</string>
+    <string name="workspace_inherit_plugins_title">Plugins</string>
+    <string name="workspace_inherit_mcp_title">MCP</string>
     <string name="workspace_inherit_note">New sessions in this workspace won\'t include disabled tools or prompts.</string>
+    <string name="workspace_inherit_mcp_note">New sessions in this workspace won\'t connect to this MCP server.</string>
     <string name="workspace_inherit_skills_empty">No globally enabled skills</string>
     <string name="workspace_inherit_plugins_empty">No plugins installed</string>
+    <string name="workspace_inherit_mcp_empty">No MCP servers configured</string>
     <string name="workspace_inherit_load_failed">Could not load. Try again.</string>
-    <string name="workspace_inherit_save">Save</string>
+    <string name="workspace_inherit_retry">Retry</string>
+    <string name="workspace_inherit_enabled">Enabled</string>
+    <string name="workspace_inherit_disabled">Off</string>
     <string name="workspace_inherit_save_failed">Save failed. Try again.</string>
 </resources>

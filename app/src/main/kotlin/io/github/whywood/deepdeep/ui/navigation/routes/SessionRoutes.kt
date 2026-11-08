@@ -88,6 +88,7 @@ internal fun WorkspaceSettingsRoute(
         agentDocStore = dependencies.agentDocStore,
         workspaceToolPolicies = dependencies.workspaceToolPolicies,
         pluginManager = dependencies.pluginManager,
+        mcpConfigStore = dependencies.mcpConfigStore,
         onBack = onBack,
         onOpenSkills = { navigator.push(AppDestination.Skills) },
     )

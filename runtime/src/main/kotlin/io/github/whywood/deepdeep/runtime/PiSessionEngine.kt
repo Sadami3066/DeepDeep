@@ -43,6 +43,7 @@ class PiSessionEngine(
     private val storageMounts: suspend () -> List<StorageMountInfo> = { emptyList() },
     private val pluginPromptBody: suspend () -> String? = { null },
     private val excludedSkills: Set<String> = emptySet(),
+    private val excludedMcpServers: Set<String> = emptySet(),
     private val toolContext: AppToolContext? = null,
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
@@ -153,6 +154,7 @@ class PiSessionEngine(
                     samplingEnabled = false,
                     rootsEnabled = true,
                     autoEnableToolSearch = false,
+                    excludedServers = excludedMcpServers,
                 ),
             ),
         )
