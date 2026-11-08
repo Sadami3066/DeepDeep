@@ -7,4 +7,5 @@
     <files-path name="gui" path="gui/" />
     <cache-path name="camera" path="camera/" />
     <cache-path name="share_incoming" path="share-incoming/" />
+    <external-path name="external" path="." />
 </paths>

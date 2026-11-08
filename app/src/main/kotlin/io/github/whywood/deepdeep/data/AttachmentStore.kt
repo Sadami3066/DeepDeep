@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Environment
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -34,6 +35,11 @@ interface AttachmentStore {
 
 class FileAttachmentStore(context: Context, private val home: File) : AttachmentStore {
     private val appContext = context.applicationContext
+
+    @Suppress("DEPRECATION")
+    private val externalRoot: File? = runCatching {
+        Environment.getExternalStorageDirectory().canonicalFile
+    }.getOrNull()
 
     @SuppressLint("UsableSpace")
     override suspend fun import(uri: Uri, root: File): AttachmentImport = withContext(Dispatchers.IO) {
@@ -98,13 +104,19 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
                 if (root.absolutePath != home.absolutePath) add(File(home, relative))
             }
         }
-        val roots = listOf(root, home).mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+        val roots = listOfNotNull(root, home, externalRoot)
+            .mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+        val external = externalRoot
         for (candidate in candidates) {
             val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: continue
             if (roots.none { canonical.path.startsWith(it.path + File.separator) }) continue
-            if (!canonical.isFile) continue
+            if (!canonical.isFile || !canonical.canRead()) continue
             val base = roots.firstOrNull { canonical.path.startsWith(it.path + File.separator) } ?: continue
-            val relative = canonical.relativeTo(base).path.replace(File.separatorChar, '/')
+            val relative = if (external != null && base.path == external.path) {
+                canonical.absolutePath
+            } else {
+                canonical.relativeTo(base).path.replace(File.separatorChar, '/')
+            }
             val mime = guessMime(canonical.name)
             return AttachmentRef(
                 id = relative,
