@@ -154,8 +154,11 @@ class PluginHostManager internal constructor(
 
     override suspend fun refreshNow() = mutex.withLock { refreshLocked() }
 
-    override fun promptBody(): String? {
-        val sections = registrySnapshot.promptSections.map { it.section }.sortedBy { it.priority }
+    override fun promptBody(excludedPlugins: Set<String>): String? {
+        val sections = registrySnapshot.promptSections
+            .filterNot { it.pluginId in excludedPlugins }
+            .map { it.section }
+            .sortedBy { it.priority }
         if (sections.isEmpty()) return null
         return sections.joinToString("\n\n") { it.body }
     }

@@ -26,10 +26,11 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     internal abstract val registrySnapshot: PluginRegistrySnapshot
 
-    override fun tools(binding: SessionBinding): List<dev.pi.coding.tools.CodingTool> = sessionHooks.tools(binding)
+    override fun tools(binding: SessionBinding, excludedPlugins: Set<String>): List<dev.pi.coding.tools.CodingTool> =
+        sessionHooks.tools(binding, excludedPlugins)
 
-    override fun deferredTools(binding: SessionBinding): List<io.github.whywood.deepdeep.runtime.DeferredTool> =
-        sessionHooks.deferredTools(binding)
+    override fun deferredTools(binding: SessionBinding, excludedPlugins: Set<String>): List<io.github.whywood.deepdeep.runtime.DeferredTool> =
+        sessionHooks.deferredTools(binding, excludedPlugins)
 
     override suspend fun inspectExternal(file: File): ExternalInspectionUi? = externalFlow.inspectExternal(file)
 
@@ -73,8 +74,11 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
 
-    internal fun bindSessionHooks(binding: SessionBinding, delegate: PluginHooksDelegate) =
-        sessionHooks.bind(binding, delegate)
+    internal fun bindSessionHooks(
+        binding: SessionBinding,
+        delegate: PluginHooksDelegate,
+        excludedPlugins: Set<String> = emptySet(),
+    ) = sessionHooks.bind(binding, delegate, excludedPlugins)
 
     internal fun onSessionClosed(sessionId: String) = sessionHooks.close(sessionId)
 

@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
@@ -77,6 +78,8 @@ interface StorageDependencies {
     val linuxSettings: LinuxSettingsStore
 
     val storageMounts: StorageMountStore
+
+    val workspaceToolPolicies: WorkspaceToolPolicyStore
 
     val shareStaging: ShareStaging
 

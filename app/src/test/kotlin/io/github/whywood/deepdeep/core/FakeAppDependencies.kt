@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.market.MarketRepository
@@ -50,6 +51,8 @@ internal class FakeAppDependencies(
     override val memoryRecap: MemoryRecap get() = unavailable("memoryRecap")
 
     override val storageMounts: StorageMountStore get() = unavailable("storageMounts")
+
+    override val workspaceToolPolicies: WorkspaceToolPolicyStore get() = unavailable("workspaceToolPolicies")
 
     override suspend fun prepare() {
         unavailable("prepare")

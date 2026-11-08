@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.SkillRepository
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
@@ -36,6 +37,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
 
@@ -44,6 +46,8 @@ fun WorkspaceSettingsScreen(
     workspace: RuntimeWorkspace,
     skillRepository: SkillRepository,
     agentDocStore: AgentDocStore,
+    workspaceToolPolicies: WorkspaceToolPolicyStore,
+    pluginManager: PluginManagerFacade,
     onBack: () -> Unit,
     onOpenSkills: () -> Unit,
     modifier: Modifier = Modifier,
@@ -55,6 +59,10 @@ fun WorkspaceSettingsScreen(
     var projectSkillCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
     var skillsLoadFailed by remember(workspace.id) { mutableStateOf(false) }
     var agentsDocSet by remember(workspace.id) { mutableStateOf<Boolean?>(null) }
+    var showInheritedSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showInheritedPlugins by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var inheritedSkillsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
+    var inheritedPluginsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(workspace.id, reloadKey) {
         skillsLoadFailed = false
@@ -63,6 +71,11 @@ fun WorkspaceSettingsScreen(
         skillsLoadFailed = skills.isFailure
         projectSkillCount = skills.getOrNull()?.count { it.globalEnabled || it.id in enabledIds }
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
+        val policy = workspaceToolPolicies.policyForCwd(workspace.cwd)
+        val globalSkills = skills.getOrNull()?.count { it.globalEnabled } ?: 0
+        inheritedSkillsValue = if (globalSkills == 0 || policy.skills.isEmpty()) null
+            else "${policy.skills.size}"
+        inheritedPluginsValue = if (policy.plugins.isEmpty()) null else "${policy.plugins.size}"
     }
 
     Column(
@@ -119,6 +132,26 @@ fun WorkspaceSettingsScreen(
                 )
                 DdHairline()
                 DdListRow(
+                    icon = DdIcons.Sparkles,
+                    title = stringResource(R.string.workspace_inherit_skills),
+                    value = inheritedSkillsValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
+                        ?: stringResource(R.string.workspace_inherit_all),
+                    onClick = { showInheritedSkills = true },
+                    showChevron = true,
+                    modifier = Modifier.testTag("workspace_settings_inherit_skills"),
+                )
+                DdHairline()
+                DdListRow(
+                    icon = DdIcons.Puzzle,
+                    title = stringResource(R.string.workspace_inherit_plugins),
+                    value = inheritedPluginsValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
+                        ?: stringResource(R.string.workspace_inherit_all),
+                    onClick = { showInheritedPlugins = true },
+                    showChevron = true,
+                    modifier = Modifier.testTag("workspace_settings_inherit_plugins"),
+                )
+                DdHairline()
+                DdListRow(
                     icon = DdIcons.File,
                     title = stringResource(R.string.workspace_settings_agents_doc),
                     value = when (val set = agentsDocSet) {
@@ -145,6 +178,30 @@ fun WorkspaceSettingsScreen(
             },
             onSaved = { reloadKey += 1 },
             onDismiss = { showProjectSkills = false },
+        )
+    }
+
+    if (showInheritedSkills) {
+        WorkspaceInheritedSheet(
+            workspaceCwd = workspace.cwd,
+            kind = WorkspaceInheritedKind.Skills,
+            store = workspaceToolPolicies,
+            skillRepository = skillRepository,
+            pluginManager = pluginManager,
+            onSaved = { reloadKey += 1 },
+            onDismiss = { showInheritedSkills = false },
+        )
+    }
+
+    if (showInheritedPlugins) {
+        WorkspaceInheritedSheet(
+            workspaceCwd = workspace.cwd,
+            kind = WorkspaceInheritedKind.Plugins,
+            store = workspaceToolPolicies,
+            skillRepository = skillRepository,
+            pluginManager = pluginManager,
+            onSaved = { reloadKey += 1 },
+            onDismiss = { showInheritedPlugins = false },
         )
     }
 

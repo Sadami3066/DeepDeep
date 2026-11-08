@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.ShareStaging
@@ -63,6 +64,7 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val attachmentStore = FileAttachmentStore(deps.appContext, homeDir)
     val linuxSettings = LinuxSettingsStore(deps.appContext)
     val storageMountStore = StorageMountStore(File(deps.appContext.filesDir, "storage-mounts.json"))
+    val workspaceToolPolicies = WorkspaceToolPolicyStore(File(deps.appContext.filesDir, "workspace-tool-policies.json"))
     val themePreferences = ThemePreferences(deps.appContext)
     val appPreferences = AppPreferences(deps.appContext)
     val voicePreferences = VoicePreferences(deps.appContext)

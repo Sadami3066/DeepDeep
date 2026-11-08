@@ -36,18 +36,18 @@ internal class PluginSessionHooks(
     private val contributionLocks = WeakHashMap<SessionBinding, Any>()
     private val sessions = linkedMapOf<String, SessionState>()
 
-    fun tools(binding: SessionBinding): List<CodingTool> {
+    fun tools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<CodingTool> {
         val sessionId = { binding.current()?.sessionId.orEmpty() }
-        return sessionContributions(binding).values
+        return sessionContributions(binding).filterKeys { it !in excludedPlugins }.values
             .flatMap { contribution ->
                 PluginToolAdapter.toCodingTools(contribution.tools.filter { it.exposure == PluginToolExposure.DIRECT }, sessionId)
             }
             .distinctBy { it.name }
     }
 
-    fun deferredTools(binding: SessionBinding): List<DeferredTool> {
+    fun deferredTools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<DeferredTool> {
         val sessionId = { binding.current()?.sessionId.orEmpty() }
-        return sessionContributions(binding).entries
+        return sessionContributions(binding).entries.filter { it.key !in excludedPlugins }
             .flatMap { (pluginId, contribution) ->
                 contribution.tools
                     .filter { it.exposure == PluginToolExposure.DEFERRED }
@@ -56,9 +56,9 @@ internal class PluginSessionHooks(
             .distinctBy { it.name }
     }
 
-    fun bind(binding: SessionBinding, delegate: PluginHooksDelegate) {
+    fun bind(binding: SessionBinding, delegate: PluginHooksDelegate, excludedPlugins: Set<String> = emptySet()) {
         val bound = binding.current() ?: return
-        val source = sessionSource(binding)
+        val source = sessionSource(binding, excludedPlugins)
         val adapter = PluginRuntimeHooksFactory(source).create(bound.sessionId, bound.cwd, bound.sessionFile)
         synchronized(sessions) {
             sessions[bound.sessionId] = SessionState(binding, bound.sessionId, source, adapter)
@@ -127,8 +127,10 @@ internal class PluginSessionHooks(
         pump.updateSnapshot(state.sessionId, snapshot)
     }
 
-    private fun sessionSource(binding: SessionBinding): SessionHookSource {
-        val hooks = sessionContributions(binding).mapValues { (_, contribution) -> contribution.hooks }
+    private fun sessionSource(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): SessionHookSource {
+        val hooks = sessionContributions(binding)
+            .filterKeys { it !in excludedPlugins }
+            .mapValues { (_, contribution) -> contribution.hooks }
         return SessionHookSource(snapshots = base::snapshot, sessionHooks = hooks)
     }
 

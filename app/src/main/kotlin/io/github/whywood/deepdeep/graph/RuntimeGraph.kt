@@ -92,8 +92,12 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     val appToolContext: AppToolContext by lazy {
         AppToolContext(
             questionCenter = deps.questionCenter,
-            pluginTools = { binding -> deps.pluginManager().tools(binding) },
-            pluginDeferredTools = { binding -> deps.pluginManager().deferredTools(binding) },
+            pluginTools = { binding ->
+                deps.pluginManager().tools(binding, policyFor(binding).plugins)
+            },
+            pluginDeferredTools = { binding ->
+                deps.pluginManager().deferredTools(binding, policyFor(binding).plugins)
+            },
             extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
         )
     }
@@ -156,7 +160,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding ->
-                deps.pluginManager().bindSessionHooks(binding, delegate)
+                deps.pluginManager().bindSessionHooks(binding, delegate, policyFor(binding).plugins)
                 memoryRollup.launchIfDue()
                 memoryRecap.launchRetryPending()
             },
@@ -169,7 +173,11 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             StorageMountInfo(name = mount.name, description = mount.description, path = mount.path)
         }
 
+    private fun policyFor(binding: SessionBinding) =
+        deps.workspaceToolPolicies.policyForCwd(binding.current()?.cwd.orEmpty())
+
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+        val workspacePolicy = deps.workspaceToolPolicies.policyForCwd(cwd.absolutePath)
         PiSessionEngine(
             workspace = cwd,
             agentDir = deps.agentDir,
@@ -180,7 +188,8 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             storageMounts = { storageMountInfos() },
-            pluginPromptBody = { deps.pluginManager().promptBody() },
+            pluginPromptBody = { deps.pluginManager().promptBody(workspacePolicy.plugins) },
+            excludedSkills = workspacePolicy.skills,
             toolContext = appToolContext,
             memory = memoryStore,
             hooks = pluginRuntimeHooks(),

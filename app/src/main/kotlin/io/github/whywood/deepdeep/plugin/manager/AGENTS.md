@@ -35,3 +35,7 @@
 - 外部安装/更新只做「校验 + 暂存」，`PENDING_RESTART` 由 `record.pendingVersion` 表达，下次启动由 `PluginActivationProtocol` 走 prepare/probe/commit/swap；失败按矩阵回滚（旧版本保持可用）。安装后不再调用插件 `install()` 钩子，插件自身的 CLI 下载/登录由插件页面或工具完成。
 - `start()` 重复调用不会重复注册/启用插件，但仍会激活待生效的 pending 版本：更新只经启动安全点生效，进程内重试与真实重启走同一条路径。
 - 崩溃恢复：启动时对启用中的外部插件读 activation marker；中断→跳过自动激活并记 `lastError`（`attempts>=2` 自动禁用）；未中断且非 pending → `noteStartup`，同版本连续 2 次启动崩溃自动 `enabled=false`；激活/启用成功后清计数。facade 提供 `retryActivation(pluginId)` 与 `rollbackPlugin(pluginId)`（回滚 previous 版本）；用户手动启用（`PluginManagerCommands.enablePlugin`）先清 startup 计数/marker 再装载，保证自动禁用后可手动恢复。
+
+## 会话级排除
+
+`PluginManagerFacade` / `PluginManagerDelegation` 的 `tools`、`deferredTools`、`promptBody`、`bindSessionHooks` 接受 `excludedPlugins: Set<String>`；`PluginSessionHooks` 按 pluginId 过滤 contributions 与 hooks，`PluginHostManager.promptBody` 过滤对应 promptSections。用于工作区关闭继承插件，未传时行为不变。

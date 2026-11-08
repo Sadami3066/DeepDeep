@@ -86,6 +86,8 @@ internal fun WorkspaceSettingsRoute(
         workspace = workspace,
         skillRepository = dependencies.skillRepository,
         agentDocStore = dependencies.agentDocStore,
+        workspaceToolPolicies = dependencies.workspaceToolPolicies,
+        pluginManager = dependencies.pluginManager,
         onBack = onBack,
         onOpenSkills = { navigator.push(AppDestination.Skills) },
     )

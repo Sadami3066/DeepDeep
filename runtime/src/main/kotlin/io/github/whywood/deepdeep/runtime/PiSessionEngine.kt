@@ -42,6 +42,7 @@ class PiSessionEngine(
     private val sharedStorage: suspend () -> Boolean = { false },
     private val storageMounts: suspend () -> List<StorageMountInfo> = { emptyList() },
     private val pluginPromptBody: suspend () -> String? = { null },
+    private val excludedSkills: Set<String> = emptySet(),
     private val toolContext: AppToolContext? = null,
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
@@ -142,6 +143,7 @@ class PiSessionEngine(
                 hooks = CodingHooks(extraSystemPromptSections = { currentSections() })
                     .withPluginHooks(hooks.promptTransform),
                 credentials = credentials,
+                excludedSkills = excludedSkills,
                 extraSystemPromptSections = buildToolRuleSection(tools),
                 initialSystemPromptSections = currentSections(),
                 projectTrusted = true,

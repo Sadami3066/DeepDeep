@@ -486,3 +486,20 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - 冷启动：主题初值由固定 DeepDeep 改为 `SYSTEM`（浅色 Santorini / 深色 Oceanic），窗口背景色与对应纸色一致（`#F7F8F8` / `#1B2B34`），深色启动不再白闪。
 - 市场失败态重试加进行中反馈与防抖（`retrying` 状态，重试期间显示加载并禁用按钮）。
 - 插件图标缓存改为按字节限 6MB，缓存 key 的 `targetPx` 向上归一到 64px 桶，避免同图多份解码。
+
+## 136. 撤销「不再扩张组件库」约束，回归按需扩展
+
+用户明确撤销 134 条里「设计系统不再扩张组件库」的结论：组件库可以继续按需扩展。同时确立一条协作规则——新增任何全局约束（代码风格、流程、目录规范、组件边界等）之前，必须先向用户汇报并获同意，不能把开发过程中的临时取舍固化成约束。
+
+后续 P2 交互审计项全部跟进：P2-4 四条长列表改 LazyColumn、P2-11 扩展文本组件能力（AnnotatedString/softWrap/onTextLayout）、P2-12 UI 层 dp/sp 全面 token 化、P2-14 字体切换改为实时生效不再 recreate。
+
+## 137. 工作区可关闭继承的全局技能与插件
+
+原决策是「所有工作区继承全局技能，不能关闭」，对隔离型工作区（课程、临时项目）不合适。改为：每个工作区可单独关闭部分全局技能与插件。
+
+- 技能：`WorkspaceToolPolicyStore` 记录工作区不继承的技能名，`PiSessionEngine` 构造参数 `excludedSkills` 透传到 SDK `AgentSessionOptions.excludedSkills`（pi2kotlin 0.5.3 新增），由 `ResourceLoader` 在 skills 列表中过滤——提示词清单与可读文件都拿不到。
+- 插件：facade 的 `tools/deferredTools/promptBody/bindSessionHooks` 全部加 `excludedPlugins`；`RuntimeGraph` 按绑定工作区的 cwd 解析策略后传入，插件工具、提示词与 hooks 均不出现。
+- 存储：`files/workspace-tool-policies.json`，按 canonical cwd 存 `skills`（名称）与 `plugins`（id），原子写；UI 在工作区设置页「继承的全局技能 / 继承的插件」两个 sheet 中开关，固定说明「关闭后，本工作区的新会话不会注入对应工具与提示词」。
+- 范围：本轮只做技能 + 插件；MCP 关闭留到下轮（需会话级 MCP 配置注入或 SDK 支持）。
+- 依赖升级：App 使用 pi2kotlin 0.5.3（GitHub Release `v0.5.3`，asset `pi2kotlin-0.5.3-m2.zip`，sha256 见 `gradle/pi-sdk.sha256`）。
+

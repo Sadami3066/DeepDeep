@@ -24,7 +24,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | `remote/` | 远程连接页：顶栏返回与占位空态，等待后续接入 |
 | `timers/` | 定时任务页：列表、编辑器、日期/时间选择与 cron 草稿 |
 | [miniapp/](miniapp/AGENTS.md) | 小程序：列表/查看器、WebView 与 bridge |
-| `workspaces/` | 工作区设置：项目技能、AGENTS.md 编辑与工作区对话框 |
+| `workspaces/` | 工作区设置：项目技能、继承的全局技能/插件（`WorkspaceInheritedSheet`，关闭后新会话不注入）、AGENTS.md 编辑与工作区对话框 |
 
 ## 要点
 

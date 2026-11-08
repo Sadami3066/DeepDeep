@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -109,6 +110,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val linuxSettings: LinuxSettingsStore get() = dataGraph.linuxSettings
 
     override val storageMounts: StorageMountStore get() = dataGraph.storageMountStore
+    override val workspaceToolPolicies: WorkspaceToolPolicyStore get() = dataGraph.workspaceToolPolicies
     override val credentials: SdkCredentialStore get() = dataGraph.credentials
     override val providerCatalog: ProviderDirectory get() = dataGraph.providerCatalog
     override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService
@@ -229,6 +231,7 @@ class AppGraph(context: Context) : AppDependencies {
         personalizationStore = dataGraph.personalizationStore,
         linuxSettings = dataGraph.linuxSettings,
         storageMountStore = dataGraph.storageMountStore,
+        workspaceToolPolicies = dataGraph.workspaceToolPolicies,
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,

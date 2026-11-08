@@ -43,4 +43,16 @@
     <string name="agents_doc_discard_title">Discard changes?</string>
     <string name="agents_doc_discard_message">Your edits have not been saved.</string>
     <string name="agents_doc_discard_confirm">Discard</string>
+    <string name="workspace_inherit_skills">Inherited global skills</string>
+    <string name="workspace_inherit_plugins">Inherited plugins</string>
+    <string name="workspace_inherit_all">All enabled</string>
+    <string name="workspace_inherit_disabled_count">%1$s off</string>
+    <string name="workspace_inherit_skills_title">Inherited global skills</string>
+    <string name="workspace_inherit_plugins_title">Inherited plugins</string>
+    <string name="workspace_inherit_note">New sessions in this workspace won\'t include disabled tools or prompts.</string>
+    <string name="workspace_inherit_skills_empty">No globally enabled skills</string>
+    <string name="workspace_inherit_plugins_empty">No plugins installed</string>
+    <string name="workspace_inherit_load_failed">Could not load. Try again.</string>
+    <string name="workspace_inherit_save">Save</string>
+    <string name="workspace_inherit_save_failed">Save failed. Try again.</string>
 </resources>
