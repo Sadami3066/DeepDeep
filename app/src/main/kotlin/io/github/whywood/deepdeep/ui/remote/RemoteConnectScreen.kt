@@ -142,12 +142,14 @@ internal fun RemoteConnectScreen(
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
 
-            current != null -> RemoteWebView(
-                session = current,
-                state = webViewState,
-                onTlsRejected = { tlsRejected = true },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            )
+            current != null -> Box(Modifier.fillMaxWidth().weight(1f)) {
+                RemoteWebView(
+                    session = current,
+                    state = webViewState,
+                    onTlsRejected = { tlsRejected = true },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
             failure != null -> ConnectFailureContent(
                 failure = failure,

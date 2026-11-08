@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 class RemoteConnection(
     private val store: RemoteComputerStore,
     private val secrets: RemoteSecrets,
+    private val browser: RemoteBrowserClient,
     private val client: RemoteGatewayClient = RemoteGatewayClient(),
     scope: CoroutineScope,
 ) {
@@ -51,6 +52,30 @@ class RemoteConnection(
     }
 
     suspend fun pair(link: RemotePairingLink, name: String): RemoteComputer {
+        if (link.kind == RemoteEntryKind.Public) {
+            val paired = runCatching { pairWithBrowser(link, name) }.getOrNull()
+            if (paired != null) return paired
+        }
+        return pairWithNative(link, name)
+    }
+
+    private suspend fun pairWithBrowser(link: RemotePairingLink, name: String): RemoteComputer {
+        val pairing = browser.pair(link.origin, link.token, deviceLabel())
+        val entry = RemoteEntry(
+            deviceId = pairing.deviceId ?: link.instanceId,
+            origin = link.origin,
+            kind = RemoteEntryKind.Public,
+            deviceExpiresAt = 0L,
+            sessionExpiresAt = pairing.sessionExpiresAt,
+            certDerBase64 = null,
+            certSha256 = null,
+            lastSeenAt = System.currentTimeMillis(),
+            auth = RemoteEntryAuth.Browser,
+        )
+        return persistPairing(entry, link.instanceId, link.instanceId, name, credentials = null)
+    }
+
+    private suspend fun pairWithNative(link: RemotePairingLink, name: String): RemoteComputer {
         val pairing = client.pair(link, deviceLabel())
         val entry = RemoteEntry(
             deviceId = pairing.deviceId,
@@ -62,35 +87,54 @@ class RemoteConnection(
             certSha256 = pairing.certSha256,
             lastSeenAt = System.currentTimeMillis(),
         )
-        val previous = store.cached().firstOrNull { computer ->
-            computer.instanceId == pairing.instanceId ||
-                (pairing.installationId != null && computer.installationId == pairing.installationId)
-        }
-        store.upsert(
-            RemoteComputer(
-                instanceId = pairing.instanceId,
-                name = name.trim().take(MAX_NAME_LENGTH),
-                lastUsedAt = System.currentTimeMillis(),
-                entries = listOf(entry),
-                installationId = pairing.installationId,
-            ),
-        )
-        secrets.save(
-            pairing.deviceId,
-            RemoteEntrySecrets(
+        return persistPairing(
+            entry = entry,
+            instanceId = pairing.instanceId,
+            installationId = pairing.installationId,
+            name = name,
+            credentials = RemoteEntrySecrets(
                 deviceToken = pairing.deviceToken,
                 sessionToken = pairing.sessionToken,
                 csrfToken = pairing.csrfToken,
             ),
         )
+    }
+
+    private suspend fun persistPairing(
+        entry: RemoteEntry,
+        instanceId: String,
+        installationId: String?,
+        name: String,
+        credentials: RemoteEntrySecrets?,
+    ): RemoteComputer {
+        val previous = store.cached().firstOrNull { computer ->
+            computer.instanceId == instanceId ||
+                (installationId != null && computer.installationId == installationId)
+        }
+        store.upsert(
+            RemoteComputer(
+                instanceId = instanceId,
+                name = name.trim().take(MAX_NAME_LENGTH),
+                lastUsedAt = System.currentTimeMillis(),
+                entries = listOf(entry),
+                installationId = installationId,
+            ),
+        )
+        if (credentials != null) secrets.save(entry.deviceId, credentials)
         previous?.entries.orEmpty()
             .filter { old -> old.origin == entry.origin && old.deviceId != entry.deviceId }
-            .forEach { old -> secrets.remove(old.deviceId) }
-        val machine = pairing.installationId ?: pairing.instanceId
+            .forEach { old ->
+                if (old.auth == RemoteEntryAuth.Browser) {
+                    browser.clearCookies(old.origin)
+                } else {
+                    secrets.remove(old.deviceId)
+                }
+            }
+        val machine = installationId ?: instanceId
         val computer = store.cached().firstOrNull { it.machineId() == machine }
-            ?: store.cached().first { it.instanceId == pairing.instanceId }
+            ?: store.cached().first { it.instanceId == instanceId }
         reachability.value = reachability.value + (
-            computer.instanceId to when (link.kind) {
+            computer.instanceId to when (entry.kind) {
                 RemoteEntryKind.Lan -> RemoteReachability.OnlineLan
                 RemoteEntryKind.Public -> RemoteReachability.OnlinePublic
             }
@@ -106,7 +150,13 @@ class RemoteConnection(
 
     suspend fun remove(instanceId: String) {
         val computer = store.cached().firstOrNull { it.instanceId == instanceId } ?: return
-        computer.entries.forEach { entry -> secrets.remove(entry.deviceId) }
+        computer.entries.forEach { entry ->
+            if (entry.auth == RemoteEntryAuth.Browser) {
+                browser.clearCookies(entry.origin)
+            } else {
+                secrets.remove(entry.deviceId)
+            }
+        }
         store.remove(instanceId)
         reachability.value = reachability.value - instanceId
     }
@@ -119,6 +169,16 @@ class RemoteConnection(
         }
         var failure: RemoteGatewayFailure? = null
         for (entry in connectOrder(computer)) {
+            if (entry.auth == RemoteEntryAuth.Browser) {
+                try {
+                    ensureBrowserSession(entry)
+                    store.touch(instanceId)
+                    return RemoteSession(computer, entry, "${entry.origin.trimEnd('/')}/")
+                } catch (error: RemoteGatewayException) {
+                    if (failure == null) failure = error.failure
+                }
+                continue
+            }
             val tokens = secrets.read(entry.deviceId) ?: continue
             try {
                 val currentEntry = if (sessionExpired(entry, tokens)) {
@@ -177,6 +237,24 @@ class RemoteConnection(
         var state: RemoteReachability? = null
         var installationId = computer.installationId
         for (entry in probeOrder(computer)) {
+            if (entry.auth == RemoteEntryAuth.Browser) {
+                when (browser.state(entry.origin)) {
+                    RemoteBrowserState.Online -> return ProbeOutcome(
+                        reachability = RemoteReachability.OnlinePublic,
+                        origin = entry.origin,
+                        lastSeenAt = System.currentTimeMillis(),
+                        installationId = installationId,
+                    )
+                    RemoteBrowserState.NeedsPairing -> {
+                        state = mergeState(state, RemoteReachability.NeedsPairing)
+                        continue
+                    }
+                    RemoteBrowserState.Offline -> {
+                        state = mergeState(state, RemoteReachability.Offline)
+                        continue
+                    }
+                }
+            }
             val tokens = secrets.read(entry.deviceId) ?: continue
             try {
                 val probe = client.probe(
@@ -206,6 +284,20 @@ class RemoteConnection(
             }
         }
         return ProbeOutcome(reachability = state ?: RemoteReachability.Offline, installationId = installationId)
+    }
+
+    private suspend fun ensureBrowserSession(entry: RemoteEntry) {
+        if (entry.sessionExpiresAt - System.currentTimeMillis() > RENEW_WINDOW_MS) return
+        when (browser.state(entry.origin)) {
+            RemoteBrowserState.Online -> return
+            RemoteBrowserState.NeedsPairing -> {
+                if (!browser.renew(entry.origin)) throw RemoteGatewayException(RemoteGatewayFailure.Unauthorized)
+                if (browser.state(entry.origin) != RemoteBrowserState.Online) {
+                    throw RemoteGatewayException(RemoteGatewayFailure.Unauthorized)
+                }
+            }
+            RemoteBrowserState.Offline -> throw RemoteGatewayException(RemoteGatewayFailure.Unreachable)
+        }
     }
 
     private suspend fun learnInstallation(instanceId: String, installationId: String?): String {

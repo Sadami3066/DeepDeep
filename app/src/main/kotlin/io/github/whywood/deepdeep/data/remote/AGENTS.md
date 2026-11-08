@@ -11,12 +11,15 @@
 | `RemoteComputerStore.kt` | 电脑列表 JSON（`files/remote-computers.json`）：原子写、读容错、按 `installationId`/实例合并同机入口、重命名/删除/最近使用 |
 | `RemoteSecrets.kt` | 每台设备的 device/session/csrf token，经 `EncryptedSecretStore` 加密存本机 |
 | `RemoteTls.kt` | 证书编解码、SHA-256 指纹、TOFU 固定 CA 的 TrustManager 与 OkHttp 客户端 |
-| `RemoteGatewayClient.kt` | 配对/续期/探测请求与响应解析；错误映射为 `RemoteGatewayFailure` |
+| `RemoteGatewayClient.kt` | 局域网入口的配对/续期/探测请求与响应解析；错误映射为 `RemoteGatewayFailure` |
+| `RemoteBrowser.kt` | 远程入口的浏览器通道：隐藏 WebView 同源 fetch 完成配对/续期/探测，cookie 留在 CookieManager |
 | `RemoteConnection.kt` | 连接协调：列表状态、配对、续期、入口选择、写入 WebView cookie、删除 |
 
 ## 要点
 
 - 电脑端唯一权威是电脑上的 dsh-mobile 插件与 DSH 进程；这里只保存连接所需的最小状态，不缓存会话内容。
+- 局域网入口用原生 HTTP 通道（`RemoteGatewayClient`）；远程入口改走浏览器通道（`RemoteBrowser`）：部分网络会按 TLS 客户端指纹拦截 OkHttp/curl 而放行 Chromium，用隐藏 WebView 做同源 fetch 既能通过，也能让配对与续期留下的 cookie 被连接页直接复用。
+- 入口的 `auth` 字段区分两条通道（`Native`/`Browser`），`Browser` 入口不在本机保存 token。
 - 证书固定是 TOFU：局域网入口必须取 `/mobile-access/ca.cer` 并固定 CA；公开远程入口用系统信任，自签入口才抓取并固定 CA。固定后证书不匹配即失败，不降级。
 - 配对/续期/探测都带 `x-dsh-mobile-capabilities: installation-id`，用返回的 `installationId` 把同一台电脑的局域网与远程入口合并；远程入口使用更长超时。
 - 探测按局域网优先逐个入口尝试，连接失败会自动回退到同电脑的其它入口。

@@ -503,3 +503,9 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - 列表用电脑图标与状态圆点表达连接情况（绿=在线、红=离线/需重新配对、黄=证书变化）；「添加电脑」菜单新增「使用教程」，说明电脑端安装 dsh-mobile、开启移动访问、生成二维码到手机配对的完整流程。
 - 手机直连公网入口受网络策略影响（例如 SNI 过滤），App 不做绕过；局域网仍是首选，远程入口用于换网络或外出场景。
 
+
+## 138. 远程入口改用浏览器通道（WebView/Chromium）
+
+- 真机复现：同一手机、同一网络（开或关 VPN、WiFi 与 5G 都试过），Chrome 可正常打开公网 dsh-mobile 页面，而 curl 与 OkHttp 的 TLS 握手被直接重置（`SSL_connect: Connection reset by peer` / `SSLHandshakeException: connection closed`，VPN 与证书均排除）→ 网络侧按 TLS 客户端指纹过滤，不是 App 逻辑问题。
+- 因此远程（Public）入口的配对、续期、探测改走隐藏 WebView 的 Chromium 栈：加载网关同源页面后执行 `fetch`（自动带正确 Origin），配对/续期留下的 cookie 由 `CookieManager` 持久化，连接页 WebView 直接复用；局域网（Native）入口保留 OkHttp + CA pin，超时与证书策略不变。
+- 代价：浏览器通道依赖 WebView 可用与页面同源策略，单测只能覆盖 JSON/模型部分，配对与探测靠真机验收；`auth` 字段随入口持久化，远程入口不再需要本机保存 device token。

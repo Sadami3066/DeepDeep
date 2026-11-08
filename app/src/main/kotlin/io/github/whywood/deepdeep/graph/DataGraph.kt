@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
+import io.github.whywood.deepdeep.data.remote.RemoteBrowserClient
 import io.github.whywood.deepdeep.data.remote.RemoteComputerStore
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.data.remote.RemoteGatewayClient
@@ -71,6 +72,7 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val remoteConnection = RemoteConnection(
         store = remoteComputerStore,
         secrets = RemoteSecrets(secretStore),
+        browser = RemoteBrowserClient(deps.appContext),
         client = RemoteGatewayClient(),
         scope = deps.scope,
     )

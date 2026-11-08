@@ -15,6 +15,11 @@ enum class RemoteEntryKind {
     Public,
 }
 
+enum class RemoteEntryAuth {
+    Native,
+    Browser,
+}
+
 data class RemoteEntry(
     val deviceId: String,
     val origin: String,
@@ -24,6 +29,7 @@ data class RemoteEntry(
     val certDerBase64: String?,
     val certSha256: String?,
     val lastSeenAt: Long,
+    val auth: RemoteEntryAuth = RemoteEntryAuth.Native,
 )
 
 data class RemoteEntrySecrets(

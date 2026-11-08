@@ -106,6 +106,7 @@ class RemoteComputerStore(
                                                     put("deviceId", entry.deviceId)
                                                     put("origin", entry.origin)
                                                     put("kind", if (entry.kind == RemoteEntryKind.Lan) "lan" else "public")
+                                                    if (entry.auth == RemoteEntryAuth.Browser) put("auth", "browser")
                                                     put("deviceExpiresAt", entry.deviceExpiresAt)
                                                     put("sessionExpiresAt", entry.sessionExpiresAt)
                                                     put("lastSeenAt", entry.lastSeenAt)
@@ -164,6 +165,11 @@ class RemoteComputerStore(
                                     certDerBase64 = entry["certDerBase64"]?.jsonPrimitive?.contentOrNull,
                                     certSha256 = entry["certSha256"]?.jsonPrimitive?.contentOrNull,
                                     lastSeenAt = entry["lastSeenAt"]?.jsonPrimitive?.longOrNull ?: 0L,
+                                    auth = if (entry["auth"]?.jsonPrimitive?.contentOrNull == "browser") {
+                                        RemoteEntryAuth.Browser
+                                    } else {
+                                        RemoteEntryAuth.Native
+                                    },
                                 )
                             }.getOrNull()
                         },

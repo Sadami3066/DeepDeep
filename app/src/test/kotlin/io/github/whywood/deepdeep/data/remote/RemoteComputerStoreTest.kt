@@ -49,6 +49,32 @@ class RemoteComputerStoreTest {
     }
 
     @Test
+    fun persistsBrowserAuthEntries() = runTest {
+        val store = RemoteComputerStore(file)
+        store.save(
+            listOf(
+                RemoteComputer(
+                    instanceId = "abc",
+                    name = "我的电脑",
+                    lastUsedAt = 0L,
+                    entries = listOf(
+                        entry("https://192.168.1.2:3443"),
+                        entry("https://dsh.example.com:8443", deviceId = "browser-1").copy(
+                            kind = RemoteEntryKind.Public,
+                            auth = RemoteEntryAuth.Browser,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val restored = RemoteComputerStore(file).cached().single()
+        assertEquals(RemoteEntryAuth.Native, restored.entries[0].auth)
+        assertEquals(RemoteEntryAuth.Browser, restored.entries[1].auth)
+        assertEquals(RemoteEntryKind.Public, restored.entries[1].kind)
+    }
+
+    @Test
     fun keepsNameAndMergesEntriesOnUpsert() = runTest {
         val store = RemoteComputerStore(file)
         store.save(listOf(computer("abc", "电脑", "https://192.168.1.2:3443")))
