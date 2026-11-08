@@ -24,9 +24,9 @@ class ThemePreferences(context: Context) {
     }
 
     val preset = store.data.map { values ->
-        ThemePreset.entries.firstOrNull { it.name == values[presetKey] } ?: ThemePreset.DEEP_DEEP
+        ThemePreset.entries.firstOrNull { it.name == values[presetKey] } ?: ThemePreset.SYSTEM
     }.catch { error ->
-        if (error is IOException) emit(ThemePreset.DEEP_DEEP) else throw error
+        if (error is IOException) emit(ThemePreset.SYSTEM) else throw error
     }
 
     suspend fun setTheme(mode: ThemeMode) {

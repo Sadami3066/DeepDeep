@@ -460,3 +460,8 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - 主题存 `appearance` DataStore 的独立 `theme_preset` 键；默认 DeepDeep。新增主题只需在 `DdTheme` 加一套 `DeepDeepColors` 并在 `ThemePreset` 登记，设置页自动出现选项，App/悬浮窗/助手浮层三条渲染入口共用同一套解析。
 - 边距与按压反馈：可点组件的内容与按压/波纹边缘之间至少留 `DdSpacing.Md`（12dp）横向内边距，文字与图标不许贴边（`DdTextAction` 之前 2dp 已改为 12dp）；按压反馈不得溢出组件可视形状；可点区域 ≥ 44dp。该约束写入 `design/AGENTS.md`，Phase 1 新组件按此执行。
 - 底层仍是 Compose Material3 + 自定义 `:design` 组件层。MD3 Expressive 的 spring motion 与新组件在评估中：不整体替换底层（会牵动插件 UI SDK/ABI 与主题 token），先吸收其动效思想，用现有 `DdMotion` 弹簧 token 落地，后续按需增量引入组件。
+
+## 132. 圣托里尼近白底与市场页统一网格
+
+- Santorini 改为「近白底 + 纯白组件」：paper `#F4F6F8`、surface/raised `#FFFFFF`、hairline `#E4ECF5`、wash `#F2F8FC`；页面不再用蓝调铺底，区分度只靠约 4% 灰阶与发丝线，主蓝 `#0078D7` 只出现在按钮、链接与选中态。
+- 市场三页（技能/插件/连接器）统一平铺网格：内容统一 16dp 横向内边距；行高 ≥64dp、纵向 12dp，图标 40dp 无容器裸放（无图时 22dp 线性占位），图文间距 12dp；分隔线自 20dp 起内缩，右侧状态与行右边缘对齐；离线提示用 `DdInlineMessage`，空态用 `DdEmptyState`。列表不再包 `DdGroupCard`——该组件只用于设置表单式分组。
