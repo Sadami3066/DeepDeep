@@ -36,6 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdEmptyState
+import io.github.whywood.deepdeep.design.DdInlineMessage
+import io.github.whywood.deepdeep.design.DdSpacing
+import io.github.whywood.deepdeep.design.DdTone
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -138,51 +142,42 @@ internal fun MarketTab(
 
             is MarketState.Ready -> {
                 if (current.source != MarketSource.Network) {
-                    Text(
+                    DdInlineMessage(
                         text = stringResource(R.string.market_offline_notice),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 8.dp)
+                            .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)
                             .testTag("${testTagPrefix}_market_offline"),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
+                        tone = DdTone.Neutral,
                     )
                 }
                 when {
-                    entries.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.market_empty),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                    }
+                    entries.isEmpty() -> DdEmptyState(
+                        text = stringResource(R.string.market_empty),
+                        icon = marketPlaceholderIcon(type),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
+                    )
 
-                    visible.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.search_no_match),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                    }
+                    visible.isEmpty() -> DdEmptyState(
+                        text = stringResource(R.string.search_no_match),
+                        icon = DdIcons.Search,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
+                    )
 
-                    else -> visible.forEachIndexed { index, entry ->
-                        if (index > 0) DdHairline(Modifier.padding(horizontal = 4.dp))
-                        val installState = installStates[entry.id]
-                        MarketRow(
-                            entry = entry,
-                            language = language,
-                            status = marketEntryStatus(entry, installState, repository.installedVersion(entry)),
-                            progress = (installState as? MarketInstallState.Installing)?.progress,
-                            iconLoader = iconLoader,
-                            onClick = { selectedId = entry.id },
-                            modifier = Modifier.testTag("${testTagPrefix}_market_row_${entry.id}"),
-                        )
+                    else -> Column(Modifier.padding(horizontal = DdSpacing.Lg)) {
+                        visible.forEachIndexed { index, entry ->
+                            if (index > 0) DdHairline(Modifier.padding(start = DdSpacing.Xl))
+                            val installState = installStates[entry.id]
+                            MarketRow(
+                                entry = entry,
+                                language = language,
+                                status = marketEntryStatus(entry, installState, repository.installedVersion(entry)),
+                                progress = (installState as? MarketInstallState.Installing)?.progress,
+                                iconLoader = iconLoader,
+                                onClick = { selectedId = entry.id },
+                                modifier = Modifier.testTag("${testTagPrefix}_market_row_${entry.id}"),
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(24.dp))
@@ -331,7 +326,7 @@ private fun MarketRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MarketEntryIcon(entry = entry, loader = iconLoader)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = name,
@@ -440,7 +435,7 @@ private fun MarketDetailSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MarketEntryIcon(entry = entry, loader = iconLoader, size = 44.dp)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = entry.name(language),

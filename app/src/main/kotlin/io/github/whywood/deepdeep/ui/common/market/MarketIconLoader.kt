@@ -123,27 +123,22 @@ internal fun MarketEntryIcon(
     val bitmap by produceState<ImageBitmap?>(initialValue = null, icon) {
         value = loader.load(icon)
     }
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(RoundedCornerShape(size * 0.25f))
-            .background(colors.wash),
-        contentAlignment = Alignment.Center,
-    ) {
-        val image = bitmap
-        if (image != null) {
-            Image(
-                bitmap = image,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-        } else {
-            DdIcon(
-                icon = marketPlaceholderIcon(entry.type),
-                tint = colors.inkTertiary,
-                size = size * 0.5f,
-            )
-        }
+    val image = bitmap
+    if (image != null) {
+        Image(
+            bitmap = image,
+            contentDescription = null,
+            modifier = modifier
+                .size(size)
+                .clip(RoundedCornerShape(size * 0.22f)),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        DdIcon(
+            icon = marketPlaceholderIcon(entry.type),
+            tint = colors.inkTertiary,
+            size = size * 0.55f,
+            modifier = modifier,
+        )
     }
 }
