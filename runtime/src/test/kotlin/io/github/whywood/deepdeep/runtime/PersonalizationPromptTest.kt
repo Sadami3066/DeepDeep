@@ -15,7 +15,6 @@ class PersonalizationPromptTest {
             personalization = personalization,
             providerId = "deepseek",
             modelId = "deepseek-v4.1-flash",
-            cwd = "/data/user/0/io.github.whywood.deepdeep/files/home",
             now = now,
         )
 
@@ -27,7 +26,7 @@ class PersonalizationPromptTest {
         assertTrue(environment.endsWith("</environment>"))
         assertTrue(environment.contains("Date: 2026-10-23 (UTC+08:00)."))
         assertTrue(environment.contains("Model: deepseek/deepseek-v4.1-flash."))
-        assertTrue(environment.contains("Working directory: /data/user/0/io.github.whywood.deepdeep/files/home."))
+        assertFalse(environment.contains("Working directory:"))
         assertFalse(environment.contains("/skill-repo"))
         assertFalse(environment.contains("文件工具仍须显式提供绝对路径"))
         assertTrue(environment.contains("Nickname: Milous."))
@@ -40,8 +39,7 @@ class PersonalizationPromptTest {
         val morning = sectionAt("2026-10-23T08:00:00+08:00")
         val evening = sectionAt("2026-10-23T23:59:59+08:00")
         assertEquals(morning, evening)
-        assertTrue(morning.contains("Working directory:"))
-        assertTrue(evening.contains("Date: 2026-10-23"))
+        assertTrue(morning.contains("Date: 2026-10-23"))
     }
 
     @Test
@@ -53,12 +51,18 @@ class PersonalizationPromptTest {
     }
 
     @Test
+    fun environmentEscapesDynamicValuesExactlyOnce() {
+        val environment = sections(Personalization(nickname = "<ops> & team")).getValue("environment")
+        assertTrue(environment.contains("Nickname: &lt;ops&gt; &amp; team."))
+        assertFalse(environment.contains("&amp;lt;"))
+    }
+
+    @Test
     fun sessionSectionsMergePersonalizationSharedStoragePluginsAndExtras() {
         val result = buildSessionSystemPromptSections(
             personalization = Personalization(instruction = "be brief"),
             providerId = "deepseek",
             modelId = "deepseek-v4.1-flash",
-            cwd = "/tmp",
             now = now,
             pluginBody = "feishu ready",
             extra = mapOf("page" to "<page>prompt</page>"),
@@ -78,7 +82,6 @@ class PersonalizationPromptTest {
             personalization = Personalization(),
             providerId = "deepseek",
             modelId = "deepseek-v4.1-flash",
-            cwd = "/tmp",
             now = now,
             pluginBody = "   ",
         )
@@ -86,11 +89,29 @@ class PersonalizationPromptTest {
         assertEquals(listOf("environment"), result.keys.toList())
     }
 
+    @Test
+    fun pluginBodyIsEscapedExactlyOnce() {
+        val plugins = buildSessionSystemPromptSections(
+            personalization = Personalization(),
+            providerId = "deepseek",
+            modelId = "deepseek-v4.1-flash",
+            now = now,
+            pluginBody = "<plugin_context> & more",
+        ).getValue("plugins")
+        assertTrue(plugins.contains("&lt;plugin_context&gt; &amp; more"))
+        assertFalse(plugins.contains("&amp;lt;"))
+    }
+
+    @Test
+    fun wrapPromptSectionEscapesByDefaultAndCanBeRaw() {
+        assertEquals("<x>\na&lt;b\n</x>", wrapPromptSection("x", "a<b"))
+        assertEquals("<x>\na<b\n</x>", wrapPromptSection("x", "a<b", escape = false))
+    }
+
     private fun sectionAt(timestamp: String): String = buildPersonalizationSections(
         personalization = Personalization(),
         providerId = "deepseek",
         modelId = "deepseek-v4.1-flash",
-        cwd = "/tmp",
         now = OffsetDateTime.parse(timestamp),
     ).getValue("environment")
 

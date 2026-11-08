@@ -91,7 +91,7 @@ class PiSessionEngine(
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         suspend fun pluginContextSection(): Map<String, String> {
             val context = hooks.systemContext?.invoke()?.takeIf { it.isNotBlank() } ?: return emptyMap()
-            return mapOf("plugin_context" to wrapPromptSection("plugin_context", context))
+            return mapOf("plugin_context" to context)
         }
         suspend fun memoryContextSections(): Map<String, String> {
             val text = try {
@@ -103,7 +103,7 @@ class PiSessionEngine(
                 null
             } ?: return emptyMap()
             if (text.isBlank()) return emptyMap()
-            return mapOf("memory" to wrapPromptSection("memory", escapePromptXml(text)))
+            return mapOf("memory" to wrapPromptSection("memory", text))
         }
         val currentSections: suspend () -> Map<String, String> = {
             val session = created
@@ -113,19 +113,16 @@ class PiSessionEngine(
                 personalization = runCatching { personalization() }.getOrDefault(Personalization()),
                 providerId = session?.model?.provider ?: providerId,
                 modelId = session?.model?.id ?: modelId,
-                cwd = cwd.toString(),
                 now = OffsetDateTime.now(),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",
-                        escapePromptXml(
-                            buildPathsSection(
-                                skillsDir = (agentDirectory / "skills").toString(),
-                                appDataDir = (agentDirectory.parent?.parent ?: agentDirectory).toString(),
-                                sharedStorage = sharedStorageValue,
-                                mounts = mounts,
-                            ),
+                        buildPathsSection(
+                            skillsDir = (agentDirectory / "skills").toString(),
+                            appDataDir = (agentDirectory.parent?.parent ?: agentDirectory).toString(),
+                            sharedStorage = sharedStorageValue,
+                            mounts = mounts,
                         ),
                     ),
                 ) + pluginContextSection() + extraSystemPromptSections + buildToolRuleSection(tools),

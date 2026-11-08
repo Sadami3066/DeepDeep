@@ -62,6 +62,12 @@ internal object MemoryText {
 
     fun marker(sessionId: String?): String = "<!-- ${nowStamp()} [${shortSession(sessionId)}] -->"
 
+    private val commentPattern = Regex("<!--(.*?)-->", RegexOption.DOT_MATCHES_ALL)
+
+    fun visibleText(content: String): String = normalize(
+        content.replace(commentPattern) { match -> match.groupValues[1].trim() },
+    )
+
     fun normalize(content: String): String = content.replace("\r\n", "\n").trimEnd()
 
     fun truncate(content: String, maxChars: Int, mode: MemoryTruncation): String {
@@ -168,6 +174,42 @@ internal object MemorySections {
         return merged.trimEnd() + "\n"
     }
 
+    fun dropLeadingHeading(content: String, title: String? = null): String {
+        val lines = content.replace("\r\n", "\n").split('\n').toMutableList()
+        while (lines.isNotEmpty() && lines.first().isBlank()) lines.removeAt(0)
+        if (lines.isEmpty()) return ""
+        val match = headingLine.matchEntire(lines.first().trim()) ?: return lines.joinToString("\n")
+        if (title == null) {
+            if (match.groupValues[1].length != 1) return lines.joinToString("\n")
+        } else {
+            val text = normalizeTitle(match.groupValues[2]) ?: return lines.joinToString("\n")
+            if (!text.equals(title, ignoreCase = true)) return lines.joinToString("\n")
+        }
+        lines.removeAt(0)
+        while (lines.isNotEmpty() && lines.first().isBlank()) lines.removeAt(0)
+        return lines.joinToString("\n")
+    }
+
+    fun demoteHeadings(content: String, levels: Int): String {
+        if (levels <= 0) return content
+        var fenced = false
+        return content.replace("\r\n", "\n").split('\n').joinToString("\n") { line ->
+            val trimmed = line.trimStart()
+            if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+                fenced = !fenced
+                line
+            } else {
+                val match = if (fenced) null else headingLine.matchEntire(line.trim())
+                if (match == null) {
+                    line
+                } else {
+                    val level = (match.groupValues[1].length + levels).coerceAtMost(6)
+                    "#".repeat(level) + " " + match.groupValues[2]
+                }
+            }
+        }
+    }
+
     private fun normalizeTitle(raw: String?): String? =
         raw?.replace("\r", "")?.trim()?.trimStart('#')?.trim()?.takeIf { it.isNotEmpty() }
 }
@@ -186,7 +228,7 @@ internal fun renderMemorySection(
     val blocks = ArrayList<String>()
 
     fun addZone(title: String, body: String, budget: Int) {
-        val text = MemoryText.normalize(body)
+        val text = MemorySections.dropLeadingHeading(MemoryText.visibleText(body), title)
         if (text.isBlank()) return
         blocks += "# $title\n\n" + MemoryText.truncate(text, budget, MemoryTruncation.START)
     }
@@ -197,7 +239,10 @@ internal fun renderMemorySection(
 
     val diary = ArrayList<String>()
     fun addDiaryPart(heading: String, body: String, budget: Int) {
-        val text = MemoryText.normalize(body)
+        val text = MemorySections.demoteHeadings(
+            MemorySections.dropLeadingHeading(MemoryText.visibleText(body)),
+            1,
+        )
         if (text.isBlank()) return
         diary += "## $heading\n\n" + MemoryText.truncate(text, budget, MemoryTruncation.END)
     }

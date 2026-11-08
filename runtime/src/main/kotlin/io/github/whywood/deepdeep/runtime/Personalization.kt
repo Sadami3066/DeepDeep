@@ -18,19 +18,17 @@ internal fun buildPersonalizationSections(
     personalization: Personalization,
     providerId: String,
     modelId: String,
-    cwd: String,
     now: OffsetDateTime,
 ): Map<String, String> {
-    val nickname = escapePromptXml(personalization.nickname.trim())
+    val nickname = personalization.nickname.trim()
     val sections = linkedMapOf<String, String>()
     sections["environment"] = wrapPromptSection(
         "environment",
         buildString {
-            appendLine("Date: ${escapePromptXml(now.toLocalDate().toString())} (UTC${escapePromptXml(now.offset.id)}).")
-            appendLine("Model: ${escapePromptXml(providerId)}/${escapePromptXml(modelId)}.")
-            appendLine("Working directory: ${escapePromptXml(cwd)}.")
+            appendLine("Date: ${now.toLocalDate()} (UTC${now.offset.id}).")
+            appendLine("Model: $providerId/$modelId.")
             if (nickname.isNotEmpty()) {
-                appendLine("Nickname: ${escapePromptXml(nickname)}.")
+                appendLine("Nickname: $nickname.")
             } else {
                 appendLine("Address the user as \"you\".")
             }
@@ -41,12 +39,7 @@ internal fun buildPersonalizationSections(
 
     val instruction = personalization.instruction.trim()
     if (instruction.isNotEmpty()) {
-        val body = buildString {
-            appendLine("User's instruction:")
-            appendLine()
-            appendLine(escapePromptXml(instruction))
-        }.trim()
-        sections["instruction"] = wrapPromptSection("instruction", body)
+        sections["instruction"] = wrapPromptSection("instruction", "User's instruction:\n\n$instruction")
     }
     return sections
 }
@@ -55,15 +48,14 @@ internal fun buildSessionSystemPromptSections(
     personalization: Personalization,
     providerId: String,
     modelId: String,
-    cwd: String,
     now: OffsetDateTime,
     pluginBody: String?,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
-    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, cwd, now))
+    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, now))
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
-        sections["plugins"] = wrapPromptSection("plugins", escapePromptXml(body))
+        sections["plugins"] = wrapPromptSection("plugins", body)
     }
     sections.putAll(extra)
     return sections
@@ -86,8 +78,8 @@ private fun interactionInstructions(style: InteractionStyle): String = when (sty
         "Be proactive: ask more, suggest more, and act on likely follow-ups."
 }
 
-internal fun wrapPromptSection(name: String, content: String): String =
-    "<$name>\n$content\n</$name>"
+internal fun wrapPromptSection(name: String, content: String, escape: Boolean = true): String =
+    "<$name>\n${if (escape) escapePromptXml(content) else content}\n</$name>"
 
 internal fun escapePromptXml(value: String): String = value
     .replace("&", "&amp;")

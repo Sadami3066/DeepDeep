@@ -114,6 +114,12 @@ data class PluginSkillFile(
     val assetPath: String? = null,
 )
 
+/**
+ * 插件注入系统提示词的一段正文。
+ *
+ * [body] 为纯文本或 Markdown，会直接拼进 `<plugins>` 段（与其他插件正文之间空一行）。
+ * 不要写 XML 标签：整段内容会被转义为实体。不要用 `#` 一级标题：`<plugins>` 已是顶层段，正文标题请从 `##` 开始。
+ */
 data class PromptSection(
     val id: String,
     val body: String,
