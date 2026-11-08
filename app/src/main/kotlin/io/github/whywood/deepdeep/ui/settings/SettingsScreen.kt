@@ -63,6 +63,7 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.ui.common.AvatarBadge
@@ -82,11 +83,13 @@ fun SettingsScreen(
     modelName: String?,
     configured: Boolean,
     themeMode: ThemeMode,
+    themePreset: ThemePreset,
     linuxState: LinuxInstallState,
     versionName: String,
     fontLabel: String,
     onBack: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onThemePresetChange: (ThemePreset) -> Unit,
     onOpenChatSettings: () -> Unit,
     overlayEntryMode: OverlayEntryMode = OverlayEntryMode.VOICE,
     onOpenUsageHabits: () -> Unit = {},
@@ -205,10 +208,17 @@ fun SettingsScreen(
 
             SettingsSectionLabel(stringResource(R.string.settings_group_appearance))
             DdGroupCard {
-                ThemeControl(
-                    themeMode = themeMode,
-                    onThemeModeChange = onThemeModeChange,
+                ThemePresetControl(
+                    preset = themePreset,
+                    onPresetChange = onThemePresetChange,
                 )
+                if (themePreset == ThemePreset.DEEP_DEEP) {
+                    DdRowDivider(leadingInset = SettingsDividerInset)
+                    ThemeControl(
+                        themeMode = themeMode,
+                        onThemeModeChange = onThemeModeChange,
+                    )
+                }
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Font,
@@ -440,6 +450,48 @@ private fun NotificationRow() {
         modifier = Modifier.testTag("settings_notifications"),
     )
 }
+
+@Composable
+private fun ThemePresetControl(
+    preset: ThemePreset,
+    onPresetChange: (ThemePreset) -> Unit,
+) {
+    val colors = deepDeepColors()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DdIcon(
+                icon = DdIcons.Theme,
+                tint = colors.inkSecondary,
+                size = 20.dp,
+            )
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text = stringResource(R.string.settings_theme_preset),
+                modifier = Modifier.weight(1f),
+                style = DdType.body,
+                color = colors.ink,
+                maxLines = 1,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        DdSegmentedControl(
+            options = ThemePreset.entries,
+            selected = preset,
+            onSelect = onPresetChange,
+            modifier = Modifier.fillMaxWidth().testTag("settings_theme_preset"),
+            label = { presetLabel(it) },
+        )
+    }
+}
+
+@Composable
+private fun presetLabel(preset: ThemePreset): String = stringResource(
+    when (preset) {
+        ThemePreset.DEEP_DEEP -> R.string.settings_theme_preset_deepdeep
+        ThemePreset.SANTORINI -> R.string.settings_theme_preset_santorini
+        ThemePreset.OCEANIC -> R.string.settings_theme_preset_oceanic
+    },
+)
 
 @Composable
 private fun ThemeControl(

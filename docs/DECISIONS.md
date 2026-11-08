@@ -453,3 +453,10 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - 深色主题 `DdTheme.darkOceanic()`：底色深海青 #1B2B34、面 #22343E、提亮面 #2A3F4B，字幕白 #F4F7F8，主色极光青 #6699CC，星群黄 #FAC863（警示），落霞红 #EC5F67（危险），成功墨绿 #99C794；代码高亮沿用同一色系。与圣托里尼日光构成同一套「海上日光 / 深海极光」双生配色，由展示页循环切换预览。
 - 视觉约束：不再使用「图标容器」（圆角方框/圆圈包住图标）。列表行与空状态的图标改为 20–24dp 线性稿直接呈现；`DdIconBox` 保留仅为插件 ABI 兼容，新界面不调用。
 - 展示页（设置 → 关于 → 设计系统，仅 debug）循环切换 Santorini / Oceanic / DeepDeep 三套颜色，用于逐页迁移前验收。
+
+## 131. 三主题预设与边距/按压反馈规范
+
+- 主题从单一的明暗模式升级为「预设 × 色彩模式」：`ThemePreset { DEEP_DEEP, SANTORINI, OCEANIC }`，`DeepDeepTheme(mode = ..., preset = ..., fontStyle = ...)`。Santorini 固定浅色、Oceanic 固定深色，DeepDeep 保留 SYSTEM/LIGHT/DARK；设置 → 外观与语言新增「主题风格」分段控件，切到 Santorini/Oceanic 时隐藏无意义的颜色模式行。
+- 主题存 `appearance` DataStore 的独立 `theme_preset` 键；默认 DeepDeep。新增主题只需在 `DdTheme` 加一套 `DeepDeepColors` 并在 `ThemePreset` 登记，设置页自动出现选项，App/悬浮窗/助手浮层三条渲染入口共用同一套解析。
+- 边距与按压反馈：可点组件的内容与按压/波纹边缘之间至少留 `DdSpacing.Md`（12dp）横向内边距，文字与图标不许贴边（`DdTextAction` 之前 2dp 已改为 12dp）；按压反馈不得溢出组件可视形状；可点区域 ≥ 44dp。该约束写入 `design/AGENTS.md`，Phase 1 新组件按此执行。
+- 底层仍是 Compose Material3 + 自定义 `:design` 组件层。MD3 Expressive 的 spring motion 与新组件在评估中：不整体替换底层（会牵动插件 UI SDK/ABI 与主题 token），先吸收其动效思想，用现有 `DdMotion` 弹簧 token 落地，后续按需增量引入组件。

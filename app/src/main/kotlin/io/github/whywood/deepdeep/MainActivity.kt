@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.data.parseSharePayload
 import io.github.whywood.deepdeep.deeplink.DeepLink
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
@@ -58,12 +59,14 @@ class MainActivity : ComponentActivity() {
         val fontStyle = graph.fontPreferences.read()
         setContent {
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(initialValue = ThemePreset.DEEP_DEEP)
             val scope = rememberCoroutineScope()
-            DeepDeepTheme(theme, fontStyle) {
+            DeepDeepTheme(mode = theme, preset = preset, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
                     DeepDeepApp(
                         graph = graph,
                         theme = theme,
+                        themePreset = preset,
                         fontStyle = fontStyle,
                         openSessionId = pendingSessionId.value,
                         onOpenSessionConsumed = { pendingSessionId.value = null },
@@ -77,6 +80,7 @@ class MainActivity : ComponentActivity() {
                             recreate()
                         },
                         onThemeChange = { mode -> scope.launch { graph.themePreferences.setTheme(mode) } },
+                        onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
                     )
                 }
             }

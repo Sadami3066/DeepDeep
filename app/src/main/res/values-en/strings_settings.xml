@@ -37,6 +37,10 @@
     <string name="settings_provider">Provider</string>
     <string name="settings_environment">Linux</string>
     <string name="settings_android">Android</string>
+    <string name="settings_theme_preset">Theme</string>
+    <string name="settings_theme_preset_deepdeep">DeepDeep</string>
+    <string name="settings_theme_preset_santorini">Santorini</string>
+    <string name="settings_theme_preset_oceanic">Oceanic</string>
     <string name="settings_theme">Color mode</string>
     <string name="settings_theme_system">Auto</string>
     <string name="settings_theme_light">Light</string>

@@ -51,6 +51,7 @@ internal fun SettingsRoute(
         modelName = ui.modelLabel,
         configured = ui.modelConfig.providerId in ui.configuredProviderIds,
         themeMode = ui.theme,
+        themePreset = ui.themePreset,
         linuxState = linuxState,
         versionName = BuildConfig.VERSION_NAME,
         fontLabel = if (ui.fontStyle == DdFontStyle.SYSTEM) {
@@ -60,6 +61,7 @@ internal fun SettingsRoute(
         },
         onBack = onBack,
         onThemeModeChange = ui.onThemeChange,
+        onThemePresetChange = ui.onThemePresetChange,
         onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
         overlayEntryMode = overlayEntryMode,
         onOpenUsageHabits = { navigator.push(AppDestination.UsageHabits) },

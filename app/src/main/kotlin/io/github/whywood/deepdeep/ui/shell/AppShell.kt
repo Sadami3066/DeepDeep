@@ -36,6 +36,7 @@ import io.github.whywood.deepdeep.data.session.SessionExporter
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -85,6 +86,7 @@ internal fun AppShell(
     chatViewModel: ChatViewModel,
     state: ChatUiState,
     theme: ThemeMode,
+    themePreset: ThemePreset,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
@@ -94,6 +96,7 @@ internal fun AppShell(
     onShareConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit,
+    onThemePresetChange: (ThemePreset) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val overlays = rememberSaveable(saver = AppOverlaysState.Saver) { AppOverlaysState() }
@@ -552,6 +555,8 @@ internal fun AppShell(
                     ui = ShellRouteUi(
                         theme = theme,
                         onThemeChange = onThemeChange,
+                        themePreset = themePreset,
+                        onThemePresetChange = onThemePresetChange,
                         fontStyle = fontStyle,
                         onFontStyleChange = onFontStyleChange,
                         nickname = nickname,

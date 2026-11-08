@@ -232,7 +232,7 @@ fun DdTextAction(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 2.dp),
+            modifier = Modifier.padding(horizontal = DdSpacing.Md),
             style = DdType.label,
             color = if (enabled) color else color.copy(alpha = 0.38f),
             maxLines = 1,

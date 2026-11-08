@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+enum class ThemePreset { DEEP_DEEP, SANTORINI, OCEANIC }
+
 @Immutable
 data class DeepDeepColors(
     val dark: Boolean,
@@ -350,18 +352,27 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 @Composable
 fun DeepDeepTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,
+    preset: ThemePreset = ThemePreset.DEEP_DEEP,
     fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
 ) {
-    val dark = when (mode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+    val dark = when (preset) {
+        ThemePreset.SANTORINI -> false
+        ThemePreset.OCEANIC -> true
+        ThemePreset.DEEP_DEEP -> when (mode) {
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+        }
     }
-    val colors = if (dark) Dark else Light
+    val colors = when (preset) {
+        ThemePreset.SANTORINI -> DdTheme.lightSantorini()
+        ThemePreset.OCEANIC -> DdTheme.darkOceanic()
+        ThemePreset.DEEP_DEEP -> if (dark) Dark else Light
+    }
     DdFonts.apply(fontStyle)
     val typography = remember(fontStyle) { deepDeepTypography() }
-    val colorScheme = remember(dark) { colors.materialScheme() }
+    val colorScheme = remember(colors) { colors.materialScheme() }
     CompositionLocalProvider(LocalDeepDeepColors provides colors) {
         MaterialTheme(
             colorScheme = colorScheme,

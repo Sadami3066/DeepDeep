@@ -26,6 +26,7 @@ import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
@@ -86,6 +87,9 @@ class AssistantOverlayActivity : ComponentActivity() {
             val theme by graph.themePreferences.theme.collectAsStateWithLifecycle(
                 initialValue = ThemeMode.SYSTEM,
             )
+            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(
+                initialValue = ThemePreset.DEEP_DEEP,
+            )
             val autoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(
                 initialValue = false,
             )
@@ -137,7 +141,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                 }
             }
 
-            DeepDeepTheme(theme, fontStyle) {
+            DeepDeepTheme(mode = theme, preset = preset, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
                 AssistantOverlayScreen(
                     state = state,

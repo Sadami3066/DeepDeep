@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemeMode
+import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
@@ -75,6 +76,7 @@ class FloatingWindowController(
     private val questionCenter: QuestionCenter,
     private val preferences: FloatingWindowPreferences,
     private val theme: Flow<ThemeMode>,
+    private val themePreset: Flow<ThemePreset>,
     private val fontStyle: DdFontStyle,
     private val virtualScreenProvider: () -> VirtualScreenController?,
     private val onOpenApp: () -> Unit,
@@ -97,6 +99,7 @@ class FloatingWindowController(
     private val appForeground = MutableStateFlow(false)
     private val settingsState = MutableStateFlow(FloatingWindowSettings())
     private val themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    private val presetState = MutableStateFlow(ThemePreset.DEEP_DEEP)
     private val now = MutableStateFlow(System.currentTimeMillis())
     private val bubbleState = MutableStateFlow(FloatingBubbleState())
     private val surfaceUi = MutableStateFlow<FloatingSurfaceUi?>(null)
@@ -168,6 +171,7 @@ class FloatingWindowController(
         scope.launch { previewOpen.collect { requestRender() } }
         scope.launch { previewExpanded.collect { requestRender() } }
         scope.launch { theme.collect { mode -> themeMode.value = mode } }
+        scope.launch { themePreset.collect { value -> presetState.value = value } }
         scope.launch { now.collect { requestRender() } }
         scope.launch { virtualScreenState.collect { requestRender() } }
         scope.launch { VirtualScreenRuntime.toolStarted.collect { onScreenToolStarted() } }
@@ -400,7 +404,8 @@ class FloatingWindowController(
         val compose = host.composeView(windowContext)
         compose.setContent {
             val theme by themeMode.collectAsState()
-            DeepDeepTheme(theme, fontStyle) {
+            val preset by presetState.collectAsState()
+            DeepDeepTheme(mode = theme, preset = preset, fontStyle = fontStyle) {
                 val surface by surfaceUi.collectAsState()
                 val content = surface
                 if (content != null) {
@@ -545,7 +550,8 @@ class FloatingWindowController(
         val compose = host.composeView(windowContext)
         compose.setContent {
             val theme by themeMode.collectAsState()
-            DeepDeepTheme(theme, fontStyle) {
+            val preset by presetState.collectAsState()
+            DeepDeepTheme(mode = theme, preset = preset, fontStyle = fontStyle) {
                 val state by bubbleState.collectAsState()
                 val bubbleRing by ring.collectAsState()
                 FloatingBubble(mood = state.mood, pending = state.pending, ring = bubbleRing)
