@@ -35,6 +35,12 @@ class PersonalizationPromptTest {
     }
 
     @Test
+    fun environmentMentionsBashContainer() {
+        val environment = sections(Personalization()).getValue("environment")
+        assertTrue(environment.contains("Env: Alpine Linux via proot and Android."))
+    }
+
+    @Test
     fun environmentIsStableWithinTheSameDay() {
         val morning = sectionAt("2026-10-23T08:00:00+08:00")
         val evening = sectionAt("2026-10-23T23:59:59+08:00")

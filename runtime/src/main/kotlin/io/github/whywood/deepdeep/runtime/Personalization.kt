@@ -27,6 +27,7 @@ internal fun buildPersonalizationSections(
         buildString {
             appendLine("Date: ${now.toLocalDate()} (UTC${now.offset.id}).")
             appendLine("Model: $providerId/$modelId.")
+            appendLine("Env: Alpine Linux via proot and Android.")
             if (nickname.isNotEmpty()) {
                 appendLine("Nickname: $nickname.")
             } else {
