@@ -77,7 +77,6 @@ internal fun LinuxEnvironmentSection(
     val installedState = state as? LinuxInstallState.Installed
     val installed = installedState != null
     val installing = state is LinuxInstallState.Installing
-    val failed = state as? LinuxInstallState.Failed
     val available = installed && supported && enabled
     var resetConfirm by remember { mutableStateOf(false) }
     var sharedStorageGranted by remember { mutableStateOf(isSharedStorageGranted()) }
@@ -157,40 +156,25 @@ internal fun LinuxEnvironmentSection(
             )
             DdHairline()
         }
-        if (installing) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.settings_linux_installing),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                )
-            }
-            DdHairline()
-        }
-        if (!installed && !installing) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                if (failed != null) {
-                    Text(
-                        text = stringResource(R.string.settings_linux_status_failed, failed.message),
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                }
-                DdPrimaryButton(
-                    text = stringResource(R.string.settings_linux_install),
-                    onClick = onInstall,
-                    modifier = Modifier.fillMaxWidth().testTag("linux_install"),
-                    enabled = supported,
-                )
-            }
-            DdHairline()
-        }
+        val retryAvailable = supported && !installed && !installing
+        DdListRow(
+            title = stringResource(R.string.settings_linux_builtin),
+            subtitle = when (state) {
+                LinuxInstallState.NotInstalled -> stringResource(R.string.settings_linux_status_not_installed)
+                LinuxInstallState.Installing -> stringResource(R.string.settings_linux_status_installing)
+                is LinuxInstallState.Installed -> stringResource(R.string.settings_linux_status_installed, state.version)
+                is LinuxInstallState.Failed -> stringResource(R.string.settings_linux_status_failed)
+            },
+            onClick = if (retryAvailable) onInstall else null,
+            showChevron = retryAvailable,
+            modifier = Modifier.testTag("linux_builtin"),
+            trailing = if (installing) {
+                { DdSpinner(size = 16.dp, strokeWidth = 2.dp) }
+            } else {
+                null
+            },
+        )
+        DdHairline()
         DdListRow(
             title = stringResource(R.string.settings_linux_enable),
             enabled = installed && supported,

@@ -49,7 +49,7 @@
     <string name="settings_license">开源许可</string>
     <string name="settings_license_title">开源许可</string>
     <string name="settings_license_icons">Tabler Icons</string>
-    <string name="settings_license_provider_icons">厂商图标</string>
+    <string name="settings_license_provider_icons">服务商图标</string>
     <string name="settings_license_provider_icons_body">LobeHub MIT · Radius 官方图示</string>
     <string name="settings_license_open_runde">Open Runde</string>
     <string name="settings_license_fredoka">Fredoka</string>
@@ -58,16 +58,15 @@
     <string name="settings_license_ofl">SIL Open Font License 1.1</string>
     <string name="settings_license_mit">MIT License</string>
 
-    <string name="settings_linux_status_not_installed">未安装</string>
-    <string name="settings_linux_status_installing">正在安装…</string>
-    <string name="settings_linux_status_installed">已安装 · Alpine %1$s</string>
-    <string name="settings_linux_status_failed">安装失败：%1$s</string>
-    <string name="settings_linux_install">安装 Linux 环境</string>
-    <string name="settings_linux_installing">正在安装…</string>
+    <string name="settings_linux_status_not_installed">待准备</string>
+    <string name="settings_linux_status_installing">正在准备…</string>
+    <string name="settings_linux_status_installed">已内置 · Alpine %1$s</string>
+    <string name="settings_linux_status_failed">内置环境准备失败</string>
+    <string name="settings_linux_builtin">内置环境</string>
     <string name="settings_linux_enable">允许助手运行 Linux 命令</string>
-    <string name="settings_linux_reset">重置 Linux 环境</string>
-    <string name="settings_linux_reset_title">重置 Linux 环境？</string>
-    <string name="settings_linux_reset_dialog">将删除 Linux 环境并关闭开关，工作区文件保留。</string>
+    <string name="settings_linux_reset">重新准备内置环境</string>
+    <string name="settings_linux_reset_title">重新准备内置环境？</string>
+    <string name="settings_linux_reset_dialog">将删除当前内置环境并关闭开关，下次启动会重新准备，工作区文件保留。</string>
     <string name="settings_linux_reset_confirm">重置</string>
     <string name="settings_linux_cancel">取消</string>
     <string name="settings_linux_unsupported">此设备不支持 Linux（仅 arm64-v8a）。</string>
@@ -78,13 +77,13 @@
     <string name="settings_linux_shared_storage_grant">需要在系统设置中授予「所有文件访问权限」</string>
 
     <string name="settings_provider_title">服务商</string>
-    <string name="settings_provider_search">搜索厂商</string>
-    <string name="settings_provider_all_count">全部厂商 · %1$d</string>
+    <string name="settings_provider_search">搜索服务商</string>
+    <string name="settings_provider_all_count">全部服务商 · %1$d</string>
     <string name="settings_provider_result_count">搜索结果 · %1$d</string>
     <string name="settings_provider_models_count">%1$d 个模型</string>
-    <string name="settings_provider_no_result">没有匹配的厂商</string>
+    <string name="settings_provider_no_result">没有匹配的服务商</string>
     <string name="settings_provider_extra_config">需要额外配置</string>
-    <string name="settings_provider_extra_config_body">该厂商不支持 API Key，需要 OAuth 或专用登录方式。</string>
+    <string name="settings_provider_extra_config_body">该服务商不支持 API Key，需要 OAuth 或专用登录方式。</string>
     <string name="settings_oauth_title">登录 %1$s</string>
     <string name="settings_oauth_method">登录方式</string>
     <string name="settings_oauth">OAuth</string>
@@ -138,7 +137,7 @@
     <string name="privacy_tracking_title">无统计与广告</string>
     <string name="privacy_tracking_body">不接入分析、广告或第三方追踪 SDK。</string>
     <string name="privacy_micloud_title">小米云服务</string>
-    <string name="privacy_micloud_body">登录凭据加密保存在本地，仅用于访问 i.mi.com；笔记、待办、短信与通话、联系人、相册、录音按功能开关读取，写入仅在开启写开关并确认后发生。读取内容会进入会话历史，并可能随对话发送给模型厂商。</string>
+    <string name="privacy_micloud_body">登录凭据加密保存在本地，仅用于访问 i.mi.com；笔记、待办、短信与通话、联系人、相册、录音按功能开关读取，写入仅在开启写开关并确认后发生。读取内容会进入会话历史，并可能随对话发送给模型服务商。</string>
     <string name="privacy_uninstall_title">卸载即删除</string>
     <string name="privacy_uninstall_body">卸载应用会删除本地私有数据；系统备份已关闭。</string>
 
@@ -150,7 +149,7 @@
     <string name="dev_install">安装</string>
     <string name="dev_installed">已安装</string>
     <string name="dev_refresh">刷新</string>
-    <string name="dev_linux_required">先安装 Linux 环境，才能安装这些组合。</string>
+    <string name="dev_linux_required">内置环境正在准备，完成后再安装组合。</string>
     <string name="dev_error">失败：%1$s</string>
     <string name="dev_stage_updating">正在更新软件源…</string>
     <string name="dev_stage_installing">正在安装…</string>
@@ -158,7 +157,7 @@
     <string name="dev_stage_python">正在安装 Python 文档库…</string>
     <string name="dev_uninstalling">正在移除 %1$s…</string>
     <string name="dev_error_busy">正在安装其他组合</string>
-    <string name="dev_error_linux_missing">请先安装 Linux 环境</string>
+    <string name="dev_error_linux_missing">内置环境尚未就绪</string>
     <string name="dev_error_generic">安装失败</string>
     <string name="dev_continue">继续安装</string>
     <string name="dev_close">关闭</string>

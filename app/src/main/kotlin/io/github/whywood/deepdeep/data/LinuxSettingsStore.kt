@@ -21,7 +21,7 @@ class LinuxSettingsStore(context: Context) {
     private val sharedStorageKey = booleanPreferencesKey("shared_storage_enabled")
     private val rootEnabledKey = booleanPreferencesKey("root_enabled")
 
-    val enabled: Flow<Boolean> = flag(enabledKey)
+    val enabled: Flow<Boolean> = flag(enabledKey, linuxEnabledDefault())
     val sharedStorageEnabled: Flow<Boolean> = flag(sharedStorageKey)
     val rootEnabled: Flow<Boolean> = flag(rootEnabledKey)
 
@@ -39,12 +39,14 @@ class LinuxSettingsStore(context: Context) {
         store.edit { it[sharedStorageKey] = value }
     }
 
-    private fun flag(key: Preferences.Key<Boolean>): Flow<Boolean> = store.data
-        .map { it[key] ?: false }
+    private fun flag(key: Preferences.Key<Boolean>, default: Boolean = false): Flow<Boolean> = store.data
+        .map { it[key] ?: default }
         .catch { error ->
-            if (error is IOException) emit(false) else throw error
+            if (error is IOException) emit(default) else throw error
         }
 }
+
+internal fun linuxEnabledDefault(): Boolean = true
 
 fun isSharedStorageGranted(): Boolean =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()

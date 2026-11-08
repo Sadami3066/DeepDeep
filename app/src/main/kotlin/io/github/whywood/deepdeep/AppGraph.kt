@@ -65,6 +65,7 @@ import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -143,6 +144,13 @@ class AppGraph(context: Context) : AppDependencies {
 
     init {
         scope.launch { StorageMigration.migrate(appContext.filesDir) }
+        scope.launch {
+            val environment = linuxEnvironment
+            if (!shouldAutoInstallLinux(environment.isSupported, environment.state.value)) return@launch
+            runCatching { environment.install() }.onFailure {
+                Diagnostics.log(appContext, "app: linux environment preparation failed", it)
+            }
+        }
         OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
         scope.launch {
             host.sdkEvents.collect { event ->
