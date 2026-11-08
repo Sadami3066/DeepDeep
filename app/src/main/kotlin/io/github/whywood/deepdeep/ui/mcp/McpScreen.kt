@@ -135,9 +135,20 @@ fun McpScreen(
         modifier = modifier,
     )
 
+    val marketState by marketRepository.state.collectAsStateWithLifecycle()
+    val editorMarketEntry = remember(marketState, editorName, state.visibleServers) {
+        val url = (state.visibleServers.firstOrNull { it.name == editorName }?.config as? McpServerConfig.Http)?.url
+        (marketState as? MarketState.Ready)?.let {
+            marketRepository.entries(MarketEntryType.Mcp).firstOrNull { it.mcp?.url == url }
+        }
+    }
+    val editorIconLoader = rememberMarketIconLoader()
+
     if (editorOpen) {
         McpEditorSheet(
             target = McpEditorTarget(editorName),
+            marketEntry = editorMarketEntry,
+            iconLoader = editorIconLoader,
             store = store,
             probe = probe,
             oauth = oauth,

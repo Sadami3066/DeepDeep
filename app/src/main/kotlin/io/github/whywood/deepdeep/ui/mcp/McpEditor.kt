@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,7 +77,10 @@ import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.runtime.parseMcpEntries
+import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
+import io.github.whywood.deepdeep.ui.common.market.MarketEntryIcon
+import io.github.whywood.deepdeep.ui.common.market.MarketIconLoader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,6 +98,8 @@ internal data class McpEditorTarget(
 @Composable
 internal fun McpEditorSheet(
     target: McpEditorTarget,
+    marketEntry: MarketEntry?,
+    iconLoader: MarketIconLoader,
     store: McpConfigStore,
     probe: McpServerProbe,
     oauth: McpOAuthService,
@@ -192,13 +198,6 @@ internal fun McpEditorSheet(
         }
     }
 
-    fun format() {
-        val pretty = prettyJson(text) ?: return
-        text = pretty
-        error = null
-        testResult = null
-    }
-
     fun copy() {
         if (copyToClipboard(context, text)) copied = true
     }
@@ -223,7 +222,12 @@ internal fun McpEditorSheet(
 
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).testTag("mcp_editor_sheet")) {
-            EditorHeader(serverName = target.name, onClose = onDismiss)
+            EditorHeader(
+                serverName = target.name,
+                marketEntry = marketEntry,
+                iconLoader = iconLoader,
+                onClose = onDismiss,
+            )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,8 +246,8 @@ internal fun McpEditorSheet(
                     DdSpinner(size = 18.dp, strokeWidth = 2.dp)
                 } else {
                     ConfigHeader(
-                        enabled = parsed != null && !saving,
-                        onFormat = { format() },
+                        deleteEnabled = !saving && !testing,
+                        onDelete = { showDelete = true },
                     )
                     Spacer(Modifier.height(DdSpacing.Sm))
                     JsonEditorCard(
@@ -283,16 +287,6 @@ internal fun McpEditorSheet(
                                     onCommitted()
                                 }
                             },
-                        )
-                    }
-                    Spacer(Modifier.height(DdSpacing.Xl))
-                    Row(Modifier.fillMaxWidth()) {
-                        DdTextAction(
-                            text = stringResource(R.string.mcp_delete),
-                            onClick = { showDelete = true },
-                            modifier = Modifier.testTag("mcp_delete"),
-                            color = colors.danger,
-                            enabled = !saving && !testing,
                         )
                     }
                 }
@@ -355,7 +349,12 @@ internal fun McpEditorSheet(
 }
 
 @Composable
-private fun EditorHeader(serverName: String, onClose: () -> Unit) {
+private fun EditorHeader(
+    serverName: String,
+    marketEntry: MarketEntry?,
+    iconLoader: MarketIconLoader,
+    onClose: () -> Unit,
+) {
     val colors = deepDeepColors()
     Row(
         modifier = Modifier
@@ -364,24 +363,22 @@ private fun EditorHeader(serverName: String, onClose: () -> Unit) {
             .padding(start = DdSpacing.Xxl, end = DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DdIcon(icon = DdIcons.Plug, tint = colors.inkSecondary, size = 22.dp)
-        Spacer(Modifier.width(DdSpacing.Md))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.mcp_editor_title),
-                style = DdType.heading,
-                color = colors.ink,
-            )
-            if (serverName.isNotBlank()) {
-                Text(
-                    text = serverName,
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        if (marketEntry != null) {
+            MarketEntryIcon(entry = marketEntry, loader = iconLoader, size = 28.dp)
+        } else {
+            Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                DdIcon(icon = DdIcons.Plug, tint = colors.inkSecondary, size = 22.dp)
             }
         }
+        Spacer(Modifier.width(DdSpacing.Md))
+        Text(
+            text = serverName.ifBlank { stringResource(R.string.mcp_title) },
+            modifier = Modifier.weight(1f),
+            style = DdType.heading,
+            color = colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         DdIconButton(
             icon = DdIcons.Close,
             onClick = onClose,
@@ -393,7 +390,7 @@ private fun EditorHeader(serverName: String, onClose: () -> Unit) {
 }
 
 @Composable
-private fun ConfigHeader(enabled: Boolean, onFormat: () -> Unit) {
+private fun ConfigHeader(deleteEnabled: Boolean, onDelete: () -> Unit) {
     val colors = deepDeepColors()
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -414,11 +411,13 @@ private fun ConfigHeader(enabled: Boolean, onFormat: () -> Unit) {
                 color = colors.inkTertiary,
             )
         }
+        Spacer(Modifier.width(DdSpacing.Sm))
         DdTextAction(
-            text = stringResource(R.string.mcp_format),
-            onClick = onFormat,
-            modifier = Modifier.testTag("mcp_format"),
-            enabled = enabled,
+            text = stringResource(R.string.mcp_delete),
+            onClick = onDelete,
+            modifier = Modifier.testTag("mcp_delete"),
+            color = colors.danger,
+            enabled = deleteEnabled,
         )
     }
 }
@@ -838,71 +837,6 @@ private class JsonHighlight(
         }
         return TransformedText(highlighted, OffsetMapping.Identity)
     }
-}
-
-private fun prettyJson(text: String): String? {
-    val out = StringBuilder()
-    var depth = 0
-    var inString = false
-    var escaped = false
-    var pendingBreak = false
-    fun flushBreak() {
-        if (pendingBreak) {
-            pendingBreak = false
-            out.append('\n')
-            repeat(depth) { out.append("  ") }
-        }
-    }
-    var index = 0
-    while (index < text.length) {
-        val char = text[index]
-        if (inString) {
-            out.append(char)
-            when {
-                escaped -> escaped = false
-                char == '\\' -> escaped = true
-                char == '"' -> inString = false
-            }
-            index++
-            continue
-        }
-        when {
-            char == '"' -> {
-                flushBreak()
-                inString = true
-                out.append(char)
-            }
-            char == '{' || char == '[' -> {
-                flushBreak()
-                out.append(char)
-                depth++
-                pendingBreak = true
-            }
-            char == '}' || char == ']' -> {
-                if (pendingBreak) {
-                    pendingBreak = false
-                    depth--
-                } else {
-                    depth--
-                    flushBreak()
-                }
-                out.append(char)
-            }
-            char == ',' -> {
-                out.append(char)
-                pendingBreak = true
-            }
-            char == ':' -> out.append(": ")
-            char.isWhitespace() -> Unit
-            else -> {
-                flushBreak()
-                out.append(char)
-            }
-        }
-        index++
-    }
-    if (inString) return null
-    return out.toString().trim()
 }
 
 private fun locateJsonErrorLine(text: String): Int? {

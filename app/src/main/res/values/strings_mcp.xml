@@ -18,14 +18,12 @@
     <string name="mcp_status_unsupported">Android 不支持</string>
     <string name="mcp_state_enabled">已启用</string>
 
-    <string name="mcp_editor_title">编辑 MCP 服务器</string>
     <string name="mcp_close">关闭</string>
     <string name="mcp_save">保存</string>
     <string name="mcp_test">测试连接</string>
     <string name="mcp_test_failed">连接失败：%1$s</string>
     <string name="mcp_editor_config_label">服务器配置</string>
     <string name="mcp_json_badge">JSON</string>
-    <string name="mcp_format">格式化</string>
     <string name="mcp_json_valid">JSON 格式正确</string>
     <string name="mcp_json_invalid">JSON 格式错误</string>
     <string name="mcp_json_invalid_line">JSON 格式错误：第 %1$d 行</string>
@@ -34,7 +32,7 @@
     <string name="mcp_save_changes">保存更改</string>
     <string name="mcp_testing">测试中…</string>
     <string name="mcp_saving">保存中…</string>
-    <string name="mcp_delete">删除服务器</string>
+    <string name="mcp_delete">删除</string>
     <string name="mcp_delete_title">删除 连接器 服务器？</string>
     <string name="mcp_delete_message">「%1$s」删除后无法恢复。</string>
     <string name="mcp_delete_confirm">删除</string>

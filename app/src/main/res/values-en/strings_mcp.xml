@@ -18,14 +18,12 @@
     <string name="mcp_status_unsupported">Unsupported on Android</string>
     <string name="mcp_state_enabled">Enabled</string>
 
-    <string name="mcp_editor_title">Edit MCP server</string>
     <string name="mcp_close">Close</string>
     <string name="mcp_save">Save</string>
     <string name="mcp_test">Test connection</string>
     <string name="mcp_test_failed">Connection failed: %1$s</string>
     <string name="mcp_editor_config_label">Server configuration</string>
     <string name="mcp_json_badge">JSON</string>
-    <string name="mcp_format">Format</string>
     <string name="mcp_json_valid">Valid JSON</string>
     <string name="mcp_json_invalid">Invalid JSON</string>
     <string name="mcp_json_invalid_line">Invalid JSON: line %1$d</string>
@@ -34,7 +32,7 @@
     <string name="mcp_save_changes">Save changes</string>
     <string name="mcp_testing">Testing…</string>
     <string name="mcp_saving">Saving…</string>
-    <string name="mcp_delete">Delete server</string>
+    <string name="mcp_delete">Delete</string>
     <string name="mcp_delete_title">Delete MCP server?</string>
     <string name="mcp_delete_message">“%1$s” will be deleted permanently.</string>
     <string name="mcp_delete_confirm">Delete</string>
