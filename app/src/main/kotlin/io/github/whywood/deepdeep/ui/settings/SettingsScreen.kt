@@ -422,7 +422,7 @@ private fun ThemeControl(
         Row(verticalAlignment = Alignment.CenterVertically) {
             DdIcon(
                 icon = when (themeMode) {
-                    ThemeMode.SYSTEM -> DdIcons.Monitor
+                    ThemeMode.SYSTEM -> DdIcons.Theme
                     ThemeMode.LIGHT -> DdIcons.Sun
                     ThemeMode.DARK -> DdIcons.Moon
                 },

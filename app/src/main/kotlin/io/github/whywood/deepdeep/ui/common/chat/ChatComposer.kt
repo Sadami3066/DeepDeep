@@ -699,10 +699,11 @@ private fun ComposerStopButton(
     DdPressable(
         onClick = onClick,
         modifier = modifier.size(34.dp).testTag("assistant_stop"),
-        background = colors.wash,
+        shape = CircleShape,
+        background = colors.accent,
         contentDescription = stringResource(R.string.assistant_stop),
     ) {
-        StopSquare(size = 10.dp)
+        StopSquare(size = 10.dp, color = colors.onAccent)
     }
 }
 
@@ -710,12 +711,13 @@ private fun ComposerStopButton(
 private fun StopSquare(
     size: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = deepDeepColors().danger,
 ) {
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(2.dp))
-            .background(deepDeepColors().danger),
+            .clip(RoundedCornerShape(3.dp))
+            .background(color),
     )
 }
 
@@ -736,7 +738,7 @@ private fun ComposerSendButton(
             .clip(CircleShape)
             .background(
                 when {
-                    stops -> colors.danger.copy(alpha = 0.14f)
+                    stops -> colors.accent
                     canSend -> colors.accent
                     else -> colors.wash
                 },
@@ -758,7 +760,7 @@ private fun ComposerSendButton(
             label = "composer-primary-icon",
         ) { stopping ->
             if (stopping) {
-                StopSquare(size = 12.dp)
+                StopSquare(size = 12.dp, color = colors.onAccent)
             } else {
                 DdIcon(
                     icon = DdIcons.ArrowUp,

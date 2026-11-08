@@ -467,14 +467,14 @@ private fun OverlayStopButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.size(34.dp).testTag("assistant_overlay_stop"),
         shape = CircleShape,
-        background = colors.wash,
+        background = colors.accent,
         contentDescription = stringResource(R.string.assistant_overlay_stop),
     ) {
         Box(
             Modifier
                 .size(12.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(colors.danger),
+                .clip(RoundedCornerShape(3.dp))
+                .background(colors.onAccent),
         )
     }
 }
