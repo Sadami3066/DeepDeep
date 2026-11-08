@@ -342,25 +342,15 @@ internal fun OnboardingPrimaryButton(
         background = background,
         enabled = enabled,
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 style = DdType.button,
                 color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.width(12.dp))
-            DdIcon(
-                icon = DdIcons.ArrowLeft,
-                tint = contentColor,
-                modifier = Modifier.graphicsLayer { rotationZ = 180f },
-                size = 19.dp,
             )
         }
     }
