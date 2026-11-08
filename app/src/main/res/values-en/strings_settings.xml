@@ -197,9 +197,9 @@
     <string name="settings_assistant">System assistant</string>
     <string name="assistant_settings_title">System assistant</string>
     <string name="assistant_settings_subtitle">Replaces the phone\'s system assistant</string>
-    <string name="assistant_settings_role">Set DeepDeep as the default assistant</string>
-    <string name="assistant_settings_role_held">DeepDeep is the default assistant</string>
-    <string name="assistant_settings_role_missing">DeepDeep is not the default assistant</string>
+    <string name="assistant_settings_role">Default assistant</string>
+    <string name="assistant_settings_role_held">Set</string>
+    <string name="assistant_settings_role_missing">Not set</string>
     <string name="assistant_settings_power">Launch DeepDeep with a long press of the power button</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
     <string name="settings_privilege">Permissions</string>

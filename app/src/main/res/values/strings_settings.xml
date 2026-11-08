@@ -203,9 +203,9 @@
     <string name="settings_assistant">系统助手</string>
     <string name="assistant_settings_title">系统助手</string>
     <string name="assistant_settings_subtitle">用于替换手机系统助手</string>
-    <string name="assistant_settings_role">设置DeepDeep为默认助手</string>
-    <string name="assistant_settings_role_held">已设置DeepDeep为默认助手</string>
-    <string name="assistant_settings_role_missing">未设置DeepDeep为默认助手</string>
+    <string name="assistant_settings_role">默认助手</string>
+    <string name="assistant_settings_role_held">已设置</string>
+    <string name="assistant_settings_role_missing">未设置</string>
     <string name="assistant_settings_power">长按电源键启动DeepDeep</string>
     <string name="assistant_settings_power_unavailable">系统没有这个设置页</string>
     <string name="settings_privilege">权限</string>
