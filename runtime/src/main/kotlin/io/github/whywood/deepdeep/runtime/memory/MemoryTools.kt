@@ -49,7 +49,7 @@ private val writeParameters: JsonObject = buildJsonObject {
             writeModes,
         ))
         put("section", stringProperty(
-            "Heading to replace or to append under, such as 健身计划 or 近期; leading # is optional.",
+            "Heading to replace or to append under, such as Workout plan or Recent threads; leading # is optional.",
         ))
         put("date", stringProperty("Day for target=today as yyyy-MM-dd; defaults to today."))
     })
@@ -73,12 +73,15 @@ private val searchParameters: JsonObject = buildJsonObject {
     put("type", "object")
     put("properties", buildJsonObject {
         put("query", stringProperty("Keywords to search for. Chinese and English both work; short distinctive words are best."))
-        put("limit", integerProperty("Maximum results from 1 to 25; default 5."))
+        put("limit", integerProperty("Maximum number of results to return."))
     })
     put("required", buildJsonArray { add(JsonPrimitive("query")) })
 }
 
-private val statusParameters: JsonObject = buildJsonObject { put("type", "object") }
+private val statusParameters: JsonObject = buildJsonObject {
+    put("type", "object")
+    put("properties", buildJsonObject {})
+}
 
 fun memoryTools(store: MemoryStore, sessionId: () -> String?): List<CodingTool> = listOf(
     CodingTool(
@@ -214,25 +217,25 @@ private fun formatSearchResult(outcome: MemorySearchOutcome): String {
 }
 
 private fun formatStatus(status: MemoryStatus): String = buildString {
-    appendLine("数据目录：${status.rootDir}")
+    appendLine("Data directory: ${status.rootDir}")
     appendLine()
-    appendLine("profile.md：${status.profileChars} 字符")
-    appendLine("context.md：${status.contextChars} 字符")
-    appendLine("cookbook.md：${status.cookbookChars} 字符")
-    appendLine("今天：${status.todayChars} 字符")
-    appendLine("本月：${status.monthChars} 字符")
-    appendLine("本年：${status.yearChars} 字符")
-    appendLine("日记共 ${status.dayCount} 天")
+    appendLine("profile.md: ${status.profileChars} chars")
+    appendLine("context.md: ${status.contextChars} chars")
+    appendLine("cookbook.md: ${status.cookbookChars} chars")
+    appendLine("Today: ${status.todayChars} chars")
+    appendLine("This month: ${status.monthChars} chars")
+    appendLine("This year: ${status.yearChars} chars")
+    appendLine("Diary: ${status.dayCount} days")
     appendLine()
-    appendLine("搜索索引：${status.indexedChunks} 片段 · ${status.indexBuildMs} ms")
+    appendLine("Search index: ${status.indexedChunks} chunks · ${status.indexBuildMs} ms")
     val snapshot = if (status.snapshotAt == null) {
-        "注入快照：${status.snapshotChars} 字符 · 尚未重建"
+        "Snapshot: ${status.snapshotChars} chars · not built yet"
     } else {
-        "注入快照：${status.snapshotChars} 字符 · ${status.snapshotAt} · ${status.snapshotReason}"
+        "Snapshot: ${status.snapshotChars} chars · ${status.snapshotAt} · ${status.snapshotReason}"
     }
     appendLine(snapshot)
-    if (status.dirty) appendLine("（快照待刷新）")
-    appendLine("占用：${MemoryText.formatBytes(status.totalBytes)}")
+    if (status.dirty) appendLine("(Snapshot refresh pending)")
+    appendLine("Size: ${MemoryText.formatBytes(status.totalBytes)}")
 }
 
 private fun JsonObject.stringArg(name: String): String =

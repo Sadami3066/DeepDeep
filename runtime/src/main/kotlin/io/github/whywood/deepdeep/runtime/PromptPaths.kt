@@ -13,7 +13,7 @@ internal fun buildPathsSection(
     mounts: List<StorageMountInfo>,
 ): String = buildString {
     appendLine("Skills: $skillsDir.")
-    appendLine("App data: $appDataDir (/data/data equivalent). Bash and file tools use these real paths.")
+    appendLine("App data: $appDataDir. Bash and file tools use these real paths.")
     if (sharedStorage) {
         appendLine(
             "Shared storage: $PUBLIC_STORAGE_ROOT — all user files are readable and writable. " +

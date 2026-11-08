@@ -93,7 +93,7 @@ class PiSessionEngine(
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
         suspend fun pluginContextSection(): Map<String, String> {
             val context = hooks.systemContext?.invoke()?.takeIf { it.isNotBlank() } ?: return emptyMap()
-            return mapOf("plugin_context" to context)
+            return mapOf("plugin_context" to wrapPromptSection("plugin_context", context))
         }
         suspend fun memoryContextSections(): Map<String, String> {
             val text = try {

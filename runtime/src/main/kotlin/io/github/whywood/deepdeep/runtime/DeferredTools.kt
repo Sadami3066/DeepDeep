@@ -64,7 +64,7 @@ internal fun deferredTools(
     deferredExecuteTool(context, binding, session),
 )
 
-private const val DEFERRED_SEARCH_LIMIT = 8
+private const val DEFERRED_SEARCH_LIMIT = 50
 private const val DEFERRED_DESCRIPTION_LIMIT = 240
 
 private fun deferredSearchTool(
@@ -90,14 +90,14 @@ private fun deferredSearchTool(
                     "limit",
                     buildJsonObject {
                         put("type", "integer")
-                        put("description", "Maximum number of tools to return (1-8).")
+                        put("description", "Maximum number of tools to return.")
                     },
                 )
             },
         )
         put("required", JsonArray(listOf(JsonPrimitive("query"))))
     },
-    label = "搜索按需工具",
+    label = "Search tools",
     promptSnippet = "Use tool_search to discover deferred MCP or plugin tools, then tool_execute to call one.",
     promptGuidelines = listOf(
         "Deferred tools are not callable directly; search first, then execute by name.",
@@ -176,7 +176,7 @@ private fun deferredExecuteTool(
         )
         put("required", JsonArray(listOf(JsonPrimitive("name"), JsonPrimitive("arguments"))))
     },
-    label = "执行按需工具",
+    label = "Execute tool",
     promptSnippet = "Run a deferred tool by name after finding it with tool_search.",
     promptGuidelines = listOf("Unknown names fail; call tool_search before tool_execute."),
     execute = { toolCallId, args, signal, onUpdate ->

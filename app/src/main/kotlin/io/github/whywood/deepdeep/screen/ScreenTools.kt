@@ -519,7 +519,7 @@ private fun statusTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun observeTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_observe",
-    description = "Read the selected screen as nodes. Filters combine with AND. Refs are re-resolved by node identity across ordinary operations; a restarted screen invalidates them. scanned counts visited nodes; complete=false means unsearched nodes remain, even when there are no matches.",
+    description = "Read the selected screen as nodes; filters combine with AND. Refs survive normal operations but a restarted screen invalidates them. scanned counts visited nodes; complete=false means unsearched nodes remain.",
     parameters = observeParameters,
     label = "screen_observe",
     execute = { _, args, signal, _ ->
@@ -540,7 +540,7 @@ private fun screenshotTool(
     screenshotDir: File,
 ): CodingTool = CodingTool(
     name = "screen_screenshot",
-    description = "Save the selected screen as a PNG. Main screen capture requires accessibility and Android 11+. Protected or locked screens may refuse capture. Returns one absolute path usable by file tools, shell and present.",
+    description = "Save the selected screen as a PNG. Main capture needs accessibility and Android 11+; protected or locked screens may refuse. Returns an absolute path.",
     parameters = screenshotParameters,
     label = "screen_screenshot",
     execute = { _, args, signal, _ ->
@@ -602,7 +602,7 @@ private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun scrollTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_scroll",
-    description = "Scroll a screen or a scrollable node in one direction. Use it to reveal content outside the current view; down or up reveals later or earlier content, right or left reveals horizontal content, with an optional number of steps.",
+    description = "Scroll a screen or a scrollable node in one direction; down/up reveals later/earlier content, right/left horizontal content. Optional steps.",
     parameters = scrollParameters,
     label = "screen_scroll",
     execute = { _, args, signal, _ ->
@@ -643,7 +643,7 @@ private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_key",
-    description = "Press a screen key: back, enter, delete, tab, escape, space or arrows. Home, recents, notifications and volume keys are main-only. Availability depends on accessibility and authorized ADB/Root; inspect screen_status.",
+    description = "Press a screen key: back, enter, delete, tab, escape, space or arrows. Home/recents/notifications/volume are main-only. Availability depends on accessibility and ADB/Root.",
     parameters = keyParameters,
     label = "screen_key",
     execute = { _, args, signal, _ ->
@@ -657,7 +657,7 @@ private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun waitTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_wait",
-    description = "Wait until a package or text appears on a screen, or a text disappears, and report whether it happened before the timeout with the current window. Use it when waiting for a screen transition or loading state to finish.",
+    description = "Wait until a package or text appears/disappears; report whether it happened before timeout plus the current window.",
     parameters = waitParameters,
     label = "screen_wait",
     execute = { _, args, signal, _ ->
@@ -718,7 +718,7 @@ private fun listAppsTool(controller: ScreenController): CodingTool = CodingTool(
 
 private fun launchTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_launch",
-    description = "Open an app on the selected screen by package name. Virtual needs an online virtual screen. Refuses to move an app from another screen; reports whether launch was confirmed on the requested screen.",
+    description = "Open an app on the selected screen by package name. Virtual needs an online virtual screen; refuses cross-screen moves; reports whether launch was confirmed.",
     parameters = launchParameters,
     label = "screen_launch",
     execute = { _, args, signal, _ ->

@@ -46,7 +46,7 @@ private val goalParameters: JsonObject = buildJsonObject {
         }
         putJsonObject("maxRounds") {
             put("type", "integer")
-            put("description", "Optional maximum goal rounds, 1-50; omit for unlimited")
+            put("description", "Optional maximum goal rounds, 1-50; defaults to the configured limit")
         }
         putJsonObject("blockedReason") {
             put("type", "string")

@@ -15,7 +15,7 @@ class PromptPathsTest {
         )
 
         assertTrue(section.contains("Skills: /data/app/skills."))
-        assertTrue(section.contains("App data: /data/app (/data/data equivalent)."))
+        assertTrue(section.contains("App data: /data/app."))
         assertFalse(section.contains("Shared storage"))
         assertFalse(section.contains("Mounted directories"))
     }
