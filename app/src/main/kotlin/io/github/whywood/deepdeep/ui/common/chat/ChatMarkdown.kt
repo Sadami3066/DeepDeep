@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -62,10 +64,13 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 
-private val chatTracking = (-0.2).sp
+private val mdBody = DdType.body.copy(letterSpacing = 0.sp)
+private val mdHeading1 = mdBody.copy(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold)
+private val mdHeading2 = mdBody.copy(fontSize = 19.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold)
+private val mdHeading3 = mdBody.copy(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium)
 
-private val tableCellStyle = DdType.bodySmall.copy(fontSize = 14.sp, lineHeight = 20.sp)
-private val tableHeaderStyle = tableCellStyle.copy(fontWeight = FontWeight.SemiBold)
+private val tableCellStyle = DdType.bodySmall.copy(fontSize = 14.sp, lineHeight = 21.sp)
+private val tableHeaderStyle = tableCellStyle.copy(fontWeight = FontWeight.Medium)
 
 @Composable
 internal fun ChatMarkdown(
@@ -124,9 +129,29 @@ private fun MarkdownBlocks(
     live: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DdSpacing.Md)) {
-        blocks.forEach { block -> MarkdownBlockItem(block, document, colors, onFileClick, live) }
+    Column(modifier.fillMaxWidth()) {
+        blocks.forEachIndexed { index, block ->
+            if (index > 0) {
+                Spacer(Modifier.height(blockGap(blocks[index - 1], block)))
+            }
+            MarkdownBlockItem(block, document, colors, onFileClick, live)
+        }
     }
+}
+
+@Composable
+private fun blockGap(previous: MarkdownBlock, current: MarkdownBlock): Dp = when {
+    current is MarkdownBlock.Heading -> when (current.level) {
+        1 -> 26.dp
+        2 -> 22.dp
+        else -> 18.dp
+    }
+    previous is MarkdownBlock.Heading -> 10.dp
+    previous is MarkdownBlock.Code || current is MarkdownBlock.Code -> 16.dp
+    previous is MarkdownBlock.Table || current is MarkdownBlock.Table -> 16.dp
+    previous is MarkdownBlock.Quote || current is MarkdownBlock.Quote -> 14.dp
+    current is MarkdownBlock.Rule || previous is MarkdownBlock.Rule -> 16.dp
+    else -> 12.dp
 }
 
 @Composable
@@ -140,26 +165,17 @@ private fun MarkdownBlockItem(
     when (block) {
         is MarkdownBlock.Heading -> InlineCodeText(
             rendered = rememberedInline(block.text, document, colors, onFileClick),
-            style = DdType.body.copy(
-                fontSize = when (block.level) {
-                    1 -> 22.sp
-                    2 -> 19.sp
-                    else -> 17.sp
-                },
-                lineHeight = when (block.level) {
-                    1 -> 31.sp
-                    2 -> 27.sp
-                    else -> 24.sp
-                },
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = chatTracking,
-            ),
+            style = when (block.level) {
+                1 -> mdHeading1
+                2 -> mdHeading2
+                else -> mdHeading3
+            },
             color = colors.ink,
         )
 
         is MarkdownBlock.Paragraph -> InlineCodeText(
             rendered = rememberedInline(block.text, document, colors, onFileClick),
-            style = DdType.body.copy(letterSpacing = chatTracking),
+            style = mdBody,
             color = colors.ink,
         )
 
@@ -275,7 +291,7 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
             .fillMaxWidth()
             .clip(DdShapes.Medium)
             .background(colors.wash)
-            .padding(start = DdSpacing.Md, end = DdSpacing.Sm, top = 6.dp, bottom = DdSpacing.Md),
+            .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 14.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             DdText(
@@ -304,9 +320,9 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
                 style = DdType.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 13.sp,
-                    lineHeight = 20.sp,
+                    lineHeight = 21.sp,
                 ),
-                color = colors.inkSecondary,
+                color = colors.ink,
                 softWrap = false,
             )
         }
@@ -321,7 +337,7 @@ private fun ListBlockBody(
     onFileClick: ((String) -> Unit)?,
     depth: Int,
 ) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items.forEach { item -> ListItemBody(item, document, colors, onFileClick, depth) }
     }
 }
@@ -340,7 +356,7 @@ private fun ListItemBody(
             InlineCodeText(
                 rendered = rememberedInline(item.text, document, colors, onFileClick),
                 modifier = Modifier.weight(1f).padding(start = DdSpacing.Xs),
-                style = DdType.body,
+                style = mdBody,
                 color = if (item.marker is MarkdownMarker.Task && item.marker.checked) {
                     colors.inkTertiary
                 } else {
@@ -362,14 +378,14 @@ private fun ListMarker(marker: MarkdownMarker, colors: DeepDeepColors, depth: In
         MarkdownMarker.Bullet -> DdText(
             text = if (depth == 0) "•" else "◦",
             modifier = Modifier.width(24.dp),
-            style = DdType.body,
-            color = colors.inkTertiary.copy(alpha = if (depth == 0) 1f else 0.72f),
+            style = DdType.bodySmall,
+            color = colors.inkTertiary.copy(alpha = if (depth == 0) 0.9f else 0.72f),
         )
 
         is MarkdownMarker.Ordered -> DdText(
             text = "${marker.number}.",
             modifier = Modifier.width(24.dp),
-            style = DdType.body,
+            style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
 
@@ -438,7 +454,7 @@ private fun TableBlock(
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val density = LocalDensity.current
         val horizontalPadding = 12.dp
-        val verticalPadding = 10.dp
+        val verticalPadding = 8.dp
         val paddingPx = with(density) { (horizontalPadding * 2).roundToPx() }
         val minWidthPx = with(density) { 64.dp.roundToPx() }
         val maxWidthPx = with(density) { 240.dp.roundToPx() }
@@ -507,7 +523,7 @@ private fun TableRow(
                 InlineCodeText(
                     rendered = rememberedInline(cells.getOrNull(index).orEmpty(), document, colors, onFileClick),
                     style = style,
-                    color = if (header) colors.ink else colors.inkSecondary,
+                    color = colors.ink,
                 )
             }
         }
@@ -598,12 +614,24 @@ private fun AnnotatedString.Builder.appendInlineNodes(
 
             is InlineNode.Code -> {
                 if (isPathLikeInlineCode(node.text)) {
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = colors.inkSecondary)) {
+                    withStyle(
+                        SpanStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = colors.inkSecondary,
+                        ),
+                    ) {
                         append(node.text)
                     }
                 } else {
                     val start = length
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = colors.inkSecondary)) {
+                    withStyle(
+                        SpanStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = colors.inkSecondary,
+                        ),
+                    ) {
                         append(node.text)
                     }
                     if (start < length) codeRanges += start until length
@@ -621,7 +649,7 @@ private fun AnnotatedString.Builder.appendInlineNodes(
                 append(node.text)
             }
 
-            is InlineNode.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+            is InlineNode.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.Medium)) {
                 appendInlineNodes(node.children, colors, onFileClick, codeRanges)
             }
 
