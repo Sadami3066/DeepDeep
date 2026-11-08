@@ -20,8 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
-
 enum class ThemePreset { SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }
 
 @Immutable
@@ -84,35 +82,6 @@ private val Light = DeepDeepColors(
     codeNumber = Color(0xFFB45309),
     codeFunction = Color(0xFF1D4ED8),
     codeType = Color(0xFF0E7490),
-)
-
-private val Dark = DeepDeepColors(
-    dark = true,
-    paper = Color(0xFF070D0F),
-    surface = Color(0xFF0F1A1D),
-    raised = Color(0xFF111F22),
-    ink = Color(0xFFF4F7F8),
-    inkSecondary = Color(0xFFB7C7CB),
-    inkTertiary = Color(0xFF8A9BA0),
-    accent = Color(0xFF8AB4F8),
-    accentPressed = Color(0xFFA8C7FA),
-    onAccent = Color(0xFF07101F),
-    accentSoft = Color(0xFF12233D),
-    danger = Color(0xFFFF8A80),
-    success = Color(0xFF81C995),
-    warning = Color(0xFFF2C66D),
-    hairline = Color(0xFF1C3034),
-    wash = Color(0xFF142428),
-    composer = Color(0xFF0F1A1D),
-    scrim = Color(0x99000000),
-    codeBackground = Color(0x22F4F7F8),
-    inlineCodeBackground = Color(0x1FFFFFFF),
-    codeKeyword = Color(0xFFC4A7F5),
-    codeString = Color(0xFF8FD694),
-    codeComment = Color(0xFF8A9BA0),
-    codeNumber = Color(0xFFE8B67A),
-    codeFunction = Color(0xFF8AB4F8),
-    codeType = Color(0xFF7FD1E0),
 )
 
 val LocalDeepDeepColors = staticCompositionLocalOf { Light }
@@ -351,27 +320,16 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 }
 @Composable
 fun DeepDeepTheme(
-    mode: ThemeMode = ThemeMode.SYSTEM,
     preset: ThemePreset = ThemePreset.SYSTEM,
     fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
-    val dark = when (preset) {
-        ThemePreset.SYSTEM -> systemDark
-        ThemePreset.SANTORINI -> false
-        ThemePreset.OCEANIC -> true
-        ThemePreset.DEEP_DEEP -> when (mode) {
-            ThemeMode.SYSTEM -> systemDark
-            ThemeMode.LIGHT -> false
-            ThemeMode.DARK -> true
-        }
-    }
     val colors = when (preset) {
-        ThemePreset.SYSTEM -> if (dark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
+        ThemePreset.SYSTEM -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
         ThemePreset.SANTORINI -> DdTheme.lightSantorini()
         ThemePreset.OCEANIC -> DdTheme.darkOceanic()
-        ThemePreset.DEEP_DEEP -> if (dark) Dark else Light
+        ThemePreset.DEEP_DEEP -> Light
     }
     DdFonts.apply(fontStyle)
     val typography = remember(fontStyle) { deepDeepTypography() }

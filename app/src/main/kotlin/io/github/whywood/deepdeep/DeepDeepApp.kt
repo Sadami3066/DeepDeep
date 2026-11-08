@@ -7,7 +7,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.design.DdFontStyle
-import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
@@ -20,7 +19,6 @@ import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
 @Composable
 internal fun DeepDeepApp(
     graph: AppDependencies,
-    theme: ThemeMode,
     themePreset: ThemePreset,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
@@ -31,7 +29,6 @@ internal fun DeepDeepApp(
     onShareConsumed: () -> Unit = {},
     onActiveSessionChanged: (String?) -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
-    onThemeChange: (ThemeMode) -> Unit,
     onThemePresetChange: (ThemePreset) -> Unit,
 ) {
     val chatUiStrings = rememberShellConversationStrings()
@@ -53,7 +50,6 @@ internal fun DeepDeepApp(
             graph = graph,
             chatViewModel = chatViewModel,
             state = state,
-            theme = theme,
             themePreset = themePreset,
             fontStyle = fontStyle,
             openSessionId = openSessionId,
@@ -63,7 +59,6 @@ internal fun DeepDeepApp(
             pendingShare = pendingShare,
             onShareConsumed = onShareConsumed,
             onFontStyleChange = onFontStyleChange,
-            onThemeChange = onThemeChange,
             onThemePresetChange = onThemePresetChange,
         )
     }

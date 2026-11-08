@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.ui.navigation
 import androidx.compose.ui.graphics.ImageBitmap
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.design.DdFontStyle
-import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.ModelConfig
@@ -19,8 +18,6 @@ internal data class ChatRouteData(
 )
 
 internal data class ShellRouteUi(
-    val theme: ThemeMode,
-    val onThemeChange: (ThemeMode) -> Unit,
     val themePreset: ThemePreset,
     val onThemePresetChange: (ThemePreset) -> Unit,
     val fontStyle: DdFontStyle,

@@ -35,7 +35,6 @@ import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.session.SessionExporter
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.design.DdFontStyle
-import io.github.whywood.deepdeep.design.ThemeMode
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
@@ -85,7 +84,6 @@ internal fun AppShell(
     graph: AppDependencies,
     chatViewModel: ChatViewModel,
     state: ChatUiState,
-    theme: ThemeMode,
     themePreset: ThemePreset,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
@@ -95,7 +93,6 @@ internal fun AppShell(
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
-    onThemeChange: (ThemeMode) -> Unit,
     onThemePresetChange: (ThemePreset) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -553,8 +550,6 @@ internal fun AppShell(
                         archivedCount = state.archivedCount,
                     ),
                     ui = ShellRouteUi(
-                        theme = theme,
-                        onThemeChange = onThemeChange,
                         themePreset = themePreset,
                         onThemePresetChange = onThemePresetChange,
                         fontStyle = fontStyle,
