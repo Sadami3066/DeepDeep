@@ -12,7 +12,7 @@
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
-| `NetworkPluginService.kt` | `dev.pi.ai.http.HttpTransport`：`request`（2 MiB 截断）与 `download`（512 MiB 上限、sha256 校验、进度回调） |
+| `NetworkPluginService.kt` | `io.github.whywood.deepdeep.sdk.ai.http.HttpTransport`：`request`（2 MiB 截断）与 `download`（512 MiB 上限、sha256 校验、进度回调） |
 | `FilePluginService.kt` | 以插件 data 目录为根的读写/列举/删除；`workspaceDir`/`sharedStorageDir` 只作属性暴露，绝对路径原样放行 |
 | `SessionPluginService.kt` | `ConversationQueries`/`SessionCommands`：会话列表、当前会话观察（同时观察 active 与 busySessionIds）、向会话发消息 |
 | `JobPluginService.kt` | `runtime.JobRegistry`：启动/读取/列表/终止后台任务，`sessionId` 缺省取当前会话 |

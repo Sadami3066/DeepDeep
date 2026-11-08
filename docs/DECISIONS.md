@@ -551,3 +551,16 @@ Milo Modern 图标从 semibold 换成 regular 档（256 画布、线宽约 1.75d
 - 真机复现：同一手机、同一网络（开或关 VPN、WiFi 与 5G 都试过），Chrome 可正常打开公网 dsh-mobile 页面，而 curl 与 OkHttp 的 TLS 握手被直接重置（`SSL_connect: Connection reset by peer` / `SSLHandshakeException: connection closed`，VPN 与证书均排除）→ 网络侧按 TLS 客户端指纹过滤，不是 App 逻辑问题。
 - 因此远程（Public）入口的配对、续期、探测改走隐藏 WebView 的 Chromium 栈：加载网关同源页面后执行 `fetch`（自动带正确 Origin），配对/续期留下的 cookie 由 `CookieManager` 持久化，连接页 WebView 直接复用；局域网（Native）入口保留 OkHttp + CA pin，超时与证书策略不变。
 - 代价：浏览器通道依赖 WebView 可用与页面同源策略，单测只能覆盖 JSON/模型部分，配对与探测靠真机验收；`auth` 字段随入口持久化，远程入口不再需要本机保存 device token。
+
+## 146. 系统提示词改由 SDK 生成
+
+- App 不再写 `SYSTEM.md`、不再注入工具规则段：`PiSessionEngine` 删除 `ensureSystemPromptFile` 与 `buildToolRuleSection`（仅保留旧文件清理），删除 `runtime/SystemPrompt.kt` 与对应测试；系统提示词由 SDK `buildSystemPrompt` 生成，extra 段顺序为 memory → paths → plugin_context → initial/extra。
+- SDK 默认文案改为 DeepDeep 身份（设备任务、默认中文、简洁、授权与数据边界、失败先查因），`TOOLS_TRAILER` 改为提示可用 `tool_search` 找未列出的工具；插件 `promptBody` 仍由宿主注入 `<plugins>`。
+- 影响：tool `promptSnippet` 通道重新生效；`rules` 段改由 SDK 汇总各工具 `promptGuidelines`，语义优化直接改工具定义。
+
+## 147. SDK 改名 DeepDeep-KotlinSDK 并改走 JitPack
+
+- GitHub 仓库 `pi2kotlin` 改名 `DeepDeep-KotlinSDK`（公开）；包名与发布坐标迁移到 `io.github.whywood.deepdeep.sdk`，版本 0.6.0，源码目录/import/namespace/group/examples 全部同步。
+- JitPack 构建通过：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.0`（其余 `pi-ai`/`pi-agent`/`pi-mcp` 及 `-jvm` 变体同组）。
+- App 删除 `SyncPiSdk` zip 同步任务与 `gradle/pi-sdk.sha256`，改用 JitPack 依赖；`settings.gradle.kts` 去掉 `dev.pi` 专用仓库与本地 m2 仓库。
+- plugins 仓库移除 `interop`/`template`/`deepdeep-memory` 三个边界插件及相关文档/脚本引用；该仓库无远端，仅本地提交。

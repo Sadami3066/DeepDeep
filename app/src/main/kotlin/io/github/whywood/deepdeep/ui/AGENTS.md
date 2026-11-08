@@ -29,7 +29,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 ## 要点
 
 - 包边界（根 `build.gradle.kts` 的 `verifyPackageBoundaries` 会查）：普通 `ui/<feature>` 之间禁止互相 import，只有 `common`、`navigation` 例外；`ui.navigation` 与 `ui.shell` 是组合层，可 import 各 feature；`ui.common.chat` 是共享聊天渲染层，不 import 任何 `ui.<feature>`；`ui` 下禁止 import `AppGraph`/`DeepDeepApplication`（装配只在 app 根层）或 `assistant`，`assistant`/`floating` 也禁止 import `ui.chat`（共用组件走 `ui.common.chat`）。既有违规在 `gradle/package-boundaries.allow` 里，只许减少不许新增。
-- 页面注册在 `navigation/`：`AppDestination` 加路由、`routes/` 下写页面装配、`AppRoutes.kt` 的 `AppRouteContent(destination, AppRouteHost)` 分发。`AppRouteHost` 是唯一拿 `AppDependencies` 的装配上下文；Screen 通过参数收 state 与回调，不自己取依赖，也不直接调 dev.pi SDK（数据与事件都来自 runtime）。
+- 页面注册在 `navigation/`：`AppDestination` 加路由、`routes/` 下写页面装配、`AppRoutes.kt` 的 `AppRouteContent(destination, AppRouteHost)` 分发。`AppRouteHost` 是唯一拿 `AppDependencies` 的装配上下文；Screen 通过参数收 state 与回调，不自己取依赖，也不直接调 DeepDeep SDK（数据与事件都来自 runtime）。
 - 多页子包把加载与操作放 `XxxStateHolder`（mcp、plugins、skills、timers、miniapp），Screen 保持薄；过滤/解析等纯逻辑抽成顶层函数以便单测。
 - 用户可见文案全部在 `res/values*/strings_*.xml`（默认中文 + `values-en`），视觉只用 `:design` 的 `deepDeepColors`/`DdType`/`Dd*` 组件，不自造颜色与字号。
 
