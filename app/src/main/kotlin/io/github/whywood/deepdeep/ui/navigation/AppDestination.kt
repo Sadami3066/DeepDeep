@@ -101,10 +101,6 @@ sealed interface AppDestination {
         override val depth: Int = 3
     }
 
-    data object MarketSettings : AppDestination {
-        override val routeKey: String = "settings/market"
-        override val depth: Int = 2
-    }
 
     data object Search : AppDestination {
         override val routeKey: String = "search"
@@ -200,7 +196,6 @@ sealed interface AppDestination {
             routeKey == AndroidSettings.routeKey -> AndroidSettings
             routeKey == AgentSettings.routeKey -> AgentSettings
             routeKey == WebSearch.routeKey -> WebSearch
-            routeKey == MarketSettings.routeKey -> MarketSettings
             routeKey == Search.routeKey -> Search
             routeKey == Skills.routeKey -> Skills
             routeKey == Mcp.routeKey -> Mcp

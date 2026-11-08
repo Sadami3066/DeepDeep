@@ -77,6 +77,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -391,6 +392,8 @@ private fun PluginsContent(
                         }
                     }
                 }
+            } else {
+                MarketRefreshButton(repository = marketRepository)
             }
         }
         DdSegmented(

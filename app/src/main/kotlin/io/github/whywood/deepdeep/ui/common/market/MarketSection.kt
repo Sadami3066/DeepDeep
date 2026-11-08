@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -50,6 +52,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -81,6 +84,7 @@ internal fun MarketTab(
     modifier: Modifier = Modifier,
     onInstalled: suspend () -> Unit = {},
     onAuthorizeMcp: (String) -> Unit = {},
+    showIcons: Boolean = true,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -207,6 +211,7 @@ internal fun MarketTab(
                                 status = marketEntryStatus(entry, installState, repository.installedVersion(entry)),
                                 progress = (installState as? MarketInstallState.Installing)?.progress,
                                 iconLoader = iconLoader,
+                                showIcons = showIcons,
                                 onClick = { selectedId = entry.id },
                                 modifier = Modifier.testTag("${testTagPrefix}_market_row_${entry.id}"),
                             )
@@ -339,6 +344,7 @@ private fun MarketRow(
     status: MarketEntryStatus,
     progress: Int?,
     iconLoader: MarketIconLoader,
+    showIcons: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -357,8 +363,10 @@ private fun MarketRow(
                 .padding(horizontal = 4.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MarketEntryIcon(entry = entry, loader = iconLoader)
-            Spacer(Modifier.width(DdSpacing.Md))
+            if (showIcons) {
+                MarketEntryIcon(entry = entry, loader = iconLoader)
+                Spacer(Modifier.width(DdSpacing.Md))
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     text = name,
@@ -671,5 +679,36 @@ private fun MarketLinkAction(
 private fun openMarketUrl(context: Context, url: String) {
     runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+}
+
+@Composable
+internal fun MarketRefreshButton(
+    repository: MarketRepository,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(false) }
+    if (refreshing) {
+        Box(modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            DdSpinner()
+        }
+    } else {
+        DdIconButton(
+            icon = DdIcons.Refresh,
+            onClick = {
+                scope.launch {
+                    refreshing = true
+                    try {
+                        repository.refresh(force = true)
+                    } finally {
+                        refreshing = false
+                    }
+                }
+            },
+            contentDescription = stringResource(R.string.market_refresh),
+            modifier = modifier.testTag("market_refresh"),
+            iconSize = 21.dp,
+        )
     }
 }

@@ -4,6 +4,7 @@
     <string name="market_tab_mine">Mine</string>
     <string name="market_install">Install</string>
     <string name="market_notice">The market is opening soon. Installation is not available yet.</string>
+    <string name="market_refresh">Refresh market</string>
     <string name="market_skill_polish_name">Writing polish</string>
     <string name="market_skill_polish_summary">Trim wordiness and repetition so the point reads clearly.</string>
     <string name="market_skill_polish_tags">Writing · Editing</string>
@@ -99,15 +100,6 @@
     <string name="market_mcp_confirm_message">This will add 「%1$s」 to your connectors.</string>
     <string name="market_confirm">Confirm</string>
     <string name="market_cancel">Cancel</string>
-    <string name="market_settings_title">Market</string>
-    <string name="market_settings_group">Content</string>
-    <string name="market_settings_source_label">Official source</string>
-    <string name="market_settings_check">Check for updates</string>
-    <string name="market_settings_checking">Checking for updates…</string>
-    <string name="market_settings_last_update">Last updated</string>
-    <string name="market_settings_never">Not updated yet</string>
-    <string name="market_settings_updated">Market updated</string>
-    <string name="market_settings_failed">Could not check for updates</string>
     <string name="market_detail_about">About</string>
     <string name="market_detail_info">Details</string>
     <string name="market_type_mcp">Connector</string>

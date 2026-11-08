@@ -100,7 +100,6 @@ fun SettingsScreen(
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
-    onOpenMarket: () -> Unit = {},
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
     onLanguageChange: () -> Unit = {},
@@ -163,14 +162,6 @@ fun SettingsScreen(
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.settings_agent),
-                    onClick = onOpenAgentSettings,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_agent"),
-                )
-                DdRowDivider(leadingInset = SettingsDividerInset)
-                DdListRow(
                     icon = DdIcons.Shield,
                     title = stringResource(R.string.settings_privilege),
                     value = stringResource(
@@ -183,6 +174,14 @@ fun SettingsScreen(
                     onClick = onOpenPermission,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_permission"),
+                )
+                DdRowDivider(leadingInset = SettingsDividerInset)
+                DdListRow(
+                    icon = DdIcons.Sparkles,
+                    title = stringResource(R.string.settings_agent),
+                    onClick = onOpenAgentSettings,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_agent"),
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
@@ -272,17 +271,6 @@ fun SettingsScreen(
                     onClick = onOpenScan,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_scan"),
-                )
-            }
-
-            SettingsSectionLabel(stringResource(R.string.market_settings_group))
-            DdGroupCard {
-                DdListRow(
-                    icon = DdIcons.Package,
-                    title = stringResource(R.string.market_settings_title),
-                    onClick = onOpenMarket,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_market"),
                 )
             }
 

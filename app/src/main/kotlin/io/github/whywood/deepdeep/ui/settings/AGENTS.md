@@ -13,7 +13,6 @@
 | `AndroidSettingsScreen.kt` | Android 设置：悬浮窗开关与悬浮权限申请/状态、系统助手角色与电源设置 |
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |
 | `PermissionScreen.kt` | 权限三档选择、ADB 配对、Root 探测、生效档提示 |
-| `MarketSettingsScreen.kt` | 市场设置：官方来源（只读）、检查更新、上次更新时间 |
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
 | `PrivacyScreen.kt` | 隐私说明：本地数据、Provider 通信、统计、小米云、卸载 |
 | `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情 |

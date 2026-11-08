@@ -4,6 +4,7 @@
     <string name="market_tab_mine">我的</string>
     <string name="market_install">安装</string>
     <string name="market_notice">市场内容即将开放，暂不能安装。</string>
+    <string name="market_refresh">刷新市场</string>
     <string name="market_skill_polish_name">写作润色</string>
     <string name="market_skill_polish_summary">改掉啰嗦和重复，让表达更清楚。</string>
     <string name="market_skill_polish_tags">写作 · 编辑</string>
@@ -99,15 +100,6 @@
     <string name="market_mcp_confirm_message">将把「%1$s」写入连接器配置。</string>
     <string name="market_confirm">确认</string>
     <string name="market_cancel">取消</string>
-    <string name="market_settings_title">市场</string>
-    <string name="market_settings_group">内容</string>
-    <string name="market_settings_source_label">官方来源</string>
-    <string name="market_settings_check">检查更新</string>
-    <string name="market_settings_checking">正在检查更新…</string>
-    <string name="market_settings_last_update">上次更新</string>
-    <string name="market_settings_never">尚未更新</string>
-    <string name="market_settings_updated">市场已更新</string>
-    <string name="market_settings_failed">检查更新失败</string>
     <string name="market_detail_about">简介</string>
     <string name="market_detail_info">信息</string>
     <string name="market_type_mcp">连接器</string>

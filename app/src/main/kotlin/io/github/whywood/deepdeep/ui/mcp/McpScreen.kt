@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,8 +29,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pi.mcp.config.McpServerConfig
@@ -38,9 +42,10 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -51,11 +56,17 @@ import io.github.whywood.deepdeep.runtime.McpOAuthService
 import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
+import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
+import io.github.whywood.deepdeep.market.MarketState
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MINE
+import io.github.whywood.deepdeep.ui.common.market.MarketEntryIcon
+import io.github.whywood.deepdeep.ui.common.market.MarketIconLoader
+import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
+import io.github.whywood.deepdeep.ui.common.market.rememberMarketIconLoader
 import java.net.URI
 import kotlinx.coroutines.launch
 
@@ -176,6 +187,15 @@ private fun McpScreenContent(
     val error = state.error
     val visibleServers = state.visibleServers
     val showMarket = tab == MARKET_TAB_MARKET
+    val marketState by marketRepository.state.collectAsStateWithLifecycle()
+    val marketEntriesByUrl = remember(marketState) {
+        (marketState as? MarketState.Ready)?.let {
+            marketRepository.entries(MarketEntryType.Mcp)
+                .mapNotNull { entry -> entry.mcp?.url?.let { url -> url to entry } }
+                .toMap()
+        }.orEmpty()
+    }
+    val iconLoader = rememberMarketIconLoader()
     Column(
         modifier
             .fillMaxSize()
@@ -219,6 +239,8 @@ private fun McpScreenContent(
                     tint = colors.ink,
                     iconSize = 21.dp,
                 )
+            } else {
+                MarketRefreshButton(repository = marketRepository)
             }
         }
         DdSegmented(
@@ -311,6 +333,8 @@ private fun McpScreenContent(
                                     entry = entry,
                                     probeResult = state.probes[entry.name],
                                     switchEnabled = state.toggleEnabled,
+                                    marketEntry = marketEntriesByUrl[(entry.config as? McpServerConfig.Http)?.url],
+                                    iconLoader = iconLoader,
                                     onOpen = { onOpen(entry) },
                                     onToggle = { enabled -> onToggle(entry, enabled) },
                                 )
@@ -375,15 +399,65 @@ private fun McpServerRow(
     entry: McpServerEntry,
     probeResult: McpProbeResult?,
     switchEnabled: Boolean,
+    marketEntry: MarketEntry?,
+    iconLoader: MarketIconLoader,
     onOpen: () -> Unit,
     onToggle: (Boolean) -> Unit,
 ) {
-    DdListRow(
-        title = entry.name,
-        subtitle = rowSubtitle(entry, probeResult),
+    val colors = deepDeepColors()
+    val status = rowStatus(entry, probeResult)
+    DdPressable(
         onClick = onOpen,
-        modifier = Modifier.testTag("mcp_row_${entry.name}").heightIn(min = 64.dp),
-        trailing = {
+        modifier = Modifier.fillMaxWidth().testTag("mcp_row_${entry.name}"),
+        shape = DdShapes.Row,
+        contentDescription = entry.name,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (marketEntry != null) {
+                MarketEntryIcon(entry = marketEntry, loader = iconLoader, size = 40.dp)
+            } else {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    DdIcon(icon = DdIcons.Plug, tint = colors.inkTertiary, size = 22.dp)
+                }
+            }
+            Spacer(Modifier.width(DdSpacing.Md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    style = DdType.body,
+                    color = if (entry.config.enabled) colors.ink else colors.inkTertiary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val description = rowDescription(entry)
+                if (description.isNotBlank()) {
+                    Spacer(Modifier.height(DdSpacing.Xxs))
+                    Text(
+                        text = description,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.width(DdSpacing.Sm))
+            Text(
+                text = status.text,
+                style = DdType.bodySmall,
+                color = status.color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 96.dp),
+            )
+            Spacer(Modifier.width(DdSpacing.Sm))
             DdSwitch(
                 checked = entry.config.enabled,
                 onCheckedChange = onToggle,
@@ -393,23 +467,33 @@ private fun McpServerRow(
                 ),
                 modifier = Modifier.testTag("mcp_switch_${entry.name}"),
             )
-        },
-    )
+        }
+    }
 }
 
 @Composable
-private fun rowSubtitle(entry: McpServerEntry, result: McpProbeResult?): String {
-    val status = when {
-        !entry.config.enabled -> stringResource(R.string.mcp_status_disabled)
-        entry.config !is McpServerConfig.Http -> stringResource(R.string.mcp_status_unsupported)
-        result == null -> stringResource(R.string.mcp_status_untested)
-        result.state == McpProbeState.OK -> stringResource(R.string.mcp_status_ok, result.toolCount)
-        result.state == McpProbeState.AUTH_REQUIRED -> stringResource(R.string.mcp_status_auth)
-        result.state == McpProbeState.FAILED -> stringResource(R.string.mcp_status_failed)
-        else -> stringResource(R.string.mcp_status_unsupported)
+private fun rowStatus(entry: McpServerEntry, result: McpProbeResult?): McpRowStatus {
+    val colors = deepDeepColors()
+    val styled = when {
+        !entry.config.enabled -> stringResource(R.string.mcp_status_disabled) to colors.inkTertiary
+        entry.config !is McpServerConfig.Http -> stringResource(R.string.mcp_status_unsupported) to colors.inkTertiary
+        result == null -> stringResource(R.string.mcp_status_untested) to colors.inkTertiary
+        result.state == McpProbeState.OK -> stringResource(R.string.mcp_row_tools, result.toolCount) to colors.success
+        result.state == McpProbeState.AUTH_REQUIRED -> stringResource(R.string.mcp_status_auth) to colors.warning
+        result.state == McpProbeState.FAILED -> stringResource(R.string.mcp_status_failed) to colors.danger
+        else -> stringResource(R.string.mcp_status_unsupported) to colors.inkTertiary
     }
-    val host = (entry.config as? McpServerConfig.Http)?.let { urlHost(it.url) }.orEmpty()
-    return if (host.isBlank()) status else stringResource(R.string.mcp_row_subtitle, host, status)
+    return McpRowStatus(styled.first, styled.second)
+}
+
+private data class McpRowStatus(
+    val text: String,
+    val color: Color,
+)
+
+private fun rowDescription(entry: McpServerEntry): String {
+    val http = entry.config as? McpServerConfig.Http ?: return ""
+    return http.description?.takeIf { it.isNotBlank() } ?: urlHost(http.url)
 }
 
 private fun urlHost(url: String): String = runCatching { URI(url).host }.getOrNull().orEmpty()

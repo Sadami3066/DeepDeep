@@ -9,6 +9,10 @@ internal class ScanStrategyStore(context: Context) {
 
     val file: File = File(File(appContext.filesDir, "scan"), "strategies.json")
 
+    init {
+        ensureCookbook()
+    }
+
     private val repository = ScanStrategyRepository(::builtinText, file)
 
     fun load(force: Boolean = false): ScanStrategyRepository.Snapshot {
@@ -53,6 +57,17 @@ internal class ScanStrategyStore(context: Context) {
     private fun builtinText(): String? = runCatching {
         appContext.assets.open(ASSET_PATH).bufferedReader().use { it.readText() }
     }.getOrNull()
+
+    private fun ensureCookbook() {
+        val target = File(file.parentFile, "cookbook.md")
+        if (target.isFile) return
+        runCatching {
+            target.parentFile?.mkdirs()
+            appContext.assets.open("scan/cookbook.md").use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+        }
+    }
 
     private data class Cached(val signature: Long, val snapshot: ScanStrategyRepository.Snapshot)
 

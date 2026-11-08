@@ -73,6 +73,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -218,6 +219,8 @@ private fun SkillsContent(
                         iconSize = 21.dp,
                     )
                 }
+            } else {
+                MarketRefreshButton(repository = marketRepository)
             }
         }
         DdSegmented(
@@ -249,6 +252,7 @@ private fun SkillsContent(
                 testTagPrefix = "skills",
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 onInstalled = onMarketInstalled,
+                showIcons = false,
             )
         } else {
             LazyColumn(
@@ -451,15 +455,10 @@ private fun SkillsGroup(
                 DdListRow(
                     title = skill.name,
                     subtitle = skill.description.takeIf { it.isNotBlank() },
-                    subtitleMaxLines = 2,
-                    icon = DdIcons.Sparkles,
+                    subtitleMaxLines = 1,
                     onClick = { onOpen(skill) },
-                    modifier = Modifier.testTag("skill_${skill.id}"),
+                    modifier = Modifier.heightIn(min = 64.dp).testTag("skill_${skill.id}"),
                     trailing = {
-                        if (skill.disableModelInvocation) {
-                            ManualTag()
-                            Spacer(Modifier.width(10.dp))
-                        }
                         DdSwitch(
                             checked = skill.globalEnabled,
                             onCheckedChange = { onToggle(skill, it) },

@@ -73,7 +73,6 @@ internal fun SettingsRoute(
         onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
         onOpenFonts = { navigator.push(AppDestination.Fonts) },
         onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
-        onOpenMarket = { navigator.push(AppDestination.MarketSettings) },
         archivedCount = archivedCount,
         onOpenArchived = { navigator.push(AppDestination.Archived) },
         onLanguageChange = { dependencies.pluginManager.refresh() },
