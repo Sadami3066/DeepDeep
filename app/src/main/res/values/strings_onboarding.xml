@@ -33,7 +33,7 @@
     <string name="onboarding_provider_subtitle">选择一家服务商，就可以开始聊天了。</string>
     <string name="onboarding_provider_section">服务商</string>
     <string name="onboarding_provider_recommended">推荐</string>
-    <string name="onboarding_provider_deepseek_body">速度较快，价格实惠，中文表现出色</string>
+    <string name="onboarding_provider_deepseek_body">速度较快，价格实惠</string>
     <string name="onboarding_provider_models">%1$d 个模型</string>
     <string name="onboarding_provider_choose_other">选择其他服务商</string>
     <string name="onboarding_provider_api_key_label">API Key</string>

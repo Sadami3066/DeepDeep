@@ -33,7 +33,7 @@
     <string name="onboarding_provider_subtitle">Choose a provider to start chatting.</string>
     <string name="onboarding_provider_section">Provider</string>
     <string name="onboarding_provider_recommended">Recommended</string>
-    <string name="onboarding_provider_deepseek_body">Fast, affordable, and strong at Chinese</string>
+    <string name="onboarding_provider_deepseek_body">Fast and affordable</string>
     <string name="onboarding_provider_models">Models: %1$d</string>
     <string name="onboarding_provider_choose_other">Choose another provider</string>
     <string name="onboarding_provider_api_key_label">API key</string>
