@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -42,8 +43,10 @@ internal class MarketIconLoader(
     private val http: OkHttpClient = defaultHttpClient(),
 ) {
     private val dir = File(File(context.applicationContext.filesDir, MarketDefaults.MARKET_DIR), "icons")
-    private val cache = HashMap<String, ImageBitmap?>()
+    private val cache = ConcurrentHashMap<String, ImageBitmap?>()
     private val mutex = Mutex()
+
+    fun cached(icon: String?): ImageBitmap? = marketIconUrl(icon)?.let { cache[it] }
 
     suspend fun load(icon: String?): ImageBitmap? {
         val url = marketIconUrl(icon) ?: return null
@@ -87,8 +90,15 @@ internal class MarketIconLoader(
 
     private fun fileFor(url: String): File = File(dir, sha256(url))
 
-    private companion object {
-        fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    companion object {
+        @Volatile private var shared: MarketIconLoader? = null
+
+        fun shared(context: Context): MarketIconLoader =
+            shared ?: synchronized(this) {
+                shared ?: MarketIconLoader(context.applicationContext).also { shared = it }
+            }
+
+        private fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .build()
@@ -102,7 +112,7 @@ internal class MarketIconLoader(
 @Composable
 internal fun rememberMarketIconLoader(): MarketIconLoader {
     val context = LocalContext.current.applicationContext
-    return remember(context) { MarketIconLoader(context) }
+    return remember(context) { MarketIconLoader.shared(context) }
 }
 
 internal fun marketPlaceholderIcon(type: MarketEntryType): DdIcon = when (type) {
@@ -120,7 +130,7 @@ internal fun MarketEntryIcon(
 ) {
     val colors = deepDeepColors()
     val icon = entry.icon
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, icon) {
+    val bitmap by produceState<ImageBitmap?>(initialValue = loader.cached(icon), icon) {
         value = loader.load(icon)
     }
     val image = bitmap
