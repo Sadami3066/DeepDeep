@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 object DdTheme {
     fun lightSantorini(): DeepDeepColors = DeepDeepColors(
         dark = false,
-        paper = Color(0xFFF4F6F8),
+        paper = Color(0xFFF7F8F8),
         surface = Color(0xFFFFFFFF),
         raised = Color(0xFFFFFFFF),
         ink = Color(0xFF1E3A47),
@@ -18,8 +18,8 @@ object DdTheme {
         danger = Color(0xFFB3261E),
         success = Color(0xFF2E7D5B),
         warning = Color(0xFFB26A00),
-        hairline = Color(0xFFE4ECF5),
-        wash = Color(0xFFF2F8FC),
+        hairline = Color(0xFFE2E5E7),
+        wash = Color(0xFFF0F3F5),
         composer = Color(0xFFFFFFFF),
         scrim = Color(0x521E3A47),
         codeBackground = Color(0x0F0078D7),

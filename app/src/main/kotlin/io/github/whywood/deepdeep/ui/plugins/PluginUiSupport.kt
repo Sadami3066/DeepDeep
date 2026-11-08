@@ -2,21 +2,15 @@ package io.github.whywood.deepdeep.ui.plugins
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -27,10 +21,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.LanguagePreferences
+import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
-import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
@@ -88,16 +81,30 @@ private fun rememberPluginBitmap(assetsDir: File?, path: String, size: Dp): Imag
     val density = LocalDensity.current
     val targetPx = with(density) { size.roundToPx() }.coerceAtLeast(1)
     val file = remember(assetsDir, path) { File(assetsDir, path).takeIf { it.isFile } }
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = file, key2 = targetPx) {
-        value = if (file == null) {
-            null
-        } else {
-            withContext(Dispatchers.IO) {
-                runCatching { decodePluginBitmap(file, targetPx) }.getOrNull()
-            }
+    val cacheKey = remember(file, targetPx) { file?.let { it.absolutePath + "|" + targetPx } }
+    val cached = remember(cacheKey) { cacheKey?.let { pluginBitmapCache.get(it) } }
+    val bitmap by produceState<ImageBitmap?>(initialValue = cached, key1 = file, key2 = targetPx) {
+        if (file == null) {
+            value = null
+            return@produceState
         }
+        val key = file.absolutePath + "|" + targetPx
+        val hit = pluginBitmapCache.get(key)
+        if (hit != null) {
+            value = hit
+            return@produceState
+        }
+        val decoded = withContext(Dispatchers.IO) {
+            runCatching { decodePluginBitmap(file, targetPx) }.getOrNull()
+        }
+        if (decoded != null) pluginBitmapCache.put(key, decoded)
+        value = decoded
     }
     return bitmap
+}
+
+private val pluginBitmapCache = object : LruCache<String, ImageBitmap>(24) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = 1
 }
 
 private fun decodePluginBitmap(file: File, targetPx: Int): ImageBitmap? {
@@ -158,15 +165,5 @@ internal fun PluginGroup(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = deepDeepColors()
-    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
-        Column(
-            modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(colors.surface)
-                .padding(vertical = 4.dp),
-            content = content,
-        )
-    }
+    DdGroupCard(modifier = modifier, content = content)
 }
