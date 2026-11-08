@@ -399,7 +399,7 @@ PluginTool(
 
 `DEFERRED` 工具不会常驻系统提示，只出现在宿主 `tool_search` 的目录里。模型调用 `tool_search(query)` 拿到工具名与参数说明后，再用 `tool_execute(name, arguments)` 执行，宿主不会把工具加载进会话。是否折叠由插件自己决定；插件也可以在页面里提供开关，通过 `requestContributionsRefresh()` 在新会话生效（当前 run 的贡献集合在 run 开始时冻结）。
 
-宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`/`ls`/`grep`/`find`；App 自带工具 `ask_user_question`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`arrange_calendar`/`screen_*`/`virtual_screen`；宿主按需工具 `tool_search`/`tool_execute` 与 SDK 的 `mcp_*`；以及所有 `mcp__` 前缀。
+宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`；App 自带工具 `ask_user_question`/`present`/`adb_shell`/`root_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`calendar`/`screen_*`/`virtual_screen`/`todo_write`；宿主按需工具 `tool_search`/`tool_execute` 与 SDK 的 `list_mcp_resources`/`list_mcp_resource_templates`/`read_mcp_resource`；以及所有 `mcp__` 前缀。
 
 `PluginToolCall`：
 

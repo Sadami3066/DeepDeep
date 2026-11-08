@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host
 
 internal object HostToolNames {
-    private val engine = setOf("read", "write", "edit", "bash", "ls", "grep", "find")
+    private val engine = setOf("read", "write", "edit", "bash")
 
     private val hostTools = setOf(
         "ask_user_question",
@@ -24,13 +24,14 @@ internal object HostToolNames {
         "miniapp_list",
         "miniapp_delete",
         "miniapp_edit",
+        "todo_write",
         "memory_write",
         "memory_read",
         "memory_search",
         "memory_status",
         "web_search",
         "web_fetch",
-        "arrange_calendar",
+        "calendar",
         "virtual_screen",
         "screen_status",
         "screen_observe",
@@ -48,11 +49,9 @@ internal object HostToolNames {
     private val sdkTools = setOf(
         "tool_search",
         "tool_execute",
-        "mcp_loaded_tools",
-        "mcp_resource",
-        "mcp_resources",
-        "mcp_resource_templates",
-        "mcp_servers",
+        "list_mcp_resources",
+        "list_mcp_resource_templates",
+        "read_mcp_resource",
     )
 
     private val reservedPrefixes = setOf("mcp__")

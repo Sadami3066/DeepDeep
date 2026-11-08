@@ -131,10 +131,10 @@ private fun arrangeCalendarTool(
     calendar: ArrangeCalendarGateway,
     zone: ZoneId,
 ): CodingTool = CodingTool(
-    name = "arrange_calendar",
+    name = "calendar",
     description = "Read, create, update or delete calendar events in the phone calendar.",
     parameters = calendarParameters,
-    label = "arrange_calendar",
+    label = "calendar",
     promptGuidelines = listOf(ARRANGE_CALENDAR_GUIDELINE),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()

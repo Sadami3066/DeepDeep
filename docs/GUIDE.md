@@ -77,7 +77,7 @@
   - 外部插件与 App 同权限运行、没有沙箱；只用可信来源，卸载会移除插件文件、登录信息与技能
   - 官方插件（飞书、企业微信、小米云服务、中山大学教务）与第三方插件一样以 `.ddp` 分发和导入，构建仓库在宿主仓库同级
 - **屏幕操作**：App 自带能力，设置 → 权限 里的屏幕操作开关控制（默认关闭）；开关打开后会话里才有 `screen_*` 与 `virtual_screen` 工具，真正操作还需要同一页的生效权限为无线调试（ADB）或 Root 且后端可用，否则开关会提示「未生效」。原子 `screen_*` 默认并优先操作虚拟屏，主屏需显式 `target=main`；`virtual_screen(action=start|stop|status)` 管生命周期，详见「虚拟屏幕」
-- **安排**：`arrange_calendar` 读写系统日历事件与提醒；需要日历读写权限，在系统设置 → 应用 → DeepDeep 的权限页授予
+- **安排**：`calendar` 读写系统日历事件与提醒；需要日历读写权限，在系统设置 → 应用 → DeepDeep 的权限页授予
 - **飞书**：在插件页面安装官方 lark-cli、创建应用并授权账号后，读写消息、日历、云文档、云空间、邮箱与任务；应用权限与重新授权都在插件页完成
 - **企业微信**：安装官方 `wecom-cli` 后扫码授权，操作消息/邮件/文档/日程/待办
 - **小米云服务**：插件页 WebView 登录 i.mi.com，登录后按插件页的能力开关读取账号、笔记、待办、短信与通话、联系人、相册、录音；登录状态区分已验证、已失效与暂时无法验证，工具收到失效时即时刷新状态
@@ -106,7 +106,7 @@
 | 定时任务 | `timer_create` `timer_list` `timer_update` `timer_delete` |
 | 小程序 | `miniapp_create` `miniapp_load` `miniapp_list` `miniapp_delete` `miniapp_edit` |
 | 网络搜索 | `web_search` `web_fetch` |
-| 安排 | `arrange_calendar` |
+| 安排 | `calendar` |
 | 屏幕操作（需开关） | `screen_status` `screen_observe` `screen_screenshot` `screen_list_apps` `screen_launch` `screen_tap` `screen_swipe` `screen_scroll` `screen_type` `screen_key` `screen_wait` |
 | 虚拟屏生命周期（同上） | `virtual_screen` |
 | 无线调试（ADB，可选） | `adb_shell` |

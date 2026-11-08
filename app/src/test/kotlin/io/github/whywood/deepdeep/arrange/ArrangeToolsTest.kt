@@ -29,7 +29,7 @@ class ArrangeToolsTest {
 
     @Test
     fun exposesOnlyCalendarTool() {
-        assertEquals(listOf("arrange_calendar"), tools.map { it.name })
+        assertEquals(listOf("calendar"), tools.map { it.name })
     }
 
     @Test

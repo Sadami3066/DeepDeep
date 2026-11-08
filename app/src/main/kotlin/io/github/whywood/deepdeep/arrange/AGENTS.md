@@ -1,12 +1,12 @@
 # arrange · 系统日历
 
-`arrange_calendar` 的 App 自带工具实现：直接读写系统日历与提醒；工具在 `graph/RuntimeGraph` 的 `AppToolContext` 装配。
+`calendar` 的 App 自带工具实现：直接读写系统日历与提醒；工具在 `graph/RuntimeGraph` 的 `AppToolContext` 装配。
 
 ## 文件
 
 | 文件 | 职责 |
 |---|---|
-| `ArrangeTools.kt` | `arrange_calendar` 工具：参数解析、动作分发与 JSON 结果 |
+| `ArrangeTools.kt` | `calendar` 工具：参数解析、动作分发与 JSON 结果 |
 | `ArrangeCalendar.kt` | 系统日历网关（ContentResolver 实现）与事件/补丁/范围模型 |
 | `ArrangeCalendarWriter.kt` | 创建/更新事务与提醒回滚 |
 | `ArrangeRequests.kt` | 时间解析/格式化与文本长度限制 |
