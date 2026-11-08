@@ -41,7 +41,6 @@ import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
-import io.github.whywood.deepdeep.design.DdIconBox
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -63,8 +62,12 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 
 @Composable
 fun DesignSystemScreen(onClose: () -> Unit) {
-    var santorini by remember { mutableStateOf(true) }
-    val colors = if (santorini) DdTheme.lightSantorini() else deepDeepColors()
+    var themeIndex by remember { mutableStateOf(0) }
+    val colors = when (themeIndex) {
+        0 -> DdTheme.lightSantorini()
+        1 -> DdTheme.darkOceanic()
+        else -> deepDeepColors()
+    }
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -95,8 +98,12 @@ fun DesignSystemScreen(onClose: () -> Unit) {
                         DdText(text = "Debug preview", style = DdType.bodySmall, color = colors.inkTertiary)
                     }
                     DdTextAction(
-                        text = if (santorini) "Santorini" else "DeepDeep",
-                        onClick = { santorini = !santorini },
+                        text = when (themeIndex) {
+                            0 -> "Santorini"
+                            1 -> "Oceanic"
+                            else -> "DeepDeep"
+                        },
+                        onClick = { themeIndex = (themeIndex + 1) % 3 },
                         color = colors.accent,
                     )
                 }
@@ -371,23 +378,20 @@ private fun ComponentsSection(colors: DeepDeepColors) {
     var searchQuery by remember { mutableStateOf("") }
     val pressSource = remember { MutableInteractionSource() }
     ShowcaseSection(title = "Components", colors = colors) {
-        ComponentGroup(title = "DdText · DdIconBox", colors = colors) {
+        ComponentGroup(title = "DdText · DdIcon", colors = colors) {
             DdText(
                 text = "DdText 封装 DdType、颜色、行数与对齐。",
                 style = DdType.body,
                 color = colors.ink,
             )
             Spacer(Modifier.height(DdSpacing.Md))
-            Row(horizontalArrangement = Arrangement.spacedBy(DdSpacing.Md)) {
-                DdIconBox(icon = DdIcons.Brain)
-                DdIconBox(icon = DdIcons.Plug, size = 44.dp, iconSize = 22.dp)
-                DdIconBox(
-                    icon = DdIcons.Shield,
-                    size = 48.dp,
-                    iconSize = 24.dp,
-                    containerColor = colors.accentSoft,
-                    tint = colors.accent,
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(DdSpacing.Lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DdIcon(icon = DdIcons.Brain, size = 20.dp, tint = colors.inkSecondary)
+                DdIcon(icon = DdIcons.Plug, size = 22.dp, tint = colors.inkSecondary)
+                DdIcon(icon = DdIcons.Shield, size = 24.dp, tint = colors.accent)
             }
         }
         ComponentGroup(title = "DdPressable · DdPrimaryButton · DdTextAction", colors = colors) {

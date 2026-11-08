@@ -31,4 +31,33 @@ object DdTheme {
         codeFunction = Color(0xFF0078D7),
         codeType = Color(0xFF0E7490),
     )
+
+    fun darkOceanic(): DeepDeepColors = DeepDeepColors(
+        dark = true,
+        paper = Color(0xFF1B2B34),
+        surface = Color(0xFF22343E),
+        raised = Color(0xFF2A3F4B),
+        ink = Color(0xFFF4F7F8),
+        inkSecondary = Color(0xFFC0CED6),
+        inkTertiary = Color(0xFF8FA6B2),
+        accent = Color(0xFF6699CC),
+        accentPressed = Color(0xFF7FB2E0),
+        onAccent = Color(0xFF0B1A22),
+        accentSoft = Color(0xFF22384A),
+        danger = Color(0xFFEC5F67),
+        success = Color(0xFF99C794),
+        warning = Color(0xFFFAC863),
+        hairline = Color(0xFF2E4450),
+        wash = Color(0xFF21333D),
+        composer = Color(0xFF1F323D),
+        scrim = Color(0x99000000),
+        codeBackground = Color(0xFF0A1A22),
+        inlineCodeBackground = Color(0xFF22343E),
+        codeKeyword = Color(0xFFC594C5),
+        codeString = Color(0xFF99C794),
+        codeComment = Color(0xFF65737E),
+        codeNumber = Color(0xFFFAC863),
+        codeFunction = Color(0xFF6699CC),
+        codeType = Color(0xFF5FB3B3),
+    )
 }

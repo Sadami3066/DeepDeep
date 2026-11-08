@@ -343,11 +343,9 @@ fun DdListRow(
                 .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIconBox(
+            DdIcon(
                 icon = leadingIcon,
-                size = 40.dp,
-                iconSize = 20.dp,
-                containerColor = iconContainerColor,
+                size = 22.dp,
                 tint = iconTint.copy(alpha = alpha),
             )
             Spacer(Modifier.width(12.dp))

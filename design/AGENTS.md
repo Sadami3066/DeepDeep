@@ -41,7 +41,8 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 - 组件只用 Compose 与本模块资源，不依赖 `:app`/`:runtime`；跨模块复用的控件先落到这里。
 - 图标：单源在 `design/icons/`（7 类分类目录 + `catalog.json` 登记），`node design/icons/gen.mjs` 生成 `res/drawable-nodpi/ic_<category>_<id>.png|xml` 与 `DdIcons.kt`，分类预览 `design/icons/preview.html`；位图取自 `assets/milo-modern-icons-200-revised/` 的 **semibold** 档（256 画布、线宽约 2.15dp、`#273140` 线稿、图形约占画布 85%），手写矢量 24 viewport、2.1dp 圆头描边，两种都由 `DdIcon` 统一 tint；运行时资源是生成物，只改 `design/icons/` 再重跑生成。
 - 圆角是 8/12/14/16/20/24/28dp 体系，可点区域按 44dp；改视觉先改 token 再改调用点。
-- 设计系统 Phase 0 新增 token 与 6 个组件（list row / group card slot / 泛型 segmented / search field / empty state / avatar），均以「新增重载 + 旧签名保留」方式扩展，避免破坏插件 ABI；圣托里尼日光主题（白底、#0078D7 主蓝、#E3F2FD 浅天蓝、#1E3A47 深青灰）由 `DdTheme.lightSantorini()` 提供，默认主题仍走 `deepDeepColors()`。
+- 不用「图标容器」：列表行、空状态、展示页等位置图标直接以线性稿呈现，不加圆角方框或圆圈底色；旧 `DdIconBox` 仅为插件兼容保留，新界面不再使用。
+- 设计系统 Phase 0 新增 token 与 6 个组件（list row / group card slot / 泛型 segmented / search field / empty state / avatar），均以「新增重载 + 旧签名保留」方式扩展，避免破坏插件 ABI；圣托里尼日光主题（白底、#0078D7 主蓝、#E3F2FD 浅天蓝、#1E3A47 深青灰）由 `DdTheme.lightSantorini()` 提供，深色镜像 `DdTheme.darkOceanic()`（#1B2B34 深海青、#6699CC 极光青、#FAC863 星群黄、#EC5F67 落霞红）提供夜间方案；默认主题仍走 `deepDeepColors()`。
 - debug 展示页在 App 侧 `ui/settings/DesignSystemScreen.kt`：Settings → 关于 → 设计系统（仅 `BuildConfig.DEBUG`），用圣托里尼主题展示 tokens 与组件状态矩阵，供视觉验收与后续逐页迁移参考。
 - 本模块无单测，改组件以编译通过 + 真机截图验收。
 - 插件 UI 直接消费本模块组件（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），所以公共组件的签名与视觉是跨仓库 API：改签名要同步 `plugin-api` ABI 与 `docs/PLUGIN_DEV.md`，并让 `plugins/` 仓库重编译。

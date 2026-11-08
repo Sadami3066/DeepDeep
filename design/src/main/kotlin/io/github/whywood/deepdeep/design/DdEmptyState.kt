@@ -40,12 +40,9 @@ fun DdEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(DdSpacing.Md),
     ) {
-        DdIconBox(
+        DdIcon(
             icon = icon,
-            size = 48.dp,
-            iconSize = 24.dp,
-            shape = CircleShape,
-            containerColor = colors.wash,
+            size = 24.dp,
             tint = colors.inkTertiary,
         )
         DdText(
