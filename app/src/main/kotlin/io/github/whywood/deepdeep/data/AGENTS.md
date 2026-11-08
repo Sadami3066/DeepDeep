@@ -29,6 +29,7 @@
 | `PersonalizationStore.kt` | 昵称、交互风格、语气与附加指令 DataStore |
 | `PrivilegePreferences.kt` | 权限档位 DataStore 与旧 root 开关迁移 |
 | `ProfileAvatarStore.kt` | 头像裁成 512 方图存 files/profile，revision 通知刷新 |
+| [remote/](remote/AGENTS.md) | 远程连接：电脑与入口模型、配对链接解析、加密凭据、证书固定、网关请求与连接协调（详见子包文档） |
 | `SharePayload.kt` | 解析系统分享的 URI/文本（去重、最多 20 条） |
 | `ShareStaging.kt` | 分享附件暂存到 cache token 目录（限额、重名、1 小时清理） |
 | `SkillArchive.kt` | 技能 zip 解析：单 SKILL.md、frontmatter、路径安全与体积限制 |

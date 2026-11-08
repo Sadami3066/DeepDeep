@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProvidersRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.RemoteConnectRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RemoteRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RuntimeSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
@@ -43,10 +44,12 @@ data class RouteSpec(
 private const val PLUGIN_DETAIL_PREFIX = "plugins/"
 private const val PLUGIN_PAGE_MARKER = "/page/"
 private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
+private const val REMOTE_CONNECT_PREFIX = "remote/"
 
 fun parentRouteKey(routeKey: String): String? = when {
     routeKey.startsWith(PLUGIN_DETAIL_PREFIX) -> "plugins"
     routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> "miniapp"
+    routeKey.startsWith(REMOTE_CONNECT_PREFIX) -> "remote"
     else -> null
 }
 
@@ -183,7 +186,18 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onBack = onBack,
         )
 
-        AppDestination.Remote -> RemoteRoute(onBack = onBack)
+        AppDestination.Remote -> RemoteRoute(
+            dependencies = dependencies,
+            navigator = host.navigator,
+            onBack = onBack,
+        )
+
+        is AppDestination.RemoteConnect -> RemoteConnectRoute(
+            computerId = destination.computerId,
+            dependencies = dependencies,
+            navigator = host.navigator,
+            onBack = onBack,
+        )
 
         is AppDestination.WorkspaceSettings -> WorkspaceSettingsRoute(
             dependencies = dependencies,

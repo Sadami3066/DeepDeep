@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
+import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
@@ -116,6 +117,8 @@ interface FeatureDependencies {
     val memory: MemoryStore
 
     val memoryRecap: MemoryRecap
+
+    val remoteConnection: RemoteConnection
 }
 
 interface ServiceDependencies {

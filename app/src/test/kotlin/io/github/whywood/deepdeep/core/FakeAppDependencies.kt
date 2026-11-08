@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
+import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
@@ -53,6 +54,8 @@ internal class FakeAppDependencies(
     override val storageMounts: StorageMountStore get() = unavailable("storageMounts")
 
     override val workspaceToolPolicies: WorkspaceToolPolicyStore get() = unavailable("workspaceToolPolicies")
+
+    override val remoteConnection: RemoteConnection get() = unavailable("remoteConnection")
 
     override suspend fun prepare() {
         unavailable("prepare")

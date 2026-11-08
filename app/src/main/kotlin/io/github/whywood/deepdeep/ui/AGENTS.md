@@ -21,7 +21,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | [settings/](settings/AGENTS.md) | 设置各页：个性化、权限、Provider、运行环境等 |
 | `shell/` | 外壳层：`AppShell`（导航/聊天 base）、`AppOverlays`（全局叠层与抽屉）、`AppOnboardingGate` 引导门控、`/` 命令解析、分享与深链进入意图 |
 | `skills/` | 技能页：市场/我的选项卡、搜索、启停、zip 安装与删除；市场安装走市场仓库 |
-| `remote/` | 远程连接页：顶栏返回与占位空态，等待后续接入 |
+| [remote/](remote/AGENTS.md) | 远程连接页：扫码/粘贴配对、电脑列表与状态、连接页 WebView 与手机端样式注入 |
 | `timers/` | 定时任务页：列表、编辑器、日期/时间选择与 cron 草稿 |
 | [miniapp/](miniapp/AGENTS.md) | 小程序：列表/查看器、WebView 与 bridge |
 | `workspaces/` | 工作区设置：项目技能、继承的全局技能/插件（`WorkspaceInheritedSheet`，关闭后新会话不注入）、AGENTS.md 编辑与工作区对话框 |

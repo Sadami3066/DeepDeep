@@ -28,19 +28,22 @@ class AppRoutesTest {
         AppDestination.Timers,
         AppDestination.Plugins,
         AppDestination.Remote,
+        AppDestination.RemoteConnect("demo-computer"),
         AppDestination.Miniapp,
         AppDestination.MiniappDetail("demo-miniapp"),
         AppDestination.PluginPage("demo-plugin", "home"),
         AppDestination.WorkspaceSettings("workspace-1"),
     )
     private val detailDestinations = allDestinations.filter {
-        it is AppDestination.PluginPage || it is AppDestination.MiniappDetail
+        it is AppDestination.PluginPage ||
+            it is AppDestination.MiniappDetail ||
+            it is AppDestination.RemoteConnect
     }
     private val rootDestinations = allDestinations - detailDestinations.toSet()
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(24, allDestinations.size)
+        assertEquals(25, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 
@@ -62,9 +65,10 @@ class AppRoutesTest {
     }
 
     @Test
-    fun onlyPluginAndMiniappDetailDeclareParentRouteKey() {
+    fun detailRoutesDeclareParentRouteKey() {
         assertEquals("plugins", routeSpec(AppDestination.PluginPage("demo-plugin", "home")).parentRouteKey)
         assertEquals("miniapp", routeSpec(AppDestination.MiniappDetail("demo-miniapp")).parentRouteKey)
+        assertEquals("remote", routeSpec(AppDestination.RemoteConnect("demo-computer")).parentRouteKey)
     }
 
     @Test
@@ -85,6 +89,14 @@ class AppRoutesTest {
         assertEquals(
             listOf(AppDestination.Miniapp, AppDestination.MiniappDetail("demo-miniapp")),
             deepLinkStack(AppDestination.MiniappDetail("demo-miniapp")),
+        )
+    }
+
+    @Test
+    fun remoteConnectDeepLinkAddsRemoteParent() {
+        assertEquals(
+            listOf(AppDestination.Remote, AppDestination.RemoteConnect("demo-computer")),
+            deepLinkStack(AppDestination.RemoteConnect("demo-computer")),
         )
     }
 

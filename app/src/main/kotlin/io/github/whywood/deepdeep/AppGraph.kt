@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
+import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.graph.DataGraph
 import io.github.whywood.deepdeep.graph.DataGraphDeps
 import io.github.whywood.deepdeep.graph.PlatformGraph
@@ -125,6 +126,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val skillCatalog: SkillCatalog get() = dataGraph.skillCatalog
     override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
     override val goalService: GoalService get() = dataGraph.goalService
+    override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
 
     override val privilege: PrivilegeController get() = platformGraph.privilege
     val adbBridge get() = platformGraph.adbBridge

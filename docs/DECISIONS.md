@@ -528,3 +528,26 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 ## 142. 应用图标线宽切换为 regular
 
 Milo Modern 图标从 semibold 换成 regular 档（256 画布、线宽约 1.75dp，原 2.15dp），62 个位图源与生成资源同步替换，8 个手绘 vector 保持 2.1dp；`DdIcons` 成员与资源名不变。此前的 semibold 决策由本条取代。
+
+## 143. 远程连接复用 dsh-mobile 网关与 WebView
+
+- 电脑端零改动：手机连接电脑上的 DSH 复用已安装的 dsh-mobile 插件（HTTPS 网关、设备配对、设备管理、手机布局），App 不实现 DSH 会话协议，也不新增第三方依赖；原「自建 gateway 协议 + 原生聊天」方案作废（改造面与 DSH 版本耦合更大）。
+- 手机端原生壳：电脑列表、扫码或粘贴配对链接、加密保存设备令牌（`EncryptedSecretStore`）、续期、状态探测、重命名/重新配对/删除；连接页用 WebView 打开 dsh-mobile 认证后的手机版页面。
+- 证书固定为 TOFU：首次配对经未认证的 `/mobile-access/ca.cer` 取 CA 并校验服务器证书链，之后只信任固定 CA；证书变化失败关闭并提示重新配对，不静默降级。
+- 样式只影响本 App：连接页注入 DeepDeep 的手机端 CSS/JS（`RemoteInjection`），电脑端与手机浏览器不受影响；不做通知推送、后台多连与分屏，一次只连一台。
+- 边界：网页 DOM/类名随 dsh-mobile/DSH 升级变化时注入需要跟随维护；配对的电脑即手机操作者权限，只连可信电脑。
+
+## 144. 远程连接补齐局域网与远程双入口
+
+- 按 dsh-mobile 官方实现补齐连接方式：配对/续期/探测请求带 `x-dsh-mobile-capabilities: installation-id`，把服务端返回的 `installationId` 作为机器身份；同一台电脑的局域网与远程入口按 `installationId` 合并成一条记录，原有 `instanceId` 仅作单入口标识。
+- 配对信任与官方对齐：局域网必定固定 CA 并校验 CA 指纹等于 gateway 的 `instanceId`；远程公开入口用系统信任，自签入口才抓取并固定 CA；证书固定后仍以 CA 验签服务器证书，失败关闭。
+- 连接与探测支持多入口：探测按局域网优先逐个入口进行，连接在某入口失败时自动尝试同电脑的其它入口；远程入口使用更长的超时（bootstrap 3s/5s、auth 10s/30s），局域网保持短超时。
+- 列表用电脑图标与状态圆点表达连接情况（绿=在线、红=离线/需重新配对、黄=证书变化）；「添加电脑」菜单新增「使用教程」，说明电脑端安装 dsh-mobile、开启移动访问、生成二维码到手机配对的完整流程。
+- 手机直连公网入口受网络策略影响（例如 SNI 过滤），App 不做绕过；局域网仍是首选，远程入口用于换网络或外出场景。
+
+
+## 145. 远程入口改用浏览器通道（WebView/Chromium）
+
+- 真机复现：同一手机、同一网络（开或关 VPN、WiFi 与 5G 都试过），Chrome 可正常打开公网 dsh-mobile 页面，而 curl 与 OkHttp 的 TLS 握手被直接重置（`SSL_connect: Connection reset by peer` / `SSLHandshakeException: connection closed`，VPN 与证书均排除）→ 网络侧按 TLS 客户端指纹过滤，不是 App 逻辑问题。
+- 因此远程（Public）入口的配对、续期、探测改走隐藏 WebView 的 Chromium 栈：加载网关同源页面后执行 `fetch`（自动带正确 Origin），配对/续期留下的 cookie 由 `CookieManager` 持久化，连接页 WebView 直接复用；局域网（Native）入口保留 OkHttp + CA pin，超时与证书策略不变。
+- 代价：浏览器通道依赖 WebView 可用与页面同源策略，单测只能覆盖 JSON/模型部分，配对与探测靠真机验收；`auth` 字段随入口持久化，远程入口不再需要本机保存 device token。

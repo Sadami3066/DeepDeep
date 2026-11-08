@@ -19,6 +19,11 @@ import io.github.whywood.deepdeep.data.ShareStaging
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
+import io.github.whywood.deepdeep.data.remote.RemoteBrowserClient
+import io.github.whywood.deepdeep.data.remote.RemoteComputerStore
+import io.github.whywood.deepdeep.data.remote.RemoteConnection
+import io.github.whywood.deepdeep.data.remote.RemoteGatewayClient
+import io.github.whywood.deepdeep.data.remote.RemoteSecrets
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.AndroidPluginStrings
@@ -65,6 +70,14 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val linuxSettings = LinuxSettingsStore(deps.appContext)
     val storageMountStore = StorageMountStore(File(deps.appContext.filesDir, "storage-mounts.json"))
     val workspaceToolPolicies = WorkspaceToolPolicyStore(File(deps.appContext.filesDir, "workspace-tool-policies.json"))
+    val remoteComputerStore = RemoteComputerStore(File(deps.appContext.filesDir, "remote-computers.json"))
+    val remoteConnection = RemoteConnection(
+        store = remoteComputerStore,
+        secrets = RemoteSecrets(secretStore),
+        browser = RemoteBrowserClient(deps.appContext),
+        client = RemoteGatewayClient(),
+        scope = deps.scope,
+    )
     val themePreferences = ThemePreferences(deps.appContext)
     val appPreferences = AppPreferences(deps.appContext)
     val voicePreferences = VoicePreferences(deps.appContext)
