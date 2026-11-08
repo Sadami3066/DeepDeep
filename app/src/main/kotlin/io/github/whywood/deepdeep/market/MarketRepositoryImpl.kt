@@ -101,14 +101,14 @@ class MarketRepositoryImpl(
         }
     }
 
-    override suspend fun install(entry: MarketEntry): Result<Unit> = installMutex.withLock {
+    override suspend fun install(entry: MarketEntry, apiKey: String?): Result<Unit> = installMutex.withLock {
         withContext(Dispatchers.IO) {
             setInstallState(entry.id, MarketInstallState.Installing(null))
             try {
                 when (entry.type) {
                     MarketEntryType.Plugin -> installPlugin(entry)
                     MarketEntryType.Skill -> installSkill(entry)
-                    MarketEntryType.Mcp -> installMcp(entry)
+                    MarketEntryType.Mcp -> installMcp(entry, apiKey)
                 }
                 refreshInstalled()
                 setInstallState(entry.id, MarketInstallState.Installed(entry.version))
@@ -184,12 +184,16 @@ class MarketRepositoryImpl(
         }
     }
 
-    private suspend fun installMcp(entry: MarketEntry) {
+    private suspend fun installMcp(entry: MarketEntry, apiKey: String?) {
         val meta = entry.mcp ?: error("MCP 配置缺失")
         if (meta.transport != "http") error("暂不支持该连接方式")
         mcpConfigStore.upsert(
             entry.id,
-            McpServerConfig.Http(url = meta.url, headers = meta.headers, description = entry.summary),
+            McpServerConfig.Http(
+                url = meta.url,
+                headers = meta.resolvedHeaders(apiKey),
+                description = entry.summary("zh"),
+            ),
         )
     }
 

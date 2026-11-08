@@ -11,7 +11,7 @@ interface MarketRepository {
 
     suspend fun refresh(force: Boolean = false): Boolean
 
-    suspend fun install(entry: MarketEntry): Result<Unit>
+    suspend fun install(entry: MarketEntry, apiKey: String? = null): Result<Unit>
 
     fun installedVersion(entry: MarketEntry): String?
 }

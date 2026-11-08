@@ -52,6 +52,7 @@ import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MINE
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.net.URI
 import kotlinx.coroutines.launch
@@ -110,6 +111,14 @@ fun McpScreen(
             onReloadSessions()
             holder.refresh()
         },
+        onAuthorizeMcp = { id ->
+            tab = MARKET_TAB_MINE
+            scope.launch {
+                holder.refresh()
+                editorName = id
+                editorOpen = true
+            }
+        },
         modifier = modifier,
     )
 
@@ -158,6 +167,7 @@ private fun McpScreenContent(
     onAdd: () -> Unit,
     marketRepository: MarketRepository,
     onMarketInstalled: suspend () -> Unit,
+    onAuthorizeMcp: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -244,6 +254,7 @@ private fun McpScreenContent(
                     query = marketQuery,
                     testTagPrefix = "mcp",
                     onInstalled = onMarketInstalled,
+                    onAuthorizeMcp = onAuthorizeMcp,
                 )
             } else {
                 if (state.notices.isNotEmpty()) {

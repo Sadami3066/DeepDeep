@@ -7,13 +7,17 @@ import java.util.Locale
 
 internal enum class MarketEntryStatus { Install, Installed, Update, Installing, Failed }
 
-internal fun filterMarketEntries(entries: List<MarketEntry>, query: String): List<MarketEntry> {
+internal fun filterMarketEntries(
+    entries: List<MarketEntry>,
+    query: String,
+    language: String,
+): List<MarketEntry> {
     val keyword = query.trim()
     if (keyword.isEmpty()) return entries
     return entries.filter { entry ->
-        entry.name.contains(keyword, ignoreCase = true) ||
-            entry.summary.contains(keyword, ignoreCase = true) ||
-            entry.tags.any { it.contains(keyword, ignoreCase = true) }
+        entry.name(language).contains(keyword, ignoreCase = true) ||
+            entry.summary(language).contains(keyword, ignoreCase = true) ||
+            entry.tags(language).any { it.contains(keyword, ignoreCase = true) }
     }
 }
 

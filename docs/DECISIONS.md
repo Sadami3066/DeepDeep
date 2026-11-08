@@ -395,3 +395,15 @@ Linux 不再作为「推荐安装」的附加组件，而是 App 自带能力：
 - 客户端：网络 → 本地缓存（`files/market`）→ 内置种子（`assets/market`）三级回退；插件走 `inspectExternal` + `installExternal`，技能走 `SkillRepository.install` 并启用，连接器走 `McpConfigStore.upsert`。
 - 内容：首批 27 条（4 插件来自本仓库构建产物，8 技能来自 obra/superpowers 与 microsoft/skills，15 个 MCP 远程服务器取自官方 Registry 并翻译说明）；社区投稿走 PR，人工审核后签名发布。
 - 已知限制：OAuth / API Key 类 MCP 条目 headers 为空，需要用户在连接器页补授权头；官方源在境内访问 GitHub Pages/Releases 可能不稳定；评分与搜索服务预留到 P2。
+
+## 126. 市场 v3：多语言、连接器授权引导与分类发布
+
+市场 P1 只支持中文硬编码文案、连接器条目装完不能完成授权，内容与签名都靠手工发版。v3 一并补齐：
+
+- schema v3：`name/summary/description` 改为 `{zh,en}` 本地化对象，`tags` 改为 `{zh,en}` 数组；解析器同时兼容 v2 的纯文本写法。
+- 连接器授权：`mcp.auth` 声明 `none / apiKey / oauth`；`apiKey` 带 `header`、`prefix`、双语 `placeholder` 与 `helpUrl`，安装时弹出令牌表单，令牌与 `resolvedHeaders()` 拼进请求头，不落市场缓存；`oauth` 安装后提示「已加入，去连接器完成授权」，自动切到「我的」并打开该服务器编辑器的登录入口。
+- UI：市场列表行压缩为「40dp 图标 + 名称 + 单行说明 + 右侧状态」，去掉行内标签；详情按简介 / 信息 / 授权 / 标签分组；文案按当前语言解析，缺失回退中文。
+- 内容仓库：27 条全部双语，图标补到 20 个（MCP 15/15）；插件与技能分别发 `plugins-20261108`、`skills-20261108` 分类 Release（MCP 不打包）；索引与签名由 CI 生成。
+- CI：`validate.yml` 在 PR 上做 schema 校验并评论失败原因；`release.yml` 在 master 上发布条目、下载并校验全部制品 size/sha256、用仓库 secret 签名、部署 GitHub Pages；Pages source 切到 GitHub Actions。
+
+限制不变：固定官方源、index ≤ 512 条 / 2MB、插件 ≤ 50MB、技能 ≤ 20MB、图标 ≤ 128KB、MCP 仅 http；community 投稿走 PR + 人工审核。

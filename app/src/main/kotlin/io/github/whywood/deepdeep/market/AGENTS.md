@@ -15,6 +15,8 @@
 
 - 官方源固定（`MarketDefaults.PAGE_BASE_URL`），不提供自定义源。
 - 签名对象是 `registry.json` 原始字节，签名文件 `registry.json.sig` 为 DER base64；公钥内嵌，keyId 需匹配。
+- schema 3 起 `name/summary/description` 为 `{zh,en}` 本地化对象、`tags` 为 `{zh,en}` 数组；parser 同时兼容 schema 2 的纯文本写法。
+- 连接器条目可带 `mcp.auth`：`none` / `apiKey`（header+prefix+placeholder+helpUrl）/ `oauth`；API Key 令牌由安装时传入，`resolvedHeaders()` 负责拼头。
 - 限额：registry ≤ 2MB、条目 ≤ 512、插件 ≤ 50MB、技能 ≤ 20MB、图标 ≤ 128KB；MCP 仅 http。
 - 离线回退顺序：网络 → 本地缓存（`files/market`）→ 内置种子（`assets/market`）。
 - 安装：插件走 `PluginManagerFacade.inspectExternal` + `installExternal`；技能走 `SkillRepository.install` + 启用 + `syncActiveSkills`；连接器走 `McpConfigStore.upsert`。

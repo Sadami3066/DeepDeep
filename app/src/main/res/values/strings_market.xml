@@ -108,4 +108,14 @@
     <string name="market_settings_never">尚未更新</string>
     <string name="market_settings_updated">市场已更新</string>
     <string name="market_settings_failed">检查更新失败</string>
+    <string name="market_detail_about">简介</string>
+    <string name="market_detail_info">信息</string>
+    <string name="market_type_mcp">连接器</string>
+    <string name="market_auth_type_apikey">访问令牌</string>
+    <string name="market_auth_type_oauth">账号授权</string>
+    <string name="market_auth_token_title">填写访问令牌</string>
+    <string name="market_auth_token_placeholder">粘贴访问令牌</string>
+    <string name="market_auth_help">了解更多</string>
+    <string name="market_oauth_hint">已加入，去连接器完成授权</string>
+    <string name="market_oauth_action">去连接器完成授权</string>
 </resources>

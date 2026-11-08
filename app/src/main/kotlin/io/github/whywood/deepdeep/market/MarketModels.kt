@@ -2,6 +2,19 @@ package io.github.whywood.deepdeep.market
 
 enum class MarketEntryType { Plugin, Skill, Mcp }
 
+data class LocalizedText(
+    val values: Map<String, String>,
+) {
+    fun resolve(language: String): String {
+        val key = language.lowercase().substringBefore('-').substringBefore('_')
+        return values[key] ?: values["zh"] ?: values.values.firstOrNull().orEmpty()
+    }
+
+    val any: String get() = resolve("zh")
+}
+
+fun LocalizedText.resolveOrDefault(): String = values["zh"] ?: values.values.firstOrNull().orEmpty()
+
 data class MarketArtifact(
     val url: String,
     val sha256: String,
@@ -19,27 +32,47 @@ data class MarketSkillMeta(
     val source: String?,
 )
 
+enum class MarketMcpAuthType { None, ApiKey, OAuth }
+
+data class MarketMcpAuth(
+    val type: MarketMcpAuthType,
+    val header: String? = null,
+    val prefix: String? = null,
+    val placeholder: LocalizedText? = null,
+    val helpUrl: String? = null,
+)
+
 data class MarketMcpMeta(
     val url: String,
     val transport: String,
     val headers: Map<String, String>,
-    val authHint: String?,
+    val authHint: LocalizedText?,
+    val auth: MarketMcpAuth? = null,
 )
 
 data class MarketEntry(
     val type: MarketEntryType,
     val id: String,
-    val name: String,
-    val summary: String,
-    val description: String,
+    val name: LocalizedText,
+    val summary: LocalizedText,
+    val description: LocalizedText,
     val icon: String?,
-    val tags: List<String>,
+    val tags: Map<String, List<String>>,
     val version: String,
     val artifact: MarketArtifact?,
     val plugin: MarketPluginMeta? = null,
     val skill: MarketSkillMeta? = null,
     val mcp: MarketMcpMeta? = null,
-)
+) {
+    fun name(language: String): String = name.resolve(language)
+
+    fun summary(language: String): String = summary.resolve(language)
+
+    fun description(language: String): String = description.resolve(language)
+
+    fun tags(language: String): List<String> =
+        tags[language.lowercase().substringBefore('-')] ?: tags["zh"] ?: tags.values.firstOrNull().orEmpty()
+}
 
 data class MarketRegistry(
     val schemaVersion: Int,
@@ -72,4 +105,16 @@ sealed interface MarketInstallState {
     data class Installing(val progress: Int?) : MarketInstallState
 
     data class Failed(val message: String) : MarketInstallState
+}
+
+internal fun MarketMcpMeta.resolvedHeaders(apiKey: String?): Map<String, String> {
+    val resolved = headers.toMutableMap()
+    val auth = auth ?: return resolved
+    if (auth.type == MarketMcpAuthType.ApiKey) {
+        val token = apiKey?.trim().orEmpty()
+        if (token.isEmpty()) error("需要填写访问令牌")
+        val header = auth.header ?: error("连接器缺少授权头配置")
+        resolved[header] = (auth.prefix.orEmpty()) + token
+    }
+    return resolved
 }

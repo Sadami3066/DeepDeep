@@ -11,13 +11,14 @@ import kotlinx.serialization.json.longOrNull
 
 internal object MarketRegistryParser {
     private val SHA256 = Regex("^[0-9a-f]{64}$")
+    private val SUPPORTED_SCHEMA = 2..3
 
     fun parse(bytes: ByteArray): MarketRegistry {
         if (bytes.size > MarketDefaults.MAX_REGISTRY_BYTES) error("市场索引过大")
         val root = runCatching { Json.parseToJsonElement(bytes.decodeToString()).jsonObject }
             .getOrElse { error("市场索引格式错误") }
         val schemaVersion = root.int("schemaVersion") ?: error("市场索引缺少 schemaVersion")
-        if (schemaVersion != 2) error("不支持的市场索引版本")
+        if (schemaVersion !in SUPPORTED_SCHEMA) error("不支持的市场索引版本")
         val generatedAt = root.string("generatedAt").orEmpty()
         val keyId = root.string("keyId").orEmpty()
         val array = root["entries"] as? JsonArray ?: error("市场索引缺少 entries")
@@ -40,11 +41,11 @@ internal object MarketRegistryParser {
             else -> error("未知的条目类型")
         }
         val id = obj.string("id")?.takeIf { it.isNotBlank() } ?: error("条目缺少 id")
-        val name = obj.string("name").orEmpty()
-        val summary = obj.string("summary").orEmpty()
-        val description = obj.string("description").orEmpty()
+        val name = parseLocalized(obj, "name")
+        val summary = parseLocalized(obj, "summary")
+        val description = parseLocalized(obj, "description")
         val icon = obj.string("icon")
-        val tags = (obj["tags"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
+        val tags = parseTags(obj["tags"])
         val version = obj.string("version").orEmpty()
         val artifact = (obj["artifact"] as? JsonObject)?.let { parseArtifact(it, type, id) }
         val plugin = (obj["plugin"] as? JsonObject)?.let {
@@ -68,7 +69,9 @@ internal object MarketRegistryParser {
                 headers = (it["headers"] as? JsonObject)?.mapValues { (_, value) ->
                     (value as? JsonPrimitive)?.contentOrNull.orEmpty()
                 }.orEmpty(),
-                authHint = it.string("authHint"),
+                authHint = (it["authHint"] as? JsonObject)?.let { hint -> parseLocalized(hint) }
+                    ?: it.string("authHint")?.let { hint -> LocalizedText(mapOf("default" to hint)) },
+                auth = (it["auth"] as? JsonObject)?.let { auth -> parseAuth(auth) },
             )
         }
         if (type == MarketEntryType.Plugin && artifact == null) error("插件条目缺少下载信息")
@@ -88,6 +91,57 @@ internal object MarketRegistryParser {
             skill = skill,
             mcp = mcp,
         )
+    }
+
+    private fun parseAuth(obj: JsonObject): MarketMcpAuth {
+        val type = when (obj.string("type")) {
+            "apiKey" -> MarketMcpAuthType.ApiKey
+            "oauth" -> MarketMcpAuthType.OAuth
+            "none", null -> MarketMcpAuthType.None
+            else -> error("未知的连接器授权方式")
+        }
+        val header = obj.string("header")
+        if (type == MarketMcpAuthType.ApiKey && header.isNullOrBlank()) error("API Key 连接器缺少 header")
+        return MarketMcpAuth(
+            type = type,
+            header = header,
+            prefix = obj.string("prefix"),
+            placeholder = (obj["placeholder"] as? JsonObject)?.let { parseLocalized(it) },
+            helpUrl = obj.string("helpUrl"),
+        )
+    }
+
+    private fun parseTags(element: kotlinx.serialization.json.JsonElement?): Map<String, List<String>> {
+        when (element) {
+            is JsonArray -> {
+                val plain = element.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                return if (plain.isEmpty()) emptyMap() else mapOf("default" to plain)
+            }
+            is JsonObject -> return element.mapNotNull { (language, value) ->
+                val array = value as? JsonArray ?: return@mapNotNull null
+                val plain = array.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                if (plain.isEmpty()) null else language to plain
+            }.toMap()
+            else -> return emptyMap()
+        }
+    }
+
+    private fun parseLocalized(obj: JsonObject, key: String): LocalizedText {
+        val element = obj[key]
+        if (element is JsonPrimitive) {
+            return LocalizedText(mapOf("default" to element.contentOrNull.orEmpty()))
+        }
+        val objectValue = element as? JsonObject ?: return LocalizedText(emptyMap())
+        return parseLocalized(objectValue)
+    }
+
+    private fun parseLocalized(obj: JsonObject): LocalizedText {
+        val values = obj.mapNotNull { (language, value) ->
+            val text = (value as? JsonPrimitive)?.contentOrNull.orEmpty()
+            if (text.isBlank()) null else language to text
+        }.toMap()
+        if (values.isEmpty()) error("缺少本地化文案")
+        return LocalizedText(values)
     }
 
     private fun parseArtifact(obj: JsonObject, type: MarketEntryType, id: String): MarketArtifact {

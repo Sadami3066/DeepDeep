@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.common.market
 
+import io.github.whywood.deepdeep.market.LocalizedText
 import io.github.whywood.deepdeep.market.MarketArtifact
 import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
@@ -10,20 +11,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MarketLogicTest {
+    private fun text(value: String) = LocalizedText(mapOf("zh" to value))
+
     private fun entry(
         id: String,
         name: String = id,
+        nameText: LocalizedText? = null,
         summary: String = "",
         tags: List<String> = emptyList(),
         version: String = "1.0.0",
     ) = MarketEntry(
         type = MarketEntryType.Skill,
         id = id,
-        name = name,
-        summary = summary,
-        description = "",
+        name = nameText ?: text(name),
+        summary = text(summary),
+        description = LocalizedText(emptyMap()),
         icon = null,
-        tags = tags,
+        tags = if (tags.isEmpty()) emptyMap() else mapOf("zh" to tags),
         version = version,
         artifact = MarketArtifact(url = "", sha256 = "", size = 2048L),
     )
@@ -31,7 +35,7 @@ class MarketLogicTest {
     @Test
     fun blankQueryKeepsAllEntries() {
         val entries = listOf(entry("a"), entry("b"))
-        assertEquals(entries, filterMarketEntries(entries, "   "))
+        assertEquals(entries, filterMarketEntries(entries, "   ", "zh"))
     }
 
     @Test
@@ -43,13 +47,41 @@ class MarketLogicTest {
             entry("d", name = "Other"),
         )
         val expected = listOf(entries[0], entries[1], entries[2])
-        assertEquals(expected, filterMarketEntries(entries, "writ"))
+        assertEquals(expected, filterMarketEntries(entries, "writ", "zh"))
     }
 
     @Test
     fun queryDoesNotMatchOtherFields() {
         val entries = listOf(entry("a", name = "Alpha"))
-        assertTrue(filterMarketEntries(entries, "alpha-id").isEmpty())
+        assertTrue(filterMarketEntries(entries, "alpha-id", "zh").isEmpty())
+    }
+
+    @Test
+    fun localizedTextResolvesRequestedLanguageAndFallsBackToChinese() {
+        val bilingual = entry(
+            id = "a",
+            nameText = LocalizedText(mapOf("zh" to "写作", "en" to "Writer")),
+        )
+        assertEquals("Writer", bilingual.name("en-US"))
+        assertEquals("写作", bilingual.name("zh"))
+        val chineseOnly = entry(id = "b", nameText = LocalizedText(mapOf("zh" to "写作")))
+        assertEquals("写作", chineseOnly.name("en"))
+    }
+
+    @Test
+    fun filterUsesLanguageSpecificText() {
+        val entries = listOf(
+            entry(id = "a", nameText = LocalizedText(mapOf("zh" to "写作", "en" to "Writer"))),
+        )
+        assertEquals(1, filterMarketEntries(entries, "writ", "en").size)
+        assertEquals(1, filterMarketEntries(entries, "写作", "zh").size)
+        assertTrue(filterMarketEntries(entries, "写作", "en").isEmpty())
+    }
+
+    @Test
+    fun tagsFallBackToChinese() {
+        val candidate = entry("a", tags = listOf("写作"))
+        assertEquals(listOf("写作"), candidate.tags("en"))
     }
 
     @Test

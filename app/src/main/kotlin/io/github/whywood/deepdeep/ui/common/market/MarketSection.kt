@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.ui.common.market
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,8 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,24 +37,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdLoadingBlock
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdTextAction
+import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketInstallState
+import io.github.whywood.deepdeep.market.MarketMcpAuthType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
 import kotlinx.coroutines.launch
 
 internal const val MARKET_TAB_MARKET = 0
+
+internal const val MARKET_TAB_MINE = 1
 
 @Composable
 internal fun MarketTab(
@@ -58,24 +70,40 @@ internal fun MarketTab(
     testTagPrefix: String,
     modifier: Modifier = Modifier,
     onInstalled: suspend () -> Unit = {},
+    onAuthorizeMcp: (String) -> Unit = {},
 ) {
     val colors = deepDeepColors()
+    val context = LocalContext.current
+    val language = LocalConfiguration.current.locales[0].language
     val state by repository.state.collectAsStateWithLifecycle()
     val installStates by repository.installStates.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val iconLoader = rememberMarketIconLoader()
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
+    var tokenId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val current = state
     val entries = if (current is MarketState.Ready) repository.entries(type) else emptyList()
-    val visible = filterMarketEntries(entries, query)
+    val visible = filterMarketEntries(entries, query, language)
     val selected = entries.firstOrNull { it.id == selectedId }
     val confirm = entries.firstOrNull { it.id == confirmId }
+    val tokenEntry = entries.firstOrNull { it.id == tokenId }
 
-    fun install(entry: MarketEntry) {
+    fun install(entry: MarketEntry, apiKey: String? = null) {
         scope.launch {
-            repository.install(entry).onSuccess { onInstalled() }
+            repository.install(entry, apiKey).onSuccess {
+                onInstalled()
+                when {
+                    apiKey != null -> tokenId = null
+                    entry.mcp?.auth?.type == MarketMcpAuthType.OAuth -> {
+                        selectedId = null
+                        confirmId = null
+                        Toast.makeText(context, R.string.market_oauth_hint, Toast.LENGTH_SHORT).show()
+                        onAuthorizeMcp(entry.id)
+                    }
+                }
+            }
         }
     }
 
@@ -144,17 +172,17 @@ internal fun MarketTab(
                     }
 
                     else -> visible.forEachIndexed { index, entry ->
-                        if (index > 0) DdHairline()
+                        if (index > 0) DdHairline(Modifier.padding(horizontal = 4.dp))
                         val installState = installStates[entry.id]
                         MarketRow(
                             entry = entry,
+                            language = language,
                             status = marketEntryStatus(entry, installState, repository.installedVersion(entry)),
                             progress = (installState as? MarketInstallState.Installing)?.progress,
                             iconLoader = iconLoader,
                             onClick = { selectedId = entry.id },
                             modifier = Modifier.testTag("${testTagPrefix}_market_row_${entry.id}"),
                         )
-                        Spacer(Modifier.height(2.dp))
                     }
                 }
                 Spacer(Modifier.height(24.dp))
@@ -165,16 +193,24 @@ internal fun MarketTab(
     if (selected != null) {
         MarketDetailSheet(
             entry = selected,
+            language = language,
             installState = installStates[selected.id],
             installedVersion = repository.installedVersion(selected),
             iconLoader = iconLoader,
             onDismiss = { selectedId = null },
             onInstall = {
-                if (selected.type == MarketEntryType.Mcp) {
-                    confirmId = selected.id
-                } else {
-                    install(selected)
+                when {
+                    selected.type != MarketEntryType.Mcp -> install(selected)
+                    selected.mcp?.auth?.type == MarketMcpAuthType.ApiKey -> {
+                        confirmId = null
+                        tokenId = selected.id
+                    }
+                    else -> confirmId = selected.id
                 }
+            },
+            onAuthorize = {
+                selectedId = null
+                onAuthorizeMcp(selected.id)
             },
             testTagPrefix = testTagPrefix,
         )
@@ -186,16 +222,16 @@ internal fun MarketTab(
             title = stringResource(R.string.market_mcp_confirm_title),
             content = {
                 Text(
-                    text = stringResource(R.string.market_mcp_confirm_message, confirm.name),
+                    text = stringResource(R.string.market_mcp_confirm_message, confirm.name(language)),
                     style = DdType.body,
-                    color = deepDeepColors().inkSecondary,
+                    color = colors.inkSecondary,
                 )
             },
             actions = {
                 DdTextAction(
                     text = stringResource(R.string.market_cancel),
                     onClick = { confirmId = null },
-                    color = deepDeepColors().inkSecondary,
+                    color = colors.inkSecondary,
                 )
                 DdTextAction(
                     text = stringResource(R.string.market_confirm),
@@ -207,11 +243,72 @@ internal fun MarketTab(
             },
         )
     }
+
+    if (tokenEntry != null) {
+        val auth = tokenEntry.mcp?.auth
+        val hint = tokenEntry.mcp?.authHint?.resolve(language)
+        val failed = installStates[tokenEntry.id] as? MarketInstallState.Failed
+        var token by rememberSaveable(tokenEntry.id) { mutableStateOf("") }
+        DdDialog(
+            onDismissRequest = { tokenId = null },
+            title = stringResource(R.string.market_auth_token_title),
+            content = {
+                Text(
+                    text = stringResource(R.string.market_mcp_confirm_message, tokenEntry.name(language)),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(12.dp))
+                DdTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    placeholder = auth?.placeholder?.resolve(language)?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.market_auth_token_placeholder),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("${testTagPrefix}_market_token_field"),
+                )
+                if (!hint.isNullOrBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = hint, style = DdType.bodySmall, color = colors.inkTertiary)
+                }
+                val helpUrl = auth?.helpUrl
+                if (!helpUrl.isNullOrBlank()) {
+                    MarketLinkAction(
+                        text = stringResource(R.string.market_auth_help),
+                        onClick = { openMarketUrl(context, helpUrl) },
+                        modifier = Modifier.testTag("${testTagPrefix}_market_token_help"),
+                    )
+                }
+                if (failed != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = failed.message,
+                        style = DdType.bodySmall,
+                        color = colors.danger,
+                    )
+                }
+            },
+            actions = {
+                DdTextAction(
+                    text = stringResource(R.string.market_cancel),
+                    onClick = { tokenId = null },
+                    color = colors.inkSecondary,
+                )
+                DdTextAction(
+                    text = stringResource(R.string.market_install),
+                    onClick = { install(tokenEntry, token) },
+                    enabled = token.isNotBlank(),
+                )
+            },
+        )
+    }
 }
 
 @Composable
 private fun MarketRow(
     entry: MarketEntry,
+    language: String,
     status: MarketEntryStatus,
     progress: Int?,
     iconLoader: MarketIconLoader,
@@ -219,42 +316,38 @@ private fun MarketRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val name = entry.name(language)
     DdPressable(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        contentDescription = entry.name,
+        contentDescription = name,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 68.dp)
+                .padding(horizontal = 4.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MarketEntryIcon(entry = entry, loader = iconLoader)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = entry.name,
-                    style = DdType.body,
+                    text = name,
+                    style = DdType.body.copy(fontWeight = FontWeight.SemiBold),
                     color = colors.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = entry.summary,
+                    text = entry.summary(language),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (entry.tags.isNotEmpty()) {
-                    Text(
-                        text = entry.tags.joinToString(" · "),
-                        style = DdType.micro,
-                        color = colors.inkTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
             Spacer(Modifier.width(8.dp))
             Text(
@@ -288,52 +381,54 @@ private fun statusLabel(status: MarketEntryStatus, progress: Int?): String = whe
 @Composable
 private fun MarketDetailSheet(
     entry: MarketEntry,
+    language: String,
     installState: MarketInstallState?,
     installedVersion: String?,
     iconLoader: MarketIconLoader,
     onDismiss: () -> Unit,
     onInstall: () -> Unit,
+    onAuthorize: () -> Unit,
     testTagPrefix: String,
 ) {
     val colors = deepDeepColors()
+    val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val maxBodyHeight = configuration.screenHeightDp.dp * 0.45f
     val status = marketEntryStatus(entry, installState, installedVersion)
     val progress = (installState as? MarketInstallState.Installing)?.progress
     val sizeText = entry.artifact?.let { formatMarketSize(it.size) }
-    val metaRows = mutableListOf<Pair<String, String>>()
-    metaRows += stringResource(R.string.market_detail_version) to entry.version
-    if (sizeText != null) {
-        metaRows += stringResource(R.string.market_detail_size) to sizeText
-    }
-    val plugin = entry.plugin
-    if (entry.type == MarketEntryType.Plugin && plugin != null) {
-        val publisher = plugin.publisherKeyId
-        if (!publisher.isNullOrBlank()) {
-            metaRows += stringResource(R.string.market_detail_publisher) to publisher
-        }
-    }
-    val skill = entry.skill
-    if (entry.type == MarketEntryType.Skill && skill != null) {
-        val license = skill.license
-        if (!license.isNullOrBlank()) {
-            metaRows += stringResource(R.string.market_detail_license) to license
-        }
-        val source = skill.source
-        if (!source.isNullOrBlank()) {
-            metaRows += stringResource(R.string.market_detail_source) to source
-        }
-    }
     val mcp = entry.mcp
-    if (entry.type == MarketEntryType.Mcp && mcp != null) {
+    val metaRows = mutableListOf<Pair<String, String>>()
+    if (entry.type != MarketEntryType.Mcp) {
+        if (entry.version.isNotBlank()) {
+            metaRows += stringResource(R.string.market_detail_version) to entry.version
+        }
+        if (sizeText != null) {
+            metaRows += stringResource(R.string.market_detail_size) to sizeText
+        }
+        val plugin = entry.plugin
+        if (entry.type == MarketEntryType.Plugin && plugin != null) {
+            val publisher = plugin.publisherKeyId
+            if (!publisher.isNullOrBlank()) {
+                metaRows += stringResource(R.string.market_detail_publisher) to publisher
+            }
+        }
+        val skill = entry.skill
+        if (entry.type == MarketEntryType.Skill && skill != null) {
+            val license = skill.license
+            if (!license.isNullOrBlank()) {
+                metaRows += stringResource(R.string.market_detail_license) to license
+            }
+            val source = skill.source
+            if (!source.isNullOrBlank()) {
+                metaRows += stringResource(R.string.market_detail_source) to source
+            }
+        }
+    } else if (mcp != null) {
         metaRows += stringResource(R.string.market_detail_endpoint) to mcp.url
         if (mcp.headers.isNotEmpty()) {
             metaRows += stringResource(R.string.market_detail_headers) to
                 mcp.headers.entries.joinToString("\n") { header -> "${header.key}: ${header.value}" }
-        }
-        val authHint = mcp.authHint
-        if (!authHint.isNullOrBlank()) {
-            metaRows += stringResource(R.string.market_detail_auth) to authHint
         }
     }
 
@@ -348,13 +443,17 @@ private fun MarketDetailSheet(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = entry.name,
+                    text = entry.name(language),
                     style = DdType.heading,
                     color = colors.ink,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val subtitle = listOfNotNull(entry.version.takeIf { it.isNotBlank() }, sizeText).joinToString(" · ")
+                val subtitle = if (entry.type == MarketEntryType.Mcp) {
+                    stringResource(R.string.market_type_mcp)
+                } else {
+                    listOfNotNull(entry.version.takeIf { it.isNotBlank() }, sizeText).joinToString(" · ")
+                }
                 if (subtitle.isNotEmpty()) {
                     Text(
                         text = subtitle,
@@ -379,38 +478,96 @@ private fun MarketDetailSheet(
                 .padding(horizontal = 24.dp)
                 .testTag("${testTagPrefix}_market_detail"),
         ) {
-            if (entry.summary.isNotBlank()) {
+            DdSectionLabel(stringResource(R.string.market_detail_about))
+            val summary = entry.summary(language)
+            if (summary.isNotBlank()) {
                 Text(
-                    text = entry.summary,
+                    text = summary,
                     style = DdType.body,
                     color = colors.inkSecondary,
                 )
             }
-            if (entry.description.isNotBlank() && entry.description != entry.summary) {
-                Spacer(Modifier.height(8.dp))
+            val description = entry.description(language)
+            if (description.isNotBlank() && description != summary) {
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = entry.description,
+                    text = description,
                     style = DdType.bodySmall,
                     color = colors.inkSecondary,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            metaRows.forEach { (label, value) ->
-                MarketMetaRow(label = label, value = value)
+            if (metaRows.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                DdSectionLabel(stringResource(R.string.market_detail_info))
+                metaRows.forEach { (label, value) ->
+                    MarketMetaRow(label = label, value = value)
+                }
             }
-            if (entry.type == MarketEntryType.Mcp) {
-                Spacer(Modifier.height(8.dp))
+            if (entry.type == MarketEntryType.Mcp && mcp != null) {
+                Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.market_mcp_notice),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
+                val auth = mcp.auth
+                val authHint = mcp.authHint?.resolve(language)
+                if ((auth != null && auth.type != MarketMcpAuthType.None) || !authHint.isNullOrBlank()) {
+                    Spacer(Modifier.height(16.dp))
+                    DdSectionLabel(stringResource(R.string.market_detail_auth))
+                    when (auth?.type) {
+                        MarketMcpAuthType.ApiKey -> Text(
+                            text = stringResource(R.string.market_auth_type_apikey),
+                            style = DdType.bodySmall,
+                            color = colors.inkSecondary,
+                        )
+
+                        MarketMcpAuthType.OAuth -> Text(
+                            text = stringResource(R.string.market_auth_type_oauth),
+                            style = DdType.bodySmall,
+                            color = colors.inkSecondary,
+                        )
+
+                        MarketMcpAuthType.None, null -> Unit
+                    }
+                    if (!authHint.isNullOrBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = authHint,
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                    }
+                    val helpUrl = auth?.helpUrl
+                    if (!helpUrl.isNullOrBlank()) {
+                        MarketLinkAction(
+                            text = stringResource(R.string.market_auth_help),
+                            onClick = { openMarketUrl(context, helpUrl) },
+                        )
+                    }
+                    if (auth?.type == MarketMcpAuthType.OAuth && status == MarketEntryStatus.Installed) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.market_oauth_hint),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                        MarketLinkAction(
+                            text = stringResource(R.string.market_oauth_action),
+                            onClick = onAuthorize,
+                            modifier = Modifier.testTag("${testTagPrefix}_market_authorize"),
+                        )
+                    }
+                }
             }
-            if (entry.tags.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                MarketMetaRow(
-                    label = stringResource(R.string.market_detail_tags),
-                    value = entry.tags.joinToString(" · "),
+            val tags = entry.tags(language)
+            if (tags.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                DdSectionLabel(stringResource(R.string.market_detail_tags))
+                Text(
+                    text = tags.joinToString(" · "),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -458,5 +615,34 @@ private fun MarketMetaRow(label: String, value: String) {
             style = DdType.bodySmall,
             color = colors.inkSecondary,
         )
+    }
+}
+
+@Composable
+private fun MarketLinkAction(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = text, style = DdType.label, color = colors.accent)
+            Spacer(Modifier.width(4.dp))
+            DdIcon(icon = DdIcons.External, tint = colors.accent, size = 14.dp)
+        }
+    }
+}
+
+private fun openMarketUrl(context: Context, url: String) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 }
