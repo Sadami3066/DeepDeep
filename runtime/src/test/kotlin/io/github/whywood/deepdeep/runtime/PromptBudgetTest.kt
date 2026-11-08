@@ -32,29 +32,6 @@ class PromptBudgetTest {
         directory.deleteRecursively()
     }
 
-    @Test
-    fun globalRulesStayShort() {
-        assertTrue(GLOBAL_TOOL_RULES.size <= 5)
-        GLOBAL_TOOL_RULES.forEach { rule -> assertTrue(rule.length <= 220) }
-    }
-
-    @Test
-    fun fileAndBashRulesStayBoundedAndDeduplicated() {
-        val tools = defaultCodingTools(cwd, FileSystem.SYSTEM, FileMutationQueue())
-            .filter { it.name != "bash" }
-            .map { it.withAbsolutePaths() } +
-            deepDeepBashTool(NoopShell)
-        val rules = buildToolRuleSection(tools).getValue("rules")
-        val bullets = rules.lines().filter { it.startsWith("- ") }
-
-        assertEquals(bullets.size, bullets.distinct().size)
-        assertTrue("rules section too long: ${rules.length}", rules.length <= 2_200)
-        assertTrue(bullets.any { it.contains("absolute paths") })
-        assertTrue(bullets.any { it.contains("[exit: N]") })
-        assertFalse(rules.contains("job_start"))
-        assertFalse(rules.contains("timer_create"))
-    }
-
     private object NoopShell : ShellExecutor {
         override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult =
             ShellResult(output = "", exitCode = 0)

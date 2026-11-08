@@ -63,7 +63,7 @@ class PiSessionEngine(
         mcpEnabled: Boolean = true,
         extraSystemPromptSections: Map<String, String> = emptyMap(),
     ): AgentSession {
-        ensureSystemPromptFile(agentDirectory.toFile())
+        runCatching { java.io.File(agentDirectory.toFile(), "SYSTEM.md").delete() }
         try {
             memory?.ensure()
             memory?.refresh("session_start")
@@ -127,7 +127,7 @@ class PiSessionEngine(
                             mounts = mounts,
                         ),
                     ),
-                ) + pluginContextSection() + extraSystemPromptSections + buildToolRuleSection(tools),
+                ) + pluginContextSection() + extraSystemPromptSections,
             )
         }
         val session = createAgentSession(
@@ -145,7 +145,6 @@ class PiSessionEngine(
                     .withPluginHooks(hooks.promptTransform),
                 credentials = credentials,
                 excludedSkills = excludedSkills,
-                extraSystemPromptSections = buildToolRuleSection(tools),
                 initialSystemPromptSections = currentSections(),
                 projectTrusted = true,
                 mcp = McpOptions(
