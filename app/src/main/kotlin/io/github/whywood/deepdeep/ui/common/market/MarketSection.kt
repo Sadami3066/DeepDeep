@@ -37,9 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdEmptyState
-import io.github.whywood.deepdeep.design.DdInlineMessage
 import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdTone
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -142,13 +140,14 @@ internal fun MarketTab(
 
             is MarketState.Ready -> {
                 if (current.source != MarketSource.Network) {
-                    DdInlineMessage(
+                    Text(
                         text = stringResource(R.string.market_offline_notice),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)
                             .testTag("${testTagPrefix}_market_offline"),
-                        tone = DdTone.Neutral,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
                     )
                 }
                 when {

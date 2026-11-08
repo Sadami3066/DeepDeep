@@ -464,10 +464,14 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 ## 132. 圣托里尼近白底与市场页统一网格
 
 - Santorini 改为「近白底 + 纯白组件」：paper `#F4F6F8`、surface/raised `#FFFFFF`、hairline `#E4ECF5`、wash `#F2F8FC`；页面不再用蓝调铺底，区分度只靠约 4% 灰阶与发丝线，主蓝 `#0078D7` 只出现在按钮、链接与选中态。
-- 市场三页（技能/插件/连接器）统一平铺网格：内容统一 16dp 横向内边距；行高 ≥64dp、纵向 12dp，图标 40dp 无容器裸放（无图时 22dp 线性占位），图文间距 12dp；分隔线自 20dp 起内缩，右侧状态与行右边缘对齐；离线提示用 `DdInlineMessage`，空态用 `DdEmptyState`。列表不再包 `DdGroupCard`——该组件只用于设置表单式分组。
+- 市场三页（技能/插件/连接器）统一平铺网格：内容统一 16dp 横向内边距；行高 ≥64dp、纵向 12dp，图标 40dp 无容器裸放（无图时 22dp 线性占位），图文间距 12dp；分隔线自 20dp 起内缩，右侧状态与行右边缘对齐；离线提示用灰字说明，空态用 `DdEmptyState`。列表不再包 `DdGroupCard`——该组件只用于设置表单式分组。
 
 ## 133. 主题收敛为两套明暗配色，删除颜色模式与 DeepDeep 深色
 
 - 主题只保留两套固定配色：Santorini（浅，近白底 `#F4F6F8`）与 Oceanic（深，`#1B2B34`）；「跟随系统」预设按系统明暗自动选择两者，DeepDeep 预设固定使用原 DeepDeep 浅色。删除原 DeepDeep 深色配色与 `ThemeMode` 枚举，`DeepDeepTheme(preset, fontStyle, content)` 只接收预设。
 - 设置 → 外观与语言不再有「颜色模式」行，主题风格下拉保留 跟随系统 / DeepDeep / Santorini / Oceanic；旧 `theme_preset` 值不认识的回退「跟随系统」。
 - 市场图标加载器改为进程级共享实例（`MarketIconLoader.shared`）与 `ConcurrentHashMap` 内存缓存，`MarketEntryIcon` 用缓存值作为 `produceState` 初值——切页重进不再等异步解码，图标不再整屏闪烁。
+
+## 134. 移除设计系统 Phase 1/2 组件，UI 回退旧实现
+
+整 App 迁移到新组件的尝试经真机实测更丑（信息密度、间距与层级都变差），用户要求回退：移除 Phase 1（10 个）与 Phase 2（8 个）组件文件，撤销页面迁移，仅保留 token 与 Phase 0 基础组件；配色与主题决策继续保留（Santorini 中性近白 `#F7F8F8`、Oceanic 深色、两套固定配色、无颜色模式）。设计系统不再扩张组件库，后续 UI 改动回到既有组件内调整。
