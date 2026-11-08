@@ -80,22 +80,23 @@ private fun rememberPluginBitmap(assetsDir: File?, path: String, size: Dp): Imag
     if (assetsDir == null) return null
     val density = LocalDensity.current
     val targetPx = with(density) { size.roundToPx() }.coerceAtLeast(1)
+    val bucketPx = ((targetPx + 63) / 64) * 64
     val file = remember(assetsDir, path) { File(assetsDir, path).takeIf { it.isFile } }
-    val cacheKey = remember(file, targetPx) { file?.let { it.absolutePath + "|" + targetPx } }
+    val cacheKey = remember(file, bucketPx) { file?.let { it.absolutePath + "|" + bucketPx } }
     val cached = remember(cacheKey) { cacheKey?.let { pluginBitmapCache.get(it) } }
-    val bitmap by produceState<ImageBitmap?>(initialValue = cached, key1 = file, key2 = targetPx) {
+    val bitmap by produceState<ImageBitmap?>(initialValue = cached, key1 = file, key2 = bucketPx) {
         if (file == null) {
             value = null
             return@produceState
         }
-        val key = file.absolutePath + "|" + targetPx
+        val key = file.absolutePath + "|" + bucketPx
         val hit = pluginBitmapCache.get(key)
         if (hit != null) {
             value = hit
             return@produceState
         }
         val decoded = withContext(Dispatchers.IO) {
-            runCatching { decodePluginBitmap(file, targetPx) }.getOrNull()
+            runCatching { decodePluginBitmap(file, bucketPx) }.getOrNull()
         }
         if (decoded != null) pluginBitmapCache.put(key, decoded)
         value = decoded
@@ -103,8 +104,8 @@ private fun rememberPluginBitmap(assetsDir: File?, path: String, size: Dp): Imag
     return bitmap
 }
 
-private val pluginBitmapCache = object : LruCache<String, ImageBitmap>(24) {
-    override fun sizeOf(key: String, value: ImageBitmap): Int = 1
+private val pluginBitmapCache = object : LruCache<String, ImageBitmap>(6 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
 }
 
 private fun decodePluginBitmap(file: File, targetPx: Int): ImageBitmap? {

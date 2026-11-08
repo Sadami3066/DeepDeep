@@ -87,6 +87,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.ProviderSummary
+import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
 import io.github.whywood.deepdeep.ui.common.ProviderIcon
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -172,9 +173,7 @@ internal fun AccountStep(
 ) {
     val colors = deepDeepColors()
     var languageSheetOpen by remember { mutableStateOf(false) }
-    val avatar by produceState<ImageBitmap?>(initialValue = null, avatarVersion) {
-        value = withContext(Dispatchers.IO) { loadAvatar()?.asImageBitmap() }
-    }
+    val avatar by rememberAvatarBitmap("onboarding:$avatarVersion") { loadAvatar() }
     Column(
         modifier
             .fillMaxSize()

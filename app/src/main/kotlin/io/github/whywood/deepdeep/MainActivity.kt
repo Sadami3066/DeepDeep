@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermission()
         val fontStyle = graph.fontPreferences.read()
         setContent {
-            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(initialValue = ThemePreset.DEEP_DEEP)
+            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(initialValue = ThemePreset.SYSTEM)
             val scope = rememberCoroutineScope()
             DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {

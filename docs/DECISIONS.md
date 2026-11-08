@@ -475,3 +475,14 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 ## 134. 移除设计系统 Phase 1/2 组件，UI 回退旧实现
 
 整 App 迁移到新组件的尝试经真机实测更丑（信息密度、间距与层级都变差），用户要求回退：移除 Phase 1（10 个）与 Phase 2（8 个）组件文件，撤销页面迁移，仅保留 token 与 Phase 0 基础组件；配色与主题决策继续保留（Santorini 中性近白 `#F7F8F8`、Oceanic 深色、两套固定配色、无颜色模式）。设计系统不再扩张组件库，后续 UI 改动回到既有组件内调整。
+
+## 135. 交互细节修复：图标加载、安装协程、头像缓存与冷启动
+
+审计 `tmp/ui-interaction-audit.md` 暴露的 P0/P1 修复：
+
+- 市场图标加载：失败结果不再写入 `ConcurrentHashMap`（P0 NPE），改为成功项进按字节计数的 `LruCache`、失败项记 5 分钟 TTL 的负缓存、同 URL 用 `Deferred` 去重并去掉全局锁串行；下载上限放宽到 512KB，解码按目标 192px 降采样。
+- 安装协程从页面 `rememberCoroutineScope()` 移到进程级 scope，切 tab/返回不再取消安装；仓库 install 对 `CancellationException` 重新抛出，不再记成「安装失败」。
+- 头像三处（AppShell/Personalization/Onboarding）改走 `ProfileAvatarCache`（按字节计数的进程级 `LruCache` + 初值命中），不再先字母占位再跳照片。
+- 冷启动：主题初值由固定 DeepDeep 改为 `SYSTEM`（浅色 Santorini / 深色 Oceanic），窗口背景色与对应纸色一致（`#F7F8F8` / `#1B2B34`），深色启动不再白闪。
+- 市场失败态重试加进行中反馈与防抖（`retrying` 状态，重试期间显示加载并禁用按钮）。
+- 插件图标缓存改为按字节限 6MB，缓存 key 的 `targetPx` 向上归一到 64px 桶，避免同图多份解码。

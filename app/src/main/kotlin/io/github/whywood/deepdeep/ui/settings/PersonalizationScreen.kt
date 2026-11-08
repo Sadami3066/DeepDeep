@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.ProfileAvatarStore
@@ -81,9 +82,7 @@ fun PersonalizationScreen(
     val avatarStore = remember(context) { ProfileAvatarStore(context) }
     var avatarStamp by remember { mutableLongStateOf(avatarStore.current()?.lastModified() ?: 0L) }
     val avatarFile = remember(avatarStamp) { avatarStore.current() }
-    val avatarBitmap by produceState<ImageBitmap?>(initialValue = null, avatarStamp) {
-        this.value = withContext(Dispatchers.IO) { avatarStore.load()?.asImageBitmap() }
-    }
+    val avatarBitmap by rememberAvatarBitmap("personalization:$avatarStamp") { avatarStore.load() }
     val avatarFailedText = stringResource(R.string.personalization_avatar_failed)
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult

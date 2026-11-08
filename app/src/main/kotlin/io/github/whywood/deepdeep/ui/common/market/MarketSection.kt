@@ -58,11 +58,16 @@ import io.github.whywood.deepdeep.market.MarketMcpAuthType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 internal const val MARKET_TAB_MARKET = 0
 
 internal const val MARKET_TAB_MINE = 1
+
+private val marketInstallScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
 @Composable
 internal fun MarketTab(
@@ -84,6 +89,7 @@ internal fun MarketTab(
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
     var tokenId by rememberSaveable { mutableStateOf<String?>(null) }
+    var retrying by rememberSaveable { mutableStateOf(false) }
 
     val current = state
     val entries = if (current is MarketState.Ready) repository.entries(type) else emptyList()
@@ -93,7 +99,7 @@ internal fun MarketTab(
     val tokenEntry = entries.firstOrNull { it.id == tokenId }
 
     fun install(entry: MarketEntry, apiKey: String? = null) {
-        scope.launch {
+        marketInstallScope.launch {
             repository.install(entry, apiKey).onSuccess {
                 onInstalled()
                 when {
@@ -123,18 +129,32 @@ internal fun MarketTab(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = current.message,
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    DdTextAction(
-                        text = stringResource(R.string.market_retry),
-                        onClick = { scope.launch { repository.refresh(force = true) } },
-                        modifier = Modifier.testTag("${testTagPrefix}_market_retry"),
-                    )
+                    if (retrying) {
+                        DdLoadingBlock(text = stringResource(R.string.market_loading))
+                    } else {
+                        Text(
+                            text = current.message,
+                            style = DdType.bodySmall,
+                            color = colors.inkSecondary,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        DdTextAction(
+                            text = stringResource(R.string.market_retry),
+                            onClick = {
+                                if (retrying) return@DdTextAction
+                                retrying = true
+                                scope.launch {
+                                    try {
+                                        repository.refresh(force = true)
+                                    } finally {
+                                        retrying = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.testTag("${testTagPrefix}_market_retry"),
+                        )
+                    }
                 }
             }
 

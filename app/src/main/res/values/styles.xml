@@ -3,7 +3,7 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">#F6F8FC</item>
+        <item name="android:windowBackground">#F7F8F8</item>
     </style>
 
     <style name="Theme.DeepDeep.AssistantOverlay" parent="android:style/Theme.Material.Light.NoActionBar">

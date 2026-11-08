@@ -47,6 +47,8 @@ import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
+import io.github.whywood.deepdeep.ui.common.ProfileAvatarCache
+import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.shareChooser
@@ -110,9 +112,8 @@ internal fun AppShell(
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle(initialValue = emptyMap())
     val credentialRevision by graph.credentials.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val avatarRevision by ProfileAvatarStore.revision.collectAsStateWithLifecycle(initialValue = 0L)
-    val avatarBitmap by produceState<ImageBitmap?>(initialValue = null, avatarRevision) {
-        value = withContext(Dispatchers.IO) { avatarStore.load()?.asImageBitmap() }
-    }
+    val avatarKey = remember(avatarRevision) { "profile:${avatarStore.current()?.lastModified() ?: 0L}" }
+    val avatarBitmap by rememberAvatarBitmap(avatarKey) { avatarStore.load() }
     val configuredProviders = authKinds.keys
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }

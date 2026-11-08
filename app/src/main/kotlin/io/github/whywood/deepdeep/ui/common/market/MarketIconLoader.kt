@@ -2,17 +2,15 @@ package io.github.whywood.deepdeep.ui.common.market
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.os.SystemClock
+import android.util.LruCache
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
@@ -31,9 +29,11 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -43,28 +43,52 @@ internal class MarketIconLoader(
     private val http: OkHttpClient = defaultHttpClient(),
 ) {
     private val dir = File(File(context.applicationContext.filesDir, MarketDefaults.MARKET_DIR), "icons")
-    private val cache = ConcurrentHashMap<String, ImageBitmap?>()
-    private val mutex = Mutex()
+    private val cache = object : LruCache<String, ImageBitmap>(MAX_CACHE_BYTES) {
+        override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
+    }
+    private val failedAt = ConcurrentHashMap<String, Long>()
+    private val inFlight = ConcurrentHashMap<String, Deferred<ImageBitmap?>>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    fun cached(icon: String?): ImageBitmap? = marketIconUrl(icon)?.let { cache[it] }
+    fun cached(icon: String?): ImageBitmap? = marketIconUrl(icon)?.let { url ->
+        synchronized(cache) { cache.get(url) }
+    }
 
     suspend fun load(icon: String?): ImageBitmap? {
         val url = marketIconUrl(icon) ?: return null
-        if (cache.containsKey(url)) return cache[url]
-        return mutex.withLock {
-            if (cache.containsKey(url)) {
-                cache[url]
-            } else {
-                val bitmap = withContext(Dispatchers.IO) { readFile(url) ?: download(url) }
-                cache[url] = bitmap
-                bitmap
-            }
+        synchronized(cache) { cache.get(url) }?.let { return it }
+        failedAt[url]?.let { failedTime ->
+            if (SystemClock.elapsedRealtime() - failedTime < FAIL_RETRY_MS) return null
+            failedAt.remove(url)
         }
+        val request = inFlight.computeIfAbsent(url) { scope.async { fetch(url) } }
+        return try {
+            request.await()
+        } catch (cancel: kotlinx.coroutines.CancellationException) {
+            throw cancel
+        } catch (_: Exception) {
+            null
+        } finally {
+            inFlight.remove(url, request)
+        }
+    }
+
+    private suspend fun fetch(url: String): ImageBitmap? {
+        val bitmap = withContext(Dispatchers.IO) {
+            runCatching { readFile(url) ?: download(url) }.getOrNull()
+        }
+        if (bitmap != null) {
+            synchronized(cache) { cache.put(url, bitmap) }
+            failedAt.remove(url)
+        } else {
+            failedAt[url] = SystemClock.elapsedRealtime()
+        }
+        return bitmap
     }
 
     private fun readFile(url: String): ImageBitmap? {
         val file = fileFor(url)
-        if (!file.isFile || file.length() > MarketDefaults.MAX_ICON_BYTES) return null
+        if (!file.isFile || file.length() > MAX_ICON_BYTES) return null
         val bytes = runCatching { file.readBytes() }.getOrNull() ?: return null
         return decode(bytes)
     }
@@ -74,9 +98,9 @@ internal class MarketIconLoader(
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@use null
             val body = response.body
-            if (body.contentLength() > MarketDefaults.MAX_ICON_BYTES) return@use null
+            if (body.contentLength() > MAX_ICON_BYTES) return@use null
             val bytes = body.bytes()
-            if (bytes.size > MarketDefaults.MAX_ICON_BYTES) return@use null
+            if (bytes.size > MAX_ICON_BYTES) return@use null
             val bitmap = decode(bytes) ?: return@use null
             dir.mkdirs()
             runCatching { fileFor(url).writeBytes(bytes) }
@@ -85,12 +109,25 @@ internal class MarketIconLoader(
     }.getOrNull()
 
     private fun decode(bytes: ByteArray): ImageBitmap? = runCatching {
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+        var sampleSize = 1
+        while (bounds.outWidth / (sampleSize * 2) >= TARGET_PX && bounds.outHeight / (sampleSize * 2) >= TARGET_PX) {
+            sampleSize *= 2
+        }
+        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
     }.getOrNull()
 
     private fun fileFor(url: String): File = File(dir, sha256(url))
 
     companion object {
+        private const val MAX_CACHE_BYTES = 4 * 1024 * 1024
+        private const val MAX_ICON_BYTES = 512 * 1024L
+        private const val TARGET_PX = 192
+        private const val FAIL_RETRY_MS = 5 * 60 * 1000L
+
         @Volatile private var shared: MarketIconLoader? = null
 
         fun shared(context: Context): MarketIconLoader =
@@ -131,7 +168,7 @@ internal fun MarketEntryIcon(
     val colors = deepDeepColors()
     val icon = entry.icon
     val bitmap by produceState<ImageBitmap?>(initialValue = loader.cached(icon), icon) {
-        value = loader.load(icon)
+        value = runCatching { loader.load(icon) }.getOrNull()
     }
     val image = bitmap
     if (image != null) {

@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -157,6 +158,8 @@ class MarketRepositoryImpl(
                         Result.failure(IllegalStateException("安装失败，请稍后再试"))
                     }
                 }
+            } catch (cancel: CancellationException) {
+                throw cancel
             } catch (failure: Exception) {
                 Log.w(TAG, "install ${entry.id} failed: ${failure.message}")
                 if (entry.type == MarketEntryType.Plugin) {
