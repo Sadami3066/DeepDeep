@@ -339,7 +339,7 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 
 按风格审计与用户第 1 项要求修提示词：environment 段删除与 `<cwd>` 重复的 Working directory 行（`buildPersonalizationSections` 不再收 cwd）；memory 渲染去掉重复的区标题、日记三层标题按层级降级（`# 日记` → `## 今天` → `### 纪要`）、HTML 注释转成可读文本而非 `&lt;!-- --&gt;`；`plugin_context` 删除 runtime 外层 wrap，保留 adapter 每插件一个 `<plugin_context plugin="…">` 兄弟段；`wrapPromptSection(name, content, escape = true)` 统一转义，调用方不再各自 escape（nickname 不再双重转义）；plugin-api `PromptSection.body` 补 KDoc 契约（纯文本/Markdown、禁 XML、禁 `#` 一级标题）。
 
-`mcp_servers` 裸文本本次未修：SDK `AgentSession.kt:738-741` 用 map 覆盖且 `buildMcpServersSection` 为 internal，app 仓库无法包裹，标记为上游 SDK 待修，未改 pi2kotlin、未发布 mavenLocal。
+`mcp_servers` 的容器已在上游修掉：pi2kotlin `McpSection.kt` 现在返回 `<mcp_servers>…</mcp_servers>`，发布为 0.5.1（commit 24926bc，Release v0.5.1），App 依赖升级到 0.5.1（`libs.versions.toml` + `gradle/pi-sdk.sha256`）；SDK 内部 `AgentSession.kt:738-741` 的 map 覆盖不再有裸文本问题。
 
 代价：`plugin_context` 顶层从单容器变成每插件一个兄弟段；该段在 `createSession` 内局部函数，无自动化测试，只能靠 SDK 渲染路径核对。
 
