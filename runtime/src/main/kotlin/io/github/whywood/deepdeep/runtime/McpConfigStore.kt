@@ -8,6 +8,9 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -29,6 +32,9 @@ class McpConfigStore(
 ) {
     private val mutex = Mutex()
     private val file = File(agentDir, FILE_NAME)
+    private val _changes = MutableStateFlow(0L)
+
+    val changes: StateFlow<Long> = _changes.asStateFlow()
 
     suspend fun load(): McpConfigSnapshot = mutex.withLock { loadLocked() }
 
@@ -142,6 +148,7 @@ class McpConfigStore(
         } catch (_: AtomicMoveNotSupportedException) {
             Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
+        _changes.value += 1
     }
 
     private fun validateEntry(name: String, entry: JsonObject) {

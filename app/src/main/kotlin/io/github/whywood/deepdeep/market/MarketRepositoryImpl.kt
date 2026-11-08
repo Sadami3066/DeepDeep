@@ -3,10 +3,10 @@ package io.github.whywood.deepdeep.market
 import android.content.Context
 import android.util.Log
 import dev.pi.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.data.InstalledSkill
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import java.io.File
 import java.security.MessageDigest
@@ -15,14 +15,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -38,6 +45,7 @@ class MarketRepositoryImpl(
     private val registryFile = File(filesDir, "registry.json")
     private val signatureFile = File(filesDir, "registry.json.sig")
     private val metaFile = File(filesDir, "meta.json")
+    private val skillVersionsFile = File(filesDir, "skills.json")
     private val downloadDir = File(filesDir, "download")
 
     private val refreshMutex = Mutex()
@@ -49,20 +57,25 @@ class MarketRepositoryImpl(
     private val _installStates = MutableStateFlow<Map<String, MarketInstallState>>(emptyMap())
     override val installStates: StateFlow<Map<String, MarketInstallState>> = _installStates.asStateFlow()
 
-    private val installedPlugins = MutableStateFlow<Map<String, String>>(emptyMap())
-    private val installedSkills = MutableStateFlow<Set<String>>(emptySet())
-    private val installedMcp = MutableStateFlow<Set<String>>(emptySet())
+    private val installedContent = MutableStateFlow(InstalledContent())
+    private val autoUpdatePlanner = MarketAutoUpdatePlanner()
+
+    init {
+        scope.launch {
+            merge(
+                pluginManager.state.map { plugins -> plugins.plugins }.distinctUntilChanged(),
+                skillRepository.changes,
+                mcpConfigStore.changes,
+            ).collect { refreshInstalledStates() }
+        }
+    }
 
     override fun entries(type: MarketEntryType): List<MarketEntry> {
         val ready = _state.value as? MarketState.Ready ?: return emptyList()
         return ready.registry.entries.filter { it.type == type }
     }
 
-    override fun installedVersion(entry: MarketEntry): String? = when (entry.type) {
-        MarketEntryType.Plugin -> installedPlugins.value[entry.id]
-        MarketEntryType.Skill -> if (installedSkills.value.contains(entry.id)) entry.version else null
-        MarketEntryType.Mcp -> if (installedMcp.value.contains(entry.id)) entry.version else null
-    }
+    override fun installedVersion(entry: MarketEntry): String? = installedContent.value.versionOf(entry)
 
     override suspend fun refresh(force: Boolean): Boolean = refreshMutex.withLock {
         withContext(Dispatchers.IO) {
@@ -70,34 +83,57 @@ class MarketRepositoryImpl(
             val cached = readCached()
             val fresh = !force && cached != null && System.currentTimeMillis() - cached.fetchedAt < MarketDefaults.CACHE_TTL_MS
             if (fresh) {
-                _state.value = MarketState.Ready(cached.registry, MarketSource.Cache, cached.fetchedAt)
-                refreshInstalled()
-                return@withContext true
+                return@withContext completeRefresh(cached.registry, MarketSource.Cache, cached.fetchedAt)
             }
             val network = runCatching { fetchRemote() }.onFailure { failure ->
                 Log.w(TAG, "market refresh failed: ${failure.message}")
             }.getOrNull()
             if (network != null) {
                 saveCache(network)
-                _state.value = MarketState.Ready(network.registry, MarketSource.Network, System.currentTimeMillis())
-                refreshInstalled()
-                return@withContext true
+                return@withContext completeRefresh(network.registry, MarketSource.Network, System.currentTimeMillis())
             }
             if (cached != null) {
-                _state.value = MarketState.Ready(cached.registry, MarketSource.Cache, cached.fetchedAt)
-                refreshInstalled()
-                return@withContext true
+                return@withContext completeRefresh(cached.registry, MarketSource.Cache, cached.fetchedAt)
             }
             val seed = runCatching { fetchSeed() }.getOrNull()
             if (seed != null) {
-                _state.value = MarketState.Ready(seed, MarketSource.Seed, 0L)
-                refreshInstalled()
-                return@withContext true
+                return@withContext completeRefresh(seed, MarketSource.Seed, 0L)
             }
             if (_state.value !is MarketState.Ready) {
                 _state.value = MarketState.Failed("市场暂时无法加载，请稍后再试")
             }
             false
+        }
+    }
+
+    override suspend fun refreshInstalledStates() = installMutex.withLock {
+        withContext(Dispatchers.IO) { refreshInstalled() }
+    }
+
+    private suspend fun completeRefresh(registry: MarketRegistry, source: MarketSource, fetchedAt: Long): Boolean {
+        _state.value = MarketState.Ready(registry, source, fetchedAt)
+        installMutex.withLock { withContext(Dispatchers.IO) { refreshInstalled() } }
+        autoUpdateInstalled(registry)
+        return true
+    }
+
+    private suspend fun autoUpdateInstalled(registry: MarketRegistry) {
+        val pending = runCatching {
+            pluginManager.state.value.plugins
+                .filter { it.phase == PluginPhaseUi.PENDING_RESTART }
+                .map { it.id }
+                .toSet()
+        }.getOrDefault(emptySet())
+        val targets = autoUpdatePlanner.plan(registry.entries, _installStates.value)
+            .filter { it.id !in pending }
+        for (entry in targets) {
+            autoUpdatePlanner.markAttempt(entry.id)
+            val result = install(entry)
+            if (result.isSuccess) {
+                autoUpdatePlanner.markInstalled(entry.id)
+            } else {
+                Log.w(TAG, "market auto update failed: ${entry.id}")
+            }
         }
     }
 
@@ -110,9 +146,17 @@ class MarketRepositoryImpl(
                     MarketEntryType.Skill -> installSkill(entry)
                     MarketEntryType.Mcp -> installMcp(entry, apiKey)
                 }
-                refreshInstalled()
-                setInstallState(entry.id, MarketInstallState.Installed(entry.version))
-                Result.success(Unit)
+                refreshInstalled(clearInstallingId = entry.id)
+                when (_installStates.value[entry.id]) {
+                    is MarketInstallState.Installed,
+                    is MarketInstallState.UpdateAvailable,
+                    -> Result.success(Unit)
+
+                    else -> {
+                        setInstallState(entry.id, MarketInstallState.Failed("安装失败，请稍后再试"))
+                        Result.failure(IllegalStateException("安装失败，请稍后再试"))
+                    }
+                }
             } catch (failure: Exception) {
                 Log.w(TAG, "install ${entry.id} failed: ${failure.message}")
                 if (entry.type == MarketEntryType.Plugin) {
@@ -124,35 +168,53 @@ class MarketRepositoryImpl(
         }
     }
 
-    private suspend fun refreshInstalled() {
-        installedPlugins.value = runCatching { pluginManager.state.value.plugins }
-            .getOrDefault(emptyList())
-            .mapNotNull { snapshot -> snapshot.installedVersion?.let { snapshot.id to it } }
-            .toMap()
-        installedSkills.value = runCatching { skillRepository.list() }
+    private suspend fun refreshInstalled(clearInstallingId: String? = null) {
+        val skillVersions = readSkillVersions()
+        val skills = runCatching { skillRepository.list() }
             .getOrNull()?.getOrNull()
             .orEmpty()
-            .map(InstalledSkill::id)
-            .filter { it.isNotBlank() }
-            .toSet()
-        installedMcp.value = runCatching { mcpConfigStore.loadServers().keys }
-            .getOrDefault(emptySet())
-        val requested = currentRegistry()?.entries.orEmpty()
-        val next = LinkedHashMap<String, MarketInstallState>()
-        for (entry in requested) {
-            val existing = _installStates.value[entry.id]
-            if (existing is MarketInstallState.Installing) {
-                next[entry.id] = existing
-                continue
-            }
-            val installed = installedVersion(entry)
-            next[entry.id] = when {
-                installed == null -> MarketInstallState.NotInstalled
-                installed == entry.version -> MarketInstallState.Installed(installed)
-                else -> MarketInstallState.UpdateAvailable(installed)
-            }
+            .filter { it.globalEnabled && it.id.isNotBlank() }
+            .associate { it.id to skillVersions[it.id] }
+        val content = InstalledContent(
+            plugins = runCatching { pluginManager.state.value.plugins }
+                .getOrDefault(emptyList())
+                .mapNotNull { snapshot -> snapshot.installedVersion?.let { snapshot.id to it } }
+                .toMap(),
+            skills = skills,
+            mcp = runCatching { mcpConfigStore.loadServers() }
+                .getOrDefault(emptyMap())
+                .mapNotNull { (name, config) -> (config as? McpServerConfig.Http)?.let { name to it.url } }
+                .toMap(),
+        )
+        installedContent.value = content
+        val previous = if (clearInstallingId == null) {
+            _installStates.value
+        } else {
+            _installStates.value - clearInstallingId
         }
-        _installStates.value = next
+        _installStates.value = resolveInstallStates(
+            entries = currentRegistry()?.entries.orEmpty(),
+            installed = content,
+            previous = previous,
+        )
+    }
+
+    private fun readSkillVersions(): Map<String, String> = runCatching {
+        Json.parseToJsonElement(skillVersionsFile.readText()).jsonObject.mapNotNull { (id, value) ->
+            (value as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.let { id to it }
+        }.toMap()
+    }.getOrDefault(emptyMap())
+
+    private fun writeSkillVersion(id: String, version: String) {
+        runCatching {
+            filesDir.mkdirs()
+            val versions = readSkillVersions() + (id to version)
+            skillVersionsFile.writeText(
+                buildJsonObject {
+                    versions.forEach { (skillId, skillVersion) -> put(skillId, JsonPrimitive(skillVersion)) }
+                }.toString(),
+            )
+        }.onFailure { failure -> Log.w(TAG, "skill version write failed: ${failure.message}") }
     }
 
     private suspend fun installPlugin(entry: MarketEntry) {
@@ -165,6 +227,8 @@ class MarketRepositoryImpl(
             val result = pluginManager.installExternal(file, acceptPublisher = true)
             if (!result.success) error(result.error ?: "插件安装失败")
             pluginManager.refreshNow()
+            val snapshot = pluginManager.state.value.plugins.firstOrNull { it.id == entry.id }
+            if (snapshot?.installedVersion == null) error("插件安装失败")
         } finally {
             file.delete()
         }
@@ -177,8 +241,10 @@ class MarketRepositoryImpl(
             val bytes = file.readBytes()
             val result = skillRepository.install(bytes, entry.id)
             if (result is SkillArchiveResult.Failure) error(result.error.name)
-            (result as SkillArchiveResult.Success).let { skillRepository.setGlobalEnabled(it.skill.id, true) }
+            val skill = (result as SkillArchiveResult.Success).skill
+            if (!skillRepository.setGlobalEnabled(skill.id, true)) error("安装失败，请稍后再试")
             skillRepository.syncActiveSkills()
+            writeSkillVersion(skill.id, entry.version)
         } finally {
             file.delete()
         }
@@ -187,8 +253,13 @@ class MarketRepositoryImpl(
     private suspend fun installMcp(entry: MarketEntry, apiKey: String?) {
         val meta = entry.mcp ?: error("MCP 配置缺失")
         if (meta.transport != "http") error("暂不支持该连接方式")
+        val servers = mcpConfigStore.loadServers()
+        val existingName = servers.entries.firstOrNull { (_, config) ->
+            (config as? McpServerConfig.Http)?.url == meta.url
+        }?.key
+        val name = existingName ?: uniqueMcpName(servers.keys, entry.id)
         mcpConfigStore.upsert(
-            entry.id,
+            name,
             McpServerConfig.Http(
                 url = meta.url,
                 headers = meta.resolvedHeaders(apiKey),

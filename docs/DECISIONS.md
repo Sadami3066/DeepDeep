@@ -421,6 +421,19 @@ Linux 不再作为「推荐安装」的附加组件，而是 App 自带能力：
 
 代价：改图标要改 `design/icons/` 并重跑生成脚本；忘记 `--check` 时 CI 会拦生成物不一致。
 
+## 128. 市场安装状态同步与启动自动更新
+
+市场 P1 的安装状态只在 `refresh()` / `install()` 里重算，且 MCP 配置没有变更流，于是出现「连接器已删除、市场仍显示已安装」；同时 App 启动只拉索引，不检查已装内容的版本。
+
+现在：
+
+- 已安装快照统一为 `InstalledContent`（插件 / 技能 / MCP 三源），`resolveInstallStates()` 是纯函数：已装且版本相同 → Installed，有更新版本 → UpdateAvailable，未装 → NotInstalled，`Installing` 与 `Failed` 保留可重试语义。
+- 插件与技能有变更流，`MarketRepositoryImpl` 观察后自动重算；MCP 无变更流，市场 tab 每次进入调用 `refreshInstalledStates()` 轻量重算（不联网、不拉索引）。
+- 启动时 `refresh()` 统一走 `completeRefresh()`：命中缓存 TTL 也重算状态，并对已安装且有新版本的插件/技能复用安装流水线自动更新（签名、sha256、体积上限校验不变）；MCP 只标记 UpdateAvailable，不覆盖用户配置与授权。自动更新失败只记日志，由 `MarketAutoUpdatePlanner` 做 5 分钟节流，成功清除。
+- 状态有单一时序入口：`refreshInstalledStates()` 与安装互斥，重算过程中保留 Installing，避免安装中状态被刷回。
+
+代价：启动时可能触发一次后台静默下载（插件 ≤ 50MB、技能 ≤ 20MB）；自动更新失败用户不可见，需要看日志；MCP 更新仍需用户手动确认。
+
 ## 129. UI 库 Phase 0：token 层、基础组件与圣托里尼日光主题
 
 UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透明度四类对象，App 层有 1830 处 dp/sp 字面量与 91 处 `DdType.copy`；调研（`tmp/ui-library-research.md`）建议把 `:design` 分成 tokens/primitives/components/patterns/motion 五层，旧 API 全部保留 facade。

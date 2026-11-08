@@ -8,6 +8,7 @@ object MarketDefaults {
     const val PUBLIC_KEY_DER_BASE64 =
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEycLAgCQiJ8JZqgHDTJdV5GqJobXPr6zfbr4GyL0UlXo19QnEtTfBLHo3uMaVHUVDkX67nDhkwqdp94JbIGONA=="
     const val CACHE_TTL_MS = 6L * 60L * 60L * 1000L
+    const val AUTO_UPDATE_RETRY_MS = 5L * 60L * 1000L
     const val MAX_REGISTRY_BYTES = 2L * 1024L * 1024L
     const val MAX_ENTRIES = 512
     const val MAX_PLUGIN_BYTES = 50L * 1024L * 1024L

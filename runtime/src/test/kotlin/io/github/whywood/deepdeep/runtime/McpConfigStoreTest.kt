@@ -254,4 +254,25 @@ class McpConfigStoreTest {
         assertTrue(snapshot.entries.isEmpty())
         assertNull(snapshot.errors.firstOrNull())
     }
+
+    @Test
+    fun changesAdvanceOnEverySuccessfulWrite() = runTest {
+        val store = McpConfigStore(directory)
+        assertEquals(0L, store.changes.value)
+        store.upsert("docs", http())
+        assertEquals(1L, store.changes.value)
+        store.setEnabled("docs", false)
+        assertEquals(2L, store.changes.value)
+        store.remove("docs")
+        assertEquals(3L, store.changes.value)
+    }
+
+    @Test
+    fun changesStayPutOnRejectedWrite() = runTest {
+        val store = McpConfigStore(directory)
+        store.upsert("docs", http())
+        val before = store.changes.value
+        runCatching { store.upsert("broken", McpServerConfig.Http(url = "not-a-url")) }
+        assertEquals(before, store.changes.value)
+    }
 }

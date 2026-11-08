@@ -70,7 +70,7 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `ModelConfigStore.kt` | 全局默认模型与思考档（DataStore） |
 | `InstallationIdStore.kt` | 持久安装 ID，作 OAuth 设备标识 |
 | `DeepDeepOAuthCallbackServerFactory.kt` | 本地 HTTP 回调服务器，收 OAuth code |
-| `McpConfigStore.kt` | mcp.json 的读写、增删改、启停与导入 |
+| `McpConfigStore.kt` | mcp.json 的读写、增删改、启停、导入与写盘变更流（`changes`） |
 | `McpJson.kt` | 宽松解析粘贴的 MCP JSON，格式化单条 |
 | `McpServices.kt` | MCP 服务器探测、OAuth 登录与鉴权；`McpPluginBridge` 供插件 tools/call |
 
