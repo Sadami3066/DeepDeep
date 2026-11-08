@@ -141,7 +141,6 @@
 
     <string name="dev_bundles_title">Install bundles</string>
     <string name="dev_install">Install</string>
-    <string name="dev_installed">Installed</string>
     <string name="dev_refresh">Refresh</string>
     <string name="dev_linux_required">The built-in environment is still preparing. Add bundles once it\'s ready.</string>
     <string name="dev_error">Failed: %1$s</string>
@@ -232,27 +231,18 @@
     <string name="settings_linux_mount_pick">Choose folder</string>
 
     <string name="dev_bundle_apk_dev">APK development</string>
-    <string name="dev_bundle_base_body">Everyday command-line tools and a script runtime, ready to use.</string>
-    <string name="dev_bundle_office_body">Everyday tools for PDFs, Excel, images, and scans.</string>
-    <string name="dev_bundle_dev_body">Git, a compiler toolchain, and build tools.</string>
-    <string name="dev_bundle_apk_dev_body">Build Android APKs inside Linux, with build tools downloaded.</string>
+    <string name="dev_bundle_base_body">Everyday command-line tools</string>
+    <string name="dev_bundle_office_body">PDF, spreadsheets, images</string>
+    <string name="dev_bundle_dev_body">Git, compilers and build tools</string>
+    <string name="dev_bundle_apk_dev_body">Build Android APKs on device</string>
     <string name="dev_bundle_form_packages">Included apps</string>
-    <string name="dev_bundle_form_package_count">%1$d apps · about %2$s</string>
-    <string name="dev_bundle_form_extras">Extra apps</string>
-    <string name="dev_bundle_form_extras_add">Add apps</string>
-    <string name="dev_bundle_form_extras_empty">No extra apps yet</string>
-    <string name="dev_bundle_form_overlays">Combine bundles</string>
-    <string name="dev_bundle_form_overlays_hint">Selected bundles install together with this one</string>
-    <string name="dev_bundle_form_source">Package source</string>
-    <string name="dev_bundle_form_source_multi">%1$d mirrors selected</string>
+    <string name="dev_bundle_form_package_count">%1$d apps</string>
     <string name="dev_bundle_form_install">Install bundle</string>
     <string name="dev_bundle_form_installed">Installed</string>
     <string name="dev_bundle_form_downloads">Build tools download</string>
-    <string name="dev_bundle_form_downloads_body">Also downloads JDK 21, the Android SDK, Platform 36, and Gradle, about 480 MB.</string>
+    <string name="dev_bundle_form_downloads_body">Includes JDK, Android SDK and Gradle.</string>
     <string name="dev_remove">Remove</string>
     <string name="dev_done">Done</string>
-    <string name="dev_package_picker_title">Add apps</string>
-    <string name="dev_package_picker_subtitle">Selected apps are appended to the current bundle.</string>
     <string name="dev_mirror_sheet_title">Package sources</string>
     <string name="dev_mirror_sheet_subtitle">Pick one or more mirrors for Linux packages.</string>
     <string name="dev_mirror_apply">Apply package source</string>
@@ -280,4 +270,5 @@
     <string name="settings_linux_bootstrap_title">Runtime basics</string>
     <string name="settings_linux_bootstrap_hint">Finish setup to continue</string>
     <string name="settings_linux_bootstrap_time">First-time setup takes 1–2 minutes</string>
+    <string name="dev_installed">Installed</string>
 </resources>

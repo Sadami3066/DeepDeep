@@ -147,7 +147,6 @@
 
     <string name="dev_bundles_title">安装组合</string>
     <string name="dev_install">安装</string>
-    <string name="dev_installed">已安装</string>
     <string name="dev_refresh">刷新</string>
     <string name="dev_linux_required">内置环境正在准备，完成后再安装组合。</string>
     <string name="dev_error">失败：%1$s</string>
@@ -238,27 +237,18 @@
     <string name="settings_linux_mount_pick">选择目录</string>
 
     <string name="dev_bundle_apk_dev">APK 开发组合</string>
-    <string name="dev_bundle_base_body">常用命令行与脚本运行环境，装好即可开始。</string>
-    <string name="dev_bundle_office_body">处理 PDF、Excel、图片和扫描件的日常工具。</string>
-    <string name="dev_bundle_dev_body">Git、编译工具链与软件构建工具。</string>
-    <string name="dev_bundle_apk_dev_body">在 Linux 里编译 Android APK，附带构建工具下载。</string>
+    <string name="dev_bundle_base_body">常用命令行工具</string>
+    <string name="dev_bundle_office_body">PDF、表格、图片与扫描件</string>
+    <string name="dev_bundle_dev_body">Git、编译与构建工具</string>
+    <string name="dev_bundle_apk_dev_body">在 Linux 里编译 Android APK</string>
     <string name="dev_bundle_form_packages">包含应用</string>
-    <string name="dev_bundle_form_package_count">%1$d 个应用 · 约 %2$s</string>
-    <string name="dev_bundle_form_extras">附加应用</string>
-    <string name="dev_bundle_form_extras_add">添加应用</string>
-    <string name="dev_bundle_form_extras_empty">还没有附加应用</string>
-    <string name="dev_bundle_form_overlays">叠加组合</string>
-    <string name="dev_bundle_form_overlays_hint">选中的组合会和当前组合一起安装</string>
-    <string name="dev_bundle_form_source">软件源</string>
-    <string name="dev_bundle_form_source_multi">已选 %1$d 个镜像</string>
+    <string name="dev_bundle_form_package_count">%1$d 个应用</string>
     <string name="dev_bundle_form_install">安装组合</string>
     <string name="dev_bundle_form_installed">已安装</string>
     <string name="dev_bundle_form_downloads">构建工具下载</string>
-    <string name="dev_bundle_form_downloads_body">额外下载 JDK 21、Android SDK、Platform 36 与 Gradle，约 480 MB。</string>
+    <string name="dev_bundle_form_downloads_body">附带 JDK、Android SDK 与 Gradle。</string>
     <string name="dev_remove">移除</string>
     <string name="dev_done">完成</string>
-    <string name="dev_package_picker_title">添加应用</string>
-    <string name="dev_package_picker_subtitle">选中的应用会追加到当前组合。</string>
     <string name="dev_mirror_sheet_title">软件源</string>
     <string name="dev_mirror_sheet_subtitle">选择下载 Linux 软件包的镜像站，可多选。</string>
     <string name="dev_mirror_apply">应用软件源</string>
@@ -286,4 +276,5 @@
     <string name="settings_linux_bootstrap_title">环境基础</string>
     <string name="settings_linux_bootstrap_hint">安装完成后才能继续</string>
     <string name="settings_linux_bootstrap_time">首次安装约 1–2 分钟</string>
+    <string name="dev_installed">已安装</string>
 </resources>

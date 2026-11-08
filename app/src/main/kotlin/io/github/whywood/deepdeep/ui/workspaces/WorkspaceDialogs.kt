@@ -102,7 +102,6 @@ fun WorkspaceCreateDialog(
                 Spacer(Modifier.height(6.dp))
                 DdListRow(
                     title = stringResource(R.string.workspace_directory_private),
-                    subtitle = privateDirectory,
                     modifier = Modifier.testTag("workspace_directory_private"),
                     onClick = {
                         useSharedStorage = false

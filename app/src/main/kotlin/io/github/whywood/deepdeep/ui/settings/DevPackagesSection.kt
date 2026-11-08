@@ -47,7 +47,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-private enum class DevSheetMode { DETAIL, PACKAGES, MIRRORS }
+private enum class DevSheetMode { DETAIL, MIRRORS }
 
 @Composable
 internal fun DevPackagesSection(
@@ -70,18 +70,6 @@ internal fun DevPackagesSection(
     fun persist(next: DevBundleCustomization) {
         customization = next
         scope.launch(Dispatchers.IO) { store.save(next) }
-    }
-
-    fun toggleExtra(bundleId: String, packageId: String) {
-        val current = customization.extrasFor(bundleId).toMutableList()
-        if (!current.remove(packageId)) current.add(packageId)
-        persist(customization.copy(extras = customization.extras + (bundleId to current)))
-    }
-
-    fun toggleOverlay(bundleId: String, overlayId: String) {
-        val current = customization.overlaysFor(bundleId).toMutableList()
-        if (!current.remove(overlayId)) current.add(overlayId)
-        persist(customization.copy(overlays = customization.overlays + (bundleId to current)))
     }
 
     fun toggleMirror(mirrorId: String) {
@@ -129,7 +117,6 @@ internal fun DevPackagesSection(
                 val installedCount = composed.packageIds.count { it in state.installed }
                 val installed = composed.packageIds.isNotEmpty() && installedCount == composed.packageIds.size
                 DdListRow(
-                    icon = DdIcons.Package,
                     title = title,
                     subtitle = bundle.bodyRes?.let { stringResource(it) },
                     subtitleMaxLines = 2,
@@ -159,23 +146,10 @@ internal fun DevPackagesSection(
                                 }
                             }
 
-                            installed -> Text(
-                                text = stringResource(R.string.dev_installed),
-                                style = DdType.bodySmall,
-                                color = colors.accent,
-                            )
-
-                            installedCount > 0 -> Text(
-                                text = "$installedCount/${composed.packageIds.size} · ${composed.sizeLabel}",
-                                style = DdType.bodySmall,
-                                color = colors.inkTertiary,
-                                maxLines = 1,
-                            )
-
                             else -> Text(
-                                text = composed.sizeLabel,
+                                text = "${if (installed) composed.packageIds.size else installedCount}/${composed.packageIds.size}",
                                 style = DdType.bodySmall,
-                                color = colors.inkTertiary,
+                                color = if (installed) colors.inkSecondary else colors.inkTertiary,
                                 maxLines = 1,
                             )
                         }
@@ -229,17 +203,12 @@ internal fun DevPackagesSection(
                 DevSheetMode.DETAIL -> BundleForm(
                     bundle = bundle,
                     composed = composed,
-                    extras = customization.extrasFor(bundle.id),
-                    overlays = customization.overlaysFor(bundle.id),
                     mirrorIds = customization.mirrorIds(),
                     installedCount = composed.packageIds.count { it in state.installed },
                     installing = installing,
                     busy = state.busy,
                     linuxInstalled = linuxInstalled,
                     stage = operation?.takeIf { installing }?.stage,
-                    onAddExtras = { sheetMode = DevSheetMode.PACKAGES },
-                    onRemoveExtra = { toggleExtra(bundle.id, it) },
-                    onToggleOverlay = { toggleOverlay(bundle.id, it) },
                     onOpenMirrors = {
                         mirrorError = false
                         sheetMode = DevSheetMode.MIRRORS
@@ -248,14 +217,6 @@ internal fun DevPackagesSection(
                         openedBundle = null
                         onInstallBundle(composed)
                     },
-                )
-
-                DevSheetMode.PACKAGES -> PackagePicker(
-                    bundle = bundle,
-                    extras = customization.extrasFor(bundle.id),
-                    overlayIds = customization.overlaysFor(bundle.id),
-                    onToggle = { toggleExtra(bundle.id, it) },
-                    onDone = { sheetMode = DevSheetMode.DETAIL },
                 )
 
                 DevSheetMode.MIRRORS -> MirrorPicker(
@@ -288,17 +249,12 @@ private fun composeBundle(bundle: DevBundle, customization: DevBundleCustomizati
 private fun BundleForm(
     bundle: DevBundle,
     composed: DevBundle,
-    extras: List<String>,
-    overlays: List<String>,
     mirrorIds: List<String>,
     installedCount: Int,
     installing: Boolean,
     busy: Boolean,
     linuxInstalled: Boolean,
     stage: String?,
-    onAddExtras: () -> Unit,
-    onRemoveExtra: (String) -> Unit,
-    onToggleOverlay: (String) -> Unit,
     onOpenMirrors: () -> Unit,
     onInstall: () -> Unit,
 ) {
@@ -327,11 +283,7 @@ private fun BundleForm(
             color = colors.ink,
         )
         Text(
-            text = stringResource(
-                R.string.dev_bundle_form_package_count,
-                composed.packageIds.size,
-                DevPackageCatalog.estimatedSizeLabel(composed.packageIds),
-            ),
+            text = stringResource(R.string.dev_bundle_form_package_count, composed.packageIds.size),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
@@ -349,88 +301,11 @@ private fun BundleForm(
         style = DdType.bodySmall,
         color = colors.inkSecondary,
     )
-    Row(
-        Modifier.fillMaxWidth().padding(top = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.dev_bundle_form_extras),
-            modifier = Modifier.weight(1f),
-            style = DdType.label,
-            color = colors.ink,
-        )
-        DdTextAction(
-            text = stringResource(R.string.dev_bundle_form_extras_add),
-            onClick = onAddExtras,
-        )
-    }
-    if (extras.isEmpty()) {
-        Text(
-            text = stringResource(R.string.dev_bundle_form_extras_empty),
-            modifier = Modifier.padding(vertical = 4.dp),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-        )
-    } else {
-        extras.forEach { id ->
-            DevPackageCatalog.packageById(id)?.let { packageInfo ->
-                DdListRow(
-                    title = packageInfo.label(context),
-                    value = packageInfo.sizeLabel,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailing = {
-                        DdTextAction(
-                            text = stringResource(R.string.dev_remove),
-                            onClick = { onRemoveExtra(id) },
-                            color = colors.inkSecondary,
-                        )
-                    },
-                )
-            }
-        }
-    }
-    Text(
-        text = stringResource(R.string.dev_bundle_form_overlays),
-        modifier = Modifier.padding(top = 20.dp),
-        style = DdType.label,
-        color = colors.ink,
-    )
-    Text(
-        text = stringResource(R.string.dev_bundle_form_overlays_hint),
-        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-        style = DdType.bodySmall,
-        color = colors.inkTertiary,
-    )
-    DevPackageCatalog.bundles.filter { it.id != bundle.id }.forEach { other ->
-        val checked = other.id in overlays
-        DdListRow(
-            title = stringResource(other.titleRes),
-            subtitle = other.sizeLabel,
-            onClick = { onToggleOverlay(other.id) },
-            modifier = Modifier.fillMaxWidth(),
-            trailing = {
-                DdSwitch(
-                    checked = checked,
-                    onCheckedChange = { onToggleOverlay(other.id) },
-                    stateDescription = stringResource(
-                        if (checked) R.string.settings_switch_on else R.string.settings_switch_off,
-                    ),
-                )
-            },
-        )
-    }
-    Text(
-        text = stringResource(R.string.dev_bundle_form_source),
-        modifier = Modifier.padding(top = 20.dp, bottom = 6.dp),
-        style = DdType.label,
-        color = colors.ink,
-    )
     DdListRow(
         icon = DdIcons.Download,
         title = stringResource(R.string.dev_mirror_sheet_title),
         subtitle = apkMirrorSubtitle(mirrorIds),
         subtitleMaxLines = 2,
-        value = stringResource(R.string.dev_bundle_form_source_multi, mirrorIds.size),
         onClick = onOpenMirrors,
         showChevron = true,
         modifier = Modifier.fillMaxWidth(),
@@ -488,60 +363,6 @@ private fun BundleForm(
             enabled = !busy,
         )
     }
-}
-
-@Composable
-private fun PackagePicker(
-    bundle: DevBundle,
-    extras: List<String>,
-    overlayIds: List<String>,
-    onToggle: (String) -> Unit,
-    onDone: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    val context = LocalContext.current
-    val included = bundle.packageIds.toSet() +
-        overlayIds.mapNotNull { DevPackageCatalog.bundleById(it)?.packageIds }.flatten()
-    Text(
-        text = stringResource(R.string.dev_package_picker_title),
-        style = DdType.heading,
-        color = colors.ink,
-    )
-    Text(
-        text = stringResource(R.string.dev_package_picker_subtitle),
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-        style = DdType.bodySmall,
-        color = colors.inkSecondary,
-    )
-    DevPackageCatalog.packages.forEach { packageInfo ->
-        val inBundle = packageInfo.id in included
-        val selected = inBundle || packageInfo.id in extras
-        DdListRow(
-            title = packageInfo.label(context),
-            subtitle = stringResource(packageInfo.descriptionRes),
-            subtitleMaxLines = 1,
-            value = packageInfo.sizeLabel,
-            enabled = !inBundle,
-            onClick = if (inBundle) null else ({ onToggle(packageInfo.id) }),
-            modifier = Modifier.fillMaxWidth(),
-            trailing = {
-                DdSwitch(
-                    checked = selected,
-                    onCheckedChange = { if (!inBundle) onToggle(packageInfo.id) },
-                    enabled = !inBundle,
-                    stateDescription = stringResource(
-                        if (selected) R.string.settings_switch_on else R.string.settings_switch_off,
-                    ),
-                )
-            },
-        )
-    }
-    Spacer(Modifier.height(16.dp))
-    DdPrimaryButton(
-        text = stringResource(R.string.dev_done),
-        onClick = onDone,
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 @Composable

@@ -32,3 +32,11 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 - 页面注册在 `navigation/`：`AppDestination` 加路由、`routes/` 下写页面装配、`AppRoutes.kt` 的 `AppRouteContent(destination, AppRouteHost)` 分发。`AppRouteHost` 是唯一拿 `AppDependencies` 的装配上下文；Screen 通过参数收 state 与回调，不自己取依赖，也不直接调 dev.pi SDK（数据与事件都来自 runtime）。
 - 多页子包把加载与操作放 `XxxStateHolder`（mcp、plugins、skills、timers、miniapp），Screen 保持薄；过滤/解析等纯逻辑抽成顶层函数以便单测。
 - 用户可见文案全部在 `res/values*/strings_*.xml`（默认中文 + `values-en`），视觉只用 `:design` 的 `deepDeepColors`/`DdType`/`Dd*` 组件，不自造颜色与字号。
+
+## 界面文案与布局原则
+
+- 简洁优先：一屏只说一件事，标题 + 一句话副标题即可；不要堆叠解释性长句、来源说明或技术细节。
+- 少文字、多交互：能用选项、开关、表单、步骤表达清楚的，不要用段落文字解释；说明性文字只保留必要的一句。
+- 次要信息（路径、体积、安装计数等）放行尾且尽量短；安装组合的进度用 `2/8` 这类计数，不写「已安装 / 剩余」长文案。
+- 不要在同一张表单里混合两种无关的操作（例如「附加应用」「叠加组合」与「包含应用」并列）；同类信息分组，不同类拆分或删掉。
+- 新增文案先问：删掉它用户是否还能完成任务？能删就删，能改成控件就改成控件。
