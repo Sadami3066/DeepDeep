@@ -374,11 +374,9 @@ fun ChatScreen(
                 }
             }
             .pointerInput(onOpenDrawer) {
-                var startX = 0f
                 var total = 0f
                 detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        startX = offset.x
+                    onDragStart = {
                         total = 0f
                     },
                     onHorizontalDrag = { change, dragAmount ->
@@ -386,9 +384,7 @@ fun ChatScreen(
                         change.consume()
                     },
                     onDragEnd = {
-                        val width = size.width.toFloat()
-                        val middle = startX > width * 0.25f && startX < width * 0.75f
-                        if (middle && total > 80.dp.toPx()) onOpenDrawer()
+                        if (total > 80.dp.toPx()) onOpenDrawer()
                     },
                     onDragCancel = { total = 0f },
                 )

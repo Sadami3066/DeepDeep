@@ -70,8 +70,7 @@ internal fun ChatTopBar(
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .height(70.dp)
-            .padding(top = DdSpacing.Md),
+            .height(58.dp),
     ) {
         val compact = maxWidth < 370.dp || LocalDensity.current.fontScale > 1.15f
         val crowded = state.jobCount > 0 || state.reminderCount > 0
